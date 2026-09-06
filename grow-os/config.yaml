@@ -1,12 +1,12 @@
-name: Grow OS
-version: "2.0.0-beta.65"
-slug: grow_os
+name: Grow OS Fork AI
+version: "2.0.0-forkai.1"
+slug: grow_os_fork_ai
 description: RDWC/DWC grow management, natively integrated with Home Assistant
-url: https://github.com/Nerdstreak/Grow-Operation-System
+url: https://github.com/bru-u-kno/Grow-Operation-System_Fork_AI
 # Prebuilt public multi-arch image, pulled directly by the Supervisor (the tag
 # matches this add-on version; Docker resolves the right architecture). Updates are
 # a clean image pull with no on-device rebuild and no data loss.
-image: ghcr.io/nerdstreak/grow-operation-system
+image: ghcr.io/bru-u-kno/grow-operation-system_fork_ai
 # The Grow OS image is published multi-arch; these are the Raspberry Pi + PC targets.
 arch:
   - aarch64
@@ -18,7 +18,7 @@ init: false
 ingress: true
 ingress_port: 5076
 panel_icon: mdi:sprout
-panel_title: Grow OS
+panel_title: Grow OS Fork AI
 # Grants the add-on a SUPERVISOR_TOKEN with access to the Home Assistant core API
 # (http://supervisor/core) — this is what makes the HA connection zero-config.
 homeassistant_api: true
