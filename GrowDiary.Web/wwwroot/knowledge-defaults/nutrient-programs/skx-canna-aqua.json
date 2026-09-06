@@ -1,0 +1,543 @@
+{
+  "schemaVersion": "1.0",
+  "id": "skx-canna-aqua",
+  "name": "SKX Canna Aqua (R/DWC Growplan Rev.01)",
+  "manufacturer": "Canna · Schema: SKX-RDWC",
+  "category": "Mineralisch • RDWC/DWC • Weichwasser/Osmose",
+  "summary": "Wochengenaues Canna-Aqua-Schema nach dem R/DWC Growplan by SKX-RDWC Rev.01: 14 Spalten von Root über Vega 1–4 und Flores 1–8 bis Flush, mit ml je Liter, Ziel-EC und Ziel-pH je Woche. Ausgelegt auf Osmosewasser (0,0 mS), das mit CalMag Agent aufbereitet wird.",
+  "bestFor": "RDWC mit Osmose- oder Weichwasser (0,2 mS). DWC: Dosierung +30 % starten, bei Mangel in 20-%-Schritten (50/70/90 %) erhöhen.",
+  "waterGuidance": "Osmosewasser (0,0 mS EC) plus konstante CalMag-Dosis je Phase; alternativ Leitungswasser mit Osmosewasser auf 0,2 mS verdünnen. Wöchentlicher Wasserwechsel ist Pflicht (setzt EC zurück, verhindert Antagonismen und Salzansammlung). Addback täglich nach Lichtaus: EC höher als Vortag → Addback −0,1 EC, EC niedriger → +0,1 EC.",
+  "phGuidance": "Ziel 5,8–6,2 (Root/frühe Vega 6,2, Blüte 5,8–6,0, Flush 5,6–5,8). Im Korridor nicht nachregeln – die Pflanze beeinflusst die Rhizosphäre selbst. Korrektur erst unter 5,5 oder über 6,5.",
+  "ecGuidance": "Stufenweise von 0,4 (Root) über 0,5–0,8 (Vega) auf 0,9–1,6 (Flores 1–6), dann zurück auf 1,2/1,0 (Flores 7–8) und 0,4 im Flush. Strain-Korridor in der Blüte: Sativa-dominant 1,0–1,4, Haze/Hybrid 1,2–1,6, Indica-dominant 1,4–1,8. Messwerte dürfen leicht über dem Ziel liegen (0,8 → 0,86 ist normal).",
+  "scheduleStyle": "Mischreihenfolge je 10 L: Osmosewasser → CalMag → Vega/Flores A+B → Rhizotonic → Cannazym → PK 13/14 → Cannaboost. Angaben im Feed-Chart in ml je Liter (Plan: ml je 10 L ÷ 10).",
+  "officialHighlights": "CalMag ist im Canna-Aqua-Schema nicht vorgesehen und wird hier zur Weichwasser-Aufbereitung und als Blattdüngung ergänzt. PK 13/14 läuft im SKX-Plan über Flores 3–8 gestuft (0,5–1,5 ml/L) statt einmalig. Cannaboost beginnt hoch (4 ml/L in Flores 1) und fällt bis Flores 5 auf 1 ml/L.",
+  "practiceNotes": "CalMag-Blattdüngung: 1,0 ml/L alle 2–3 Tage Ober- und Unterseite besprühen; bei Mangel 1,5 ml/L für 3 Tage, 1 h vor Licht. Ab Blütewoche 6 zurückhaltend und Luftfeuchte beachten. CO₂ 1,2–1,4 K ppm in der Blüte nur bei 26–30 °C Blatttemperatur sinnvoll; ohne CO₂ nicht über 800–900 PPFD. Lichtstress → PPFD in 50er-Schritten senken; zur EC-Konsum-Steigerung in 50er-Schritten erhöhen. Flush 4–10 Tage nach Trichomen (20–25 % bernstein) und Stigmen (75 %).",
+  "stages": [
+    {
+      "stage": "Root / Bewurzelung",
+      "dose": "CalMag 0,3 · Vega A+B 0,5+0,5 · Rhizotonic 2,0 ml/L",
+      "target": "EC 0,4 · pH 6,2 · Wasser 22 °C · 20/4 h",
+      "notes": "VPD 0,4, 30 °C / 90 % RH, PPFD 200, kein CO₂."
+    },
+    {
+      "stage": "Vega Woche 1–4",
+      "dose": "CalMag 0,3 · Vega A+B 0,7→1,6 · Rhizotonic 1,0 (W1) · Cannazym 0,5→2,5 (W2–4) ml/L",
+      "target": "EC 0,5→0,8 · pH 6,2→6,0 · ORP 300 · Wasser 20 °C · 18/6 h",
+      "notes": "VPD 0,4→1,0, 25 °C, RH 85→70 %, CO₂ 600–800, PPFD 300→600. Verbrauch 1–2 L/m²/Tag."
+    },
+    {
+      "stage": "Flores Woche 1–3",
+      "dose": "CalMag 0,5 · Flores A+B 1,8→2,2 · Cannaboost 4,0→2,0 · PK 13/14 0,5 (W3) ml/L",
+      "target": "EC 0,9→1,2 · pH 6,0 · ORP 400–450 · Wasser 20 °C · 12/12 h",
+      "notes": "VPD 1,0–1,4, 25 °C, RH 65 %, CO₂ 600→1,2 K, PPFD 800→1000. Verbrauch 3–4 L/m²/Tag."
+    },
+    {
+      "stage": "Flores Woche 4–6",
+      "dose": "CalMag 0,5 · Flores A+B 2,4→2,7 · PK 13/14 0,8→1,5 · Cannaboost 2,0→1,0 ml/L",
+      "target": "EC 1,4→1,6 · pH 5,9→5,8 · Wasser 20/17→18/16 °C Tag/Nacht",
+      "notes": "VPD 1,2–1,4, 25→23 °C, RH 60→50 %, CO₂ 1,2–1,4 K, PPFD 1–1,2 K. Verbrauch 5–7 L/m²/Tag."
+    },
+    {
+      "stage": "Flores Woche 7–8",
+      "dose": "CalMag 0,5 · Flores A+B 2,0→1,6 · PK 13/14 1,0→0,5 · Cannaboost 1,0 ml/L",
+      "target": "EC 1,2→1,0 · pH 5,8 · Wasser 18/16→17/15 °C · 12/12→11/13 h",
+      "notes": "VPD 1,4→1,6, 20→18 °C, RH <40 %, CO₂ 1–1,2 K→600–800, PPFD 1–1,2 K→800."
+    },
+    {
+      "stage": "Flush",
+      "dose": "CalMag 0,2 · Cannazym 2,5 · Cannaboost 0,5 ml/L, kein A+B",
+      "target": "EC 0,4 · pH 5,6–5,8 · ORP 300 · Wasser 15 °C · 10/14 h",
+      "notes": "4–10 Tage je nach Reife. VPD 1,6, 16 °C, RH <30 %, CO₂ 600–800, PPFD 500, kein Addback."
+    }
+  ],
+  "tips": [
+    "Wasserwechsel wöchentlich – kein optionaler Schritt, sondern die Grundlage des Schemas.",
+    "Täglicher Addback nach Lichtaus messen und ergänzen; EC-Trend zum Vortag entscheidet über ±0,1 EC.",
+    "pH nur außerhalb 5,5–6,5 korrigieren; im Korridor stabilisiert sich das System selbst.",
+    "Sativa-dominante Sorten am unteren, Indica-dominante am oberen Ende des EC-Korridors fahren.",
+    "CO₂ über 1000 ppm nur mit 26–30 °C und hoher PPFD kombinieren, sonst bringt es nichts.",
+    "Mindestens 30 cm Abstand Lampe–Spitzen; PPFD-Änderungen immer in 50er-Schritten."
+  ],
+  "searchTerms": [
+    "skx",
+    "skx-rdwc",
+    "growplan",
+    "canna aqua",
+    "aqua vega",
+    "aqua flores",
+    "calmag",
+    "rhizotonic",
+    "cannazym",
+    "pk 13/14",
+    "cannaboost",
+    "osmose",
+    "weichwasser",
+    "feed chart",
+    "wochenplan"
+  ],
+  "feedChart": {
+    "unit": "mlPerLiter",
+    "note": "Quelle: R/DWC Growplan by SKX-RDWC Rev.01 (Canna Aqua, ml je 10 L), umgerechnet in ml je Liter (÷ 10). Basis Osmosewasser 0,0 mS. Ziel-pH ist der Wochenwert des Plans; Korrekturkorridor bleibt 5,5–6,5. DWC: +30 % starten und bei Mangel in 20-%-Schritten steigern.",
+    "columns": [
+      {
+        "id": "root",
+        "label": "Root · Bewurzelung",
+        "stage": "Clone",
+        "week": null,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.3,
+            "maxMlPerLiter": 0.3
+          },
+          {
+            "component": "Aqua Vega A",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Vega B",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Rhizotonic",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          }
+        ],
+        "ecTarget": 0.4,
+        "phMin": 6.2,
+        "phMax": 6.2
+      },
+      {
+        "id": "veg-w1",
+        "label": "Vega · Woche 1",
+        "stage": "Veg",
+        "week": 1,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.3,
+            "maxMlPerLiter": 0.3
+          },
+          {
+            "component": "Aqua Vega A",
+            "minMlPerLiter": 0.7,
+            "maxMlPerLiter": 0.7
+          },
+          {
+            "component": "Aqua Vega B",
+            "minMlPerLiter": 0.7,
+            "maxMlPerLiter": 0.7
+          },
+          {
+            "component": "Rhizotonic",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          }
+        ],
+        "ecTarget": 0.5,
+        "phMin": 6.2,
+        "phMax": 6.2
+      },
+      {
+        "id": "veg-w2",
+        "label": "Vega · Woche 2",
+        "stage": "Veg",
+        "week": 2,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.3,
+            "maxMlPerLiter": 0.3
+          },
+          {
+            "component": "Aqua Vega A",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          },
+          {
+            "component": "Aqua Vega B",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          },
+          {
+            "component": "Cannazym",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          }
+        ],
+        "ecTarget": 0.6,
+        "phMin": 6.1,
+        "phMax": 6.1
+      },
+      {
+        "id": "veg-w3",
+        "label": "Vega · Woche 3",
+        "stage": "Veg",
+        "week": 3,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.3,
+            "maxMlPerLiter": 0.3
+          },
+          {
+            "component": "Aqua Vega A",
+            "minMlPerLiter": 1.4,
+            "maxMlPerLiter": 1.4
+          },
+          {
+            "component": "Aqua Vega B",
+            "minMlPerLiter": 1.4,
+            "maxMlPerLiter": 1.4
+          },
+          {
+            "component": "Cannazym",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          }
+        ],
+        "ecTarget": 0.7,
+        "phMin": 6.0,
+        "phMax": 6.0
+      },
+      {
+        "id": "veg-w4",
+        "label": "Vega · Woche 4",
+        "stage": "Veg",
+        "week": 4,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.3,
+            "maxMlPerLiter": 0.3
+          },
+          {
+            "component": "Aqua Vega A",
+            "minMlPerLiter": 1.6,
+            "maxMlPerLiter": 1.6
+          },
+          {
+            "component": "Aqua Vega B",
+            "minMlPerLiter": 1.6,
+            "maxMlPerLiter": 1.6
+          },
+          {
+            "component": "Cannazym",
+            "minMlPerLiter": 2.5,
+            "maxMlPerLiter": 2.5
+          }
+        ],
+        "ecTarget": 0.8,
+        "phMin": 6.0,
+        "phMax": 6.0
+      },
+      {
+        "id": "flower-w1",
+        "label": "Flores · Woche 1",
+        "stage": "Flower",
+        "week": 1,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 1.8,
+            "maxMlPerLiter": 1.8
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 1.8,
+            "maxMlPerLiter": 1.8
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 4.0,
+            "maxMlPerLiter": 4.0
+          }
+        ],
+        "ecTarget": 0.9,
+        "phMin": 6.0,
+        "phMax": 6.0
+      },
+      {
+        "id": "flower-w2",
+        "label": "Flores · Woche 2",
+        "stage": "Flower",
+        "week": 2,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 3.0,
+            "maxMlPerLiter": 3.0
+          }
+        ],
+        "ecTarget": 1.0,
+        "phMin": 6.0,
+        "phMax": 6.0
+      },
+      {
+        "id": "flower-w3",
+        "label": "Flores · Woche 3",
+        "stage": "Flower",
+        "week": 3,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 2.2,
+            "maxMlPerLiter": 2.2
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 2.2,
+            "maxMlPerLiter": 2.2
+          },
+          {
+            "component": "PK 13/14",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          }
+        ],
+        "ecTarget": 1.2,
+        "phMin": 6.0,
+        "phMax": 6.0
+      },
+      {
+        "id": "flower-w4",
+        "label": "Flores · Woche 4",
+        "stage": "Flower",
+        "week": 4,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 2.4,
+            "maxMlPerLiter": 2.4
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 2.4,
+            "maxMlPerLiter": 2.4
+          },
+          {
+            "component": "PK 13/14",
+            "minMlPerLiter": 0.8,
+            "maxMlPerLiter": 0.8
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          }
+        ],
+        "ecTarget": 1.4,
+        "phMin": 5.9,
+        "phMax": 5.9
+      },
+      {
+        "id": "flower-w5",
+        "label": "Flores · Woche 5",
+        "stage": "Flower",
+        "week": 5,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 2.5,
+            "maxMlPerLiter": 2.5
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 2.5,
+            "maxMlPerLiter": 2.5
+          },
+          {
+            "component": "PK 13/14",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          }
+        ],
+        "ecTarget": 1.5,
+        "phMin": 5.9,
+        "phMax": 5.9
+      },
+      {
+        "id": "flower-w6",
+        "label": "Flores · Woche 6",
+        "stage": "Flower",
+        "week": 6,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 2.7,
+            "maxMlPerLiter": 2.7
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 2.7,
+            "maxMlPerLiter": 2.7
+          },
+          {
+            "component": "PK 13/14",
+            "minMlPerLiter": 1.5,
+            "maxMlPerLiter": 1.5
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          }
+        ],
+        "ecTarget": 1.6,
+        "phMin": 5.8,
+        "phMax": 5.8
+      },
+      {
+        "id": "flower-w7",
+        "label": "Flores · Woche 7",
+        "stage": "Flower",
+        "week": 7,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 2.0,
+            "maxMlPerLiter": 2.0
+          },
+          {
+            "component": "PK 13/14",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          }
+        ],
+        "ecTarget": 1.2,
+        "phMin": 5.8,
+        "phMax": 5.8
+      },
+      {
+        "id": "flower-w8",
+        "label": "Flores · Woche 8",
+        "stage": "Flower",
+        "week": 8,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Aqua Flores A",
+            "minMlPerLiter": 1.6,
+            "maxMlPerLiter": 1.6
+          },
+          {
+            "component": "Aqua Flores B",
+            "minMlPerLiter": 1.6,
+            "maxMlPerLiter": 1.6
+          },
+          {
+            "component": "PK 13/14",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 1.0,
+            "maxMlPerLiter": 1.0
+          }
+        ],
+        "ecTarget": 1.0,
+        "phMin": 5.8,
+        "phMax": 5.8
+      },
+      {
+        "id": "flush",
+        "label": "Flush",
+        "stage": "Finish",
+        "week": null,
+        "items": [
+          {
+            "component": "CalMag Agent",
+            "minMlPerLiter": 0.2,
+            "maxMlPerLiter": 0.2
+          },
+          {
+            "component": "Cannazym",
+            "minMlPerLiter": 2.5,
+            "maxMlPerLiter": 2.5
+          },
+          {
+            "component": "Cannaboost",
+            "minMlPerLiter": 0.5,
+            "maxMlPerLiter": 0.5
+          }
+        ],
+        "ecTarget": 0.4,
+        "phMin": 5.6,
+        "phMax": 5.8
+      }
+    ]
+  }
+}
