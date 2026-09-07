@@ -45,7 +45,8 @@ public sealed class CultivationKnowledgeService
             Notes = s.Notes
         }).ToList(),
         Tips = def.Tips,
-        SearchTerms = def.SearchTerms
+        SearchTerms = def.SearchTerms,
+        FeedChart = def.FeedChart
     };
 
     private static List<MediumPlaybook> BuildMediumPlaybooks()
