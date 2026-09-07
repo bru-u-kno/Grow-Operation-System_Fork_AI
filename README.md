@@ -1,5 +1,7 @@
 # Grow OS — the RDWC/DWC grow add-on for Home Assistant
 
+> **Fork AI:** Dies ist ein Ableger von Grow OS (Nerdstreak). Was hier gegenüber dem Original neu ist, steht in [FORK.md](FORK.md).
+
 **English** · [Deutsch](README.de.md)
 
 **Turn your Home Assistant sensors into a real grow-management cockpit.** Grow OS is a
