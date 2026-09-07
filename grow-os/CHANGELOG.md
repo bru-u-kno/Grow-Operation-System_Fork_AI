@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.3
+
+**Fork AI.** Ein Anzeigefehler auf der Addback-Seite.
+
+### Was Sie sehen
+
+- Behoben — **Addback zeigte das falsche Programm an.** Stand am Grow „SKX Canna
+  Aqua", meldete die Karte „Programm" trotzdem „Canna Aqua", weil die Seite das
+  Programm per Teilstring aus dem Freitext riet. Der Mischplan rechnete die ganze
+  Zeit richtig (er nutzt die gespeicherte Programm-Id) — nur die Anzeige und die
+  Vorauswahl im Formular waren falsch. Jetzt gilt die Id zuerst, der Freitext nur
+  als Rückfall, und ein exakter Name schlägt einen Teilstring-Treffer.
+
 ## 2.0.0-forkai.2
 
 **Fork AI.** Neues Düngeprogramm **„SKX Canna Aqua (R/DWC Growplan Rev.01)"**
