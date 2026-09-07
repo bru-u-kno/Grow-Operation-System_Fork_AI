@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.5
+
+**Fork AI.** Der Wochen-Feed-Chart eines Düngeprogramms ist jetzt auf der Wissensseite sichtbar.
+
+### Was Sie sehen
+
+- Neu — **Feed-Chart als Tabelle.** Unter Wissen → Programme zeigt ein Programm mit Feed-Chart
+  (SKX Canna Aqua, Athena Blended) den Abschnitt „Feed-Chart (je Woche)“: Spalten je Woche,
+  Zeilen je Komponente in ml je Liter, darunter Ziel-EC und Ziel-pH. Auf dem Handy seitlich scrollbar.
+
+### Technik
+
+- Das Programm-DTO der Wissens-API (`/api/knowledge`) trägt neu das optionale Feld `feedChart`;
+  Programme ohne Chart liefern `null`, sonst ändert sich an der API nichts.
+
 ## 2.0.0-forkai.4
 
 **Fork AI.** Das Düngeprogramm heißt jetzt kurz **„SKX Canna Aqua“** (statt „SKX Canna Aqua (R/DWC Growplan Rev.01)“). Die Quelle steht weiterhin in der Beschreibung.
