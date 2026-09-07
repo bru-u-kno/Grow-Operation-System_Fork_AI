@@ -141,7 +141,14 @@ function AddbackPage() {
         setMischplan(nextPlan)
         setWasserprofil(nextWasser)
 
-        const matchedProgram = matchProgram(nextKnowledge?.programs ?? [], nextGrow.nutrients)
+        // Fork AI: Zuerst die am Grow gespeicherte Programm-Id — nur wenn die fehlt,
+        // faellt die Erkennung auf den Freitext zurueck. Sonst gewinnt bei
+        // „SKX Canna Aqua" der Teilstring-Treffer „Canna Aqua", und die Seite
+        // zeigt ein anderes Programm an als der Mischplan tatsaechlich rechnet.
+        const programById = nextGrow.feedProgramId
+          ? (nextKnowledge?.programs ?? []).find((program) => program.key === nextGrow.feedProgramId) ?? null
+          : null
+        const matchedProgram = programById ?? matchProgram(nextKnowledge?.programs ?? [], nextGrow.nutrients)
         const initialProgramKey = matchedProgram?.key ?? 'custom'
         setProgramKey(initialProgramKey)
 
@@ -667,6 +674,10 @@ function componentNamesForProgram(program: NutrientProgramDto | null): string[] 
 function matchProgram(programs: NutrientProgramDto[], nutrients: string | null | undefined): NutrientProgramDto | null {
   const text = (nutrients ?? '').toLowerCase()
   if (!text) return null
+  // Fork AI: exakter Namens-/Key-Treffer zuerst, damit ein laengerer Name
+  // („SKX Canna Aqua …") nicht vom kuerzeren Teilstring („Canna Aqua") geschlagen wird.
+  const exact = programs.find((program) => program.name.toLowerCase() === text || program.key.toLowerCase() === text)
+  if (exact) return exact
   return programs.find((program) => {
     const haystack = `${program.key} ${program.name} ${program.manufacturer}`.toLowerCase()
     return haystack.includes(text) || text.includes(program.key.toLowerCase()) || text.includes(program.name.toLowerCase()) || text.includes(program.manufacturer.toLowerCase())
