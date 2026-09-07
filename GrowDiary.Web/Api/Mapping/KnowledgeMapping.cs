@@ -20,7 +20,16 @@ public static class KnowledgeMapping
             stage.Dose,
             stage.Target,
             stage.Notes)).ToList(),
-        Tips: program.Tips.ToList()
+        Tips: program.Tips.ToList(),
+        FeedChart: program.FeedChart is { Columns.Count: > 0 } chart
+            ? new FeedChartDto(
+                chart.Unit,
+                chart.Note,
+                chart.Columns.Select(c => new FeedChartColumnDto(
+                    c.Id, c.Label, c.Stage, c.Week,
+                    c.Items.Select(i => new FeedChartItemDto(i.Component, i.MinMlPerLiter, i.MaxMlPerLiter)).ToList(),
+                    c.EcTarget, c.PhMin, c.PhMax)).ToList())
+            : null
     );
 
     public static MediumPlaybookDto ToDto(this MediumPlaybook playbook) => new(
