@@ -5,6 +5,38 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.2
+
+**Fork AI.** Neues Düngeprogramm **„SKX Canna Aqua (R/DWC Growplan Rev.01)"**
+unter Wissen → Düngeprogramme. Das bestehende „Canna Aqua" bleibt unverändert.
+
+### Was Sie sehen
+
+- Neu — **Wochen-Feed-Chart nach SKX:** 14 Spalten (Root, Vega 1–4,
+  Flores 1–8, Flush) mit CalMag Agent, Aqua Vega/Flores A+B, Rhizotonic,
+  Cannazym, PK 13/14 und Cannaboost in ml je Liter (Plan: ml je 10 L ÷ 10),
+  dazu Ziel-EC und Ziel-pH je Woche.
+- Neu — die Regeln aus den Fußnoten des Plans als Text: Addback ±0,1 EC,
+  pH-Korrektur erst außerhalb 5,5–6,5, DWC +30 %, Strain-EC-Korridore,
+  CO₂/PPFD-Hinweise, CalMag-Blattdüngung, Flush-Kriterien.
+
+### Technik
+
+- Datei `knowledge-defaults/nutrient-programs/skx-canna-aqua.json`; wird beim
+  Start automatisch in die Wissensdatenbank übernommen, eigene Anpassungen
+  bleiben erhalten.
+
+## 2.0.0-forkai.1
+
+**Fork AI.** Erster Stand des Ablegers von Grow OS (Nerdstreak, MIT).
+Läuft als eigenes Add-on **„Grow OS Fork AI"** parallel zum Original.
+
+### Technik
+
+- Eigener Add-on-Slug `grow_os_fork_ai`, eigenes Image
+  `ghcr.io/bru-u-kno/grow-operation-system_fork_ai`, eigenes Add-on-Repository.
+- Keine funktionalen Änderungen gegenüber 2.0.0-beta.65.
+
 ## 2.0.0-beta.65
 
 **Beta.** Ein Aufräum-Release. Die App hatte Endpunkte, die niemand ruft, Code,
