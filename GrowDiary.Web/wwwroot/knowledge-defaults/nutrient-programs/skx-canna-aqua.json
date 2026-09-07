@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "id": "skx-canna-aqua",
-  "name": "SKX Canna Aqua (R/DWC Growplan Rev.01)",
+  "name": "SKX Canna Aqua",
   "manufacturer": "Canna · Schema: SKX-RDWC",
   "category": "Mineralisch • RDWC/DWC • Weichwasser/Osmose",
   "summary": "Wochengenaues Canna-Aqua-Schema nach dem R/DWC Growplan by SKX-RDWC Rev.01: 14 Spalten von Root über Vega 1–4 und Flores 1–8 bis Flush, mit ml je Liter, Ziel-EC und Ziel-pH je Woche. Ausgelegt auf Osmosewasser (0,0 mS), das mit CalMag Agent aufbereitet wird.",
