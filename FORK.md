@@ -12,6 +12,7 @@ läuft parallel zum Original, eigene Datenbank, eigenes Image.
 | Seit | Funktion | Wo | Dateien |
 |---|---|---|---|
 | forkai.2 | Düngeprogramm **„SKX Canna Aqua (R/DWC Growplan Rev.01)"** mit 14-Spalten-Wochen-Feed-Chart (Root, Vega 1–4, Flores 1–8, Flush; ml/L, Ziel-EC, Ziel-pH) und den Plan-Regeln als Text | Wissen → Düngeprogramme | `GrowDiary.Web/wwwroot/knowledge-defaults/nutrient-programs/skx-canna-aqua.json` |
+| forkai.3 | Bugfix: Addback-Seite zeigt das am Grow gespeicherte Programm (per Id) statt eines Teilstring-Treffers aus dem Freitext (betraf „SKX Canna Aqua“ vs. „Canna Aqua“) | Addback | `GrowDiary.React/src/pages/AddbackPage.tsx` |
 
 ## Geplant
 
