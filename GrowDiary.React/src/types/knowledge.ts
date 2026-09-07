@@ -17,6 +17,30 @@ export interface NutrientProgramDto {
   ecGuidance: string
   stages: NutrientProgramStageDto[]
   tips: string[]
+  feedChart?: FeedChartDto | null
+}
+
+export interface FeedChartItemDto {
+  component: string
+  minMlPerLiter: number
+  maxMlPerLiter: number
+}
+
+export interface FeedChartColumnDto {
+  id: string
+  label: string
+  stage: string
+  week: number | null
+  items: FeedChartItemDto[]
+  ecTarget: number | null
+  phMin: number | null
+  phMax: number | null
+}
+
+export interface FeedChartDto {
+  unit: string
+  note: string | null
+  columns: FeedChartColumnDto[]
 }
 
 export interface MediumPlaybookDto {
