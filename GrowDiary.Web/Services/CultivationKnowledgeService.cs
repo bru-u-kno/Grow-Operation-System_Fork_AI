@@ -21,7 +21,24 @@ public sealed class CultivationKnowledgeService
     public IReadOnlyList<MediumPlaybook> GetMediumPlaybooks() => _mediumPlaybooks;
 
     public NutrientProgram? MatchProgram(string? nutrientText)
-        => _programs.FirstOrDefault(x => x.Matches(nutrientText));
+    {
+        if (string.IsNullOrWhiteSpace(nutrientText)) return null;
+        var text = nutrientText.Trim();
+
+        // Fork AI: exakter Name oder Key gewinnt immer.
+        var exact = _programs.FirstOrDefault(x =>
+            string.Equals(x.Name, text, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Key, text, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null) return exact;
+
+        // Fork AI: bei mehreren Treffern der längste enthaltene Programmname —
+        // sonst fällt „SKX Canna Aqua …" auf „Canna Aqua" zurück.
+        var lower = text.ToLowerInvariant();
+        return _programs
+            .Where(x => x.Matches(text))
+            .OrderByDescending(x => lower.Contains(x.Name.ToLowerInvariant()) ? x.Name.Length : 0)
+            .FirstOrDefault();
+    }
 
     private static NutrientProgram MapProgram(NutrientProgramDefinition def) => new()
     {
