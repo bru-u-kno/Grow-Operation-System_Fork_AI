@@ -16,7 +16,32 @@ public sealed record NutrientProgramDto(
     string PhGuidance,
     string EcGuidance,
     IReadOnlyList<NutrientProgramStageDto> Stages,
-    IReadOnlyList<string> Tips
+    IReadOnlyList<string> Tips,
+    FeedChartDto? FeedChart = null
+);
+
+/// <summary>Fork AI: Wochen-Feed-Chart eines Programms für die Wissensseite (ml je Liter je Spalte).</summary>
+public sealed record FeedChartDto(
+    string Unit,
+    string? Note,
+    IReadOnlyList<FeedChartColumnDto> Columns
+);
+
+public sealed record FeedChartColumnDto(
+    string Id,
+    string Label,
+    string Stage,
+    int? Week,
+    IReadOnlyList<FeedChartItemDto> Items,
+    double? EcTarget,
+    double? PhMin,
+    double? PhMax
+);
+
+public sealed record FeedChartItemDto(
+    string Component,
+    double MinMlPerLiter,
+    double MaxMlPerLiter
 );
 
 public sealed record NutrientProgramStageDto(
