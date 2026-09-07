@@ -1,3 +1,5 @@
+using GrowDiary.Web.Services.Knowledge.Schema;
+
 namespace GrowDiary.Web.Models;
 
 public sealed class NutrientProgram
@@ -17,6 +19,8 @@ public sealed class NutrientProgram
     public List<NutrientProgramStage> Stages { get; init; } = new();
     public List<string> Tips { get; init; } = new();
     public List<string> SearchTerms { get; init; } = new();
+    /// <summary>Fork AI: Wochen-Feed-Chart der Definition (null, wenn das Programm keins hat).</summary>
+    public FeedChartDefinition? FeedChart { get; init; }
 
     // Backward-compatible aliases for older views.
     public string Description => Summary;
