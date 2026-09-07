@@ -281,6 +281,66 @@ function StageTable({ stages }: { stages: KnowledgeRecord }) {
   )
 }
 
+/* Fork AI: Wochen-Feed-Chart eines Düngeprogramms als Tabelle. Spalten = die
+   Chart-Spalten (Root, Vega 1–4, Flores 1–8, Flush …), Zeilen = Komponenten
+   in Reihenfolge ihres ersten Auftretens, darunter Ziel-EC und Ziel-pH.
+   Zahlen in ml je Liter; Spannen als „min–max". */
+function FeedChartTable({ chart }: { chart: KnowledgeRecord }) {
+  const columns = (asRecArr(chart.columns) ?? []).filter((c) => Array.isArray(c.items))
+  if (!columns.length) return null
+  const fmt = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 2 })
+  const components: string[] = []
+  columns.forEach((c) => (asRecArr(c.items) ?? []).forEach((it) => {
+    const name = asStr(it.component)
+    if (name && !components.includes(name)) components.push(name)
+  }))
+  const cell = (c: KnowledgeRecord, name: string) => {
+    const it = (asRecArr(c.items) ?? []).find((x) => asStr(x.component) === name)
+    const lo = num(it?.minMlPerLiter); const hi = num(it?.maxMlPerLiter)
+    if (lo === undefined) return '–'
+    return hi !== undefined && hi !== lo ? `${fmt(lo)}–${fmt(hi)}` : fmt(lo)
+  }
+  const ph = (c: KnowledgeRecord) => {
+    const lo = num(c.phMin); const hi = num(c.phMax)
+    if (lo === undefined && hi === undefined) return '–'
+    if (lo !== undefined && hi !== undefined && hi !== lo) return `${fmt(lo)}–${fmt(hi)}`
+    return fmt((lo ?? hi) as number)
+  }
+  const note = asStr(chart.note)
+  const unit = asStr(chart.unit) === 'mlPerLiter' ? 'ml/L' : (asStr(chart.unit) ?? '')
+  return (
+    <>
+      <div className="ix-kb-table-wrap">
+        <table className="ix-kb-table">
+          <thead>
+            <tr>
+              <th>{unit ? `Komponente (${unit})` : 'Komponente'}</th>
+              {columns.map((c) => <th key={asStr(c.id) ?? asStr(c.label)}>{asStr(c.label) ?? asStr(c.id)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {components.map((name) => (
+              <tr key={name}>
+                <td>{name}</td>
+                {columns.map((c) => <td key={asStr(c.id) ?? asStr(c.label)}>{cell(c, name)}</td>)}
+              </tr>
+            ))}
+            <tr>
+              <td><strong>Ziel-EC</strong></td>
+              {columns.map((c) => <td key={asStr(c.id) ?? asStr(c.label)}>{num(c.ecTarget) !== undefined ? fmt(num(c.ecTarget) as number) : '–'}</td>)}
+            </tr>
+            <tr>
+              <td><strong>Ziel-pH</strong></td>
+              {columns.map((c) => <td key={asStr(c.id) ?? asStr(c.label)}>{ph(c)}</td>)}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {note && <p className="ix-kb-lede" style={{ marginTop: 8 }}>{note}</p>}
+    </>
+  )
+}
+
 function ObjFacts({ obj }: { obj: KnowledgeRecord }) {
   const facts = Object.entries(obj).filter(([, v]) => asStr(v) !== undefined || num(v) !== undefined)
   if (!facts.length) return null
@@ -388,6 +448,10 @@ function RecordDetail({ category, record, index, onNavigate }: { category: Categ
   const stages = isRecord(record.stages) ? record.stages : undefined
   mark('dosage', 'application', 'stages')
 
+  // Fork AI: Wochen-Feed-Chart (Düngeprogramme)
+  const feedChart = isRecord(record.feedChart) ? record.feedChart : undefined
+  mark('feedChart')
+
   const triggers = asRecArr(record.triggers)
   const triggerTypes = triggers ? triggers.map((t) => asStr(t.type)).filter((x): x is string => !!x) : undefined
   mark('triggers')
@@ -459,6 +523,7 @@ function RecordDetail({ category, record, index, onNavigate }: { category: Categ
       {dosage && <Section title="Dosierung"><ObjFacts obj={dosage} /></Section>}
       {application && <Section title="Anwendung"><ObjFacts obj={application} /></Section>}
       {stages && <Section title="Phasen-Sollwerte"><StageTable stages={stages} /></Section>}
+      {feedChart && <Section title="Feed-Chart (je Woche)"><FeedChartTable chart={feedChart} /></Section>}
 
       {triggerTypes && triggerTypes.length > 0 && (
         <Section title="Auslöser"><BulletList items={triggerTypes.map(humanize)} /></Section>
