@@ -396,12 +396,20 @@ public sealed class EinZielbandJeMessgroesseTests : IDisposable
     }
 
     /// <summary>Die Wahl selbst — als reine Funktion, damit sie prüfbar ist.</summary>
+    // Fork AI: Seit <c>skx-canna-aqua</c> gibt es ZWEI Programme mit
+    // Blüte-Wochen. "Das erste mit Blüte-Spalten" hängt damit wieder an der
+    // Dateireihenfolge — deshalb entscheidet unter den Kandidaten die Id.
     internal static NutrientProgramDefinition? MitBlueteChart(
         IEnumerable<NutrientProgramDefinition> programme)
-        => programme.FirstOrDefault(p =>
-            p.FeedChart is { } chart
+        => programme
+            .Where(HatBlueteWochen)
+            .OrderBy(p => p.Id, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+    internal static bool HatBlueteWochen(NutrientProgramDefinition p)
+        => p.FeedChart is { } chart
             && chart.Columns.Any(c =>
-                string.Equals(c.Stage, "Flower", StringComparison.OrdinalIgnoreCase) && c.Week is not null));
+                string.Equals(c.Stage, "Flower", StringComparison.OrdinalIgnoreCase) && c.Week is not null);
 
     /// <summary>
     /// Die Wahl überlebt eine andere Dateireihenfolge — und die alte nicht.
@@ -440,17 +448,23 @@ public sealed class EinZielbandJeMessgroesseTests : IDisposable
             + "haengt weiter an der Reihenfolge, in der die Dateien gelesen wurden.");
 
         // Und der Nachweis, dass die Umkehrung den alten Fehler wirklich
-        // ausloest: die ALTE Wahl (schlicht der erste Eintrag) liefert
+        // ausloest: eine schlicht reihenfolgeabhaengige Wahl liefert
         // rueckwaerts ein anderes Programm. Ohne diesen Teil waere oben nicht
         // belegt, dass ueberhaupt etwas auf dem Spiel steht.
-        var alteWahlVorwaerts = programme[0];
-        var alteWahlRueckwaerts = programme.Reverse().First();
+        //
+        // Fork AI: Im Original hatte nur athena Bluete-Spalten, die alte Wahl
+        // war "erster Eintrag". Im Fork hat auch skx-canna-aqua Bluete-Wochen;
+        // dann ist "erster Eintrag MIT Bluete-Spalten" die Wahl, die kippt.
+        var kandidaten = programme.Where(HatBlueteWochen).ToList();
+        var alteWahlVorwaerts = kandidaten.Count >= 2 ? kandidaten[0] : programme[0];
+        var alteWahlRueckwaerts = kandidaten.Count >= 2 ? kandidaten[^1] : programme.Reverse().First();
         Assert.True(alteWahlVorwaerts.Id != alteWahlRueckwaerts.Id,
             "Vorwaerts und rueckwaerts steht dasselbe Programm vorn — dann zeigt die "
             + "Umkehrung den Fehler gar nicht, den dieser Fall belegen soll.");
         Assert.True(
-            MitBlueteChart(new[] { alteWahlRueckwaerts })?.Id != alteWahlRueckwaerts.Id
-            || MitBlueteChart(new[] { alteWahlVorwaerts })?.Id != alteWahlVorwaerts.Id,
+            kandidaten.Count >= 2
+            || !HatBlueteWochen(alteWahlRueckwaerts)
+            || !HatBlueteWochen(alteWahlVorwaerts),
             $"Sowohl {alteWahlVorwaerts.Id} als auch {alteWahlRueckwaerts.Id} haben "
             + "Bluete-Spalten — dann waere die alte Wahl in beiden Richtungen tauglich "
             + "gewesen, und der CI-Ausfall haette eine andere Ursache gehabt.");
