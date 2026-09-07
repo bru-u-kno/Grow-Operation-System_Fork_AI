@@ -59,15 +59,38 @@ public sealed class NutrientProgramMigrationTests : IDisposable
     }
 
     [Fact]
-    public void Loader_LoadsAllThreeNutrientPrograms()
+    public void Loader_LoadsAllFourNutrientPrograms()
     {
-        Assert.Equal(3, _loader.NutrientPrograms.Count);
+        // Fork AI: Athena, Canna Aqua, Hydro Research VBX + SKX Canna Aqua.
+        Assert.Equal(4, _loader.NutrientPrograms.Count);
     }
 
     [Fact]
     public void CultivationKnowledgeService_ExposesAllPrograms()
     {
-        Assert.Equal(3, _svc.GetPrograms().Count);
+        Assert.Equal(4, _svc.GetPrograms().Count);
+    }
+
+    [Fact]
+    public void CultivationKnowledgeService_SkxCannaAqua_HasFourteenWeekColumns()
+    {
+        // Fork AI: Root, Vega 1–4, Flores 1–8, Flush — das SKX-Schema in ml je Liter.
+        var skx = _svc.GetPrograms().Single(p => p.Key == "skx-canna-aqua");
+        Assert.NotNull(skx.FeedChart);
+        Assert.Equal(14, skx.FeedChart!.Columns.Count);
+        var flores3 = skx.FeedChart.Columns.Single(c => c.Id == "flower-w3");
+        Assert.Equal(1.2, flores3.EcTarget);
+        Assert.Equal(2.2, flores3.Items.Single(i => i.Component == "Aqua Flores A").MinMlPerLiter);
+    }
+
+    [Fact]
+    public void CultivationKnowledgeService_MatchProgram_ExactSkxNameWinsOverCannaSubstring()
+    {
+        // Fork AI: „SKX Canna Aqua" enthält „Canna Aqua" — der Freitext-Treffer darf
+        // trotzdem nicht auf das Original zurückfallen, wenn der Name exakt passt.
+        var match = _svc.MatchProgram("SKX Canna Aqua");
+        Assert.NotNull(match);
+        Assert.Equal("skx-canna-aqua", match.Key);
     }
 
     [Fact]
