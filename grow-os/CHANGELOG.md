@@ -5,6 +5,10 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.4
+
+**Fork AI.** Das Düngeprogramm heißt jetzt kurz **„SKX Canna Aqua“** (statt „SKX Canna Aqua (R/DWC Growplan Rev.01)“). Die Quelle steht weiterhin in der Beschreibung.
+
 ## 2.0.0-forkai.3
 
 **Fork AI.** Ein Anzeigefehler auf der Addback-Seite.
