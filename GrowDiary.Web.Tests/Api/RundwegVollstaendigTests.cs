@@ -73,6 +73,8 @@ public sealed class RundwegVollstaendigTests
 
         // Einzelstuecke: es gibt sie genau einmal, ohne Id.
         new("Kosten", null, "/api/costs/settings", typeof(CostsApiController.KostenEinstellungenRequest)),
+        // Fork AI (forkai.6): welche HA-Entitaeten den Strom liefern.
+        new("Strom-Quelle", null, "/api/kosten/strom-quelle", typeof(GrowDiary.Web.Models.StromQuelle)),
         new("Wasserprofil", null, "/api/water-profile", typeof(GrowDiary.Web.Models.WaterProfile)),
         new("Benachrichtigungen", null, "/api/notifications/settings", typeof(NotificationSettingsDto)),
     ];
@@ -266,6 +268,15 @@ public sealed class RundwegVollstaendigTests
         ["UpdateAutoMeasurementConfigRequest"] =
             "Der Demobestand legt keine Auto-Messung an; ohne Bestand faehrt der "
             + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen.",
+        // Fork AI (forkai.6)
+        ["ArtikelRequest"] =
+            "Der Demobestand legt keinen Verbrauchsartikel an; ohne Bestand faehrt der "
+            + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen. Die Felder "
+            + "fahren KostenSeiteTests und die Oberflaechen-Erfassung.",
+        ["NachfuellungUpdateRequest"] =
+            "Der Demobestand legt keine Nachfuellung an; ohne Bestand faehrt der Rundweg "
+            + "ins Leere und waere gruen, ohne etwas zu pruefen. Der Vertrag ist fuer den "
+            + "Grow-MCP und die API gedacht; die Oberflaeche loescht und erfasst neu.",
         ["ReplaceAutoMeasurementFieldMappingsRequest"] =
             "Traegt nur eine Liste von Zuordnungen — kein Feld, das einzeln "
             + "zurueckkommen muesste. Fuer Listen braucht es einen eigenen Bauplan.",

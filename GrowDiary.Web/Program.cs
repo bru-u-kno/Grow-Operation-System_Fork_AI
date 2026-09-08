@@ -104,6 +104,9 @@ builder.Services.AddSingleton<NotificationSettingsRepository>();
 builder.Services.AddSingleton<AppSettingsRepository>();
 builder.Services.AddSingleton<WaterProfileStore>();
 builder.Services.AddScoped<GrowCostService>();
+// Fork AI (forkai.6): Kosten-Seite
+builder.Services.AddSingleton<KostenRepository>();
+builder.Services.AddScoped<KostenSeiteService>();
 builder.Services.AddScoped<MischplanService>();
 builder.Services.AddScoped<SopDueService>();
 builder.Services.AddScoped<WasserwechselStandService>();
@@ -129,6 +132,7 @@ builder.Services.AddHostedService<DosingWorker>();
 // Eigener Minutentakt und NICHT an der Lichtflanke: die haengt zweimal am Tag,
 // die Wassertemperatur wandert dazwischen.
 builder.Services.AddHostedService<KuehlerWorker>();
+builder.Services.AddHostedService<ZaehlerstandWorker>(); // Fork AI (forkai.6)
 
 var defaultUrls = builder.Configuration["Hosting:DefaultUrls"];
 if (!string.IsNullOrWhiteSpace(defaultUrls))
