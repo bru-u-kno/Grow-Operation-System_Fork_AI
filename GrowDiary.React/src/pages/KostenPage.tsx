@@ -5,7 +5,7 @@ import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skele
 import { euro, tage } from '../features/kosten/kosten-typen'
 import type { EntitaetTest, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
 import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../utils'
-import { istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
+import { feldText, istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import { phaseName } from '../deutsche-woerter'
 import '../features/kosten/kosten.css'
 
@@ -370,7 +370,12 @@ function anlassText(anlass: Zaehlerstand['anlass']): string {
 
 function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: KostenArtikel; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
   const [busy, setBusy] = useState(false)
+  const [bearbeiten, setBearbeiten] = useState(false)
   const a = artikel.aktuell
+
+  if (bearbeiten) {
+    return <ArtikelForm artikel={artikel} onDone={(text) => { setBearbeiten(false); onChanged(text) }} onError={onError} onCancel={() => setBearbeiten(false)} />
+  }
 
   async function leerMarkieren() {
     if (!a) return
@@ -406,6 +411,12 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
         <strong>{artikel.name}</strong>
         {a ? <span className="ls-pill">Tag {a.tag}{a.prognoseTage != null && <> von ≈ {Math.round(a.prognoseTage)}</>}</span> : <span className="ls-pill is-plan">leer</span>}
       </div>
+      {(artikel.hersteller || artikel.produkt || artikel.preisEur != null) && (
+        <p className="ko-artikel-fakten">
+          {[artikel.hersteller, artikel.produkt].filter(Boolean).join(' · ')}
+          {artikel.preisEur != null && <>{(artikel.hersteller || artikel.produkt) ? ' · ' : ''}{euro(artikel.preisEur)} je {artikel.gebinde != null ? `${formatNumber(artikel.gebinde, 2)} ${artikel.einheit}` : 'Gebinde'}</>}
+        </p>
+      )}
 
       {a ? (
         <>
@@ -432,6 +443,7 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
       <div className="ko-artikel-aktionen">
         <button type="button" className="ls-btn is-small is-primary" disabled={busy} onClick={onErfassen}>Nachfüllung erfassen</button>
         {a && <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => void leerMarkieren()}>Als leer markieren</button>}
+        <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => setBearbeiten(true)}>Bearbeiten</button>
         <button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen()}>Löschen</button>
       </div>
       </div>
@@ -439,22 +451,36 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
   )
 }
 
-function ArtikelForm({ onDone, onError }: { onDone: (text: string) => void; onError: (text: string) => void }) {
-  const [name, setName] = useState('')
-  const [einheit, setEinheit] = useState('kg')
-  const [gebinde, setGebinde] = useState('')
-  const [notiz, setNotiz] = useState('')
+/** Anlegen oder — mit `artikel` — Bearbeiten; dieselben Felder, derselbe Vertrag. */
+function ArtikelForm({ artikel, onDone, onError, onCancel }: { artikel?: KostenArtikel; onDone: (text: string) => void; onError: (text: string) => void; onCancel?: () => void }) {
+  const [name, setName] = useState(artikel?.name ?? '')
+  const [hersteller, setHersteller] = useState(artikel?.hersteller ?? '')
+  const [produkt, setProdukt] = useState(artikel?.produkt ?? '')
+  const [einheit, setEinheit] = useState(artikel?.einheit ?? 'kg')
+  const [gebinde, setGebinde] = useState(feldText(artikel?.gebinde))
+  const [preis, setPreis] = useState(feldText(artikel?.preisEur))
+  const [notiz, setNotiz] = useState(artikel?.notiz ?? '')
   const [busy, setBusy] = useState(false)
 
   async function speichern() {
     if (istUnlesbar(gebinde)) { onError('Gebindegröße ist keine Zahl.'); return }
+    if (istUnlesbar(preis)) { onError('Preis ist keine Zahl.'); return }
     setBusy(true)
     try {
-      await apiFetch('/api/kosten/artikel', {
-        method: 'POST',
-        body: JSON.stringify({ name: name.trim(), einheit: einheit.trim() || 'kg', gebinde: zahlOderNull(gebinde), notiz: notiz.trim() || null, aktiv: true }),
+      await apiFetch(artikel ? `/api/kosten/artikel/${artikel.id}` : '/api/kosten/artikel', {
+        method: artikel ? 'PUT' : 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          hersteller: hersteller.trim() || null,
+          produkt: produkt.trim() || null,
+          preisEur: zahlOderNull(preis),
+          einheit: einheit.trim() || 'kg',
+          gebinde: zahlOderNull(gebinde),
+          notiz: notiz.trim() || null,
+          aktiv: artikel?.aktiv ?? true,
+        }),
       })
-      onDone(`${name.trim()} angelegt — jetzt die erste Füllung erfassen.`)
+      onDone(artikel ? `${name.trim()} gespeichert.` : `${name.trim()} angelegt — jetzt die erste Füllung erfassen.`)
     } catch (caught) {
       onError(formatApiError(caught, 'Artikel konnte nicht angelegt werden.'))
     } finally {
@@ -465,8 +491,14 @@ function ArtikelForm({ onDone, onError }: { onDone: (text: string) => void; onEr
   return (
     <V1Card className="ko-form"><div className="ko-form-inhalt" data-audit="kosten-artikel-form">
       <div className="v1-form-grid">
-        <V1Field label="Name" wide>
+        <V1Field label="Anzeigename" hint="so heißt der Artikel in Karten, Tabellen und im Journal" wide>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="CO₂-Flasche 10 kg" />
+        </V1Field>
+        <V1Field label="Hersteller">
+          <input type="text" value={hersteller} onChange={(e) => setHersteller(e.target.value)} placeholder="Linde, Canna …" />
+        </V1Field>
+        <V1Field label="Produktbezeichnung">
+          <input type="text" value={produkt} onChange={(e) => setProdukt(e.target.value)} placeholder="Kohlendioxid E290, Aqua Vega A …" />
         </V1Field>
         <V1Field label="Einheit" hint="kg, L, ml — wie du die Menge nennst">
           <input type="text" value={einheit} onChange={(e) => setEinheit(e.target.value)} placeholder="kg" />
@@ -474,12 +506,16 @@ function ArtikelForm({ onDone, onError }: { onDone: (text: string) => void; onEr
         <V1Field label="Gebinde" hint="Menge eines vollen Gebindes; belegt die Erfassung vor">
           <input type="text" inputMode="decimal" value={gebinde} onChange={(e) => setGebinde(e.target.value)} placeholder="10" />
         </V1Field>
+        <V1Field label="Preis je Gebinde (€)" hint="belegt die Kosten beim Erfassen vor; pro Füllung änderbar">
+          <input type="text" inputMode="decimal" value={preis} onChange={(e) => setPreis(e.target.value)} placeholder="36,75" />
+        </V1Field>
         <V1Field label="Notiz" wide>
           <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Tauschflasche, Lieferant …" />
         </V1Field>
       </div>
       <div className="v1-form-actions">
-        <V1Button variant="primary" onClick={() => void speichern()} disabled={busy || istLeer(name)} audit="kosten-artikel-speichern">Artikel anlegen</V1Button>
+        <V1Button variant="primary" onClick={() => void speichern()} disabled={busy || istLeer(name)} audit="kosten-artikel-speichern">{artikel ? 'Speichern' : 'Artikel anlegen'}</V1Button>
+        {onCancel && <V1Button onClick={onCancel} disabled={busy}>Abbrechen</V1Button>}
       </div>
       </div>
     </V1Card>
@@ -502,8 +538,8 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
   const [artikelId, setArtikelId] = useState<number>(artikel.some((a) => a.id === vorbelegtArtikelId) ? vorbelegtArtikelId : (artikel[0]?.id ?? 0))
   const gewaehlt = artikel.find((a) => a.id === artikelId)
   const [zeitpunkt, setZeitpunkt] = useState(toLocalInputValue())
-  const [menge, setMenge] = useState(gewaehlt?.gebinde != null ? String(gewaehlt.gebinde).replace('.', ',') : '')
-  const [kosten, setKosten] = useState('')
+  const [menge, setMenge] = useState(gewaehlt?.gebinde != null ? feldText(gewaehlt.gebinde) : '')
+  const [kosten, setKosten] = useState(gewaehlt?.preisEur != null ? feldText(gewaehlt.preisEur) : '')
   const [notiz, setNotiz] = useState('')
   const [vorherigeLeer, setVorherigeLeer] = useState(true)
   const [journal, setJournal] = useState(true)
@@ -516,7 +552,8 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
 
   useEffect(() => {
     const a = artikel.find((x) => x.id === artikelId)
-    if (a?.gebinde != null) setMenge(String(a.gebinde).replace('.', ','))
+    if (a?.gebinde != null) setMenge(feldText(a.gebinde))
+    if (a?.preisEur != null) setKosten(feldText(a.preisEur))
   }, [artikelId, artikel])
 
   const mengeZahl = zahlOderNull(menge)
@@ -576,7 +613,7 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
           <V1Field label={`Menge${gewaehlt ? ` (${gewaehlt.einheit})` : ''}`}>
             <input type="text" inputMode="decimal" value={menge} onChange={(e) => setMenge(e.target.value)} placeholder="10" />
           </V1Field>
-          <V1Field label="Kosten (€)" hint="was die Füllung gekostet hat; leer, wenn unbekannt">
+          <V1Field label="Kosten (€)" hint={gewaehlt?.preisEur != null ? `vorbelegt mit dem Gebindepreis ${euro(gewaehlt.preisEur)}` : 'was die Füllung gekostet hat; leer, wenn unbekannt'}>
             <input type="text" inputMode="decimal" value={kosten} onChange={(e) => setKosten(e.target.value)} placeholder="34,90" />
           </V1Field>
           <V1Field label="Notiz" wide>

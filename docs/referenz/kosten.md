@@ -29,8 +29,10 @@ der laufende Grow seine Phase wechselt (Klick **oder** Kalender — der Worker
 vergleicht mit `GrowStageResolver`, nicht mit dem Speichern-Knopf). Die Seite
 rechnet nur noch Differenzen zwischen Ständen.
 
-**Verbrauchsartikel.** Ein Artikel ist etwas, das leer wird: Name, Einheit,
-Gebindegröße. Eine **Nachfüllung** ist Datum, Menge, Kosten, Notiz, Grow. Beim
+**Verbrauchsartikel.** Ein Artikel ist etwas, das leer wird: Anzeigename,
+Hersteller, Produktbezeichnung, Einheit, Gebindegröße und Preis je Gebinde
+(forkai.8). Gebinde und Preis belegen die Erfassung vor — jede Füllung darf
+davon abweichen. Eine **Nachfüllung** ist Datum, Menge, Kosten, Notiz, Grow. Beim
 Erfassen ist „Vorherige Füllung damit als leer markieren“ vorbelegt — die neue
 Flasche hängt ja dran, die alte nicht mehr. Aus dem Leer-Zeitpunkt entsteht
 die **Laufzeit** der alten Füllung; daraus die Prognose für die neue. Auf

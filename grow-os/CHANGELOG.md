@@ -5,6 +5,23 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.8
+
+**Fork AI.** Verbrauchsartikel bekommen Stammdaten.
+
+### Was Sie sehen
+
+- Ein Artikel hat jetzt **Anzeigename**, **Hersteller**, **Produktbezeichnung** und einen
+  **Preis je Gebinde**. Gebinde und Preis belegen die Erfassung einer Nachfüllung vor —
+  jede Füllung darf davon abweichen.
+- Artikel lassen sich auf der Karte **bearbeiten**.
+
+### Technik
+
+- `ForkVerbrauchsartikel` bekommt die Spalten `Hersteller`, `Produkt`, `PreisEur`; das
+  Repository zieht sie beim ersten Zugriff nach (`ALTER TABLE`, einmalig, ohne Datenverlust).
+- `POST/PUT /api/kosten/artikel` nehmen die neuen Felder entgegen; `GET /api/kosten` liefert sie.
+
 ## 2.0.0-forkai.7
 
 **Fork AI.** Die Kosten-Seite sieht jetzt aus wie der Rest der App.

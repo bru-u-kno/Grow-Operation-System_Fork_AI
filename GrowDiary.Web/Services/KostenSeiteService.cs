@@ -50,6 +50,9 @@ public sealed record KostenFuellungAktuell(
 public sealed record KostenArtikel(
     int Id,
     string Name,
+    string? Hersteller,
+    string? Produkt,
+    double? PreisEur,
     string Einheit,
     double? Gebinde,
     int? TentId,
@@ -407,7 +410,7 @@ public sealed class KostenSeiteService
         }
 
         return new KostenArtikel(
-            a.Id, a.Name, a.Einheit, a.Gebinde, a.TentId, a.Notiz, a.Aktiv, aktuell,
+            a.Id, a.Name, a.Hersteller, a.Produkt, a.PreisEur, a.Einheit, a.Gebinde, a.TentId, a.Notiz, a.Aktiv, aktuell,
             eigene.Count, mittlereLaufzeit,
             growId is { } g ? eigene.Where(f => f.GrowId == g).Sum(f => f.KostenEur ?? 0) : 0);
     }

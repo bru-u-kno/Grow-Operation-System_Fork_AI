@@ -91,7 +91,12 @@ public sealed class KostenApiController : ApiControllerBase
 
     public sealed class ArtikelRequest
     {
+        /// <summary>Anzeigename.</summary>
         public string Name { get; set; } = string.Empty;
+        public string? Hersteller { get; set; }
+        public string? Produkt { get; set; }
+        /// <summary>Preis eines vollen Gebindes; belegt die Kosten beim Erfassen vor.</summary>
+        public double? PreisEur { get; set; }
         public string Einheit { get; set; } = "kg";
         public double? Gebinde { get; set; }
         public int? TentId { get; set; }
@@ -110,7 +115,8 @@ public sealed class KostenApiController : ApiControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Der Artikel braucht einen Namen.");
         if (request.Gebinde is <= 0) return BadRequestError("gebinde_invalid", "Das Gebinde muss größer als 0 sein.");
-        var artikel = new Verbrauchsartikel { Name = request.Name, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv };
+        if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
+        var artikel = new Verbrauchsartikel { Name = request.Name, Hersteller = request.Hersteller, Produkt = request.Produkt, PreisEur = request.PreisEur, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv };
         artikel.Id = _repo.CreateArtikel(artikel);
         return Created($"/api/kosten/artikel/{artikel.Id}", _repo.GetArtikel(artikel.Id));
     }
@@ -124,7 +130,11 @@ public sealed class KostenApiController : ApiControllerBase
         if (artikel is null) return NotFoundError("artikel_not_found", $"Verbrauchsartikel {id} existiert nicht.");
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Der Artikel braucht einen Namen.");
         if (request.Gebinde is <= 0) return BadRequestError("gebinde_invalid", "Das Gebinde muss größer als 0 sein.");
+        if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
         artikel.Name = request.Name;
+        artikel.Hersteller = request.Hersteller;
+        artikel.Produkt = request.Produkt;
+        artikel.PreisEur = request.PreisEur;
         artikel.Einheit = request.Einheit;
         artikel.Gebinde = request.Gebinde;
         artikel.TentId = request.TentId;

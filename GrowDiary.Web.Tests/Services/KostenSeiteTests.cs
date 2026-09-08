@@ -119,7 +119,7 @@ public sealed class KostenSeiteTests
     [Fact]
     public void DieFlaschePrognostiziertAusDerLetztenLaufzeit()
     {
-        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂-Flasche 10 kg", Einheit = "kg", Gebinde = 10 };
+        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂-Flasche 10 kg", Hersteller = "Linde", Produkt = "Kohlendioxid E290", PreisEur = 36.75, Einheit = "kg", Gebinde = 10 };
         var vorherige = new Nachfuellung
         {
             Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 34.90, GrowId = 1,
@@ -138,6 +138,10 @@ public sealed class KostenSeiteTests
         var a = Assert.Single(seite.Artikel);
         Assert.Equal(42, a.MittlereLaufzeitTage!.Value, precision: 3);
         Assert.Equal(69.80, a.SummeEurImGrow, precision: 2);
+        // forkai.8: Stammdaten kommen unverändert durch — die Oberfläche belegt damit vor.
+        Assert.Equal("Linde", a.Hersteller);
+        Assert.Equal("Kohlendioxid E290", a.Produkt);
+        Assert.Equal(36.75, a.PreisEur!.Value, precision: 2);
 
         var f = a.Aktuell!;
         Assert.Equal(2, f.Tag);

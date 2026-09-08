@@ -65,7 +65,12 @@ export type KostenFuellungAktuell = {
 
 export type KostenArtikel = {
   id: number
+  /** Anzeigename */
   name: string
+  hersteller: string | null
+  produkt: string | null
+  /** Preis eines vollen Gebindes — belegt die Kosten beim Erfassen vor */
+  preisEur: number | null
   einheit: string
   gebinde: number | null
   tentId: number | null

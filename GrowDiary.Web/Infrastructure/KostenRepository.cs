@@ -71,8 +71,33 @@ public sealed class KostenRepository : RepositoryBase
                 CREATE INDEX IF NOT EXISTS IX_ForkZaehlerstaende_Zeit ON ForkZaehlerstaende(ZeitpunktUtc);
                 """;
             command.ExecuteNonQuery();
+
+            // forkai.8: drei Spalten nachgezogen. SQLite kennt kein
+            // „ADD COLUMN IF NOT EXISTS", also erst nachsehen — das läuft auf
+            // jeder Installation genau einmal.
+            foreach (var (spalte, typ) in new[] { ("Hersteller", "TEXT NULL"), ("Produkt", "TEXT NULL"), ("PreisEur", "REAL NULL") })
+            {
+                if (!SpalteVorhanden(connection, "ForkVerbrauchsartikel", spalte))
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = $"ALTER TABLE ForkVerbrauchsartikel ADD COLUMN {spalte} {typ};";
+                    alter.ExecuteNonQuery();
+                }
+            }
             _schemaEnsured = true;
         }
+    }
+
+    private static bool SpalteVorhanden(SqliteConnection connection, string tabelle, string spalte)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({tabelle});";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader["name"].ToString(), spalte, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- Artikel
@@ -105,8 +130,8 @@ public sealed class KostenRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkVerbrauchsartikel (Name, Einheit, Gebinde, TentId, Notiz, Aktiv, CreatedAtUtc)
-            VALUES ($name, $einheit, $gebinde, $tentId, $notiz, $aktiv, $createdAtUtc);
+            INSERT INTO ForkVerbrauchsartikel (Name, Hersteller, Produkt, PreisEur, Einheit, Gebinde, TentId, Notiz, Aktiv, CreatedAtUtc)
+            VALUES ($name, $hersteller, $produkt, $preisEur, $einheit, $gebinde, $tentId, $notiz, $aktiv, $createdAtUtc);
             SELECT last_insert_rowid();
             """;
         BindArtikel(command, artikel);
@@ -120,7 +145,7 @@ public sealed class KostenRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE ForkVerbrauchsartikel
-            SET Name = $name, Einheit = $einheit, Gebinde = $gebinde, TentId = $tentId, Notiz = $notiz, Aktiv = $aktiv
+            SET Name = $name, Hersteller = $hersteller, Produkt = $produkt, PreisEur = $preisEur, Einheit = $einheit, Gebinde = $gebinde, TentId = $tentId, Notiz = $notiz, Aktiv = $aktiv
             WHERE Id = $id;
             """;
         BindArtikel(command, artikel);
@@ -140,6 +165,9 @@ public sealed class KostenRepository : RepositoryBase
     private static void BindArtikel(SqliteCommand command, Verbrauchsartikel artikel)
     {
         command.Parameters.AddWithValue("$name", artikel.Name.Trim());
+        command.Parameters.AddWithValue("$hersteller", (object?)NormalizeOptional(artikel.Hersteller) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$produkt", (object?)NormalizeOptional(artikel.Produkt) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$preisEur", (object?)artikel.PreisEur ?? DBNull.Value);
         command.Parameters.AddWithValue("$einheit", string.IsNullOrWhiteSpace(artikel.Einheit) ? "kg" : artikel.Einheit.Trim());
         command.Parameters.AddWithValue("$gebinde", (object?)artikel.Gebinde ?? DBNull.Value);
         command.Parameters.AddWithValue("$tentId", (object?)artikel.TentId ?? DBNull.Value);
@@ -151,6 +179,9 @@ public sealed class KostenRepository : RepositoryBase
     {
         Id = Convert.ToInt32(reader["Id"], CultureInfo.InvariantCulture),
         Name = reader["Name"].ToString() ?? string.Empty,
+        Hersteller = NullString(reader["Hersteller"]),
+        Produkt = NullString(reader["Produkt"]),
+        PreisEur = NullableDouble(reader["PreisEur"]),
         Einheit = reader["Einheit"].ToString() ?? "kg",
         Gebinde = NullableDouble(reader["Gebinde"]),
         TentId = reader["TentId"] is DBNull ? null : Convert.ToInt32(reader["TentId"], CultureInfo.InvariantCulture),

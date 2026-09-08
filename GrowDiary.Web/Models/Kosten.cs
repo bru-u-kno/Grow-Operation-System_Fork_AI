@@ -10,7 +10,18 @@ namespace GrowDiary.Web.Models;
 public sealed class Verbrauchsartikel
 {
     public int Id { get; set; }
+
+    /// <summary>Anzeigename — so heißt der Artikel in Listen, Karten und im Journal.</summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Wer es herstellt (forkai.8), z. B. „Linde", „Canna".</summary>
+    public string? Hersteller { get; set; }
+
+    /// <summary>Die Produktbezeichnung des Herstellers (forkai.8), z. B. „Aqua Vega A".</summary>
+    public string? Produkt { get; set; }
+
+    /// <summary>Preis eines vollen Gebindes (forkai.8) — belegt die Kosten beim Erfassen vor.</summary>
+    public double? PreisEur { get; set; }
 
     /// <summary>Einheit der Menge, wie der Nutzer sie nennt: „kg", „L", „ml".</summary>
     public string Einheit { get; set; } = "kg";
