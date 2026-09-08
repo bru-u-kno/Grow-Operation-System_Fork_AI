@@ -1,6 +1,6 @@
 # Referenz — was die App tut und warum
 
-> Zehn Nachschlagseiten, eine je Bereich. Jede hat dieselben Abschnitte in
+> Elf Nachschlagseiten, eine je Bereich. Jede hat dieselben Abschnitte in
 > derselben Reihenfolge: **Wo in der App · Was es tut · Die Zahlen und woher sie
 > kommen · Was es bewusst NICHT tut · Im Code · Fallen.**
 
@@ -33,6 +33,8 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | Wie die Pheno-Punktzahl gewichtet wird | [grows-sorten-pflanzen.md](grows-sorten-pflanzen.md) |
 | Wann ein Glas gelüftet werden muss und wie lange | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) |
 | Was in der Kostenzahl im Archiv steckt — und was bewusst nicht | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) |
+| Wie lange die CO₂-Flasche noch hält und was der Strom vom Zähler kostet (Fork AI) | [kosten.md](kosten.md) |
+| Warum die Stromzahl auf `/kosten` nicht die aus dem Archiv ist | [kosten.md](kosten.md) |
 | Warum die Reservoir-Alarme nach der Ernte schweigen | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) |
 | Wie aus Zentimetern am eTape ein Literwert wird | [zelte-hydro-wasser.md](zelte-hydro-wasser.md) |
 | Ob die Luftpumpe für das Beckenvolumen reicht | [zelte-hydro-wasser.md](zelte-hydro-wasser.md) |
@@ -46,7 +48,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | Warum überhaupt keine Erinnerungen mehr kommen | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
 | Was eine eigene KI von Grow OS lesen darf — und warum sie nichts schalten kann | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
 
-## Die zehn Seiten
+## Die elf Seiten
 
 | Seite | Worum es geht |
 |---|---|
@@ -60,6 +62,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | [zelte-hydro-wasser.md](zelte-hydro-wasser.md) | Die Anlage: Zelte, Hydro-Systeme, eTape-Kalibrierung, Wasserprofil |
 | [home-assistant-und-automatik.md](home-assistant-und-automatik.md) | Anbindung, Entitäts-Zuordnung, Grenzwerte, Push, die fünf Hintergrunddienste |
 | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) | Aufgabenseite, Journal und Fotos, Grow MCP, Mappe für eigene KI |
+| [kosten.md](kosten.md) | Fork AI: Strom aus HA-Zählerständen je Grow und Phase, Verbrauchsartikel mit Nachfüllungen, Laufzeit-Prognose, Kosten je Tag/Pflanze |
 
 ## Wenn nichts davon passt
 
