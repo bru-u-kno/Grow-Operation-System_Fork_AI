@@ -139,39 +139,42 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
   const artikelAnteil = gesamt > 0 ? (artikel / gesamt) * 100 : 0
 
   return (
-    <V1Section title={grow ? `Durchgang ${grow.name}` : 'Kein laufender Grow'}>
-      <V1Card className="ko-hero">
-        {grow ? (
-          <p className="ko-hero-meta">
-            <Link to={`/grows/${grow.id}`}>{grow.name}</Link> · {grow.phase} · Tag {grow.tag} · seit {formatDate(grow.startDate)}
-            {grow.endDate && <> · beendet {formatDate(grow.endDate)}</>}
-          </p>
-        ) : (
-          <p className="ko-hero-meta">Ohne laufenden Grow gibt es nichts zu summieren. Die Artikel und Zählerstände bleiben erhalten.</p>
-        )}
+    <>
+      <V1Section title={grow ? `Durchgang ${grow.name}` : 'Kein laufender Grow'}>
+        <V1Card className="ko-hero">
+          {grow ? (
+            <p>
+              <Link to={`/grows/${grow.id}`}>{grow.name}</Link> · {grow.phase} · Tag {grow.tag} · seit {formatDate(grow.startDate)}
+              {grow.endDate && <> · beendet {formatDate(grow.endDate)}</>}
+            </p>
+          ) : (
+            <p>Ohne laufenden Grow gibt es nichts zu summieren. Die Artikel und Zählerstände bleiben erhalten.</p>
+          )}
 
-        <div className="ko-gesamt" data-audit="kosten-gesamt">
-          <strong>{euro(gesamt)}</strong>
-          <span>seit Start{summe.proTagEur != null && <> · Ø {euro(summe.proTagEur)} je Tag</>}</span>
-        </div>
+          <div className="ko-gesamt" data-audit="kosten-gesamt">
+            <strong>{euro(gesamt)}</strong>
+            <span>seit Start{summe.proTagEur != null && <> · Ø {euro(summe.proTagEur)} je Tag</>}</span>
+          </div>
 
-        <div className="ko-split" role="img" aria-label={`Strom ${formatNumber(stromAnteil, 0)} %, Verbrauchsartikel ${formatNumber(artikelAnteil, 0)} %`}>
-          <i className="is-strom" style={{ width: `${stromAnteil}%` }} />
-          <i className="is-artikel" style={{ width: `${artikelAnteil}%` }} />
-        </div>
-        <div className="ko-legende">
-          <span className="is-strom">Strom {euro(summe.stromEur)}</span>
-          <span className="is-artikel">Verbrauchsartikel {euro(artikel)}</span>
-        </div>
+          <div className="ko-split" role="img" aria-label={`Strom ${formatNumber(stromAnteil, 0)} %, Verbrauchsartikel ${formatNumber(artikelAnteil, 0)} %`}>
+            <i className="is-strom" style={{ width: `${stromAnteil}%` }} />
+            <i className="is-artikel" style={{ width: `${artikelAnteil}%` }} />
+          </div>
+          <div className="ko-legende">
+            <span className="is-strom">Strom {euro(summe.stromEur)}</span>
+            <span className="is-artikel">Verbrauchsartikel {euro(artikel)}</span>
+          </div>
+        </V1Card>
+      </V1Section>
 
-        <div className="v1-metric-grid ko-stats">
-          <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)} kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
-          <V1Stat label="Verbrauchsartikel" value={euro(artikel)} hint={`${seite.nachfuellungen.filter((f) => grow && f.growId === grow.id).length} Nachfüllungen`} />
-          <V1Stat label="Prognose Ernte" value={summe.prognoseErnteEur != null ? `≈ ${euro(summe.prognoseErnteEur)}` : '–'} hint={summe.prognoseHinweis ?? 'braucht Flip-Datum und Blütewochen der Sorte'} />
-          <V1Stat label="Je Pflanze" value={euro(summe.proPflanzeEur)} hint={grow?.pflanzen ? `${grow.pflanzen} Pflanzen, bisher` : 'Pflanzenzahl im Grow eintragen'} />
-        </div>
-      </V1Card>
-    </V1Section>
+      {/* Fakten-Leiste wie im Grow-Detail: dieselbe Leiste, dieselben Linien. */}
+      <section className="v1-kpi-grid" data-audit="kosten-summe">
+        <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)} kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
+        <V1Stat label="Verbrauchsartikel" value={euro(artikel)} hint={`${seite.nachfuellungen.filter((f) => grow && f.growId === grow.id).length} Nachfüllungen`} />
+        <V1Stat label="Prognose Ernte" value={summe.prognoseErnteEur != null ? `≈ ${euro(summe.prognoseErnteEur)}` : '–'} hint={summe.prognoseHinweis ?? 'braucht Flip-Datum und Blütewochen der Sorte'} />
+        <V1Stat label="Je Pflanze" value={euro(summe.proPflanzeEur)} hint={grow?.pflanzen ? `${grow.pflanzen} Pflanzen, bisher` : 'Pflanzenzahl im Grow eintragen'} />
+      </section>
+    </>
   )
 }
 
@@ -183,13 +186,13 @@ function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onC
 
   return (
     <V1Section title="Strom" action={<V1Button onClick={() => setQuelleOffen((v) => !v)} audit="kosten-strom-quelle">{quelleOffen ? 'Quelle schließen' : 'Strom-Quelle einstellen'}</V1Button>}>
-      <V1Card>
-        <div className="v1-metric-grid" data-audit="kosten-strom">
+      <div className="ko-stapel">
+        <section className="v1-kpi-grid" data-audit="kosten-strom">
           <V1Stat label="Leistung jetzt" value={strom.leistungW != null ? formatNumber(strom.leistungW, 0) : '–'} unit="W" hint={strom.leistungEntityId ? (strom.leistungW != null ? 'aus Home Assistant' : 'kein Wert von Home Assistant') : 'keine Leistungs-Entität gewählt'} />
           <V1Stat label="Verbrauch" value={strom.kwhSeitStart != null ? formatNumber(strom.kwhSeitStart, 0) : '–'} unit="kWh" hint="seit Start des Grows" />
           <V1Stat label="Ø je Tag" value={strom.kwhProTag != null ? formatNumber(strom.kwhProTag, 1) : '–'} unit="kWh" hint={strom.eurProTag != null ? `${euro(strom.eurProTag)} je Tag` : null} />
           <V1Stat label="Preis" value={strom.preisCentProKwh != null ? formatNumber(strom.preisCentProKwh / 100, 2) : '–'} unit="€/kWh" hint={strom.preisCentProKwh != null ? 'aus den Einstellungen' : 'in den Einstellungen hinterlegen'} />
-        </div>
+        </section>
 
         <p className="ko-hint">{strom.hinweis}{strom.preisCentProKwh == null && <> <Link to="/einstellungen">Zu den Einstellungen.</Link></>}</p>
 
@@ -201,7 +204,7 @@ function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onC
                   <th scope="col">Phase</th>
                   <th scope="col">Dauer</th>
                   <th scope="col">kWh</th>
-                  <th scope="col">Ø kWh/Tag</th>
+                  <th scope="col">kWh/Tag</th>
                   <th scope="col">Kosten</th>
                 </tr>
               </thead>
@@ -234,9 +237,9 @@ function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onC
             Zähler bei Grow-Start {formatNumber(strom.zaehlerStart, 1)} kWh ({formatDateTime(strom.ersterStandUtc)}), zuletzt {formatNumber(strom.zaehlerAktuell, 1)} kWh ({formatDateTime(strom.letzterStandUtc)}).
           </p>
         )}
-      </V1Card>
 
-      {quelleOffen && <StromQuelleForm quelle={{ zaehlerEntityId: strom.zaehlerEntityId, leistungEntityId: strom.leistungEntityId }} onChanged={(text) => { setQuelleOffen(false); onChanged(text) }} onError={onError} />}
+        {quelleOffen && <StromQuelleForm quelle={{ zaehlerEntityId: strom.zaehlerEntityId, leistungEntityId: strom.leistungEntityId }} onChanged={(text) => { setQuelleOffen(false); onChanged(text) }} onError={onError} />}
+      </div>
     </V1Section>
   )
 }
@@ -397,7 +400,8 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
   }
 
   return (
-    <article className={`ko-artikel${a ? ' is-offen' : ''}`} data-audit="kosten-artikel-karte">
+    <V1Card className={`ko-artikel${a ? ' is-offen' : ''}`}>
+      <div className="ko-artikel-inhalt" data-audit="kosten-artikel-karte">
       <div className="ko-artikel-kopf">
         <strong>{artikel.name}</strong>
         {a ? <span className="ls-pill">Tag {a.tag}{a.prognoseTage != null && <> von ≈ {Math.round(a.prognoseTage)}</>}</span> : <span className="ls-pill is-plan">leer</span>}
@@ -430,7 +434,8 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
         {a && <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => void leerMarkieren()}>Als leer markieren</button>}
         <button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen()}>Löschen</button>
       </div>
-    </article>
+      </div>
+    </V1Card>
   )
 }
 
@@ -620,7 +625,7 @@ function NachfuellungenTabelle({ liste, onChanged, onError }: { liste: KostenNac
 
   return (
     <V1Section title="Nachfüllungen">
-      <V1Card>
+      <V1Card className="ko-stapel">
         <div className="ko-tabelle-huelle">
           <table className="ko-tabelle" data-audit="kosten-nachfuellungen">
             <thead>
@@ -665,7 +670,7 @@ function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: numb
 
   return (
     <V1Section title="Durchgänge">
-      <V1Card>
+      <V1Card className="ko-stapel">
         <div className="ko-tabelle-huelle">
           <table className="ko-tabelle" data-audit="kosten-durchgaenge">
             <thead>

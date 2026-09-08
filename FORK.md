@@ -15,6 +15,7 @@ läuft parallel zum Original, eigene Datenbank, eigenes Image.
 | forkai.3 | Bugfix: Addback-Seite zeigt das am Grow gespeicherte Programm (per Id) statt eines Teilstring-Treffers aus dem Freitext (betraf „SKX Canna Aqua“ vs. „Canna Aqua“) | Addback | `GrowDiary.React/src/pages/AddbackPage.tsx` |
 | forkai.5 | Feed-Chart eines Düngeprogramms als Wochentabelle auf der Wissensseite (Komponenten × Wochen, Ziel-EC/pH); `feedChart` neu im Programm-DTO | Wissen → Programme | `KnowledgePage.tsx`, `types/knowledge.ts`, `KnowledgeDto.cs`, `KnowledgeMapping.cs`, `NutrientProgram.cs`, `CultivationKnowledgeService.cs` |
 | forkai.6 | Seite **Kosten**: Strom aus HA-Zählerständen je Grow und Phase (Worker hält den kWh-Zähler bei Grow-Start/Phasenwechsel/täglich fest), Verbrauchsartikel mit Nachfüllungen, Laufzeit-Prognose, Kosten je Tag/Pflanze, Ernteprognose; eigene `Fork*`-Tabellen, API `/api/kosten` | Betrieb → Kosten | `Models/Kosten.cs`, `Infrastructure/KostenRepository.cs`, `Services/KostenSeiteService.cs`, `Services/ZaehlerstandWorker.cs`, `Api/Controllers/KostenApiController.cs`, `pages/KostenPage.tsx`, `features/kosten/*`, `docs/referenz/kosten.md` |
+| forkai.7 | Kosten-Seite auf die Original-Bausteine umgestellt (`v1-kpi-grid`, Tokens statt eigener Werte, Tabelle am Telefon) | Betrieb → Kosten | `pages/KostenPage.tsx`, `features/kosten/kosten.css` |
 
 ## Geplant
 

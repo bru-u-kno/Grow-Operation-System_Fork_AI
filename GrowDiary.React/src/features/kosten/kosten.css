@@ -1,35 +1,39 @@
-/* Fork AI (forkai.6): Kosten — Strom vom Zähler, Verbrauchsartikel. */
+/* Fork AI (forkai.6): Kosten — Strom vom Zähler, Verbrauchsartikel.
+
+   Bewusst nur Tokens und Bausteine des Originals: Flächen sind .v1-card /
+   .v1-section, Zahlenreihen sind .v1-kpi-grid, Tabellen folgen .cs-tabelle
+   (Crop Steering). Keine eigenen Farb- oder Radiuswerte — was hier steht,
+   sieht im hellen und im dunklen Thema genauso aus wie der Rest der App. */
 @layer features {
 
-  /* Kopf: eine Zahl, darunter die Aufteilung. Die Zahl ist gross, weil sie
-     die Frage der Seite beantwortet; alles andere erklärt nur, woraus sie
-     besteht. */
-  .ko-hero { display: grid; gap: 12px; }
-  .ko-hero-meta { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
-  .ko-hero-meta a { color: var(--accent-text); }
+  /* Ein Stapel im Abschnittskörper: dieselbe Lücke wie zwischen Seitenteilen. */
+  .ko-stapel { display: grid; gap: var(--s-3); }
 
-  .ko-gesamt { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  /* Kopf: Meta-Zeile, die eine Zahl, darunter die Aufteilung. */
+  .ko-hero { display: grid; gap: var(--s-3); }
+  .ko-hero > p { margin: 0; }
+
+  .ko-gesamt { display: flex; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
   .ko-gesamt strong { font: 600 var(--fs-zahl)/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
   .ko-gesamt span { font-size: var(--fs-text); color: var(--muted); }
 
-  /* Aufteilung Strom/Artikel. Grün = Strom, weil es die grosse Zahl ist;
-     Blau = Artikel — dieselbe Zuordnung wie in der Legende darunter. */
-  .ko-split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
+  /* Aufteilung Strom/Artikel: Akzent = Strom (die große Zahl), Blau =
+     Artikel — dieselbe Zuordnung wie in der Legende darunter. */
+  .ko-split { display: flex; height: 10px; border-radius: var(--r-pill); overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
   .ko-split i { display: block; height: 100%; }
   .ko-split .is-strom { background: var(--accent); }
   .ko-split .is-artikel { background: var(--blue); }
-  .ko-legende { display: flex; gap: 16px; flex-wrap: wrap; font: 400 var(--fs-etikett)/1.4 var(--font-mono); color: var(--muted); }
+  .ko-legende { display: flex; gap: var(--s-4); flex-wrap: wrap; font: 400 var(--fs-etikett)/1.4 var(--font-mono); color: var(--muted); }
   .ko-legende span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   .ko-legende .is-strom::before { background: var(--accent); }
   .ko-legende .is-artikel::before { background: var(--blue); }
 
-  .ko-stats { margin-top: 4px; }
-
-  .ko-hint { margin: 10px 0 0; font-size: var(--fs-klein); line-height: 1.55; color: var(--muted); max-width: 72ch; }
+  /* Erklärende Sätze — wie .v1-card p, nur ohne Karte drumherum. */
+  .ko-hint { margin: 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); max-width: 72ch; }
   .ko-hint a { color: var(--accent-text); }
 
-  /* Tabellen — derselbe Satz wie .cs-tabelle (Crop Steering). */
-  .ko-tabelle-huelle { overflow-x: auto; margin-top: 12px; }
+  /* Tabellen — derselbe Satz wie .cs-tabelle. */
+  .ko-tabelle-huelle { overflow-x: auto; }
   .ko-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
   .ko-tabelle th[scope='col'] {
     text-align: left; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
@@ -43,35 +47,35 @@
   .ko-tabelle td:last-child, .ko-tabelle th:last-child { padding-right: 0; }
   .ko-tabelle tr.is-aktuell td, .ko-tabelle tr.is-aktuell th[scope='row'] { background: var(--accent-wash); }
   .ko-tabelle tr.is-summe td, .ko-tabelle tr.is-summe th[scope='row'] { font-weight: 600; border-top: 1px solid var(--hair-2); }
-  .ko-tabelle .ls-pill { margin-left: 8px; }
+  .ko-tabelle .ls-pill { margin-left: var(--s-2); }
   .ko-tabelle .ls-btn.is-small { margin-left: 0; }
+  /* Am Telefon ist die Phasentabelle 30 px zu breit für die Karte; weniger
+     Spaltenluft statt abgeschnittener Euro-Beträge. Wischen bleibt möglich. */
+  @media (max-width: 480px) {
+    .ko-tabelle th[scope='col'], .ko-tabelle td, .ko-tabelle th[scope='row'] { padding-right: var(--s-2); }
+    .ko-tabelle th[scope='col'] { letter-spacing: .06em; }
+  }
   .ko-link { background: none; border: 0; padding: 0; color: var(--accent-text); font: inherit; cursor: pointer; text-decoration: underline; }
 
-  /* Ein Verbrauchsartikel. Der Balken ist eine Schätzung und sagt das im Text
-     daneben — er ist bewusst nicht das Erste, was man sieht. */
-  .ko-artikel {
-    border: 1px solid var(--hair); border-radius: 12px; background: var(--panel);
-    padding: 14px; display: grid; gap: 10px; min-width: 0; align-self: stretch; align-content: start;
-  }
+  /* Ein Verbrauchsartikel: eine .v1-card im .co-grid. Der Balken ist eine
+     Schätzung und sagt das im Text daneben. */
   .ko-artikel.is-offen { border-color: var(--accent-dim); }
-  .ko-artikel-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ko-artikel-inhalt { display: grid; gap: var(--s-2); align-content: start; min-width: 0; }
+  .ko-artikel-kopf { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
   .ko-artikel-kopf strong { font-size: var(--fs-gross); }
-  .ko-artikel-fakten { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
-  .ko-balken { height: 8px; border-radius: 999px; overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
-  .ko-balken i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
-  .ko-artikel-prognose { margin: 0; font-size: var(--fs-klein); color: var(--muted); line-height: 1.5; }
-  .ko-artikel-aktionen { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+  .ko-artikel-fakten, .ko-artikel-prognose { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
+  .ko-balken { height: 8px; border-radius: var(--r-pill); overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
+  .ko-balken i { display: block; height: 100%; background: var(--accent); border-radius: var(--r-pill); }
+  .ko-artikel-aktionen { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-2); }
   .ko-artikel-aktionen .ls-btn { margin-left: 0; }
 
   /* Formulare: Erfassung und Quelle. */
-  .ko-form, .ko-quelle { display: grid; gap: 12px; }
-  .ko-form-inhalt { display: grid; gap: 12px; }
-  .ko-check { display: flex; gap: 10px; align-items: flex-start; font-size: var(--fs-text); color: var(--ink); line-height: 1.45; }
+  .ko-form-inhalt { display: grid; gap: var(--s-3); }
+  .ko-check { display: flex; gap: var(--s-2); align-items: flex-start; font-size: var(--fs-text); color: var(--ink); line-height: 1.45; }
   .ko-check input { margin-top: 3px; accent-color: var(--accent); }
   .ko-vorschau {
-    margin: 0; padding: 8px 12px; border: 1px dashed var(--hair-2); border-radius: 8px;
-    font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--muted);
+    margin: 0; padding: var(--s-2) var(--s-3); border: 1px dashed var(--hair-2); border-radius: var(--r-sm);
+    font: 400 var(--fs-text)/1.5 var(--font-mono); color: var(--muted);
   }
   .ko-quelle .v1-form-actions .ko-hint { margin: 0; }
-
 }

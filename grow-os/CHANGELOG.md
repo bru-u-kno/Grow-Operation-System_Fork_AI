@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.7
+
+**Fork AI.** Die Kosten-Seite sieht jetzt aus wie der Rest der App.
+
+### Was Sie sehen
+
+- Die Zahlenreihen (Summe, Strom) sind dieselbe Hairline-Leiste wie im Grow-Detail — durchgehender
+  Rahmen, Trennlinien zwischen den Kacheln, auch wenn sie am Telefon umbrechen.
+- Abstände, Radien und Farben kommen nur noch aus den Tokens des Originals; helles und dunkles
+  Thema stimmen mit den übrigen Seiten überein.
+- Die Phasentabelle wird am Telefon nicht mehr am rechten Rand abgeschnitten.
+
 ## 2.0.0-forkai.6
 
 **Fork AI.** Neue Seite **Kosten** unter Betrieb: Strom vom Zähler und alles, was nachgekauft wird.
