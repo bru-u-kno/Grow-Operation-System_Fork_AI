@@ -69,6 +69,20 @@ public sealed class KostenRepository : RepositoryBase
                     Phase TEXT NULL
                 );
                 CREATE INDEX IF NOT EXISTS IX_ForkZaehlerstaende_Zeit ON ForkZaehlerstaende(ZeitpunktUtc);
+                CREATE TABLE IF NOT EXISTS ForkAnschaffungen (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Hersteller TEXT NULL,
+                    Produkt TEXT NULL,
+                    DatumUtc TEXT NOT NULL,
+                    Stueck INTEGER NOT NULL DEFAULT 1,
+                    EinzelpreisEur REAL NOT NULL DEFAULT 0,
+                    GrowId INTEGER NULL,
+                    Notiz TEXT NULL,
+                    HardwareItemId INTEGER NULL,
+                    CreatedAtUtc TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_ForkAnschaffungen_Datum ON ForkAnschaffungen(DatumUtc);
                 """;
             command.ExecuteNonQuery();
 
@@ -187,6 +201,95 @@ public sealed class KostenRepository : RepositoryBase
         TentId = reader["TentId"] is DBNull ? null : Convert.ToInt32(reader["TentId"], CultureInfo.InvariantCulture),
         Notiz = NullString(reader["Notiz"]),
         Aktiv = Convert.ToInt32(reader["Aktiv"], CultureInfo.InvariantCulture) == 1,
+        CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"].ToString()) ?? DateTime.UtcNow,
+    };
+
+    // ---------------------------------------------------------- Anschaffungen (forkai.9)
+
+    public List<Anschaffung> GetAnschaffungen()
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM ForkAnschaffungen ORDER BY DatumUtc DESC, Id DESC;";
+        using var reader = command.ExecuteReader();
+        var list = new List<Anschaffung>();
+        while (reader.Read()) list.Add(MapAnschaffung(reader));
+        return list;
+    }
+
+    public Anschaffung? GetAnschaffung(int id)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM ForkAnschaffungen WHERE Id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? MapAnschaffung(reader) : null;
+    }
+
+    public int CreateAnschaffung(Anschaffung a)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO ForkAnschaffungen (Name, Hersteller, Produkt, DatumUtc, Stueck, EinzelpreisEur, GrowId, Notiz, HardwareItemId, CreatedAtUtc)
+            VALUES ($name, $hersteller, $produkt, $datumUtc, $stueck, $einzelpreis, $growId, $notiz, $hardwareItemId, $createdAtUtc);
+            SELECT last_insert_rowid();
+            """;
+        BindAnschaffung(command, a);
+        command.Parameters.AddWithValue("$createdAtUtc", ToStorageUtc(DateTime.UtcNow));
+        return Convert.ToInt32((long)command.ExecuteScalar()!);
+    }
+
+    public void UpdateAnschaffung(Anschaffung a)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE ForkAnschaffungen
+            SET Name = $name, Hersteller = $hersteller, Produkt = $produkt, DatumUtc = $datumUtc, Stueck = $stueck,
+                EinzelpreisEur = $einzelpreis, GrowId = $growId, Notiz = $notiz, HardwareItemId = $hardwareItemId
+            WHERE Id = $id;
+            """;
+        BindAnschaffung(command, a);
+        command.Parameters.AddWithValue("$id", a.Id);
+        command.ExecuteNonQuery();
+    }
+
+    public void DeleteAnschaffung(int id)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM ForkAnschaffungen WHERE Id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
+    private static void BindAnschaffung(SqliteCommand command, Anschaffung a)
+    {
+        command.Parameters.AddWithValue("$name", a.Name.Trim());
+        command.Parameters.AddWithValue("$hersteller", (object?)NormalizeOptional(a.Hersteller) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$produkt", (object?)NormalizeOptional(a.Produkt) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$datumUtc", ToStorageUtc(a.DatumUtc));
+        command.Parameters.AddWithValue("$stueck", a.Stueck);
+        command.Parameters.AddWithValue("$einzelpreis", a.EinzelpreisEur);
+        command.Parameters.AddWithValue("$growId", (object?)a.GrowId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$notiz", (object?)NormalizeOptional(a.Notiz) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$hardwareItemId", (object?)a.HardwareItemId ?? DBNull.Value);
+    }
+
+    private static Anschaffung MapAnschaffung(SqliteDataReader reader) => new()
+    {
+        Id = Convert.ToInt32(reader["Id"], CultureInfo.InvariantCulture),
+        Name = reader["Name"].ToString() ?? string.Empty,
+        Hersteller = NullString(reader["Hersteller"]),
+        Produkt = NullString(reader["Produkt"]),
+        DatumUtc = ParseStoredUtcDateTime(reader["DatumUtc"].ToString()) ?? DateTime.UtcNow,
+        Stueck = Convert.ToInt32(reader["Stueck"], CultureInfo.InvariantCulture),
+        EinzelpreisEur = Convert.ToDouble(reader["EinzelpreisEur"], CultureInfo.InvariantCulture),
+        GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
+        Notiz = NullString(reader["Notiz"]),
+        HardwareItemId = reader["HardwareItemId"] is DBNull ? null : Convert.ToInt32(reader["HardwareItemId"], CultureInfo.InvariantCulture),
         CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"].ToString()) ?? DateTime.UtcNow,
     };
 

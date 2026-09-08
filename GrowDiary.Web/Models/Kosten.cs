@@ -50,6 +50,38 @@ public sealed class Nachfuellung
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>Die Einheiten, die ein Verbrauchsartikel haben darf (forkai.9).</summary>
+public static class VerbrauchsEinheiten
+{
+    public static readonly string[] Alle = ["kg", "g", "L", "ml", "Stück"];
+    public static bool IstGueltig(string? einheit) => einheit is not null && Alle.Contains(einheit, StringComparer.Ordinal);
+}
+
+/// <summary>
+/// Etwas, das gekauft wurde und bleibt (forkai.9): Werkzeug, Technik, Zubehör.
+/// Wird nicht leer, hat keine Laufzeit — zählt einmal, im Grow, dem es zugeordnet ist.
+/// </summary>
+public sealed class Anschaffung
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Hersteller { get; set; }
+    public string? Produkt { get; set; }
+    public DateTime DatumUtc { get; set; } = DateTime.UtcNow;
+    public int Stueck { get; set; } = 1;
+    public double EinzelpreisEur { get; set; }
+
+    /// <summary>Null = Lager, zählt in keinen Durchgang.</summary>
+    public int? GrowId { get; set; }
+    public string? Notiz { get; set; }
+
+    /// <summary>Der Hardware-Artikel, der beim Erfassen angelegt wurde — falls gewünscht.</summary>
+    public int? HardwareItemId { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public double GesamtEur => Stueck * EinzelpreisEur;
+}
+
 /// <summary>Warum ein Zählerstand festgehalten wurde.</summary>
 public enum ZaehlerAnlass
 {

@@ -23,10 +23,12 @@
   .ko-split i { display: block; height: 100%; }
   .ko-split .is-strom { background: var(--accent); }
   .ko-split .is-artikel { background: var(--blue); }
+  .ko-split .is-anschaffung { background: var(--warn); }
   .ko-legende { display: flex; gap: var(--s-4); flex-wrap: wrap; font: 400 var(--fs-etikett)/1.4 var(--font-mono); color: var(--muted); }
   .ko-legende span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   .ko-legende .is-strom::before { background: var(--accent); }
   .ko-legende .is-artikel::before { background: var(--blue); }
+  .ko-legende .is-anschaffung::before { background: var(--warn); }
 
   /* Erklärende Sätze — wie .v1-card p, nur ohne Karte drumherum. */
   .ko-hint { margin: 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); max-width: 72ch; }
@@ -73,6 +75,7 @@
   .ko-form-inhalt { display: grid; gap: var(--s-3); }
   .ko-check { display: flex; gap: var(--s-2); align-items: flex-start; font-size: var(--fs-text); color: var(--ink); line-height: 1.45; }
   .ko-check input { margin-top: 3px; accent-color: var(--accent); }
+  .ko-check small { display: block; color: var(--muted); font-size: var(--fs-klein); }
   .ko-vorschau {
     margin: 0; padding: var(--s-2) var(--s-3); border: 1px dashed var(--hair-2); border-radius: var(--r-sm);
     font: 400 var(--fs-text)/1.5 var(--font-mono); color: var(--muted);

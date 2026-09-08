@@ -19,6 +19,7 @@ public sealed class KostenApiController : ApiControllerBase
     private readonly GrowRepository _grows;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
+    private readonly HardwareRepository _hardware;
 
     public KostenApiController(
         KostenSeiteService seite,
@@ -26,7 +27,8 @@ public sealed class KostenApiController : ApiControllerBase
         JournalRepository journal,
         GrowRepository grows,
         HomeAssistantService ha,
-        HomeAssistantSettingsRepository haSettings)
+        HomeAssistantSettingsRepository haSettings,
+        HardwareRepository hardware)
     {
         _seite = seite;
         _repo = repo;
@@ -34,6 +36,7 @@ public sealed class KostenApiController : ApiControllerBase
         _grows = grows;
         _ha = ha;
         _haSettings = haSettings;
+        _hardware = hardware;
     }
 
     // ------------------------------------------------------------- Seite
@@ -116,6 +119,7 @@ public sealed class KostenApiController : ApiControllerBase
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Der Artikel braucht einen Namen.");
         if (request.Gebinde is <= 0) return BadRequestError("gebinde_invalid", "Das Gebinde muss größer als 0 sein.");
         if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
+        if (!VerbrauchsEinheiten.IstGueltig(request.Einheit)) return BadRequestError("einheit_invalid", $"Einheit muss eine von {string.Join(", ", VerbrauchsEinheiten.Alle)} sein.");
         var artikel = new Verbrauchsartikel { Name = request.Name, Hersteller = request.Hersteller, Produkt = request.Produkt, PreisEur = request.PreisEur, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv };
         artikel.Id = _repo.CreateArtikel(artikel);
         return Created($"/api/kosten/artikel/{artikel.Id}", _repo.GetArtikel(artikel.Id));
@@ -131,6 +135,7 @@ public sealed class KostenApiController : ApiControllerBase
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Der Artikel braucht einen Namen.");
         if (request.Gebinde is <= 0) return BadRequestError("gebinde_invalid", "Das Gebinde muss größer als 0 sein.");
         if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
+        if (!VerbrauchsEinheiten.IstGueltig(request.Einheit)) return BadRequestError("einheit_invalid", $"Einheit muss eine von {string.Join(", ", VerbrauchsEinheiten.Alle)} sein.");
         artikel.Name = request.Name;
         artikel.Hersteller = request.Hersteller;
         artikel.Produkt = request.Produkt;
@@ -164,6 +169,8 @@ public sealed class KostenApiController : ApiControllerBase
         public double Menge { get; set; }
         public double? KostenEur { get; set; }
         public int? GrowId { get; set; }
+        /// <summary>Ausdrücklich keinem Grow zuordnen („Lager"); ohne dieses Flag gilt bei leerer GrowId der laufende Grow.</summary>
+        public bool OhneGrow { get; set; }
         public string? Notiz { get; set; }
         /// <summary>Die bisher offene Füllung dieses Artikels mit diesem Zeitpunkt als leer schließen.</summary>
         public bool VorherigeLeer { get; set; } = true;
@@ -184,7 +191,8 @@ public sealed class KostenApiController : ApiControllerBase
         var zeitpunkt = ZuUtc(request.Zeitpunkt);
         if (zeitpunkt > DateTime.UtcNow.AddMinutes(5)) return BadRequestError("zeitpunkt_future", "Der Zeitpunkt liegt in der Zukunft.");
 
-        var growId = request.GrowId ?? _seite.LaufenderGrow(zeitpunkt.ToLocalTime().Date).GrowId;
+        var growId = request.OhneGrow ? null : request.GrowId ?? _seite.LaufenderGrow(zeitpunkt.ToLocalTime().Date).GrowId;
+        if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
 
         double? vorherigeLaufzeit = null;
         if (request.VorherigeLeer)
@@ -288,6 +296,125 @@ public sealed class KostenApiController : ApiControllerBase
         _repo.DeleteNachfuellung(id);
         return NoContent();
     }
+
+    // ---------------------------------------------------- Anschaffungen (forkai.9)
+
+    public sealed class AnschaffungRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Hersteller { get; set; }
+        public string? Produkt { get; set; }
+        /// <summary>Ortszeit oder ISO mit Offset; leer = jetzt.</summary>
+        public DateTime? Datum { get; set; }
+        public int Stueck { get; set; } = 1;
+        public double EinzelpreisEur { get; set; }
+        public int? GrowId { get; set; }
+        /// <summary>Ausdrücklich keinem Grow zuordnen („Lager").</summary>
+        public bool OhneGrow { get; set; }
+        public string? Notiz { get; set; }
+        /// <summary>Beim Anlegen zusätzlich einen Hardware-Artikel unter Sensoren &amp; Wartung erzeugen.</summary>
+        public bool AlsHardware { get; set; }
+        /// <summary>Einen Journal-Eintrag im Grow anlegen.</summary>
+        public bool Journal { get; set; } = true;
+    }
+
+    private ActionResult? AnschaffungPruefen(AnschaffungRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Die Anschaffung braucht einen Namen.");
+        if (request.Stueck <= 0) return BadRequestError("stueck_invalid", "Stückzahl muss mindestens 1 sein.");
+        if (request.EinzelpreisEur < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
+        return null;
+    }
+
+    [HttpPost("anschaffungen")]
+    [ProducesResponseType(typeof(Anschaffung), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    public ActionResult<Anschaffung> CreateAnschaffung([FromBody] AnschaffungRequest request)
+    {
+        if (AnschaffungPruefen(request) is { } fehler) return fehler;
+        var datum = ZuUtc(request.Datum);
+        var growId = request.OhneGrow ? null : request.GrowId ?? _seite.LaufenderGrow(datum.ToLocalTime().Date).GrowId;
+        if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
+
+        int? hardwareId = null;
+        if (request.AlsHardware)
+        {
+            // Ein Hardware-Artikel ist das Werkzeug im Inventar — Kategorie
+            // „Zubehör", damit er unter Sensoren & Wartung auffindbar ist.
+            var item = _hardware.CreateHardwareItem(new HardwareItem
+            {
+                Name = request.Name.Trim(),
+                Category = "Zubehör",
+                Manufacturer = Leer(request.Hersteller),
+                Model = Leer(request.Produkt),
+                GrowId = growId,
+                InstalledAtUtc = datum,
+            });
+            hardwareId = item.Id;
+        }
+
+        var a = new Anschaffung
+        {
+            Name = request.Name, Hersteller = request.Hersteller, Produkt = request.Produkt,
+            DatumUtc = datum, Stueck = request.Stueck, EinzelpreisEur = request.EinzelpreisEur,
+            GrowId = growId, Notiz = request.Notiz, HardwareItemId = hardwareId,
+        };
+        a.Id = _repo.CreateAnschaffung(a);
+
+        if (request.Journal && growId is { } gid && _grows.GetGrow(gid) is not null)
+        {
+            var de = CultureInfo.GetCultureInfo("de-DE");
+            var teile = new List<string> { $"{a.Stueck} × {a.EinzelpreisEur.ToString("0.00", de)} € = {a.GesamtEur.ToString("0.00", de)} €" };
+            var herkunft = string.Join(" ", new[] { Leer(request.Hersteller), Leer(request.Produkt) }.Where(t => t is not null));
+            if (herkunft.Length > 0) teile.Add(herkunft);
+            if (!string.IsNullOrWhiteSpace(request.Notiz)) teile.Add(request.Notiz.Trim());
+            _journal.Create(new JournalEntry
+            {
+                GrowId = gid,
+                Title = $"{a.Name.Trim()} angeschafft",
+                Body = string.Join(" · ", teile),
+                EntryType = JournalEntryType.Action,
+                Source = ValueOrigin.Manual,
+                OccurredAtUtc = datum,
+            });
+        }
+
+        return Created($"/api/kosten/anschaffungen/{a.Id}", _repo.GetAnschaffung(a.Id));
+    }
+
+    [HttpPut("anschaffungen/{id:int}")]
+    [ProducesResponseType(typeof(Anschaffung), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
+    public ActionResult<Anschaffung> UpdateAnschaffung(int id, [FromBody] AnschaffungRequest request)
+    {
+        var a = _repo.GetAnschaffung(id);
+        if (a is null) return NotFoundError("anschaffung_not_found", $"Anschaffung {id} existiert nicht.");
+        if (AnschaffungPruefen(request) is { } fehler) return fehler;
+        var growId = request.OhneGrow ? null : request.GrowId ?? a.GrowId;
+        if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
+        a.Name = request.Name;
+        a.Hersteller = request.Hersteller;
+        a.Produkt = request.Produkt;
+        a.DatumUtc = request.Datum is null ? a.DatumUtc : ZuUtc(request.Datum);
+        a.Stueck = request.Stueck;
+        a.EinzelpreisEur = request.EinzelpreisEur;
+        a.GrowId = growId;
+        a.Notiz = request.Notiz;
+        _repo.UpdateAnschaffung(a);
+        return Ok(_repo.GetAnschaffung(id));
+    }
+
+    [HttpDelete("anschaffungen/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
+    public IActionResult DeleteAnschaffung(int id)
+    {
+        if (_repo.GetAnschaffung(id) is null) return NotFoundError("anschaffung_not_found", $"Anschaffung {id} existiert nicht.");
+        _repo.DeleteAnschaffung(id);
+        return NoContent();
+    }
+
+    private static string? Leer(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     /// <summary>Ein Zeitpunkt aus dem Formular: ohne Kennzeichnung gilt Ortszeit des Add-ons.</summary>
     private static DateTime ZuUtc(DateTime? wert)

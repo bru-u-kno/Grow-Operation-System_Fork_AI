@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.9
+
+**Fork AI.** Die Kosten-Seite bekommt Reiter, Anschaffungen und eine Grow-Zuordnung.
+
+### Was Sie sehen
+
+- **Reiter statt langer Seite**: Strom · Verbrauch · Anschaffungen · Durchgänge, wie auf
+  „Regeln & Automatik“. Kachel und KPI-Leiste bleiben oben stehen. Der Reiter steht in der
+  Adresse (`/kosten?tab=verbrauch`).
+- **Drei Knöpfe oben**: Artikel anlegen, Nachfüllung erfassen, Anschaffung erfassen — ein Tipp
+  wechselt auf den Reiter und öffnet das Formular direkt unter der Reiterleiste. Mehrere dürfen
+  offen sein, ▴ schließt.
+- Neu — **Anschaffungen**: Werkzeug, Technik, Zubehör mit Datum, Stück, Einzelpreis, Hersteller
+  und Produkt. Zählt einmal im zugeordneten Grow; „Lager“ zählt nirgends. Auf Wunsch entsteht
+  dazu ein Hardware-Artikel unter Sensoren & Wartung und ein Journal-Eintrag. Die Kopfzahl und
+  die Aufteilung zeigen Anschaffungen als dritte Farbe.
+- **Für Grow**: Nachfüllungen und Anschaffungen lassen sich einem laufenden Grow oder dem Lager
+  zuordnen; der Journal-Eintrag folgt der Auswahl.
+- Verbrauchsartikel: **Einheit als Auswahl** (kg, g, L, ml, Stück), „Gebinde“ heißt jetzt
+  **Inhalt je Packung**, der Preis **Preis je Packung**.
+
+### Technik
+
+- Neue Tabelle `ForkAnschaffungen`; `GET /api/kosten` liefert `anschaffungen`, `einheiten` und
+  in Summe/Durchgängen `anschaffungenEur`. `POST/PUT/DELETE /api/kosten/anschaffungen`.
+- `POST /api/kosten/artikel` prüft die Einheit gegen die Liste; Nachfüllung/Anschaffung kennen
+  `ohneGrow` für „Lager“.
+
 ## 2.0.0-forkai.8
 
 **Fork AI.** Verbrauchsartikel bekommen Stammdaten.

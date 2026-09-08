@@ -273,6 +273,10 @@ public sealed class RundwegVollstaendigTests
             "Der Demobestand legt keinen Verbrauchsartikel an; ohne Bestand faehrt der "
             + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen. Die Felder "
             + "fahren KostenSeiteTests und die Oberflaechen-Erfassung.",
+        ["AnschaffungRequest"] =
+            "Der Demobestand legt keine Anschaffung an; ohne Bestand faehrt der Rundweg ins "
+            + "Leere und waere gruen, ohne etwas zu pruefen. Die Felder fahren KostenSeiteTests "
+            + "und die Oberflaechen-Erfassung (Anlegen, Bearbeiten, zweimal speichern).",
         ["NachfuellungUpdateRequest"] =
             "Der Demobestand legt keine Nachfuellung an; ohne Bestand faehrt der Rundweg "
             + "ins Leere und waere gruen, ohne etwas zu pruefen. Der Vertrag ist fuer den "

@@ -16,6 +16,7 @@ export type KostenSumme = {
   gesamtEur: number
   stromEur: number | null
   artikelEur: number
+  anschaffungenEur: number
   proTagEur: number | null
   proPflanzeEur: number | null
   prognoseErnteEur: number | null
@@ -98,6 +99,21 @@ export type KostenNachfuellung = {
   notiz: string | null
 }
 
+export type KostenAnschaffung = {
+  id: number
+  name: string
+  hersteller: string | null
+  produkt: string | null
+  datumUtc: string
+  stueck: number
+  einzelpreisEur: number
+  gesamtEur: number
+  growId: number | null
+  growName: string | null
+  notiz: string | null
+  hardwareItemId: number | null
+}
+
 export type KostenDurchgang = {
   growId: number
   name: string
@@ -106,6 +122,7 @@ export type KostenDurchgang = {
   laeuft: boolean
   stromEur: number | null
   artikelEur: number
+  anschaffungenEur: number
   gesamtEur: number | null
 }
 
@@ -115,7 +132,19 @@ export type KostenSeite = {
   strom: KostenStrom
   artikel: KostenArtikel[]
   nachfuellungen: KostenNachfuellung[]
+  anschaffungen: KostenAnschaffung[]
   durchgaenge: KostenDurchgang[]
+  /** Erlaubte Einheiten für Verbrauchsartikel — vom Backend, damit beide Seiten dieselbe Liste haben */
+  einheiten: string[]
+}
+
+/** „Lager" — ausdrücklich keinem Grow zugeordnet. Als Select-Wert, weil ein <option> keinen null-Wert tragen kann. */
+export const LAGER = 'lager'
+
+/** Auswahl „Für Grow": alle laufenden Grows plus Lager. */
+export function growOptionen(seite: KostenSeite): Array<{ value: string; label: string }> {
+  const laufend = seite.durchgaenge.filter((d) => d.laeuft).map((d) => ({ value: String(d.growId), label: d.name }))
+  return [...laufend, { value: LAGER, label: 'Lager — noch keinem Grow zugeordnet' }]
 }
 
 export type StromQuelle = {

@@ -5,17 +5,21 @@
 
 ## Wo in der App
 
-`/kosten` — Menü **Betrieb → Kosten**. Auf der Seite:
+`/kosten` — Menü **Betrieb → Kosten**. Aufbau (forkai.9):
 
-- Kopf: Gesamtkosten des gewählten Durchgangs, Aufteilung Strom/Artikel, Ø je
-  Tag, je Pflanze, Prognose bis zur Ernte.
-- **Strom**: Leistung jetzt, kWh und Euro seit Grow-Start, je Phase eine Zeile;
-  darunter „Strom-Quelle einstellen“ (welche Home-Assistant-Entitäten zählen).
-- **Verbrauchsartikel**: eine Karte je Artikel (CO₂-Flasche, Dünger …) mit
-  laufender Füllung, Prognose und den Knöpfen „Nachfüllung erfassen“ und „Als
-  leer markieren“.
-- **Nachfüllungen**: alle Füllungen als Tabelle, neueste zuerst.
-- **Durchgänge**: dieselbe Rechnung für frühere Grows, anklickbar.
+- Kopf mit drei Knöpfen **Artikel anlegen · Nachfüllung erfassen · Anschaffung
+  erfassen** — ein Tipp wechselt auf den passenden Reiter und öffnet dort das
+  Formular; mehrere dürfen offen sein, ▴ schließt.
+- Kachel Durchgang: Gesamtkosten, Aufteilung Strom/Verbrauch/Anschaffungen,
+  Ø je Tag, Prognose bis zur Ernte; darunter die KPI-Leiste (Strom,
+  Verbrauchsartikel, Anschaffungen, je Pflanze).
+- Reiter (`?tab=strom|verbrauch|anschaffungen|durchgaenge`):
+  - **Strom**: Leistung jetzt, kWh und Euro seit Grow-Start, je Phase eine
+    Zeile; „Strom-Quelle einstellen“.
+  - **Verbrauch**: Artikel-Karten (laufende Füllung, Prognose, Bearbeiten) und
+    die Nachfüll-Historie.
+  - **Anschaffungen**: Werkzeug/Technik/Zubehör mit Stück, Einzelpreis, Grow.
+  - **Durchgänge**: dieselbe Rechnung für alle Grows, anklickbar.
 
 Der Strompreis je kWh steht **nicht** hier, sondern in den Einstellungen
 (`/einstellungen`, Kosten) — derselbe Wert, den das Archiv benutzt.
@@ -30,9 +34,16 @@ vergleicht mit `GrowStageResolver`, nicht mit dem Speichern-Knopf). Die Seite
 rechnet nur noch Differenzen zwischen Ständen.
 
 **Verbrauchsartikel.** Ein Artikel ist etwas, das leer wird: Anzeigename,
-Hersteller, Produktbezeichnung, Einheit, Gebindegröße und Preis je Gebinde
-(forkai.8). Gebinde und Preis belegen die Erfassung vor — jede Füllung darf
-davon abweichen. Eine **Nachfüllung** ist Datum, Menge, Kosten, Notiz, Grow. Beim
+Hersteller, Produktbezeichnung, Einheit (Auswahl: kg, g, L, ml, Stück),
+Inhalt je Packung und Preis je Packung. Inhalt und Preis belegen die Erfassung
+vor — jede Füllung darf davon abweichen. Eine Nachfüllung wird einem Grow
+zugeordnet (Auswahl „Für Grow“: alle laufenden Grows oder **Lager**); nur
+zugeordnete zählen in den Durchgang.
+
+**Anschaffungen (forkai.9).** Was gekauft wird und bleibt: Name, Hersteller,
+Produkt, Datum, Stück, Einzelpreis, Grow oder Lager, Notiz. Zählt einmal, hat
+keine Laufzeit. Optional legt das Erfassen einen Hardware-Artikel (Kategorie
+„Zubehör“) unter Sensoren & Wartung an und einen Journal-Eintrag im Grow. Eine **Nachfüllung** ist Datum, Menge, Kosten, Notiz, Grow. Beim
 Erfassen ist „Vorherige Füllung damit als leer markieren“ vorbelegt — die neue
 Flasche hängt ja dran, die alte nicht mehr. Aus dem Leer-Zeitpunkt entsteht
 die **Laufzeit** der alten Füllung; daraus die Prognose für die neue. Auf
@@ -50,7 +61,8 @@ Wunsch (vorbelegt) entsteht ein Journal-Eintrag im Grow.
 | Prognose „leer ≈“ | Mittel der letzten drei Laufzeiten **je Mengeneinheit** × Menge der laufenden Füllung — eine halbe Flasche hält halb so lang; Laufzeiten unter einem Tag zählen nicht (Fehlgriff) | `ArtikelBerechnen` |
 | Füllstand % | 1 − vergangene Tage ÷ Prognose-Tage, zeitbasiert | `ArtikelBerechnen` |
 | Euro je Tag (Artikel) | Kosten der Füllung ÷ Prognose-Tage (laufend) bzw. ÷ Laufzeit (abgeschlossen) | `ArtikelBerechnen` |
-| Gesamt | Strom + Summe der Füllungen, deren `GrowId` der Grow ist | `Berechnen` |
+| Anschaffungen | Summe Stück × Einzelpreis der Positionen mit `GrowId` = Grow; Lager zählt nirgends | `Berechnen` |
+| Gesamt | Strom + Füllungen + Anschaffungen des Grows | `Berechnen` |
 | Je Tag / je Pflanze | Gesamt ÷ Tag im Grow bzw. ÷ `PlantCount` | `Berechnen` |
 | Prognose Ernte | Gesamt + Resttage × Ø je Tag; Ernte = Flip + Züchter-Blütewochen (Mitte von min/max) | `Ernteprognose` |
 
@@ -80,7 +92,8 @@ fehlt der Strom davor) oder ob der Preis fehlt (dann nur kWh).
 - Modelle: `GrowDiary.Web/Models/Kosten.cs` — `Verbrauchsartikel`,
   `Nachfuellung`, `Zaehlerstand` (+ `ZaehlerAnlass`), `StromQuelle`.
 - Tabellen: `GrowDiary.Web/Infrastructure/KostenRepository.cs` legt
-  `ForkVerbrauchsartikel`, `ForkNachfuellungen`, `ForkZaehlerstaende` selbst an
+  `ForkVerbrauchsartikel`, `ForkNachfuellungen`, `ForkZaehlerstaende`,
+  `ForkAnschaffungen` selbst an
   (`CREATE TABLE IF NOT EXISTS`) — **nicht** im Kern-Schema, damit der
   Abgleich mit dem Original konfliktfrei bleibt.
 - Rechnung: `GrowDiary.Web/Services/KostenSeiteService.cs` — statisch,
@@ -90,7 +103,7 @@ fehlt der Strom davor) oder ob der Preis fehlt (dann nur kWh).
 - API: `GrowDiary.Web/Api/Controllers/KostenApiController.cs` — `GET /api/kosten`,
   `PUT /api/kosten/strom-quelle`, `GET /api/kosten/entitaet`,
   `POST /api/kosten/zaehlerstand`, `…/artikel`, `…/nachfuellungen`,
-  `POST …/nachfuellungen/{id}/leer`.
+  `POST …/nachfuellungen/{id}/leer`, `…/anschaffungen` (POST/PUT/DELETE).
 - Oberfläche: `GrowDiary.React/src/pages/KostenPage.tsx`,
   `src/features/kosten/kosten-typen.ts`, `src/features/kosten/kosten.css`.
 - Strom-Quelle liegt in `AppSettings` unter `fork-kosten-strom-quelle`.

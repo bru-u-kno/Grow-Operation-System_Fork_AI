@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
-import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Stat } from '../components/v1'
-import { euro, tage } from '../features/kosten/kosten-typen'
-import type { EntitaetTest, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
+import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Stat, V1Tabs } from '../components/v1'
+import { LAGER, euro, growOptionen, tage } from '../features/kosten/kosten-typen'
+import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
 import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../utils'
 import { feldText, istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import { phaseName } from '../deutsche-woerter'
@@ -24,15 +25,25 @@ import '../features/kosten/kosten.css'
  * Hand: Datum, Menge, Preis. Alles andere — Laufzeit, Prognose, Euro je Tag —
  * ist Rechnung und steht als solche da.
  */
+type Reiter = 'strom' | 'verbrauch' | 'anschaffungen' | 'durchgaenge'
+const REITER: Reiter[] = ['strom', 'verbrauch', 'anschaffungen', 'durchgaenge']
+type Formular = 'artikel' | 'nachfuellung' | 'anschaffung'
+/** Welches Formular auf welchem Reiter wohnt. */
+const FORMULAR_REITER: Record<Formular, Reiter> = { artikel: 'verbrauch', nachfuellung: 'verbrauch', anschaffung: 'anschaffungen' }
+
 function KostenPage() {
+  const [params, setParams] = useSearchParams()
+  const angefragt = params.get('tab')
+  const reiter: Reiter = REITER.includes(angefragt as Reiter) ? (angefragt as Reiter) : 'strom'
   const [growId, setGrowId] = useState<number | null>(null)
   const [seite, setSeite] = useState<KostenSeite | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [refresh, setRefresh] = useState(0)
-  const [erfassenFuer, setErfassenFuer] = useState<number | null>(null)
-  const [artikelAnlegen, setArtikelAnlegen] = useState(false)
+  // Mehrere Formulare dürfen gleichzeitig offen sein — jedes auf seinem Reiter.
+  const [offen, setOffen] = useState<Set<Formular>>(() => new Set())
+  const [nachfuellungArtikelId, setNachfuellungArtikelId] = useState<number | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -56,9 +67,37 @@ function KostenPage() {
     setRefresh((n) => n + 1)
   }, [])
 
-  const action = (
-    <V1Button variant="primary" onClick={() => setErfassenFuer(seite?.artikel[0]?.id ?? 0)} disabled={!seite || seite.artikel.length === 0} audit="kosten-nachfuellung-erfassen">
-      Nachfüllung erfassen
+  function reiterWechseln(ziel: Reiter) {
+    const next = new URLSearchParams(params)
+    next.set('tab', ziel)
+    // replace: Reiterwechsel soll den Zurück-Knopf nicht vollmüllen.
+    setParams(next, { replace: true })
+  }
+
+  /** Die drei Knöpfe oben: ein Tipp wechselt auf den Reiter und öffnet das Formular, ein zweiter schließt es. */
+  function formularUmschalten(f: Formular, artikelId?: number) {
+    const ziel = FORMULAR_REITER[f]
+    if (artikelId != null) setNachfuellungArtikelId(artikelId)
+    setOffen((alt) => {
+      const neu = new Set(alt)
+      if (neu.has(f) && reiter === ziel && artikelId == null) neu.delete(f)
+      else neu.add(f)
+      return neu
+    })
+    if (reiter !== ziel) reiterWechseln(ziel)
+  }
+  function formularSchliessen(f: Formular) {
+    setOffen((alt) => { const neu = new Set(alt); neu.delete(f); return neu })
+  }
+
+  const knopf = (f: Formular, text: string, audit: string) => (
+    <V1Button
+      variant={offen.has(f) ? 'primary' : 'secondary'}
+      onClick={() => formularUmschalten(f)}
+      disabled={!seite || (f === 'nachfuellung' && seite.artikel.length === 0)}
+      audit={audit}
+    >
+      {text}{offen.has(f) ? ' ▴' : ''}
     </V1Button>
   )
 
@@ -66,8 +105,14 @@ function KostenPage() {
     <V1Page
       eyebrow="Betrieb / Kosten"
       title="Kosten"
-      subtitle="Strom vom Zähler und alles, was nachgekauft wird — je Durchgang, je Tag, je Pflanze. Prognosen sind Rechnung aus der Vergangenheit, keine Messung."
-      action={action}
+      subtitle="Strom vom Zähler, was nachgekauft wird und was angeschafft wurde — je Durchgang, je Tag, je Pflanze. Prognosen sind Rechnung aus der Vergangenheit, keine Messung."
+      action={
+        <div className="v1-action-row">
+          {knopf('artikel', 'Artikel anlegen', 'kosten-artikel-anlegen')}
+          {knopf('nachfuellung', 'Nachfüllung erfassen', 'kosten-nachfuellung-erfassen')}
+          {knopf('anschaffung', 'Anschaffung erfassen', 'kosten-anschaffung-erfassen')}
+        </div>
+      }
     >
       {error && <V1Alert message={error} tone="critical" />}
       {notice && <V1Alert message={notice} tone="ok" />}
@@ -78,53 +123,97 @@ function KostenPage() {
         <>
           <Zusammenfassung seite={seite} />
 
-          {erfassenFuer != null && (
-            <NachfuellungForm
-              seite={seite}
-              vorbelegtArtikelId={erfassenFuer}
-              onDone={(text) => { setErfassenFuer(null); neuLaden(text) }}
-              onCancel={() => setErfassenFuer(null)}
-              onError={setError}
-            />
-          )}
+          <V1Tabs
+            items={[
+              { value: 'strom' as Reiter, label: 'Strom', meta: seite.strom.eurSeitStart != null ? euro(seite.strom.eurSeitStart) : null, audit: 'kosten-tab-strom' },
+              { value: 'verbrauch' as Reiter, label: 'Verbrauch', meta: `${seite.artikel.length}`, audit: 'kosten-tab-verbrauch' },
+              { value: 'anschaffungen' as Reiter, label: 'Anschaffungen', meta: `${seite.anschaffungen.length}`, audit: 'kosten-tab-anschaffungen' },
+              { value: 'durchgaenge' as Reiter, label: 'Durchgänge', meta: `${seite.durchgaenge.filter((d) => d.laeuft).length}`, audit: 'kosten-tab-durchgaenge' },
+            ]}
+            active={reiter}
+            onChange={reiterWechseln}
+            label="Bereich"
+          />
 
-          <StromAbschnitt seite={seite} onChanged={neuLaden} onError={setError} />
+          {reiter === 'strom' && <StromAbschnitt seite={seite} onChanged={neuLaden} onError={setError} />}
 
-          <V1Section
-            title="Verbrauchsartikel"
-            action={<V1Button onClick={() => setArtikelAnlegen((v) => !v)} audit="kosten-artikel-anlegen">{artikelAnlegen ? 'Abbrechen' : 'Artikel anlegen'}</V1Button>}
-          >
-            {artikelAnlegen && (
-              <ArtikelForm onDone={(text) => { setArtikelAnlegen(false); neuLaden(text) }} onError={setError} />
-            )}
-            {seite.artikel.length === 0 ? (
-              <V1Card>
-                <V1Empty
-                  title="Noch kein Verbrauchsartikel."
-                  text="Ein Artikel ist etwas, das leer wird und nachgekauft wird — CO₂-Flasche, Dünger, pH-Down. Lege ihn an, dann erfasst du jede Füllung mit Datum, Menge und Preis."
-                />
-              </V1Card>
-            ) : (
-              <div className="co-grid" data-audit="kosten-artikel">
-                {seite.artikel.map((artikel) => (
-                  <ArtikelKarte
-                    key={artikel.id}
-                    artikel={artikel}
-                    onErfassen={() => setErfassenFuer(artikel.id)}
-                    onChanged={neuLaden}
+          {reiter === 'verbrauch' && (
+            <>
+              {offen.has('artikel') && (
+                <FormularHuelle titel="Artikel anlegen" onClose={() => formularSchliessen('artikel')}>
+                  <ArtikelForm einheiten={seite.einheiten} onDone={(text) => { formularSchliessen('artikel'); neuLaden(text) }} onError={setError} />
+                </FormularHuelle>
+              )}
+              {offen.has('nachfuellung') && seite.artikel.length > 0 && (
+                <FormularHuelle titel="Nachfüllung erfassen" onClose={() => formularSchliessen('nachfuellung')}>
+                  <NachfuellungForm
+                    seite={seite}
+                    vorbelegtArtikelId={nachfuellungArtikelId ?? seite.artikel[0].id}
+                    onDone={(text) => { formularSchliessen('nachfuellung'); neuLaden(text) }}
+                    onCancel={() => formularSchliessen('nachfuellung')}
                     onError={setError}
                   />
-                ))}
-              </div>
-            )}
-          </V1Section>
+                </FormularHuelle>
+              )}
 
-          <NachfuellungenTabelle liste={seite.nachfuellungen} onChanged={neuLaden} onError={setError} />
+              <V1Section title="Verbrauchsartikel" action={<V1Button onClick={() => formularUmschalten('artikel')}>Artikel anlegen</V1Button>}>
+                {seite.artikel.length === 0 ? (
+                  <V1Card>
+                    <V1Empty
+                      title="Noch kein Verbrauchsartikel."
+                      text="Ein Artikel ist etwas, das leer wird und nachgekauft wird — CO₂-Flasche, Dünger, pH-Down. Lege ihn an, dann erfasst du jede Füllung mit Datum, Menge und Preis."
+                    />
+                  </V1Card>
+                ) : (
+                  <div className="co-grid" data-audit="kosten-artikel">
+                    {seite.artikel.map((artikel) => (
+                      <ArtikelKarte
+                        key={artikel.id}
+                        artikel={artikel}
+                        einheiten={seite.einheiten}
+                        onErfassen={() => formularUmschalten('nachfuellung', artikel.id)}
+                        onChanged={neuLaden}
+                        onError={setError}
+                      />
+                    ))}
+                  </div>
+                )}
+              </V1Section>
 
-          <Durchgaenge seite={seite} aktiv={growId} onWahl={setGrowId} />
+              <NachfuellungenTabelle liste={seite.nachfuellungen} onChanged={neuLaden} onError={setError} />
+            </>
+          )}
+
+          {reiter === 'anschaffungen' && (
+            <>
+              {offen.has('anschaffung') && (
+                <FormularHuelle titel="Anschaffung erfassen" onClose={() => formularSchliessen('anschaffung')}>
+                  <AnschaffungForm seite={seite} onDone={(text) => { formularSchliessen('anschaffung'); neuLaden(text) }} onCancel={() => formularSchliessen('anschaffung')} onError={setError} />
+                </FormularHuelle>
+              )}
+              <AnschaffungenTabelle seite={seite} onErfassen={() => formularUmschalten('anschaffung')} onChanged={neuLaden} onError={setError} />
+            </>
+          )}
+
+          {reiter === 'durchgaenge' && <Durchgaenge seite={seite} aktiv={growId} onWahl={setGrowId} />}
         </>
       )}
     </V1Page>
+  )
+}
+
+/** Ein offenes Formular: Kopfzeile mit Titel und ▴ zum Einklappen, rollt beim Öffnen ins Bild. */
+function FormularHuelle({ titel, onClose, children }: { titel: string; onClose: () => void; children: ReactNode }) {
+  const huelle = useRef<HTMLDivElement>(null)
+  useEffect(() => { huelle.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }, [])
+  return (
+    <section className="v1-section" ref={huelle}>
+      <header className="v1-section-head">
+        <h2>{titel}</h2>
+        <V1Button variant="ghost" onClick={onClose} audit={`kosten-form-zu`}>▴</V1Button>
+      </header>
+      <div className="v1-section-body">{children}</div>
+    </section>
   )
 }
 
@@ -134,9 +223,11 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
   const { grow, summe } = seite
   const strom = summe.stromEur ?? 0
   const artikel = summe.artikelEur
+  const anschaffungen = summe.anschaffungenEur
   const gesamt = summe.gesamtEur
   const stromAnteil = gesamt > 0 ? (strom / gesamt) * 100 : 0
   const artikelAnteil = gesamt > 0 ? (artikel / gesamt) * 100 : 0
+  const anschaffungenAnteil = gesamt > 0 ? (anschaffungen / gesamt) * 100 : 0
 
   return (
     <>
@@ -156,14 +247,19 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
             <span>seit Start{summe.proTagEur != null && <> · Ø {euro(summe.proTagEur)} je Tag</>}</span>
           </div>
 
-          <div className="ko-split" role="img" aria-label={`Strom ${formatNumber(stromAnteil, 0)} %, Verbrauchsartikel ${formatNumber(artikelAnteil, 0)} %`}>
+          <div className="ko-split" role="img" aria-label={`Strom ${formatNumber(stromAnteil, 0)} %, Verbrauchsartikel ${formatNumber(artikelAnteil, 0)} %, Anschaffungen ${formatNumber(anschaffungenAnteil, 0)} %`}>
             <i className="is-strom" style={{ width: `${stromAnteil}%` }} />
             <i className="is-artikel" style={{ width: `${artikelAnteil}%` }} />
+            <i className="is-anschaffung" style={{ width: `${anschaffungenAnteil}%` }} />
           </div>
           <div className="ko-legende">
             <span className="is-strom">Strom {euro(summe.stromEur)}</span>
             <span className="is-artikel">Verbrauchsartikel {euro(artikel)}</span>
+            <span className="is-anschaffung">Anschaffungen {euro(anschaffungen)}</span>
           </div>
+          {summe.prognoseErnteEur != null && (
+            <p>Prognose bis zur Ernte ≈ {euro(summe.prognoseErnteEur)} — {summe.prognoseHinweis}</p>
+          )}
         </V1Card>
       </V1Section>
 
@@ -171,7 +267,7 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
       <section className="v1-kpi-grid" data-audit="kosten-summe">
         <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)} kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
         <V1Stat label="Verbrauchsartikel" value={euro(artikel)} hint={`${seite.nachfuellungen.filter((f) => grow && f.growId === grow.id).length} Nachfüllungen`} />
-        <V1Stat label="Prognose Ernte" value={summe.prognoseErnteEur != null ? `≈ ${euro(summe.prognoseErnteEur)}` : '–'} hint={summe.prognoseHinweis ?? 'braucht Flip-Datum und Blütewochen der Sorte'} />
+        <V1Stat label="Anschaffungen" value={euro(anschaffungen)} hint={`${seite.anschaffungen.filter((x) => grow && x.growId === grow.id).length} Positionen im Grow`} />
         <V1Stat label="Je Pflanze" value={euro(summe.proPflanzeEur)} hint={grow?.pflanzen ? `${grow.pflanzen} Pflanzen, bisher` : 'Pflanzenzahl im Grow eintragen'} />
       </section>
     </>
@@ -368,13 +464,13 @@ function anlassText(anlass: Zaehlerstand['anlass']): string {
 
 // ------------------------------------------------------ Verbrauchsartikel
 
-function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: KostenArtikel; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+function ArtikelKarte({ artikel, einheiten, onErfassen, onChanged, onError }: { artikel: KostenArtikel; einheiten: string[]; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
   const [busy, setBusy] = useState(false)
   const [bearbeiten, setBearbeiten] = useState(false)
   const a = artikel.aktuell
 
   if (bearbeiten) {
-    return <ArtikelForm artikel={artikel} onDone={(text) => { setBearbeiten(false); onChanged(text) }} onError={onError} onCancel={() => setBearbeiten(false)} />
+    return <ArtikelForm artikel={artikel} einheiten={einheiten} onDone={(text) => { setBearbeiten(false); onChanged(text) }} onError={onError} onCancel={() => setBearbeiten(false)} />
   }
 
   async function leerMarkieren() {
@@ -414,7 +510,7 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
       {(artikel.hersteller || artikel.produkt || artikel.preisEur != null) && (
         <p className="ko-artikel-fakten">
           {[artikel.hersteller, artikel.produkt].filter(Boolean).join(' · ')}
-          {artikel.preisEur != null && <>{(artikel.hersteller || artikel.produkt) ? ' · ' : ''}{euro(artikel.preisEur)} je {artikel.gebinde != null ? `${formatNumber(artikel.gebinde, 2)} ${artikel.einheit}` : 'Gebinde'}</>}
+          {artikel.preisEur != null && <>{(artikel.hersteller || artikel.produkt) ? ' · ' : ''}{euro(artikel.preisEur)} je {artikel.gebinde != null ? `${formatNumber(artikel.gebinde, 2)} ${artikel.einheit}` : 'Packung'}</>}
         </p>
       )}
 
@@ -452,11 +548,11 @@ function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: Ko
 }
 
 /** Anlegen oder — mit `artikel` — Bearbeiten; dieselben Felder, derselbe Vertrag. */
-function ArtikelForm({ artikel, onDone, onError, onCancel }: { artikel?: KostenArtikel; onDone: (text: string) => void; onError: (text: string) => void; onCancel?: () => void }) {
+function ArtikelForm({ artikel, einheiten, onDone, onError, onCancel }: { artikel?: KostenArtikel; einheiten: string[]; onDone: (text: string) => void; onError: (text: string) => void; onCancel?: () => void }) {
   const [name, setName] = useState(artikel?.name ?? '')
   const [hersteller, setHersteller] = useState(artikel?.hersteller ?? '')
   const [produkt, setProdukt] = useState(artikel?.produkt ?? '')
-  const [einheit, setEinheit] = useState(artikel?.einheit ?? 'kg')
+  const [einheit, setEinheit] = useState(artikel?.einheit ?? einheiten[0] ?? 'kg')
   const [gebinde, setGebinde] = useState(feldText(artikel?.gebinde))
   const [preis, setPreis] = useState(feldText(artikel?.preisEur))
   const [notiz, setNotiz] = useState(artikel?.notiz ?? '')
@@ -500,13 +596,15 @@ function ArtikelForm({ artikel, onDone, onError, onCancel }: { artikel?: KostenA
         <V1Field label="Produktbezeichnung">
           <input type="text" value={produkt} onChange={(e) => setProdukt(e.target.value)} placeholder="Kohlendioxid E290, Aqua Vega A …" />
         </V1Field>
-        <V1Field label="Einheit" hint="kg, L, ml — wie du die Menge nennst">
-          <input type="text" value={einheit} onChange={(e) => setEinheit(e.target.value)} placeholder="kg" />
+        <V1Field label="Einheit" hint="wie du die Menge nennst">
+          <select value={einheit} onChange={(e) => setEinheit(e.target.value)}>
+            {einheiten.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
         </V1Field>
-        <V1Field label="Gebinde" hint="Menge eines vollen Gebindes; belegt die Erfassung vor">
+        <V1Field label="Inhalt je Packung" hint="eine volle Flasche, ein Kanister, ein Beutel — belegt die Menge beim Erfassen vor">
           <input type="text" inputMode="decimal" value={gebinde} onChange={(e) => setGebinde(e.target.value)} placeholder="10" />
         </V1Field>
-        <V1Field label="Preis je Gebinde (€)" hint="belegt die Kosten beim Erfassen vor; pro Füllung änderbar">
+        <V1Field label="Preis je Packung (€)" hint="belegt die Kosten beim Erfassen vor; pro Füllung änderbar">
           <input type="text" inputMode="decimal" value={preis} onChange={(e) => setPreis(e.target.value)} placeholder="36,75" />
         </V1Field>
         <V1Field label="Notiz" wide>
@@ -544,11 +642,8 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
   const [vorherigeLeer, setVorherigeLeer] = useState(true)
   const [journal, setJournal] = useState(true)
   const [busy, setBusy] = useState(false)
-  const huelle = useRef<HTMLDivElement>(null)
-
-  // Der Knopf steht oben, das Formular unter dem Kopf: ohne Sprung sieht man
-  // am Telefon nur, dass „nichts passiert“.
-  useEffect(() => { huelle.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }, [])
+  const growOpts = growOptionen(seite)
+  const [fuerGrow, setFuerGrow] = useState<string>(seite.grow && growOpts.some((o) => o.value === String(seite.grow!.id)) ? String(seite.grow.id) : (growOpts[0]?.value ?? LAGER))
 
   useEffect(() => {
     const a = artikel.find((x) => x.id === artikelId)
@@ -584,10 +679,11 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
           zeitpunkt: zeitpunkt ? new Date(zeitpunkt).toISOString() : null,
           menge: mengeZahl,
           kostenEur: kostenZahl,
-          growId: seite.grow?.id ?? null,
+          growId: fuerGrow === LAGER ? null : Number(fuerGrow),
+          ohneGrow: fuerGrow === LAGER,
           notiz: notiz.trim() || null,
           vorherigeLeer,
-          journal,
+          journal: journal && fuerGrow !== LAGER,
         }),
       })
       onDone(`${gewaehlt?.name ?? 'Artikel'}: ${formatNumber(mengeZahl, 2)} ${gewaehlt?.einheit ?? ''} erfasst${kostenZahl != null ? ` für ${euro(kostenZahl)}` : ''}.`)
@@ -599,8 +695,7 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
   }
 
   return (
-    <V1Section title="Nachfüllung erfassen">
-      <V1Card className="ko-form"><div className="ko-form-inhalt" data-audit="kosten-nachfuellung-form" ref={huelle}>
+    <V1Card className="ko-form"><div className="ko-form-inhalt" data-audit="kosten-nachfuellung-form">
         <div className="v1-form-grid">
           <V1Field label="Artikel" wide>
             <select value={artikelId} onChange={(e) => setArtikelId(Number(e.target.value))}>
@@ -613,8 +708,13 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
           <V1Field label={`Menge${gewaehlt ? ` (${gewaehlt.einheit})` : ''}`}>
             <input type="text" inputMode="decimal" value={menge} onChange={(e) => setMenge(e.target.value)} placeholder="10" />
           </V1Field>
-          <V1Field label="Kosten (€)" hint={gewaehlt?.preisEur != null ? `vorbelegt mit dem Gebindepreis ${euro(gewaehlt.preisEur)}` : 'was die Füllung gekostet hat; leer, wenn unbekannt'}>
+          <V1Field label="Kosten (€)" hint={gewaehlt?.preisEur != null ? `vorbelegt mit dem Packungspreis ${euro(gewaehlt.preisEur)}` : 'was die Füllung gekostet hat; leer, wenn unbekannt'}>
             <input type="text" inputMode="decimal" value={kosten} onChange={(e) => setKosten(e.target.value)} placeholder="34,90" />
+          </V1Field>
+          <V1Field label="Für Grow" hint="alle laufenden Grows oder Lager, wenn es noch keinem Durchgang gehört">
+            <select value={fuerGrow} onChange={(e) => setFuerGrow(e.target.value)}>
+              {growOpts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </V1Field>
           <V1Field label="Notiz" wide>
             <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Lieferant, Flaschennummer …" />
@@ -626,8 +726,8 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
           <span>Vorherige Füllung damit als leer markieren{offen ? ` (seit ${formatDate(offen.zeitpunktUtc)})` : ' — es läuft keine'}</span>
         </label>
         <label className="ko-check">
-          <input type="checkbox" checked={journal} onChange={(e) => setJournal(e.target.checked)} disabled={!seite.grow} />
-          <span>Journal-Eintrag im Grow {seite.grow?.name ?? ''} anlegen</span>
+          <input type="checkbox" checked={journal && fuerGrow !== LAGER} onChange={(e) => setJournal(e.target.checked)} disabled={fuerGrow === LAGER} />
+          <span>Journal-Eintrag im gewählten Grow anlegen</span>
         </label>
 
         {vorschau && <p className="ko-vorschau" data-audit="kosten-vorschau">Ergibt: {vorschau}</p>}
@@ -638,7 +738,6 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
         </div>
         </div>
       </V1Card>
-    </V1Section>
   )
 }
 
@@ -698,11 +797,203 @@ function NachfuellungenTabelle({ liste, onChanged, onError }: { liste: KostenNac
   )
 }
 
+// ------------------------------------------------------ Anschaffungen (forkai.9)
+
+/** Anlegen oder — mit `vorhanden` — Bearbeiten einer Anschaffung. */
+function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
+  seite: KostenSeite
+  vorhanden?: KostenAnschaffung
+  onDone: (text: string) => void
+  onCancel: () => void
+  onError: (text: string) => void
+}) {
+  const growOpts = growOptionen(seite)
+  const vorbelegtGrow = vorhanden
+    ? (vorhanden.growId != null ? String(vorhanden.growId) : LAGER)
+    : (seite.grow && growOpts.some((o) => o.value === String(seite.grow!.id)) ? String(seite.grow.id) : (growOpts[0]?.value ?? LAGER))
+  const [name, setName] = useState(vorhanden?.name ?? '')
+  const [hersteller, setHersteller] = useState(vorhanden?.hersteller ?? '')
+  const [produkt, setProdukt] = useState(vorhanden?.produkt ?? '')
+  const [datum, setDatum] = useState(vorhanden ? toLocalInputValue(new Date(vorhanden.datumUtc)).slice(0, 10) : toLocalInputValue().slice(0, 10))
+  const [stueck, setStueck] = useState(vorhanden ? String(vorhanden.stueck) : '1')
+  const [preis, setPreis] = useState(vorhanden ? feldText(vorhanden.einzelpreisEur) : '')
+  const [fuerGrow, setFuerGrow] = useState<string>(vorbelegtGrow)
+  const [notiz, setNotiz] = useState(vorhanden?.notiz ?? '')
+  const [alsHardware, setAlsHardware] = useState(false)
+  const [journal, setJournal] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  const stueckZahl = zahlOderNull(stueck)
+  const preisZahl = zahlOderNull(preis)
+  const gesamt = stueckZahl != null && preisZahl != null ? stueckZahl * preisZahl : null
+
+  async function speichern() {
+    if (istUnlesbar(stueck) || istUnlesbar(preis)) { onError('Stück oder Einzelpreis sind keine Zahl.'); return }
+    if (stueckZahl == null || stueckZahl < 1) { onError('Stückzahl fehlt.'); return }
+    if (preisZahl == null) { onError('Einzelpreis fehlt.'); return }
+    setBusy(true)
+    try {
+      await apiFetch(vorhanden ? `/api/kosten/anschaffungen/${vorhanden.id}` : '/api/kosten/anschaffungen', {
+        method: vorhanden ? 'PUT' : 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          hersteller: hersteller.trim() || null,
+          produkt: produkt.trim() || null,
+          datum: datum ? new Date(`${datum}T12:00:00`).toISOString() : null,
+          stueck: Math.round(stueckZahl),
+          einzelpreisEur: preisZahl,
+          growId: fuerGrow === LAGER ? null : Number(fuerGrow),
+          ohneGrow: fuerGrow === LAGER,
+          notiz: notiz.trim() || null,
+          alsHardware: !vorhanden && alsHardware,
+          journal: !vorhanden && journal && fuerGrow !== LAGER,
+        }),
+      })
+      onDone(vorhanden ? `${name.trim()} gespeichert.` : `${name.trim()} erfasst${gesamt != null ? ` — ${euro(gesamt)}` : ''}.`)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Anschaffung konnte nicht gespeichert werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <V1Card className="ko-form"><div className="ko-form-inhalt" data-audit="kosten-anschaffung-form">
+      <div className="v1-form-grid">
+        <V1Field label="Anzeigename" wide>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Erntescheren" />
+        </V1Field>
+        <V1Field label="Hersteller">
+          <input type="text" value={hersteller} onChange={(e) => setHersteller(e.target.value)} placeholder="Fiskars, AC Infinity …" />
+        </V1Field>
+        <V1Field label="Produktbezeichnung">
+          <input type="text" value={produkt} onChange={(e) => setProdukt(e.target.value)} placeholder="Micro-Tip Pruning Snips …" />
+        </V1Field>
+        <V1Field label="Datum">
+          <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
+        </V1Field>
+        <V1Field label="Stück">
+          <input type="text" inputMode="numeric" value={stueck} onChange={(e) => setStueck(e.target.value)} placeholder="1" />
+        </V1Field>
+        <V1Field label="Einzelpreis (€)">
+          <input type="text" inputMode="decimal" value={preis} onChange={(e) => setPreis(e.target.value)} placeholder="4,90" />
+        </V1Field>
+        <V1Field label="Für Grow" hint="alle laufenden Grows oder Lager, wenn es noch keinem Durchgang gehört">
+          <select value={fuerGrow} onChange={(e) => setFuerGrow(e.target.value)}>
+            {growOpts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </V1Field>
+        <V1Field label="Notiz" wide>
+          <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Shop, Bestellnummer …" />
+        </V1Field>
+      </div>
+
+      {!vorhanden && (
+        <>
+          <label className="ko-check">
+            <input type="checkbox" checked={alsHardware} onChange={(e) => setAlsHardware(e.target.checked)} />
+            <span>Auch als Hardware-Artikel anlegen<small>legt unter Sensoren &amp; Wartung einen Eintrag an (Lebensdauer, Wartung) — für Werkzeug meist unnötig, für Technik sinnvoll</small></span>
+          </label>
+          <label className="ko-check">
+            <input type="checkbox" checked={journal && fuerGrow !== LAGER} onChange={(e) => setJournal(e.target.checked)} disabled={fuerGrow === LAGER} />
+            <span>Journal-Eintrag im gewählten Grow anlegen</span>
+          </label>
+        </>
+      )}
+
+      {gesamt != null && <p className="ko-vorschau" data-audit="kosten-anschaffung-vorschau">Ergibt: {euro(gesamt)}</p>}
+
+      <div className="v1-form-actions">
+        <V1Button variant="primary" onClick={() => void speichern()} disabled={busy || istLeer(name)} audit="kosten-anschaffung-speichern">Speichern</V1Button>
+        <V1Button onClick={onCancel} disabled={busy}>Abbrechen</V1Button>
+      </div>
+      </div>
+    </V1Card>
+  )
+}
+
+function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite: KostenSeite; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const [bearbeiten, setBearbeiten] = useState<KostenAnschaffung | null>(null)
+  const liste = seite.anschaffungen
+  const imGrow = seite.grow ? liste.filter((a) => a.growId === seite.grow!.id) : []
+
+  async function loeschen(a: KostenAnschaffung) {
+    if (!window.confirm(`„${a.name}“ vom ${formatDate(a.datumUtc)} löschen?${a.hardwareItemId != null ? ' Der Hardware-Artikel dazu bleibt bestehen.' : ''}`)) return
+    setBusy(true)
+    try {
+      await apiFetch(`/api/kosten/anschaffungen/${a.id}`, { method: 'DELETE' })
+      onChanged(`${a.name} gelöscht.`)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Löschen fehlgeschlagen.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <V1Section title="Anschaffungen" action={<V1Button onClick={onErfassen}>Anschaffung erfassen</V1Button>}>
+      <V1Card className="ko-stapel">
+        <p className="ko-hint">Was gekauft wurde und bleibt: Werkzeug, Technik, Zubehör. Wird nicht leer, hat keine Laufzeit — zählt einmal, im Grow, dem du es zuordnest. „Lager“ zählt in keinen Durchgang.</p>
+        {bearbeiten && (
+          <AnschaffungForm seite={seite} vorhanden={bearbeiten} onDone={(text) => { setBearbeiten(null); onChanged(text) }} onCancel={() => setBearbeiten(null)} onError={onError} />
+        )}
+        {liste.length === 0 ? (
+          <V1Empty title="Noch keine Anschaffung." text="Erfasse Werkzeug oder Technik mit Datum, Stückzahl und Einzelpreis — und ordne es einem Grow zu oder lege es ins Lager." />
+        ) : (
+          <div className="ko-tabelle-huelle">
+            <table className="ko-tabelle" data-audit="kosten-anschaffungen">
+              <thead>
+                <tr>
+                  <th scope="col">Datum</th>
+                  <th scope="col">Artikel</th>
+                  <th scope="col">Stück</th>
+                  <th scope="col">Einzelpreis</th>
+                  <th scope="col">Gesamt</th>
+                  <th scope="col">Grow</th>
+                  <th scope="col"><span className="sr-only">Aktion</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {liste.map((a) => (
+                  <tr key={a.id} className={seite.grow && a.growId === seite.grow.id ? 'is-aktuell' : undefined}>
+                    <td>{formatDate(a.datumUtc)}</td>
+                    <th scope="row">{a.name}{(a.hersteller || a.produkt) && <small>{[a.hersteller, a.produkt].filter(Boolean).join(' · ')}</small>}{a.notiz && <small>{a.notiz}</small>}</th>
+                    <td>{a.stueck}</td>
+                    <td>{euro(a.einzelpreisEur)}</td>
+                    <td>{euro(a.gesamtEur)}</td>
+                    <td>{a.growId != null ? <Link to={`/grows/${a.growId}`}>{a.growName ?? a.growId}</Link> : <span className="ls-pill is-plan">Lager</span>}</td>
+                    <td>
+                      <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => setBearbeiten(a)}>Bearbeiten</button>{' '}
+                      <button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen(a)}>Löschen</button>
+                    </td>
+                  </tr>
+                ))}
+                {seite.grow && imGrow.length > 0 && (
+                  <tr className="is-summe">
+                    <td></td>
+                    <th scope="row">Summe im Durchgang {seite.grow.name}</th>
+                    <td>{imGrow.reduce((n, a) => n + a.stueck, 0)}</td>
+                    <td></td>
+                    <td>{euro(seite.summe.anschaffungenEur)}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </V1Card>
+    </V1Section>
+  )
+}
+
 // -------------------------------------------------------- Durchgänge
 
 function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: number | null; onWahl: (growId: number | null) => void }) {
   const liste = seite.durchgaenge.filter((d) => d.gesamtEur != null || d.laeuft)
-  if (liste.length <= 1) return null
+  if (liste.length === 0) return null
   const gezeigt = aktiv ?? seite.grow?.id ?? null
 
   return (
@@ -715,7 +1006,8 @@ function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: numb
                 <th scope="col">Grow</th>
                 <th scope="col">Zeitraum</th>
                 <th scope="col">Strom</th>
-                <th scope="col">Artikel</th>
+                <th scope="col">Verbrauch</th>
+                <th scope="col">Anschaffungen</th>
                 <th scope="col">Gesamt</th>
               </tr>
             </thead>
@@ -726,6 +1018,7 @@ function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: numb
                   <td>{formatDate(d.startDate)} – {d.endDate ? formatDate(d.endDate) : 'heute'}</td>
                   <td>{euro(d.stromEur)}</td>
                   <td>{euro(d.artikelEur)}</td>
+                  <td>{euro(d.anschaffungenEur)}</td>
                   <td>{euro(d.gesamtEur)}</td>
                 </tr>
               ))}

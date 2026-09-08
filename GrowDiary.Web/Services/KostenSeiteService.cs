@@ -12,6 +12,7 @@ public sealed record KostenSumme(
     double GesamtEur,
     double? StromEur,
     double ArtikelEur,
+    double AnschaffungenEur,
     double? ProTagEur,
     double? ProPflanzeEur,
     double? PrognoseErnteEur,
@@ -78,7 +79,11 @@ public sealed record KostenNachfuellung(
     string? GrowName,
     string? Notiz);
 
-public sealed record KostenDurchgang(int GrowId, string Name, DateTime StartDate, DateTime? EndDate, bool Laeuft, double? StromEur, double ArtikelEur, double? GesamtEur);
+public sealed record KostenAnschaffung(
+    int Id, string Name, string? Hersteller, string? Produkt, DateTime DatumUtc, int Stueck, double EinzelpreisEur, double GesamtEur,
+    int? GrowId, string? GrowName, string? Notiz, int? HardwareItemId);
+
+public sealed record KostenDurchgang(int GrowId, string Name, DateTime StartDate, DateTime? EndDate, bool Laeuft, double? StromEur, double ArtikelEur, double AnschaffungenEur, double? GesamtEur);
 
 public sealed record KostenSeite(
     KostenGrowInfo? Grow,
@@ -86,7 +91,9 @@ public sealed record KostenSeite(
     KostenStrom Strom,
     IReadOnlyList<KostenArtikel> Artikel,
     IReadOnlyList<KostenNachfuellung> Nachfuellungen,
-    IReadOnlyList<KostenDurchgang> Durchgaenge);
+    IReadOnlyList<KostenAnschaffung> Anschaffungen,
+    IReadOnlyList<KostenDurchgang> Durchgaenge,
+    IReadOnlyList<string> Einheiten);
 
 /// <summary>
 /// Rechnet die Kosten-Seite zusammen. Die Rechnung selbst ist statisch und
@@ -195,6 +202,7 @@ public sealed class KostenSeiteService
             _kosten.GetZaehlerstaende(),
             _kosten.GetArtikel(),
             _kosten.GetNachfuellungen(),
+            _kosten.GetAnschaffungen(),
             DateTime.UtcNow);
     }
 
@@ -209,6 +217,7 @@ public sealed class KostenSeiteService
         IReadOnlyList<Zaehlerstand> staende,
         IReadOnlyList<Verbrauchsartikel> artikel,
         IReadOnlyList<Nachfuellung> fuellungen,
+        IReadOnlyList<Anschaffung> anschaffungen,
         DateTime jetztUtc)
     {
         var heute = jetztUtc.ToLocalTime().Date;
@@ -231,13 +240,21 @@ public sealed class KostenSeiteService
             .ToList();
 
         var artikelEur = grow is null ? 0 : fuellungen.Where(f => f.GrowId == grow.Id).Sum(f => f.KostenEur ?? 0);
-        var gesamt = (strom.EurSeitStart ?? 0) + artikelEur;
+        var anschaffungenEur = grow is null ? 0 : anschaffungen.Where(a => a.GrowId == grow.Id).Sum(a => a.GesamtEur);
+        var gesamt = (strom.EurSeitStart ?? 0) + artikelEur + anschaffungenEur;
+
+        var anschaffungenListe = anschaffungen
+            .OrderByDescending(a => a.DatumUtc).ThenByDescending(a => a.Id)
+            .Select(a => new KostenAnschaffung(
+                a.Id, a.Name, a.Hersteller, a.Produkt, a.DatumUtc, a.Stueck, a.EinzelpreisEur, a.GesamtEur,
+                a.GrowId, a.GrowId is { } gid2 && growNachId.TryGetValue(gid2, out var g2) ? g2.Name : null, a.Notiz, a.HardwareItemId))
+            .ToList();
 
         KostenGrowInfo? info = null;
         KostenSumme summe;
         if (grow is null)
         {
-            summe = new KostenSumme(gesamt, strom.EurSeitStart, artikelEur, null, null, null, null);
+            summe = new KostenSumme(gesamt, strom.EurSeitStart, artikelEur, anschaffungenEur, null, null, null, null);
         }
         else
         {
@@ -249,7 +266,7 @@ public sealed class KostenSeiteService
             // Ohne eine einzige Zahl gibt es auch keine Prognose — „≈ 0,00 €“ wäre eine Aussage, die niemand gemacht hat.
             var (prognose, hinweis) = gesamt > 0 ? Ernteprognose(grow, heute, gesamt, proTag) : (null, null);
             summe = new KostenSumme(
-                gesamt, strom.EurSeitStart, artikelEur,
+                gesamt, strom.EurSeitStart, artikelEur, anschaffungenEur,
                 proTag,
                 grow.PlantCount is > 0 ? gesamt / grow.PlantCount.Value : null,
                 prognose, hinweis);
@@ -261,12 +278,13 @@ public sealed class KostenSeiteService
             {
                 var s = StromBerechnen(g, quelle, preisCent, null, staende, jetztUtc);
                 var a = fuellungen.Where(f => f.GrowId == g.Id).Sum(f => f.KostenEur ?? 0);
-                var summeEur = s.EurSeitStart is { } se ? se + a : (a > 0 ? a : (double?)null);
-                return new KostenDurchgang(g.Id, g.Name, g.StartDate, g.EndDate, g.Status == GrowStatus.Running, s.EurSeitStart, a, summeEur);
+                var an = anschaffungen.Where(x => x.GrowId == g.Id).Sum(x => x.GesamtEur);
+                var summeEur = s.EurSeitStart is { } se ? se + a + an : (a + an > 0 ? a + an : (double?)null);
+                return new KostenDurchgang(g.Id, g.Name, g.StartDate, g.EndDate, g.Status == GrowStatus.Running, s.EurSeitStart, a, an, summeEur);
             })
             .ToList();
 
-        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, durchgaenge);
+        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle);
     }
 
     private static (double? Prognose, string? Hinweis) Ernteprognose(GrowRun grow, DateTime heute, double bisher, double proTag)

@@ -132,7 +132,7 @@ public sealed class KostenSeiteTests
             ZeitpunktUtc = new DateTime(2026, 9, 7, 10, 0, 0, DateTimeKind.Utc),
         };
 
-        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [vorherige, aktuelle], Jetzt);
+        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [vorherige, aktuelle], [], Jetzt);
 
         Assert.True(seite.Artikel.Count >= 1, "Mengenwächter");
         var a = Assert.Single(seite.Artikel);
@@ -167,7 +167,7 @@ public sealed class KostenSeiteTests
         var fehlgriff = new Nachfuellung { Id = 2, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0, LeerAmUtc = t0.AddHours(2) };
         var laufend = new Nachfuellung { Id = 3, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0.AddHours(2) };
 
-        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [echte, fehlgriff, laufend], Jetzt);
+        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [echte, fehlgriff, laufend], [], Jetzt);
 
         var a = Assert.Single(seite.Artikel);
         Assert.Equal(42, a.MittlereLaufzeitTage!.Value, precision: 3);
@@ -180,7 +180,7 @@ public sealed class KostenSeiteTests
         var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂-Flasche 10 kg", Einheit = "kg" };
         var erste = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 34.90, GrowId = 1, ZeitpunktUtc = new DateTime(2026, 9, 7, 10, 0, 0, DateTimeKind.Utc) };
 
-        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [erste], Jetzt);
+        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [erste], [], Jetzt);
 
         var f = Assert.Single(seite.Artikel).Aktuell!;
         Assert.Null(f.PrognoseTage);
@@ -201,7 +201,7 @@ public sealed class KostenSeiteTests
         var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂", Einheit = "kg" };
         var fuellung = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 34.90, GrowId = 1, ZeitpunktUtc = new DateTime(2026, 9, 7, 10, 0, 0, DateTimeKind.Utc) };
 
-        var seite = KostenSeiteService.Berechnen(grow, [grow], Quelle, 32, null, staende, [co2], [fuellung], Jetzt);
+        var seite = KostenSeiteService.Berechnen(grow, [grow], Quelle, 32, null, staende, [co2], [fuellung], [], Jetzt);
 
         Assert.Equal(10, seite.Grow!.Tag);
         Assert.Equal(76.80, seite.Summe.StromEur!.Value, precision: 2);
@@ -226,11 +226,28 @@ public sealed class KostenSeiteTests
         var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂", Einheit = "kg" };
         var alteFuellung = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 30, GrowId = 9, ZeitpunktUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc) };
 
-        var seite = KostenSeiteService.Berechnen(grow, [grow, alt], Quelle, 32, null, [], [co2], [alteFuellung], Jetzt);
+        var seite = KostenSeiteService.Berechnen(grow, [grow, alt], Quelle, 32, null, [], [co2], [alteFuellung], [], Jetzt);
 
         Assert.Equal(0, seite.Summe.ArtikelEur);
         Assert.Equal(2, seite.Durchgaenge.Count);
         Assert.Equal(30, seite.Durchgaenge.Single(d => d.GrowId == 9).ArtikelEur);
+    }
+
+    [Fact]
+    public void AnschaffungenZaehlenEinmalUndNurImZugeordnetenGrow()
+    {
+        var grow = Grow();
+        var scheren = new Anschaffung { Id = 1, Name = "Erntescheren", Stueck = 5, EinzelpreisEur = 4.90, GrowId = 1, DatumUtc = Jetzt.AddDays(-1) };
+        var lager = new Anschaffung { Id = 2, Name = "Hygrometer", Stueck = 2, EinzelpreisEur = 11.49, GrowId = null, DatumUtc = Jetzt.AddDays(-10) };
+
+        var seite = KostenSeiteService.Berechnen(grow, [grow], Quelle, 32, null, [], [], [], [scheren, lager], Jetzt);
+
+        Assert.Equal(24.50, seite.Summe.AnschaffungenEur, precision: 2);
+        Assert.Equal(24.50, seite.Summe.GesamtEur, precision: 2);
+        Assert.Equal(2, seite.Anschaffungen.Count); // Lager bleibt sichtbar …
+        Assert.Null(seite.Anschaffungen.Single(a => a.Id == 2).GrowName); // … zählt aber nirgends
+        Assert.Equal(24.50, seite.Durchgaenge.Single().AnschaffungenEur, precision: 2);
+        Assert.Contains("Stück", seite.Einheiten);
     }
 
     [Theory]
