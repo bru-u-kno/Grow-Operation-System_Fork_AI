@@ -5,6 +5,31 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.6
+
+**Fork AI.** Neue Seite **Kosten** unter Betrieb: Strom vom Zähler und alles, was nachgekauft wird.
+
+### Was Sie sehen
+
+- Neu — **Kosten je Durchgang.** Gesamtsumme seit Grow-Start, Aufteilung Strom/Verbrauchsartikel,
+  Ø je Tag, je Pflanze und eine Prognose bis zur Ernte (Flip + Züchter-Blütewochen).
+- Neu — **Strom vom kWh-Zähler.** Sie wählen die Home-Assistant-Entität des Gesamtzählers (z. B. die
+  DECT-Steckdose vor dem Zelt); Grow OS hält den Stand bei Grow-Start, jedem Phasenwechsel und
+  täglich fest und rechnet kWh und Euro je Grow und je Phase. Ein Zähler-Reset wird erkannt.
+- Neu — **Verbrauchsartikel** (CO₂-Flasche, Dünger, pH-Down …) mit Nachfüllungen: Datum, Menge,
+  Preis. Aus der Laufzeit der vorherigen Füllung entsteht die Prognose „leer ≈“ für die laufende,
+  dazu Euro je Tag. Beim Erfassen wird die alte Füllung auf Wunsch als leer geschlossen und ein
+  Journal-Eintrag im Grow angelegt.
+- Der Strompreis bleibt, wo er war: Einstellungen → Kosten (derselbe Wert wie im Archiv).
+
+### Technik
+
+- Drei eigene Tabellen (`ForkVerbrauchsartikel`, `ForkNachfuellungen`, `ForkZaehlerstaende`), vom
+  Repository selbst angelegt — das Kern-Schema des Originals bleibt unberührt.
+- Neuer Hintergrunddienst `ZaehlerstandWorker` (Takt 10 min; liest nur, wenn eine Quelle gewählt ist).
+- Neue API `/api/kosten` (Seite, Strom-Quelle, Entität prüfen, Zählerstände, Artikel, Nachfüllungen).
+- Referenz: `docs/referenz/kosten.md`.
+
 ## 2.0.0-forkai.5
 
 **Fork AI.** Der Wochen-Feed-Chart eines Düngeprogramms ist jetzt auf der Wissensseite sichtbar.
