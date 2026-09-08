@@ -22,6 +22,7 @@ import HydroEditorPage from './features/hydro/HydroEditorPage'
 import KnowledgePage from './pages/KnowledgePage'
 import ShoppingListPage from './pages/ShoppingListPage'
 import CuringPage from './pages/CuringPage'
+import KostenPage from './pages/KostenPage'
 import LiveDashboardPage from './pages/LiveDashboardPage'
 import ManualMeasurementPage from './pages/ManualMeasurementPage'
 import MeasurementEditPage from './pages/MeasurementEditPage'
@@ -119,6 +120,7 @@ function App() {
 
           <Route path="/sollwerte" element={<SetpointProfilesPage />} />
           <Route path="/cropsteering" element={<CropSteeringPage />} />
+          <Route path="/kosten" element={<KostenPage />} />
           <Route path="/ac-test" element={<AcTestPage />} />
           <Route path="/wasser" element={<WaterProfilePage />} />
 

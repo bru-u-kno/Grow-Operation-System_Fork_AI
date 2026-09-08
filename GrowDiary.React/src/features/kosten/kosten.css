@@ -1,0 +1,77 @@
+/* Fork AI (forkai.6): Kosten — Strom vom Zähler, Verbrauchsartikel. */
+@layer features {
+
+  /* Kopf: eine Zahl, darunter die Aufteilung. Die Zahl ist gross, weil sie
+     die Frage der Seite beantwortet; alles andere erklärt nur, woraus sie
+     besteht. */
+  .ko-hero { display: grid; gap: 12px; }
+  .ko-hero-meta { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
+  .ko-hero-meta a { color: var(--accent-text); }
+
+  .ko-gesamt { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .ko-gesamt strong { font: 600 var(--fs-zahl)/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ko-gesamt span { font-size: var(--fs-text); color: var(--muted); }
+
+  /* Aufteilung Strom/Artikel. Grün = Strom, weil es die grosse Zahl ist;
+     Blau = Artikel — dieselbe Zuordnung wie in der Legende darunter. */
+  .ko-split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
+  .ko-split i { display: block; height: 100%; }
+  .ko-split .is-strom { background: var(--accent); }
+  .ko-split .is-artikel { background: var(--blue); }
+  .ko-legende { display: flex; gap: 16px; flex-wrap: wrap; font: 400 var(--fs-etikett)/1.4 var(--font-mono); color: var(--muted); }
+  .ko-legende span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .ko-legende .is-strom::before { background: var(--accent); }
+  .ko-legende .is-artikel::before { background: var(--blue); }
+
+  .ko-stats { margin-top: 4px; }
+
+  .ko-hint { margin: 10px 0 0; font-size: var(--fs-klein); line-height: 1.55; color: var(--muted); max-width: 72ch; }
+  .ko-hint a { color: var(--accent-text); }
+
+  /* Tabellen — derselbe Satz wie .cs-tabelle (Crop Steering). */
+  .ko-tabelle-huelle { overflow-x: auto; margin-top: 12px; }
+  .ko-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
+  .ko-tabelle th[scope='col'] {
+    text-align: left; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+    padding: 0 var(--s-3) var(--s-2) 0; white-space: nowrap;
+  }
+  .ko-tabelle th[scope='row'] { text-align: left; font-weight: 500; color: var(--ink); }
+  .ko-tabelle th[scope='row'] small { display: block; font-weight: 400; color: var(--faint); font-size: var(--fs-etikett); }
+  .ko-tabelle td, .ko-tabelle th[scope='row'] { padding: var(--s-2) var(--s-3) var(--s-2) 0; border-top: 1px solid var(--hair); vertical-align: top; }
+  .ko-tabelle td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ko-tabelle td:last-child, .ko-tabelle th:last-child { padding-right: 0; }
+  .ko-tabelle tr.is-aktuell td, .ko-tabelle tr.is-aktuell th[scope='row'] { background: var(--accent-wash); }
+  .ko-tabelle tr.is-summe td, .ko-tabelle tr.is-summe th[scope='row'] { font-weight: 600; border-top: 1px solid var(--hair-2); }
+  .ko-tabelle .ls-pill { margin-left: 8px; }
+  .ko-tabelle .ls-btn.is-small { margin-left: 0; }
+  .ko-link { background: none; border: 0; padding: 0; color: var(--accent-text); font: inherit; cursor: pointer; text-decoration: underline; }
+
+  /* Ein Verbrauchsartikel. Der Balken ist eine Schätzung und sagt das im Text
+     daneben — er ist bewusst nicht das Erste, was man sieht. */
+  .ko-artikel {
+    border: 1px solid var(--hair); border-radius: 12px; background: var(--panel);
+    padding: 14px; display: grid; gap: 10px; min-width: 0; align-self: stretch; align-content: start;
+  }
+  .ko-artikel.is-offen { border-color: var(--accent-dim); }
+  .ko-artikel-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ko-artikel-kopf strong { font-size: var(--fs-gross); }
+  .ko-artikel-fakten { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
+  .ko-balken { height: 8px; border-radius: 999px; overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
+  .ko-balken i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+  .ko-artikel-prognose { margin: 0; font-size: var(--fs-klein); color: var(--muted); line-height: 1.5; }
+  .ko-artikel-aktionen { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+  .ko-artikel-aktionen .ls-btn { margin-left: 0; }
+
+  /* Formulare: Erfassung und Quelle. */
+  .ko-form, .ko-quelle { display: grid; gap: 12px; }
+  .ko-form-inhalt { display: grid; gap: 12px; }
+  .ko-check { display: flex; gap: 10px; align-items: flex-start; font-size: var(--fs-text); color: var(--ink); line-height: 1.45; }
+  .ko-check input { margin-top: 3px; accent-color: var(--accent); }
+  .ko-vorschau {
+    margin: 0; padding: 8px 12px; border: 1px dashed var(--hair-2); border-radius: 8px;
+    font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--muted);
+  }
+  .ko-quelle .v1-form-actions .ko-hint { margin: 0; }
+
+}

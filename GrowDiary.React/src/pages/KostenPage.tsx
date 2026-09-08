@@ -1,0 +1,699 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { apiFetch, formatApiError } from '../api'
+import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Stat } from '../components/v1'
+import { euro, tage } from '../features/kosten/kosten-typen'
+import type { EntitaetTest, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
+import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../utils'
+import { istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
+import { phaseName } from '../deutsche-woerter'
+import '../features/kosten/kosten.css'
+
+/**
+ * Fork AI (forkai.6): Was der laufende Grow kostet — Strom und das, was
+ * aufgebraucht wird.
+ *
+ * <b>Der Anlass (07.09.2026).</b> Eine neue 10-kg-CO₂-Flasche. Die Frage war
+ * nicht „wo notiere ich das“, sondern „wie lange hält sie und was kostet mich
+ * das je Tag“. Dafür gab es keinen Ort: das Archiv rechnet den Strom aus
+ * Lampen-Watt, und ein Journal-Eintrag weiß nichts von der Flasche davor.
+ *
+ * <b>Zwei Quellen, ehrlich benannt.</b> Der Strom kommt vom kWh-Zähler in Home
+ * Assistant (die DECT-Steckdose vor dem Zelt), festgehalten bei Grow-Start,
+ * jedem Phasenwechsel und einmal am Tag. Die Verbrauchsartikel kommen von
+ * Hand: Datum, Menge, Preis. Alles andere — Laufzeit, Prognose, Euro je Tag —
+ * ist Rechnung und steht als solche da.
+ */
+function KostenPage() {
+  const [growId, setGrowId] = useState<number | null>(null)
+  const [seite, setSeite] = useState<KostenSeite | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [refresh, setRefresh] = useState(0)
+  const [erfassenFuer, setErfassenFuer] = useState<number | null>(null)
+  const [artikelAnlegen, setArtikelAnlegen] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    async function load() {
+      try {
+        const query = growId != null ? `?growId=${growId}` : ''
+        const geladen = await apiFetch<KostenSeite>(`/api/kosten${query}`, { signal: controller.signal })
+        if (!controller.signal.aborted) { setSeite(geladen); setError(null) }
+      } catch (caught) {
+        if (!controller.signal.aborted) setError(formatApiError(caught, 'Kosten konnten nicht geladen werden.'))
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [growId, refresh])
+
+  const neuLaden = useCallback((text?: string) => {
+    if (text) setNotice(text)
+    setRefresh((n) => n + 1)
+  }, [])
+
+  const action = (
+    <V1Button variant="primary" onClick={() => setErfassenFuer(seite?.artikel[0]?.id ?? 0)} disabled={!seite || seite.artikel.length === 0} audit="kosten-nachfuellung-erfassen">
+      Nachfüllung erfassen
+    </V1Button>
+  )
+
+  return (
+    <V1Page
+      eyebrow="Betrieb / Kosten"
+      title="Kosten"
+      subtitle="Strom vom Zähler und alles, was nachgekauft wird — je Durchgang, je Tag, je Pflanze. Prognosen sind Rechnung aus der Vergangenheit, keine Messung."
+      action={action}
+    >
+      {error && <V1Alert message={error} tone="critical" />}
+      {notice && <V1Alert message={notice} tone="ok" />}
+
+      {loading || !seite ? (
+        <V1Skeleton tiles={4} label="Lade Kosten" />
+      ) : (
+        <>
+          <Zusammenfassung seite={seite} />
+
+          {erfassenFuer != null && (
+            <NachfuellungForm
+              seite={seite}
+              vorbelegtArtikelId={erfassenFuer}
+              onDone={(text) => { setErfassenFuer(null); neuLaden(text) }}
+              onCancel={() => setErfassenFuer(null)}
+              onError={setError}
+            />
+          )}
+
+          <StromAbschnitt seite={seite} onChanged={neuLaden} onError={setError} />
+
+          <V1Section
+            title="Verbrauchsartikel"
+            action={<V1Button onClick={() => setArtikelAnlegen((v) => !v)} audit="kosten-artikel-anlegen">{artikelAnlegen ? 'Abbrechen' : 'Artikel anlegen'}</V1Button>}
+          >
+            {artikelAnlegen && (
+              <ArtikelForm onDone={(text) => { setArtikelAnlegen(false); neuLaden(text) }} onError={setError} />
+            )}
+            {seite.artikel.length === 0 ? (
+              <V1Card>
+                <V1Empty
+                  title="Noch kein Verbrauchsartikel."
+                  text="Ein Artikel ist etwas, das leer wird und nachgekauft wird — CO₂-Flasche, Dünger, pH-Down. Lege ihn an, dann erfasst du jede Füllung mit Datum, Menge und Preis."
+                />
+              </V1Card>
+            ) : (
+              <div className="co-grid" data-audit="kosten-artikel">
+                {seite.artikel.map((artikel) => (
+                  <ArtikelKarte
+                    key={artikel.id}
+                    artikel={artikel}
+                    onErfassen={() => setErfassenFuer(artikel.id)}
+                    onChanged={neuLaden}
+                    onError={setError}
+                  />
+                ))}
+              </div>
+            )}
+          </V1Section>
+
+          <NachfuellungenTabelle liste={seite.nachfuellungen} onChanged={neuLaden} onError={setError} />
+
+          <Durchgaenge seite={seite} aktiv={growId} onWahl={setGrowId} />
+        </>
+      )}
+    </V1Page>
+  )
+}
+
+// ------------------------------------------------------------- Kopf
+
+function Zusammenfassung({ seite }: { seite: KostenSeite }) {
+  const { grow, summe } = seite
+  const strom = summe.stromEur ?? 0
+  const artikel = summe.artikelEur
+  const gesamt = summe.gesamtEur
+  const stromAnteil = gesamt > 0 ? (strom / gesamt) * 100 : 0
+  const artikelAnteil = gesamt > 0 ? (artikel / gesamt) * 100 : 0
+
+  return (
+    <V1Section title={grow ? `Durchgang ${grow.name}` : 'Kein laufender Grow'}>
+      <V1Card className="ko-hero">
+        {grow ? (
+          <p className="ko-hero-meta">
+            <Link to={`/grows/${grow.id}`}>{grow.name}</Link> · {grow.phase} · Tag {grow.tag} · seit {formatDate(grow.startDate)}
+            {grow.endDate && <> · beendet {formatDate(grow.endDate)}</>}
+          </p>
+        ) : (
+          <p className="ko-hero-meta">Ohne laufenden Grow gibt es nichts zu summieren. Die Artikel und Zählerstände bleiben erhalten.</p>
+        )}
+
+        <div className="ko-gesamt" data-audit="kosten-gesamt">
+          <strong>{euro(gesamt)}</strong>
+          <span>seit Start{summe.proTagEur != null && <> · Ø {euro(summe.proTagEur)} je Tag</>}</span>
+        </div>
+
+        <div className="ko-split" role="img" aria-label={`Strom ${formatNumber(stromAnteil, 0)} %, Verbrauchsartikel ${formatNumber(artikelAnteil, 0)} %`}>
+          <i className="is-strom" style={{ width: `${stromAnteil}%` }} />
+          <i className="is-artikel" style={{ width: `${artikelAnteil}%` }} />
+        </div>
+        <div className="ko-legende">
+          <span className="is-strom">Strom {euro(summe.stromEur)}</span>
+          <span className="is-artikel">Verbrauchsartikel {euro(artikel)}</span>
+        </div>
+
+        <div className="v1-metric-grid ko-stats">
+          <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)} kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
+          <V1Stat label="Verbrauchsartikel" value={euro(artikel)} hint={`${seite.nachfuellungen.filter((f) => grow && f.growId === grow.id).length} Nachfüllungen`} />
+          <V1Stat label="Prognose Ernte" value={summe.prognoseErnteEur != null ? `≈ ${euro(summe.prognoseErnteEur)}` : '–'} hint={summe.prognoseHinweis ?? 'braucht Flip-Datum und Blütewochen der Sorte'} />
+          <V1Stat label="Je Pflanze" value={euro(summe.proPflanzeEur)} hint={grow?.pflanzen ? `${grow.pflanzen} Pflanzen, bisher` : 'Pflanzenzahl im Grow eintragen'} />
+        </div>
+      </V1Card>
+    </V1Section>
+  )
+}
+
+// ------------------------------------------------------------- Strom
+
+function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+  const { strom } = seite
+  const [quelleOffen, setQuelleOffen] = useState(!strom.eingerichtet)
+
+  return (
+    <V1Section title="Strom" action={<V1Button onClick={() => setQuelleOffen((v) => !v)} audit="kosten-strom-quelle">{quelleOffen ? 'Quelle schließen' : 'Strom-Quelle einstellen'}</V1Button>}>
+      <V1Card>
+        <div className="v1-metric-grid" data-audit="kosten-strom">
+          <V1Stat label="Leistung jetzt" value={strom.leistungW != null ? formatNumber(strom.leistungW, 0) : '–'} unit="W" hint={strom.leistungEntityId ? (strom.leistungW != null ? 'aus Home Assistant' : 'kein Wert von Home Assistant') : 'keine Leistungs-Entität gewählt'} />
+          <V1Stat label="Verbrauch" value={strom.kwhSeitStart != null ? formatNumber(strom.kwhSeitStart, 0) : '–'} unit="kWh" hint="seit Start des Grows" />
+          <V1Stat label="Ø je Tag" value={strom.kwhProTag != null ? formatNumber(strom.kwhProTag, 1) : '–'} unit="kWh" hint={strom.eurProTag != null ? `${euro(strom.eurProTag)} je Tag` : null} />
+          <V1Stat label="Preis" value={strom.preisCentProKwh != null ? formatNumber(strom.preisCentProKwh / 100, 2) : '–'} unit="€/kWh" hint={strom.preisCentProKwh != null ? 'aus den Einstellungen' : 'in den Einstellungen hinterlegen'} />
+        </div>
+
+        <p className="ko-hint">{strom.hinweis}{strom.preisCentProKwh == null && <> <Link to="/einstellungen">Zu den Einstellungen.</Link></>}</p>
+
+        {strom.phasen.length > 0 && (
+          <div className="ko-tabelle-huelle">
+            <table className="ko-tabelle" data-audit="kosten-phasen">
+              <thead>
+                <tr>
+                  <th scope="col">Phase</th>
+                  <th scope="col">Dauer</th>
+                  <th scope="col">kWh</th>
+                  <th scope="col">Ø kWh/Tag</th>
+                  <th scope="col">Kosten</th>
+                </tr>
+              </thead>
+              <tbody>
+                {strom.phasen.map((p, i) => (
+                  <tr key={`${p.phase}-${i}`} className={p.laeuft ? 'is-aktuell' : undefined}>
+                    <th scope="row">{p.label}{p.laeuft && <span className="ls-pill">läuft</span>}</th>
+                    <td>{tage(p.tage)}</td>
+                    <td>{formatNumber(p.kwh, 0)}</td>
+                    <td>{p.tage >= 0.5 ? formatNumber(p.kwh / p.tage, 1) : '–'}</td>
+                    <td>{euro(p.eur)}</td>
+                  </tr>
+                ))}
+                {strom.kwhSeitStart != null && (
+                  <tr className="is-summe">
+                    <th scope="row">Gesamt</th>
+                    <td>{strom.ersterStandUtc && strom.letzterStandUtc ? tage((new Date(strom.letzterStandUtc).getTime() - new Date(strom.ersterStandUtc).getTime()) / 86_400_000) : '–'}</td>
+                    <td>{formatNumber(strom.kwhSeitStart, 0)}</td>
+                    <td>{strom.kwhProTag != null ? formatNumber(strom.kwhProTag, 1) : '–'}</td>
+                    <td>{euro(strom.eurSeitStart)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {strom.zaehlerStart != null && (
+          <p className="ko-hint">
+            Zähler bei Grow-Start {formatNumber(strom.zaehlerStart, 1)} kWh ({formatDateTime(strom.ersterStandUtc)}), zuletzt {formatNumber(strom.zaehlerAktuell, 1)} kWh ({formatDateTime(strom.letzterStandUtc)}).
+          </p>
+        )}
+      </V1Card>
+
+      {quelleOffen && <StromQuelleForm quelle={{ zaehlerEntityId: strom.zaehlerEntityId, leistungEntityId: strom.leistungEntityId }} onChanged={(text) => { setQuelleOffen(false); onChanged(text) }} onError={onError} />}
+    </V1Section>
+  )
+}
+
+/**
+ * Welche Entitäten den Strom liefern. Kein Auswahlmenü über alle HA-Entitäten:
+ * das sind bei dieser Anlage über tausend, und die Kennung steht in HA am
+ * Gerät. Stattdessen „Prüfen“ — der Wert, den HA gerade meldet, sagt mehr als
+ * jede Liste.
+ */
+function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; onChanged: (text: string) => void; onError: (text: string) => void }) {
+  const [zaehler, setZaehler] = useState(quelle.zaehlerEntityId ?? '')
+  const [leistung, setLeistung] = useState(quelle.leistungEntityId ?? '')
+  const [befund, setBefund] = useState<Record<string, EntitaetTest>>({})
+  const [busy, setBusy] = useState(false)
+  const [staende, setStaende] = useState<Zaehlerstand[] | null>(null)
+
+  /** Der Stand von jetzt — ohne auf den Takt des Workers zu warten. */
+  async function jetztFesthalten() {
+    setBusy(true)
+    try {
+      const stand = await apiFetch<Zaehlerstand | null>('/api/kosten/zaehlerstand', { method: 'POST' })
+      if (stand) onChanged(`Zählerstand festgehalten: ${formatNumber(stand.kwh, 1)} kWh.`)
+      else onError('Kein Wert vom Zähler — Entität prüfen und Home Assistant-Verbindung ansehen.')
+    } catch (caught) {
+      onError(formatApiError(caught, 'Zählerstand konnte nicht festgehalten werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function staendeLaden() {
+    try {
+      setStaende(await apiFetch<Zaehlerstand[]>('/api/kosten/zaehlerstaende'))
+    } catch (caught) {
+      onError(formatApiError(caught, 'Zählerstände konnten nicht geladen werden.'))
+    }
+  }
+
+  async function pruefen(entityId: string) {
+    const id = entityId.trim()
+    if (!id) return
+    setBusy(true)
+    try {
+      const test = await apiFetch<EntitaetTest>(`/api/kosten/entitaet?entityId=${encodeURIComponent(id)}`)
+      setBefund((alt) => ({ ...alt, [id]: test }))
+    } catch (caught) {
+      onError(formatApiError(caught, 'Entität konnte nicht geprüft werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function speichern() {
+    setBusy(true)
+    try {
+      await apiFetch<StromQuelle>('/api/kosten/strom-quelle', {
+        method: 'PUT',
+        body: JSON.stringify({ zaehlerEntityId: zaehler.trim() || null, leistungEntityId: leistung.trim() || null }),
+      })
+      onChanged(zaehler.trim() ? 'Strom-Quelle gespeichert — der erste Zählerstand ist festgehalten.' : 'Strom-Quelle entfernt.')
+    } catch (caught) {
+      onError(formatApiError(caught, 'Strom-Quelle konnte nicht gespeichert werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function befundText(id: string): string | null {
+    const b = befund[id.trim()]
+    if (!b) return null
+    if (!b.gefunden) return 'In Home Assistant nicht gefunden.'
+    const wert = b.wert != null ? `${formatNumber(b.wert, 2)}${b.einheit ? ` ${b.einheit}` : ''}` : (b.state ?? '–')
+    return `${b.name ?? b.entityId}: ${wert}`
+  }
+
+  return (
+    <V1Card className="ko-quelle"><div className="ko-form-inhalt" data-audit="kosten-strom-quelle-form">
+      <div className="v1-form-grid">
+        <V1Field label="kWh-Zähler (Entität)" hint={befundText(zaehler) ?? 'Gesamtzähler der Steckdose vor dem Zelt, z. B. sensor.…_total_energy. Muss nur steigen; ein Reset wird erkannt.'} wide>
+          <input type="text" value={zaehler} onChange={(e) => setZaehler(e.target.value)} placeholder="sensor.fritz_dect_210_1_total_energy" spellCheck={false} />
+        </V1Field>
+        <V1Field label="Leistung (Entität, optional)" hint={befundText(leistung) ?? 'Nur für die Anzeige „Leistung jetzt“.'} wide>
+          <input type="text" value={leistung} onChange={(e) => setLeistung(e.target.value)} placeholder="sensor.fritz_dect_210_1_power_consumption" spellCheck={false} />
+        </V1Field>
+      </div>
+      <div className="v1-form-actions">
+        <V1Button onClick={() => { void pruefen(zaehler); void pruefen(leistung) }} disabled={busy || (!zaehler.trim() && !leistung.trim())}>Prüfen</V1Button>
+        <V1Button variant="primary" onClick={() => void speichern()} disabled={busy} audit="kosten-strom-quelle-speichern">Speichern</V1Button>
+        {quelle.zaehlerEntityId && <V1Button onClick={() => void jetztFesthalten()} disabled={busy} audit="kosten-zaehlerstand-jetzt">Zählerstand jetzt festhalten</V1Button>}
+        {quelle.zaehlerEntityId && <V1Button variant="ghost" onClick={() => void staendeLaden()} disabled={busy}>Zählerstände anzeigen</V1Button>}
+        <span className="ko-hint">Der Preis je kWh steht in den <Link to="/einstellungen">Einstellungen</Link> — derselbe wie im Archiv.</span>
+      </div>
+      {staende && (
+        <div className="ko-tabelle-huelle">
+          <table className="ko-tabelle" data-audit="kosten-zaehlerstaende">
+            <thead><tr><th scope="col">Zeitpunkt</th><th scope="col">kWh</th><th scope="col">Anlass</th><th scope="col">Phase</th></tr></thead>
+            <tbody>
+              {[...staende].reverse().slice(0, 30).map((z) => (
+                <tr key={z.id}>
+                  <td>{formatDateTime(z.zeitpunktUtc)}</td>
+                  <td>{formatNumber(z.kwh, 1)}</td>
+                  <th scope="row">{anlassText(z.anlass)}</th>
+                  <td>{z.phase ? phaseName(z.phase) : '–'}</td>
+                </tr>
+              ))}
+              {staende.length === 0 && <tr><td colSpan={4}>Noch kein Stand festgehalten.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+      </div>
+    </V1Card>
+  )
+}
+
+/** Die Anlässe aus `ZaehlerAnlass` — deutsch, wie alles andere hier. */
+function anlassText(anlass: Zaehlerstand['anlass']): string {
+  switch (anlass) {
+    case 'GrowStart': return 'Grow-Start'
+    case 'Phase': return 'Phasenwechsel'
+    case 'Manuell': return 'von Hand'
+    default: return 'Tagestakt'
+  }
+}
+
+// ------------------------------------------------------ Verbrauchsartikel
+
+function ArtikelKarte({ artikel, onErfassen, onChanged, onError }: { artikel: KostenArtikel; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const a = artikel.aktuell
+
+  async function leerMarkieren() {
+    if (!a) return
+    if (!window.confirm(`„${artikel.name}“ jetzt als leer markieren? Die Laufzeit dieser Füllung wird damit festgeschrieben.`)) return
+    setBusy(true)
+    try {
+      await apiFetch(`/api/kosten/nachfuellungen/${a.id}/leer`, { method: 'POST', body: JSON.stringify({}) })
+      onChanged(`${artikel.name}: Füllung als leer markiert.`)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Als leer markieren fehlgeschlagen.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function loeschen() {
+    if (!window.confirm(`„${artikel.name}“ wirklich löschen? Alle ${artikel.anzahlFuellungen} Nachfüllungen dazu gehen mit verloren.`)) return
+    setBusy(true)
+    try {
+      await apiFetch(`/api/kosten/artikel/${artikel.id}`, { method: 'DELETE' })
+      onChanged(`${artikel.name} gelöscht.`)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Löschen fehlgeschlagen.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <article className={`ko-artikel${a ? ' is-offen' : ''}`} data-audit="kosten-artikel-karte">
+      <div className="ko-artikel-kopf">
+        <strong>{artikel.name}</strong>
+        {a ? <span className="ls-pill">Tag {a.tag}{a.prognoseTage != null && <> von ≈ {Math.round(a.prognoseTage)}</>}</span> : <span className="ls-pill is-plan">leer</span>}
+      </div>
+
+      {a ? (
+        <>
+          <p className="ko-artikel-fakten">
+            {formatNumber(a.menge, 2)} {artikel.einheit} seit {formatDate(a.zeitpunktUtc)}
+            {a.kostenEur != null && <> · {euro(a.kostenEur)}</>}
+            {a.eurProTag != null && <> · {euro(a.eurProTag)} je Tag</>}
+          </p>
+          {a.fuellstandProzent != null ? (
+            <>
+              <div className="ko-balken" role="img" aria-label={`Geschätzt noch ${formatNumber(a.fuellstandProzent, 0)} %`}><i style={{ width: `${a.fuellstandProzent}%` }} /></div>
+              <p className="ko-artikel-prognose">leer ≈ {formatDate(a.prognoseLeerAmUtc)} — geschätzt aus den letzten Laufzeiten (Ø {tage(artikel.mittlereLaufzeitTage)}), nicht gewogen.</p>
+            </>
+          ) : (
+            <p className="ko-artikel-prognose">Erste Füllung — eine Prognose gibt es, sobald eine Füllung als leer markiert wurde.</p>
+          )}
+        </>
+      ) : (
+        <p className="ko-artikel-fakten">
+          {artikel.anzahlFuellungen === 0 ? 'Noch keine Füllung erfasst.' : `${artikel.anzahlFuellungen} Füllungen bisher, Ø ${tage(artikel.mittlereLaufzeitTage)}.`}
+        </p>
+      )}
+
+      <div className="ko-artikel-aktionen">
+        <button type="button" className="ls-btn is-small is-primary" disabled={busy} onClick={onErfassen}>Nachfüllung erfassen</button>
+        {a && <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => void leerMarkieren()}>Als leer markieren</button>}
+        <button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen()}>Löschen</button>
+      </div>
+    </article>
+  )
+}
+
+function ArtikelForm({ onDone, onError }: { onDone: (text: string) => void; onError: (text: string) => void }) {
+  const [name, setName] = useState('')
+  const [einheit, setEinheit] = useState('kg')
+  const [gebinde, setGebinde] = useState('')
+  const [notiz, setNotiz] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function speichern() {
+    if (istUnlesbar(gebinde)) { onError('Gebindegröße ist keine Zahl.'); return }
+    setBusy(true)
+    try {
+      await apiFetch('/api/kosten/artikel', {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim(), einheit: einheit.trim() || 'kg', gebinde: zahlOderNull(gebinde), notiz: notiz.trim() || null, aktiv: true }),
+      })
+      onDone(`${name.trim()} angelegt — jetzt die erste Füllung erfassen.`)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Artikel konnte nicht angelegt werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <V1Card className="ko-form"><div className="ko-form-inhalt" data-audit="kosten-artikel-form">
+      <div className="v1-form-grid">
+        <V1Field label="Name" wide>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="CO₂-Flasche 10 kg" />
+        </V1Field>
+        <V1Field label="Einheit" hint="kg, L, ml — wie du die Menge nennst">
+          <input type="text" value={einheit} onChange={(e) => setEinheit(e.target.value)} placeholder="kg" />
+        </V1Field>
+        <V1Field label="Gebinde" hint="Menge eines vollen Gebindes; belegt die Erfassung vor">
+          <input type="text" inputMode="decimal" value={gebinde} onChange={(e) => setGebinde(e.target.value)} placeholder="10" />
+        </V1Field>
+        <V1Field label="Notiz" wide>
+          <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Tauschflasche, Lieferant …" />
+        </V1Field>
+      </div>
+      <div className="v1-form-actions">
+        <V1Button variant="primary" onClick={() => void speichern()} disabled={busy || istLeer(name)} audit="kosten-artikel-speichern">Artikel anlegen</V1Button>
+      </div>
+      </div>
+    </V1Card>
+  )
+}
+
+/**
+ * Eine Füllung erfassen. „Vorherige damit als leer markieren“ ist vorbelegt:
+ * wer eine neue Flasche anschließt, hat die alte abgehängt — und genau dieser
+ * Zeitpunkt macht aus der alten Füllung eine Laufzeit.
+ */
+function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError }: {
+  seite: KostenSeite
+  vorbelegtArtikelId: number
+  onDone: (text: string) => void
+  onCancel: () => void
+  onError: (text: string) => void
+}) {
+  const artikel = seite.artikel
+  const [artikelId, setArtikelId] = useState<number>(artikel.some((a) => a.id === vorbelegtArtikelId) ? vorbelegtArtikelId : (artikel[0]?.id ?? 0))
+  const gewaehlt = artikel.find((a) => a.id === artikelId)
+  const [zeitpunkt, setZeitpunkt] = useState(toLocalInputValue())
+  const [menge, setMenge] = useState(gewaehlt?.gebinde != null ? String(gewaehlt.gebinde).replace('.', ',') : '')
+  const [kosten, setKosten] = useState('')
+  const [notiz, setNotiz] = useState('')
+  const [vorherigeLeer, setVorherigeLeer] = useState(true)
+  const [journal, setJournal] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const huelle = useRef<HTMLDivElement>(null)
+
+  // Der Knopf steht oben, das Formular unter dem Kopf: ohne Sprung sieht man
+  // am Telefon nur, dass „nichts passiert“.
+  useEffect(() => { huelle.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }, [])
+
+  useEffect(() => {
+    const a = artikel.find((x) => x.id === artikelId)
+    if (a?.gebinde != null) setMenge(String(a.gebinde).replace('.', ','))
+  }, [artikelId, artikel])
+
+  const mengeZahl = zahlOderNull(menge)
+  const kostenZahl = zahlOderNull(kosten)
+  const offen = gewaehlt?.aktuell ?? null
+  const vorschau = useMemo(() => {
+    const teile: string[] = []
+    if (mengeZahl != null && mengeZahl > 0 && kostenZahl != null) teile.push(`${euro(kostenZahl / mengeZahl)} je ${gewaehlt?.einheit ?? 'Einheit'}`)
+    if (offen && vorherigeLeer) {
+      const laufzeit = (new Date(zeitpunkt).getTime() - new Date(offen.zeitpunktUtc).getTime()) / 86_400_000
+      if (laufzeit > 0) {
+        teile.push(`vorherige Füllung ${tage(laufzeit)}`)
+        if (offen.kostenEur != null) teile.push(`${euro(offen.kostenEur / laufzeit)} je Tag`)
+      }
+    }
+    return teile.join(' · ')
+  }, [mengeZahl, kostenZahl, offen, vorherigeLeer, zeitpunkt, gewaehlt])
+
+  async function speichern() {
+    if (istUnlesbar(menge) || istUnlesbar(kosten)) { onError('Menge oder Kosten sind keine Zahl.'); return }
+    if (mengeZahl == null || mengeZahl <= 0) { onError('Menge fehlt.'); return }
+    setBusy(true)
+    try {
+      await apiFetch('/api/kosten/nachfuellungen', {
+        method: 'POST',
+        body: JSON.stringify({
+          artikelId,
+          zeitpunkt: zeitpunkt ? new Date(zeitpunkt).toISOString() : null,
+          menge: mengeZahl,
+          kostenEur: kostenZahl,
+          growId: seite.grow?.id ?? null,
+          notiz: notiz.trim() || null,
+          vorherigeLeer,
+          journal,
+        }),
+      })
+      onDone(`${gewaehlt?.name ?? 'Artikel'}: ${formatNumber(mengeZahl, 2)} ${gewaehlt?.einheit ?? ''} erfasst${kostenZahl != null ? ` für ${euro(kostenZahl)}` : ''}.`)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Nachfüllung konnte nicht gespeichert werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <V1Section title="Nachfüllung erfassen">
+      <V1Card className="ko-form"><div className="ko-form-inhalt" data-audit="kosten-nachfuellung-form" ref={huelle}>
+        <div className="v1-form-grid">
+          <V1Field label="Artikel" wide>
+            <select value={artikelId} onChange={(e) => setArtikelId(Number(e.target.value))}>
+              {artikel.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </V1Field>
+          <V1Field label="Zeitpunkt">
+            <input type="datetime-local" value={zeitpunkt} onChange={(e) => setZeitpunkt(e.target.value)} />
+          </V1Field>
+          <V1Field label={`Menge${gewaehlt ? ` (${gewaehlt.einheit})` : ''}`}>
+            <input type="text" inputMode="decimal" value={menge} onChange={(e) => setMenge(e.target.value)} placeholder="10" />
+          </V1Field>
+          <V1Field label="Kosten (€)" hint="was die Füllung gekostet hat; leer, wenn unbekannt">
+            <input type="text" inputMode="decimal" value={kosten} onChange={(e) => setKosten(e.target.value)} placeholder="34,90" />
+          </V1Field>
+          <V1Field label="Notiz" wide>
+            <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Lieferant, Flaschennummer …" />
+          </V1Field>
+        </div>
+
+        <label className="ko-check">
+          <input type="checkbox" checked={vorherigeLeer} onChange={(e) => setVorherigeLeer(e.target.checked)} disabled={!offen} />
+          <span>Vorherige Füllung damit als leer markieren{offen ? ` (seit ${formatDate(offen.zeitpunktUtc)})` : ' — es läuft keine'}</span>
+        </label>
+        <label className="ko-check">
+          <input type="checkbox" checked={journal} onChange={(e) => setJournal(e.target.checked)} disabled={!seite.grow} />
+          <span>Journal-Eintrag im Grow {seite.grow?.name ?? ''} anlegen</span>
+        </label>
+
+        {vorschau && <p className="ko-vorschau" data-audit="kosten-vorschau">Ergibt: {vorschau}</p>}
+
+        <div className="v1-form-actions">
+          <V1Button variant="primary" onClick={() => void speichern()} disabled={busy || !gewaehlt} audit="kosten-nachfuellung-speichern">Speichern</V1Button>
+          <V1Button onClick={onCancel} disabled={busy}>Abbrechen</V1Button>
+        </div>
+        </div>
+      </V1Card>
+    </V1Section>
+  )
+}
+
+function NachfuellungenTabelle({ liste, onChanged, onError }: { liste: KostenNachfuellung[]; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+  const [busy, setBusy] = useState(false)
+
+  async function loeschen(f: KostenNachfuellung) {
+    if (!window.confirm(`Nachfüllung ${f.artikelName} vom ${formatDate(f.zeitpunktUtc)} löschen?`)) return
+    setBusy(true)
+    try {
+      await apiFetch(`/api/kosten/nachfuellungen/${f.id}`, { method: 'DELETE' })
+      onChanged('Nachfüllung gelöscht.')
+    } catch (caught) {
+      onError(formatApiError(caught, 'Löschen fehlgeschlagen.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (liste.length === 0) return null
+
+  return (
+    <V1Section title="Nachfüllungen">
+      <V1Card>
+        <div className="ko-tabelle-huelle">
+          <table className="ko-tabelle" data-audit="kosten-nachfuellungen">
+            <thead>
+              <tr>
+                <th scope="col">Datum</th>
+                <th scope="col">Artikel</th>
+                <th scope="col">Menge</th>
+                <th scope="col">Kosten</th>
+                <th scope="col">Laufzeit</th>
+                <th scope="col">€/Tag</th>
+                <th scope="col">Grow</th>
+                <th scope="col"><span className="sr-only">Aktion</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {liste.map((f) => (
+                <tr key={f.id} className={f.leerAmUtc == null ? 'is-aktuell' : undefined}>
+                  <td>{formatDate(f.zeitpunktUtc)}</td>
+                  <th scope="row">{f.artikelName}{f.notiz && <small>{f.notiz}</small>}</th>
+                  <td>{formatNumber(f.menge, 2)} {f.einheit}</td>
+                  <td>{euro(f.kostenEur)}</td>
+                  <td>{f.leerAmUtc == null ? <span className="ls-pill">läuft</span> : tage(f.laufzeitTage)}</td>
+                  <td>{euro(f.eurProTag)}</td>
+                  <td>{f.growId != null ? <Link to={`/grows/${f.growId}`}>{f.growName ?? f.growId}</Link> : '–'}</td>
+                  <td><button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen(f)}>Löschen</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </V1Card>
+    </V1Section>
+  )
+}
+
+// -------------------------------------------------------- Durchgänge
+
+function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: number | null; onWahl: (growId: number | null) => void }) {
+  const liste = seite.durchgaenge.filter((d) => d.gesamtEur != null || d.laeuft)
+  if (liste.length <= 1) return null
+  const gezeigt = aktiv ?? seite.grow?.id ?? null
+
+  return (
+    <V1Section title="Durchgänge">
+      <V1Card>
+        <div className="ko-tabelle-huelle">
+          <table className="ko-tabelle" data-audit="kosten-durchgaenge">
+            <thead>
+              <tr>
+                <th scope="col">Grow</th>
+                <th scope="col">Zeitraum</th>
+                <th scope="col">Strom</th>
+                <th scope="col">Artikel</th>
+                <th scope="col">Gesamt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {liste.map((d) => (
+                <tr key={d.growId} className={d.growId === gezeigt ? 'is-aktuell' : undefined}>
+                  <th scope="row"><button type="button" className="ko-link" onClick={() => onWahl(d.growId)}>{d.name}</button>{d.laeuft && <span className="ls-pill">läuft</span>}</th>
+                  <td>{formatDate(d.startDate)} – {d.endDate ? formatDate(d.endDate) : 'heute'}</td>
+                  <td>{euro(d.stromEur)}</td>
+                  <td>{euro(d.artikelEur)}</td>
+                  <td>{euro(d.gesamtEur)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="ko-hint">Strom gibt es nur für Durchgänge, in deren Laufzeit Zählerstände fallen — also ab dem Tag, an dem die Quelle eingerichtet wurde.</p>
+      </V1Card>
+    </V1Section>
+  )
+}
+
+export default KostenPage

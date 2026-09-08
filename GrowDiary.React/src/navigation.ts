@@ -91,6 +91,11 @@ export const navGroups: NavGroup[] = [
       { to: '/regeln', label: 'Regeln & Automatik', end: true, keywords: 'grenzwerte schwellen alarm push zeitplan automation' },
       { to: '/sollwerte', label: 'Sollwert-Profile', end: true, keywords: 'zielwerte setpoints profil rdwc dwc phasen erfahrung eigene werte' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
+      // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
+      // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
+      // erfasst. Das Archiv rechnet den Strom aus Lampen-Watt; hier kommt er
+      // vom Zähler.
+      { to: '/kosten', label: 'Kosten', end: true, keywords: 'strom kwh euro preis zähler verbrauch verbrauchsartikel co2 flasche nachfüllung nachfüllen dünger kanister laufzeit prognose je tag je pflanze durchgang' },
     ],
   },
   {
