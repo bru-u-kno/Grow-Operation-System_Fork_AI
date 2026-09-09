@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.10
+
+**Fork AI.** Kosten: der erste Tipp auf „Artikel anlegen“ (oder einen der anderen beiden Knöpfe)
+springt jetzt zuverlässig zum Formular — auch wenn dabei der Reiter wechselt. Bisher kam der
+Sprung einen Zug zu früh und landete im Leeren; erst der zweite Tipp traf. Außerdem rollt das
+Formular am Telefon unter die feste Kopfleiste statt dahinter (`scroll-ziel`).
+
 ## 2.0.0-forkai.9
 
 **Fork AI.** Die Kosten-Seite bekommt Reiter, Anschaffungen und eine Grow-Zuordnung.

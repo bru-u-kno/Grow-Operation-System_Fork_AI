@@ -205,9 +205,19 @@ function KostenPage() {
 /** Ein offenes Formular: Kopfzeile mit Titel und ▴ zum Einklappen, rollt beim Öffnen ins Bild. */
 function FormularHuelle({ titel, onClose, children }: { titel: string; onClose: () => void; children: ReactNode }) {
   const huelle = useRef<HTMLDivElement>(null)
-  useEffect(() => { huelle.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }, [])
+  // Nicht sofort beim Mount: wenn der Klick gleichzeitig den Reiter wechselt,
+  // rendert der Router den neuen Reiter erst im nächsten Zug — ein sofortiger
+  // Sprung landet dann im Leeren (Bru, 09.09.: „erst der zweite Klick springt").
+  // Zwei Frames später steht die Seite, dann rollen wir.
+  useEffect(() => {
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => huelle.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+    })
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
+  }, [])
   return (
-    <section className="v1-section" ref={huelle}>
+    <section className="v1-section scroll-ziel" ref={huelle}>
       <header className="v1-section-head">
         <h2>{titel}</h2>
         <V1Button variant="ghost" onClick={onClose} audit={`kosten-form-zu`}>▴</V1Button>
