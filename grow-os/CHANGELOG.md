@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.12
+
+**Fork AI.** Kosten: Vorschläge für Hersteller und Produkt stehen jetzt direkt unter dem Feld.
+
+- Statt der Browser-Vorschlagsliste (die am Telefon unten über der Tastatur landete) erscheint
+  beim Tippen eine kleine Liste unmittelbar unter dem Eingabefeld; ein Tipp übernimmt den
+  Eintrag. Am Rechner: ↓/↑ wählt, Enter übernimmt, Esc schließt.
+- Beim Produkt bringt ein Vorschlag seinen Hersteller mit, wenn der noch leer ist.
+
 ## 2.0.0-forkai.11
 
 **Fork AI.** Kosten: Hersteller und Produkt werden beim Tippen vorgeschlagen.

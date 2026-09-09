@@ -558,11 +558,80 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
 }
 
 /**
- * Hersteller und Produkt mit Vorschlägen aus dem Bestand (forkai.11). Native
- * `<datalist>`: tippt man „c", bietet der Browser „Canna" an — ohne eigenes
- * Dropdown, funktioniert in der HA-App am Telefon. Beim Speichern gleicht das
- * Backend die Schreibweise zusätzlich an („canna" → „Canna"), damit aus einem
- * Tippfehler kein zweiter Hersteller wird.
+ * Ein Textfeld mit Vorschlägen direkt darunter (forkai.12). Kein `<datalist>`:
+ * die HA-App am Telefon zeigt die Browser-Vorschläge unten über der Tastatur,
+ * wo sie niemand sucht. Hier stehen sie unter dem Feld, ein Tipp übernimmt.
+ * Tastatur: ↓/↑ wählt, Enter übernimmt, Esc schließt.
+ */
+function VorschlagsFeld({ value, onChange, vorschlaege, placeholder, audit }: {
+  value: string
+  onChange: (v: string) => void
+  vorschlaege: Array<{ wert: string; neben?: string | null }>
+  placeholder?: string
+  audit?: string
+}) {
+  const [offen, setOffen] = useState(false)
+  const [markiert, setMarkiert] = useState(-1)
+  const tipp = value.trim().toLowerCase()
+  // Leeres Feld: alles (die Liste ist kurz). Getippt: was den Text enthält,
+  // Treffer am Wortanfang zuerst.
+  const treffer = useMemo(() => {
+    const alle = vorschlaege.filter((v) => v.wert.toLowerCase() !== tipp)
+    const passend = tipp ? alle.filter((v) => v.wert.toLowerCase().includes(tipp)) : alle
+    return passend
+      .sort((x, y) => Number(y.wert.toLowerCase().startsWith(tipp)) - Number(x.wert.toLowerCase().startsWith(tipp)))
+      .slice(0, 8)
+  }, [vorschlaege, tipp])
+  const zeigen = offen && treffer.length > 0
+
+  function uebernehmen(wert: string) { onChange(wert); setOffen(false); setMarkiert(-1) }
+
+  return (
+    <div className="ko-vorschlag">
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        data-audit={audit}
+        onChange={(e) => { onChange(e.target.value); setOffen(true); setMarkiert(-1) }}
+        onFocus={() => setOffen(true)}
+        onBlur={() => setOffen(false)}
+        onKeyDown={(e) => {
+          if (!zeigen) return
+          if (e.key === 'ArrowDown') { e.preventDefault(); setMarkiert((m) => Math.min(m + 1, treffer.length - 1)) }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setMarkiert((m) => Math.max(m - 1, -1)) }
+          else if (e.key === 'Enter' && markiert >= 0) { e.preventDefault(); uebernehmen(treffer[markiert].wert) }
+          else if (e.key === 'Escape') setOffen(false)
+        }}
+      />
+      {zeigen && (
+        <ul className="ko-vorschlaege" role="listbox" data-audit={audit ? `${audit}-liste` : undefined}>
+          {treffer.map((t, i) => (
+            <li key={t.wert}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === markiert}
+                className={i === markiert ? 'is-markiert' : undefined}
+                // mousedown statt click: sonst schließt der Blur die Liste, bevor der Klick ankommt
+                onMouseDown={(e) => { e.preventDefault(); uebernehmen(t.wert) }}
+              >
+                <span>{t.wert}</span>
+                {t.neben && <small>{t.neben}</small>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Hersteller und Produkt mit Vorschlägen aus dem Bestand (forkai.11/12).
+ * Beim Speichern gleicht das Backend die Schreibweise zusätzlich an
+ * („canna" → „Canna"), damit aus einem Tippfehler kein zweiter Hersteller wird.
  */
 function HerstellerProduktFelder({ id, seite, hersteller, produkt, onHersteller, onProdukt, herstellerPlatzhalter, produktPlatzhalter }: {
   id: string
@@ -576,22 +645,25 @@ function HerstellerProduktFelder({ id, seite, hersteller, produkt, onHersteller,
 }) {
   const h = hersteller.trim().toLowerCase()
   // Produkte des getippten Herstellers zuerst; ohne Hersteller alle.
-  const produkte = h
-    ? seite.produkte.filter((p) => (p.hersteller ?? '').toLowerCase() === h)
-    : seite.produkte
+  const produkte = h ? seite.produkte.filter((p) => (p.hersteller ?? '').toLowerCase() === h) : []
+  const produktListe = (produkte.length > 0 ? produkte : seite.produkte).map((p) => ({ wert: p.produkt, neben: p.hersteller }))
   return (
     <>
-      <V1Field label="Hersteller" hint={seite.hersteller.length > 0 ? 'bekannte Hersteller werden beim Tippen vorgeschlagen' : undefined}>
-        <input type="text" list={`${id}-hersteller`} value={hersteller} onChange={(e) => onHersteller(e.target.value)} placeholder={herstellerPlatzhalter} autoComplete="off" />
-        <datalist id={`${id}-hersteller`}>
-          {seite.hersteller.map((x) => <option key={x} value={x} />)}
-        </datalist>
+      <V1Field label="Hersteller" hint={seite.hersteller.length > 0 ? 'Vorhandenes erscheint beim Tippen — antippen übernimmt' : undefined}>
+        <VorschlagsFeld value={hersteller} onChange={onHersteller} vorschlaege={seite.hersteller.map((x) => ({ wert: x }))} placeholder={herstellerPlatzhalter} audit={`${id}-hersteller`} />
       </V1Field>
       <V1Field label="Produktbezeichnung">
-        <input type="text" list={`${id}-produkt`} value={produkt} onChange={(e) => onProdukt(e.target.value)} placeholder={produktPlatzhalter} autoComplete="off" />
-        <datalist id={`${id}-produkt`}>
-          {(produkte.length > 0 ? produkte : seite.produkte).map((p) => <option key={`${p.hersteller ?? ''}|${p.produkt}`} value={p.produkt}>{p.hersteller ?? undefined}</option>)}
-        </datalist>
+        <VorschlagsFeld
+          value={produkt}
+          onChange={(v) => {
+            onProdukt(v)
+            // Ein bekanntes Produkt bringt seinen Hersteller mit, wenn der noch leer ist.
+            if (!hersteller.trim()) { const p = seite.produkte.find((x) => x.produkt === v); if (p?.hersteller) onHersteller(p.hersteller) }
+          }}
+          vorschlaege={produktListe}
+          placeholder={produktPlatzhalter}
+          audit={`${id}-produkt`}
+        />
       </V1Field>
     </>
   )

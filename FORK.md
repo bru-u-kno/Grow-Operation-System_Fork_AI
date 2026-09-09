@@ -20,6 +20,7 @@ läuft parallel zum Original, eigene Datenbank, eigenes Image.
 | forkai.9 | Kosten-Seite mit Reitern (Strom/Verbrauch/Anschaffungen/Durchgänge), drei Erfassungs-Knöpfe oben; neuer Block **Anschaffungen** (Stück × Einzelpreis, Grow oder Lager, optional Hardware-Artikel + Journal); „Für Grow“-Auswahl bei Nachfüllungen; Einheiten-Dropdown, „Inhalt je Packung“ | Betrieb → Kosten | `Models/Kosten.cs`, `KostenRepository.cs`, `KostenApiController.cs`, `KostenSeiteService.cs`, `pages/KostenPage.tsx`, `features/kosten/*` |
 | forkai.10 | Kosten: Sprung zum Formular beim ersten Tipp (zwei Frames nach dem Reiterwechsel), `scroll-ziel` gegen die feste Kopfleiste | Betrieb → Kosten | `pages/KostenPage.tsx` |
 | forkai.11 | Hersteller/Produkt-Vorschläge beim Tippen (`datalist`, Quelle: Artikel, Anschaffungen, Hardware) und Schreibweisen-Angleich beim Speichern (`Stammdaten.Angleichen`) | Betrieb → Kosten | `Models/Kosten.cs`, `KostenSeiteService.cs`, `KostenApiController.cs`, `pages/KostenPage.tsx` |
+| forkai.12 | Vorschlagsliste unter dem Feld (`VorschlagsFeld`, eigene Liste statt `datalist`, Tastaturbedienung), Produkt bringt Hersteller mit | Betrieb → Kosten | `pages/KostenPage.tsx`, `features/kosten/kosten.css` |
 
 ## Geplant
 
