@@ -141,7 +141,7 @@ function KostenPage() {
             <>
               {offen.has('artikel') && (
                 <FormularHuelle titel="Artikel anlegen" onClose={() => formularSchliessen('artikel')}>
-                  <ArtikelForm einheiten={seite.einheiten} onDone={(text) => { formularSchliessen('artikel'); neuLaden(text) }} onError={setError} />
+                  <ArtikelForm seite={seite} onDone={(text) => { formularSchliessen('artikel'); neuLaden(text) }} onError={setError} />
                 </FormularHuelle>
               )}
               {offen.has('nachfuellung') && seite.artikel.length > 0 && (
@@ -170,7 +170,7 @@ function KostenPage() {
                       <ArtikelKarte
                         key={artikel.id}
                         artikel={artikel}
-                        einheiten={seite.einheiten}
+                        seite={seite}
                         onErfassen={() => formularUmschalten('nachfuellung', artikel.id)}
                         onChanged={neuLaden}
                         onError={setError}
@@ -474,13 +474,13 @@ function anlassText(anlass: Zaehlerstand['anlass']): string {
 
 // ------------------------------------------------------ Verbrauchsartikel
 
-function ArtikelKarte({ artikel, einheiten, onErfassen, onChanged, onError }: { artikel: KostenArtikel; einheiten: string[]; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { artikel: KostenArtikel; seite: KostenSeite; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
   const [busy, setBusy] = useState(false)
   const [bearbeiten, setBearbeiten] = useState(false)
   const a = artikel.aktuell
 
   if (bearbeiten) {
-    return <ArtikelForm artikel={artikel} einheiten={einheiten} onDone={(text) => { setBearbeiten(false); onChanged(text) }} onError={onError} onCancel={() => setBearbeiten(false)} />
+    return <ArtikelForm artikel={artikel} seite={seite} onDone={(text) => { setBearbeiten(false); onChanged(text) }} onError={onError} onCancel={() => setBearbeiten(false)} />
   }
 
   async function leerMarkieren() {
@@ -557,8 +557,49 @@ function ArtikelKarte({ artikel, einheiten, onErfassen, onChanged, onError }: { 
   )
 }
 
+/**
+ * Hersteller und Produkt mit Vorschlägen aus dem Bestand (forkai.11). Native
+ * `<datalist>`: tippt man „c", bietet der Browser „Canna" an — ohne eigenes
+ * Dropdown, funktioniert in der HA-App am Telefon. Beim Speichern gleicht das
+ * Backend die Schreibweise zusätzlich an („canna" → „Canna"), damit aus einem
+ * Tippfehler kein zweiter Hersteller wird.
+ */
+function HerstellerProduktFelder({ id, seite, hersteller, produkt, onHersteller, onProdukt, herstellerPlatzhalter, produktPlatzhalter }: {
+  id: string
+  seite: KostenSeite
+  hersteller: string
+  produkt: string
+  onHersteller: (v: string) => void
+  onProdukt: (v: string) => void
+  herstellerPlatzhalter?: string
+  produktPlatzhalter?: string
+}) {
+  const h = hersteller.trim().toLowerCase()
+  // Produkte des getippten Herstellers zuerst; ohne Hersteller alle.
+  const produkte = h
+    ? seite.produkte.filter((p) => (p.hersteller ?? '').toLowerCase() === h)
+    : seite.produkte
+  return (
+    <>
+      <V1Field label="Hersteller" hint={seite.hersteller.length > 0 ? 'bekannte Hersteller werden beim Tippen vorgeschlagen' : undefined}>
+        <input type="text" list={`${id}-hersteller`} value={hersteller} onChange={(e) => onHersteller(e.target.value)} placeholder={herstellerPlatzhalter} autoComplete="off" />
+        <datalist id={`${id}-hersteller`}>
+          {seite.hersteller.map((x) => <option key={x} value={x} />)}
+        </datalist>
+      </V1Field>
+      <V1Field label="Produktbezeichnung">
+        <input type="text" list={`${id}-produkt`} value={produkt} onChange={(e) => onProdukt(e.target.value)} placeholder={produktPlatzhalter} autoComplete="off" />
+        <datalist id={`${id}-produkt`}>
+          {(produkte.length > 0 ? produkte : seite.produkte).map((p) => <option key={`${p.hersteller ?? ''}|${p.produkt}`} value={p.produkt}>{p.hersteller ?? undefined}</option>)}
+        </datalist>
+      </V1Field>
+    </>
+  )
+}
+
 /** Anlegen oder — mit `artikel` — Bearbeiten; dieselben Felder, derselbe Vertrag. */
-function ArtikelForm({ artikel, einheiten, onDone, onError, onCancel }: { artikel?: KostenArtikel; einheiten: string[]; onDone: (text: string) => void; onError: (text: string) => void; onCancel?: () => void }) {
+function ArtikelForm({ artikel, seite, onDone, onError, onCancel }: { artikel?: KostenArtikel; seite: KostenSeite; onDone: (text: string) => void; onError: (text: string) => void; onCancel?: () => void }) {
+  const einheiten = seite.einheiten
   const [name, setName] = useState(artikel?.name ?? '')
   const [hersteller, setHersteller] = useState(artikel?.hersteller ?? '')
   const [produkt, setProdukt] = useState(artikel?.produkt ?? '')
@@ -600,12 +641,7 @@ function ArtikelForm({ artikel, einheiten, onDone, onError, onCancel }: { artike
         <V1Field label="Anzeigename" hint="so heißt der Artikel in Karten, Tabellen und im Journal" wide>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="CO₂-Flasche 10 kg" />
         </V1Field>
-        <V1Field label="Hersteller">
-          <input type="text" value={hersteller} onChange={(e) => setHersteller(e.target.value)} placeholder="Linde, Canna …" />
-        </V1Field>
-        <V1Field label="Produktbezeichnung">
-          <input type="text" value={produkt} onChange={(e) => setProdukt(e.target.value)} placeholder="Kohlendioxid E290, Aqua Vega A …" />
-        </V1Field>
+        <HerstellerProduktFelder id={`artikel-${artikel?.id ?? 'neu'}`} seite={seite} hersteller={hersteller} produkt={produkt} onHersteller={setHersteller} onProdukt={setProdukt} herstellerPlatzhalter="Linde, Canna …" produktPlatzhalter="Kohlendioxid E290, Aqua Vega A …" />
         <V1Field label="Einheit" hint="wie du die Menge nennst">
           <select value={einheit} onChange={(e) => setEinheit(e.target.value)}>
             {einheiten.map((e) => <option key={e} value={e}>{e}</option>)}
@@ -873,12 +909,7 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
         <V1Field label="Anzeigename" wide>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Erntescheren" />
         </V1Field>
-        <V1Field label="Hersteller">
-          <input type="text" value={hersteller} onChange={(e) => setHersteller(e.target.value)} placeholder="Fiskars, AC Infinity …" />
-        </V1Field>
-        <V1Field label="Produktbezeichnung">
-          <input type="text" value={produkt} onChange={(e) => setProdukt(e.target.value)} placeholder="Micro-Tip Pruning Snips …" />
-        </V1Field>
+        <HerstellerProduktFelder id={`anschaffung-${vorhanden?.id ?? 'neu'}`} seite={seite} hersteller={hersteller} produkt={produkt} onHersteller={setHersteller} onProdukt={setProdukt} herstellerPlatzhalter="Fiskars, AC Infinity …" produktPlatzhalter="Micro-Tip Pruning Snips …" />
         <V1Field label="Datum">
           <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
         </V1Field>

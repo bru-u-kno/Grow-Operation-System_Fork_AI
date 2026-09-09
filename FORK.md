@@ -19,6 +19,7 @@ läuft parallel zum Original, eigene Datenbank, eigenes Image.
 | forkai.8 | Verbrauchsartikel mit Anzeigename, Hersteller, Produktbezeichnung, Preis je Gebinde (Vorbelegung der Erfassung), Bearbeiten-Formular; Spalten per einmaligem `ALTER TABLE` | Betrieb → Kosten | `Models/Kosten.cs`, `KostenRepository.cs`, `KostenApiController.cs`, `KostenSeiteService.cs`, `pages/KostenPage.tsx` |
 | forkai.9 | Kosten-Seite mit Reitern (Strom/Verbrauch/Anschaffungen/Durchgänge), drei Erfassungs-Knöpfe oben; neuer Block **Anschaffungen** (Stück × Einzelpreis, Grow oder Lager, optional Hardware-Artikel + Journal); „Für Grow“-Auswahl bei Nachfüllungen; Einheiten-Dropdown, „Inhalt je Packung“ | Betrieb → Kosten | `Models/Kosten.cs`, `KostenRepository.cs`, `KostenApiController.cs`, `KostenSeiteService.cs`, `pages/KostenPage.tsx`, `features/kosten/*` |
 | forkai.10 | Kosten: Sprung zum Formular beim ersten Tipp (zwei Frames nach dem Reiterwechsel), `scroll-ziel` gegen die feste Kopfleiste | Betrieb → Kosten | `pages/KostenPage.tsx` |
+| forkai.11 | Hersteller/Produkt-Vorschläge beim Tippen (`datalist`, Quelle: Artikel, Anschaffungen, Hardware) und Schreibweisen-Angleich beim Speichern (`Stammdaten.Angleichen`) | Betrieb → Kosten | `Models/Kosten.cs`, `KostenSeiteService.cs`, `KostenApiController.cs`, `pages/KostenPage.tsx` |
 
 ## Geplant
 

@@ -40,6 +40,12 @@ vor — jede Füllung darf davon abweichen. Eine Nachfüllung wird einem Grow
 zugeordnet (Auswahl „Für Grow“: alle laufenden Grows oder **Lager**); nur
 zugeordnete zählen in den Durchgang.
 
+**Hersteller und Produkt (forkai.11).** Beide Felder schlagen beim Tippen
+vor, was Artikel, Anschaffungen und die Hardware-Liste schon kennen; beim
+Speichern gewinnt die vorhandene Schreibweise (Groß/Klein und Leerzeichen
+werden ignoriert). Wer einen neuen Hersteller anlegt, legt damit auch seine
+Schreibweise fest.
+
 **Anschaffungen (forkai.9).** Was gekauft wird und bleibt: Name, Hersteller,
 Produkt, Datum, Stück, Einzelpreis, Grow oder Lager, Notiz. Zählt einmal, hat
 keine Laufzeit. Optional legt das Erfassen einen Hardware-Artikel (Kategorie

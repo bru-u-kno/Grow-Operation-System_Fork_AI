@@ -136,6 +136,10 @@ export type KostenSeite = {
   durchgaenge: KostenDurchgang[]
   /** Erlaubte Einheiten für Verbrauchsartikel — vom Backend, damit beide Seiten dieselbe Liste haben */
   einheiten: string[]
+  /** Bekannte Hersteller aus Artikeln, Anschaffungen und Hardware — für den Vorschlag beim Tippen */
+  hersteller: string[]
+  /** Bekannte Produkte mit Hersteller — für den Vorschlag beim Tippen */
+  produkte: Array<{ hersteller: string | null; produkt: string }>
 }
 
 /** „Lager" — ausdrücklich keinem Grow zugeordnet. Als Select-Wert, weil ein <option> keinen null-Wert tragen kann. */

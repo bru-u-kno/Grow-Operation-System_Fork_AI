@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.11
+
+**Fork AI.** Kosten: Hersteller und Produkt werden beim Tippen vorgeschlagen.
+
+### Was Sie sehen
+
+- In „Artikel anlegen“, „Bearbeiten“ und „Anschaffung erfassen“ schlagen die Felder **Hersteller**
+  und **Produktbezeichnung** beim Tippen vor, was schon im Bestand steht — aus Verbrauchsartikeln,
+  Anschaffungen und der Hardware-Liste (Sensoren & Wartung). Produkte werden nach dem getippten
+  Hersteller gefiltert.
+- Beim Speichern gleicht Grow OS die Schreibweise an: „canna“ oder „Canna “ wird zu dem
+  „Canna“, das es schon gibt. Ein unbekannter Hersteller bleibt, wie Sie ihn getippt haben —
+  die erste Schreibweise gilt danach als die richtige.
+
+### Technik
+
+- `GET /api/kosten` liefert `hersteller` und `produkte` (Hersteller + Produkt, dublettenfrei,
+  Groß/Klein ignoriert). `Stammdaten.Angleichen` im Backend, Vorschläge über natives `<datalist>`.
+
 ## 2.0.0-forkai.10
 
 **Fork AI.** Kosten: der erste Tipp auf „Artikel anlegen“ (oder einen der anderen beiden Knöpfe)

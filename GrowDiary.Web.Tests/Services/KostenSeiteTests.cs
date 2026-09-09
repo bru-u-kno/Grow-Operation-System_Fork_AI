@@ -250,6 +250,25 @@ public sealed class KostenSeiteTests
         Assert.Contains("Stück", seite.Einheiten);
     }
 
+    [Fact]
+    public void HerstellerWerdenOhneDublettenUndInVorhandenerSchreibweiseAngeboten()
+    {
+        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂", Einheit = "kg", Hersteller = "Linde", Produkt = "Kohlendioxid E290" };
+        var canna = new Verbrauchsartikel { Id = 2, Name = "Vega A", Einheit = "L", Hersteller = "Canna", Produkt = "Aqua Vega A" };
+        var schere = new Anschaffung { Id = 1, Name = "Schere", Hersteller = "canna ", Produkt = "aqua vega a", Stueck = 1, EinzelpreisEur = 1, DatumUtc = Jetzt };
+        var hardware = new HardwareItem { Id = 1, Name = "Guardian", Category = "Sensor", Manufacturer = "Bluelab", Model = "Guardian Monitor" };
+
+        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2, canna], [], [schere], Jetzt, [hardware]);
+
+        Assert.Equal(["Bluelab", "Canna", "Linde"], seite.Hersteller);
+        Assert.Single(seite.Produkte, p => p.Produkt == "Aqua Vega A"); // die Anschaffung mit anderer Schreibweise ist keine zweite Zeile
+        Assert.Contains(seite.Produkte, p => p.Hersteller == "Bluelab" && p.Produkt == "Guardian Monitor");
+
+        Assert.Equal("Canna", Stammdaten.Angleichen("  canna", seite.Hersteller));
+        Assert.Equal("Athena", Stammdaten.Angleichen("Athena", seite.Hersteller)); // unbekannt bleibt, wie getippt
+        Assert.Null(Stammdaten.Angleichen("   ", seite.Hersteller));
+    }
+
     [Theory]
     [InlineData(null, null, 1, "Flower", ZaehlerAnlass.Manuell)]     // noch nie festgehalten
     [InlineData(1, "Flower", 2, "Flower", ZaehlerAnlass.GrowStart)] // anderer Grow läuft

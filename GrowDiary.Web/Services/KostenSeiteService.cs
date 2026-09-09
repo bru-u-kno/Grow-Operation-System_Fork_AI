@@ -93,7 +93,12 @@ public sealed record KostenSeite(
     IReadOnlyList<KostenNachfuellung> Nachfuellungen,
     IReadOnlyList<KostenAnschaffung> Anschaffungen,
     IReadOnlyList<KostenDurchgang> Durchgaenge,
-    IReadOnlyList<string> Einheiten);
+    IReadOnlyList<string> Einheiten,
+    IReadOnlyList<string> Hersteller,
+    IReadOnlyList<KostenProdukt> Produkte);
+
+/// <summary>Ein bekanntes Produkt mit seinem Hersteller — für den Vorschlag im Formular.</summary>
+public sealed record KostenProdukt(string? Hersteller, string Produkt);
 
 /// <summary>
 /// Rechnet die Kosten-Seite zusammen. Die Rechnung selbst ist statisch und
@@ -123,6 +128,7 @@ public sealed class KostenSeiteService
     private readonly GrowCostService _original;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
+    private readonly HardwareRepository _hardware;
 
     public KostenSeiteService(
         KostenRepository kosten,
@@ -130,8 +136,10 @@ public sealed class KostenSeiteService
         AppSettingsRepository settings,
         GrowCostService original,
         HomeAssistantService ha,
-        HomeAssistantSettingsRepository haSettings)
+        HomeAssistantSettingsRepository haSettings,
+        HardwareRepository hardware)
     {
+        _hardware = hardware;
         _kosten = kosten;
         _grows = grows;
         _settings = settings;
@@ -203,7 +211,8 @@ public sealed class KostenSeiteService
             _kosten.GetArtikel(),
             _kosten.GetNachfuellungen(),
             _kosten.GetAnschaffungen(),
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            _hardware.GetHardwareItems());
     }
 
     // ------------------------------------------------------------ Rechnung
@@ -218,8 +227,22 @@ public sealed class KostenSeiteService
         IReadOnlyList<Verbrauchsartikel> artikel,
         IReadOnlyList<Nachfuellung> fuellungen,
         IReadOnlyList<Anschaffung> anschaffungen,
-        DateTime jetztUtc)
+        DateTime jetztUtc,
+        IReadOnlyList<HardwareItem>? hardware = null)
     {
+        hardware ??= [];
+        var hersteller = Stammdaten.Sortiert(
+            artikel.Select(a => a.Hersteller)
+            .Concat(anschaffungen.Select(a => a.Hersteller))
+            .Concat(hardware.Select(h => h.Manufacturer)));
+        var produkte = artikel.Select(a => (a.Hersteller, a.Produkt))
+            .Concat(anschaffungen.Select(a => (a.Hersteller, a.Produkt)))
+            .Concat(hardware.Select(h => (h.Manufacturer, h.Model)))
+            .Where(t => !string.IsNullOrWhiteSpace(t.Item2))
+            .Select(t => new KostenProdukt(t.Item1 is null ? null : Stammdaten.Normalisieren(t.Item1), Stammdaten.Normalisieren(t.Item2!)))
+            .DistinctBy(p => (p.Hersteller?.ToLowerInvariant(), p.Produkt.ToLowerInvariant()))
+            .OrderBy(p => p.Produkt, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
         var heute = jetztUtc.ToLocalTime().Date;
         var artikelNachId = artikel.ToDictionary(a => a.Id);
         var growNachId = alleGrows.ToDictionary(g => g.Id);
@@ -284,7 +307,7 @@ public sealed class KostenSeiteService
             })
             .ToList();
 
-        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle);
+        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle, hersteller, produkte);
     }
 
     private static (double? Prognose, string? Hinweis) Ernteprognose(GrowRun grow, DateTime heute, double bisher, double proTag)

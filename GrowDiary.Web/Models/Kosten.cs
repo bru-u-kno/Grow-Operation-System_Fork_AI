@@ -50,6 +50,32 @@ public sealed class Nachfuellung
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Bekannte Hersteller und Produkte aus allem, was schon erfasst ist (forkai.11).
+/// Damit „Canna", „canna" und „Canna " nicht zu drei Herstellern werden: die
+/// Oberfläche bietet die Liste zum Antippen an, und beim Speichern gewinnt die
+/// bereits vorhandene Schreibweise.
+/// </summary>
+public static class Stammdaten
+{
+    public static string Normalisieren(string s) => string.Join(' ', s.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>Gibt die vorhandene Schreibweise zurück, wenn es <paramref name="eingabe"/> ohne Rücksicht auf Groß/Klein schon gibt.</summary>
+    public static string? Angleichen(string? eingabe, IEnumerable<string> bekannt)
+    {
+        if (string.IsNullOrWhiteSpace(eingabe)) return null;
+        var sauber = Normalisieren(eingabe);
+        return bekannt.FirstOrDefault(b => string.Equals(Normalisieren(b), sauber, StringComparison.OrdinalIgnoreCase)) ?? sauber;
+    }
+
+    public static List<string> Sortiert(IEnumerable<string?> werte) => werte
+        .Where(w => !string.IsNullOrWhiteSpace(w))
+        .Select(w => Normalisieren(w!))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(w => w, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
+}
+
 /// <summary>Die Einheiten, die ein Verbrauchsartikel haben darf (forkai.9).</summary>
 public static class VerbrauchsEinheiten
 {

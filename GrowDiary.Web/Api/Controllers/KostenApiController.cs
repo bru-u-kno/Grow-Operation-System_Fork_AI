@@ -120,7 +120,8 @@ public sealed class KostenApiController : ApiControllerBase
         if (request.Gebinde is <= 0) return BadRequestError("gebinde_invalid", "Das Gebinde muss größer als 0 sein.");
         if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
         if (!VerbrauchsEinheiten.IstGueltig(request.Einheit)) return BadRequestError("einheit_invalid", $"Einheit muss eine von {string.Join(", ", VerbrauchsEinheiten.Alle)} sein.");
-        var artikel = new Verbrauchsartikel { Name = request.Name, Hersteller = request.Hersteller, Produkt = request.Produkt, PreisEur = request.PreisEur, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv };
+        var (herstellerA, produktA) = Angleichen(request.Hersteller, request.Produkt);
+        var artikel = new Verbrauchsartikel { Name = request.Name, Hersteller = herstellerA, Produkt = produktA, PreisEur = request.PreisEur, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv };
         artikel.Id = _repo.CreateArtikel(artikel);
         return Created($"/api/kosten/artikel/{artikel.Id}", _repo.GetArtikel(artikel.Id));
     }
@@ -136,9 +137,10 @@ public sealed class KostenApiController : ApiControllerBase
         if (request.Gebinde is <= 0) return BadRequestError("gebinde_invalid", "Das Gebinde muss größer als 0 sein.");
         if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
         if (!VerbrauchsEinheiten.IstGueltig(request.Einheit)) return BadRequestError("einheit_invalid", $"Einheit muss eine von {string.Join(", ", VerbrauchsEinheiten.Alle)} sein.");
+        var (herstellerU, produktU) = Angleichen(request.Hersteller, request.Produkt);
         artikel.Name = request.Name;
-        artikel.Hersteller = request.Hersteller;
-        artikel.Produkt = request.Produkt;
+        artikel.Hersteller = herstellerU;
+        artikel.Produkt = produktU;
         artikel.PreisEur = request.PreisEur;
         artikel.Einheit = request.Einheit;
         artikel.Gebinde = request.Gebinde;
@@ -336,6 +338,7 @@ public sealed class KostenApiController : ApiControllerBase
         var growId = request.OhneGrow ? null : request.GrowId ?? _seite.LaufenderGrow(datum.ToLocalTime().Date).GrowId;
         if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
 
+        var (herstellerN, produktN) = Angleichen(request.Hersteller, request.Produkt);
         int? hardwareId = null;
         if (request.AlsHardware)
         {
@@ -345,8 +348,8 @@ public sealed class KostenApiController : ApiControllerBase
             {
                 Name = request.Name.Trim(),
                 Category = "Zubehör",
-                Manufacturer = Leer(request.Hersteller),
-                Model = Leer(request.Produkt),
+                Manufacturer = herstellerN,
+                Model = produktN,
                 GrowId = growId,
                 InstalledAtUtc = datum,
             });
@@ -355,7 +358,7 @@ public sealed class KostenApiController : ApiControllerBase
 
         var a = new Anschaffung
         {
-            Name = request.Name, Hersteller = request.Hersteller, Produkt = request.Produkt,
+            Name = request.Name, Hersteller = herstellerN, Produkt = produktN,
             DatumUtc = datum, Stueck = request.Stueck, EinzelpreisEur = request.EinzelpreisEur,
             GrowId = growId, Notiz = request.Notiz, HardwareItemId = hardwareId,
         };
@@ -365,7 +368,7 @@ public sealed class KostenApiController : ApiControllerBase
         {
             var de = CultureInfo.GetCultureInfo("de-DE");
             var teile = new List<string> { $"{a.Stueck} × {a.EinzelpreisEur.ToString("0.00", de)} € = {a.GesamtEur.ToString("0.00", de)} €" };
-            var herkunft = string.Join(" ", new[] { Leer(request.Hersteller), Leer(request.Produkt) }.Where(t => t is not null));
+            var herkunft = string.Join(" ", new[] { herstellerN, produktN }.Where(t => t is not null));
             if (herkunft.Length > 0) teile.Add(herkunft);
             if (!string.IsNullOrWhiteSpace(request.Notiz)) teile.Add(request.Notiz.Trim());
             _journal.Create(new JournalEntry
@@ -392,9 +395,10 @@ public sealed class KostenApiController : ApiControllerBase
         if (AnschaffungPruefen(request) is { } fehler) return fehler;
         var growId = request.OhneGrow ? null : request.GrowId ?? a.GrowId;
         if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
+        var (herstellerAU, produktAU) = Angleichen(request.Hersteller, request.Produkt);
         a.Name = request.Name;
-        a.Hersteller = request.Hersteller;
-        a.Produkt = request.Produkt;
+        a.Hersteller = herstellerAU;
+        a.Produkt = produktAU;
         a.DatumUtc = request.Datum is null ? a.DatumUtc : ZuUtc(request.Datum);
         a.Stueck = request.Stueck;
         a.EinzelpreisEur = request.EinzelpreisEur;
@@ -415,6 +419,17 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     private static string? Leer(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>Hersteller/Produkt an die vorhandene Schreibweise angleichen (forkai.11).</summary>
+    private (string? Hersteller, string? Produkt) Angleichen(string? hersteller, string? produkt)
+    {
+        var artikel = _repo.GetArtikel();
+        var anschaffungen = _repo.GetAnschaffungen();
+        var hardware = _hardware.GetHardwareItems();
+        var bekannteHersteller = artikel.Select(a => a.Hersteller).Concat(anschaffungen.Select(a => a.Hersteller)).Concat(hardware.Select(h => h.Manufacturer)).Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h!);
+        var bekannteProdukte = artikel.Select(a => a.Produkt).Concat(anschaffungen.Select(a => a.Produkt)).Concat(hardware.Select(h => h.Model)).Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p!);
+        return (Stammdaten.Angleichen(hersteller, bekannteHersteller), Stammdaten.Angleichen(produkt, bekannteProdukte));
+    }
 
     /// <summary>Ein Zeitpunkt aus dem Formular: ohne Kennzeichnung gilt Ortszeit des Add-ons.</summary>
     private static DateTime ZuUtc(DateTime? wert)
