@@ -55,11 +55,11 @@ public sealed class NavBarApiControllerTests : IDisposable
     [Fact]
     public void GespeicherteReihenfolge_kommtInDerselbenFolgeZurueck()
     {
-        _controller.Save(new SaveNavBarRequest { Items = ["/kosten", "/", "/aufgaben"] });
+        _controller.Save(new SaveNavBarRequest { Items = new List<string> { "/kosten", "/", "/aufgaben" } });
 
         var dto = Auslesen(_controller.Get());
 
-        Assert.Equal(["/kosten", "/", "/aufgaben"], dto.Items);
+        Assert.Equal(new[] { "/kosten", "/", "/aufgaben" }, dto.Items);
     }
 
     [Fact]
@@ -67,9 +67,9 @@ public sealed class NavBarApiControllerTests : IDisposable
     {
         // Zweimal derselbe Eintrag stuende zweimal in der Leiste und truege in
         // React denselben Schluessel.
-        var dto = Auslesen(_controller.Save(new SaveNavBarRequest { Items = ["/", "/", "/kosten"] }));
+        var dto = Auslesen(_controller.Save(new SaveNavBarRequest { Items = new List<string> { "/", "/", "/kosten" } }));
 
-        Assert.Equal(["/", "/kosten"], dto.Items);
+        Assert.Equal(new[] { "/", "/kosten" }, dto.Items);
     }
 
     [Fact]
@@ -77,19 +77,19 @@ public sealed class NavBarApiControllerTests : IDisposable
     {
         var dto = Auslesen(_controller.Save(new SaveNavBarRequest
         {
-            Items = ["/", "/messungen", "/wissen", "/kosten", "/aufgaben", "/grows", "/sensoren"],
+            Items = new List<string> { "/", "/messungen", "/wissen", "/kosten", "/aufgaben", "/grows", "/sensoren" },
         }));
 
         Assert.Equal(NavBarApiController.MaxItems, dto.Items!.Count);
-        Assert.DoesNotContain("/grows", dto.Items);
+        Assert.DoesNotContain("/grows", dto.Items!);
     }
 
     [Fact]
     public void LeereListe_setztAufWerkseinstellungZurueck()
     {
-        _controller.Save(new SaveNavBarRequest { Items = ["/kosten"] });
+        _controller.Save(new SaveNavBarRequest { Items = new List<string> { "/kosten" } });
 
-        var dto = Auslesen(_controller.Save(new SaveNavBarRequest { Items = [] }));
+        var dto = Auslesen(_controller.Save(new SaveNavBarRequest { Items = new List<string>() }));
 
         Assert.Null(dto.Items);
         Assert.Null(_einstellungen.GetValue(NavBarApiController.SettingsKey));
@@ -98,7 +98,7 @@ public sealed class NavBarApiControllerTests : IDisposable
     [Fact]
     public void NurLeereEintraege_werdenAbgelehnt()
     {
-        var antwort = _controller.Save(new SaveNavBarRequest { Items = ["", "   "] });
+        var antwort = _controller.Save(new SaveNavBarRequest { Items = new List<string> { "", "   " } });
 
         Assert.IsType<BadRequestObjectResult>(antwort.Result);
     }
@@ -118,12 +118,12 @@ public sealed class NavBarApiControllerTests : IDisposable
     [Fact]
     public void DashboardPfad_aenderbarOhneDieReihenfolgeZuVerlieren()
     {
-        _controller.Save(new SaveNavBarRequest { Items = ["/kosten", "/"] });
+        _controller.Save(new SaveNavBarRequest { Items = new List<string> { "/kosten", "/" } });
 
         var dto = Auslesen(_controller.Save(new SaveNavBarRequest { DashboardPath = "/dashboard-grow/0" }));
 
         Assert.Equal("/dashboard-grow/0", dto.DashboardPath);
-        Assert.Equal(["/kosten", "/"], dto.Items);
+        Assert.Equal(new[] { "/kosten", "/" }, dto.Items);
     }
 
     [Fact]

@@ -81,9 +81,34 @@ public sealed class NavBarApiController : ApiControllerBase
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<NavBarDto> Save([FromBody] SaveNavBarRequest request)
     {
-        if (request?.Items is null)
+        if (request is null)
         {
-            return BadRequestError("navbar_invalid", "Es wurde keine Reihenfolge uebergeben.");
+            return BadRequestError("navbar_invalid", "Es wurde nichts uebergeben.");
+        }
+
+        // Das Ruecksprungziel kommt eigenstaendig: wer nur das Dashboard
+        // aendert, schickt keine Reihenfolge mit und darf seine trotzdem
+        // behalten.
+        if (request.DashboardPath is not null)
+        {
+            var neuesZiel = request.DashboardPath.Trim();
+            _settings.SetValue(DashboardKey, neuesZiel.Length == 0 ? null : neuesZiel);
+        }
+
+        var dashboard = _settings.GetValue(DashboardKey);
+        if (string.IsNullOrWhiteSpace(dashboard)) dashboard = DashboardDefault;
+
+        if (request.Items is null)
+        {
+            // Nur das Dashboard geaendert — Reihenfolge unangetastet lassen.
+            var bestand = _settings.GetValue(SettingsKey);
+            List<string>? unveraendert = null;
+            if (!string.IsNullOrWhiteSpace(bestand))
+            {
+                try { unveraendert = JsonSerializer.Deserialize<List<string>>(bestand); }
+                catch (JsonException) { unveraendert = null; }
+            }
+            return Ok(new NavBarDto(unveraendert, dashboard));
         }
 
         // Leere Liste heisst „zurueck auf Werkseinstellung“ — das ist der Knopf
@@ -91,7 +116,7 @@ public sealed class NavBarApiController : ApiControllerBase
         if (request.Items.Count == 0)
         {
             _settings.SetValue(SettingsKey, null);
-            return Ok(new NavBarDto(null));
+            return Ok(new NavBarDto(null, dashboard));
         }
 
         var bereinigt = new List<string>();
