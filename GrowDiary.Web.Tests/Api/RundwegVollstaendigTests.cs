@@ -77,6 +77,11 @@ public sealed class RundwegVollstaendigTests
         new("Strom-Quelle", null, "/api/kosten/strom-quelle", typeof(GrowDiary.Web.Models.StromQuelle)),
         new("Wasserprofil", null, "/api/water-profile", typeof(GrowDiary.Web.Models.WaterProfile)),
         new("Benachrichtigungen", null, "/api/notifications/settings", typeof(NotificationSettingsDto)),
+        // Fork AI (forkai.13): wohin das Haus-Zeichen in der Titelzeile springt.
+        // Die Reihenfolge selbst (Items) ist eine Liste und wird von dieser
+        // Zaehlung ohnehin nicht gefahren — dafuer gibt es
+        // NavBarApiControllerTests.
+        new("Navigationsleiste", null, "/api/navbar", typeof(SaveNavBarRequest)),
     ];
 
     /// <summary>
