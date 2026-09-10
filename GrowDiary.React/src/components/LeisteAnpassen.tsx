@@ -9,7 +9,7 @@
    schlimmer als gar keins. Deshalb ein sichtbarer Modus mit Pfeilen: er
    funktioniert mit dem Daumen, mit der Maus und mit der Tastatur gleich. */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { barCandidates, defaultBarRoutes, type NavLeaf } from '../navigation'
 import { formatApiError } from '../api'
 
@@ -24,18 +24,22 @@ type Props = {
 const MAX = 5
 
 export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Props) {
-  const [gewaehlt, setGewaehlt] = useState<string[]>([])
+  // Abgeleitet statt kopiert: `null` heisst „noch nichts angefasst“, dann gilt
+  // der gespeicherte Stand. Beim Öffnen muss also nichts übertragen werden —
+  // und wer abbricht, lässt nichts Halbfertiges zurück, weil `onClose` wieder
+  // auf `null` stellt. Ein Effekt, der beim Öffnen kopiert, wäre der Weg, den
+  // React ausdrücklich nicht mehr empfiehlt (und den der Linter meldet).
+  const [entwurf, setEntwurf] = useState<string[] | null>(null)
+  const gewaehlt = entwurf ?? aktuell.map((item) => item.to)
+  const setGewaehlt = setEntwurf
   const [fehler, setFehler] = useState<string | null>(null)
   const [speichert, setSpeichert] = useState(false)
 
-  // Beim Öffnen den echten Stand übernehmen — nicht den von vorhin. Wer
-  // abbricht, ändert nichts; wer erneut öffnet, sieht das Gespeicherte.
-  useEffect(() => {
-    if (open) {
-      setGewaehlt(aktuell.map((item) => item.to))
-      setFehler(null)
-    }
-  }, [open, aktuell])
+  const schliessen = () => {
+    setEntwurf(null)
+    setFehler(null)
+    onClose()
+  }
 
   if (!open) return null
 
@@ -71,7 +75,7 @@ export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Prop
     setFehler(null)
     try {
       await onSave(gewaehlt)
-      onClose()
+      schliessen()
     } catch (caught) {
       setFehler(formatApiError(caught, 'Die Reihenfolge konnte nicht gespeichert werden.'))
     } finally {
@@ -84,7 +88,7 @@ export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Prop
     setFehler(null)
     try {
       await onReset()
-      onClose()
+      schliessen()
     } catch (caught) {
       setFehler(formatApiError(caught, 'Die Werkseinstellung konnte nicht gesetzt werden.'))
     } finally {
@@ -99,7 +103,7 @@ export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Prop
 
   return (
     <>
-      <div className="forkai-sheet-dim" onClick={onClose} />
+      <div className="forkai-sheet-dim" onClick={schliessen} />
       <div className="forkai-anpassen" role="dialog" aria-modal="true" aria-label="Leiste anpassen" data-audit="leiste-anpassen">
         <div className="forkai-sheet-grip" aria-hidden="true" />
         <h2 className="forkai-sheet-title">Leiste anpassen</h2>
@@ -168,7 +172,7 @@ export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Prop
         {fehler && <p className="forkai-anpassen-fehler" role="alert">{fehler}</p>}
 
         <div className="forkai-anpassen-aktionen">
-          <button type="button" className="forkai-anpassen-sekundaer" onClick={onClose} disabled={speichert}>
+          <button type="button" className="forkai-anpassen-sekundaer" onClick={schliessen} disabled={speichert}>
             Abbrechen
           </button>
           <button

@@ -763,11 +763,20 @@ function NachfuellungForm({ seite, vorbelegtArtikelId, onDone, onCancel, onError
   const growOpts = growOptionen(seite)
   const [fuerGrow, setFuerGrow] = useState<string>(seite.grow && growOpts.some((o) => o.value === String(seite.grow!.id)) ? String(seite.grow.id) : (growOpts[0]?.value ?? LAGER))
 
-  useEffect(() => {
+  // Artikel gewechselt -> Menge und Preis neu vorbelegen.
+  //
+  // Angepasst WAEHREND des Renderns statt in einem Effekt. Ein Effekt laeuft
+  // erst nach dem Zeichnen: einen Bilddurchlauf lang stuenden im Formular die
+  // Werte des VORIGEN Artikels — und wer schnell tippt, schreibt in ein Feld,
+  // das gleich darauf ueberschrieben wird. So ist die Vorbelegung schon da,
+  // wenn das neue Formular zum ersten Mal erscheint.
+  const [letzterArtikelId, setLetzterArtikelId] = useState(artikelId)
+  if (letzterArtikelId !== artikelId) {
+    setLetzterArtikelId(artikelId)
     const a = artikel.find((x) => x.id === artikelId)
     if (a?.gebinde != null) setMenge(feldText(a.gebinde))
     if (a?.preisEur != null) setKosten(feldText(a.preisEur))
-  }, [artikelId, artikel])
+  }
 
   const mengeZahl = zahlOderNull(menge)
   const kostenZahl = zahlOderNull(kosten)

@@ -41,10 +41,18 @@ export function AppShell({ children, counts }: Props) {
   // Beim Seitenwechsel schliesst alles Aufgeklappte. Sonst haengt das Menue
   // ueber der neuen Seite und verdeckt genau die Ueberschrift, die einem
   // sagen wuerde, wo man gelandet ist.
-  useEffect(() => {
+  //
+  // Angepasst WAEHREND des Renderns statt in einem Effekt. Das ist Reacts
+  // eigene Empfehlung fuer „Zustand haengt an einer Aenderung von aussen"
+  // (react.dev: „You Might Not Need an Effect"): der Effekt liefe erst nach
+  // dem Zeichnen, das offene Menue waere also einen Bilddurchlauf lang ueber
+  // der neuen Seite zu sehen. Hier ist es weg, bevor irgendetwas erscheint.
+  const [letzterPfad, setLetzterPfad] = useState(location.pathname)
+  if (letzterPfad !== location.pathname) {
+    setLetzterPfad(location.pathname)
     setMoreOpen(false)
     setErfassenOpen(false)
-  }, [location.pathname])
+  }
 
   // Beim Seitenwechsel nach oben.
   //

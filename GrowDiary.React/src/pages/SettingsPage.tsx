@@ -20,11 +20,14 @@ type BackendHealth = { appName: string; backendSchema: string }
 function SettingsPage() {
   const { theme, toggle } = useTheme()
   const { dashboardPath, saveDashboardPath } = useNavBar()
-  // Eigener Zustand fuers Feld: waehrend des Tippens darf der gespeicherte
-  // Wert nicht zurueckspringen.
-  const [haZiel, setHaZiel] = useState('')
+  // Abgeleitet statt gespiegelt: `null` heisst „noch nichts getippt“, dann
+  // zeigt das Feld den gespeicherten Wert. So springt es waehrend des Tippens
+  // nicht zurueck, wenn die Antwort des Servers eintrifft — und es braucht
+  // keinen Effekt, der Zustand aus Zustand kopiert.
+  const [haZielEntwurf, setHaZielEntwurf] = useState<string | null>(null)
+  const haZiel = haZielEntwurf ?? dashboardPath
+  const setHaZiel = setHaZielEntwurf
   const [haZielSaving, setHaZielSaving] = useState(false)
-  useEffect(() => { setHaZiel(dashboardPath) }, [dashboardPath])
   const saveHaZiel = async () => {
     setHaZielSaving(true)
     try { await saveDashboardPath(haZiel.trim()) } finally { setHaZielSaving(false) }

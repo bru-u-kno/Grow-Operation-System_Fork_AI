@@ -10,22 +10,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-export type ErfassenZiel = {
-  to: string
-  icon: string
-  label: string
-  hint: string
-}
-
-/** Nach Häufigkeit, nicht alphabetisch: was man täglich tippt, steht oben. */
-export const erfassenZiele: ErfassenZiel[] = [
-  { to: '/messung', icon: '◎', label: 'Messung', hint: 'pH, EC, Wassertemperatur, ORP' },
-  { to: '/addback', icon: '⤓', label: 'Addback', hint: 'Nachfüllen und Dünger nach Feed-Chart' },
-  { to: '/wasserwechsel', icon: '⟳', label: 'Wasserwechsel', hint: 'Reservoir neu ansetzen' },
-  { to: '/journal', icon: '✎', label: 'Notiz & Foto', hint: 'Beobachtung fürs Journal' },
-  { to: '/kosten', icon: '€', label: 'Kosten', hint: 'Nachfüllung oder Anschaffung' },
-]
+import { erfassenZiele } from './erfassen-ziele'
 
 type Props = {
   open: boolean
