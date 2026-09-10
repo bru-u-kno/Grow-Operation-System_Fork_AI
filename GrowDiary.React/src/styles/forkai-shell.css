@@ -92,9 +92,16 @@
     max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   /* Aktiv wird unterstrichen statt gefuellt: eine gefuellte Kachel neben fuenf
-     leeren zieht das Auge staerker an als der Inhalt darunter. */
+     leeren zieht das Auge staerker an als der Inhalt darunter.
+
+     `--accent-text` fuer die Schrift, `--accent` nur fuer die Linie. Der
+     Unterschied ist nicht kosmetisch: `--accent` ist die FLAECHEN-Farbe und im
+     hellen Thema als Schrift zu schwach — der Rundweg hat auf „/" 3,18 statt
+     der geforderten 4,5 gemessen. Genau dieselbe Verwechslung steckt in der
+     Geschichte dieser Leiste schon einmal drin (Kontrast 1,15, siehe
+     shell.css). Eine Linie darf schwach sein, ein Wort nicht. */
   .forkai-leiste-item.active {
-    background: transparent; color: var(--accent); border-bottom-color: var(--accent);
+    background: transparent; color: var(--accent-text); border-bottom-color: var(--accent);
   }
   .forkai-leiste-punkt {
     position: absolute; top: 5px; right: 50%; margin-right: -14px;
@@ -165,7 +172,7 @@
 .forkai-sheet-icon {
   flex: 0 0 auto; width: 34px; height: 34px;
   display: grid; place-items: center; border-radius: var(--r-sm);
-  background: var(--sunk); color: var(--accent); font-size: 15px;
+  background: var(--sunk); color: var(--accent-text); font-size: 15px;
 }
 .forkai-sheet-text { display: grid; min-width: 0; }
 .forkai-sheet-text strong { font: 600 var(--fs-klein)/1.2 var(--font-mono); }
@@ -193,7 +200,7 @@
   border: 1px solid var(--hair); border-radius: var(--r-sm);
   margin-bottom: 6px;
 }
-.forkai-anpassen-icon { width: 24px; text-align: center; color: var(--accent); }
+.forkai-anpassen-icon { width: 24px; text-align: center; color: var(--accent-text); }
 .forkai-anpassen-name {
   flex: 1 1 auto; min-width: 0;
   font: 500 var(--fs-klein)/1.2 var(--font-mono); color: var(--ink);
