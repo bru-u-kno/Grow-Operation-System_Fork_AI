@@ -268,6 +268,20 @@ export function AppShell({ children, counts }: Props) {
           >
             ▦ Leiste anpassen
           </button>
+          {/* Fork AI: der Weg zu den Einstellungen. Am Schreibtisch haengt er
+              unten in der Seitenleiste — die ist am Telefon verborgen, und
+              damit war die Seite dort nur ueber die getippte Adresse
+              erreichbar. Sie steht bewusst NICHT in `navGroups`: dort speist
+              sich die anpassbare Icon-Leiste heraus, und die soll die
+              Grossfunktionen tragen, keine Verwaltung. */}
+          <NavLink
+            to="/settings"
+            className="forkai-anpassen-oeffner"
+            data-audit="mehr-einstellungen"
+            onClick={() => setMoreOpen(false)}
+          >
+            ⚙ Einstellungen
+          </NavLink>
           {navGroups.map((group) => (
             <section key={group.id}>
               <div className="v1-nav-group-head">{group.label}</div>

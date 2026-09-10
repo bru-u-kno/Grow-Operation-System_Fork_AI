@@ -115,6 +115,12 @@
     background: transparent; color: var(--ink);
     font: 500 var(--fs-klein)/1 var(--font-mono); cursor: pointer;
   }
+
+  /* Derselbe Knopf, nur als Verweis: ein <a> nimmt Breite und Hoehe erst an,
+     wenn es kein Fliesstext mehr ist. */
+  a.forkai-anpassen-oeffner {
+    display: grid; place-items: center; text-decoration: none;
+  }
 }
 
 /* Am Schreibtisch traegt die Seitenleiste die Navigation; die Leiste bleibt

@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.17
+
+**Fork AI.** Die Einstellungen sind am Telefon wieder erreichbar.
+
+### Was Sie sehen
+
+- Im Menü **Mehr** steht jetzt gleich oben, neben „Leiste anpassen", der Punkt
+  **Einstellungen**.
+
+### Warum
+
+Seit der neuen Navigation traegt die Icon-Leiste die Hauptfunktionen, und die
+Seitenleiste blendet sich am Telefon aus. Der Verweis auf die Einstellungen hing
+aber unten in genau dieser Seitenleiste — am Telefon kam man also nur noch ueber
+die getippte Adresse hin. Aufgefallen ist es beim Umstellen des Ziels fuer das
+„⌂"-Zeichen, das genau dort eingetragen wird. Der Punkt steht bewusst nicht in
+den Menuegruppen: aus denen speist sich die anpassbare Icon-Leiste, und die soll
+die Grossfunktionen tragen, nicht die Verwaltung. Ein Test haelt den Weg fest.
+
 ## 2.0.0-forkai.16
 
 **Fork AI.** Das „⌂"-Zeichen bleibt in der Home-Assistant-App.
