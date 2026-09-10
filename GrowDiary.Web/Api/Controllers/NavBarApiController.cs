@@ -24,10 +24,10 @@ namespace GrowDiary.Web.Api.Controllers;
 public sealed class NavBarApiController : ApiControllerBase
 {
     /// <summary>Schluessel in der AppSettings-Tabelle.</summary>
-    internal const string SettingsKey = "forkai.navbar.order";
+    public const string SettingsKey = "forkai.navbar.order";
 
     /// <summary>Wohin das Haus-Zeichen zurueckspringt.</summary>
-    internal const string DashboardKey = "forkai.navbar.hadashboard";
+    public const string DashboardKey = "forkai.navbar.hadashboard";
 
     /// <summary>
     /// Voreinstellung fuer den Ruecksprung: die Startseite von Home Assistant.
@@ -36,10 +36,10 @@ public sealed class NavBarApiController : ApiControllerBase
     /// anders. Wer ein Lieblings-Dashboard hat, traegt es in den Einstellungen
     /// ein; „lovelace" ist die Adresse, die jede Installation hat.
     /// </summary>
-    internal const string DashboardDefault = "/lovelace/0";
+    public const string DashboardDefault = "/lovelace/0";
 
     /// <summary>Wie viele Ziele hoechstens in die Leiste passen (das sechste Feld ist „Mehr“).</summary>
-    internal const int MaxItems = 5;
+    public const int MaxItems = 5;
 
     private readonly AppSettingsRepository _settings;
 
