@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.13
+
+**Fork AI.** Die Navigation am Telefon ist neu — Titelzeile, Icon-Leiste, ein Weg zum Eintragen.
+
+### Was Sie sehen
+
+- **Oben eine Titelzeile** mit dem Namen und der Seite, auf der Sie gerade sind. Rechts daneben
+  zwei Zeichen: das grüne **+** öffnet das Erfassen-Blatt, das **⌂** springt zurück in die normale
+  Home-Assistant-Ansicht. Beide sind auf **jeder** Seite da — bisher lag „Messung erfassen“ nur auf
+  der Startseite.
+- **Erfassen an einer Stelle**: Messung, Addback, Wasserwechsel, Notiz und Kosten stehen im Blatt
+  hinter dem **+**. Dafür sind „Messen“, „Addback“ und „Wasserwechsel“ aus der Leiste verschwunden —
+  sie standen dort doppelt, als Reiter und als Knopf.
+- **Die Leiste zeigt Zeichen statt langer Wörter** und lässt sich anpassen: unter **Mehr →
+  „Leiste anpassen“** bestimmen Sie, welche bis zu fünf Ziele oben stehen und in welcher
+  Reihenfolge. Die Einstellung liegt im Server, gilt also am Telefon und am Rechner gleich.
+- **Behoben:** Die Reiterzeile brach in eine zweite Zeile um (fünf Ziele, vier Spalten), während der
+  Seitenanfang weiter mit einer Zeile rechnete. Dadurch lag die obere Hälfte der Bewertungsscheibe
+  unter der Leiste. Die Leiste richtet sich jetzt nach der Zahl ihrer Ziele.
+- **Neu unter Einstellungen → Darstellung:** wohin das ⌂ springt (Voreinstellung `/lovelace/0`).
+
+### Ohne HA-Kopfleiste
+
+Wer die weiße Home-Assistant-Leiste über der App loswerden will, installiert die HACS-Integration
+**Ingress** (`lovelylain/hass_ingress`) und trägt einen kurzen Block in die `configuration.yaml` ein —
+Anleitung in `FORK.md`. Das ist freiwillig: ohne die Integration funktioniert alles genauso, die
+Titelzeile lässt dann nur ihren Namenszug weg, damit er nicht zweimal untereinander steht.
+
 ## 2.0.0-forkai.12
 
 **Fork AI.** Kosten: Vorschläge für Hersteller und Produkt stehen jetzt direkt unter dem Feld.

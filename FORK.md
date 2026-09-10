@@ -21,11 +21,48 @@ läuft parallel zum Original, eigene Datenbank, eigenes Image.
 | forkai.10 | Kosten: Sprung zum Formular beim ersten Tipp (zwei Frames nach dem Reiterwechsel), `scroll-ziel` gegen die feste Kopfleiste | Betrieb → Kosten | `pages/KostenPage.tsx` |
 | forkai.11 | Hersteller/Produkt-Vorschläge beim Tippen (`datalist`, Quelle: Artikel, Anschaffungen, Hardware) und Schreibweisen-Angleich beim Speichern (`Stammdaten.Angleichen`) | Betrieb → Kosten | `Models/Kosten.cs`, `KostenSeiteService.cs`, `KostenApiController.cs`, `pages/KostenPage.tsx` |
 | forkai.12 | Vorschlagsliste unter dem Feld (`VorschlagsFeld`, eigene Liste statt `datalist`, Tastaturbedienung), Produkt bringt Hersteller mit | Betrieb → Kosten | `pages/KostenPage.tsx`, `features/kosten/kosten.css` |
+| forkai.13 | **Mobile Navigation neu**: eigene Titelzeile (Name + aktuelle Seite, „+" für Erfassen, „⌂" zurück nach Home Assistant), Icon-Leiste mit anpassbarer Reihenfolge (API `/api/navbar`), Erfassen-Blatt für Messung/Addback/Wasserwechsel/Notiz/Kosten, „Leiste anpassen" unter Mehr; behebt die umbrechende Reiterzeile, die die Bewertungsscheibe halbierte | überall (Rahmen) | `AppShell.tsx`, `navigation.ts`, `useNavBar.ts`, `useHomeAssistantFrame.ts`, `components/ErfassenSheet.tsx`, `components/LeisteAnpassen.tsx`, `styles/forkai-shell.css`, `Api/Controllers/NavBarApiController.cs` |
 
 ## Geplant
 
 - Sollwertprofil um **Wochenwerte** erweitern (VPD, Temp/RH, CO₂, PPFD, Wassertemp, Lichtzeit je Woche) — heute nur 6 Phasen.
 - **Export der aktiven Wochen-Sollwerte nach Home Assistant** (Helfer), damit HA-Automationen danach regeln („Grow OS plant, HA regelt").
+
+## Empfohlen: ohne die Kopfleiste von Home Assistant
+
+Das Add-on läuft im Ingress von Home Assistant, also in einem iframe unterhalb
+der HA-Kopfleiste mit dem Menü-Zeichen. **Ein Add-on kann diese Leiste nicht
+entfernen** — sie gehört Home Assistant, nicht uns. Am Telefon kostet sie
+zusammen mit der eigenen Titelzeile spürbar Platz.
+
+Wer sie loswerden will, installiert die HACS-Integration
+[**Ingress**](https://github.com/lovelylain/hass_ingress) (`lovelylain/hass_ingress`)
+und trägt in `configuration.yaml` ein:
+
+```yaml
+ingress:
+  growos:
+    work_mode: hassio
+    url: d48160c2_grow_os_fork_ai   # eigener Add-on-Slug, siehe Add-on-Seite in HA
+    ui_mode: normal                 # 'normal' = ohne HA-Kopfleiste
+    title: Grow OS
+    icon: mdi:sprout
+```
+
+Danach Home Assistant neu starten. In der Seitenleiste erscheint ein neuer
+Eintrag, der Grow OS bildschirmfüllend öffnet; der alte Add-on-Eintrag bleibt
+daneben bestehen.
+
+**Das ist freiwillig.** Ohne die Integration funktioniert alles genauso — die
+Titelzeile erkennt selbst, ob die HA-Kopfleiste über ihr liegt, und lässt dann
+den Namenszug weg, damit er nicht zweimal untereinander steht
+(`useHomeAssistantFrame.ts`). Das „⌂"-Zeichen springt in beiden Fällen zurück;
+wohin, steht unter Einstellungen → Darstellung (Voreinstellung `/lovelace/0`).
+
+Nicht gangbar sind zwei naheliegende Wege, beide ausprobiert: eine
+`webpage`-Karte auf die Ingress-Adresse verliert nach kurzer Zeit ihr
+Sitzungs-Cookie, und `kiosk-mode` blendet nur Kopfzeilen von
+Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 

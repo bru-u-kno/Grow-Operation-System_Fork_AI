@@ -43,6 +43,9 @@ import './features/live/live-rc2.css'
 import './features/grows/grows-rc2.css'
 import './styles/primitives-rc2.css'
 import './styles/widgets.css'
+// Fork AI: Titelzeile, Icon-Leiste, Erfassen-Blatt. Zuletzt, damit die Masse
+// dieser Datei die aus shell.css ueberschreiben.
+import './styles/forkai-shell.css'
 
 import { AppShell } from './AppShell'
 import { legacyRedirects } from './navigation'

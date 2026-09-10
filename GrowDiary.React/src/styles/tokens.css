@@ -111,6 +111,9 @@
     --bp-lg: 1200px;
 
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    /* Der Schleier hinter Blaettern und Dialogen (Fork AI). Im dunklen Thema
+       darf er kraeftig sein — der Grund darunter ist ohnehin dunkel. */
+    --schleier: rgba(0, 0, 0, 0.55);
   }
 
   html[data-theme='light'] {
@@ -132,6 +135,10 @@
     --accent-dim:  #0b7c44;
     --accent-wash: rgba(14, 155, 85, 0.10);
     --accent-ink:  #04140a;
+    /* Heller Grund: derselbe Schleier waere hier ein harter Sprung ins fast
+       Schwarze. Weniger Deckung reicht, weil der Kontrast zum weissen Blatt
+       darueber schon gross ist. */
+    --schleier: rgba(20, 28, 24, 0.38);
     --warn:        #a86800;
     --warn-text:   #8a5500;
     --warn-wash:   rgba(168, 104, 0, 0.09);

@@ -4,6 +4,7 @@ import { apiFetch, formatApiError } from '../api'
 import type { GrowSummary, SettingsOverviewDto } from '../types'
 import FileInput from '../components/FileInput'
 import { useTheme } from '../useTheme'
+import { useNavBar } from '../useNavBar'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
 import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
@@ -18,6 +19,16 @@ type BackendHealth = { appName: string; backendSchema: string }
  */
 function SettingsPage() {
   const { theme, toggle } = useTheme()
+  const { dashboardPath, saveDashboardPath } = useNavBar()
+  // Eigener Zustand fuers Feld: waehrend des Tippens darf der gespeicherte
+  // Wert nicht zurueckspringen.
+  const [haZiel, setHaZiel] = useState('')
+  const [haZielSaving, setHaZielSaving] = useState(false)
+  useEffect(() => { setHaZiel(dashboardPath) }, [dashboardPath])
+  const saveHaZiel = async () => {
+    setHaZielSaving(true)
+    try { await saveDashboardPath(haZiel.trim()) } finally { setHaZielSaving(false) }
+  }
   const [settings, setSettings] = useState<SettingsOverviewDto | null>(null)
   const [grows, setGrows] = useState<GrowSummary[]>([])
   const [health, setHealth] = useState<BackendHealth | null>(null)
@@ -265,6 +276,28 @@ function SettingsPage() {
               <div className="co-row-end st-strompreis">
                 <input inputMode="numeric" value={pumpSchonfrist} onChange={(event) => setPumpSchonfrist(event.target.value)} placeholder="15" aria-label="Pumpen-Schonfrist in Minuten" style={{ width: 90 }} />
                 <button type="button" className="ls-btn is-small" disabled={pumpSaving} onClick={() => void savePumpSchonfrist()}>{pumpSaving ? 'Speichert…' : 'Speichern'}</button>
+              </div>
+            </div>
+            {/* Fork AI: Ziel des Haus-Zeichens in der Titelzeile. Steht bei
+                „Darstellung", weil es die Titelzeile betrifft — und weil es
+                jeder anders braucht: das Lieblings-Dashboard heisst nirgends
+                gleich. */}
+            <div className="co-row">
+              <div style={{ minWidth: 0 }}>
+                <div className="co-row-title">Zurück zu Home Assistant</div>
+                <div className="co-row-sub">Wohin das ⌂ in der Titelzeile springt, z. B. /dashboard-grow/0</div>
+              </div>
+              <div className="co-row-end st-strompreis">
+                <input
+                  value={haZiel}
+                  onChange={(event) => setHaZiel(event.target.value)}
+                  placeholder="/lovelace/0"
+                  aria-label="Ziel des Rücksprungs nach Home Assistant"
+                  style={{ width: 160 }}
+                />
+                <button type="button" className="ls-btn is-small" disabled={haZielSaving} onClick={() => void saveHaZiel()}>
+                  {haZielSaving ? 'Speichert…' : 'Speichern'}
+                </button>
               </div>
             </div>
           </section>

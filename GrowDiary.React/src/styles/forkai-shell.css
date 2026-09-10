@@ -1,0 +1,240 @@
+/* styles/forkai-shell.css — Fork AI
+   Titelzeile, Icon-Leiste, Erfassen-Blatt, Anpassen-Modus.
+
+   Laedt NACH shell.css, damit die Masse hier gewinnen. Keine Festfarben:
+   alles ueber die Token, sonst faellt die App im hellen Thema auseinander —
+   dieser Fehler steckt in der Geschichte dieser Datei schon dreimal drin
+   (zuletzt in der Navigationsleiste selbst, gemessener Kontrast 1,15).
+
+   Steht in `@layer features`, also der letzten Schicht aus index.css: die
+   Shell-Masse aus `@layer primitives` sollen ueberschrieben werden, aber
+   conventions.css und widgets.css (beide ungeschichtet, damit absichtlich
+   staerker) muessen weiter gewinnen. Ungeschichtet waere hier der Fehler, den
+   der Wachhund in css-variables.node.test.ts sucht. */
+
+@layer features {
+
+@media (max-width: 860px) {
+  /* Kopfflaeche: Titelzeile 52 + Leiste 56 + Trennlinie.
+     EINE Wahrheit, wie in shell.css beschrieben — der Seitenrahmen haelt sie
+     frei, und jedes Scroll-Ziel ueberspringt sie. Wird hier etwas geaendert,
+     muss die Zahl mitgeaendert werden, sonst liegt der Seitenanfang wieder
+     unter der Leiste. Genau das war der Fehler, der die Bewertungsscheibe
+     halbierte. */
+  :root { --mobil-kopf: 109px; }
+
+  .forkai-topbar {
+    min-height: 52px;
+    padding: 0 var(--s-2) 0 var(--s-3);
+    gap: var(--s-2);
+  }
+
+  .forkai-titel {
+    display: flex; align-items: center; gap: var(--s-2);
+    min-width: 0; flex: 1 1 auto;
+  }
+  .forkai-titel-text { min-width: 0; display: grid; }
+  .forkai-titel-text strong {
+    font: 600 var(--fs-text)/1.15 var(--font-mono);
+    color: var(--ink);
+    /* Ein langer Name darf die Knoepfe nicht hinausschieben. */
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .forkai-titel-text span {
+    font: 400 var(--fs-etikett)/1.2 var(--font-mono);
+    color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Wenn Home Assistant seinen Namen schon darueber setzt: nur die Seite. */
+  .forkai-titel.schlank { align-items: center; }
+  .forkai-titel-seite {
+    font: 600 var(--fs-text)/1 var(--font-mono); color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .forkai-topbar-knoepfe { display: flex; align-items: center; gap: var(--s-1); flex: 0 0 auto; }
+
+  .forkai-icon-knopf {
+    /* 40 px, nicht kleiner: darunter trifft der Daumen daneben. */
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+    background: transparent; color: var(--muted);
+    font: 500 18px/1 var(--font-mono); cursor: pointer;
+  }
+  .forkai-icon-knopf.primaer {
+    background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+    font-size: 22px; font-weight: 700;
+  }
+
+  /* ---------- Icon-Leiste ---------- */
+  .forkai-leiste {
+    /* Die Spaltenzahl kommt aus AppShell.tsx (so viele Ziele wie da sind).
+       Feste 4 waren der Grund fuer den Umbruch. */
+    inset: 52px 0 auto;
+    min-height: 56px;
+    gap: 0;
+    padding: var(--s-1) var(--s-1) 0;
+    align-items: stretch;
+  }
+  .forkai-leiste-item {
+    position: relative;
+    min-height: 52px; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    padding: 4px 2px 6px;
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .forkai-leiste-icon { font-size: 17px; line-height: 1; }
+  .forkai-leiste-text {
+    font: 500 10px/1.1 var(--font-mono);
+    /* Kurzform statt Menuewort — „Wasserwechsel" passt in kein Sechstel. */
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Aktiv wird unterstrichen statt gefuellt: eine gefuellte Kachel neben fuenf
+     leeren zieht das Auge staerker an als der Inhalt darunter. */
+  .forkai-leiste-item.active {
+    background: transparent; color: var(--accent); border-bottom-color: var(--accent);
+  }
+  .forkai-leiste-punkt {
+    position: absolute; top: 5px; right: 50%; margin-right: -14px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  }
+  .forkai-leiste-punkt.warn { background: var(--warn); }
+
+  .forkai-anpassen-oeffner {
+    width: 100%; min-height: var(--h-lg); margin-bottom: var(--s-3);
+    border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+    background: transparent; color: var(--ink);
+    font: 500 var(--fs-klein)/1 var(--font-mono); cursor: pointer;
+  }
+}
+
+/* Am Schreibtisch traegt die Seitenleiste die Navigation; die Leiste bleibt
+   verborgen (shell.css). Erfassen und Anpassen gibt es dort trotzdem — beide
+   haengen unten in der Seitenleiste, siehe AppShell.tsx. */
+.forkai-nav-knopf {
+  width: 100%; text-align: left;
+  border: 0; background: transparent; cursor: pointer;
+  font: inherit;
+}
+
+/* ---------- Erfassen-Blatt und Anpassen (beide Breiten) ---------- */
+.forkai-sheet-dim {
+  position: fixed; inset: 0; z-index: 40;
+  /* `--schleier` statt einer festen Farbe: im hellen Thema soll der Schleier
+     heller ausfallen, sonst schlaegt der Sprung ins fast Schwarze jedes Mal
+     ins Auge. Das Token steht in tokens.css und folgt dem Thema. */
+  background: var(--schleier);
+}
+.forkai-sheet,
+.forkai-anpassen {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
+  max-height: 88dvh; overflow: auto;
+  padding: var(--s-2) var(--s-3) calc(var(--s-4) + var(--safe-bottom));
+  background: var(--panel-solid, var(--bg));
+  border-top: 1px solid var(--hair);
+  border-radius: 16px 16px 0 0;
+}
+@media (min-width: 861px) {
+  /* Am Schreibtisch nicht ueber die ganze Breite: ein Blatt mit fuenf
+     Eintraegen, das 1900 px breit ist, sieht nach Fehler aus. */
+  .forkai-sheet,
+  .forkai-anpassen {
+    left: 50%; right: auto; bottom: auto; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(460px, calc(100vw - 48px));
+    border-radius: 14px; border: 1px solid var(--hair);
+  }
+}
+.forkai-sheet-grip {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--hair-2); margin: 0 auto var(--s-2);
+}
+.forkai-sheet-title {
+  margin: 0 0 var(--s-2);
+  font: 600 var(--fs-text)/1.2 var(--font-mono); color: var(--ink);
+}
+.forkai-sheet-item {
+  width: 100%; min-height: 56px; margin-bottom: var(--s-2);
+  display: flex; align-items: center; gap: var(--s-2); text-align: left;
+  padding: var(--s-2);
+  border: 1px solid var(--hair); border-radius: var(--r-sm);
+  background: transparent; color: var(--ink); cursor: pointer;
+}
+.forkai-sheet-icon {
+  flex: 0 0 auto; width: 34px; height: 34px;
+  display: grid; place-items: center; border-radius: var(--r-sm);
+  background: var(--sunk); color: var(--accent); font-size: 15px;
+}
+.forkai-sheet-text { display: grid; min-width: 0; }
+.forkai-sheet-text strong { font: 600 var(--fs-klein)/1.2 var(--font-mono); }
+.forkai-sheet-text span { font: 400 var(--fs-etikett)/1.25 var(--font-mono); color: var(--muted); }
+.forkai-sheet-cancel {
+  width: 100%; min-height: var(--h-lg);
+  border: 0; background: transparent; color: var(--muted);
+  font: 500 var(--fs-klein)/1 var(--font-mono); cursor: pointer;
+}
+
+/* ---------- Anpassen ---------- */
+.forkai-anpassen-hinweis {
+  margin: 0 0 var(--s-3);
+  font: 400 var(--fs-etikett)/1.4 var(--font-mono); color: var(--muted);
+}
+.forkai-anpassen-gruppe {
+  margin: var(--s-3) 0 var(--s-1);
+  font: 500 var(--fs-etikett)/1 var(--font-mono); color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.14em;
+}
+.forkai-anpassen-liste { list-style: none; margin: 0; padding: 0; }
+.forkai-anpassen-zeile {
+  display: flex; align-items: center; gap: var(--s-1);
+  min-height: 48px; padding: 0 var(--s-1);
+  border: 1px solid var(--hair); border-radius: var(--r-sm);
+  margin-bottom: 6px;
+}
+.forkai-anpassen-icon { width: 24px; text-align: center; color: var(--accent); }
+.forkai-anpassen-name {
+  flex: 1 1 auto; min-width: 0;
+  font: 500 var(--fs-klein)/1.2 var(--font-mono); color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.forkai-anpassen-knopf {
+  flex: 0 0 auto; width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+  background: transparent; color: var(--ink);
+  font: 500 15px/1 var(--font-mono); cursor: pointer;
+}
+.forkai-anpassen-knopf:disabled { opacity: 0.35; cursor: default; }
+.forkai-anpassen-knopf.entfernen { color: var(--muted); }
+.forkai-anpassen-vorrat { display: flex; flex-wrap: wrap; gap: 6px; }
+.forkai-anpassen-chip {
+  min-height: 40px; padding: 0 var(--s-2);
+  border: 1px dashed var(--hair-2); border-radius: var(--r-sm);
+  background: transparent; color: var(--muted);
+  font: 500 var(--fs-etikett)/1 var(--font-mono); cursor: pointer;
+}
+.forkai-anpassen-fehler {
+  margin: var(--s-2) 0 0;
+  font: 500 var(--fs-etikett)/1.4 var(--font-mono); color: var(--warn-text);
+}
+.forkai-anpassen-aktionen {
+  display: flex; gap: var(--s-1); margin-top: var(--s-3);
+}
+.forkai-anpassen-sekundaer,
+.forkai-anpassen-primaer {
+  flex: 1 1 0; min-height: var(--h-lg);
+  border-radius: var(--r-sm); cursor: pointer;
+  font: 500 var(--fs-klein)/1 var(--font-mono);
+}
+.forkai-anpassen-sekundaer {
+  border: 1px solid var(--hair-2); background: transparent; color: var(--ink);
+}
+.forkai-anpassen-primaer {
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
+  font-weight: 700;
+}
+.forkai-anpassen-sekundaer:disabled,
+.forkai-anpassen-primaer:disabled { opacity: 0.5; cursor: default; }
+}

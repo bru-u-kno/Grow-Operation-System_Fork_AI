@@ -5,10 +5,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import { AppSearch } from './components/AppSearch'
-import { isNavLeafActive, mobilePrimaryNav, navGroups, searchablePages } from './navigation'
+import { isNavLeafActive, navGroups, searchablePages } from './navigation'
 import { useTheme } from './useTheme'
 import { useHomeAssistantHealth } from './useHomeAssistantHealth'
 import { useDemoMode } from './useDemoMode'
+import { useNavBar } from './useNavBar'
+import { useHomeAssistantFrame, zurueckZuHomeAssistant } from './useHomeAssistantFrame'
+import { ErfassenSheet } from './components/ErfassenSheet'
+import { LeisteAnpassen } from './components/LeisteAnpassen'
 
 type Props = {
   children: ReactNode
@@ -29,6 +33,18 @@ export function AppShell({ children, counts }: Props) {
   const location = useLocation()
   const { theme, toggle } = useTheme()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [erfassenOpen, setErfassenOpen] = useState(false)
+  const [anpassenOpen, setAnpassenOpen] = useState(false)
+  const { items: barItems, dashboardPath, save: saveBar, reset: resetBar } = useNavBar()
+  const frame = useHomeAssistantFrame()
+
+  // Beim Seitenwechsel schliesst alles Aufgeklappte. Sonst haengt das Menue
+  // ueber der neuen Seite und verdeckt genau die Ueberschrift, die einem
+  // sagen wuerde, wo man gelandet ist.
+  useEffect(() => {
+    setMoreOpen(false)
+    setErfassenOpen(false)
+  }, [location.pathname])
 
   // Beim Seitenwechsel nach oben.
   //
@@ -102,6 +118,25 @@ export function AppShell({ children, counts }: Props) {
         ))}
 
         <div className="v1-nav-foot">
+          {/* Fork AI: derselbe Weg wie am Telefon, damit man ihn nicht an zwei
+              Stellen suchen muss. Am Schreibtisch traegt die Seitenleiste die
+              Navigation — der Anpassen-Modus gilt trotzdem, denn die Leiste
+              erscheint, sobald das Fenster schmal wird. */}
+          <button type="button" className="v1-nav-item forkai-nav-knopf" onClick={() => setErfassenOpen(true)}>
+            + ERFASSEN
+          </button>
+          <button type="button" className="v1-nav-item forkai-nav-knopf" onClick={() => setAnpassenOpen(true)}>
+            ▦ LEISTE ANPASSEN
+          </button>
+          {frame.ruecksprungMoeglich && (
+            <button
+              type="button"
+              className="v1-nav-item forkai-nav-knopf"
+              onClick={() => zurueckZuHomeAssistant(dashboardPath)}
+            >
+              ⌂ HOME ASSISTANT
+            </button>
+          )}
           <NavLink to="/settings" className="v1-nav-item">EINSTELLUNGEN</NavLink>
           <button type="button" className="theme-toggle" onClick={toggle} aria-label="Theme wechseln">
             {theme === 'dark' ? 'DARK' : 'HELL'}
@@ -109,14 +144,57 @@ export function AppShell({ children, counts }: Props) {
         </div>
       </aside>
 
-      <header className="v1-mobile-topbar">
-        <div className="v1-brand compact">
-          <div className="v1-brand-mark">G</div>
-          <div><strong>GROW OS</strong></div>
+      {/*
+        Fork AI: die Titelzeile.
+
+        Links der Name — aber nur, wenn Home Assistant seinen eigenen nicht
+        schon darueber setzt (siehe useHomeAssistantFrame). Vorher stand
+        „Grow OS Fork AI" in der HA-Leiste und „GROW OS" gleich darunter
+        nochmal; zwei Namenszuege uebereinander kosten 58 px, die am Telefon
+        dem Inhalt fehlen.
+
+        Rechts die beiden Knoepfe, die auf JEDER Seite gebraucht werden:
+        Erfassen und der Weg zurueck nach Home Assistant. Erfassen lag vorher
+        nur auf der Startseite — wer beim Blick in den Verlauf etwas eintragen
+        wollte, musste erst zurueck.
+      */}
+      <header className="v1-mobile-topbar forkai-topbar">
+        {frame.vollbild ? (
+          <div className="forkai-titel">
+            <div className="v1-brand-mark" aria-hidden="true">G</div>
+            <div className="forkai-titel-text">
+              <strong>Grow OS Fork AI</strong>
+              <span>{seitenName(location.pathname)}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="forkai-titel schlank">
+            <span className="forkai-titel-seite">{seitenName(location.pathname)}</span>
+          </div>
+        )}
+
+        <div className="forkai-topbar-knoepfe">
+          <button
+            type="button"
+            className="forkai-icon-knopf primaer"
+            onClick={() => setErfassenOpen(true)}
+            aria-label="Erfassen"
+            data-audit="erfassen-knopf"
+          >
+            +
+          </button>
+          {frame.ruecksprungMoeglich && (
+            <button
+              type="button"
+              className="forkai-icon-knopf"
+              onClick={() => zurueckZuHomeAssistant(dashboardPath)}
+              aria-label="Zurück zu Home Assistant"
+              data-audit="ha-ruecksprung"
+            >
+              ⌂
+            </button>
+          )}
         </div>
-        <button type="button" className="v1-mobile-more-button" data-audit="mobile-more-button" onClick={() => setMoreOpen((open) => !open)} aria-expanded={moreOpen}>
-          Mehr
-        </button>
       </header>
 
       {/*
@@ -125,29 +203,63 @@ export function AppShell({ children, counts }: Props) {
         Unten funktioniert sie im Home-Assistant-Ingress nicht: dort steckt
         Grow OS in einem iframe, das hoeher ist als das, was auf dem Schirm
         Platz hat. `position: fixed; bottom: 0` klebt an der Unterkante DIESES
-        iframes — und die liegt unterhalb des sichtbaren Bereichs. Auf dem
-        Telefon ragte nur noch die Oberkante der aktiven Kachel ins Bild.
+        iframes — und die liegt unterhalb des sichtbaren Bereichs.
 
-        Von innen laesst sich nicht messen, wie viel abgeschnitten ist: das
-        iframe kennt seine eigene Hoehe, nicht die des Fensters darum. Oben gibt
-        es das Problem nicht — die Oberkante liegt immer im Bild.
+        Fork AI: feste Spaltenzahl statt `repeat(4, 1fr)`. Hier lag der Fehler,
+        der die Bewertungsscheibe halbierte: die Gruppe „Jetzt" hatte fuenf
+        Ziele, das Raster vier Spalten. Das fuenfte brach um, die Leiste wurde
+        eine Zeile hoeher — die Kopfflaeche (`--mobil-kopf`) rechnete aber
+        weiter mit einer Zeile, und der Inhalt begann darunter. Jetzt bestimmt
+        die Zahl der Ziele die Spalten, und mehr als sechs koennen es nicht
+        werden.
       */}
-      <nav className="v1-mobile-nav" aria-label="Hauptnavigation">
-        {mobilePrimaryNav.map((item) => (
+      <nav
+        className="v1-mobile-nav forkai-leiste"
+        aria-label="Hauptnavigation"
+        style={{ gridTemplateColumns: `repeat(${barItems.length + 1}, 1fr)` }}
+      >
+        {barItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
-            className={isNavLeafActive(item, location.pathname) ? 'v1-mobile-nav-item active' : 'v1-mobile-nav-item'}
+            className={isNavLeafActive(item, location.pathname) ? 'v1-mobile-nav-item forkai-leiste-item active' : 'v1-mobile-nav-item forkai-leiste-item'}
           >
-            {item.label}
+            <span className="forkai-leiste-icon" aria-hidden="true">{item.icon}</span>
+            <span className="forkai-leiste-text">{item.short ?? item.label}</span>
+            {item.badge === 'warn' && counts?.addbackDue && <span className="forkai-leiste-punkt warn" aria-hidden="true" />}
+            {item.badge === 'count' && !!counts?.openTasks && <span className="forkai-leiste-punkt" aria-hidden="true" />}
           </NavLink>
         ))}
+        <button
+          type="button"
+          className={moreOpen ? 'v1-mobile-nav-item forkai-leiste-item active' : 'v1-mobile-nav-item forkai-leiste-item'}
+          data-audit="mobile-more-button"
+          onClick={() => setMoreOpen((open) => !open)}
+          aria-expanded={moreOpen}
+        >
+          <span className="forkai-leiste-icon" aria-hidden="true">{moreOpen ? '✕' : '≡'}</span>
+          <span className="forkai-leiste-text">Mehr</span>
+        </button>
       </nav>
 
       {moreOpen && (
         <div className="v1-mobile-more-panel" data-audit="mobile-more-menu">
           <AppSearch pages={searchablePages} onNavigate={() => setMoreOpen(false)} />
+          {/* Der Weg zur Leiste selbst. Steht ganz oben, weil man ihn genau
+              dann sucht, wenn einem die Leiste nicht passt — und dann hat man
+              gerade dieses Menue offen. */}
+          <button
+            type="button"
+            className="forkai-anpassen-oeffner"
+            data-audit="leiste-anpassen-oeffner"
+            onClick={() => {
+              setMoreOpen(false)
+              setAnpassenOpen(true)
+            }}
+          >
+            ▦ Leiste anpassen
+          </button>
           {navGroups.map((group) => (
             <section key={group.id}>
               <div className="v1-nav-group-head">{group.label}</div>
@@ -206,6 +318,28 @@ export function AppShell({ children, counts }: Props) {
         {children}
       </main>
 
+      <ErfassenSheet open={erfassenOpen} onClose={() => setErfassenOpen(false)} />
+      <LeisteAnpassen
+        open={anpassenOpen}
+        aktuell={barItems}
+        onClose={() => setAnpassenOpen(false)}
+        onSave={saveBar}
+        onReset={resetBar}
+      />
     </div>
   )
+}
+
+/**
+ * Wie die aktuelle Seite heisst — fuer die Titelzeile.
+ *
+ * Aus derselben Quelle wie das Menue, damit nicht zwei Listen von Namen
+ * gepflegt werden muessen. Ein Pfad mit Kennung (`/grows/7`) faellt auf sein
+ * Elternteil zurueck; findet sich gar nichts, bleibt die Zeile leer statt
+ * „unbekannt" zu behaupten.
+ */
+function seitenName(pathname: string): string {
+  const alle = navGroups.flatMap((group) => group.items)
+  const treffer = alle.find((item) => isNavLeafActive(item, pathname))
+  return treffer?.label ?? ''
 }
