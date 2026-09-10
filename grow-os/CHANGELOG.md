@@ -5,6 +5,36 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.15
+
+**Fork AI.** Die Navigationsleiste ist in der hellen Ansicht wieder lesbar.
+
+### Was Sie sehen
+
+- Der **aktive Punkt in der Leiste** am oberen Rand war in der hellen Ansicht zu blass:
+  gemessener Kontrast 3,18 — die Schwelle für Fließtext liegt bei 4,5. In der dunklen
+  Ansicht war er nie betroffen. Jetzt sind es 5,49 im hellen und 12,88 im dunklen Thema.
+- Dasselbe galt für die beiden Zeichen im Erfassen-Blatt und im Anpassen-Modus.
+
+### Warum
+
+Für die Fläche eines Knopfes und für ein Wort braucht es zwei verschiedene Grüntöne — ein
+helles Grün, das als Fläche gut aussieht, ist als Schrift auf hellem Grund zu schwach.
+Genau diese Verwechslung steckt in der Geschichte dieser Leiste schon ein zweites Mal: beim
+ersten Mal war der Kontrast 1,15. Die Linie unter dem aktiven Punkt darf blass bleiben, das
+Wort darüber nicht.
+
+### Unter der Haube
+
+- Vier Formulare der Kosten-Seite (Strom-Quelle, Artikel, Nachfüllung, Anschaffung) hatten
+  seit ihrer Entstehung in forkai.6 bis forkai.9 **keinen einzigen E2E-Fall**. Der Wächter
+  meldete das die ganze Zeit; aufgefallen ist es erst, als der Lauf nicht mehr vorher am
+  Lint abbrach. Jetzt füllt ein Rundweg jedes der vier aus, prüft den abgeschickten Rumpf
+  (auch, dass aus „36,75“ die Zahl 36.75 wird und nicht 3675), lädt neu und liest nach.
+- Der Rundweg für die Strom-Quelle stellt den vorher eingetragenen Zähler am Ende wieder
+  her — sonst zeigte die Kosten-Seite der laufenden Anlage danach auf eine Entität, die es
+  nicht gibt.
+
 ## 2.0.0-forkai.14
 
 **Fork AI.** Alarmgrenzen können jetzt dem Wochenplan folgen — und ein Bugfix an der neuen Navigation.
