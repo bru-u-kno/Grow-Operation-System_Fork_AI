@@ -136,7 +136,10 @@ test.describe('Kosten-Rundweg', () => {
     expect(rumpf.einzelpreisEur, 'Aus „4,90“ wurde nicht 4.9.').toBe(4.9)
 
     await kostenSeite(page, 'anschaffungen')
-    await expect(page.locator('main')).toContainText(name)
+    // Die Tabelle, nicht `main`: die Shell hat seit dem Navigationsumbau mehr
+    // als ein <main> (Seitenrahmen und Blattinhalt), und Playwright bricht bei
+    // mehrdeutigen Treffern ab, statt eines auszuwuerfeln — zu Recht.
+    await expect(page.locator('[data-audit="kosten-anschaffungen"]')).toContainText(name)
   })
 
   test('Strom-Quelle speichern und den vorherigen Stand zurückgeben', async ({ page }) => {
