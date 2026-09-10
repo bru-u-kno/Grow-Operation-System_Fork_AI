@@ -31,8 +31,16 @@ public static class UserTargets
     {
         if (rules is null) return null;
 
+        /* Plan-Regeln zaehlen hier NICHT (10.09.2026).
+         *
+         * Sie tragen keine eigene Zahl, sondern leiten ihre Grenzen aus genau
+         * dem Band ab, das diese Klasse gerade zusammensetzt. Liesse man sie
+         * mit, legte sich das Band spaeter ueber sich selbst — und jede
+         * Toleranz waere nach einem Durchlauf Teil des Ziels. Ausdruecklich
+         * geprueft und nicht dem Zufall ueberlassen, dass Min/Max leer sind. */
         var rule = rules.FirstOrDefault(r =>
             r.Enabled
+            && r.Quelle != Grenzwertquelle.Plan
             && string.Equals(r.MetricKey, metricKey, StringComparison.OrdinalIgnoreCase)
             && (r.MinValue is not null || r.MaxValue is not null));
 

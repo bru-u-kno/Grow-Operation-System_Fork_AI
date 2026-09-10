@@ -20,6 +20,28 @@ export type Grenzwertzeile = {
   max: string
   cooldown: string
   enabled: boolean
+  /** Woher die Grenzen kommen — Vorgabe ist die eingetragene Zahl. */
+  quelle: Grenzwertquelle
+  /** Nur bei 'Plan' gefüllt: Abstand zum Zielband. */
+  toleranz: string
+}
+
+/** 'Fest' = eingetragene Zahlen, 'Plan' = Zielband der laufenden Woche. */
+export type Grenzwertquelle = 'Fest' | 'Plan'
+
+/**
+ * Messgrößen, für die der Wochenplan überhaupt einen Wert kennt.
+ *
+ * Luftfeuchte, Sauerstoff und Wasserstand stehen in keinem Sollwertprofil und
+ * in keinem Feed-Chart. Dort darf „Plan“ nicht wählbar sein — eine Regel, die
+ * nie melden kann, ist schlimmer als keine.
+ */
+export const PLANFAEHIGE_METRIKEN: readonly string[] = [
+  'reservoir-ph', 'reservoir-ec', 'reservoir-temp', 'orp', 'vpd', 'co2', 'ppfd',
+]
+
+export function kannPlan(metricKey: string): boolean {
+  return PLANFAEHIGE_METRIKEN.includes(metricKey)
 }
 
 /** Eine Regel, wie der Server sie erwartet. */
@@ -30,6 +52,8 @@ export type Grenzwertregel = {
   notifyService: string
   enabled: boolean
   cooldownMinutes: number
+  quelle: Grenzwertquelle
+  toleranz: number | null
 }
 
 /**
@@ -46,14 +70,22 @@ export function speicherbareRegeln(
   return kennungen
     .map((kennung) => ({ kennung, zeile: zeilen[kennung] }))
     .filter((x): x is { kennung: string; zeile: Grenzwertzeile } => x.zeile != null)
-    .filter(({ zeile }) => zahlOderNull(zeile.min) != null || zahlOderNull(zeile.max) != null)
+    /* Eine Plan-Zeile trägt bewusst keine Zahlen — sie holt ihre Grenzen aus
+       dem Wochenplan. Sie muss deshalb auch ohne Min/Max mitgeschickt werden,
+       sonst wäre sie beim nächsten Laden verschwunden. */
+    .filter(({ kennung, zeile }) =>
+      (zeile.quelle === 'Plan' && kannPlan(kennung))
+      || zahlOderNull(zeile.min) != null
+      || zahlOderNull(zeile.max) != null)
     .map(({ kennung, zeile }) => ({
       metricKey: kennung,
-      minValue: zahlOderNull(zeile.min),
-      maxValue: zahlOderNull(zeile.max),
+      minValue: zeile.quelle === 'Plan' ? null : zahlOderNull(zeile.min),
+      maxValue: zeile.quelle === 'Plan' ? null : zahlOderNull(zeile.max),
       notifyService: '',
       enabled: zeile.enabled,
       cooldownMinutes: Math.max(1, zahlOderNull(zeile.cooldown) ?? 30),
+      quelle: zeile.quelle,
+      toleranz: zeile.quelle === 'Plan' ? zahlOderNull(zeile.toleranz) : null,
     }))
 }
 

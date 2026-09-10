@@ -28,6 +28,10 @@ public sealed class AlertsApiController : ApiControllerBase
         _alertEval = alertEval;
     }
 
+    /// <summary>Ob die Zeile ihre Grenzen aus dem Wochenplan holt.</summary>
+    private static bool IstPlan(AlertRuleDto dto)
+        => string.Equals(dto.Quelle, nameof(Grenzwertquelle.Plan), StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Returns the alert rules configured for a tent.</summary>
     [HttpGet("tents/{tentId:int}")]
     [ProducesResponseType(typeof(TentAlertRulesDto), StatusCodes.Status200OK)]
@@ -39,7 +43,9 @@ public sealed class AlertsApiController : ApiControllerBase
         }
 
         var rules = _alertRules.GetForTent(tentId)
-            .Select(rule => new AlertRuleDto(rule.MetricKey, rule.MinValue, rule.MaxValue, rule.NotifyService, rule.Enabled, rule.CooldownMinutes))
+            .Select(rule => new AlertRuleDto(
+                rule.MetricKey, rule.MinValue, rule.MaxValue, rule.NotifyService,
+                rule.Enabled, rule.CooldownMinutes, rule.Quelle.ToString(), rule.Toleranz))
             .ToList();
 
         return Ok(new TentAlertRulesDto(tentId, rules));
@@ -57,20 +63,38 @@ public sealed class AlertsApiController : ApiControllerBase
 
         // The notify target is configured centrally (Notification Center), so a rule only needs
         // a metric and at least one bound. NotifyService is kept for schema compatibility.
+        /* Eine Plan-Regel traegt bewusst KEINE Zahlen — sie holt ihre Grenzen
+           aus dem Wochenplan. Der Filter unten liess bis zum 10.09.2026 jede
+           Zeile ohne Min/Max fallen; genau so sieht eine Plan-Regel aus, sie
+           waere also beim Speichern lautlos verschwunden. */
         var rules = (request.Rules ?? Array.Empty<AlertRuleDto>())
             .Where(dto => !string.IsNullOrWhiteSpace(dto.MetricKey)
-                          && (dto.MinValue.HasValue || dto.MaxValue.HasValue))
+                          && (dto.MinValue.HasValue || dto.MaxValue.HasValue || IstPlan(dto)))
             .Select(dto => new TentAlertRule
             {
                 TentId = tentId,
                 MetricKey = dto.MetricKey.Trim(),
-                MinValue = dto.MinValue,
-                MaxValue = dto.MaxValue,
+                MinValue = IstPlan(dto) ? null : dto.MinValue,
+                MaxValue = IstPlan(dto) ? null : dto.MaxValue,
                 NotifyService = dto.NotifyService?.Trim() ?? string.Empty,
                 Enabled = dto.Enabled,
                 CooldownMinutes = dto.CooldownMinutes <= 0 ? 30 : dto.CooldownMinutes,
+                Quelle = IstPlan(dto) ? Grenzwertquelle.Plan : Grenzwertquelle.Fest,
+                Toleranz = IstPlan(dto) && dto.Toleranz is { } t && t > 0 ? t : null,
             })
             .ToList();
+
+        /* Der Plan gibt nicht fuer jede Messgroesse etwas her: Luftfeuchte,
+           Sauerstoff und Wasserstand stehen in keinem Profil und in keinem
+           Feed-Chart. Eine solche Regel wuerde nie melden — das faellt keinem
+           auf, deshalb wird es hier gesagt statt geschluckt. */
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Plan
+                                               && !Planzielgrenzen.KenntPlanziel(r.MetricKey)))
+        {
+            ModelState.AddModelError(nameof(AlertRuleDto.Quelle),
+                $"Fuer {regel.MetricKey} gibt es keinen Planwert — diese Messgroesse "
+                + "braucht feste Grenzen.");
+        }
 
         /* Ein vertauschtes Paar wird abgelehnt.
          *
@@ -83,7 +107,8 @@ public sealed class AlertsApiController : ApiControllerBase
          *
          * Gefunden bei der Gesamtdurchsicht am 01.09.2026: der Endpunkt nahm
          * das Paar an und antwortete HTTP 200. */
-        foreach (var regel in rules.Where(r => r.MinValue is { } min && r.MaxValue is { } max && min > max))
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest
+                                               && r.MinValue is { } min && r.MaxValue is { } max && min > max))
         {
             ModelState.AddModelError(nameof(AlertRuleDto.MinValue),
                 $"Bei der Messgroesse {regel.MetricKey} liegt die Untergrenze "
@@ -122,7 +147,9 @@ public sealed class AlertsApiController : ApiControllerBase
         }
 
         var saved = rules
-            .Select(rule => new AlertRuleDto(rule.MetricKey, rule.MinValue, rule.MaxValue, rule.NotifyService, rule.Enabled, rule.CooldownMinutes))
+            .Select(rule => new AlertRuleDto(
+                rule.MetricKey, rule.MinValue, rule.MaxValue, rule.NotifyService,
+                rule.Enabled, rule.CooldownMinutes, rule.Quelle.ToString(), rule.Toleranz))
             .ToList();
 
         return Ok(new TentAlertRulesDto(tentId, saved));

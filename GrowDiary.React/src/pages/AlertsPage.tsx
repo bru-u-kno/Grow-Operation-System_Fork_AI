@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { aktiveRegeln, speicherbareRegeln, vertauschteGrenzen } from '../features/alerts/grenzwerte-modell'
+import { aktiveRegeln, kannPlan, speicherbareRegeln, vertauschteGrenzen } from '../features/alerts/grenzwerte-modell'
+import type { Grenzwertquelle } from '../features/alerts/grenzwerte-modell'
 import { useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../api'
 import type { GrowSummary, MetricPayload, TentDto, TentLivePayload } from '../types'
@@ -8,7 +9,7 @@ import type { AlertRuleDto, TentAlertRulesDto } from '../types/alert'
 import type { NotificationSettingsDto } from '../types/notification'
 import { V1Alert, V1Empty, V1Skeleton, V1Tabs } from '../components/v1'
 import { decimalsForMetric } from '../features/live/metric-tile-model'
-import { feldText } from '../zahlenfeld'
+import { feldText, zahlOderNull } from '../zahlenfeld'
 
 type MetricDef = { key: string; label: string; unit: string; min: string; max: string }
 
@@ -29,11 +30,14 @@ const ALERT_METRICS: MetricDef[] = [
   { key: 'co2', label: 'CO₂', unit: 'ppm', min: '', max: '1500' },
 ]
 
-type Row = { min: string; max: string; cooldown: string; enabled: boolean }
+type Row = { min: string; max: string; cooldown: string; enabled: boolean; quelle: Grenzwertquelle; toleranz: string }
 type Rows = Record<string, Row>
 
 function emptyRows(): Rows {
-  return Object.fromEntries(ALERT_METRICS.map((metric) => [metric.key, { min: '', max: '', cooldown: '30', enabled: false }]))
+  return Object.fromEntries(ALERT_METRICS.map((metric) => [
+    metric.key,
+    { min: '', max: '', cooldown: '30', enabled: false, quelle: 'Fest' as Grenzwertquelle, toleranz: '' },
+  ]))
 }
 
 /**
@@ -117,6 +121,8 @@ function AlertsPage() {
             next[rule.metricKey] = {
               min: numberToInput(rule.minValue),
               max: numberToInput(rule.maxValue),
+              quelle: rule.quelle === 'Plan' ? 'Plan' : 'Fest',
+              toleranz: numberToInput(rule.toleranz),
               cooldown: String(rule.cooldownMinutes),
               enabled: rule.enabled,
             }
@@ -256,11 +262,13 @@ function AlertsPage() {
           </button>
         </div>
         <div className="co-table-wrap">
-        <div className="co-table" style={{ gridTemplateColumns: '1.6fr .9fr .5fr .5fr .45fr .4fr' }}>
+        <div className="co-table" style={{ gridTemplateColumns: '1.5fr .9fr .8fr .5fr .5fr .5fr .45fr .4fr' }}>
           <div className="co-th">Metrik</div>
           <div className="co-th">Ziel dieser Phase</div>
+          <div className="co-th">Quelle</div>
           <div className="co-th">Warnen unter</div>
           <div className="co-th">Warnen über</div>
+          <div className="co-th">Toleranz ±</div>
           <div className="co-th">Karenz</div>
           <div className="co-th">Aktiv</div>
           {ALERT_METRICS.map((metric) => {
@@ -269,8 +277,21 @@ function AlertsPage() {
               <AlertRow key={metric.key}>
                 <div className="co-td is-name">{metric.label}{metric.unit ? <span className="co-unit">{metric.unit}</span> : null}</div>
                 <div className="co-td is-muted">{zielText(ziele.get(metric.key), metric.key)}</div>
-                <div className="co-td"><input inputMode="decimal" value={row.min} placeholder={metric.min || '—'} aria-label={`${metric.label} warnen unter`} onChange={(event) => setRow(metric.key, { min: event.target.value })} /></div>
-                <div className="co-td"><input inputMode="decimal" value={row.max} placeholder={metric.max || '—'} aria-label={`${metric.label} warnen über`} onChange={(event) => setRow(metric.key, { max: event.target.value })} /></div>
+                <div className="co-td">
+                  {kannPlan(metric.key) ? (
+                    <div className="v1-tabs" role="group" aria-label={`${metric.label} Quelle`}>
+                      <button type="button" className={row.quelle === 'Fest' ? 'v1-tab active' : 'v1-tab'} onClick={() => setRow(metric.key, { quelle: 'Fest' })}>Fest</button>
+                      <button type="button" className={row.quelle === 'Plan' ? 'v1-tab active' : 'v1-tab'} onClick={() => setRow(metric.key, { quelle: 'Plan' })}>Plan</button>
+                    </div>
+                  ) : (
+                    <span className="is-muted">fest</span>
+                  )}
+                </div>
+                {/* Bei „Plan" stehen hier die Grenzen, die gerade daraus werden — gesperrt,
+                    weil sie nicht eingetippt, sondern gerechnet sind. */}
+                <div className="co-td"><input inputMode="decimal" disabled={row.quelle === 'Plan'} value={row.quelle === 'Plan' ? planGrenze(ziele.get(metric.key), metric.key, row.toleranz, 'min') : row.min} placeholder={metric.min || '—'} aria-label={`${metric.label} warnen unter`} onChange={(event) => setRow(metric.key, { min: event.target.value })} /></div>
+                <div className="co-td"><input inputMode="decimal" disabled={row.quelle === 'Plan'} value={row.quelle === 'Plan' ? planGrenze(ziele.get(metric.key), metric.key, row.toleranz, 'max') : row.max} placeholder={metric.max || '—'} aria-label={`${metric.label} warnen über`} onChange={(event) => setRow(metric.key, { max: event.target.value })} /></div>
+                <div className="co-td"><input inputMode="decimal" disabled={row.quelle !== 'Plan'} value={row.toleranz} placeholder={row.quelle === 'Plan' ? standardToleranz(metric.key) : '—'} aria-label={`${metric.label} Toleranz`} onChange={(event) => setRow(metric.key, { toleranz: event.target.value })} /></div>
                 <div className="co-td"><input inputMode="numeric" value={row.cooldown} aria-label={`${metric.label} Karenz in Minuten`} onChange={(event) => setRow(metric.key, { cooldown: event.target.value })} /></div>
                 <div className="co-td">
                   <label className="co-check">
@@ -340,6 +361,39 @@ function zielText(metric: MetricPayload | undefined, key: string): string {
   if (metric.targetMin != null) return `≥ ${zahl(metric.targetMin)}`
   if (metric.targetMax != null) return `≤ ${zahl(metric.targetMax)}`
   return '—'
+}
+
+/**
+ * Die Standard-Toleranz einer Messgröße, als Platzhalter im Feld.
+ *
+ * Dieselben Zahlen wie im Backend (<code>Planzielgrenzen.StandardToleranz</code>).
+ * Sie stehen hier nur als Anzeige — gerechnet wird auf dem Server.
+ */
+function standardToleranz(key: string): string {
+  switch (key) {
+    case 'reservoir-ph': return '0,20'
+    case 'reservoir-ec': return '0,20'
+    case 'reservoir-temp': return '2'
+    case 'orp': return '50'
+    case 'vpd': return '0,20'
+    case 'co2': return '200'
+    case 'ppfd': return '100'
+    default: return '—'
+  }
+}
+
+/** Was aus Zielband und Toleranz gerade als Grenze wird — reine Vorschau. */
+function planGrenze(
+  metric: MetricPayload | undefined,
+  key: string,
+  toleranz: string,
+  seite: 'min' | 'max',
+): string {
+  const grenze = seite === 'min' ? metric?.targetMin : metric?.targetMax
+  if (grenze == null) return ''
+  const tol = zahlOderNull(toleranz) ?? zahlOderNull(standardToleranz(key)) ?? 0
+  const wert = seite === 'min' ? grenze - tol : grenze + tol
+  return wert.toFixed(decimalsForMetric(key)).replace('.', ',')
 }
 
 /** Nur ein Fragment — die Zellen müssen direkte Grid-Kinder bleiben. */

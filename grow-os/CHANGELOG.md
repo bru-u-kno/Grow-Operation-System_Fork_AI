@@ -5,6 +5,56 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.14
+
+**Fork AI.** Alarmgrenzen können jetzt dem Wochenplan folgen — und ein Bugfix an der neuen Navigation.
+
+### Was Sie sehen
+
+- Unter **Betrieb → Regeln & Automatik → Grenzwerte** hat jede Zeile eine neue Spalte **Quelle**:
+  *Fest* sind Ihre eingetragenen Zahlen wie bisher, *Plan* nimmt das Zielband der laufenden
+  Phase beziehungsweise Woche und erweitert es um eine **Toleranz**.
+- Bei *Plan* stehen „Warnen unter/über“ nur noch zur Ansicht da: dort zeigt die Seite, was
+  gerade daraus wird. Getippt wird nur die Toleranz.
+- Die Push-Nachricht nennt bei einer Plan-Regel dazu, woher die Grenze kommt — zum Beispiel
+  „SKX Canna Aqua · Flores · Woche 3“. Eine Zahl, die Sie nirgends eingetragen haben, soll
+  nachts nicht ohne Absender auf dem Handy stehen.
+
+### Warum
+
+Wer nach einem Feed-Chart fährt, bewegt sein Ziel jede Woche. Das SKX-Chart nennt in Blüte
+Woche 3 ein EC-Ziel von 1,2 und in Woche 6 eines von 1,6. Eine feste Obergrenze von 1,2 hätte
+ab Woche 4 täglich gemeldet, obwohl planmäßig gefüttert wurde — und wer wochenlang falschen
+Alarm bekommt, glaubt auch dem echten nicht mehr.
+
+### Was gleich bleibt
+
+- **Bestehende Grenzwerte ändern sich nicht.** Alle Regeln starten auf *Fest*; erst ein
+  Umschalten ändert etwas.
+- *Plan* gibt es nur für Messgrößen, für die der Plan überhaupt einen Wert kennt (pH, EC,
+  Wassertemperatur, ORP, VPD, CO₂, PPFD). Luftfeuchte, Sauerstoff und Wasserstand behalten
+  feste Grenzen.
+- Läuft im Zelt kein Grow — oder trocknet es gerade —, schweigt eine Plan-Regel, statt gegen
+  ein Ziel zu melden, das es nicht gibt.
+- Die Nachtabsenkung ist eingerechnet: fährt die Rampe die Wassertemperatur planmäßig nach
+  unten, ist das kein Alarm.
+
+### Unter der Haube
+
+- Zielband und Alarm benutzen dieselbe Lesart je Messgröße (`Zielband.FuerMetrik`) — beim pH
+  den Handlungsbereich, bei der Wassertemperatur den Arbeitsbereich. Vorher lag diese
+  Umrechnung nur im Dashboard.
+- Plan-Regeln zählen ausdrücklich nicht als „eigene Grenze“ des Nutzers, sonst legte sich das
+  Zielband über sich selbst und jede Toleranz wäre nach einem Durchlauf Teil des Ziels.
+- Zwei neue Spalten in `TentAlertRules` (Quelle, Toleranz) mit Vorgabe *Fest*.
+
+### Bugfix
+
+- **Navigationsleiste:** Der Umbau aus forkai.13 hatte das Speichern des Rücksprung-Pfads halb
+  fertig hinterlassen — der Endpunkt ließ sich nicht übersetzen und wies jeden Aufruf ohne
+  Reihenfolge ab. Beide Felder lassen sich jetzt einzeln speichern, ohne das andere zu
+  verlieren.
+
 ## 2.0.0-forkai.13
 
 **Fork AI.** Die Navigation am Telefon ist neu — Titelzeile, Icon-Leiste, ein Weg zum Eintragen.

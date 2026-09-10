@@ -12,7 +12,7 @@ import { aktiveRegeln, speicherbareRegeln, vertauschteGrenzen, type Grenzwertzei
  */
 
 const zeile = (teil: Partial<Grenzwertzeile> = {}): Grenzwertzeile =>
-  ({ min: '', max: '', cooldown: '30', enabled: true, ...teil })
+  ({ min: '', max: '', cooldown: '30', enabled: true, quelle: 'Fest', toleranz: '', ...teil })
 
 describe('speicherbareRegeln', () => {
   it('schickt eine abgewaehlte Zeile MIT — nur eben pausiert', () => {
@@ -75,5 +75,48 @@ describe('vertauschteGrenzen', () => {
   it('schweigt bei gleichen Grenzen und bei nur einer', () => {
     expect(vertauschteGrenzen(speicherbareRegeln(['x'], { x: zeile({ min: '20', max: '20' }) }))).toEqual([])
     expect(vertauschteGrenzen(speicherbareRegeln(['x'], { x: zeile({ min: '20' }) }))).toEqual([])
+  })
+})
+
+/**
+ * Eine Zeile, die dem Wochenplan folgt, trägt keine eigenen Zahlen.
+ *
+ * <b>Der Anlass (10.09.2026).</b> Der Filter oben ließ jede Zeile ohne Min/Max
+ * fallen — genau so sieht eine Plan-Zeile aus. Sie wäre beim Speichern
+ * lautlos verschwunden, und der Nutzer hätte beim nächsten Aufruf wieder
+ * „Fest" dastehen sehen.
+ */
+describe('Plan-Zeilen', () => {
+  it('geht ohne eigene Grenzen mit raus', () => {
+    const regeln = speicherbareRegeln(['reservoir-ec'], {
+      'reservoir-ec': zeile({ quelle: 'Plan', toleranz: '0,2' }),
+    })
+
+    expect(regeln).toHaveLength(1)
+    expect(regeln[0].quelle).toBe('Plan')
+    expect(regeln[0].toleranz).toBe(0.2)
+    expect(regeln[0].minValue, 'Plan-Zeilen tragen keine eigenen Zahlen.').toBeNull()
+    expect(regeln[0].maxValue).toBeNull()
+  })
+
+  it('vergisst eingetippte Zahlen beim Umschalten auf Plan', () => {
+    const regeln = speicherbareRegeln(['reservoir-ph'], {
+      'reservoir-ph': zeile({ quelle: 'Plan', min: '5,6', max: '6,1' }),
+    })
+
+    expect(regeln[0].minValue, 'Sonst überstimmte die alte Zahl still den Plan.').toBeNull()
+    expect(regeln[0].maxValue).toBeNull()
+  })
+
+  it('gilt nicht fuer Messgroessen ohne Planwert', () => {
+    // Luftfeuchte steht in keinem Profil und in keinem Feed-Chart.
+    expect(speicherbareRegeln(['humidity'], { humidity: zeile({ quelle: 'Plan' }) })).toHaveLength(0)
+  })
+
+  it('eine Fest-Zeile bleibt unveraendert', () => {
+    const regeln = speicherbareRegeln(['reservoir-ec'], { 'reservoir-ec': zeile({ min: '0,7', max: '1,2' }) })
+    expect(regeln[0].quelle).toBe('Fest')
+    expect(regeln[0].toleranz).toBeNull()
+    expect(regeln[0].maxValue).toBe(1.2)
   })
 })

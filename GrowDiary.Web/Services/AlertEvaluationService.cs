@@ -17,6 +17,9 @@ public sealed class AlertEvaluationService
     private readonly LightRepository? _lights;
     private readonly GrowRepository? _grows;
     private readonly HarvestRepository? _harvests;
+    private readonly TargetValueService? _targetValues;
+    private readonly Services.Knowledge.KnowledgeBaseLoader? _knowledge;
+    private readonly HydroSetupRepository? _hydroSetups;
     private readonly ILogger<AlertEvaluationService> _logger;
 
     public AlertEvaluationService(
@@ -25,13 +28,19 @@ public sealed class AlertEvaluationService
         ILogger<AlertEvaluationService> logger,
         LightRepository? lights = null,
         GrowRepository? grows = null,
-        HarvestRepository? harvests = null)
+        HarvestRepository? harvests = null,
+        TargetValueService? targetValues = null,
+        Services.Knowledge.KnowledgeBaseLoader? knowledge = null,
+        HydroSetupRepository? hydroSetups = null)
     {
         _rules = rules;
         _notifications = notifications;
         _lights = lights;
         _grows = grows;
         _harvests = harvests;
+        _targetValues = targetValues;
+        _knowledge = knowledge;
+        _hydroSetups = hydroSetups;
         _logger = logger;
     }
 
@@ -98,8 +107,25 @@ public sealed class AlertEvaluationService
         // sich Regeln setzt, meint sie ernst.
         var trocknung = DryingWindow.DayFor(_grows, _harvests, tent.Id, DateTime.Today) is not null;
 
-        foreach (var rule in rules)
+        // Das Zielband der laufenden Phase/Woche — einmal je Durchlauf, nicht je
+        // Regel. Nur Regeln mit Quelle „Plan" brauchen es; laeuft kein Grow im
+        // Zelt, bleibt es null und genau diese Regeln schweigen (siehe unten).
+        var band = PlanbandFuer(tent);
+
+        foreach (var regel in rules)
         {
+            // Die Regel, gegen die wirklich gemessen wird: bei „Fest" die
+            // eingetragene, bei „Plan" eine Kopie mit den Grenzen aus dem Band.
+            var rule = Planzielgrenzen.Wirksam(regel, band.Ziele, band.RampenBodenC);
+            if (rule is null)
+            {
+                // Plan-Regel ohne Band: kein aktiver Grow, keine Phase oder eine
+                // Messgroesse, fuer die der Plan nichts hergibt. Schweigen ist
+                // hier richtig — eine Grenze, die niemand kennt, darf nicht
+                // melden, und ein leeres Zelt hat kein Ziel.
+                continue;
+            }
+
             if (lights == LightsNow.Off && LightClock.IsDaytimeOnly(rule.MetricKey))
             {
                 continue;
@@ -122,7 +148,8 @@ public sealed class AlertEvaluationService
                 if (decision.SendBreach)
                 {
                     var sent = await _notifications.SendAsync(
-                        NotificationCategory.Threshold, BuildTitle(tent), BuildBreachMessage(rule, value, decision.NewState), cancellationToken);
+                        NotificationCategory.Threshold, BuildTitle(tent),
+                        BuildBreachMessage(rule, value, decision.NewState, band.Herkunft), cancellationToken);
                     if (sent)
                     {
                         _rules.UpdateState(rule.Id, decision.NewState, nowUtc);
@@ -161,15 +188,85 @@ public sealed class AlertEvaluationService
         }
     }
 
+    /// <summary>Das Zielband des Zelts, sein Rampenboden und die Herkunft.</summary>
+    private readonly record struct Planband(
+        HydroTargetValues? Ziele, double? RampenBodenC, string? Herkunft);
+
+    /// <summary>
+    /// Die Sollwerte, an denen sich Plan-Regeln orientieren.
+    /// </summary>
+    /// <remarks>
+    /// <para>Dieselbe Kette wie die Live-Kacheln: Profil (Grow → Anlage →
+    /// Anbaustil), die Werte der Phase, die Wochenspalte des Feedcharts, wenn
+    /// der Grow sie will. Die eigenen Grenzen des Nutzers kommen bewusst NICHT
+    /// mit — sonst legte sich eine Alarmregel ueber das Band, aus dem sie
+    /// selbst entsteht.</para>
+    ///
+    /// <para>Der Rampenboden muss mit, weil die Nachtabsenkung die
+    /// Wassertemperatur planmaessig unter den Nachtsollwert faehrt. Ohne ihn
+    /// meldete der Alarm jede Nacht die eigene Regelung der App.</para>
+    /// </remarks>
+    private Planband PlanbandFuer(Tent tent)
+    {
+        if (_targetValues is null || _grows is null)
+        {
+            return default;
+        }
+
+        var grow = _grows.GetActiveGrowsForTent(tent.Id).FirstOrDefault();
+        if (grow is null)
+        {
+            return default;
+        }
+
+        var stage = GrowStageResolver.Resolve(grow, DateTime.Today);
+        var systemProfil = grow.SystemId is { } systemId
+            ? _hydroSetups?.GetSystem(systemId)?.SetpointProfileId
+            : null;
+
+        var ziele = Zielband.FuerGrow(_targetValues, _knowledge, grow, stage, systemProfil, null);
+        if (ziele is null)
+        {
+            return default;
+        }
+
+        var profil = SetpointProfileResolver.Resolve(grow.SetpointProfileId, systemProfil, grow.HydroStyle);
+        var rampenBoden = Wasserband.RampenBodenC(
+            grow,
+            _targetValues.GetTargets(profil.ProfileId, GrowStage.Flower),
+            _targetValues.GetTargets(profil.ProfileId, GrowStage.Finish));
+
+        var herkunft = _knowledge is not null
+            && MischplanService.ZielSpalteFuerGrow(grow, _knowledge.NutrientPrograms) is { } chart
+                ? chart.Herkunft
+                : stage.ToString();
+
+        return new Planband(ziele, rampenBoden, herkunft);
+    }
+
     private static string BuildTitle(Tent tent) => $"🌱 Grow OS · {tent.Name}";
 
-    private static string BuildBreachMessage(TentAlertRule rule, double value, string breach)
+    /// <param name="herkunft">
+    /// Woher die Grenze stammt, wenn die Regel dem Plan folgt — z. B.
+    /// „SKX Canna Aqua · Flores · Woche 3“.
+    /// </param>
+    /// <remarks>
+    /// Bei einer Plan-Regel steht die Herkunft mit in der Nachricht. Wer nachts
+    /// eine Zahl aufs Handy bekommt, die er nirgends eingetragen hat, muss
+    /// erkennen koennen, woher sie kommt — sonst sucht er sie in den
+    /// Grenzwerten und findet dort ein leeres Feld.
+    /// </remarks>
+    private static string BuildBreachMessage(
+        TentAlertRule rule, double value, string breach, string? herkunft = null)
     {
         var (label, unit) = MetricDisplay(rule.MetricKey);
         var direction = breach == Below ? "unter" : "über";
         var limit = breach == Below ? rule.MinValue : rule.MaxValue;
         var limitText = limit is { } l ? $" (Grenze {Format(l)}{unit})" : string.Empty;
-        return $"{label} {direction} Zielbereich: {Format(value)}{unit}{limitText}.";
+        var planText = rule.Quelle == Grenzwertquelle.Plan && !string.IsNullOrWhiteSpace(herkunft)
+            ? $" — {herkunft}"
+            : string.Empty;
+        return $"{label} {direction} Zielbereich: {Format(value)}{unit}{limitText}{planText}.";
     }
 
     private static string BuildRecoveryMessage(TentAlertRule rule, double value)

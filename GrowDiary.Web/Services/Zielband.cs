@@ -62,4 +62,46 @@ public static class Zielband
 
         return UserTargets.Overlay(band, eigeneGrenzen);
     }
+
+    /// <summary>
+    /// Das Band EINER Messgroesse — die Lesart, die auch auf der Kachel steht.
+    /// </summary>
+    /// <param name="key">Kennung der Messgroesse, z. B. <c>reservoir-ph</c>.</param>
+    /// <param name="t">Die Sollwerte der Phase/Woche.</param>
+    /// <param name="rampenBodenC">
+    /// Der Wert, auf den die Nachtabsenkung faehrt — er zieht die Untergrenze
+    /// der Wassertemperatur mit nach unten. Ohne ihn meldete die Kachel die
+    /// eigene Regelung der App als Abweichung.
+    /// </param>
+    /// <remarks>
+    /// <para><b>Warum hier und nicht im Dashboard (10.09.2026).</b> Diese
+    /// Umrechnung stand als private Methode im
+    /// <see cref="GrowDashboardComposer"/>. Solange nur die Kacheln sie
+    /// brauchten, war das richtig. Seit die Alarme ihre Grenzen aus demselben
+    /// Band ableiten koennen (<see cref="Planzielgrenzen"/>), braucht sie ein
+    /// zweiter Leser — und eine Abschrift waere genau der Fehler, den diese
+    /// Klasse behebt: zwei Auskuenfte ueber denselben Messwert.</para>
+    ///
+    /// <para>Beim pH steht bewusst der HANDLUNGSBEREICH und nicht das
+    /// Anmischziel: <c>(PhMin, PhMax)</c> ist der Wert, auf den man anmischt,
+    /// kein Band, an dem man misst. Bei der Wassertemperatur steht der
+    /// ARBEITSBEREICH und nicht das Tag/Nacht-Paar — in der Veg-Phase sind
+    /// beide Werte gleich, das Band waere null breit.</para>
+    /// </remarks>
+    public static (double? Min, double? Max) FuerMetrik(
+        string key, HydroTargetValues? t, double? rampenBodenC = null)
+    {
+        if (t is null) return (null, null);
+        return key switch
+        {
+            "reservoir-ph" => DeviationAnalyzerService.PhHandlungsbereich(t, eigene: null),
+            "reservoir-ec" => (t.EcMin, t.EcMax),
+            "orp" => (t.OrpMin, t.OrpMax),
+            "vpd" => (t.VpdMin, t.VpdMax),
+            "ppfd" => (t.PpfdMin, t.PpfdMax),
+            "co2" => (t.Co2Min, t.Co2Max),
+            "reservoir-temp" => Wasserband.Grenzen(t, rampenBodenC, null),
+            _ => (null, null),
+        };
+    }
 }

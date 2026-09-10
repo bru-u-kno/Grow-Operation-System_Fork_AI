@@ -71,6 +71,11 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "ChangeoutEntries", "WaterEcMsCm", "REAL NULL");
         EnsureColumn(connection, "Grows", "FeedProgramId", "TEXT NULL");
         EnsureColumn(connection, "Grows", "UseFeedChartTargets", "INTEGER NOT NULL DEFAULT 0");
+        // Alarmgrenzen duerfen dem Wochenplan folgen (10.09.2026). Der Vorgabewert
+        // 'Fest' ist der Zustand vor der Aenderung: bestehende Regeln melden
+        // weiter gegen ihre eingetragenen Zahlen, bis jemand umschaltet.
+        EnsureColumn(connection, "TentAlertRules", "Quelle", "TEXT NOT NULL DEFAULT 'Fest'");
+        EnsureColumn(connection, "TentAlertRules", "Toleranz", "REAL NULL");
         EnsureColumn(connection, "Grows", "NightRampEnabled", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "Grows", "NightRampFloorC", "REAL NULL");
 

@@ -50,9 +50,9 @@ public sealed class AlertRuleRepository : RepositoryBase
             insert.Transaction = transaction;
             insert.CommandText = """
                 INSERT INTO TentAlertRules
-                    (TentId, MetricKey, MinValue, MaxValue, NotifyService, Enabled, CooldownMinutes, LastState, LastNotifiedUtc, CreatedAtUtc, UpdatedAtUtc)
+                    (TentId, MetricKey, MinValue, MaxValue, NotifyService, Enabled, CooldownMinutes, Quelle, Toleranz, LastState, LastNotifiedUtc, CreatedAtUtc, UpdatedAtUtc)
                 VALUES
-                    ($tentId, $metricKey, $minValue, $maxValue, $notifyService, $enabled, $cooldown, NULL, NULL, $now, $now);
+                    ($tentId, $metricKey, $minValue, $maxValue, $notifyService, $enabled, $cooldown, $quelle, $toleranz, NULL, NULL, $now, $now);
             """;
             insert.Parameters.AddWithValue("$tentId", tentId);
             insert.Parameters.AddWithValue("$metricKey", rule.MetricKey);
@@ -61,6 +61,8 @@ public sealed class AlertRuleRepository : RepositoryBase
             insert.Parameters.AddWithValue("$notifyService", rule.NotifyService);
             insert.Parameters.AddWithValue("$enabled", rule.Enabled ? 1 : 0);
             insert.Parameters.AddWithValue("$cooldown", rule.CooldownMinutes);
+            insert.Parameters.AddWithValue("$quelle", rule.Quelle.ToString());
+            AddNullable(insert, "$toleranz", rule.Toleranz);
             insert.Parameters.AddWithValue("$now", nowUtc);
             insert.ExecuteNonQuery();
         }
@@ -96,6 +98,13 @@ public sealed class AlertRuleRepository : RepositoryBase
         NotifyService = reader["NotifyService"].ToString() ?? string.Empty,
         Enabled = Convert.ToInt32(reader["Enabled"]) == 1,
         CooldownMinutes = Convert.ToInt32(reader["CooldownMinutes"]),
+        // HasColumn, weil die Spalten erst am 10.09.2026 dazukamen: eine noch
+        // nicht migrierte Datei darf hier nicht mit einer Ausnahme aussteigen.
+        Quelle = HasColumn(reader, "Quelle")
+                 && Enum.TryParse<Services.Grenzwertquelle>(NullString(reader["Quelle"]), out var quelle)
+            ? quelle
+            : Services.Grenzwertquelle.Fest,
+        Toleranz = HasColumn(reader, "Toleranz") ? NullableDouble(reader["Toleranz"]) : null,
         LastState = NullString(reader["LastState"]),
         LastNotifiedUtc = ParseStoredUtcDateTime(NullString(reader["LastNotifiedUtc"])),
     };

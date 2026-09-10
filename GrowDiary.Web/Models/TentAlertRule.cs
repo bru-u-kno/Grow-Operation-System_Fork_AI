@@ -28,6 +28,19 @@ public sealed class TentAlertRule
     /// <summary>Minimum minutes between repeat notifications for the same rule.</summary>
     public int CooldownMinutes { get; set; } = 30;
 
+    /// <summary>
+    /// Woher die Grenzen kommen: die eingetragenen Zahlen (<c>Fest</c>) oder das
+    /// Zielband der laufenden Woche (<c>Plan</c>). Standard ist <c>Fest</c> —
+    /// bestehende Regeln aendern ihr Verhalten dadurch nicht.
+    /// </summary>
+    public Services.Grenzwertquelle Quelle { get; set; } = Services.Grenzwertquelle.Fest;
+
+    /// <summary>
+    /// Wie weit der Wert bei <c>Plan</c> ueber das Zielband hinausdarf, bevor
+    /// gemeldet wird. Null = der Standard der Messgroesse.
+    /// </summary>
+    public double? Toleranz { get; set; }
+
     /// <summary>Last evaluated state: <c>InRange</c>, <c>Below</c> or <c>Above</c> (null = never evaluated).</summary>
     public string? LastState { get; set; }
 

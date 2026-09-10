@@ -44,48 +44,16 @@ public sealed class GrowDashboardComposer
     }
 
     /// <summary>
-    /// Zielbereich je Messwert fuer die aktuelle Phase des Zelts.
-    ///
-    /// Bis hierher trug eine Kachel nur die Zahl. Die Anzeige zeichnet jetzt eine
-    /// Skala mit Zielband darunter — dafuer muss sie wissen, wo das Band liegt.
-    /// Nicht jeder Wert hat einen: Licht und Fuellstand haben keinen Sollbereich,
-    /// die bekommen null und zeichnen keine Skala.
+    /// Das Band einer Messgröße — die eine Lesart, gemeinsam mit den Alarmen.
     /// </summary>
-    /// <param name="rampenBodenC">
-    /// Der Wert, auf den die Nachtabsenkung fährt — er zieht die Untergrenze
-    /// der Wassertemperatur mit nach unten. Ohne ihn meldete die Kachel die
-    /// eigene Regelung der App als Abweichung.
-    /// </param>
+    /// <remarks>
+    /// Die Umrechnung selbst steht seit dem 10.09.2026 in <see cref="Zielband.FuerMetrik"/>,
+    /// weil die Alarmauswertung sie ebenfalls braucht. Eine Abschrift hier hätte
+    /// genau die zweite Wahrheit erzeugt, gegen die Zielband angetreten ist.
+    /// </remarks>
     private static (double? Min, double? Max) TargetFor(
         string key, HydroTargetValues? t, double? rampenBodenC = null)
-    {
-        if (t is null) return (null, null);
-        return key switch
-        {
-            /* Der HANDLUNGSBEREICH, nicht das Anmischziel.
-               Hier stand (t.PhMin, t.PhMax) — das ist der Wert, auf den man
-               anmischt, kein Band, an dem man misst. Bei pH 5,85 und Profil
-               5,90-6,00 schrieb die Kachel „daneben" und zog zehn Punkte vom
-               Score ab, waehrend das Messprotokoll derselben Messung „im Ziel"
-               sagte. Die Formel steht in DeviationAnalyzerService; eigene
-               Grenzen des Nutzers legt ApplyUserTargets danach darueber. */
-            "reservoir-ph" => DeviationAnalyzerService.PhHandlungsbereich(t, eigene: null),
-            "reservoir-ec" => (t.EcMin, t.EcMax),
-            "orp" => (t.OrpMin, t.OrpMax),
-            "vpd" => (t.VpdMin, t.VpdMax),
-            "ppfd" => (t.PpfdMin, t.PpfdMax),
-            "co2" => (t.Co2Min, t.Co2Max),
-            /* Der ARBEITSBEREICH, nicht das Tag/Nacht-Paar. Hier stand die
-               Spanne zwischen Tag- und Nachtwert des Profils — in der Veg-Phase
-               sind beide 20 °C, das Band war also null breit, und 19,7 wie 20,3
-               standen rot auf der Kachel. Messprotokoll und Diagnose urteilen
-               beide gegen den Arbeitsbereich aus SOP-RDWC-CAN-N1; die Kachel war
-               der dritte Wert fuer dieselbe Zahl. Eigene Grenzen legt
-               ApplyUserTargets danach darueber. */
-            "reservoir-temp" => Wasserband.Grenzen(t, rampenBodenC, null),
-            _ => (null, null),
-        };
-    }
+        => Zielband.FuerMetrik(key, t, rampenBodenC);
 
     public List<MetricCard> BuildTentMetrics(Tent tent, Dictionary<string, HomeAssistantState> states, IReadOnlyList<Measurement> measurements)
     {
