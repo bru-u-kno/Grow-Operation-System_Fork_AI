@@ -89,8 +89,18 @@ export function useHomeAssistantFrame(): HomeAssistantFrame {
 export function zurueckZuHomeAssistant(pfad: string): void {
   const ziel = pfad.startsWith('/') ? pfad : `/${pfad}`
   try {
-    if (window.top && window.top !== window.self) {
-      window.top.location.href = ziel
+    const oben = window.top as (Window & typeof globalThis) | null
+    if (oben && oben !== window.self) {
+      /* Bloß keinen echten Seitenwechsel auslösen: die Home-Assistant-App für
+         Android reicht einen solchen an den Standardbrowser weiter — man landet
+         in Firefox statt im Dashboard. Stattdessen dasselbe, was ein Klick in
+         der Seitenleiste tut: Adresse in der Verlaufsliste austauschen und dem
+         Frontend Bescheid geben. Erlaubt ist das, weil Ingress unter derselben
+         Herkunft läuft. */
+      oben.history.pushState(null, '', ziel)
+      oben.dispatchEvent(
+        new oben.CustomEvent('location-changed', { detail: { replace: false } }),
+      )
       return
     }
   } catch {

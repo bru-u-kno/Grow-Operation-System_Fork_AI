@@ -5,6 +5,28 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.16
+
+**Fork AI.** Das „⌂"-Zeichen bleibt in der Home-Assistant-App.
+
+### Was Sie sehen
+
+- Der Rücksprung aus Grow OS ins Dashboard öffnete auf dem Telefon den **Browser**
+  statt die Ansicht in der Home-Assistant-App zu wechseln. Man stand danach in
+  Firefox vor derselben Oberfläche, nur ohne den Weg zurück.
+- Jetzt wechselt Home Assistant die Ansicht wie bei einem Klick in der Seitenleiste —
+  man bleibt in der App.
+
+### Warum
+
+Der Knopf setzte die Adresse des obersten Fensters. Für einen Browser ist das ein
+gewöhnlicher Seitenwechsel; die Android-App von Home Assistant behandelt jeden
+Seitenwechsel dagegen als Verweis nach draußen und reicht ihn an den Standardbrowser
+weiter. Grow OS meldet den Wechsel deshalb jetzt dem Frontend (`history.pushState` +
+Ereignis `location-changed`), statt eine neue Seite zu laden. Läuft Grow OS nicht im
+Rahmen von Home Assistant — eigener Tab, fremder Proxy —, bleibt der alte Weg als
+Rückfallebene. Ein Test hält die Stelle fest.
+
 ## 2.0.0-forkai.15
 
 **Fork AI.** Die Navigationsleiste ist in der hellen Ansicht wieder lesbar.
