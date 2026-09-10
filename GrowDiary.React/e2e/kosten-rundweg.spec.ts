@@ -55,6 +55,22 @@ async function abgeschickt(
   return JSON.parse(fertig.request().postData() ?? '{}') as Record<string, unknown>
 }
 
+/**
+ * Das Quellen-Formular aufklappen — nur, wenn es zu ist.
+ *
+ * Der Knopf ist ein Umschalter, und die Seite oeffnet das Formular von selbst,
+ * solange keine Quelle eingetragen ist (`useState(!strom.eingerichtet)`). Genau
+ * so ist der Fall zuerst umgefallen: im Demobestand stand das Formular bereits
+ * offen, der Klick hat es zugeklappt, und danach war nichts mehr zu finden.
+ * Blind klicken heisst hier also, den Zustand zu erraten.
+ */
+async function quelleOeffnen(seite: Page): Promise<void> {
+  const formular = seite.locator('[data-audit="kosten-strom-quelle-form"]')
+  if (await formular.isVisible()) return
+  await seite.locator('[data-audit="kosten-strom-quelle"]').click()
+  await expect(formular).toBeVisible()
+}
+
 async function kostenSeite(seite: Page, reiter: string): Promise<void> {
   await seite.goto(`/kosten?tab=${reiter}`)
   await expect(seite.locator('[data-audit="kosten-summe"], [data-audit="kosten-strom"]').first())
@@ -144,9 +160,8 @@ test.describe('Kosten-Rundweg', () => {
 
   test('Strom-Quelle speichern und den vorherigen Stand zurückgeben', async ({ page }) => {
     await kostenSeite(page, 'strom')
-    await page.locator('[data-audit="kosten-strom-quelle"]').click()
+    await quelleOeffnen(page)
     const formular = page.locator('[data-audit="kosten-strom-quelle-form"]')
-    await expect(formular).toBeVisible()
 
     const zaehlerFeld = formular.locator('input[placeholder="sensor.fritz_dect_210_1_total_energy"]')
     const vorher = await zaehlerFeld.inputValue()
@@ -163,7 +178,7 @@ test.describe('Kosten-Rundweg', () => {
     expect(rumpf.zaehlerEntityId).toBe(testEntitaet)
 
     await kostenSeite(page, 'strom')
-    await page.locator('[data-audit="kosten-strom-quelle"]').click()
+    await quelleOeffnen(page)
     await expect(zaehlerFeld).toHaveValue(testEntitaet)
 
     // Zurückgeben, was geliehen war. Ohne das zeigt die Kosten-Seite der
@@ -175,7 +190,7 @@ test.describe('Kosten-Rundweg', () => {
     })
 
     await kostenSeite(page, 'strom')
-    await page.locator('[data-audit="kosten-strom-quelle"]').click()
+    await quelleOeffnen(page)
     await expect(zaehlerFeld).toHaveValue(vorher)
   })
 })
