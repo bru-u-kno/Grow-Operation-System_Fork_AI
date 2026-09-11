@@ -107,6 +107,7 @@ export const navGroups: NavGroup[] = [
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
       // erfasst. Das Archiv rechnet den Strom aus Lampen-Watt; hier kommt er
       // vom Zähler.
+      { to: '/steuerung', label: 'Steuerung', end: false, icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter chiller abluft licht sollwerte automatik ventil dosierung klima' },
       { to: '/kosten', label: 'Kosten', end: true, icon: '€', short: 'Kosten', keywords: 'strom kwh euro preis zähler verbrauch verbrauchsartikel co2 flasche nachfüllung nachfüllen dünger kanister laufzeit prognose je tag je pflanze durchgang' },
     ],
   },
@@ -190,7 +191,7 @@ export const barCandidates: NavLeaf[] = navGroups
  * Titelzeile. Sonst stuende dasselbe zweimal auf dem Schirm, wie vorher bei
  * „Messen“ als Reiter UND „Messung erfassen“ als Knopf.
  */
-export const defaultBarRoutes: string[] = ['/', '/messungen', '/wissen', '/kosten', '/aufgaben']
+export const defaultBarRoutes: string[] = ['/', '/messungen', '/wissen', '/kosten', '/aufgaben', '/steuerung']
 
 /**
  * Alte Pfade, die weiterhin funktionieren müssen.

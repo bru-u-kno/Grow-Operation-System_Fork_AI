@@ -46,7 +46,11 @@ public sealed record KostenFuellungAktuell(
     double? PrognoseTage,
     DateTime? PrognoseLeerAmUtc,
     double? FuellstandProzent,
-    double? EurProTag);
+    double? EurProTag,
+    /// <summary>Was seit dieser Füllung gebucht wurde (Steuerung, Journal) — in der Einheit des Artikels.</summary>
+    double VerbrauchtMenge = 0,
+    /// <summary><c>gemessen</c>, wenn der Füllstand aus Buchungen kommt, sonst <c>geschaetzt</c> (aus früheren Laufzeiten).</summary>
+    string FuellstandQuelle = "geschaetzt");
 
 public sealed record KostenArtikel(
     int Id,
@@ -212,7 +216,8 @@ public sealed class KostenSeiteService
             _kosten.GetNachfuellungen(),
             _kosten.GetAnschaffungen(),
             DateTime.UtcNow,
-            _hardware.GetHardwareItems());
+            _hardware.GetHardwareItems(),
+            _kosten.GetVerbraeuche());
     }
 
     // ------------------------------------------------------------ Rechnung
@@ -228,7 +233,8 @@ public sealed class KostenSeiteService
         IReadOnlyList<Nachfuellung> fuellungen,
         IReadOnlyList<Anschaffung> anschaffungen,
         DateTime jetztUtc,
-        IReadOnlyList<HardwareItem>? hardware = null)
+        IReadOnlyList<HardwareItem>? hardware = null,
+        IReadOnlyList<Verbrauch>? verbraeuche = null)
     {
         hardware ??= [];
         var hersteller = Stammdaten.Sortiert(
@@ -248,7 +254,7 @@ public sealed class KostenSeiteService
         var growNachId = alleGrows.ToDictionary(g => g.Id);
 
         var strom = StromBerechnen(grow, quelle, preisCent, leistungW, staende, jetztUtc);
-        var artikelListe = artikel.Select(a => ArtikelBerechnen(a, fuellungen, grow?.Id, jetztUtc)).ToList();
+        var artikelListe = artikel.Select(a => ArtikelBerechnen(a, fuellungen, verbraeuche ?? Array.Empty<Verbrauch>(), grow?.Id, jetztUtc)).ToList();
         var fuellungenListe = fuellungen
             .OrderByDescending(f => f.ZeitpunktUtc)
             .Select(f =>
@@ -423,7 +429,7 @@ public sealed class KostenSeiteService
     private static double? Laufzeit(Nachfuellung f)
         => f.LeerAmUtc is { } leer && leer > f.ZeitpunktUtc ? (leer - f.ZeitpunktUtc).TotalDays : null;
 
-    private static KostenArtikel ArtikelBerechnen(Verbrauchsartikel a, IReadOnlyList<Nachfuellung> alle, int? growId, DateTime jetztUtc)
+    private static KostenArtikel ArtikelBerechnen(Verbrauchsartikel a, IReadOnlyList<Nachfuellung> alle, IReadOnlyList<Verbrauch> verbraeuche, int? growId, DateTime jetztUtc)
     {
         var eigene = alle.Where(f => f.ArtikelId == a.Id).OrderByDescending(f => f.ZeitpunktUtc).ThenByDescending(f => f.Id).ToList();
         // Unter einem Tag war es kein Verbrauch, sondern ein Fehlgriff (Füllung
@@ -446,8 +452,29 @@ public sealed class KostenSeiteService
             double? prognoseTage = tageJeEinheit is { } t ? t * offen.Menge : null;
             var prognoseLeer = prognoseTage is { } pt ? offen.ZeitpunktUtc.AddDays(pt) : (DateTime?)null;
             double? fuellstand = prognoseTage is > 0 ? Math.Clamp(1 - (jetztUtc - offen.ZeitpunktUtc).TotalDays / prognoseTage.Value, 0, 1) * 100 : null;
+            var quelle = "geschaetzt";
+
+            // Fork AI (forkai.20): Gebuchter Verbrauch schlägt die Schätzung.
+            // Die CO₂-Steuerung bucht jeden Abend, was durchs Ventil ging —
+            // damit weiß die Flasche, wie voll sie ist, ohne dass jemand sie
+            // wiegt oder vorher eine leer gemacht hat.
+            var verbraucht = verbraeuche
+                .Where(v => v.ArtikelId == a.Id && v.ZeitpunktUtc >= offen.ZeitpunktUtc)
+                .Sum(v => v.Menge);
+            if (verbraucht > 0 && offen.Menge > 0)
+            {
+                fuellstand = Math.Clamp(1 - verbraucht / offen.Menge, 0, 1) * 100;
+                quelle = "gemessen";
+                var tageSeitFuellung = Math.Max((jetztUtc - offen.ZeitpunktUtc).TotalDays, 0.5);
+                var jeTag = verbraucht / tageSeitFuellung;
+                if (jeTag > 0)
+                {
+                    prognoseTage = offen.Menge / jeTag;
+                    prognoseLeer = offen.ZeitpunktUtc.AddDays(prognoseTage.Value);
+                }
+            }
             double? eurProTag = offen.KostenEur is { } k && prognoseTage is > 0 ? k / prognoseTage.Value : null;
-            aktuell = new KostenFuellungAktuell(offen.Id, offen.ZeitpunktUtc, offen.Menge, offen.KostenEur, tag, prognoseTage, prognoseLeer, fuellstand, eurProTag);
+            aktuell = new KostenFuellungAktuell(offen.Id, offen.ZeitpunktUtc, offen.Menge, offen.KostenEur, tag, prognoseTage, prognoseLeer, fuellstand, eurProTag, verbraucht, quelle);
         }
 
         return new KostenArtikel(

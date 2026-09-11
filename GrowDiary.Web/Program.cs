@@ -107,6 +107,9 @@ builder.Services.AddScoped<GrowCostService>();
 // Fork AI (forkai.6): Kosten-Seite
 builder.Services.AddSingleton<KostenRepository>();
 builder.Services.AddScoped<KostenSeiteService>();
+// Fork AI (forkai.20): Steuerung — CO₂-Leitstand
+builder.Services.AddSingleton<SteuerungRepository>();
+builder.Services.AddScoped<Co2SteuerungService>();
 builder.Services.AddScoped<MischplanService>();
 builder.Services.AddScoped<SopDueService>();
 builder.Services.AddScoped<WasserwechselStandService>();
@@ -133,6 +136,7 @@ builder.Services.AddHostedService<DosingWorker>();
 // die Wassertemperatur wandert dazwischen.
 builder.Services.AddHostedService<KuehlerWorker>();
 builder.Services.AddHostedService<ZaehlerstandWorker>(); // Fork AI (forkai.6)
+builder.Services.AddHostedService<Co2SyncWorker>(); // Fork AI (forkai.20)
 
 var defaultUrls = builder.Configuration["Hosting:DefaultUrls"];
 if (!string.IsNullOrWhiteSpace(defaultUrls))

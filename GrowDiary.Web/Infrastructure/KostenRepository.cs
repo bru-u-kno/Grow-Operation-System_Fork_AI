@@ -83,6 +83,17 @@ public sealed class KostenRepository : RepositoryBase
                     CreatedAtUtc TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS IX_ForkAnschaffungen_Datum ON ForkAnschaffungen(DatumUtc);
+                CREATE TABLE IF NOT EXISTS ForkVerbraeuche (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ArtikelId INTEGER NOT NULL REFERENCES ForkVerbrauchsartikel(Id) ON DELETE CASCADE,
+                    GrowId INTEGER NULL,
+                    ZeitpunktUtc TEXT NOT NULL,
+                    Menge REAL NOT NULL,
+                    Quelle TEXT NOT NULL DEFAULT 'manuell',
+                    Notiz TEXT NULL,
+                    CreatedAtUtc TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_ForkVerbraeuche_Artikel ON ForkVerbraeuche(ArtikelId, ZeitpunktUtc);
                 """;
             command.ExecuteNonQuery();
 
@@ -378,6 +389,72 @@ public sealed class KostenRepository : RepositoryBase
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
         Notiz = NullString(reader["Notiz"]),
         LeerAmUtc = ParseStoredUtcDateTime(NullString(reader["LeerAmUtc"])),
+        CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"].ToString()) ?? DateTime.UtcNow,
+    };
+
+    // ------------------------------------------------------------ Verbräuche
+
+    public List<Verbrauch> GetVerbraeuche(int? artikelId = null)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM ForkVerbraeuche"
+            + (artikelId is null ? string.Empty : " WHERE ArtikelId = $artikelId")
+            + " ORDER BY ZeitpunktUtc DESC, Id DESC;";
+        if (artikelId is { } id) command.Parameters.AddWithValue("$artikelId", id);
+        using var reader = command.ExecuteReader();
+        var list = new List<Verbrauch>();
+        while (reader.Read()) list.Add(MapVerbrauch(reader));
+        return list;
+    }
+
+    public int CreateVerbrauch(Verbrauch v)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
+            VALUES ($artikelId, $growId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
+            SELECT last_insert_rowid();
+            """;
+        command.Parameters.AddWithValue("$artikelId", v.ArtikelId);
+        command.Parameters.AddWithValue("$growId", (object?)v.GrowId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$zeitpunktUtc", ToStorageUtc(v.ZeitpunktUtc));
+        command.Parameters.AddWithValue("$menge", v.Menge);
+        command.Parameters.AddWithValue("$quelle", v.Quelle);
+        command.Parameters.AddWithValue("$notiz", (object?)NormalizeOptional(v.Notiz) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$createdAtUtc", ToStorageUtc(DateTime.UtcNow));
+        return Convert.ToInt32((long)command.ExecuteScalar()!);
+    }
+
+    public void UpdateVerbrauchMenge(int id, double menge)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE ForkVerbraeuche SET Menge = $menge WHERE Id = $id;";
+        command.Parameters.AddWithValue("$menge", menge);
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
+    public void DeleteVerbrauch(int id)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM ForkVerbraeuche WHERE Id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
+    private static Verbrauch MapVerbrauch(SqliteDataReader reader) => new()
+    {
+        Id = Convert.ToInt32(reader["Id"], CultureInfo.InvariantCulture),
+        ArtikelId = Convert.ToInt32(reader["ArtikelId"], CultureInfo.InvariantCulture),
+        GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
+        ZeitpunktUtc = ParseStoredUtcDateTime(reader["ZeitpunktUtc"].ToString()) ?? DateTime.UtcNow,
+        Menge = Convert.ToDouble(reader["Menge"], CultureInfo.InvariantCulture),
+        Quelle = reader["Quelle"].ToString() ?? "manuell",
+        Notiz = NullString(reader["Notiz"]),
         CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"].ToString()) ?? DateTime.UtcNow,
     };
 

@@ -5,6 +5,67 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.20
+
+**Fork AI.** Neuer Menüpunkt **Steuerung** — die CO₂-Begasung wird jetzt hier
+eingestellt, nicht mehr im Grow-Dashboard von Home Assistant.
+
+### Was Sie sehen
+
+- Ein sechstes Ziel in der Leiste: **Steuerung** (⊚), vor „Mehr". Die
+  Übersicht zeigt je Regelung eine Zeile mit Status-Punkt und aktuellem Wert;
+  ein Tipp öffnet die Detailseite.
+- **Steuerung → CO₂-Begasung** mit Statuskarte oben (ppm, Ziel, Ventil, Klima,
+  T6-Stufe, Canopy, RH, VPD), einer Chip-Leiste zum Wechseln zwischen den
+  Steuerungen und fünf Reitern: **Ziel · Dosierung · Klima · Zeiten · Heute**.
+- Das Ziel steht auf **Fest** (drei ppm-Werte je Canopy-Bereich) oder auf
+  **Plan** — dann ist es ein Prozentanteil des CO₂-Bands der laufenden Phase,
+  Vorgabe 55 / 70 / 80 %.
+- Im Reiter **Heute**: Impulse, Ventilzeit und Gramm der letzten 14 Tage. Wer
+  einen Kosten-Artikel wählt, bekommt die Tagessumme abends dorthin gebucht und
+  einen Eintrag in die Chronik.
+
+### Warum
+
+Die CO₂-Regelung ist über Wochen in Home-Assistant-Helfern gewachsen. Zwanzig
+`input_number` in einer Dashboard-Kachel sagen nicht, welcher Wert wovon
+abhängt. Der Fork kennt Phase, Wochenplan und Kosten-Artikel — hier lässt sich
+das Ziel an den Plan hängen und der Verbrauch dorthin buchen, wo er hingehört.
+
+**Geregelt wird weiterhin in Home Assistant.** Ein Ventil an einer Gasflasche
+darf nicht davon abhängen, ob ein Web-Add-on gerade neu startet. Der Fork
+besitzt die Sollwerte und schreibt sie in die bestehenden Helfer; fällt er aus,
+dosiert HA mit den zuletzt geschriebenen Werten weiter.
+
+### Drei Dinge, die dabei geradegezogen wurden
+
+- **Start- und Endzeit sind keine Attrappen mehr.** Sie standen fest in der
+  Automation (15 Minuten, 16:30 Uhr). Jetzt gehen sie als Helfer
+  (`co2_start_nach_licht_an`, `co2_ende_vor_licht_aus`) nach Home Assistant, und
+  die Automation rechnet ihr Fenster daraus gegen die geplante Aus-Zeit des
+  Licht-Controllers.
+- **Das Planziel heißt jetzt, was es ist.** Es kommt aus dem Sollwertprofil der
+  **Phase**, nicht aus einer Wochenspalte — das Feedchart hat keine CO₂-Spalte
+  je Woche. Die Seite schreibt das hin, statt eine wöchentliche Änderung zu
+  versprechen, die es nicht gibt.
+- **Ein Flaschenwechsel kostet nicht mehr den ganzen Tag.** Der Verbrauch kommt
+  aus dem Fall von `co2_flasche_rest`; wechselt man mittags die Flasche, springt
+  der Helfer nach oben. Bisher wurde die negative Differenz auf null gedeckelt —
+  Tagesverbrauch weg, Buchung weg. Jetzt bleibt das Gezählte stehen und die
+  Zählung läuft ab dem neuen Stand weiter.
+
+### Für Entwickler
+
+- Neu: `SteuerungApiController` (`GET /api/steuerung`, `GET|PUT
+  /api/steuerung/co2`), `Co2SteuerungService`, `Co2SyncWorker` (Tageslauf alle
+  2 min, Sollwerte stündlich), `SteuerungRepository` mit
+  `ForkSteuerungEinstellungen` und `ForkCo2Tage`.
+- `NavBarApiController.MaxItems` von 5 auf 6 — damit „Steuerung" neben den fünf
+  Bewährten Platz hat.
+- `GeltendeZieleApiController.StageLabel` ist öffentlich, damit die Steuerung
+  dieselbe Phasen-Schreibweise nennt statt einer zweiten Übersetzung.
+- Referenz: `docs/referenz/steuerung.md`.
+
 ## 2.0.0-forkai.19
 
 **Fork AI.** Der Wochenplan sagt jetzt, wenn er seine letzte Spalte hält.

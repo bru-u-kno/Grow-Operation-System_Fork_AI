@@ -1,0 +1,80 @@
+/* Fork AI (forkai.20): Steuerung — Übersicht und Detailseiten.
+   Alles über die Token des Forks, damit helles und dunkles Schema mitziehen. */
+@layer components {
+  /* --- Übersicht: eine Zeile je Steuerung --- */
+  .st-liste { display: grid; gap: var(--s-2); }
+
+  .st-zeile {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    width: 100%; text-align: left; padding: var(--s-3);
+    background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r-lg);
+    color: inherit; font: inherit; cursor: pointer;
+  }
+  .st-zeile:hover, .st-zeile:focus-visible { border-color: var(--accent-dim); }
+  .st-zeile[disabled] { cursor: default; opacity: .7; }
+
+  .st-zeile-links { display: flex; align-items: flex-start; gap: var(--s-2); min-width: 0; }
+  .st-punkt { flex: 0 0 auto; width: .5rem; height: .5rem; margin-top: .45rem; border-radius: 50%; background: var(--faint); }
+  .st-punkt.is-an { background: var(--accent-text); }
+  .st-punkt.is-warn { background: var(--warn-text); }
+  .st-punkt.is-aus { background: var(--faint); }
+
+  .st-titel { display: block; font-size: var(--fs-text); }
+  .st-titel small { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
+
+  .st-wert { flex: 0 0 auto; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .st-wert small { display: block; font-family: var(--font-sans); font-size: var(--fs-etikett); color: var(--faint); }
+
+  /* --- Chip-Leiste zum Umschalten zwischen den Steuerungen --- */
+  .st-wechsel { display: flex; gap: var(--s-2); overflow-x: auto; padding-bottom: var(--s-2); scrollbar-width: none; }
+  .st-wechsel::-webkit-scrollbar { display: none; }
+  .st-chip {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) var(--s-3); border: 1px solid var(--hair); border-radius: 999px;
+    background: var(--surface); color: var(--muted); font: inherit; font-size: var(--fs-text);
+    white-space: nowrap; cursor: pointer;
+  }
+  .st-chip[aria-current='true'] { border-color: var(--accent); color: var(--accent-text); background: var(--accent-wash); font-weight: 600; }
+  .st-chip[disabled] { cursor: default; opacity: .6; }
+  .st-chip i { width: .45rem; height: .45rem; border-radius: 50%; background: var(--faint); }
+  .st-chip i.is-an { background: var(--accent-text); }
+  .st-chip i.is-warn { background: var(--warn-text); }
+
+  /* --- Statuskarte oben --- */
+  .st-jetzt { display: flex; align-items: flex-end; gap: var(--s-3); flex-wrap: wrap; }
+  .st-gross { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 2.25rem; line-height: 1; font-weight: 700; color: var(--accent-text); }
+  .st-gross span { margin-left: .25rem; font-size: var(--fs-text); font-weight: 400; color: var(--faint); }
+  .st-neben { font-size: var(--fs-text); color: var(--muted); line-height: 1.45; }
+  .st-neben b { color: var(--ink); }
+
+  .st-marken { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
+  .st-marke { padding: 2px var(--s-2); border: 1px solid var(--hair); border-radius: 999px; font-size: var(--fs-etikett); color: var(--muted); }
+  .st-marke.is-ok { border-color: var(--accent-text); color: var(--accent-text); }
+  .st-marke.is-warn { border-color: var(--warn-text); color: var(--warn-text); }
+
+  /* --- Zeilen in den Reitern --- */
+  .st-feldzeile { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--hair); }
+  .st-feldzeile:first-of-type { border-top: 0; }
+  .st-feldzeile > .st-etikett { min-width: 0; }
+  .st-etikett { font-size: var(--fs-text); }
+  .st-etikett small { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
+  .st-eingaben { flex: 0 0 auto; display: flex; align-items: center; gap: var(--s-2); }
+  .st-eingaben input[type='number'] { width: 6rem; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .st-einheit { font-size: var(--fs-etikett); color: var(--faint); }
+  .st-nurlesen { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .st-hinweis { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); color: var(--faint); line-height: 1.5; }
+  .st-fehler { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--danger-text); }
+
+  .st-fuss { margin-top: var(--s-3); font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); text-align: center; }
+
+  .st-tage { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
+  .st-tage th[scope='col'] {
+    text-align: left; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--faint); padding: 0 var(--s-3) var(--s-2) 0; white-space: nowrap;
+  }
+  .st-tage td, .st-tage th[scope='row'] { padding: var(--s-2) var(--s-3) var(--s-2) 0; border-top: 1px solid var(--hair); }
+  .st-tage td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .st-tage th[scope='row'] { text-align: left; font-weight: 500; }
+  .st-tage-huelle { overflow-x: auto; }
+}

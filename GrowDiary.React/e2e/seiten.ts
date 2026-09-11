@@ -72,6 +72,15 @@ const DETAILSEITEN = [
   '/hydro/new',
   '/dosierung/neu',
   '/dosierung/1',
+
+  // Fork AI (forkai.20): die Detailseite einer Steuerung. Die Übersicht
+  // `/steuerung` kommt aus dem Menü; diese hier trägt die Zahlenfelder und
+  // gehört deshalb in die Zahlen- und Handy-Prüfung.
+  '/steuerung/co2',
+  // `/steuerung/1` ist der Pfad, den die Routenprüfung für `:modul` bildet.
+  // Er zeigt bewusst eine Leerseite statt ersatzweise CO₂ — auch das gehört
+  // geprüft.
+  '/steuerung/1',
 ]
 
 /** Jede Seite genau einmal. */

@@ -147,3 +147,25 @@ public sealed class StromQuelle
     /// <summary>Aktuelle Leistung in W — nur für die Anzeige.</summary>
     public string? LeistungEntityId { get; set; }
 }
+
+/// <summary>
+/// Fork AI (forkai.20): Eine Buchung gegen einen Verbrauchsartikel — was
+/// tatsächlich aufgebraucht wurde, in der Einheit des Artikels.
+/// </summary>
+/// <remarks>
+/// Die erste Quelle ist die CO₂-Steuerung: sie bucht jeden Abend die Gramm
+/// des Tages. Ohne Buchungen bleibt die Kosten-Seite bei ihrer Schätzung aus
+/// früheren Laufzeiten; mit Buchungen weiß sie, wie voll die Flasche ist.
+/// </remarks>
+public sealed class Verbrauch
+{
+    public int Id { get; set; }
+    public int ArtikelId { get; set; }
+    public int? GrowId { get; set; }
+    public DateTime ZeitpunktUtc { get; set; } = DateTime.UtcNow;
+    public double Menge { get; set; }
+    /// <summary>Woher die Buchung stammt, z. B. <c>co2-steuerung</c> oder <c>manuell</c>.</summary>
+    public string Quelle { get; set; } = "manuell";
+    public string? Notiz { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}

@@ -205,7 +205,13 @@ public sealed class GeltendeZieleApiController : ApiControllerBase
         _ => "aus dem Anbaustil",
     };
 
-    private static string StageLabel(GrowStage stage) => stage switch
+    /// <summary>Die Phase, wie sie der Mensch liest.</summary>
+    /// <remarks>
+    /// Fork AI (forkai.20): öffentlich, damit die CO₂-Steuerung dieselbe
+    /// Schreibweise nennt. Eine zweite Übersetzung wäre die nächste abweichende
+    /// Auskunft — dieselbe Begründung wie bei <c>MischplanService.WocheInPhase</c>.
+    /// </remarks>
+    public static string StageLabel(GrowStage stage) => stage switch
     {
         GrowStage.Seedling => "Sämling",
         GrowStage.Clone => "Steckling",

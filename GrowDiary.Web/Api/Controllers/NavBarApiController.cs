@@ -39,7 +39,7 @@ public sealed class NavBarApiController : ApiControllerBase
     public const string DashboardDefault = "/lovelace/0";
 
     /// <summary>Wie viele Ziele hoechstens in die Leiste passen (das sechste Feld ist „Mehr“).</summary>
-    public const int MaxItems = 5;
+    public const int MaxItems = 6; // Fork AI (forkai.20): sechs Ziele, damit „Steuerung" neben den fünf Bewährten Platz hat
 
     private readonly AppSettingsRepository _settings;
 
