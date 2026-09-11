@@ -162,4 +162,73 @@ public sealed class Co2SteuerungTests
         Assert.Contains(nameof(Co2Einstellungen.EndeVorLichtAusMinuten),
             Co2SteuerungService.Pruefen(new Co2Einstellungen { EndeVorLichtAusMinuten = 241 }));
     }
+    /// <summary>Ein Livebild mit nur den Feldern, die der Tageslauf liest.</summary>
+    private static Co2Live Live(double restKg, int impulse, double gps = 0.05) => new(
+        HaErreichbar: true, Co2Ppm: 900, ZielPpm: 960, ZielQuelle: "plan", PlanPpm: 1200, PlanHerkunft: null,
+        ZielWarm: 960, ZielMittel: 840, ZielKuehl: 660, HysteresePpm: 50, NachschubUnterPpm: 910,
+        Bedarf: false, KlimaOk: true, VentilOffen: false, AutomatikAn: true, LichtAn: true,
+        T6Stufe: 4, CanopyC: 27.6, RhProzent: 61, Vpd: 1.28, ImpulseHeute: impulse,
+        GrammProSekunde: gps, LetzteMessungGps: gps, FlascheRestKg: restKg,
+        ImpulsBedarfSekunden: 15, LetzterImpuls: null);
+
+    [Fact]
+    public void VerbrauchIstDerFallDesFlaschenrests()
+    {
+        var tag = new Co2Tag { FlascheStartKg = 9.6 };
+        Co2SteuerungService.Zwischenstand(tag, Live(restKg: 9.45, impulse: 40));
+
+        Assert.Equal(150, tag.Gramm, 3);
+        Assert.Equal(40, tag.Impulse);
+        Assert.False(tag.Flaschenwechsel);
+    }
+
+    [Fact]
+    public void FlaschenwechselAmTagVerliertDasBisDahinGezaehlteNicht()
+    {
+        // Vormittag: 9,60 -> 9,45 kg, also 150 g.
+        var tag = new Co2Tag { FlascheStartKg = 9.6 };
+        Co2SteuerungService.Zwischenstand(tag, Live(restKg: 9.45, impulse: 40));
+
+        // Mittags neue Flasche: der Helfer springt auf 10,0 kg.
+        Co2SteuerungService.Zwischenstand(tag, Live(restKg: 10.0, impulse: 41));
+        Assert.True(tag.Flaschenwechsel);
+        Assert.Equal(150, tag.Gramm, 3);
+
+        // Nachmittag: 10,00 -> 9,90 kg, also 100 g dazu.
+        Co2SteuerungService.Zwischenstand(tag, Live(restKg: 9.9, impulse: 70));
+        Assert.Equal(250, tag.Gramm, 3);
+        Assert.Contains("Flasche gewechselt", Co2SteuerungService.Tagestext(tag));
+    }
+
+    [Fact]
+    public void KleineKorrekturVonHandGiltNichtAlsFlaschenwechsel()
+    {
+        // 20 g nach oben - Rundung oder eine Korrektur, kein Wechsel. Der
+        // Abschnitt zaehlt dann null statt einen Sprung zu buchen.
+        var tag = new Co2Tag { FlascheStartKg = 9.6 };
+        Co2SteuerungService.Zwischenstand(tag, Live(restKg: 9.62, impulse: 5));
+
+        Assert.False(tag.Flaschenwechsel);
+        Assert.Equal(0, tag.Gramm, 3);
+    }
+
+    [Fact]
+    public void DerZaehlerFaelltNichtZurueck()
+    {
+        // Nach einem HA-Neustart steht der Tageszaehler kurz auf 0 - das darf
+        // den Tagesstand nicht loeschen.
+        var tag = new Co2Tag { FlascheStartKg = 9.6, Impulse = 40 };
+        Co2SteuerungService.Zwischenstand(tag, Live(restKg: 9.45, impulse: 0));
+        Assert.Equal(40, tag.Impulse);
+    }
+
+    [Fact]
+    public void EndeVorLichtAusWirdGeprueft()
+    {
+        Assert.Contains(nameof(Co2Einstellungen.EndeVorLichtAusMinuten),
+            Co2SteuerungService.Pruefen(new Co2Einstellungen { EndeVorLichtAusMinuten = 300 }).Keys);
+        Assert.DoesNotContain(nameof(Co2Einstellungen.EndeVorLichtAusMinuten),
+            Co2SteuerungService.Pruefen(new Co2Einstellungen { EndeVorLichtAusMinuten = 30 }).Keys);
+    }
+
 }

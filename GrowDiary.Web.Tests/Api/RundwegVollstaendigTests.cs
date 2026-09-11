@@ -75,6 +75,9 @@ public sealed class RundwegVollstaendigTests
         new("Kosten", null, "/api/costs/settings", typeof(CostsApiController.KostenEinstellungenRequest)),
         // Fork AI (forkai.6): welche HA-Entitaeten den Strom liefern.
         new("Strom-Quelle", null, "/api/kosten/strom-quelle", typeof(GrowDiary.Web.Models.StromQuelle)),
+        // Fork AI (forkai.20): die Sollwerte der CO2-Begasung. Einzelstueck ohne
+        // Id — es gibt genau eine Steuerung je Modul.
+        new("CO2-Steuerung", null, "/api/steuerung/co2", typeof(GrowDiary.Web.Models.Co2Einstellungen)),
         new("Wasserprofil", null, "/api/water-profile", typeof(GrowDiary.Web.Models.WaterProfile)),
         new("Benachrichtigungen", null, "/api/notifications/settings", typeof(NotificationSettingsDto)),
         // Fork AI (forkai.13): wohin das Haus-Zeichen in der Titelzeile springt.

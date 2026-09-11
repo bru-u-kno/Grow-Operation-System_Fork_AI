@@ -73,15 +73,18 @@ public sealed class NavBarApiControllerTests : IDisposable
     }
 
     [Fact]
-    public void MehrAlsFuenf_werdenAbgeschnitten()
+    public void MehrAlsDieLeisteFasst_werdenAbgeschnitten()
     {
-        var dto = Auslesen(_controller.Save(new SaveNavBarRequest
-        {
-            Items = new List<string> { "/", "/messungen", "/wissen", "/kosten", "/aufgaben", "/grows", "/sensoren" },
-        }));
+        // Ein Ziel mehr, als hineinpasst — das letzte muss wegfallen.
+        var zuViele = new List<string> { "/", "/messungen", "/wissen", "/kosten", "/aufgaben", "/grows", "/sensoren" }
+            .Take(NavBarApiController.MaxItems + 1)
+            .ToList();
+        var ueberzaehlig = zuViele[^1];
+
+        var dto = Auslesen(_controller.Save(new SaveNavBarRequest { Items = zuViele }));
 
         Assert.Equal(NavBarApiController.MaxItems, dto.Items!.Count);
-        Assert.DoesNotContain("/grows", dto.Items!);
+        Assert.DoesNotContain(ueberzaehlig, dto.Items!);
     }
 
     [Fact]

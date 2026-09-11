@@ -366,7 +366,7 @@ public sealed class Co2SteuerungService
     /// der Anzeige, weil Minuten anschaulicher sind als Gramm — nicht als
     /// Beleg.</para>
     /// </remarks>
-    private static void Zwischenstand(Co2Tag tag, Co2Live live)
+    public static void Zwischenstand(Co2Tag tag, Co2Live live)
         => Fortschreiben(tag, live.ImpulseHeute, live.FlascheRestKg, live.GrammProSekunde);
 
     /// <summary>Dieselbe Rechnung ohne Livebild — so ist sie ohne Home Assistant prüfbar.</summary>
