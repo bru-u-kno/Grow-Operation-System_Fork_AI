@@ -75,9 +75,6 @@ public sealed class RundwegVollstaendigTests
         new("Kosten", null, "/api/costs/settings", typeof(CostsApiController.KostenEinstellungenRequest)),
         // Fork AI (forkai.6): welche HA-Entitaeten den Strom liefern.
         new("Strom-Quelle", null, "/api/kosten/strom-quelle", typeof(GrowDiary.Web.Models.StromQuelle)),
-        // Fork AI (forkai.20): die Sollwerte der CO2-Begasung. Einzelstueck ohne
-        // Id — es gibt genau eine Steuerung je Modul.
-        new("CO2-Steuerung", null, "/api/steuerung/co2", typeof(GrowDiary.Web.Models.Co2Einstellungen)),
         new("Wasserprofil", null, "/api/water-profile", typeof(GrowDiary.Web.Models.WaterProfile)),
         new("Benachrichtigungen", null, "/api/notifications/settings", typeof(NotificationSettingsDto)),
         // Fork AI (forkai.13): wohin das Haus-Zeichen in der Titelzeile springt.
@@ -276,6 +273,14 @@ public sealed class RundwegVollstaendigTests
         ["UpdateAutoMeasurementConfigRequest"] =
             "Der Demobestand legt keine Auto-Messung an; ohne Bestand faehrt der "
             + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen.",
+        // Fork AI (forkai.20)
+        ["Co2Einstellungen"] =
+            "Der Rundweg faehrt jedes Feld mit einer festen Probe (1 bzw. true). Die "
+            + "CO2-Sollwerte haben durchgehend geprüfte Wertebereiche — eine Hysterese "
+            + "von 1 ppm oder ein Impuls von 1 s sind keine gueltigen Eingaben, das PUT "
+            + "lehnt sie mit 400 ab. Ein Rundweg, der nur Ablehnungen einsammelt, prueft "
+            + "nichts. Die Felder fahren Co2SteuerungTests (Rechnung und Grenzen) und die "
+            + "Oberflaechen-Erfassung auf /steuerung/co2.",
         // Fork AI (forkai.6)
         ["ArtikelRequest"] =
             "Der Demobestand legt keinen Verbrauchsartikel an; ohne Bestand faehrt der "
