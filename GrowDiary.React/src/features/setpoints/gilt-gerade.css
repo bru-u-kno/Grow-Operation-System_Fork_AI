@@ -21,7 +21,9 @@
     text-transform: uppercase; color: var(--faint); margin-bottom: 8px;
   }
   .gg-zeile { margin: 0 0 2px; font: 400 var(--fs-text)/1.6 var(--font-mono); color: var(--ink); }
-  .gg-zeile b { color: var(--accent); font-weight: 600; }
+  /* --accent-text, NICHT --accent: die Flaechenfarbe hat im hellen Thema auf
+     Weiss nur Kontrast 3,6 — genau das hat der Kontrast-Test gemeldet. */
+  .gg-zeile b { color: var(--accent-text); font-weight: 600; }
   .gg-leise { color: var(--faint); }
   .gg-leiser { color: var(--muted); }
   .gg-link { color: var(--info-text); }
