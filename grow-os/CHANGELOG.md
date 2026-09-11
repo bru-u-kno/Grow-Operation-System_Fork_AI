@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.19
+
+**Fork AI.** Der Wochenplan sagt jetzt, wenn er seine letzte Spalte hält.
+
+### Was Sie sehen
+
+- Im Kopf „Gilt gerade" steht hinter der Plan-Spalte ein Zusatz, sobald die
+  Phase über das Chart hinausläuft: *gehalten seit Woche 5 — du bist in Woche 8
+  dieser Phase*.
+
+### Warum
+
+Wer die Vegi streckt, damit die Pflanzen die Fläche zuwachsen, kommt über die
+letzte Vega-Spalte des Feed-Charts hinaus. Der Plan bleibt dann auf dieser
+Spalte stehen — fachlich richtig, aber stumm: auf dem Bildschirm stand weiter
+„Vega W4", und es war nicht zu unterscheiden, ob der Plan noch greift oder
+hängt. Die Zählung kommt aus derselben Rechnung wie die Spaltenwahl
+(`MischplanService.WocheInPhase`), damit nicht zwei Stellen verschieden zählen.
+
 ## 2.0.0-forkai.18
 
 **Fork AI.** Die Sollwert-Profile sagen jetzt, was davon bei Ihnen wirklich gilt.

@@ -25,6 +25,7 @@ type Geltend = {
   profilName: string
   profilHerkunft: string
   wochenplan: string | null
+  haltehinweis: string | null
   anmischen: string | null
   werte: Ziel[]
 }
@@ -67,6 +68,7 @@ function GiltGerade() {
               <Link className="gg-link" to="/wissen">
                 {eintrag.wochenplan}
               </Link>
+              {eintrag.haltehinweis && <span className="gg-halt"> · {eintrag.haltehinweis}</span>}
             </p>
           )}
 

@@ -228,7 +228,15 @@ public sealed class MischplanService
     }
 
     /// <summary>Woche innerhalb der Chart-Phase, ab 1.</summary>
-    private static int WocheInPhase(GrowRun grow, string chartStage)
+    /// <remarks>
+    /// Fork AI: öffentlich, seit der Banner „Gilt gerade" zeigen soll, dass eine
+    /// Spalte GEHALTEN wird. Streckt man die Vegi über die letzte Vega-Spalte
+    /// hinaus, bleibt <see cref="SpalteFuer"/> auf dieser stehen — richtig, aber
+    /// stumm. Die Antwort darauf muss aus derselben Rechnung kommen wie die
+    /// Spaltenwahl; eine zweite Zählung im Controller wäre die nächste
+    /// abweichende Auskunft.
+    /// </remarks>
+    public static int WocheInPhase(GrowRun grow, string chartStage)
     {
         var heute = DateTime.Today;
 

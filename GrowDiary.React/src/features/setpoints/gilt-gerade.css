@@ -28,6 +28,10 @@
   .gg-leiser { color: var(--muted); }
   .gg-link { color: var(--info-text); }
 
+  /* Der Haltehinweis steht bewusst klein hinter dem Plan und nicht als
+     Warnung: Halten ist der richtige Zustand, nur ein unsichtbarer. */
+  .gg-halt { color: var(--faint); }
+
   .gg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .gg-chip {
     border: 1px solid var(--hair); border-radius: 8px; background: var(--sunk);

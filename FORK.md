@@ -27,6 +27,7 @@ läuft parallel zum Original, eigene Datenbank, eigenes Image.
 | forkai.16 | „⌂"-Rücksprung wechselt die HA-Ansicht über `history.pushState` + `location-changed` statt über die Adresszeile — die Android-App öffnete den bisherigen Seitenwechsel im externen Browser; `location.href` nur noch als Rückfallebene außerhalb des HA-Rahmens | überall (Rahmen) | `useHomeAssistantFrame.ts`, `ruecksprung-ohne-seitenwechsel.node.test.ts` |
 | forkai.17 | „Einstellungen" im Mehr-Menü (am Telefon war die Seite nur über die getippte Adresse erreichbar, seit die Seitenleiste dort verborgen ist) | überall (Rahmen) | `AppShell.tsx`, `styles/forkai-shell.css`, `einstellungen-erreichbar.node.test.ts` |
 | forkai.18 | **„Gilt gerade" auf der Sollwert-Profile-Seite**: je laufendem Grow das wirksame Zielband mit Herkunft (Profil → Feed-Chart-Woche), Wochenwerte blau hervorgehoben, Anmischwerte des Charts als Fußnote; reine Anzeige über `Zielband.FuerGrow`/`FuerMetrik`, keine eigene Rechnung | Betrieb → Sollwert-Profile | `Api/Controllers/GeltendeZieleApiController.cs`, `features/setpoints/GiltGerade.tsx`, `features/setpoints/gilt-gerade.css`, `pages/SetpointProfilesPage.tsx` |
+| forkai.19 | Haltehinweis im Kopf „Gilt gerade": läuft die Phase über die letzte Spalte des Feed-Charts hinaus (gestreckte Vegi), steht dort *gehalten seit Woche N*; `WocheInPhase` dafür öffentlich | Betrieb → Sollwert-Profile | `Api/Controllers/GeltendeZieleApiController.cs`, `Services/MischplanService.cs`, `features/setpoints/GiltGerade.tsx`, `features/setpoints/gilt-gerade.css` |
 
 ## Geplant
 

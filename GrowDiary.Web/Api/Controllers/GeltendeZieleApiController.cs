@@ -22,6 +22,7 @@ public sealed record GeltendeZieleDto(
     string ProfilName,
     string ProfilHerkunft,
     string? Wochenplan,
+    string? Haltehinweis,
     string? Anmischen,
     List<GeltendesZielDto> Werte);
 
@@ -134,11 +135,31 @@ public sealed class GeltendeZieleApiController : ApiControllerBase
                 ProfilName(profil.ProfileId),
                 HerkunftText(profil.Origin),
                 chart?.Herkunft,
+                chart is { } gehalten ? Haltehinweis(grow, gehalten.Spalte) : null,
                 chart is { } spalte ? Anmischen(spalte.Spalte) : null,
                 werte));
         }
 
         return Ok(liste);
+    }
+
+    /// <summary>
+    /// Steht der Plan auf seiner letzten Spalte, während die Phase weiterläuft?
+    /// </summary>
+    /// <remarks>
+    /// Der Fall tritt bei jeder gestreckten Vegi ein: das Chart endet bei Vega
+    /// W4, der Grow ist in Woche 8. <c>SpalteFuer</c> hält dann die letzte
+    /// Spalte — sinnvoll, aber ohne diesen Satz sieht es aus, als sei der Plan
+    /// stehengeblieben oder falsch.
+    /// </remarks>
+    private static string? Haltehinweis(GrowRun grow, FeedChartColumn spalte)
+    {
+        if (spalte.Week is not { } spaltenWoche) return null;
+
+        var ist = MischplanService.WocheInPhase(grow, spalte.Stage);
+        return ist > spaltenWoche
+            ? $"gehalten seit Woche {spaltenWoche + 1} — du bist in Woche {ist} dieser Phase"
+            : null;
     }
 
     /// <summary>
