@@ -5,6 +5,32 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.18
+
+**Fork AI.** Die Sollwert-Profile sagen jetzt, was davon bei Ihnen wirklich gilt.
+
+### Was Sie sehen
+
+- Über der Profilliste steht für jeden laufenden Grow eine Zeile **„Gilt gerade"**:
+  welches Profil greift und woher es kommt (am Grow gewählt, vom System geerbt
+  oder aus dem Anbaustil), die aktuelle Phase und — falls der Grow die
+  Wochen-Ziele seines Düngeprogramms benutzt — dessen aktuelle Spalte.
+- Darunter die Zielwerte als Chips, genau die Zahlen, die auch auf den Kacheln
+  stehen. **Blau** ist, was aus dem Wochenplan kommt und nicht aus dem Profil.
+- Beim pH steht zusätzlich, worauf das Chart anmischen lässt — der Punktwert,
+  gegen den gemessen wird der Handlungsbereich.
+
+### Warum
+
+Die Seite zeigte Werte je Phase und sah damit aus wie die letzte Instanz. Sie ist
+aber nur der erste von drei Schritten: darüber legt das Feed-Chart wochenweise
+EC und pH, und ganz oben stehen die eigenen Grenzwerte des Zelts. Wer im Profil
+„Blüte: EC 1,0–1,2" las und im Messprotokoll gegen 1,1–1,3 bewertet wurde, suchte
+den Fehler an der falschen Stelle. Die neue Zeile rechnet nichts eigenes: sie
+fragt dieselben zwei Stellen wie Kacheln, Messprotokoll und Planziel-Alarme
+(`Zielband.FuerGrow`, `Zielband.FuerMetrik`) — eine zweite Rechnung wäre genau
+die zweite Auskunft, die dort abgeschafft wurde.
+
 ## 2.0.0-forkai.17
 
 **Fork AI.** Die Einstellungen sind am Telefon wieder erreichbar.

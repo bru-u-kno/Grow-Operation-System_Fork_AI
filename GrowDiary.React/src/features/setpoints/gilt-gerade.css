@@ -1,0 +1,43 @@
+/* Fork AI: „Gilt gerade" — der Kopf der Sollwert-Profile-Seite.
+   Nur Tokens, keine eigenen Farben: der Balken links ist der Akzent, die vom
+   Wochenplan gesetzten Werte tragen dieselbe Auszeichnung wie „von dir
+   geaendert" in der Tabelle darunter (--info). */
+@layer features {
+
+  .gg {
+    position: relative;
+    border: 1px solid var(--hair-2); border-radius: var(--r);
+    background: var(--panel); padding: 13px; margin-bottom: 12px;
+  }
+  /* Der Streifen sitzt INNEN am Rand, nicht davor: sonst schiebt er die Karte
+     aus der Flucht der Profilkarten darunter. */
+  .gg::before {
+    content: ''; position: absolute; left: 0; top: 10px; bottom: 10px;
+    width: 2px; border-radius: 2px; background: var(--accent);
+  }
+
+  .gg-kopf {
+    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 8px;
+  }
+  .gg-zeile { margin: 0 0 2px; font: 400 var(--fs-text)/1.6 var(--font-mono); color: var(--ink); }
+  .gg-zeile b { color: var(--accent); font-weight: 600; }
+  .gg-leise { color: var(--faint); }
+  .gg-leiser { color: var(--muted); }
+  .gg-link { color: var(--info-text); }
+
+  .gg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .gg-chip {
+    border: 1px solid var(--hair); border-radius: 8px; background: var(--sunk);
+    padding: 5px 8px; font: 400 var(--fs-klein)/1.2 var(--font-mono); color: var(--muted);
+    white-space: nowrap;
+  }
+  .gg-chip b { color: var(--ink); font-weight: 500; }
+  .gg-chip.ist-wochenplan { border-color: var(--info); color: var(--info-text); }
+  .gg-chip.ist-wochenplan b { color: var(--info-text); }
+
+  .gg-fuss {
+    margin: 9px 0 0; font: 400 var(--fs-klein)/1.55 var(--font-mono);
+    color: var(--faint); max-width: 68ch;
+  }
+}
