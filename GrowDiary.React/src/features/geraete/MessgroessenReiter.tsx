@@ -116,7 +116,8 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
         return (
           <V1Card key={gruppe.key}>
             <div className="gr-sec">
-              <span>{zelt.name} · {gruppe.label}</span>
+              {/* Der Zeltname steht nur einmal: „Zelt-RDWC · Zelt" las sich wie ein Fehler. */}
+              <span>{gruppe.label === 'Zelt' ? zelt.name : `${zelt.name} · ${gruppe.label}`}</span>
               <b>{belegt} / {zeilen.length}</b>
             </div>
 

@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.42
+
+**Fork AI.** Eine Stelle im Menü, an der gepflegt wird.
+
+- **Betrieb → Geräte & Entitäten** trägt jetzt alles: Geräte, Messgrößen,
+  Wartung.
+- **Home Assistant** und **Sensoren & Wartung** stehen unter **Einrichtung** am
+  Ende und heißen jetzt „Home Assistant (Verbindung)" und „Sensoren & Wartung
+  (erfassen)". Beide Seiten bleiben unverändert und zeigen dieselben Daten — sie
+  werden nur seltener gebraucht: die eine für URL und Token, die andere zum
+  Erfassen einer Kalibrierung.
+- Im Reiter Messgrößen steht der Zeltname nur noch einmal; „Zelt-RDWC · Zelt"
+  las sich wie ein Fehler.
+
 ## 2.0.0-forkai.41
 
 **Fork AI.** Dritter Reiter: **Wartung**.

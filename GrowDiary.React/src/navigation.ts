@@ -100,7 +100,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: '/dosierung', label: 'Dosierung', end: false, icon: '⚗', short: 'Dosierung', keywords: 'pumpe peristaltik ph minus plus säure nährstoff dosieren kalibrieren' },
       { to: '/geraete', label: 'Geräte & Entitäten', end: true, icon: '⧉', short: 'Geräte', keywords: 'entität entity home assistant zuordnung controller port sensor steckdose gerät hardware ha mapping' },
-      { to: '/sensoren', label: 'Sensoren & Wartung', end: true, icon: '⚙', short: 'Sensoren', keywords: 'hardware geräte kalibrierung inventar wechseln lebensdauer' },
       { to: '/regeln', label: 'Regeln & Automatik', end: true, icon: '≡', short: 'Regeln', keywords: 'grenzwerte schwellen alarm push zeitplan automation' },
       { to: '/sollwerte', label: 'Sollwert-Profile', end: true, icon: '◈', short: 'Sollwerte', keywords: 'zielwerte setpoints profil rdwc dwc phasen erfahrung eigene werte' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
@@ -136,7 +135,12 @@ export const navGroups: NavGroup[] = [
       // eigenen Aufbereitung (Osmose/VE). Wer unter Anlage nach „Wasser"
       // sucht, soll es finden — genau das war die Rueckmeldung.
       { to: '/wasser', label: 'Wasser', end: true, keywords: 'wasser wasserprofil trinkwasser leitungswasser osmose ro umkehrosmose ve entsalzt stadtwerk bericht härte calcium magnesium leitfähigkeit ec kalk weich hart' },
-      { to: '/home-assistant', label: 'Home Assistant', end: true, keywords: 'ha entitäten verbindung integration mapping kamera' },
+      // Fork AI (forkai.42): Gepflegt wird unter Betrieb → Geräte & Entitäten;
+      // diese beiden Seiten bleiben unverändert bestehen und zeigen dieselben
+      // Daten. Sie stehen hier unten, weil man sie nur noch selten braucht —
+      // etwa für die HA-Verbindung selbst oder zum Erfassen einer Wartung.
+      { to: '/home-assistant', label: 'Home Assistant (Verbindung)', end: true, keywords: 'ha entitäten verbindung integration mapping kamera token url' },
+      { to: '/sensoren', label: 'Sensoren & Wartung (erfassen)', end: true, keywords: 'hardware geräte kalibrierung inventar wechseln lebensdauer wartung erfassen' },
       { to: '/handy', label: 'Aufs Handy holen', end: true, keywords: 'mobil smartphone qr code startbildschirm lesezeichen app icon telefon' },
     ],
   },
