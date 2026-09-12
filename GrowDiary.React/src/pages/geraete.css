@@ -158,3 +158,15 @@
 }
 .gr-messkopf b { flex: 0 0 auto; font-family: var(--font-mono); font-size: var(--fs-text); color: var(--accent-text); }
 .gr-messkopf b.is-leer { color: var(--faint); }
+
+/* forkai.41: Reiter „Wartung" — Titel links, Frist rechts. */
+.gr-wartung { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--hair); }
+.gr-wartung .nm { flex: 1; min-width: 0; }
+.gr-wartung .nm b { display: block; font-size: var(--fs-text); font-weight: 600; }
+.gr-wartung .nm small { display: block; margin-top: 2px; font-size: var(--fs-micro, .625rem); color: var(--muted); }
+.gr-frist {
+  flex: 0 0 auto; padding: 2px var(--s-2); border-radius: var(--r-pill);
+  border: 1px solid var(--hair-2); font-family: var(--font-mono); font-size: var(--fs-micro, .625rem);
+  color: var(--muted);
+}
+.gr-frist.is-faellig { border-color: var(--warn-text); background: var(--warn-wash); color: var(--warn-text); }

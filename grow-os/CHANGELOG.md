@@ -5,6 +5,24 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.41
+
+**Fork AI.** Dritter Reiter: **Wartung**.
+
+### Was Sie sehen
+
+- Kalibrier- und Prüffristen nach **Fälligkeit** sortiert, gruppiert in „Fällig"
+  (die nächsten sieben Tage) und „Später". Je Zeile die Aufgabe, darunter das
+  **Gerät** — mit dem Namen, den es auf der Geräteseite trägt, nicht „pH" oder
+  „EC" aus dem Inventar.
+- Geräte mit Intervall, aber ohne bisheriges Ereignis stehen ebenfalls da.
+  Sonst sähe man eine Kalibrierfrist erst, nachdem sie einmal gelaufen ist.
+
+### Bewusst nur lesend
+
+Erfasst und geändert wird weiter unter „Sensoren & Wartung"; die Fußzeile führt
+dorthin. Damit bleibt die Originalseite unberührt.
+
 ## 2.0.0-forkai.40
 
 **Fork AI.** Formatfehler im Reiter „Messgrößen" behoben.

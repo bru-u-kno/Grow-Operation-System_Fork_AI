@@ -8,6 +8,7 @@ import type { V1Option } from '../components/V1Select'
 import { V1Sheet } from '../components/V1Sheet'
 import { V1Tabs } from '../components/v1'
 import { MessgroessenReiter } from '../features/geraete/MessgroessenReiter'
+import { WartungReiter } from '../features/geraete/WartungReiter'
 import type { HomeAssistantEntity } from '../types'
 import './geraete.css'
 
@@ -95,7 +96,7 @@ export default function GeraetePage() {
   // unten. Zugeklappt bleibt eine ZEILE MIT TEXT stehen — eine blosse Zahl
   // hatte niemand als Schalter erkannt.
   const [korrekturenOffen, setKorrekturenOffen] = useState(false)
-  const [reiter, setReiter] = useState<'geraete' | 'messgroessen'>('geraete')
+  const [reiter, setReiter] = useState<'geraete' | 'messgroessen' | 'wartung'>('geraete')
   const [entities, setEntities] = useState<HomeAssistantEntity[]>([])
   // Was zuletzt geschah, samt Rueckweg. Die Auswahl unter einer Entitaet
   // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
@@ -232,6 +233,14 @@ export default function GeraetePage() {
     }
   }
 
+  const geraeteNamen = useMemo(() => {
+    const namen = new Map<number, string>()
+    for (const geraet of seite?.geraete ?? []) {
+      if (geraet.hardwareItemId != null) namen.set(geraet.hardwareItemId, geraet.name)
+    }
+    return namen
+  }, [seite])
+
   // Controller zuerst, ihre Ports direkt darunter — die Reihenfolge kommt aus
   // dem Dienst, hier wird nur die Verschachtelung sichtbar gemacht.
   const gruppen = useMemo(() => {
@@ -360,10 +369,12 @@ export default function GeraetePage() {
         items={[
           { value: 'geraete', label: 'Geräte' },
           { value: 'messgroessen', label: 'Messgrößen' },
+          { value: 'wartung', label: 'Wartung' },
         ]}
       />
 
-      {reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} /> : <>
+      {reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} />
+        : reiter === 'wartung' ? <WartungReiter geraeteNamen={geraeteNamen} /> : <>
 
       {letzte && (
         <div className="gr-meldung">
