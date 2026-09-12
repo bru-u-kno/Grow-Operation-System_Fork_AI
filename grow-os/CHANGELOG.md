@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.29
+
+**Fork AI.** „Geräte & Entitäten": eine Zuordnung lässt sich zurücknehmen.
+
+- Nach dem Verschieben einer Entität erscheint oben eine Meldung mit
+  **Rückgängig** — vorher schrieb die Auswahl sofort und stumm, ein Fehlgriff
+  beim Scrollen fiel erst auf, wenn die Entität irgendwo fehlte.
+- Die Auswahl unter einer Entität heißt jetzt **„Gehört zu"** statt nackt
+  dazustehen.
+
 ## 2.0.0-forkai.28
 
 **Fork AI.** Bugfix auf „Geräte & Entitäten": Das ⋯-Menü öffnete sich nur, wenn

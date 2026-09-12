@@ -68,6 +68,10 @@ export default function GeraetePage() {
   // Handybildschirm sind genau der Platzfresser, den wir loswerden wollten.
   const [menue, setMenue] = useState<string | null>(null)
   const [rubrikName, setRubrikName] = useState<string | null>(null)
+  // Was zuletzt geschah, samt Rueckweg. Die Auswahl unter einer Entitaet
+  // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
+  // spaeter und sucht die Entitaet dann im falschen Geraet.
+  const [letzte, setLetzte] = useState<{ text: string; zurueck?: () => Promise<void> } | null>(null)
   const [entwurf, setEntwurf] = useState('')
   const [speichert, setSpeichert] = useState(false)
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
@@ -155,6 +159,19 @@ export default function GeraetePage() {
     } finally {
       setSpeichert(false)
     }
+  }
+
+  async function entitaetVerschieben(entityId: string, vonGeraet: Geraet, zielSchluessel: string) {
+    const ziel = (seite?.geraete ?? []).find((g) => g.schluessel === zielSchluessel)
+    await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: zielSchluessel })
+    setLetzte({
+      text: `${entityId} steht jetzt bei „${ziel?.name ?? zielSchluessel}".`,
+      // Zurueck heisst: wieder dem Geraet zuschlagen, aus dem sie kam.
+      zurueck: async () => {
+        await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: vonGeraet.schluessel })
+        setLetzte(null)
+      },
+    })
   }
 
   async function verwerfen(geraet: Geraet) {
@@ -278,6 +295,16 @@ export default function GeraetePage() {
       title="Geräte & Entitäten"
       subtitle="Alles, was der Fork an Home Assistant benutzt — nach Gerät sortiert."
     >
+      {letzte && (
+        <div className="gr-meldung">
+          <span>{letzte.text}</span>
+          {letzte.zurueck && (
+            <button type="button" disabled={speichert} onClick={() => void letzte.zurueck?.()}>Rückgängig</button>
+          )}
+          <button type="button" aria-label="Meldung schließen" onClick={() => setLetzte(null)}>✕</button>
+        </div>
+      )}
+
       <V1Card>
         <div className="gr-zahlen">
           <div><b>{seite.anzahlGeraete}</b><span>Geräte</span></div>
@@ -317,7 +344,7 @@ export default function GeraetePage() {
               onMenue={() => setMenue(menue === geraet.schluessel ? null : geraet.schluessel)}
               menueOffen={menue === geraet.schluessel}
               alleGeraete={seite.geraete}
-              aufGeraet={(entityId, ziel) => void schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: ziel })}
+              aufGeraet={(entityId, ziel) => void entitaetVerschieben(entityId, geraet, ziel)}
               kinderZahl={kinder.length}
               zugeklappt={zugeklappt}
               offen={offen === geraet.schluessel}
@@ -344,7 +371,7 @@ export default function GeraetePage() {
                 onMenue={() => setMenue(menue === kind.schluessel ? null : kind.schluessel)}
                 menueOffen={menue === kind.schluessel}
                 alleGeraete={seite.geraete}
-                aufGeraet={(entityId, ziel) => void schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: ziel })}
+                aufGeraet={(entityId, ziel) => void entitaetVerschieben(entityId, kind, ziel)}
                 eingerueckt
                 offen={offen === kind.schluessel}
                 onKlick={() => setOffen(offen === kind.schluessel ? null : kind.schluessel)}
@@ -434,16 +461,19 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
             {geraet.entitaeten.map((entitaet) => (
               <li key={entitaet.entityId}>
                 <code>{entitaet.entityId}</code>
+                <label className="gr-gehoert">
+                  <span>Gehört zu</span>
                 <select
                   className="gr-umhaengen"
                   value={geraet.schluessel}
-                  aria-label={`${entitaet.entityId} einem Gerät zuordnen`}
+                  aria-label={`${entitaet.entityId} — gehört zu`}
                   onChange={(event) => aufGeraet(entitaet.entityId, event.target.value)}
                 >
                   {alleGeraete.map((ziel) => (
                     <option key={ziel.schluessel} value={ziel.schluessel}>{ziel.name}</option>
                   ))}
                 </select>
+                </label>
                 <span className="gr-marken">
                     {entitaet.verwendungen.map((verwendung) => (
                     <em key={`${verwendung.quelle}-${verwendung.zweck}`} title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>
