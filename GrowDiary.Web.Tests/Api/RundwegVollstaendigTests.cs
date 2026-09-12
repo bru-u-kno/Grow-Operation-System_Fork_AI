@@ -273,6 +273,12 @@ public sealed class RundwegVollstaendigTests
         ["UpdateAutoMeasurementConfigRequest"] =
             "Der Demobestand legt keine Auto-Messung an; ohne Bestand faehrt der "
             + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen.",
+        // Fork AI (forkai.55)
+        ["LichtEinstellungen"] =
+            "Der Rundweg faehrt jedes Feld mit einer festen Probe (1 bzw. true). Vier "
+            + "Felder sind Uhrzeiten im Format HH:mm — \"1\" ist keine, das PUT lehnt sie "
+            + "mit 400 ab. Dass kein Feld beim Speichern verlorengeht, faehrt "
+            + "LichtEinstellungenRundwegTests.",
         // Fork AI (forkai.20)
         ["Co2Einstellungen"] =
             "Der Rundweg faehrt jedes Feld mit einer festen Probe (1 bzw. true). Die "

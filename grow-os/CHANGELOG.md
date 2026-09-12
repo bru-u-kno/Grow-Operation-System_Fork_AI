@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.55
+
+**Fork AI.** Schließt die Testlücke der Licht-Steuerung — die Prüfung auf `main`
+ist damit wieder grün.
+
+Die Licht-Einstellungen kamen in forkai.51 ohne einen einzigen Test. Neu ist ein
+Rundweg, der prüft, dass keins der neun Felder beim Speichern verlorengeht und
+dass ein zweites Speichern das erste ersetzt. Der allgemeine Rundweg kann diesen
+Vertrag nicht fahren: er füllt jedes Feld mit einer festen Probe, und „1" ist
+keine Uhrzeit im Format HH:mm — das ist jetzt mit Grund vermerkt.
+
+Noch offen: der Weg durch Controller und Dienst samt Prüfung der Zeitformate und
+dem Schreiben an den Controller. Dafür braucht es einen gestellten Funk.
+
 ## 2.0.0-forkai.54
 
 **Fork AI.** Behebt einen Baufehler in forkai.53 — die Übergabe an Home Assistant
