@@ -270,7 +270,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         <div className="st-marken">
           <span className={`st-marke ${live.klimaOk ? 'is-ok' : 'is-warn'}`}>{live.klimaOk ? 'Klima OK' : 'Klima sperrt'}</span>
           {live.t6Stufe != null && <span className="st-marke">T6 Stufe {live.t6Stufe}</span>}
-          {live.canopyC != null && <span className="st-marke">Canopy {formatNumber(live.canopyC, 1)} °C</span>}
+          {live.canopyC != null && <span className="st-marke">Blatt {formatNumber(live.canopyC, 1)} °C</span>}
           {live.rhProzent != null && <span className="st-marke">RH {formatNumber(live.rhProzent, 0)} %</span>}
           {live.vpd != null && <span className="st-marke">VPD {formatNumber(live.vpd, 2)}</span>}
           {live.lichtAn === false && <span className="st-marke">Licht aus</span>}
@@ -353,7 +353,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
           <V1Card>
             <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird nicht dosiert — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
             <Zahl label="Wieder frei ab" hinweis="Abstand unter der Obergrenze, damit es nicht flattert." einheit="%" schritt={0.5} wert={entwurf.klimaHystereseProzent} onChange={(v) => setz('klimaHystereseProzent', v)} fehler={feldFehler.KlimaHystereseProzent} />
-            <Zahl label="Canopy-Obergrenze" einheit="°C" schritt={0.5} wert={entwurf.canopyObergrenzeC} onChange={(v) => setz('canopyObergrenzeC', v)} fehler={feldFehler.CanopyObergrenzeC} />
+            <Zahl label="Blatt-Obergrenze" einheit="°C" schritt={0.5} wert={entwurf.canopyObergrenzeC} onChange={(v) => setz('canopyObergrenzeC', v)} fehler={feldFehler.CanopyObergrenzeC} />
             <V1Switch label="Abluft beim Dosieren drosseln" checked={entwurf.abluftDrosseln} onChange={(v) => setz('abluftDrosseln', v)} hint="Ohne Drosselung bläst der T6 das CO₂ hinaus, während dosiert wird." />
             <Zahl label="T6 normal" wert={entwurf.t6StufeNormal} onChange={(v) => setz('t6StufeNormal', v)} fehler={feldFehler.T6StufeNormal} />
             <Zahl label="T6 beim Dosieren" wert={entwurf.t6StufeDosierung} onChange={(v) => setz('t6StufeDosierung', v)} fehler={feldFehler.T6StufeDosierung} />

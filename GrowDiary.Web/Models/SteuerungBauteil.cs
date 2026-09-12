@@ -95,14 +95,14 @@ public static class SteuerungBauteile
     {
         // --- Ziel ---------------------------------------------------------
         new(Co2, "input_number.co2_zielwert", "CO2 Zielwert", BauteilArt.Zahl,
-            "Ziel bei warmer Canopy.", Min: 400, Max: 2000, Schritt: 10, Einheit: "ppm"),
+            "Ziel bei warmer Blatttemperatur.", Min: 400, Max: 2000, Schritt: 10, Einheit: "ppm"),
         new(Co2, "input_number.co2_ziel_mittel_25_bis_27_c", "CO2 Ziel mittel 25 bis 27 C", BauteilArt.Zahl,
             "Ziel im mittleren Temperaturbereich.", Pflicht: false, HaengtAn: BrauchtCanopy,
-            OhneDas: "Ohne Canopy-Fühler gilt durchgehend ein Ziel.",
+            OhneDas: "Ohne Blattfühler gilt durchgehend ein Ziel.",
             Min: 400, Max: 2000, Schritt: 10, Einheit: "ppm"),
         new(Co2, "input_number.co2_ziel_kuehl_unter_25_c", "CO2 Ziel kuehl unter 25 C", BauteilArt.Zahl,
-            "Ziel bei kühler Canopy.", Pflicht: false, HaengtAn: BrauchtCanopy,
-            OhneDas: "Ohne Canopy-Fühler gilt durchgehend ein Ziel.",
+            "Ziel bei kühler Blatttemperatur.", Pflicht: false, HaengtAn: BrauchtCanopy,
+            OhneDas: "Ohne Blattfühler gilt durchgehend ein Ziel.",
             Min: 400, Max: 2000, Schritt: 10, Einheit: "ppm"),
         new(Co2, "input_number.co2_hysterese", "CO2 Hysterese", BauteilArt.Zahl,
             "Wie weit der Wert unter das Ziel fallen darf, bevor nachdosiert wird.",
@@ -148,10 +148,10 @@ public static class SteuerungBauteile
             Pflicht: false, HaengtAn: BrauchtRh,
             OhneDas: "Ohne Feuchtefühler hat das Klima keinen Vorrang.",
             Min: 0, Max: 10, Schritt: 0.5, Einheit: "%"),
-        new(Co2, "input_number.co2_canopy_obergrenze", "CO2 Canopy Obergrenze", BauteilArt.Zahl,
+        new(Co2, "input_number.co2_canopy_obergrenze", "CO2 Blatttemperatur Obergrenze", BauteilArt.Zahl,
             "Über dieser Blatttemperatur wird nicht dosiert.",
             Pflicht: false, HaengtAn: BrauchtCanopy,
-            OhneDas: "Ohne Canopy-Fühler entfällt die Temperaturgrenze.",
+            OhneDas: "Ohne Blattfühler entfällt die Temperaturgrenze.",
             Min: 22, Max: 34, Schritt: 0.5, Einheit: "°C"),
 
         // --- Abluft -------------------------------------------------------
@@ -170,7 +170,7 @@ public static class SteuerungBauteile
             Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", Min: 1, Max: 10, Schritt: 1),
         new(Co2, "input_number.co2_t6_tief_max_temp", "CO2 T6 tief max Temp", BauteilArt.Zahl,
-            "Bis zu dieser Canopy-Temperatur ist die tiefe Stufe erlaubt.",
+            "Bis zu dieser Blatttemperatur ist die tiefe Stufe erlaubt.",
             Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", Min: 24, Max: 32, Schritt: 0.1, Einheit: "°C"),
 
