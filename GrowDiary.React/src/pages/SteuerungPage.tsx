@@ -15,7 +15,7 @@ import '../features/steuerung/steuerung.css'
  * der Zweck, nicht der Bezeichner.
  */
 const ART_LESBAR: Record<string, string> = {
-  Zahl: 'Einstellwert',
+  Zahl: 'Einstellwert',  // steht in der breiten Zeile, nicht in einer engen Spalte
   Schalter: 'Schalter',
   Zeitpunkt: 'Zeitstempel',
   Zaehler: 'Zähler',
@@ -436,9 +436,10 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               <div className="st-feldzeile" key={b.entityId}>
                 <span className="st-etikett">
                   {b.zweck}
-                  <small>{b.pflicht ? 'Wird gebraucht' : (b.ohneDas ?? 'Optional')}</small>
+                  <small>
+                    {ART_LESBAR[b.art] ?? b.art} · {b.pflicht ? 'wird gebraucht' : (b.ohneDas ?? 'optional')}
+                  </small>
                 </span>
-                <span className="st-nurlesen">{ART_LESBAR[b.art] ?? b.art}</span>
               </div>
             ))}
             <p className="st-hinweis">
