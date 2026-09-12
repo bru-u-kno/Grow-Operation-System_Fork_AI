@@ -21,11 +21,13 @@ public sealed class GeraeteApiController : ApiControllerBase
 {
     private readonly GeraeteUebersichtService _geraete;
     private readonly GeraeteRepository _repo;
+    private readonly SteuerungGeraeteService _rollen;
 
-    public GeraeteApiController(GeraeteUebersichtService geraete, GeraeteRepository repo)
+    public GeraeteApiController(GeraeteUebersichtService geraete, GeraeteRepository repo, SteuerungGeraeteService rollen)
     {
         _geraete = geraete;
         _repo = repo;
+        _rollen = rollen;
     }
 
     [HttpGet]
@@ -55,6 +57,11 @@ public sealed class GeraeteApiController : ApiControllerBase
                 e.HerkunftName)).ToList()))
             .ToList();
 
+        // Fork AI (forkai.44): Regeln tut Home Assistant. Weicht eine Rolle von dem
+        // ab, was die Automation fest verdrahtet hat, meinen Anzeige und Regelung
+        // Verschiedenes — das gehört auf die Seite, nicht in ein Protokoll.
+        var hinweise = Co2SteuerungService.Abweichungen(_rollen.EntitiesFuerModul(Co2SteuerungService.Modul));
+
         return Ok(new GeraeteSeiteDto(
             zeilen,
             // Eine Rubrik ist ein Fach, kein Geraet — sie faelschte die Zahl.
@@ -65,7 +72,8 @@ public sealed class GeraeteApiController : ApiControllerBase
             // Nutzer umgehaengt oder umbenannt hat. Zaehlte nur das erste, stuende
             // nach dem Verschieben eines Geraets weiter eine Null da.
             zeilen.Sum(z => z.Entitaeten.Count(e => e.Verschoben))
-                + zeilen.Count(z => !z.IstRubrik && (z.ElternVomNutzer || z.NameVomNutzer))));
+                + zeilen.Count(z => !z.IstRubrik && (z.ElternVomNutzer || z.NameVomNutzer)),
+            hinweise));
     }
 
     /// <summary>
@@ -204,4 +212,6 @@ public sealed record GeraeteSeiteDto(
     int AnzahlGeraete,
     int AnzahlEntitaeten,
     int AnzahlVermutet,
-    int AnzahlVerschoben);
+    int AnzahlVerschoben,
+    /// <summary>Rollen, die nicht zu dem passen, was die HA-Automation wirklich benutzt.</summary>
+    IReadOnlyList<string> Hinweise);

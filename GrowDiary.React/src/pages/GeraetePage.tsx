@@ -50,6 +50,7 @@ type Seite = {
   anzahlEntitaeten: number
   anzahlVermutet: number
   anzahlVerschoben: number
+  hinweise: string[]
 }
 
 /** Die Ziele einer Entität: erst der Rückweg, dann Rubriken, dann Geräte. */
@@ -382,6 +383,12 @@ export default function GeraetePage() {
           { value: 'wartung', label: 'Wartung' },
         ]}
       />
+
+      {/* Regeln tut Home Assistant: weicht eine Rolle von dem ab, was die
+          Automation fest verdrahtet hat, steht das hier — nicht in einem Protokoll. */}
+      {(seite.hinweise ?? []).map((hinweis) => (
+        <V1Alert key={hinweis} tone="warn" message={hinweis} />
+      ))}
 
       {reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} />
         : reiter === 'wartung' ? <WartungReiter geraeteNamen={geraeteNamen} /> : <>

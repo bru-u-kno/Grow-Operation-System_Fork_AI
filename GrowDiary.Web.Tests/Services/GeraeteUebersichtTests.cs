@@ -34,6 +34,46 @@ public sealed class GeraeteUebersichtTests
             gespeichert ?? new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase),
             zuordnungen ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
+    [Fact]
+    public void DieVergleichstabelleKenntNurEchteRollenUndDerenVorgabe()
+    {
+        // Der Abgleich meldet nur etwas, wenn die Rolle vom YAML abweicht. Passt die
+        // Tabelle nicht mehr zu den Rollen (umbenannt, Vorgabe geaendert), meldete er
+        // still nichts — deshalb haelt der Test beides zusammen.
+        foreach (var (rolle, entity) in Co2SteuerungService.AutomationVerdrahtet)
+        {
+            var definition = SteuerungGeraeteRollen.Finden(Co2SteuerungService.Modul, rolle);
+            Assert.True(definition is not null, $"Rolle {rolle} gibt es nicht mehr.");
+            Assert.Equal(definition!.Vorgabe, entity);
+        }
+    }
+
+    [Fact]
+    public void EineAbweichendeRolleWirdGemeldet()
+    {
+        var rollen = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["co2_sensor"] = "sensor.ein_anderer_fuehler",
+            ["licht"] = "binary_sensor.klein_abluft_zustand",
+        };
+
+        var meldung = Assert.Single(Co2SteuerungService.Abweichungen(rollen));
+        Assert.Contains("sensor.ein_anderer_fuehler", meldung);
+        Assert.Contains("sensor.big_co2_light_sensor_co2", meldung);
+    }
+
+    [Fact]
+    public void PassendeUndLeereRollenMeldenNichts()
+    {
+        var rollen = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["co2_sensor"] = "sensor.big_co2_light_sensor_co2",
+            ["abluft_stufe"] = null,
+        };
+
+        Assert.Empty(Co2SteuerungService.Abweichungen(rollen));
+    }
+
     [Theory]
     [InlineData("sensor.bluelab_guardian_ph", "bluelab_guardian")]
     [InlineData("sensor.bluelab_guardian_electrical_conductivity", "bluelab_guardian")]

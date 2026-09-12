@@ -5,6 +5,24 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.44
+
+**Fork AI.** Der Fork warnt, wenn Anzeige und Regelung Verschiedenes meinen.
+
+Geregelt wird die CO₂-Dosierung in Home Assistant, und die Automation trägt ihre
+Entitäten im YAML. Wer im Fork eine Rolle umhängt, ändert damit die **Anzeige** —
+nicht das, was dosiert. Weicht beides voneinander ab, steht auf **Geräte &
+Entitäten** jetzt eine Warnung: welche Rolle worauf zeigt und womit die Automation
+tatsächlich arbeitet.
+
+### Warum nicht andersherum
+
+Die Automation könnte ihre Entitäten aus Helfern lesen, statt sie fest zu haben.
+Das hieße: fünf `condition: state` würden zu Templates, die still scheitern statt
+laut — an einer Automation, die ein Ventil an einer Gasflasche schaltet, samt
+Off-Verifikation und Notabschaltung. Der Gewinn wäre ein Gerätetausch alle paar
+Jahre. Die Warnung schließt die Lücke, ohne dieses Risiko einzugehen.
+
 ## 2.0.0-forkai.43
 
 **Fork AI.** Neu am Gerät: **„Wo dieses Gerät vorkommt"**.

@@ -59,6 +59,15 @@ public sealed class Co2SteuerungService
         public const string EndeVorLichtAus = "input_number.co2_ende_vor_licht_aus";
         public const string Automatik = "automation.co2_dosierung_rdwc_port_5";
 
+        /// <summary>
+        /// Fork AI (forkai.44): Die Steckdose, die die HA-Automation wirklich schaltet.
+        /// Sie steht dort fest im YAML; der Fork liest sie nur, um zu vergleichen.
+        /// </summary>
+        public const string PortSchaltenInAutomation = PortModus;
+
+        /// <summary>Der Port-Status, auf den die Automation als Bedingung prüft (online, nicht „läuft").</summary>
+        public const string PortStatusInAutomation = "binary_sensor.big_port_5_status";
+
         public const string ZielEffektiv = "sensor.co2_ziel_effektiv";
         public const string Bedarf = "binary_sensor.co2_bedarf";
         public const string KlimaOk = "binary_sensor.co2_klima_ok";
@@ -211,6 +220,52 @@ public sealed class Co2SteuerungService
         return (e.ZielWarmPpm, e.ZielMittelPpm, e.ZielKuehlPpm);
 
         static int Runden(double v) => (int)(Math.Round(v / 10.0) * 10);
+    }
+
+    // ------------------------------------------------- Abgleich mit der Automation
+
+    /// <summary>
+    /// Fork AI (forkai.44): Was die HA-Automation je Rolle fest verdrahtet hat.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Warum das hier steht.</b> Geregelt wird in Home Assistant, und die
+    /// Automation trägt ihre Entitäten im YAML. Wer im Fork eine Rolle umhängt,
+    /// ändert damit die Anzeige — nicht das, was dosiert. Ohne Abgleich fällt das
+    /// erst auf, wenn jemand sich über Zahlen wundert, die nicht zum Ventil passen.</para>
+    ///
+    /// <para>Verglichen wird nur, was die Automation wirklich liest. Die schaltende
+    /// Steckdose hat im Fork keine Rolle (sie schaltet nichts von hier aus), und der
+    /// Port-<i>Status</i> der Automation ist eine andere Entität als der
+    /// Port-<i>Zustand</i> der Rolle — beides wäre ein Fehlalarm.</para>
+    /// </remarks>
+    public static IReadOnlyDictionary<string, string> AutomationVerdrahtet { get; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["co2_sensor"] = "sensor.big_co2_light_sensor_co2",
+            ["abluft_stufe"] = "number.rdwc_venti_einschaltleistung",
+            ["licht"] = "binary_sensor.klein_abluft_zustand",
+        };
+
+    /// <summary>
+    /// Rollen, deren Entität von der Automation abweicht — je Eintrag eine Meldung
+    /// im Klartext. Leere Liste heißt: Anzeige und Regelung meinen dasselbe.
+    /// </summary>
+    public static IReadOnlyList<string> Abweichungen(IReadOnlyDictionary<string, string?> rollen)
+    {
+        var meldungen = new List<string>();
+        foreach (var (rolle, inAutomation) in AutomationVerdrahtet)
+        {
+            if (!rollen.TryGetValue(rolle, out var gewaehlt)) continue;
+            if (string.IsNullOrWhiteSpace(gewaehlt)) continue;
+            if (string.Equals(gewaehlt, inAutomation, StringComparison.OrdinalIgnoreCase)) continue;
+
+            var label = SteuerungGeraeteRollen.Finden(Modul, rolle)?.Label ?? rolle;
+            meldungen.Add(
+                $"Rolle {label}: zeigt auf {gewaehlt}, die CO₂-Automation dosiert aber mit {inAutomation}. "
+                + "Die Anzeige im Fork und die Regelung meinen gerade Verschiedenes.");
+        }
+
+        return meldungen;
     }
 
     // ------------------------------------------------------- nach HA schreiben
