@@ -35,7 +35,12 @@ public sealed class LichtEinstellungenRundwegTests : IDisposable
     {
         _wurzel = Path.Combine(Path.GetTempPath(), "LichtRundweg_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_wurzel);
-        _repo = new SteuerungRepository(new AppPaths(_wurzel));
+        var pfade = new AppPaths(_wurzel);
+        // Ohne angelegte Datenbank kommt SQLite gar nicht erst an die Datei
+        // („unable to open database file") — dieselbe Vorbereitung wie in den
+        // uebrigen Repository-Tests.
+        TestDatabase.Initialize(pfade);
+        _repo = new SteuerungRepository(pfade);
     }
 
     [Fact]

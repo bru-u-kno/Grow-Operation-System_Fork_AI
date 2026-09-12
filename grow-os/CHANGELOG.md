@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.56
+
+**Fork AI.** Behebt die beiden neuen Licht-Tests aus forkai.55: ihnen fehlte die
+angelegte Testdatenbank, deshalb kamen sie gar nicht erst an die Ablage. Am
+Programm ändert sich nichts.
+
 ## 2.0.0-forkai.55
 
 **Fork AI.** Schließt die Testlücke der Licht-Steuerung — die Prüfung auf `main`
