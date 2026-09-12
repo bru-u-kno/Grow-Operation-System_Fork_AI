@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { GrowSummary, KuehlerLivePayload, MetricPayload, RiskEventDto, TentDto } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
 import { SensorChart } from '../../components/SensorChart'
+import { V1Sheet } from '../../components/V1Sheet'
 import { MetricTile } from './MetricTile'
 import { decimalsForMetric } from './metric-tile-model'
 import { CameraPanel } from './CameraPanel'
@@ -113,6 +114,12 @@ export function LiveScreen({
   const metricsByKey = new Map([...(alleMetriken ?? []), ...climate, ...hydro].map((metric) => [metric.key, metric]))
   const [offeneMetrik, setOffeneMetrik] = useState<string | null>(null)
 
+  /* Fork AI: „⋯" neben dem Messen-Knopf. Die selten gebrauchten Handlungen
+     (Addback, Anpassen, Zeltwechsel) liegen darunter, damit die Kopfzeile auf
+     dem Telefon einzeilig bleibt statt drei vollbreite Knöpfe zu tragen. */
+  const [weitereOffen, setWeitereOffen] = useState(false)
+  const navigate = useNavigate()
+
   return (
     <main className="ls" data-audit="live-screen">
       {/* ---------- Kopfzeile ---------- */}
@@ -129,31 +136,67 @@ export function LiveScreen({
           <i />{sensorsLive} Sensoren live
         </span>
 
-        <span className="ls-head-meta">
-          {[lastMeasurement && `Letzte Messung ${lastMeasurement}`, stageLine, grow?.name]
-            .filter(Boolean).join(' · ')}
-        </span>
+        <div className="ls-head-bar">
+          <span className="ls-head-meta">
+            {[lastMeasurement && `Letzte Messung ${lastMeasurement}`, stageLine, grow?.name]
+              .filter(Boolean).join(' · ')}
+          </span>
 
-        <div className="ls-head-actions">
-          {dashboard && !dashboard.editing && (
-            <button type="button" className="ls-btn" onClick={dashboard.onToggleEditing} data-audit="dashboard-customise">
-              ▦ Anpassen
+          <div className="ls-head-actions">
+            <Link className="ls-btn is-primary" to="/messung">Messen</Link>
+            <button
+              type="button"
+              className="ls-btn ls-head-more"
+              onClick={() => setWeitereOffen(true)}
+              aria-label="Weitere Handlungen"
+              data-audit="live-more"
+            >
+              ⋯
             </button>
-          )}
-          {tents.length > 1 && (
+          </div>
+        </div>
+      </header>
+
+      <V1Sheet open={weitereOffen} onClose={() => setWeitereOffen(false)} title="Weitere Handlungen">
+        <button
+          type="button"
+          className="forkai-sheet-item"
+          onClick={() => { setWeitereOffen(false); navigate('/addback') }}
+        >
+          <span className="forkai-sheet-icon" aria-hidden="true">↻</span>
+          <span className="forkai-sheet-text">
+            <strong>Addback starten</strong>
+            <span>Nachfüllen mit Zielwerten</span>
+          </span>
+        </button>
+        {dashboard && !dashboard.editing && (
+          <button
+            type="button"
+            className="forkai-sheet-item"
+            onClick={() => { setWeitereOffen(false); dashboard.onToggleEditing() }}
+            data-audit="dashboard-customise"
+          >
+            <span className="forkai-sheet-icon" aria-hidden="true">▦</span>
+            <span className="forkai-sheet-text">
+              <strong>Anpassen</strong>
+              <span>Kacheln dieser Seite umstellen</span>
+            </span>
+          </button>
+        )}
+        {tents.length > 1 && (
+          <label className="ls-sheet-zelt">
+            Zelt
             <select
               className="ls-tent-select"
               aria-label="Zelt"
               value={tent?.id ?? ''}
-              onChange={(event) => onTent(Number(event.target.value))}
+              onChange={(event) => { onTent(Number(event.target.value)); setWeitereOffen(false) }}
             >
               {tents.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
-          )}
-          <Link className="ls-btn is-primary" to="/messung">Messung erfassen</Link>
-          <Link className="ls-btn" to="/addback">Addback starten</Link>
-        </div>
-      </header>
+          </label>
+        )}
+      </V1Sheet>
 
       {/* ---------- Systemwarnung ---------- */}
       {/* Wenn die Überwachung selbst schweigt, sind alle Kacheln darunter

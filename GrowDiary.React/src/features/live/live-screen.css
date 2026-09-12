@@ -82,6 +82,18 @@
   .ls-head-meta { font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted); }
   .ls-head-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
+  /* Fork AI: Statuszeile und Handlungen teilen sich EINE Zeile. Vorher standen
+     darunter drei vollbreite Knöpfe — auf dem Telefon gut 200 px, bevor der
+     erste Messwert kam. Was selten gebraucht wird, liegt jetzt im „⋯". */
+  .ls-head-bar { width: 100%; display: flex; align-items: center; gap: 12px; }
+  .ls-head-bar .ls-head-meta { flex: 1 1 auto; min-width: 0; }
+  .ls-head-bar .ls-head-actions { flex: 0 0 auto; flex-wrap: nowrap; }
+  .ls-head-more { padding-inline: 12px; line-height: 1; }
+  .ls-sheet-zelt {
+    display: flex; align-items: center; gap: 10px; padding: 10px 4px;
+    font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted);
+  }
+
   /* ---------- Systemwarnung (Watchdog) ----------
      Erscheint nur, wenn die Überwachung selbst ein Problem meldet — dann sind
      die Kacheln darunter womöglich alte Zahlen. Deshalb über den Messwerten. */
@@ -449,8 +461,7 @@
   /* ---------- Telefon ---------- */
   @media (max-width: 640px) {
     .ls { padding: 12px 12px 32px; }
-    .ls-head-actions { margin-left: 0; width: 100%; }
-    .ls-head-actions .ls-btn { flex: 1 1 140px; }
+    .ls-head-bar { gap: 10px; }
     /* Die Zeitachse traegt `min-width: fit-content` je Abschnitt, damit keine
        Beschriftung abgeschnitten wird — auf dem Telefon summiert sich das auf
        fast die doppelte Bildschirmbreite. Sie laesst sich nicht umbrechen,

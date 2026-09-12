@@ -5,6 +5,26 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.48
+
+**Fork AI.** Die Kopfzeile der Live-Seite ist auf dem Telefon einzeilig.
+
+### Was Sie sehen
+
+- Statt drei vollbreiter Knöpfe steht rechts neben „Letzte Messung …" nur noch
+  **Messen** und ein **„⋯"**.
+- Unter dem „⋯" liegen **Addback starten**, **Anpassen** und — bei mehreren
+  Zelten — die **Zeltauswahl**.
+- Am Schreibtisch ändert sich fast nichts: dieselbe Zeile, nur ohne den
+  Umbruch.
+
+### Warum
+
+Die drei Knöpfe brauchten auf dem Telefon gut 200 Pixel, bevor der erste
+Messwert kam — und „Messung erfassen" wie „Addback starten" sind über das
+grüne „+" der Kopfleiste ohnehin einen Griff entfernt. „Anpassen" ist ein
+Modus für alle paar Wochen und hat in der Dauer-Ansicht nichts verloren.
+
 ## 2.0.0-forkai.47
 
 **Fork AI.** Neue Seite: Betrieb → **Wochenplan**.
