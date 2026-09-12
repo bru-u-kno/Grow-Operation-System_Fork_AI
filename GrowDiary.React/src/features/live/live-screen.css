@@ -94,6 +94,18 @@
     font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted);
   }
 
+  /* Anheften-Marke im Blatt. Kein gefüllter Knopf: die Zeile ist schon
+     anklickbar, ein zweiter Knopf darin wäre eine Falle. */
+  .ls-pin {
+    flex: 0 0 auto; margin-left: auto;
+    border: 1px solid var(--hair); border-radius: 999px; padding: 5px 10px;
+    font: 500 var(--fs-etikett)/1 var(--font-mono); color: var(--muted);
+  }
+  .ls-pin.is-on { color: var(--accent-text); border-color: var(--accent-text); }
+  .ls-sheet-hint {
+    margin: 2px 4px 6px; font: 400 var(--fs-etikett)/1.4 var(--font-mono); color: var(--muted);
+  }
+
   /* ---------- Systemwarnung (Watchdog) ----------
      Erscheint nur, wenn die Überwachung selbst ein Problem meldet — dann sind
      die Kacheln darunter womöglich alte Zahlen. Deshalb über den Messwerten. */

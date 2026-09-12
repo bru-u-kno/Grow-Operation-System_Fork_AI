@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.49
+
+**Fork AI.** Sie bestimmen selbst, welche Knöpfe oben auf der Live-Seite stehen.
+
+### Was Sie sehen
+
+- Im „⋯"-Blatt unten neu: **Knöpfe bearbeiten**. Dort hat jede Handlung einen
+  Schalter **anheften**.
+- Angeheftetes steht direkt neben der Statuszeile, alles andere bleibt im „⋯".
+- Höchstens zwei Knöpfe — der nächste löst den ältesten ab, damit die Zeile
+  nicht umbricht.
+- Ohne eigene Wahl steht wie bisher nur **Messen** oben.
+- Die Einstellung gilt je Gerät: am Telefon dürfen es andere sein als am
+  Schreibtisch.
+
+### Warum
+
+Wie viel Platz die Kopfzeile hergibt, hängt am Bildschirm, nicht am Zelt — und
+wer täglich nachfüllt, will Addback nicht jedes Mal aufklappen. Statt einer
+festen Auswahl entscheidet das jetzt jeder selbst.
+
 ## 2.0.0-forkai.48
 
 **Fork AI.** Die Kopfzeile der Live-Seite ist auf dem Telefon einzeilig.

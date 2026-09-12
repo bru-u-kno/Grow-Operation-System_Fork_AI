@@ -77,6 +77,7 @@ Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 | forkai.46 | **Klima je Woche**: `FeedChartColumn` trägt zusätzlich Wasser Tag/Nacht, VPD, CO₂, PPFD, RH max und Lufttemperatur; `MitFeedchart` legt sie über das Phasenprofil, SKX-Chart für alle 14 Spalten befüllt | wirkt überall, wo das Zielband gilt | `Services/Knowledge/Schema/NutrientProgramDefinition.cs`, `Services/MischplanService.cs`, `wwwroot/knowledge-defaults/nutrient-programs/skx-canna-aqua.json` |
 | forkai.47 | Seite **Wochenplan**: laufende Woche mit allen Plan-Werten, Anker (Vegi-Start, Flip, Erntefenster aus den Blütewochen der Sorte), Verlauf und Haltehinweis; liest nur, rechnet nichts eigenes | Betrieb → Wochenplan | `Api/Controllers/WochenplanApiController.cs`, `pages/WochenplanPage.tsx`, `features/wochenplan/wochenplan.css`, `navigation.ts`, `App.tsx`, `docs/referenz/sollwerte-und-wissen.md` |
 | forkai.48 | **Kopfzeile Live einzeilig**: Statuszeile und Handlungen in einer Reihe, „Messen" als Primärknopf, Addback/Anpassen/Zeltauswahl im „⋯"-Blatt (`V1Sheet`) | Live | `features/live/LiveScreen.tsx`, `features/live/live-screen.css` |
+| forkai.49 | **Kopfknöpfe anheften**: „Knöpfe bearbeiten" im „⋯"-Blatt, höchstens zwei angeheftete Handlungen neben der Statuszeile, Standard „Messen"; Auswahl je Gerät im Browser abgelegt (wie das Farbschema), kein Backend berührt | Live | `features/live/kopf-knoepfe.ts` (neu), `features/live/kopf-knoepfe.test.ts` (neu), `features/live/LiveScreen.tsx`, `features/live/live-screen.css` |
 
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 

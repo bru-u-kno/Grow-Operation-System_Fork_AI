@@ -4,6 +4,10 @@ import type { GrowSummary, KuehlerLivePayload, MetricPayload, RiskEventDto, Tent
 import type { HistoryPoint } from '../../components/SensorChart'
 import { SensorChart } from '../../components/SensorChart'
 import { V1Sheet } from '../../components/V1Sheet'
+import {
+  KOPF_KNOEPFE, MAX_ANGEHEFTET, ladeKopfKnoepfe, speichereKopfKnoepfe, umschalten,
+  type KopfKnopf,
+} from './kopf-knoepfe'
 import { MetricTile } from './MetricTile'
 import { decimalsForMetric } from './metric-tile-model'
 import { CameraPanel } from './CameraPanel'
@@ -118,7 +122,29 @@ export function LiveScreen({
      (Addback, Anpassen, Zeltwechsel) liegen darunter, damit die Kopfzeile auf
      dem Telefon einzeilig bleibt statt drei vollbreite Knöpfe zu tragen. */
   const [weitereOffen, setWeitereOffen] = useState(false)
+  const [knoepfeBearbeiten, setKnoepfeBearbeiten] = useState(false)
+  const [angeheftet, setAngeheftet] = useState<KopfKnopf[]>(ladeKopfKnoepfe)
   const navigate = useNavigate()
+
+  const anpassenMoeglich = Boolean(dashboard) && !dashboard?.editing
+  /* „Anpassen" gehört nur in die Zeile, solange es etwas anzupassen gibt —
+     im laufenden Editor führt die Leiste darunter. */
+  const sichtbar = angeheftet.filter((id) => id !== 'anpassen' || anpassenMoeglich)
+
+  const blattSchliessen = () => { setWeitereOffen(false); setKnoepfeBearbeiten(false) }
+
+  const ausloesen = (id: KopfKnopf) => {
+    blattSchliessen()
+    if (id === 'messen') navigate('/messung')
+    else if (id === 'addback') navigate('/addback')
+    else dashboard?.onToggleEditing()
+  }
+
+  const anheften = (id: KopfKnopf) => {
+    const naechste = umschalten(angeheftet, id)
+    setAngeheftet(naechste)
+    speichereKopfKnoepfe(naechste)
+  }
 
   return (
     <main className="ls" data-audit="live-screen">
@@ -143,7 +169,27 @@ export function LiveScreen({
           </span>
 
           <div className="ls-head-actions">
-            <Link className="ls-btn is-primary" to="/messung">Messen</Link>
+            {sichtbar.map((id) => {
+              const knopf = KOPF_KNOEPFE.find((eintrag) => eintrag.id === id)
+              if (!knopf) return null
+              if (id === 'messen') {
+                return <Link key={id} className="ls-btn is-primary" to="/messung">Messen</Link>
+              }
+              if (id === 'addback') {
+                return <Link key={id} className="ls-btn" to="/addback">Addback</Link>
+              }
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className="ls-btn"
+                  onClick={dashboard?.onToggleEditing}
+                  data-audit="dashboard-customise"
+                >
+                  ▦ Anpassen
+                </button>
+              )
+            })}
             <button
               type="button"
               className="ls-btn ls-head-more"
@@ -157,31 +203,69 @@ export function LiveScreen({
         </div>
       </header>
 
-      <V1Sheet open={weitereOffen} onClose={() => setWeitereOffen(false)} title="Weitere Handlungen">
-        <button
-          type="button"
-          className="forkai-sheet-item"
-          onClick={() => { setWeitereOffen(false); navigate('/addback') }}
-        >
-          <span className="forkai-sheet-icon" aria-hidden="true">↻</span>
-          <span className="forkai-sheet-text">
-            <strong>Addback starten</strong>
-            <span>Nachfüllen mit Zielwerten</span>
-          </span>
-        </button>
-        {dashboard && !dashboard.editing && (
-          <button
-            type="button"
-            className="forkai-sheet-item"
-            onClick={() => { setWeitereOffen(false); dashboard.onToggleEditing() }}
-            data-audit="dashboard-customise"
-          >
-            <span className="forkai-sheet-icon" aria-hidden="true">▦</span>
-            <span className="forkai-sheet-text">
-              <strong>Anpassen</strong>
-              <span>Kacheln dieser Seite umstellen</span>
-            </span>
-          </button>
+      <V1Sheet
+        open={weitereOffen}
+        onClose={blattSchliessen}
+        title={knoepfeBearbeiten ? 'Knöpfe bearbeiten' : 'Weitere Handlungen'}
+      >
+        {knoepfeBearbeiten ? (
+          <>
+            {KOPF_KNOEPFE.filter((knopf) => knopf.id !== 'anpassen' || anpassenMoeglich).map((knopf) => (
+              <button
+                key={knopf.id}
+                type="button"
+                className="forkai-sheet-item"
+                onClick={() => anheften(knopf.id)}
+                aria-pressed={angeheftet.includes(knopf.id)}
+              >
+                <span className="forkai-sheet-icon" aria-hidden="true">{knopf.icon}</span>
+                <span className="forkai-sheet-text">
+                  <strong>{knopf.titel}</strong>
+                  <span>{knopf.hinweis}</span>
+                </span>
+                <span className={classNames('ls-pin', angeheftet.includes(knopf.id) && 'is-on')}>
+                  {angeheftet.includes(knopf.id) ? '✓ angeheftet' : 'anheften'}
+                </span>
+              </button>
+            ))}
+            <p className="ls-sheet-hint">
+              Höchstens {MAX_ANGEHEFTET} — der nächste löst den ältesten wieder ab, damit die
+              Zeile nicht umbricht. Alles Übrige bleibt hier im „⋯“.
+            </p>
+          </>
+        ) : (
+          <>
+            {KOPF_KNOEPFE
+              .filter((knopf) => !sichtbar.includes(knopf.id))
+              .filter((knopf) => knopf.id !== 'anpassen' || anpassenMoeglich)
+              .map((knopf) => (
+                <button
+                  key={knopf.id}
+                  type="button"
+                  className="forkai-sheet-item"
+                  onClick={() => ausloesen(knopf.id)}
+                  data-audit={knopf.id === 'anpassen' ? 'dashboard-customise' : undefined}
+                >
+                  <span className="forkai-sheet-icon" aria-hidden="true">{knopf.icon}</span>
+                  <span className="forkai-sheet-text">
+                    <strong>{knopf.titel}</strong>
+                    <span>{knopf.hinweis}</span>
+                  </span>
+                </button>
+              ))}
+            <button
+              type="button"
+              className="forkai-sheet-item"
+              onClick={() => setKnoepfeBearbeiten(true)}
+              data-audit="live-kopfknoepfe"
+            >
+              <span className="forkai-sheet-icon" aria-hidden="true">⚙</span>
+              <span className="forkai-sheet-text">
+                <strong>Knöpfe bearbeiten</strong>
+                <span>Was direkt oben stehen soll</span>
+              </span>
+            </button>
+          </>
         )}
         {tents.length > 1 && (
           <label className="ls-sheet-zelt">
@@ -190,7 +274,7 @@ export function LiveScreen({
               className="ls-tent-select"
               aria-label="Zelt"
               value={tent?.id ?? ''}
-              onChange={(event) => { onTent(Number(event.target.value)); setWeitereOffen(false) }}
+              onChange={(event) => { onTent(Number(event.target.value)); blattSchliessen() }}
             >
               {tents.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
