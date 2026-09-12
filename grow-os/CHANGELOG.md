@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.36
+
+**Fork AI.** Korrekturen sind jetzt klar von Vermutungen zu unterscheiden — und
+nehmen weniger Platz.
+
+- **Eigene Farbe:** „vermutet" bleibt gelb (da ist etwas unklar), „korrigiert"
+  wird **cyan** — bis hin zur Marke an der Gerätezeile und dem Hinweis an der
+  Entität. Vorher standen beide in fast demselben Gelb nebeneinander.
+- **Einklappbar:** Die Liste der von Hand gesetzten Einträge steckt hinter einer
+  Zeile „3 Einträge von Hand gesetzt ›". Sie bleibt sichtbar — nur die Liste
+  selbst klappt auf, wenn man sie braucht.
+
 ## 2.0.0-forkai.35
 
 **Fork AI.** Formulare und Auswahlfelder im Stil der App statt im Stil des Handys.

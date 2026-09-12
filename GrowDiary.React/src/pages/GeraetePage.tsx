@@ -88,6 +88,10 @@ export default function GeraetePage() {
   // Handybildschirm sind genau der Platzfresser, den wir loswerden wollten.
   const [menue, setMenue] = useState<string | null>(null)
   const [rubrikName, setRubrikName] = useState<string | null>(null)
+  // Die Korrekturliste klappt zu: drei Kameras schoben die Geraete weit nach
+  // unten. Zugeklappt bleibt eine ZEILE MIT TEXT stehen — eine blosse Zahl
+  // hatte niemand als Schalter erkannt.
+  const [korrekturenOffen, setKorrekturenOffen] = useState(false)
   // Was zuletzt geschah, samt Rueckweg. Die Auswahl unter einer Entitaet
   // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
   // spaeter und sucht die Entitaet dann im falschen Geraet.
@@ -346,14 +350,27 @@ export default function GeraetePage() {
           <div><b>{seite.anzahlEntitaeten}</b><span>Entitäten</span></div>
           <div><b className={seite.anzahlVermutet > 0 ? 'is-warn' : undefined}>{seite.anzahlVermutet}</b><span>vermutet</span></div>
           <div>
-            <b className={seite.anzahlVerschoben > 0 ? 'is-warn' : undefined}>{seite.anzahlVerschoben}</b>
+            <b className={seite.anzahlVerschoben > 0 ? 'is-korrigiert' : undefined}>{seite.anzahlVerschoben}</b>
             <span>korrigiert</span>
           </div>
         </div>
 
         {(verschobene.length > 0 || korrigierteGeraete.length > 0) && (
           <>
-          <p className="gr-verschobene-kopf">Von Hand gesetzt — „Zurück" stellt her, was Home Assistant meldet.</p>
+          <button
+            type="button"
+            className="gr-korrekturen-schalter"
+            aria-expanded={korrekturenOffen}
+            onClick={() => setKorrekturenOffen((offen) => !offen)}
+          >
+            <span>
+              {verschobene.length + korrigierteGeraete.length === 1
+                ? '1 Eintrag von Hand gesetzt'
+                : `${verschobene.length + korrigierteGeraete.length} Einträge von Hand gesetzt`}
+            </span>
+            <em aria-hidden="true">{korrekturenOffen ? '⌄' : '›'}</em>
+          </button>
+          {korrekturenOffen && (
           <ul className="gr-verschobene">
             {verschobene.map(({ entitaet, geraet }) => (
               <li key={entitaet.entityId}>
@@ -384,6 +401,7 @@ export default function GeraetePage() {
               </li>
             ))}
           </ul>
+          )}
           </>
         )}
         <div className="gr-knoepfe">
@@ -540,7 +558,7 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
         )}
         {verschobenImBaum > 0 && (
           <span
-            className="gr-anzahl is-warn"
+            className="gr-anzahl is-korrigiert"
             title={verschobenImBaum === 1
               ? '1 Korrektur von Hand — hier oder an einem Port'
               : `${verschobenImBaum} Korrekturen von Hand`}
