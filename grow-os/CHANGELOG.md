@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.24
+
+**Fork AI.** **Geräte & Entitäten** startet eingeklappt.
+
+- Controller zeigen zunächst nur sich selbst; rechts steht als Pille, wie viele
+  Geräte an ihnen hängen (RDWC: 4). Ein Tipp klappt sie auf.
+- Die Unterzeile eines Controllers nennt jetzt Rolle und Modell — „Controller ·
+  AC Infinity UIS Controller AI+ (CTR89Q)" — statt der Zahl, die in der Pille steht.
+- Hersteller und Modell kommen aus dem HA-Geräteregister.
+
 ## 2.0.0-forkai.23
 
 **Fork AI.** Kleine Korrektur auf **Geräte & Entitäten**: Der Pfeil an einem

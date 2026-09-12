@@ -9,10 +9,11 @@
 „Sensoren & Wartung". Eine Zeile je Gerät; Controller tragen ihre Ports
 eingerückt darunter.
 
-Der Pfeil tut zweierlei, je nachdem was die Zeile trägt: an einem Controller
-klappt er die **angeschlossenen Geräte** zu (bei acht Ports der Sinn der
-Zeile), an einem Gerät ohne Ports seine **Entitäten** — jede mit einer Marke
-dahinter, wofür sie benutzt wird.
+Die Liste startet **eingeklappt**: ein Controller zeigt zunächst nur sich
+selbst, rechts als Pille die Zahl der Geräte an seinen Ports. Der Pfeil tut
+zweierlei, je nachdem was die Zeile trägt: an einem Controller klappt er die
+**angeschlossenen Geräte** auf, an einem Gerät ohne Ports seine **Entitäten** —
+jede mit einer Marke dahinter, wofür sie benutzt wird.
 
 ## Was es tut
 

@@ -25,6 +25,7 @@ type Geraet = {
   elternSchluessel: string | null
   anschluss: string | null
   istController: boolean
+  modell: string | null
   bestaetigt: boolean
   vermutet: boolean
   tentId: number | null
@@ -52,9 +53,9 @@ export default function GeraetePage() {
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
-  // Zugeklappte Controller. Der Pfeil am Controller gehoert seinen Ports, nicht
-  // seinen eigenen Entitaeten — bei acht Ports ist das Zuklappen der Sinn der Zeile.
-  const [zu, setZu] = useState<Set<string>>(new Set())
+  // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
+  // RDWC ist die kurze Uebersicht der Zweck der Seite, nicht die lange Liste.
+  const [auf, setAuf] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const abbruch = new AbortController()
@@ -122,7 +123,7 @@ export default function GeraetePage() {
       </V1Card>
 
       {gruppen.map(({ geraet, kinder }) => {
-        const zugeklappt = zu.has(geraet.schluessel)
+        const zugeklappt = kinder.length > 0 && !auf.has(geraet.schluessel)
         return (
           <V1Card key={geraet.schluessel}>
             <GeraetZeile
@@ -134,7 +135,7 @@ export default function GeraetePage() {
                 // Traegt das Geraet Ports, klappt der Pfeil DIE auf und zu.
                 // Sonst — ein Geraet fuer sich — seine eigenen Entitaeten.
                 if (kinder.length > 0) {
-                  setZu((bisher) => {
+                  setAuf((bisher) => {
                     const neu = new Set(bisher)
                     if (neu.has(geraet.schluessel)) neu.delete(geraet.schluessel)
                     else neu.add(geraet.schluessel)
@@ -176,13 +177,15 @@ function GeraetZeile({ geraet, offen, onKlick, eingerueckt = false, kinderZahl =
   zugeklappt?: boolean
 }) {
   const hatKinder = kinderZahl > 0
+  // Traegt die Zeile Ports, steht die Zahl als Pille rechts — die Unterzeile
+  // gehoert dann der Rolle und dem Modell.
   const unterzeile = [
     geraet.anschluss,
-    hatKinder ? (kinderZahl === 1 ? '1 angeschlossenes Gerät' : `${kinderZahl} angeschlossene Geräte`) : null,
+    geraet.istController ? 'Controller' : null,
+    hatKinder ? geraet.modell : null,
     geraet.entitaeten.length === 0
       ? null
       : geraet.entitaeten.length === 1 ? '1 Entität' : `${geraet.entitaeten.length} Entitäten`,
-    geraet.istController ? 'Controller' : null,
   ].filter(Boolean).join(' · ')
 
   return (
@@ -193,6 +196,11 @@ function GeraetZeile({ geraet, offen, onKlick, eingerueckt = false, kinderZahl =
           {geraet.vermutet && <em className="gr-vermutet">vermutet</em>}
           <small>{unterzeile}</small>
         </span>
+        {hatKinder && (
+          <span className="gr-anzahl" title={kinderZahl === 1 ? '1 angeschlossenes Gerät' : `${kinderZahl} angeschlossene Geräte`}>
+            {kinderZahl}
+          </span>
+        )}
         <span className="gr-pfeil" aria-hidden="true">{(hatKinder ? !zugeklappt : offen) ? '⌄' : '›'}</span>
       </button>
 

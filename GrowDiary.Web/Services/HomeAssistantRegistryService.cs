@@ -83,6 +83,7 @@ public sealed class HomeAssistantRegistryService
         JsonElement? geraete)
     {
         var namen = new Dictionary<string, string>(StringComparer.Ordinal);
+        var modelle = new Dictionary<string, string>(StringComparer.Ordinal);
         var eltern = new Dictionary<string, string>(StringComparer.Ordinal);
         if (geraete is { ValueKind: JsonValueKind.Array } geraeteliste)
         {
@@ -94,6 +95,11 @@ public sealed class HomeAssistantRegistryService
                 namen[id] = Text(geraet, "name_by_user") ?? Text(geraet, "name") ?? id;
                 // via_device_id: der Controller, an dem dieses Gerät hängt.
                 if (Text(geraet, "via_device_id") is { } via) eltern[id] = via;
+
+                // Hersteller und Modell — die Unterzeile der Geräteliste.
+                var modell = string.Join(' ', new[] { Text(geraet, "manufacturer"), Text(geraet, "model") }
+                    .Where(teil => !string.IsNullOrWhiteSpace(teil)));
+                if (modell.Length > 0) modelle[id] = modell;
             }
         }
 
@@ -110,10 +116,12 @@ public sealed class HomeAssistantRegistryService
 
                 string? viaId = null;
                 string? viaName = null;
+                string? viaModell = null;
                 if (deviceId is not null && eltern.TryGetValue(deviceId, out var via))
                 {
                     viaId = via;
                     viaName = namen.TryGetValue(via, out var name2) ? name2 : null;
+                    viaModell = modelle.TryGetValue(via, out var modell2) ? modell2 : null;
                 }
 
                 treffer[entityId] = new HerkunftEintrag(
@@ -123,7 +131,9 @@ public sealed class HomeAssistantRegistryService
                     geraetename ?? Text(eintrag, "name") ?? Text(eintrag, "original_name"),
                     Text(eintrag, "unique_id"),
                     viaId,
-                    viaName);
+                    viaName,
+                    deviceId is not null && modelle.TryGetValue(deviceId, out var eigenes) ? eigenes : null,
+                    viaModell);
             }
         }
 

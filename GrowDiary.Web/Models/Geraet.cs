@@ -36,6 +36,9 @@ public sealed record Geraet(
 
     /// <summary>Ein Controller, der selbst keine Steckstelle belegt, aber Kinder trägt.</summary>
     public bool IstController { get; init; }
+
+    /// <summary>Hersteller und Modell aus dem HA-Geräteregister, soweit bekannt.</summary>
+    public string? Modell { get; init; }
 }
 
 /// <summary>Eine Entität des Geräts samt allem, wofür sie im Fork benutzt wird.</summary>
@@ -135,7 +138,9 @@ public sealed record HerkunftEintrag(
     string? DeviceName,
     string? UniqueId,
     string? ViaDeviceId = null,
-    string? ViaDeviceName = null);
+    string? ViaDeviceName = null,
+    string? DeviceModell = null,
+    string? ViaDeviceModell = null);
 
 /// <summary>
 /// Die Klammer über den Geräten, die Home Assistant je Port einzeln anlegt.

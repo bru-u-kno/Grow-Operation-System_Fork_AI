@@ -35,6 +35,7 @@ public sealed class GeraeteApiController : ControllerBase
             g.Anschluss,
             g.IstController,
             g.Bestaetigt,
+            g.Modell,
             g.TentId,
             g.HardwareItemId,
             g.Entitaeten.Select(e => new GeraetEntitaetDto(
@@ -64,6 +65,7 @@ public sealed record GeraetDto(
     string? Anschluss,
     bool IstController,
     bool Bestaetigt,
+    string? Modell,
     int? TentId,
     int? HardwareItemId,
     IReadOnlyList<GeraetEntitaetDto> Entitaeten)

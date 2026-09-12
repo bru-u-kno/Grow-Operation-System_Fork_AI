@@ -159,6 +159,7 @@ public sealed class GeraeteUebersichtService
             eintrag.Entitaeten.Add(new GeraetEntitaet(entityId, liste));
             eintrag.Bestaetigt |= bestaetigt;
             eintrag.Name ??= quelle?.DeviceName;
+            eintrag.Modell ??= quelle?.DeviceModell;
 
             // Zweite Stufe: an welchem Gerät hängt dieses? Home Assistant sagt es
             // selbst über via_device; die MAC ist nur der Notnagel für Integrationen,
@@ -168,10 +169,12 @@ public sealed class GeraeteUebersichtService
 
             string? controller = null;
             string? controllerName = null;
+            string? controllerModell = null;
             if (!string.IsNullOrWhiteSpace(quelle?.ViaDeviceId))
             {
                 controller = HaSchluessel(quelle!.ViaDeviceId!);
                 controllerName = quelle.ViaDeviceName;
+                controllerModell = quelle.ViaDeviceModell;
             }
             else if (mac is not null)
             {
@@ -187,6 +190,7 @@ public sealed class GeraeteUebersichtService
                 eltern.IstController = true;
                 eltern.Bestaetigt = true;
                 eltern.Name ??= controllerName;
+                eltern.Modell ??= controllerModell;
             }
         }
 
@@ -222,6 +226,7 @@ public sealed class GeraeteUebersichtService
                 ElternSchluessel = eigen?.ElternSchluessel ?? eintrag.ElternSchluessel,
                 Anschluss = eigen?.Anschluss ?? eintrag.Anschluss,
                 IstController = eintrag.IstController,
+                Modell = eintrag.Modell,
             });
         }
 
@@ -248,6 +253,7 @@ public sealed class GeraeteUebersichtService
         public string? Name { get; set; }
         public string? ElternSchluessel { get; set; }
         public string? Anschluss { get; set; }
+        public string? Modell { get; set; }
     }
 
     private static (string Schluessel, bool Bestaetigt) SchluesselFuer(
