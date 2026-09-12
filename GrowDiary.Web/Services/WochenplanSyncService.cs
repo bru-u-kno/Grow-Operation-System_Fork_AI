@@ -186,8 +186,8 @@ public sealed class WochenplanSyncService
     /// <summary>Ein Durchlauf: vergleichen, schreiben, Stand fortschreiben.</summary>
     public async Task<int> UebergebenAsync(CancellationToken ct)
     {
-        if (Spalte() is not { } jetzt) return 0;
-        var (grow, spalte) = jetzt;
+        if (Spalte() is not { } laufend) return 0;
+        var (grow, spalte) = laufend;
 
         var stand = Stand;
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();

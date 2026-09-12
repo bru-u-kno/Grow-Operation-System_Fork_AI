@@ -5,6 +5,11 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.60
+
+**Fork AI.** Baufehler aus forkai.59 behoben (doppelt vergebener Name im
+Übergabe-Durchlauf); inhaltlich unverändert.
+
 ## 2.0.0-forkai.59
 
 **Fork AI.** Die Alarmgrenzen für Lufttemperatur und Luftfeuchte wandern jetzt mit
