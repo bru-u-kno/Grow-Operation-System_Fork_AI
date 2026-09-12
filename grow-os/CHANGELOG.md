@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.39
+
+**Fork AI.** Die Messgrößen des Zelts stehen jetzt bei den Geräten.
+
+### Was Sie sehen
+
+- **Geräte & Entitäten** hat Reiter: **Geräte** und **Messgrößen**.
+- Im Reiter Messgrößen steht je Größe (Lufttemperatur, pH, EC …) die Auswahl im
+  Fork-Stil und rechts der Livewert. Angezeigt werden die zugeordneten und die
+  wichtigsten Größen; die übrigen leeren stehen hinter dem Schalter „Auch leere
+  Messgrößen zeigen". Zwölf leere Zeilen über acht belegten wären Rauschen —
+  eine fehlende Kernmessgröße soll man dagegen sehen.
+- Geändert wird über denselben Weg wie bisher: die Seite **Einrichtung → Home
+  Assistant** bleibt unverändert bestehen und zeigt dieselben Werte.
+
+### Warum so
+
+Der Fork schreibt die Originalseite nicht um, sondern liest und schreibt über
+ihren Endpunkt. Damit bleibt eine Weiterentwicklung des Originals an dieser
+Stelle ohne Handarbeit übernehmbar — das war die Bedingung.
+
 ## 2.0.0-forkai.38
 
 **Fork AI.** Auch die Entitäts-Auswahlen außerhalb der Geräteseite laufen jetzt

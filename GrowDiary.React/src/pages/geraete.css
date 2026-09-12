@@ -142,3 +142,13 @@
   border: 1px solid var(--hair-2); color: var(--warn-text);
   letter-spacing: .05em; text-transform: uppercase;
 }
+
+/* forkai.39: Reiter „Messgrößen" — Auswahl links, Livewert rechts. */
+.gr-sec { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: var(--s-2); }
+.gr-sec span { font-size: var(--fs-micro, .625rem); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.gr-sec b { font-family: var(--font-mono); font-size: var(--fs-micro, .625rem); color: var(--faint); }
+
+.gr-messgroesse { display: flex; align-items: flex-end; gap: var(--s-3); padding: var(--s-2) 0; border-top: 1px solid var(--hair); }
+.gr-messgroesse > label { flex: 1; min-width: 0; }
+.gr-messwert { flex: 0 0 auto; font-family: var(--font-mono); font-size: var(--fs-text); color: var(--accent-text); padding-bottom: 10px; }
+.gr-messwert.is-leer { color: var(--faint); }

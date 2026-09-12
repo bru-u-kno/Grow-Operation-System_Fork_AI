@@ -6,6 +6,9 @@ import { V1Alert, V1Button, V1Card, V1Empty, V1Page, V1Skeleton } from '../compo
 import { V1Select } from '../components/V1Select'
 import type { V1Option } from '../components/V1Select'
 import { V1Sheet } from '../components/V1Sheet'
+import { V1Tabs } from '../components/v1'
+import { MessgroessenReiter } from '../features/geraete/MessgroessenReiter'
+import type { HomeAssistantEntity } from '../types'
 import './geraete.css'
 
 /**
@@ -92,6 +95,8 @@ export default function GeraetePage() {
   // unten. Zugeklappt bleibt eine ZEILE MIT TEXT stehen — eine blosse Zahl
   // hatte niemand als Schalter erkannt.
   const [korrekturenOffen, setKorrekturenOffen] = useState(false)
+  const [reiter, setReiter] = useState<'geraete' | 'messgroessen'>('geraete')
+  const [entities, setEntities] = useState<HomeAssistantEntity[]>([])
   // Was zuletzt geschah, samt Rueckweg. Die Auswahl unter einer Entitaet
   // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
   // spaeter und sucht die Entitaet dann im falschen Geraet.
@@ -111,6 +116,20 @@ export default function GeraetePage() {
         if (!abbruch.signal.aborted) setFehler(formatApiError(caught, 'Die Geräte konnten nicht geladen werden.'))
       } finally {
         if (!abbruch.signal.aborted) setLaedt(false)
+      }
+    })()
+    return () => abbruch.abort()
+  }, [])
+
+  // Die Entitaetenliste braucht nur der Messgroessen-Reiter — sie kommt trotzdem
+  // einmal fuer die ganze Seite, damit ein Reiterwechsel nicht jedes Mal laedt.
+  useEffect(() => {
+    const abbruch = new AbortController()
+    void (async () => {
+      try {
+        setEntities(await apiFetch<HomeAssistantEntity[]>('/api/home-assistant/entities', { signal: abbruch.signal }))
+      } catch {
+        // Ohne Home Assistant bleibt die Liste leer; die Auswahl zeigt dann nur den Rückweg.
       }
     })()
     return () => abbruch.abort()
@@ -334,6 +353,18 @@ export default function GeraetePage() {
       title="Geräte & Entitäten"
       subtitle="Alles, was der Fork an Home Assistant benutzt — nach Gerät sortiert."
     >
+      <V1Tabs
+        label="Bereich"
+        active={reiter}
+        onChange={setReiter}
+        items={[
+          { value: 'geraete', label: 'Geräte' },
+          { value: 'messgroessen', label: 'Messgrößen' },
+        ]}
+      />
+
+      {reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} /> : <>
+
       {letzte && (
         <div className="gr-meldung">
           <span>{letzte.text}</span>
@@ -496,6 +527,8 @@ export default function GeraetePage() {
           />
         </label>
       </V1Sheet>
+
+      </>}
 
       <p className="gr-fuss">
         „Vermutet" heißt: weder Home Assistant noch du habt gesagt, zu welchem Gerät die Entität

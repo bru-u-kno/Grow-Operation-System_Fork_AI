@@ -14,16 +14,16 @@ import '../features/home-assistant/home-assistant.css'
 type GroupKey = 'tent' | 'reservoir' | 'hardware'
 type SensorDraft = { metricType: SensorMetricType; haEntityId: string; displayLabel: string; isActive: boolean }
 type TentMappingDraft = { cameras: string[]; sensors: SensorDraft[] }
-type EntityDefinition = { metricType: SensorMetricType; label: string; group: GroupKey; placeholder: string; importance: 'core' | 'optional'; unit?: string }
+export type EntityDefinition = { metricType: SensorMetricType; label: string; group: GroupKey; placeholder: string; importance: 'core' | 'optional'; unit?: string }
 type SavingState = 'ha' | `tent-${number}` | null
 
-const groups: Array<{ key: GroupKey; label: string }> = [
+export const groups: Array<{ key: GroupKey; label: string }> = [
   { key: 'tent', label: 'Zelt' },
   { key: 'reservoir', label: 'RDWC/DWC' },
   { key: 'hardware', label: 'Technik' },
 ]
 
-const definitions: EntityDefinition[] = [
+export const definitions: EntityDefinition[] = [
   { metricType: 'AirTemperature', label: 'Lufttemp', group: 'tent', placeholder: 'sensor.zelt_temperatur', unit: '°C', importance: 'core' },
   { metricType: 'Humidity', label: 'Luftfeuchte', group: 'tent', placeholder: 'sensor.zelt_luftfeuchte', unit: '%', importance: 'core' },
   { metricType: 'Vpd', label: 'VPD', group: 'tent', placeholder: 'sensor.zelt_vpd', unit: 'kPa', importance: 'core' },
@@ -66,7 +66,7 @@ const suggestionFilters: Partial<Record<SensorMetricType, { domains?: string[]; 
   Chiller: { domains: ['climate', 'switch'] },
 }
 
-function suggestionsForMetric(entities: HomeAssistantEntity[], metricType: SensorMetricType): HomeAssistantEntity[] {
+export function suggestionsForMetric(entities: HomeAssistantEntity[], metricType: SensorMetricType): HomeAssistantEntity[] {
   const filter = suggestionFilters[metricType]
   if (!filter) return entities
   if (filter.deviceClass) {
@@ -80,7 +80,7 @@ function suggestionsForMetric(entities: HomeAssistantEntity[], metricType: Senso
   return entities
 }
 
-function entityOptionLabel(entity: HomeAssistantEntity): string {
+export function entityOptionLabel(entity: HomeAssistantEntity): string {
   const name = entity.friendlyName ?? entity.entityId
   if (entity.state == null || entity.state === '') return name
   return `${name} — ${haWert(entity.state, entity.unitOfMeasurement)}`
