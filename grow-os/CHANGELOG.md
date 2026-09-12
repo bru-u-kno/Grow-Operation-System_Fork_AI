@@ -5,11 +5,35 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.38
+
+**Fork AI.** Auch die Entitäts-Auswahlen außerhalb der Geräteseite laufen jetzt
+über das Blatt.
+
+### Was Sie sehen
+
+- **Steuerung → Geräte & Entitäten**: je Rolle eine Auswahl mit Suche, gruppiert
+  in „Eigene Geräte" und „Aus Home Assistant", mit „— wie ab Werk —" oben. Die
+  bisherige Grenze von 200 Vorschlägen entfällt — die Suche trägt auch mehr.
+- **Einrichtung → Home Assistant**: dieselbe Auswahl für die Messgrößen des
+  Zelts und für die Kameras, jeweils mit dem Livewert als Hinweis.
+
+### Bewusst unverändert
+
+Kurze Auswahlen mit zwei, drei festen Werten (Einheit, Phase, Ja/Nein) bleiben
+native Felder. Ein Blatt wäre dort Aufwand ohne Gewinn — und je weniger Seiten
+des Originals der Fork umschreibt, desto leichter lassen sich dessen
+Weiterentwicklungen übernehmen.
+
 ## 2.0.0-forkai.37
 
 **Fork AI.** Farben getauscht: **„vermutet" ist jetzt blau**, **„korrigiert"
 gelb** — samt Marke an der Gerätezeile, Hinweis an der Entität und der Zeile
 über der Korrekturliste.
+
+Der Grund: Gelb zieht den Blick stärker an, und beim Suchen geht es um das, was
+Sie selbst gesetzt haben. Eine Vermutung ist dagegen nur ein Hinweis, dass der
+Fork mangels Auskunft von Home Assistant geraten hat — die bleibt ruhiger.
 
 ## 2.0.0-forkai.36
 

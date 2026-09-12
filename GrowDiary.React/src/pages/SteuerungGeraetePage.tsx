@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiRequestError, apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { V1Select } from '../components/V1Select'
+import type { V1Option } from '../components/V1Select'
 import type { HomeAssistantEntity } from '../types'
 import type { GeraeteSeite, GeraetZeile } from '../features/steuerung/steuerung-typen'
 import { haWert } from '../utils'
@@ -224,13 +226,11 @@ function RollenZeile({
   eigene: string[]
   onChange: (wert: string) => void
 }) {
-  const listId = `geraete-${zeile.rolle}`
-
   // Vorgefiltert auf die Domains der Rolle: ein sensor. in einer Schaltrolle
   // hilft niemandem. Findet der Filter nichts, steht die ganze Liste bereit.
   const vorschlaege = useMemo(() => {
     const passend = entities.filter((entity) => zeile.domains.includes(entity.domain))
-    return (passend.length > 0 ? passend : entities).slice(0, 200)
+    return passend.length > 0 ? passend : entities
   }, [entities, zeile.domains])
 
   return (
@@ -240,26 +240,26 @@ function RollenZeile({
       wide
     >
       <div className="st-geraet">
-        <input
-          className="st-geraet-feld"
-          value={wert}
-          list={listId}
-          spellCheck={false}
-          autoCapitalize="none"
-          placeholder={zeile.vorgabe}
-          aria-label={`${zeile.label} — Entität`}
-          onChange={(event) => onChange(event.target.value)}
+        <V1Select
+          label={zeile.label}
+          titel={zeile.label}
+          unterzeile={zeile.hinweis ?? undefined}
+          wert={wert}
+          platzhalter={zeile.vorgabe}
+          onWahl={onChange}
+          optionen={[
+            { wert: '', text: '— wie ab Werk —', hinweis: zeile.vorgabe, betont: true },
+            ...eigene.map((name): V1Option => ({
+              wert: `@${name}`, text: name, gruppe: 'Eigene Geräte',
+            })),
+            ...vorschlaege.map((entity): V1Option => ({
+              wert: entity.entityId,
+              text: entity.friendlyName ?? entity.entityId,
+              hinweis: `${entity.entityId}${entity.state ? ` · ${haWert(entity.state, entity.unitOfMeasurement)}` : ''}`,
+              gruppe: 'Aus Home Assistant',
+            })),
+          ]}
         />
-        <datalist id={listId}>
-          {eigene.map((name) => (
-            <option key={`eigen-${name}`} value={`@${name}`}>Eigenes Gerät</option>
-          ))}
-          {vorschlaege.map((entity) => (
-            <option key={entity.entityId} value={entity.entityId}>
-              {entity.friendlyName ?? entity.entityId}{entity.state ? ` · ${haWert(entity.state, entity.unitOfMeasurement)}` : ''}
-            </option>
-          ))}
-        </datalist>
         <span className={zeile.gefunden ? 'st-geraet-wert is-ok' : 'st-geraet-wert is-faint'}>
           {zeile.gefunden ? (haWert(zeile.livewert, zeile.einheit) ?? 'gefunden') : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}
         </span>
@@ -338,21 +338,19 @@ function EigeneGeraete({
           <V1Field label="Name" wide>
             <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Zuluft Zelt" />
           </V1Field>
-          <V1Field label="Entität" wide>
-            <input
-              value={entityId}
-              list="geraete-eigene-entities"
-              spellCheck={false}
-              autoCapitalize="none"
-              onChange={(event) => setEntityId(event.target.value)}
-              placeholder="fan.big_zuluft"
-            />
-            <datalist id="geraete-eigene-entities">
-              {entities.slice(0, 300).map((entity) => (
-                <option key={entity.entityId} value={entity.entityId}>{entity.friendlyName ?? entity.entityId}</option>
-              ))}
-            </datalist>
-          </V1Field>
+          <V1Select
+            label="Entität"
+            titel="Entität wählen"
+            unterzeile={name || undefined}
+            wert={entityId}
+            platzhalter="fan.big_zuluft"
+            onWahl={setEntityId}
+            optionen={entities.map((entity): V1Option => ({
+              wert: entity.entityId,
+              text: entity.friendlyName ?? entity.entityId,
+              hinweis: entity.entityId,
+            }))}
+          />
           <V1Button variant="primary" onClick={() => void anlegen()}>Speichern</V1Button>
         </>
       )}

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import type { HomeAssistantEntity, HomeAssistantSettingsDto, SensorMetricType, SettingsOverviewDto, TentDto, UpdateTentRequest, UpdateTentSensorRequest } from '../types'
 import { V1Alert, V1Button, V1Empty, V1Field, V1Page, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
+import { V1Select } from '../components/V1Select'
+import type { V1Option } from '../components/V1Select'
 import { toNullableString } from '../components/v1-utils'
 import { resolveUrl } from '../base'
 import { haWert } from '../utils'
@@ -285,25 +287,27 @@ function HomeAssistantPage() {
                 {definitions.filter((definition) => definition.group === activeGroup).map((definition) => {
                   const sensor = selectedDraft.sensors.find((item) => item.metricType === definition.metricType) ?? createSensorDraft(definition)
                   const live = liveValue(sensor.haEntityId)
-                  const listId = `ha-entities-${definition.metricType}`
                   return (
                     <div key={definition.metricType} className="co-row" data-audit="ha-entity-row">
                       <span className="ha-metric">{definition.label}{definition.unit ? <small> {definition.unit}</small> : null}</span>
-                      <input
-                        className="ha-entity-input"
-                        value={sensor.haEntityId}
-                        onChange={(event) => updateSensor(definition.metricType, { haEntityId: event.target.value })}
-                        placeholder={definition.placeholder}
-                        aria-label={`${definition.label} Entity`}
-                        list={entities.length > 0 ? listId : undefined}
+                      {/* forkai.38: Auswahl im Blatt statt Eingabefeld mit Vorschlagsliste —
+                          bei dreihundert Entitaeten ist Suchen der Normalfall. */}
+                      <V1Select
+                        label={definition.label}
+                        titel={definition.label}
+                        unterzeile={definition.placeholder}
+                        wert={sensor.haEntityId}
+                        platzhalter={definition.placeholder}
+                        onWahl={(wert) => updateSensor(definition.metricType, { haEntityId: wert })}
+                        optionen={[
+                          { wert: '', text: '— nicht zugeordnet —', betont: true },
+                          ...suggestionsForMetric(entities, definition.metricType).map((entity): V1Option => ({
+                            wert: entity.entityId,
+                            text: entity.friendlyName ?? entity.entityId,
+                            hinweis: entityOptionLabel(entity),
+                          })),
+                        ]}
                       />
-                      {entities.length > 0 && (
-                        <datalist id={listId}>
-                          {suggestionsForMetric(entities, definition.metricType).map((entity) => (
-                            <option key={entity.entityId} value={entity.entityId}>{entityOptionLabel(entity)}</option>
-                          ))}
-                        </datalist>
-                      )}
                       {live != null
                         ? <span className="co-row-value is-good">{live}</span>
                         : sensor.haEntityId.trim() === ''
@@ -318,17 +322,21 @@ function HomeAssistantPage() {
                     {selectedDraft.cameras.map((camera, index) => (
                       <div key={index} className="co-row" data-audit="ha-camera-field-action">
                         <span className="ha-metric">Kamera {index + 1}</span>
-                        <input className="ha-entity-input" value={camera} onChange={(event) => updateCameraAt(index, event.target.value)} placeholder="camera.hauptzelt" aria-label={`Kamera ${index + 1} Entity`} list={entities.length > 0 ? 'ha-entities-camera' : undefined} />
+                        <V1Select
+                          label={`Kamera ${index + 1}`}
+                          titel={`Kamera ${index + 1}`}
+                          wert={camera}
+                          platzhalter="camera.hauptzelt"
+                          onWahl={(wert) => updateCameraAt(index, wert)}
+                          optionen={cameraEntities.map((entity): V1Option => ({
+                            wert: entity.entityId,
+                            text: entity.friendlyName ?? entity.entityId,
+                            hinweis: entityOptionLabel(entity),
+                          }))}
+                        />
                         <button type="button" className="ls-btn is-small" onClick={() => removeCameraAt(index)}>Entfernen</button>
                       </div>
                     ))}
-                    {entities.length > 0 && (
-                      <datalist id="ha-entities-camera">
-                        {cameraEntities.map((entity) => (
-                          <option key={entity.entityId} value={entity.entityId}>{entityOptionLabel(entity)}</option>
-                        ))}
-                      </datalist>
-                    )}
                     <div className="co-row">
                       <div className="co-actions">
                         <button type="button" className="ls-btn is-small" onClick={addCamera}>+ Kamera</button>
