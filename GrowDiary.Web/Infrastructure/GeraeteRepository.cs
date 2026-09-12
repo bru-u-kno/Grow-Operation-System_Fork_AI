@@ -46,6 +46,8 @@ public sealed class GeraeteRepository : RepositoryBase
                     Name TEXT NOT NULL,
                     TentId INTEGER NULL,
                     HardwareItemId INTEGER NULL,
+                    ElternSchluessel TEXT NULL,
+                    Anschluss TEXT NULL,
                     UpdatedAtUtc TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS ForkGeraetEntitaeten (
@@ -66,7 +68,7 @@ public sealed class GeraeteRepository : RepositoryBase
     {
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT Schluessel, Name, TentId, HardwareItemId, UpdatedAtUtc FROM ForkGeraete;";
+        command.CommandText = "SELECT Schluessel, Name, TentId, HardwareItemId, ElternSchluessel, Anschluss, UpdatedAtUtc FROM ForkGeraete;";
 
         var liste = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase);
         using var leser = command.ExecuteReader();
@@ -78,7 +80,9 @@ public sealed class GeraeteRepository : RepositoryBase
                 Name = leser.GetString(1),
                 TentId = leser.IsDBNull(2) ? null : leser.GetInt32(2),
                 HardwareItemId = leser.IsDBNull(3) ? null : leser.GetInt32(3),
-                UpdatedAtUtc = ParseStoredUtcDateTime(leser.GetString(4)) ?? DateTime.UtcNow,
+                ElternSchluessel = leser.IsDBNull(4) ? null : leser.GetString(4),
+                Anschluss = leser.IsDBNull(5) ? null : leser.GetString(5),
+                UpdatedAtUtc = ParseStoredUtcDateTime(leser.GetString(6)) ?? DateTime.UtcNow,
             };
             liste[eintrag.Schluessel] = eintrag;
         }
@@ -104,16 +108,20 @@ public sealed class GeraeteRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkGeraete (Schluessel, Name, TentId, HardwareItemId, UpdatedAtUtc)
-            VALUES ($schluessel, $name, $tent, $hardware, $updated)
+            INSERT INTO ForkGeraete (Schluessel, Name, TentId, HardwareItemId, ElternSchluessel, Anschluss, UpdatedAtUtc)
+            VALUES ($schluessel, $name, $tent, $hardware, $eltern, $anschluss, $updated)
             ON CONFLICT(Schluessel) DO UPDATE SET
                 Name = excluded.Name, TentId = excluded.TentId,
-                HardwareItemId = excluded.HardwareItemId, UpdatedAtUtc = excluded.UpdatedAtUtc;
+                HardwareItemId = excluded.HardwareItemId,
+                ElternSchluessel = excluded.ElternSchluessel, Anschluss = excluded.Anschluss,
+                UpdatedAtUtc = excluded.UpdatedAtUtc;
             """;
         command.Parameters.AddWithValue("$schluessel", geraet.Schluessel);
         command.Parameters.AddWithValue("$name", geraet.Name);
         command.Parameters.AddWithValue("$tent", (object?)geraet.TentId ?? DBNull.Value);
         command.Parameters.AddWithValue("$hardware", (object?)geraet.HardwareItemId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$eltern", (object?)geraet.ElternSchluessel ?? DBNull.Value);
+        command.Parameters.AddWithValue("$anschluss", (object?)geraet.Anschluss ?? DBNull.Value);
         command.Parameters.AddWithValue("$updated", ToStorageUtc(DateTime.UtcNow));
         command.ExecuteNonQuery();
     }

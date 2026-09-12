@@ -22,8 +22,20 @@ public sealed record Geraet(
     int? HardwareItemId,
     IReadOnlyList<GeraetEntitaet> Entitaeten)
 {
-    /// <summary>Zugeordnet von Hand (Inventar oder eigene Tabelle) statt nur geraten.</summary>
+    /// <summary>Zugeordnet von Hand oder aus dem HA-Geräteregister statt nur geraten.</summary>
     public bool Bestaetigt { get; init; }
+
+    /// <summary>
+    /// Das Gerät, an dem dieses hängt — der Controller, in dessen Port es steckt.
+    /// Null bei einem Gerät, das für sich steht.
+    /// </summary>
+    public string? ElternSchluessel { get; init; }
+
+    /// <summary>Die Steckstelle am Eltern-Gerät: „Port 5", „Fühler 2".</summary>
+    public string? Anschluss { get; init; }
+
+    /// <summary>Ein Controller, der selbst keine Steckstelle belegt, aber Kinder trägt.</summary>
+    public bool IstController { get; init; }
 }
 
 /// <summary>Eine Entität des Geräts samt allem, wofür sie im Fork benutzt wird.</summary>
@@ -95,5 +107,61 @@ public sealed class GespeichertesGeraet
     public string Name { get; set; } = string.Empty;
     public int? TentId { get; set; }
     public int? HardwareItemId { get; set; }
+    /// <summary>Korrektur des Nutzers: an welchem Gerät dieses hängt.</summary>
+    public string? ElternSchluessel { get; set; }
+    /// <summary>Korrektur des Nutzers: an welcher Steckstelle.</summary>
+    public string? Anschluss { get; set; }
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+
+/// <summary>
+/// Fork AI (forkai.22): Was Home Assistant über die Herkunft einer Entität weiß.
+/// </summary>
+/// <remarks>
+/// <para>Die Zustandsliste (<c>/api/states</c>) kennt das nicht — sie liefert nur
+/// Name und Wert. <c>DeviceId</c> und <c>UniqueId</c> kommen aus dem Geräte- und
+/// Entitätsregister. Fehlen sie (alte Anlage, Registry nicht erreichbar), fällt die
+/// Ableitung auf die Namensvermutung zurück; nichts bricht, es wird nur gröber.</para>
+/// </remarks>
+public sealed record HerkunftEintrag(string EntityId, string? DeviceId, string? DeviceName, string? UniqueId);
+
+/// <summary>
+/// Die Klammer über den Geräten, die Home Assistant je Port einzeln anlegt.
+/// </summary>
+/// <remarks>
+/// <para><b>Das Problem.</b> Die AC-Infinity-Integration macht aus EINEM Controller
+/// bis zu sieben HA-Geräte: je Port eines, je Fühler eines. Auf der Geräte-Id allein
+/// stünde der Controller siebenfach in der Liste, und niemand sähe, dass es dieselbe
+/// Box ist.</para>
+///
+/// <para><b>Die Lösung.</b> Die <c>unique_id</c> trägt die MAC:
+/// <c>ac_infinity_34CDB02C4C16_port_5_loadState</c>. Gleiche MAC heißt gleicher
+/// Controller; <c>port_5</c> bzw. <c>sensor_2</c> sagt, an welcher Steckstelle das
+/// Kind hängt. Was AM Port hängt — Ventil, Ventilator, Chiller — weiß Home Assistant
+/// nicht; das trägt der Nutzer ein.</para>
+/// </remarks>
+public static partial class GeraeteHerkunft
+{
+    /// <summary>MAC und Steckstelle aus einer unique_id, soweit sie eine trägt.</summary>
+    public static (string? Mac, string? Anschluss) Lesen(string? uniqueId)
+    {
+        if (string.IsNullOrWhiteSpace(uniqueId)) return (null, null);
+
+        var treffer = MacUndPort().Match(uniqueId);
+        if (!treffer.Success) return (null, null);
+
+        var art = treffer.Groups["art"].Value.Equals("port", StringComparison.OrdinalIgnoreCase) ? "Port" : "Fühler";
+        return (treffer.Groups["mac"].Value.ToUpperInvariant(), $"{art} {treffer.Groups["nr"].Value}");
+    }
+
+    public static string ControllerSchluessel(string mac) => $"mac:{mac.ToLowerInvariant()}";
+
+    public static string ControllerName(string mac)
+        => $"Controller {mac[^4..]}";
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"_(?<mac>[0-9A-Fa-f]{12})_(?<art>port|sensor)_(?<nr>\d+)",
+        System.Text.RegularExpressions.RegexOptions.ExplicitCapture)]
+    private static partial System.Text.RegularExpressions.Regex MacUndPort();
 }

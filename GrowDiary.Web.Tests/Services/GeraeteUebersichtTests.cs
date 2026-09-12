@@ -25,9 +25,11 @@ public sealed class GeraeteUebersichtTests
         Dictionary<string, List<GeraetVerwendung>> verwendungen,
         IReadOnlyList<HardwareItem>? hardware = null,
         Dictionary<string, GespeichertesGeraet>? gespeichert = null,
-        Dictionary<string, string>? zuordnungen = null)
+        Dictionary<string, string>? zuordnungen = null,
+        Dictionary<string, HerkunftEintrag>? herkunft = null)
         => GeraeteUebersichtService.Zusammenfassen(
             verwendungen,
+            herkunft ?? new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase),
             hardware ?? Array.Empty<HardwareItem>(),
             gespeichert ?? new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase),
             zuordnungen ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
@@ -56,20 +58,81 @@ public sealed class GeraeteUebersichtTests
     }
 
     [Fact]
-    public void EinInventarEintragIstDasGeraetUndMachtEsBestaetigt()
+    public void DasHaGeraetSchlaegtDasInventarUndFasstSeineEintraegeZusammen()
     {
+        // Das Inventar legt je Messgröße einen Eintrag an — „pH", „EC",
+        // „Wassertemperatur" sind EIN Bluelab, nicht drei Geräte. Vor dieser
+        // Änderung standen sie dreifach in der Liste.
         var hardware = new[]
         {
-            new HardwareItem { Id = 7, Name = "Bluelab Guardian Monitor", HaEntityId = "sensor.bluelab_guardian_ph", TentId = 2 },
+            new HardwareItem { Id = 11, Name = "pH", HaEntityId = "sensor.bluelab_guardian_ph", TentId = 2 },
+            new HardwareItem { Id = 12, Name = "EC", HaEntityId = "sensor.bluelab_guardian_electrical_conductivity" },
+        };
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.bluelab_guardian_ph"] = new("sensor.bluelab_guardian_ph", "8efd96", "Bluelab Guardian", "6bf89330_ph"),
+            ["sensor.bluelab_guardian_electrical_conductivity"] = new("sensor.bluelab_guardian_electrical_conductivity", "8efd96", "Bluelab Guardian", "6bf89330_ec"),
         };
 
-        var geraete = Bauen(Verwendungen(("sensor.bluelab_guardian_ph", "Messgröße ReservoirPh")), hardware);
+        var geraete = Bauen(
+            Verwendungen(("sensor.bluelab_guardian_ph", "Messgröße ReservoirPh"),
+                         ("sensor.bluelab_guardian_electrical_conductivity", "Messgröße ReservoirEc")),
+            hardware,
+            herkunft: herkunft);
 
         var geraet = Assert.Single(geraete);
-        Assert.Equal("Bluelab Guardian Monitor", geraet.Name);
-        Assert.Equal(7, geraet.HardwareItemId);
-        Assert.Equal(2, geraet.TentId);
+        Assert.Equal("Bluelab Guardian", geraet.Name);
+        Assert.Equal(2, geraet.Entitaeten.Count);
         Assert.True(geraet.Bestaetigt);
+        Assert.Null(geraet.ElternSchluessel);
+    }
+
+    [Fact]
+    public void PortsEinesControllersHaengenAnEinemGeraet()
+    {
+        // AC Infinity legt je Port ein eigenes HA-Gerät an. Die MAC in der
+        // unique_id klammert sie zum Controller; der Port wird zur Steckstelle.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "Port 5",
+                "ac_infinity_34CDB02C4C16_port_5_loadState"),
+            ["number.rdwc_venti_einschaltleistung"] = new("number.rdwc_venti_einschaltleistung", "ffcb63", "RDWC Venti",
+                "ac_infinity_34CDB02C4C16_port_1_onSelfSpead"),
+            ["binary_sensor.klein_abluft_zustand"] = new("binary_sensor.klein_abluft_zustand", "1abfe0", "Klein Abluft",
+                "ac_infinity_4827E289FA8E_port_1_loadState"),
+        };
+
+        var geraete = Bauen(
+            Verwendungen(("binary_sensor.big_port_5_zustand", "CO₂-Ventil"),
+                         ("number.rdwc_venti_einschaltleistung", "Abluft Stufe"),
+                         ("binary_sensor.klein_abluft_zustand", "Licht-Status")),
+            herkunft: herkunft);
+
+        var controller = geraete.Where(g => g.IstController).ToList();
+        Assert.Equal(2, controller.Count);
+
+        var ventil = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.big_port_5_zustand"));
+        var abluft = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "number.rdwc_venti_einschaltleistung"));
+        var licht = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.klein_abluft_zustand"));
+
+        // Gleicher Controller, verschiedene Ports.
+        Assert.Equal(ventil.ElternSchluessel, abluft.ElternSchluessel);
+        Assert.Equal("Port 5", ventil.Anschluss);
+        Assert.Equal("Port 1", abluft.Anschluss);
+
+        // Anderer Controller.
+        Assert.NotEqual(ventil.ElternSchluessel, licht.ElternSchluessel);
+    }
+
+    [Theory]
+    [InlineData("ac_infinity_34CDB02C4C16_port_5_loadState", "34CDB02C4C16", "Port 5")]
+    [InlineData("ac_infinity_34CDB02C4C16_sensor_2_probeTemperature", "34CDB02C4C16", "Fühler 2")]
+    [InlineData("6bf89330-2cb9-11f0-b22b-63543a698b74_ph", null, null)]
+    public void MacUndSteckstelleKommenAusDerUniqueId(string uniqueId, string? mac, string? anschluss)
+    {
+        var (gelesen, stelle) = GeraeteHerkunft.Lesen(uniqueId);
+        Assert.Equal(mac, gelesen);
+        Assert.Equal(anschluss, stelle);
     }
 
     [Fact]
@@ -101,7 +164,7 @@ public sealed class GeraeteUebersichtTests
         };
         var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
         {
-            [GeraeteUebersichtService.HardwareSchluessel(3)] = new() { Schluessel = GeraeteUebersichtService.HardwareSchluessel(3), Name = "Big Probe Sensor" },
+            ["big_probe"] = new() { Schluessel = "big_probe", Name = "Big Probe Sensor" },
         };
 
         var geraete = Bauen(Verwendungen(("sensor.big_probe_sensor_sonden_temperatur", "Messgröße AirTemperature")), hardware, gespeichert);

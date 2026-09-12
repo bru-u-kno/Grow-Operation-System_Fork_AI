@@ -10,14 +10,20 @@ namespace GrowDiary.Web.Services;
 /// <remarks>
 /// <para><b>Nur lesend.</b> Diese Etappe ändert keine der bestehenden Tabellen —
 /// sie legt die gemeinsame Sicht darüber. Wer eine Entität ändern will, tut das
-/// vorerst weiter dort, wo sie heute gepflegt wird; die spätere Etappe dreht das
-/// um.</para>
+/// vorerst weiter dort, wo sie heute gepflegt wird.</para>
 ///
-/// <para><b>Reihenfolge der Wahrheit.</b> Erstens die Zuordnung des Nutzers
-/// (<see cref="GeraeteRepository"/>), zweitens das Inventar (ein Hardware-Eintrag
-/// mit dieser Entity-ID IST das Gerät), drittens die Vermutung aus dem Namen.
-/// Geraten wird nur, was sonst niemand beantwortet — und es ist als Vermutung
-/// gekennzeichnet, damit die Oberfläche es nicht als Tatsache zeigt.</para>
+/// <para><b>Reihenfolge der Wahrheit.</b> Erstens die Zuordnung des Nutzers,
+/// zweitens das Geräteregister von Home Assistant, drittens — nur wenn beides
+/// schweigt — die Vermutung aus dem Namen. Das Inventar definiert KEIN Gerät:
+/// es legt je Messgröße einen Eintrag an („pH", „EC", „Wassertemperatur"), und
+/// die sind drei Sensoren EINES Bluelab, nicht drei Geräte. Ein Inventar-Eintrag
+/// hängt sich deshalb an das Gerät seiner Entität.</para>
+///
+/// <para><b>Zwei Stufen.</b> Ein Controller ist ein Gerät, und was in seinen Ports
+/// steckt, ist wieder eines. Home Assistant legt je Port ein eigenes Gerät an; die
+/// MAC aus der <c>unique_id</c> klammert sie zum Controller zusammen, und die
+/// Steckstelle steht als „Port 5" am Kind. Was AM Port hängt — Ventil, Ventilator,
+/// Chiller — weiß Home Assistant nicht; den Namen trägt der Nutzer ein.</para>
 /// </remarks>
 public sealed class GeraeteUebersichtService
 {
@@ -44,20 +50,22 @@ public sealed class GeraeteUebersichtService
         _kosten = kosten;
     }
 
-    /// <summary>Alle Geräte mit ihren Entitäten und deren Verwendungen, nach Namen.</summary>
-    public IReadOnlyList<Geraet> Alle()
-    {
-        var verwendungen = Verwendungen();
-        var hardware = _hardware.GetHardwareItems();
-        return Zusammenfassen(verwendungen, hardware, _geraete.Geraete(), _geraete.Zuordnungen());
-    }
+    /// <summary>
+    /// Alle Geräte mit ihren Entitäten und deren Verwendungen.
+    /// <paramref name="herkunft"/> kommt aus dem HA-Register; ohne sie greift die
+    /// Namensvermutung (der Abruf folgt im nächsten Schritt).
+    /// </summary>
+    public IReadOnlyList<Geraet> Alle(IReadOnlyDictionary<string, HerkunftEintrag>? herkunft = null)
+        => Zusammenfassen(
+            Verwendungen(),
+            herkunft ?? new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase),
+            _hardware.GetHardwareItems(),
+            _geraete.Geraete(),
+            _geraete.Zuordnungen());
 
     // ------------------------------------------------------- Quellen einsammeln
 
-    /// <summary>
-    /// Jede Entität, die der Fork kennt, mit allem, wofür sie benutzt wird.
-    /// Öffentlich, damit der Test die Zusammenfassung ohne Datenbank fahren kann.
-    /// </summary>
+    /// <summary>Jede Entität, die der Fork kennt, mit allem, wofür sie benutzt wird.</summary>
     public IReadOnlyDictionary<string, List<GeraetVerwendung>> Verwendungen()
     {
         var treffer = new Dictionary<string, List<GeraetVerwendung>>(StringComparer.OrdinalIgnoreCase);
@@ -114,32 +122,49 @@ public sealed class GeraeteUebersichtService
 
     // ------------------------------------------------------------ Zusammenfassen
 
-    /// <summary>
-    /// Aus Verwendungen, Inventar und den Korrekturen des Nutzers die Geräteliste
-    /// bauen. Rein rechnend und ohne Datenbank — deshalb prüfbar.
-    /// </summary>
+    /// <summary>Rein rechnend und ohne Datenbank — deshalb prüfbar.</summary>
     public static IReadOnlyList<Geraet> Zusammenfassen(
         IReadOnlyDictionary<string, List<GeraetVerwendung>> verwendungen,
+        IReadOnlyDictionary<string, HerkunftEintrag> herkunft,
         IReadOnlyList<HardwareItem> hardware,
         IReadOnlyDictionary<string, GespeichertesGeraet> gespeichert,
         IReadOnlyDictionary<string, string> zuordnungen)
     {
-        var hardwareNachEntity = hardware
-            .Where(h => !string.IsNullOrWhiteSpace(h.HaEntityId))
-            .GroupBy(h => h.HaEntityId!.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var eimer = new Dictionary<string, Eimer>(StringComparer.OrdinalIgnoreCase);
 
-        var eimer = new Dictionary<string, (List<GeraetEntitaet> Entitaeten, bool Bestaetigt)>(StringComparer.OrdinalIgnoreCase);
+        Eimer Holen(string schluessel)
+        {
+            if (!eimer.TryGetValue(schluessel, out var vorhanden))
+            {
+                vorhanden = new Eimer();
+                eimer[schluessel] = vorhanden;
+            }
+            return vorhanden;
+        }
 
         foreach (var (entityId, liste) in verwendungen)
         {
-            var (schluessel, bestaetigt) = SchluesselFuer(entityId, hardwareNachEntity, zuordnungen);
-            if (!eimer.TryGetValue(schluessel, out var eintrag))
-            {
-                eintrag = (new List<GeraetEntitaet>(), false);
-            }
+            herkunft.TryGetValue(entityId, out var quelle);
+            var (schluessel, bestaetigt) = SchluesselFuer(entityId, quelle, zuordnungen);
+
+            var eintrag = Holen(schluessel);
             eintrag.Entitaeten.Add(new GeraetEntitaet(entityId, liste));
-            eimer[schluessel] = (eintrag.Entitaeten, eintrag.Bestaetigt || bestaetigt);
+            eintrag.Bestaetigt |= bestaetigt;
+            eintrag.Name ??= quelle?.DeviceName;
+
+            // Zweite Stufe: steckt dieses Gerät in einem Port?
+            var (mac, anschluss) = GeraeteHerkunft.Lesen(quelle?.UniqueId);
+            if (mac is not null && !schluessel.StartsWith("mac:", StringComparison.Ordinal))
+            {
+                var controller = GeraeteHerkunft.ControllerSchluessel(mac);
+                eintrag.ElternSchluessel ??= controller;
+                eintrag.Anschluss ??= anschluss;
+
+                var eltern = Holen(controller);
+                eltern.IstController = true;
+                eltern.Bestaetigt = true;
+                eltern.Name ??= GeraeteHerkunft.ControllerName(mac);
+            }
         }
 
         // Inventar-Einträge OHNE Entität sind trotzdem Geräte: CO₂-Flasche,
@@ -147,9 +172,15 @@ public sealed class GeraeteUebersichtService
         // Wartung und Verschleiß tragen.
         foreach (var eintrag in hardware.Where(h => string.IsNullOrWhiteSpace(h.HaEntityId)))
         {
-            var schluessel = HardwareSchluessel(eintrag.Id);
-            if (!eimer.ContainsKey(schluessel)) eimer[schluessel] = (new List<GeraetEntitaet>(), true);
+            var eimerEintrag = Holen(HardwareSchluessel(eintrag.Id));
+            eimerEintrag.Bestaetigt = true;
+            eimerEintrag.Name ??= eintrag.Name;
         }
+
+        var hardwareNachEntity = hardware
+            .Where(h => !string.IsNullOrWhiteSpace(h.HaEntityId))
+            .GroupBy(h => h.HaEntityId!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var geraete = new List<Geraet>();
         foreach (var (schluessel, eintrag) in eimer)
@@ -159,24 +190,46 @@ public sealed class GeraeteUebersichtService
 
             geraete.Add(new Geraet(
                 schluessel,
-                eigen?.Name ?? hardwareItem?.Name ?? GeraeteSchluessel.AlsName(schluessel),
+                eigen?.Name ?? eintrag.Name ?? hardwareItem?.Name ?? GeraeteSchluessel.AlsName(schluessel),
                 eigen?.TentId ?? hardwareItem?.TentId,
                 eigen?.HardwareItemId ?? hardwareItem?.Id,
                 eintrag.Entitaeten.OrderBy(e => e.EntityId, StringComparer.OrdinalIgnoreCase).ToList())
             {
                 Bestaetigt = eintrag.Bestaetigt || eigen is not null,
+                ElternSchluessel = eigen?.ElternSchluessel ?? eintrag.ElternSchluessel,
+                Anschluss = eigen?.Anschluss ?? eintrag.Anschluss,
+                IstController = eintrag.IstController,
             });
         }
 
-        return geraete.OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        // Sortierung: Controller zuerst, darunter ihre Ports der Reihe nach.
+        return geraete
+            .OrderBy(g => g.ElternSchluessel ?? g.Schluessel, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(g => g.ElternSchluessel is null ? 0 : 1)
+            .ThenBy(g => g.Anschluss, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
-    /// <summary>Schlüssel eines Inventar-Eintrags ohne Entität — eigener Namensraum, damit nichts kollidiert.</summary>
+    /// <summary>Schlüssel eines Inventar-Eintrags ohne Entität — eigener Namensraum.</summary>
     public static string HardwareSchluessel(int hardwareItemId) => $"hw:{hardwareItemId}";
+
+    /// <summary>Schlüssel eines Geräts aus dem HA-Register.</summary>
+    public static string HaSchluessel(string deviceId) => $"ha:{deviceId}";
+
+    private sealed class Eimer
+    {
+        public List<GeraetEntitaet> Entitaeten { get; } = new();
+        public bool Bestaetigt { get; set; }
+        public bool IstController { get; set; }
+        public string? Name { get; set; }
+        public string? ElternSchluessel { get; set; }
+        public string? Anschluss { get; set; }
+    }
 
     private static (string Schluessel, bool Bestaetigt) SchluesselFuer(
         string entityId,
-        IReadOnlyDictionary<string, HardwareItem> hardwareNachEntity,
+        HerkunftEintrag? herkunft,
         IReadOnlyDictionary<string, string> zuordnungen)
     {
         if (zuordnungen.TryGetValue(entityId, out var gesetzt) && !string.IsNullOrWhiteSpace(gesetzt))
@@ -184,9 +237,9 @@ public sealed class GeraeteUebersichtService
             return (gesetzt, true);
         }
 
-        if (hardwareNachEntity.TryGetValue(entityId, out var item))
+        if (!string.IsNullOrWhiteSpace(herkunft?.DeviceId))
         {
-            return (HardwareSchluessel(item.Id), true);
+            return (HaSchluessel(herkunft!.DeviceId!), true);
         }
 
         return (GeraeteSchluessel.AusEntity(entityId), false);
@@ -207,9 +260,9 @@ public sealed class GeraeteUebersichtService
             return hardware.FirstOrDefault(h => h.Id == hardwareId);
         }
 
-        // Ein geratenes Gerät kann trotzdem einen Inventar-Eintrag haben, wenn EINE
-        // seiner Entitäten dort steht — das ist der übliche Fall beim Bluelab, wo
-        // nur der pH-Fühler im Inventar geführt wird.
+        // Ein Inventar-Eintrag hängt sich an das Gerät SEINER Entität — er definiert
+        // keines. Trägt ein Gerät mehrere Einträge (Bluelab: pH, EC, Temperatur),
+        // ist der erste die Verbindung; die Geräteseite zeigt später alle.
         foreach (var entitaet in entitaeten)
         {
             if (hardwareNachEntity.TryGetValue(entitaet.EntityId, out var item)) return item;
