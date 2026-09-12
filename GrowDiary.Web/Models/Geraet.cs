@@ -46,6 +46,15 @@ public sealed record Geraet(
     /// ohne Entsprechung in Home Assistant; deshalb zählt sie nicht als Gerät.
     /// </summary>
     public bool IstRubrik { get; init; }
+
+    /// <summary>Der Nutzer hat gesagt, woran dieses Gerät hängt (oder dass es an nichts hängt).</summary>
+    public bool ElternVomNutzer { get; init; }
+
+    /// <summary>Der Nutzer hat dem Gerät einen eigenen Namen gegeben.</summary>
+    public bool NameVomNutzer { get; init; }
+
+    /// <summary>Woran es ohne die Korrektur hinge — für „zurück wohin?" in der Oberfläche.</summary>
+    public string? AbgeleiteterEltern { get; init; }
 }
 
 /// <summary>Eine Entität des Geräts samt allem, wofür sie im Fork benutzt wird.</summary>

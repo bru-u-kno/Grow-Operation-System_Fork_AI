@@ -27,6 +27,9 @@ type Geraet = {
   anschluss: string | null
   istController: boolean
   istRubrik: boolean
+  elternVomNutzer: boolean
+  nameVomNutzer: boolean
+  abgeleiteterEltern: string | null
   modell: string | null
   bestaetigt: boolean
   vermutet: boolean
@@ -232,6 +235,13 @@ export default function GeraetePage() {
   const verschobene = (seite?.geraete ?? []).flatMap((g) =>
     g.entitaeten.filter((e) => e.verschoben).map((e) => ({ entitaet: e, geraet: g })))
 
+  // Korrigierte Geräte: umgehängt oder umbenannt. Rubriken sind keine Korrektur,
+  // sie sind Absicht.
+  const korrigierteGeraete = (seite?.geraete ?? []).filter((g) => !g.istRubrik && (g.elternVomNutzer || g.nameVomNutzer))
+
+  const nameVon = (schluessel: string | null) =>
+    (seite?.geraete ?? []).find((g) => g.schluessel === schluessel)?.name ?? null
+
   // Wohin sich ein Gerät hängen lässt: in eine Rubrik oder unter einen
   // Controller. Ein Port-Gerät als Ziel wäre eine dritte Ebene — die zeigt die
   // Liste nicht, also bietet sie es auch nicht an.
@@ -320,13 +330,13 @@ export default function GeraetePage() {
           <div><b className={seite.anzahlVermutet > 0 ? 'is-warn' : undefined}>{seite.anzahlVermutet}</b><span>vermutet</span></div>
           <div>
             <b className={seite.anzahlVerschoben > 0 ? 'is-warn' : undefined}>{seite.anzahlVerschoben}</b>
-            <span>verschoben</span>
+            <span>korrigiert</span>
           </div>
         </div>
 
-        {verschobene.length > 0 && (
+        {(verschobene.length > 0 || korrigierteGeraete.length > 0) && (
           <>
-          <p className="gr-verschobene-kopf">Von Hand zugeordnet — „Zurück" gibt die Entität dorthin, wohin Home Assistant sie zählt.</p>
+          <p className="gr-verschobene-kopf">Von Hand gesetzt — „Zurück" stellt her, was Home Assistant meldet.</p>
           <ul className="gr-verschobene">
             {verschobene.map(({ entitaet, geraet }) => (
               <li key={entitaet.entityId}>
@@ -338,6 +348,22 @@ export default function GeraetePage() {
                 <button type="button" disabled={speichert} onClick={() => void entitaetVerschieben(entitaet.entityId, geraet, '')}>
                   Zurück
                 </button>
+              </li>
+            ))}
+            {korrigierteGeraete.map((g) => (
+              <li key={`geraet-${g.schluessel}`}>
+                <code>{g.name}</code>
+                <small>
+                  {g.elternVomNutzer
+                    ? (g.elternSchluessel
+                        ? `hängt an „${nameVon(g.elternSchluessel) ?? g.elternSchluessel}"`
+                        : 'hängt an nichts')
+                    : 'umbenannt'}
+                  {g.abgeleiteterEltern && g.abgeleiteterEltern !== g.elternSchluessel
+                    ? ` · laut Home Assistant: ${nameVon(g.abgeleiteterEltern) ?? g.abgeleiteterEltern}`
+                    : ''}
+                </small>
+                <button type="button" disabled={speichert} onClick={() => void verwerfen(g)}>Zurück</button>
               </li>
             ))}
           </ul>
@@ -377,7 +403,10 @@ export default function GeraetePage() {
               // wo man sie nicht vermutet.
               verschobenImBaum={
                 geraet.entitaeten.filter((e) => e.verschoben).length
-                + kinder.reduce((summe, kind) => summe + kind.entitaeten.filter((e) => e.verschoben).length, 0)
+                + (!geraet.istRubrik && (geraet.elternVomNutzer || geraet.nameVomNutzer) ? 1 : 0)
+                + kinder.reduce((summe, kind) => summe
+                  + kind.entitaeten.filter((e) => e.verschoben).length
+                  + (kind.elternVomNutzer || kind.nameVomNutzer ? 1 : 0), 0)
               }
               werkzeug={werkzeug(geraet)}
               onMenue={() => setMenue(menue === geraet.schluessel ? null : geraet.schluessel)}
@@ -406,7 +435,8 @@ export default function GeraetePage() {
               <GeraetZeile
                 key={kind.schluessel}
                 geraet={kind}
-                verschobenImBaum={kind.entitaeten.filter((e) => e.verschoben).length}
+                verschobenImBaum={kind.entitaeten.filter((e) => e.verschoben).length
+                  + (kind.elternVomNutzer || kind.nameVomNutzer ? 1 : 0)}
                 werkzeug={werkzeug(kind)}
                 onMenue={() => setMenue(menue === kind.schluessel ? null : kind.schluessel)}
                 menueOffen={menue === kind.schluessel}
@@ -484,8 +514,8 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
           <span
             className="gr-anzahl is-warn"
             title={verschobenImBaum === 1
-              ? '1 von Hand zugeordnete Entität — hier oder an einem Port'
-              : `${verschobenImBaum} von Hand zugeordnete Entitäten`}
+              ? '1 Korrektur von Hand — hier oder an einem Port'
+              : `${verschobenImBaum} Korrekturen von Hand`}
           >
             {verschobenImBaum}
           </span>

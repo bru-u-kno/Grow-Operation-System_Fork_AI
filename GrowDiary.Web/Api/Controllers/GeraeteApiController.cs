@@ -43,6 +43,9 @@ public sealed class GeraeteApiController : ApiControllerBase
             g.Bestaetigt,
             g.Modell,
             g.IstRubrik,
+            g.ElternVomNutzer,
+            g.NameVomNutzer,
+            g.AbgeleiteterEltern,
             g.TentId,
             g.HardwareItemId,
             g.Entitaeten.Select(e => new GeraetEntitaetDto(
@@ -58,7 +61,11 @@ public sealed class GeraeteApiController : ApiControllerBase
             zeilen.Count(z => !z.IstRubrik),
             zeilen.Sum(z => z.Entitaeten.Count),
             zeilen.Count(z => !z.Bestaetigt),
-            zeilen.Sum(z => z.Entitaeten.Count(e => e.Verschoben))));
+            // Korrekturen sind BEIDES: verschobene Entitaeten und Geraete, die der
+            // Nutzer umgehaengt oder umbenannt hat. Zaehlte nur das erste, stuende
+            // nach dem Verschieben eines Geraets weiter eine Null da.
+            zeilen.Sum(z => z.Entitaeten.Count(e => e.Verschoben))
+                + zeilen.Count(z => !z.IstRubrik && (z.ElternVomNutzer || z.NameVomNutzer))));
     }
 
     /// <summary>
@@ -182,6 +189,9 @@ public sealed record GeraetDto(
     bool Bestaetigt,
     string? Modell,
     bool IstRubrik,
+    bool ElternVomNutzer,
+    bool NameVomNutzer,
+    string? AbgeleiteterEltern,
     int? TentId,
     int? HardwareItemId,
     IReadOnlyList<GeraetEntitaetDto> Entitaeten)

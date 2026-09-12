@@ -252,6 +252,9 @@ public sealed class GeraeteUebersichtService
                 IstController = eintrag.IstController,
                 Modell = eintrag.Modell,
                 IstRubrik = eintrag.IstRubrik || (eigen?.IstRubrik ?? false),
+                ElternVomNutzer = eigen?.ElternSchluessel is not null,
+                NameVomNutzer = !string.IsNullOrWhiteSpace(eigen?.Name),
+                AbgeleiteterEltern = eintrag.ElternSchluessel,
             });
         }
 

@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.34
+
+**Fork AI.** Auch verschobene **Geräte** zählen als Korrektur.
+
+- Die Kennzahl heißt jetzt **„korrigiert"** und zählt beides: von Hand
+  zugeordnete Entitäten **und** Geräte, die umgehängt oder umbenannt wurden.
+  Vorher stand nach dem Verschieben eines Geräts weiter eine Null da.
+- Die Liste oben führt beide Arten mit Herkunft und **Zurück**: „hängt an
+  ‚Kameras' · laut Home Assistant: FRITZ!Box 7590".
+- Die gelbe Zahl an einer Gerätezeile zählt Korrekturen im ganzen Zweig — auch
+  die am Gerät selbst.
+
 ## 2.0.0-forkai.33
 
 **Fork AI.** Die gelbe Marke schlägt bis zum Controller durch.
