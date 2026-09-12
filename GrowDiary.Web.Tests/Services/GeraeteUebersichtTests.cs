@@ -287,6 +287,34 @@ public sealed class GeraeteUebersichtTests
     }
 
     [Fact]
+    public void EineZugewanderteEntitaetBenenntIhrNeuesGeraetNichtUm()
+    {
+        // Bru schob den CO2-Fuehler versehentlich in eine Kamera — und die Karte
+        // hiess danach „RDWC CO2 + Light Sensor". Der Name kam von der
+        // zugewanderten Entitaet; gefunden hat er sie so nicht wieder.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["camera.rdwc_neu"] = new("camera.rdwc_neu", "cam2", "RDWC neu", "reolink_2"),
+            ["sensor.big_co2_light_sensor_co2"] = new("sensor.big_co2_light_sensor_co2", "c17ef", "RDWC CO2 + Light Sensor", "ac_infinity_34CDB02C4C16_sensor_1_co2Sensor"),
+        };
+        var zuordnungen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.big_co2_light_sensor_co2"] = "ha:cam2",
+        };
+
+        var geraete = Bauen(
+            Verwendungen(("camera.rdwc_neu", "Kamera"), ("sensor.big_co2_light_sensor_co2", "Messgröße Co2")),
+            herkunft: herkunft, zuordnungen: zuordnungen);
+
+        var kamera = Assert.Single(geraete, g => g.Schluessel == "ha:cam2");
+        Assert.Equal("RDWC neu", kamera.Name);
+
+        var zugewandert = Assert.Single(kamera.Entitaeten, e => e.EntityId == "sensor.big_co2_light_sensor_co2");
+        Assert.True(zugewandert.Verschoben);
+        Assert.Equal("RDWC CO2 + Light Sensor", zugewandert.HerkunftName);
+    }
+
+    [Fact]
     public void GeraeteOhneEntitaetBleibenInDerListe()
     {
         // Die CO₂-Flasche hat nichts in Home Assistant, trägt aber Wartung und

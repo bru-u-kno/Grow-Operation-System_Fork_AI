@@ -153,11 +153,17 @@ public sealed class GeraeteUebersichtService
         foreach (var (entityId, liste) in verwendungen)
         {
             herkunft.TryGetValue(entityId, out var quelle);
-            var (schluessel, bestaetigt) = SchluesselFuer(entityId, quelle, zuordnungen);
+            var (schluessel, bestaetigt, vomNutzer) = SchluesselFuer(entityId, quelle, zuordnungen);
 
             var eintrag = Holen(schluessel);
-            eintrag.Entitaeten.Add(new GeraetEntitaet(entityId, liste));
+            eintrag.Entitaeten.Add(new GeraetEntitaet(entityId, liste, vomNutzer, vomNutzer ? quelle?.DeviceName : null));
             eintrag.Bestaetigt |= bestaetigt;
+
+            // Eine zugewanderte Entität benennt ihr neues Gerät NICHT um: der Name
+            // kam sonst von dem Gerät, aus dem sie stammt — eine Kamera hieß nach
+            // dem Verschieben „RDWC CO2 + Light Sensor", und niemand fand sie wieder.
+            if (vomNutzer) continue;
+
             eintrag.Name ??= quelle?.DeviceName;
             eintrag.Modell ??= quelle?.DeviceModell;
 
@@ -286,22 +292,22 @@ public sealed class GeraeteUebersichtService
         public bool IstRubrik { get; set; }
     }
 
-    private static (string Schluessel, bool Bestaetigt) SchluesselFuer(
+    private static (string Schluessel, bool Bestaetigt, bool VomNutzer) SchluesselFuer(
         string entityId,
         HerkunftEintrag? herkunft,
         IReadOnlyDictionary<string, string> zuordnungen)
     {
         if (zuordnungen.TryGetValue(entityId, out var gesetzt) && !string.IsNullOrWhiteSpace(gesetzt))
         {
-            return (gesetzt, true);
+            return (gesetzt, true, true);
         }
 
         if (!string.IsNullOrWhiteSpace(herkunft?.DeviceId))
         {
-            return (HaSchluessel(herkunft!.DeviceId!), true);
+            return (HaSchluessel(herkunft!.DeviceId!), true, false);
         }
 
-        return (GeraeteSchluessel.AusEntity(entityId), false);
+        return (GeraeteSchluessel.AusEntity(entityId), false, false);
     }
 
     private static HardwareItem? HardwareZu(

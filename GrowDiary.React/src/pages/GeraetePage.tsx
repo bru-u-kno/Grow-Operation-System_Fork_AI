@@ -19,7 +19,7 @@ import './geraete.css'
  */
 
 type Verwendung = { zweck: string; quelle: string }
-type Entitaet = { entityId: string; verwendungen: Verwendung[] }
+type Entitaet = { entityId: string; verwendungen: Verwendung[]; verschoben: boolean; herkunftName: string | null }
 type Geraet = {
   schluessel: string
   name: string
@@ -39,6 +39,7 @@ type Seite = {
   anzahlGeraete: number
   anzahlEntitaeten: number
   anzahlVermutet: number
+  anzahlVerschoben: number
 }
 
 const QUELLEN: Record<string, string> = {
@@ -72,6 +73,7 @@ export default function GeraetePage() {
   // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
   // spaeter und sucht die Entitaet dann im falschen Geraet.
   const [letzte, setLetzte] = useState<{ text: string; zurueck?: () => Promise<void> } | null>(null)
+  const [zeigeVerschobene, setZeigeVerschobene] = useState(false)
   const [entwurf, setEntwurf] = useState('')
   const [speichert, setSpeichert] = useState(false)
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
@@ -165,7 +167,9 @@ export default function GeraetePage() {
     const ziel = (seite?.geraete ?? []).find((g) => g.schluessel === zielSchluessel)
     await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: zielSchluessel })
     setLetzte({
-      text: `${entityId} steht jetzt bei „${ziel?.name ?? zielSchluessel}".`,
+      text: zielSchluessel === ''
+        ? `${entityId} steht wieder dort, wo Home Assistant sie zählt.`
+        : `${entityId} steht jetzt bei „${ziel?.name ?? zielSchluessel}".`,
       // Zurueck heisst: wieder dem Geraet zuschlagen, aus dem sie kam.
       zurueck: async () => {
         await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: vonGeraet.schluessel })
@@ -223,6 +227,11 @@ export default function GeraetePage() {
       </V1Page>
     )
   }
+
+  // Alle von Hand verschobenen Entitäten — die Antwort auf „wohin habe ich das
+  // eigentlich geschoben?". Ohne diese Liste muss man jede Karte aufklappen.
+  const verschobene = (seite?.geraete ?? []).flatMap((g) =>
+    g.entitaeten.filter((e) => e.verschoben).map((e) => ({ entitaet: e, geraet: g })))
 
   // Wohin sich ein Gerät hängen lässt: in eine Rubrik oder unter einen
   // Controller. Ein Port-Gerät als Ziel wäre eine dritte Ebene — die zeigt die
@@ -310,7 +319,34 @@ export default function GeraetePage() {
           <div><b>{seite.anzahlGeraete}</b><span>Geräte</span></div>
           <div><b>{seite.anzahlEntitaeten}</b><span>Entitäten</span></div>
           <div><b className={seite.anzahlVermutet > 0 ? 'is-warn' : undefined}>{seite.anzahlVermutet}</b><span>vermutet</span></div>
+          <div
+            className={seite.anzahlVerschoben > 0 ? 'gr-klickbar' : undefined}
+            role={seite.anzahlVerschoben > 0 ? 'button' : undefined}
+            tabIndex={seite.anzahlVerschoben > 0 ? 0 : undefined}
+            onClick={() => seite.anzahlVerschoben > 0 && setZeigeVerschobene((offen) => !offen)}
+            onKeyDown={(event) => { if (event.key === 'Enter' && seite.anzahlVerschoben > 0) setZeigeVerschobene((offen) => !offen) }}
+          >
+            <b className={seite.anzahlVerschoben > 0 ? 'is-warn' : undefined}>{seite.anzahlVerschoben}</b>
+            <span>verschoben</span>
+          </div>
         </div>
+
+        {zeigeVerschobene && verschobene.length > 0 && (
+          <ul className="gr-verschobene">
+            {verschobene.map(({ entitaet, geraet }) => (
+              <li key={entitaet.entityId}>
+                <code>{entitaet.entityId}</code>
+                <small>
+                  steht bei „{geraet.name}"
+                  {entitaet.herkunftName ? ` · laut Home Assistant: ${entitaet.herkunftName}` : ''}
+                </small>
+                <button type="button" disabled={speichert} onClick={() => void entitaetVerschieben(entitaet.entityId, geraet, '')}>
+                  Zurück
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {rubrikName === null ? (
           <div className="gr-knoepfe">
             <V1Button onClick={() => setRubrikName('')}>Rubrik anlegen</V1Button>
@@ -474,6 +510,12 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
                   ))}
                 </select>
                 </label>
+                {entitaet.verschoben && (
+                  <p className="gr-verschoben-hinweis">
+                    <em>verschoben</em>
+                    {entitaet.herkunftName ? ` laut Home Assistant: ${entitaet.herkunftName}` : ' — von Hand zugeordnet'}
+                  </p>
+                )}
                 <span className="gr-marken">
                     {entitaet.verwendungen.map((verwendung) => (
                     <em key={`${verwendung.quelle}-${verwendung.zweck}`} title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>

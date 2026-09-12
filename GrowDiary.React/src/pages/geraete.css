@@ -103,3 +103,26 @@
   text-transform: uppercase; color: var(--muted);
 }
 .gr-gehoert select { flex: 1; min-width: 0; font: inherit; font-size: var(--fs-text); }
+
+/* Fork AI (forkai.30): verschobene Entitaeten sichtbar machen. */
+.gr-klickbar { cursor: pointer; }
+
+.gr-verschobene { list-style: none; margin: var(--s-3) 0 0; padding: 0; }
+.gr-verschobene li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) 0; border-top: 1px solid var(--hair);
+}
+.gr-verschobene code { flex: 1 1 100%; font-family: var(--font-mono); font-size: var(--fs-micro, .625rem); overflow-wrap: anywhere; }
+.gr-verschobene small { flex: 1; min-width: 0; font-size: var(--fs-micro, .625rem); color: var(--muted); }
+.gr-verschobene button {
+  flex: 0 0 auto; padding: var(--s-1) var(--s-2); border: 1px solid var(--hair-2);
+  border-radius: var(--r-sm); background: transparent; color: var(--accent-text);
+  font: inherit; font-size: var(--fs-micro, .625rem); cursor: pointer;
+}
+
+.gr-verschoben-hinweis { margin: var(--s-1) 0 0; font-size: var(--fs-micro, .625rem); color: var(--muted); }
+.gr-verschoben-hinweis em {
+  font-style: normal; margin-right: var(--s-2); padding: 1px var(--s-2); border-radius: var(--r-sm);
+  border: 1px solid var(--hair-2); color: var(--warn-text);
+  letter-spacing: .05em; text-transform: uppercase;
+}

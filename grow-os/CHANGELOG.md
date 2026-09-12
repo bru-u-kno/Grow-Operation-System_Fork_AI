@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.30
+
+**Fork AI.** Verschobene Entitäten sind jetzt zu sehen — und zu finden.
+
+- Neue Kennzahl **„verschoben"** oben. Ein Tipp klappt die Liste aller von Hand
+  gesetzten Zuordnungen auf: Entität, wo sie jetzt steht, wo Home Assistant sie
+  zählt, und ein **Zurück** je Zeile.
+- An der Entität selbst steht die Marke **„verschoben"** samt Herkunft.
+- **Bugfix:** Eine zugewanderte Entität benennt ihr neues Gerät nicht mehr um.
+  Vorher hieß eine Kamera nach dem Verschieben plötzlich „RDWC CO2 + Light
+  Sensor" — der Name kam von dem Gerät, aus dem die Entität stammte, und die
+  Entität war danach praktisch unauffindbar.
+
 ## 2.0.0-forkai.29
 
 **Fork AI.** „Geräte & Entitäten": eine Zuordnung lässt sich zurücknehmen.

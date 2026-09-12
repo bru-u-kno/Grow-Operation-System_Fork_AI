@@ -47,7 +47,9 @@ public sealed class GeraeteApiController : ApiControllerBase
             g.HardwareItemId,
             g.Entitaeten.Select(e => new GeraetEntitaetDto(
                 e.EntityId,
-                e.Verwendungen.Select(v => new GeraetVerwendungDto(v.Zweck, v.Quelle)).ToList())).ToList()))
+                e.Verwendungen.Select(v => new GeraetVerwendungDto(v.Zweck, v.Quelle)).ToList(),
+                e.Verschoben,
+                e.HerkunftName)).ToList()))
             .ToList();
 
         return Ok(new GeraeteSeiteDto(
@@ -55,7 +57,8 @@ public sealed class GeraeteApiController : ApiControllerBase
             // Eine Rubrik ist ein Fach, kein Geraet — sie faelschte die Zahl.
             zeilen.Count(z => !z.IstRubrik),
             zeilen.Sum(z => z.Entitaeten.Count),
-            zeilen.Count(z => !z.Bestaetigt)));
+            zeilen.Count(z => !z.Bestaetigt),
+            zeilen.Sum(z => z.Entitaeten.Count(e => e.Verschoben))));
     }
 
     /// <summary>
@@ -159,7 +162,13 @@ public sealed record GeraetSpeichernRequest(
 
 public sealed record GeraetVerwendungDto(string Zweck, string Quelle);
 
-public sealed record GeraetEntitaetDto(string EntityId, IReadOnlyList<GeraetVerwendungDto> Verwendungen);
+/// <param name="Verschoben">Von Hand diesem Gerät zugeschlagen.</param>
+/// <param name="HerkunftName">Wohin Home Assistant sie zählt.</param>
+public sealed record GeraetEntitaetDto(
+    string EntityId,
+    IReadOnlyList<GeraetVerwendungDto> Verwendungen,
+    bool Verschoben,
+    string? HerkunftName);
 
 /// <param name="ElternSchluessel">Der Controller, in dessen Port das Gerät steckt.</param>
 /// <param name="Anschluss">Die Steckstelle am Eltern-Gerät, etwa „Port 5".</param>
@@ -184,4 +193,5 @@ public sealed record GeraeteSeiteDto(
     IReadOnlyList<GeraetDto> Geraete,
     int AnzahlGeraete,
     int AnzahlEntitaeten,
-    int AnzahlVermutet);
+    int AnzahlVermutet,
+    int AnzahlVerschoben);

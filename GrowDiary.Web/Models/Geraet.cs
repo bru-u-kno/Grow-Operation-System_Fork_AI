@@ -49,7 +49,13 @@ public sealed record Geraet(
 }
 
 /// <summary>Eine Entität des Geräts samt allem, wofür sie im Fork benutzt wird.</summary>
-public sealed record GeraetEntitaet(string EntityId, IReadOnlyList<GeraetVerwendung> Verwendungen);
+/// <param name="Verschoben">Von Hand diesem Gerät zugeschlagen, nicht von Home Assistant.</param>
+/// <param name="HerkunftName">Das Gerät, zu dem Home Assistant sie zählt — nur bei <paramref name="Verschoben"/>.</param>
+public sealed record GeraetEntitaet(
+    string EntityId,
+    IReadOnlyList<GeraetVerwendung> Verwendungen,
+    bool Verschoben = false,
+    string? HerkunftName = null);
 
 /// <summary>
 /// Wofür eine Entität benutzt wird — „Messgröße EC", „Steuerung CO₂ · Licht-Status".
