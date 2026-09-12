@@ -27,14 +27,16 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly KostenRepository _kosten;
     private readonly SteuerungGeraeteService _geraete;
+    private readonly SteuerungBestandService _bestand;
 
-    public SteuerungApiController(Co2SteuerungService co2, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete)
+    public SteuerungApiController(Co2SteuerungService co2, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand)
     {
         _co2 = co2;
         _ha = ha;
         _haSettings = haSettings;
         _kosten = kosten;
         _geraete = geraete;
+        _bestand = bestand;
     }
 
     // ------------------------------------------------------------ Übersicht
@@ -158,6 +160,30 @@ public sealed class SteuerungApiController : ApiControllerBase
     /// damit in der Oberfläche sichtbar ist, ob hinter einer Rolle wirklich das
     /// gemeinte Gerät hängt.
     /// </summary>
+    /// <summary>
+    /// Was die Steuerung in Home Assistant an eigenen Objekten braucht — und was
+    /// davon fehlt.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (forkai.45): Ohne das zeigt die Seite bei einer fremden
+    /// Installation nur „nicht verfügbar", ohne den Grund zu nennen. Der
+    /// Endpunkt stellt fest und erklärt; angelegt wird hier nichts.
+    /// </remarks>
+    [HttpGet("{modul}/bestand")]
+    public async Task<ActionResult<SteuerungBestandService.Bestandsaufnahme>> Bestand(
+        string modul, CancellationToken ct)
+    {
+        if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
+
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var belegt = _geraete.EntitiesFuerModul(modul)
+            .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+            .Select(p => p.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return Ok(await _bestand.AufnehmenAsync(modul, belegt, settings, ct));
+    }
+
     [HttpGet("geraete")]
     [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<SteuerungGeraeteSeiteDto>> Geraete(CancellationToken ct)
