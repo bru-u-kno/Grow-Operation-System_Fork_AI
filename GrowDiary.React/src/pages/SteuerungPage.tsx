@@ -66,20 +66,6 @@ export default function SteuerungPage() {
 
   return (
     <V1Page eyebrow="Betrieb" title="Steuerung" subtitle="Alle Regelungen des RDWC-Zelts · laufen in Home Assistant">
-      {/* Fork AI (forkai.21): Geraete werden auf EINER Seite zugeordnet — hier steht
-          nur, wie viele Rollen belegt sind, und der Weg dorthin. Doppelte Pflege
-          waere doppelte Wahrheit. */}
-      <div className="st-geraete-zeile">
-        <span>
-          Geräte{' '}
-          <b className={seite.geraeteZugeordnet < seite.geraeteGesamt ? 'is-offen' : undefined}>
-            {seite.geraeteZugeordnet} / {seite.geraeteGesamt}
-          </b>{' '}
-          zugeordnet
-        </span>
-        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
-      </div>
-
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {uebersicht && !uebersicht.haErreichbar && (
         <V1Alert title="Home Assistant antwortet nicht" message="Die Werte unten sind der letzte bekannte Stand. Die Regelung läuft davon unabhängig weiter." />
@@ -202,6 +188,20 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             {m.titel}
           </button>
         ))}
+      </div>
+
+      {/* Fork AI (forkai.21): Geraete werden auf EINER Seite zugeordnet — hier steht
+          nur, wie viele Rollen belegt sind, und der Weg dorthin. Doppelte Pflege
+          waere doppelte Wahrheit. */}
+      <div className="st-geraete-zeile">
+        <span>
+          Geräte{' '}
+          <b className={seite.geraeteZugeordnet < seite.geraeteGesamt ? 'is-offen' : undefined}>
+            {seite.geraeteZugeordnet} / {seite.geraeteGesamt}
+          </b>{' '}
+          zugeordnet
+        </span>
+        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
       </div>
 
       {fehler && <V1Alert tone="critical" message={fehler} />}
