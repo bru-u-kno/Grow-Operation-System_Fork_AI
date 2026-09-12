@@ -35,6 +35,14 @@ type Woche = {
   dosierung: string | null
 }
 
+type Uebergabe = {
+  rolle: string
+  name: string
+  entityId: string
+  wert: string
+  zustand: string
+}
+
 type Plan = {
   growId: number
   growName: string
@@ -47,6 +55,8 @@ type Plan = {
   jetztLabel: string | null
   haltehinweis: string | null
   wochen: Woche[]
+  uebergabe: Uebergabe[]
+  letzteUebergabe: string | null
 }
 
 function Wert({ name, wert }: { name: string; wert: string | null }) {
@@ -76,6 +86,16 @@ function WochenplanPage() {
     }
     void laden()
   }, [])
+
+  async function freigeben(growId: number, rolle: string) {
+    try {
+      await apiFetch(`/api/wochenplan/freigeben/${encodeURIComponent(rolle)}`, { method: 'POST' })
+      setPlaene(await apiFetch<Plan[]>('/api/wochenplan'))
+    } catch {
+      setError('Der Helfer konnte nicht freigegeben werden.')
+    }
+    void growId
+  }
 
   if (loading) return <V1Skeleton rows={6} label="Lade Wochenplan" />
 
@@ -168,6 +188,31 @@ function WochenplanPage() {
                 ))}
               </div>
             </V1Section>
+
+            {plan.uebergabe.length > 0 && (
+              <V1Section title="Übergabe an Home Assistant">
+                <div className="wp-liste">
+                  {plan.uebergabe.map((wert) => (
+                    <div key={wert.rolle} className="wp-zeile">
+                      <span className="wp-zeile-l">
+                        {wert.name}
+                        <span className="wp-leise"> · {wert.wert}</span>
+                      </span>
+                      {wert.zustand === 'folgt dem Plan' ? (
+                        <span className="wp-zeile-w">folgt dem Plan</span>
+                      ) : (
+                        /* Von Hand verstellt: der Plan lässt den Helfer in Ruhe,
+                           bis er hier freigegeben wird. Ohne diesen Knopf bliebe
+                           er für immer stehen — und keiner wüsste, warum. */
+                        <button type="button" className="wp-frei" onClick={() => void freigeben(plan.growId, wert.rolle)}>
+                          von dir gesetzt — freigeben
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </V1Section>
+            )}
           </div>
         )
       })}

@@ -25,6 +25,9 @@ public sealed record WochenplanWocheDto(
     string? Ppfd,
     string? Dosierung);
 
+/// <summary>Ein Wert, den der Sync betreut — für den Block „Übergabe an HA".</summary>
+public sealed record WochenplanUebergabeDto(string Rolle, string Name, string EntityId, string Wert, string Zustand);
+
 /// <summary>Der Plan eines laufenden Durchgangs.</summary>
 public sealed record WochenplanDto(
     int GrowId,
@@ -37,7 +40,9 @@ public sealed record WochenplanDto(
     string? Erntefenster,
     string? JetztLabel,
     string? Haltehinweis,
-    List<WochenplanWocheDto> Wochen);
+    List<WochenplanWocheDto> Wochen,
+    List<WochenplanUebergabeDto> Uebergabe,
+    string? LetzteUebergabe);
 
 /// <summary>
 /// Fork AI: die Seite „Wochenplan" — was der Plan für diesen Durchgang vorgibt.
@@ -58,13 +63,36 @@ public sealed record WochenplanDto(
 [Produces("application/json")]
 public sealed class WochenplanApiController : ApiControllerBase
 {
+    private static readonly Dictionary<string, string> Rollennamen = new()
+    {
+        [WochenplanSyncService.Rollen.WasserTag] = "Chiller Tag",
+        [WochenplanSyncService.Rollen.WasserNacht] = "Chiller Nacht",
+        [WochenplanSyncService.Rollen.RhObergrenze] = "RH-Obergrenze",
+        [WochenplanSyncService.Rollen.Co2Ziel] = "CO₂-Ziel",
+    };
+
     private readonly GrowRepository _grows;
     private readonly KnowledgeBaseLoader _wissen;
+    private readonly WochenplanSyncService _sync;
 
-    public WochenplanApiController(GrowRepository grows, KnowledgeBaseLoader wissen)
+    public WochenplanApiController(GrowRepository grows, KnowledgeBaseLoader wissen, WochenplanSyncService sync)
     {
         _grows = grows;
         _wissen = wissen;
+        _sync = sync;
+    }
+
+    /// <summary>Jetzt übergeben, ohne auf 06:00 oder den Wochenwechsel zu warten.</summary>
+    [HttpPost("uebergeben")]
+    public async Task<ActionResult<object>> Uebergeben(CancellationToken ct)
+        => Ok(new { geschrieben = await _sync.UebergebenAsync(ct) });
+
+    /// <summary>Einen von Hand verstellten Helfer wieder dem Plan überlassen.</summary>
+    [HttpPost("freigeben/{rolle}")]
+    public ActionResult Freigeben(string rolle)
+    {
+        _sync.Freigeben(rolle);
+        return NoContent();
     }
 
     [HttpGet]
@@ -101,7 +129,16 @@ public sealed class WochenplanApiController : ApiControllerBase
                 Erntefenster(grow),
                 jetzt?.Spalte.Label,
                 jetzt is { } j ? Haltehinweis(grow, j.Spalte) : null,
-                wochen));
+                wochen,
+                _sync.Sollwerte()
+                    .Select(u => new WochenplanUebergabeDto(
+                        u.Rolle,
+                        Rollennamen.GetValueOrDefault(u.Rolle, u.Rolle),
+                        u.EntityId,
+                        Zahl(u.Wert),
+                        u.Zustand))
+                    .ToList(),
+                _sync.Stand.LetzterLauf));
         }
 
         return Ok(liste);

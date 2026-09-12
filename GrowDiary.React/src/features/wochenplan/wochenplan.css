@@ -56,3 +56,13 @@
   .wp-zeile.ist-jetzt { background: var(--accent-wash); }
   .wp-zeile.ist-jetzt .wp-zeile-l { color: var(--accent-text); font-weight: 600; }
 }
+
+@layer features {
+  /* Freigabe-Knopf: sieht wie Text aus, weil er selten gebraucht wird und
+     die Zeile nicht dominieren soll. */
+  .wp-frei {
+    border: 1px solid var(--warn); border-radius: 7px; background: transparent;
+    color: var(--warn); padding: 3px 8px;
+    font: 400 var(--fs-klein)/1.2 var(--font-mono); cursor: pointer;
+  }
+}

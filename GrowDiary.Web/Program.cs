@@ -115,6 +115,7 @@ builder.Services.AddSingleton<GeraeteRepository>();
 builder.Services.AddSingleton<HomeAssistantRegistryService>();
 builder.Services.AddScoped<GeraeteUebersichtService>();
 builder.Services.AddScoped<Co2SteuerungService>();
+builder.Services.AddScoped<WochenplanSyncService>(); // Fork AI (forkai.53)
 builder.Services.AddScoped<LichtSteuerungService>();
 // Fork AI (forkai.45): stellt fest, welche Helfer und Automationen einer
 // Steuerung in Home Assistant fehlen.
@@ -146,6 +147,7 @@ builder.Services.AddHostedService<DosingWorker>();
 builder.Services.AddHostedService<KuehlerWorker>();
 builder.Services.AddHostedService<ZaehlerstandWorker>(); // Fork AI (forkai.6)
 builder.Services.AddHostedService<Co2SyncWorker>(); // Fork AI (forkai.20)
+builder.Services.AddHostedService<WochenplanSyncWorker>(); // Fork AI (forkai.53)
 
 var defaultUrls = builder.Configuration["Hosting:DefaultUrls"];
 if (!string.IsNullOrWhiteSpace(defaultUrls))

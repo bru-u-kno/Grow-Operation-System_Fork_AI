@@ -5,6 +5,32 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.53
+
+**Fork AI.** Der Wochenplan schreibt seine Werte jetzt selbst nach Home Assistant.
+
+### Was Sie sehen
+
+- Auf der Seite **Wochenplan** ein neuer Abschnitt „Übergabe an Home Assistant"
+  mit den vier betreuten Werten: Chiller Tag, Chiller Nacht, RH-Obergrenze und
+  CO₂-Ziel — je Zeile der Wert der laufenden Woche und ob er dem Plan folgt.
+- Übergeben wird beim Wechsel der Plan-Woche und einmal täglich um 06:00.
+
+### Ihre Handverstellungen bleiben
+
+Stellen Sie einen dieser Helfer in Home Assistant selbst um, merkt der Fork das
+beim nächsten Lauf: der Wert wird **nicht** überschrieben, sondern als „von dir
+gesetzt" markiert und ausgelassen. Erst ein Klick auf **freigeben** überlässt ihn
+wieder dem Plan. Beim allerersten Lauf schreibt der Dienst gar nichts, sondern
+merkt sich, was in Home Assistant steht — sonst überschriebe er beim Hochfahren
+Einstellungen, die längst stimmen.
+
+### Grenzen
+
+Laufen zwei Durchgänge mit Wochen-Zielen gleichzeitig, wird nichts geschrieben:
+die Helfer gehören dem Zelt, nicht dem Grow, und zwei Pläne würden sich um sie
+streiten. PPFD, Lichtzeiten und Dosiermengen bleiben außen vor.
+
 ## 2.0.0-forkai.52
 
 **Fork AI.** Verständlichere Beschriftung auf der Licht-Seite.
