@@ -24,6 +24,7 @@ import ShoppingListPage from './pages/ShoppingListPage'
 import CuringPage from './pages/CuringPage'
 import KostenPage from './pages/KostenPage'
 import SteuerungPage from './pages/SteuerungPage'
+import GeraetePage from './pages/GeraetePage'
 import SteuerungGeraetePage from './pages/SteuerungGeraetePage'
 import LiveDashboardPage from './pages/LiveDashboardPage'
 import ManualMeasurementPage from './pages/ManualMeasurementPage'
@@ -128,6 +129,7 @@ function App() {
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />
           <Route path="/steuerung/geraete" element={<SteuerungGeraetePage />} />
+          <Route path="/geraete" element={<GeraetePage />} />
           <Route path="/steuerung/:modul" element={<SteuerungPage />} />
           <Route path="/ac-test" element={<AcTestPage />} />
           <Route path="/wasser" element={<WaterProfilePage />} />

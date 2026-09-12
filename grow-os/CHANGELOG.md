@@ -5,6 +5,42 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.22
+
+**Fork AI.** Neue Seite **Geräte & Entitäten** — alles, was der Fork an Home
+Assistant benutzt, an einer Stelle.
+
+### Was Sie sehen
+
+- Menü **Betrieb → Geräte & Entitäten**: eine Zeile je Gerät, Controller tragen
+  ihre Ports eingerückt darunter. Ein Tipp klappt die Entitäten auf, und hinter
+  jeder steht, wofür der Fork sie benutzt — „Messgröße EC", „Steuerung CO2 ·
+  Licht-Status", „Dosierpumpe pH−".
+- Die Einheit ist das **Gerät**, nicht die Entität: der Bluelab Guardian ist
+  eine Zeile mit pH, EC und Wassertemperatur darin, nicht drei. Geräte ohne
+  Entität (CO₂-Flasche, Verschleißteile) stehen trotzdem in der Liste.
+- Eingesammelt wird aus sechs Quellen: Messgrößen des Zelts, Zelt-Technik,
+  Inventar, Dosierpumpen, Steuerungs-Rollen, Stromzähler.
+- Namen und Hierarchie kommen aus Home Assistant. Heißt der Controller dort
+  „RDWC", heißt er hier auch so — die alten Entity-IDs (`klein_abluft_…`)
+  spielen keine Rolle mehr.
+
+### Was noch nicht
+
+Die Seite **liest nur**. Geändert wird weiter dort, wo es heute steht; die
+Marke hinter jeder Entität sagt, wo das ist. Reiter je Gerät (Entitäten,
+Wartung, Verschleiß) folgen.
+
+### Technik
+
+- `GET /api/geraete`; Register über `/api/websocket`
+  (`config/entity_registry/list`, `config/device_registry/list`)
+- Neue Tabellen `ForkGeraete` und `ForkGeraetEntitaeten` für die Korrekturen
+  des Nutzers — leer, solange nichts korrigiert wurde
+- Reihenfolge der Wahrheit: Zuordnung des Nutzers, dann `device_id` /
+  `via_device_id` von Home Assistant, dann die Namensvermutung. Ist der Socket
+  nicht erreichbar, wird es gröber, aber nichts bricht
+
 ## 2.0.0-forkai.21
 
 **Fork AI.** Die Steuerungen fragen ihre Geräte jetzt nach, statt sie fest im

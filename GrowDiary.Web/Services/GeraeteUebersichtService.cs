@@ -33,6 +33,8 @@ public sealed class GeraeteUebersichtService
     private readonly DosingRepository _dosierung;
     private readonly SteuerungGeraeteService _steuerung;
     private readonly KostenSeiteService _kosten;
+    private readonly HomeAssistantRegistryService _register;
+    private readonly HomeAssistantSettingsRepository _haEinstellungen;
 
     public GeraeteUebersichtService(
         GeraeteRepository geraete,
@@ -40,8 +42,12 @@ public sealed class GeraeteUebersichtService
         HardwareRepository hardware,
         DosingRepository dosierung,
         SteuerungGeraeteService steuerung,
-        KostenSeiteService kosten)
+        KostenSeiteService kosten,
+        HomeAssistantRegistryService register,
+        HomeAssistantSettingsRepository haEinstellungen)
     {
+        _register = register;
+        _haEinstellungen = haEinstellungen;
         _geraete = geraete;
         _zelte = zelte;
         _hardware = hardware;
@@ -51,17 +57,19 @@ public sealed class GeraeteUebersichtService
     }
 
     /// <summary>
-    /// Alle Geräte mit ihren Entitäten und deren Verwendungen.
-    /// <paramref name="herkunft"/> kommt aus dem HA-Register; ohne sie greift die
-    /// Namensvermutung (der Abruf folgt im nächsten Schritt).
+    /// Alle Geräte mit ihren Entitäten und deren Verwendungen. Holt die Herkunft aus
+    /// dem HA-Register; ist es nicht erreichbar, greift die Namensvermutung.
     /// </summary>
-    public IReadOnlyList<Geraet> Alle(IReadOnlyDictionary<string, HerkunftEintrag>? herkunft = null)
-        => Zusammenfassen(
+    public async Task<IReadOnlyList<Geraet>> AlleAsync(CancellationToken ct)
+    {
+        var herkunft = await _register.HerkunftAsync(_haEinstellungen.GetEffectiveHomeAssistantSettings(), ct);
+        return Zusammenfassen(
             Verwendungen(),
-            herkunft ?? new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase),
+            herkunft,
             _hardware.GetHardwareItems(),
             _geraete.Geraete(),
             _geraete.Zuordnungen());
+    }
 
     // ------------------------------------------------------- Quellen einsammeln
 

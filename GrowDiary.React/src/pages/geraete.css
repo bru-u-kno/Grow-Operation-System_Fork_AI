@@ -1,0 +1,46 @@
+/* Fork AI (forkai.22): Geräteliste. Nur Tokens, keine eigenen Farbwerte —
+   die Seite soll im hellen wie im dunklen Thema tragen. */
+
+.gr-zahlen { display: flex; gap: var(--s-4); }
+.gr-zahlen div { flex: 1; }
+.gr-zahlen b { display: block; font-size: var(--fs-lg, 1.25rem); font-variant-numeric: tabular-nums; }
+.gr-zahlen b.is-warn { color: var(--warn-text); }
+.gr-zahlen span {
+  display: block; margin-top: var(--s-1); font-size: var(--fs-micro, .625rem);
+  letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+}
+
+.gr-zeile + .gr-zeile { border-top: 1px solid var(--hair); }
+.gr-zeile.is-kind { padding-left: var(--s-4); }
+
+.gr-kopf {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%;
+  padding: var(--s-3) 0; background: none; border: 0; color: inherit;
+  font: inherit; text-align: left; cursor: pointer;
+}
+
+.gr-name { flex: 1; min-width: 0; font-size: var(--fs-text); font-weight: 600; }
+.gr-name small { display: block; margin-top: var(--s-1); font-weight: 400; font-size: var(--fs-micro, .625rem); color: var(--muted); }
+
+.gr-vermutet {
+  margin-left: var(--s-2); padding: 1px var(--s-2); border-radius: var(--r-sm);
+  border: 1px solid var(--hair-2); font-style: normal; font-size: var(--fs-micro, .625rem);
+  letter-spacing: .05em; text-transform: uppercase; color: var(--warn-text);
+}
+
+.gr-pfeil { color: var(--faint); }
+
+.gr-entitaeten { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
+.gr-entitaeten li { padding: var(--s-2) 0; border-top: 1px solid var(--hair); }
+.gr-entitaeten code { font-family: var(--font-mono); font-size: var(--fs-micro, .625rem); color: var(--ink); overflow-wrap: anywhere; }
+
+.gr-marken { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-1); }
+.gr-marken em {
+  font-style: normal; font-size: var(--fs-micro, .625rem); padding: 1px var(--s-2);
+  border-radius: var(--r-sm); background: var(--accent-wash); color: var(--accent-text);
+  border: 1px solid var(--hair-2);
+}
+
+.gr-leer { margin: 0 0 var(--s-3); font-size: var(--fs-micro, .625rem); color: var(--muted); }
+
+.gr-fuss { margin: var(--s-4) 0 0; font-size: var(--fs-micro, .625rem); color: var(--muted); line-height: 1.5; }
