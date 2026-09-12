@@ -43,7 +43,20 @@ public enum BauteilArt
 /// <summary>Ein einzelnes Objekt, das die Steuerung in Home Assistant braucht.</summary>
 /// <param name="Modul">Zu welcher Steuerung es gehört — <c>co2</c>, später andere.</param>
 /// <param name="EntityId">Die volle Entitäts-Id, wie sie nach dem Anlegen heißt.</param>
-/// <param name="Name">Der Anzeigename in Home Assistant.</param>
+/// <param name="Name">
+/// Der Name in Home Assistant — <b>kein</b> Titel für die Oberfläche.
+/// <para>
+/// Home Assistant leitet die Objektkennung aus dem Namen ab: klein, alles
+/// Nicht-Alphanumerische zu Unterstrichen. Der Name muss deshalb genau zu
+/// <see cref="Bauteil.EntityId"/> passen, sonst entsteht ein Helfer unter einer
+/// Kennung, die der Katalog nie findet — und beim nächsten Lauf wird er ein
+/// zweites Mal angelegt. Zwei Namen sehen deshalb ungeschickt aus:
+/// „CO2 Impulsdauer" heißt so, weil die Entität aus einer Zeit stammt, als es
+/// noch keine Obergrenze gab, und „CO2 Canopy Obergrenze" trägt ein Wort, das
+/// auf der Oberfläche nichts zu suchen hat. Gelesen wird ohnehin
+/// <see cref="Bauteil.Zweck"/>.
+/// </para>
+/// </param>
 /// <param name="Art">Was für ein Objekt es ist.</param>
 /// <param name="Zweck">Ein Satz für den Nutzer — warum es das gibt.</param>
 /// <param name="Pflicht">
@@ -109,7 +122,7 @@ public static class SteuerungBauteile
             Min: 20, Max: 300, Schritt: 10, Einheit: "ppm"),
 
         // --- Dosierung ----------------------------------------------------
-        new(Co2, "input_number.co2_impulsdauer", "CO2 Impulsdauer min", BauteilArt.Zahl,
+        new(Co2, "input_number.co2_impulsdauer", "CO2 Impulsdauer", BauteilArt.Zahl,
             "Kürzester Impuls.", Min: 1, Max: 60, Schritt: 1, Einheit: "s"),
         new(Co2, "input_number.co2_impulsdauer_max", "CO2 Impulsdauer max", BauteilArt.Zahl,
             "Längster Impuls. Muss unter der Wächter-Schwelle bleiben.",
@@ -148,7 +161,7 @@ public static class SteuerungBauteile
             Pflicht: false, HaengtAn: BrauchtRh,
             OhneDas: "Ohne Feuchtefühler hat das Klima keinen Vorrang.",
             Min: 0, Max: 10, Schritt: 0.5, Einheit: "%"),
-        new(Co2, "input_number.co2_canopy_obergrenze", "CO2 Blatttemperatur Obergrenze", BauteilArt.Zahl,
+        new(Co2, "input_number.co2_canopy_obergrenze", "CO2 Canopy Obergrenze", BauteilArt.Zahl,
             "Über dieser Blatttemperatur wird nicht dosiert.",
             Pflicht: false, HaengtAn: BrauchtCanopy,
             OhneDas: "Ohne Blattfühler entfällt die Temperaturgrenze.",

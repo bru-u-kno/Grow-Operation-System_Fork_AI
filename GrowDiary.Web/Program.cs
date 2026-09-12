@@ -120,6 +120,8 @@ builder.Services.AddScoped<LichtSteuerungService>();
 // Fork AI (forkai.45): stellt fest, welche Helfer und Automationen einer
 // Steuerung in Home Assistant fehlen.
 builder.Services.AddScoped<SteuerungBestandService>();
+// Fork AI (forkai.58): legt die fehlenden Helfer in Home Assistant an.
+builder.Services.AddScoped<SteuerungHelferService>();
 builder.Services.AddScoped<MischplanService>();
 builder.Services.AddScoped<SopDueService>();
 builder.Services.AddScoped<WasserwechselStandService>();

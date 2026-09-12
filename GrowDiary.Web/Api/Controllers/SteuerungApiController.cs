@@ -29,8 +29,9 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly KostenRepository _kosten;
     private readonly SteuerungGeraeteService _geraete;
     private readonly SteuerungBestandService _bestand;
+    private readonly SteuerungHelferService _helfer;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer)
     {
         _co2 = co2;
         _licht = licht;
@@ -39,6 +40,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         _kosten = kosten;
         _geraete = geraete;
         _bestand = bestand;
+        _helfer = helfer;
     }
 
     // ------------------------------------------------------------ Übersicht
@@ -244,6 +246,39 @@ public sealed class SteuerungApiController : ApiControllerBase
     /// Installation nur „nicht verfügbar", ohne den Grund zu nennen. Der
     /// Endpunkt stellt fest und erklärt; angelegt wird hier nichts.
     /// </remarks>
+    /// <summary>Die fehlenden Helfer einer Steuerung in Home Assistant anlegen.</summary>
+    /// <remarks>
+    /// <para>Fork AI (forkai.58): Legt nur die einfachen Arten an — Zahlen,
+    /// Schalter, Zeitstempel, Zähler. Rechen-Sensoren und Automationen brauchen
+    /// andere Wege und kommen getrennt, weil sie getrennt schiefgehen.</para>
+    /// <para>POST, obwohl nichts im Fork entsteht: Der Aufruf verändert den
+    /// Zustand von Home Assistant und darf nicht durch einen Vorlauf des
+    /// Browsers ausgelöst werden.</para>
+    /// </remarks>
+    [HttpPost("{modul}/helfer")]
+    public async Task<ActionResult<SteuerungHelferService.Bilanz>> HelferAnlegen(
+        string modul, CancellationToken ct)
+    {
+        if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
+
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var belegt = _geraete.EntitiesFuerModul(modul)
+            .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+            .Select(p => p.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var bilanz = await _helfer.AnlegenAsync(modul, belegt, settings, ct);
+        if (!bilanz.Erreichbar)
+        {
+            return Problem(
+                title: "Home Assistant antwortet nicht",
+                detail: "Es wurde nichts angelegt. Ohne Antwort ist nicht zu erkennen, welche Helfer es schon gibt.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        return Ok(bilanz);
+    }
+
     [HttpGet("{modul}/bestand")]
     public async Task<ActionResult<SteuerungBestandService.Bestandsaufnahme>> Bestand(
         string modul, CancellationToken ct)
