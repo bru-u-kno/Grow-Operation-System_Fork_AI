@@ -5,6 +5,28 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.35
+
+**Fork AI.** Formulare und Auswahlfelder im Stil der App statt im Stil des Handys.
+
+### Was Sie sehen
+
+- „Rubrik anlegen" öffnet jetzt ein **Blatt von unten** — dasselbe, das hinter
+  dem grünen Plus schon steckt — statt ein Formular mitten in die Karte zu
+  schieben.
+- **„Gehört zu"** und **„Verschieben nach"** sind keine grauen System-Auswahlen
+  mehr, sondern ein Blatt mit **Suche**, Gruppen (Rubriken / Geräte) und dem
+  Rückweg hervorgehoben ganz oben. Die aktuelle Wahl trägt einen Haken.
+
+### Technik
+
+- `V1Sheet` aus `ErfassenSheet` herausgelöst: gleicher Schleier, Griff, Escape
+  und Fokus, gleiches CSS, nur mit freiem Inhalt. `ErfassenSheet` ist der erste
+  Nutzer und schrumpft auf die Hälfte.
+- `V1Select` darauf aufgesetzt; das geschlossene Feld folgt den Feldregeln aus
+  `primitives.css`. Für zwei, drei feste Möglichkeiten bleibt das native Select
+  richtig — diese Auswahl ist für Listen, in denen man sucht.
+
 ## 2.0.0-forkai.34
 
 **Fork AI.** Auch verschobene **Geräte** zählen als Korrektur.

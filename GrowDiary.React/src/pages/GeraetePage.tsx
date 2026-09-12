@@ -3,6 +3,9 @@ import type { ReactNode } from 'react'
 
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Page, V1Skeleton } from '../components/v1'
+import { V1Select } from '../components/V1Select'
+import type { V1Option } from '../components/V1Select'
+import { V1Sheet } from '../components/V1Sheet'
 import './geraete.css'
 
 /**
@@ -43,6 +46,19 @@ type Seite = {
   anzahlEntitaeten: number
   anzahlVermutet: number
   anzahlVerschoben: number
+}
+
+/** Die Ziele einer Entität: erst der Rückweg, dann Rubriken, dann Geräte. */
+function zielOptionen(alle: Geraet[]): V1Option[] {
+  return [
+    { wert: '', text: '— dorthin, wo Home Assistant sie zählt —', betont: true },
+    ...alle.map((ziel): V1Option => ({
+      wert: ziel.schluessel,
+      text: ziel.name,
+      hinweis: ziel.anschluss,
+      gruppe: ziel.istRubrik ? 'Rubriken' : 'Geräte',
+    })),
+  ]
 }
 
 const QUELLEN: Record<string, string> = {
@@ -280,25 +296,26 @@ export default function GeraetePage() {
           </button>
         )}
         {!geraet.istRubrik && ziele.length > 0 && (
-          <label className="gr-menue-ziel">
-            <span aria-hidden="true">⇄</span>
-            <select
-              value=""
+          <div className="gr-menue-ziel">
+            <V1Select
+              label="Verschieben nach"
+              titel="Verschieben nach"
+              unterzeile={geraet.name}
+              wert={geraet.elternSchluessel ?? ''}
               disabled={speichert}
-              aria-label={`${geraet.name} verschieben`}
-              onChange={(event) => { const ziel = event.target.value; setMenue(null); void verschieben(geraet, ziel) }}
-            >
-              <option value="" disabled>Verschieben nach …</option>
-              {geraet.elternSchluessel && <option value="">— an nichts —</option>}
-              {ziele
-                .filter((ziel) => ziel.schluessel !== geraet.schluessel && ziel.schluessel !== geraet.elternSchluessel)
-                .map((ziel) => (
-                  <option key={ziel.schluessel} value={ziel.schluessel}>
-                    {ziel.istRubrik ? `Rubrik: ${ziel.name}` : ziel.name}
-                  </option>
-                ))}
-            </select>
-          </label>
+              onWahl={(ziel) => { setMenue(null); void verschieben(geraet, ziel) }}
+              optionen={[
+                { wert: '', text: '— an nichts —', betont: true },
+                ...ziele
+                  .filter((ziel) => ziel.schluessel !== geraet.schluessel)
+                  .map((ziel): V1Option => ({
+                    wert: ziel.schluessel,
+                    text: ziel.name,
+                    gruppe: ziel.istRubrik ? 'Rubriken' : 'Controller',
+                  })),
+              ]}
+            />
+          </div>
         )}
         <button type="button" role="menuitem" disabled={speichert} onClick={() => { setMenue(null); void verwerfen(geraet) }}>
           <span aria-hidden="true">↺</span>Korrektur verwerfen
@@ -369,27 +386,9 @@ export default function GeraetePage() {
           </ul>
           </>
         )}
-        {rubrikName === null ? (
-          <div className="gr-knoepfe">
-            <V1Button onClick={() => setRubrikName('')}>Rubrik anlegen</V1Button>
-          </div>
-        ) : (
-          <div className="gr-werkzeug">
-            <input
-              value={rubrikName}
-              autoFocus
-              onChange={(event) => setRubrikName(event.target.value)}
-              aria-label="Name der Rubrik"
-              placeholder="z. B. Kameras"
-            />
-            <div className="gr-knoepfe">
-              <V1Button onClick={() => setRubrikName(null)}>Abbrechen</V1Button>
-              <V1Button variant="primary" disabled={speichert || rubrikName.trim() === ''} onClick={() => void rubrikAnlegen(rubrikName.trim())}>
-                {speichert ? 'Legt an …' : 'Anlegen'}
-              </V1Button>
-            </div>
-          </div>
-        )}
+        <div className="gr-knoepfe">
+          <V1Button onClick={() => setRubrikName('')}>Rubrik anlegen</V1Button>
+        </div>
       </V1Card>
 
       {gruppen.map(({ geraet, kinder }) => {
@@ -450,6 +449,35 @@ export default function GeraetePage() {
           </V1Card>
         )
       })}
+
+      <V1Sheet
+        open={rubrikName !== null}
+        onClose={() => setRubrikName(null)}
+        title="Rubrik anlegen"
+        subtitle="Ein Fach für Geräte, die zusammengehören — etwa alle Kameras."
+        footer={
+          <div className="gr-knoepfe">
+            <V1Button onClick={() => setRubrikName(null)}>Abbrechen</V1Button>
+            <V1Button
+              variant="primary"
+              disabled={speichert || (rubrikName ?? '').trim() === ''}
+              onClick={() => void rubrikAnlegen((rubrikName ?? '').trim())}
+            >
+              {speichert ? 'Legt an …' : 'Anlegen'}
+            </V1Button>
+          </div>
+        }
+      >
+        <label className="v1-field">
+          <span>Name</span>
+          <input
+            value={rubrikName ?? ''}
+            autoFocus
+            onChange={(event) => setRubrikName(event.target.value)}
+            placeholder="z. B. Kameras"
+          />
+        </label>
+      </V1Sheet>
 
       <p className="gr-fuss">
         „Vermutet" heißt: weder Home Assistant noch du habt gesagt, zu welchem Gerät die Entität
@@ -542,22 +570,14 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
             {geraet.entitaeten.map((entitaet) => (
               <li key={entitaet.entityId}>
                 <code>{entitaet.entityId}</code>
-                <label className="gr-gehoert">
-                  <span>Gehört zu</span>
-                <select
-                  className="gr-umhaengen"
-                  value={geraet.schluessel}
-                  aria-label={`${entitaet.entityId} — gehört zu`}
-                  onChange={(event) => aufGeraet(entitaet.entityId, event.target.value)}
-                >
-                  {/* Der Rueckweg gehoert in dieselbe Auswahl: wer hier etwas
-                      verstellt hat, sucht ihn genau hier. */}
-                  <option value="">— dorthin, wo Home Assistant sie zählt —</option>
-                  {alleGeraete.map((ziel) => (
-                    <option key={ziel.schluessel} value={ziel.schluessel}>{ziel.name}</option>
-                  ))}
-                </select>
-                </label>
+                <V1Select
+                  label="Gehört zu"
+                  titel="Gehört zu"
+                  unterzeile={entitaet.entityId}
+                  wert={geraet.schluessel}
+                  onWahl={(ziel) => aufGeraet(entitaet.entityId, ziel)}
+                  optionen={zielOptionen(alleGeraete)}
+                />
                 {entitaet.verschoben && (
                   <p className="gr-verschoben-hinweis">
                     <em>verschoben</em>
