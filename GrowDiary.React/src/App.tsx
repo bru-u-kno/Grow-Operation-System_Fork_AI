@@ -5,6 +5,7 @@ import { GrowScopedSectionPage } from './pages/GrowScopedSectionPage'
 import GettingStartedPage from './pages/GettingStartedPage'
 import DosingPage from './pages/DosingPage'
 import SetpointProfilesPage from './pages/SetpointProfilesPage'
+import WochenplanPage from './pages/WochenplanPage'
 import { CropSteeringPage } from './pages/CropSteeringPage'
 import { AcTestPage } from './pages/AcTestPage'
 import MobilePage from './pages/MobilePage'
@@ -125,6 +126,7 @@ function App() {
           <Route path="/sensoren" element={<HardwarePage />} />
 
           <Route path="/sollwerte" element={<SetpointProfilesPage />} />
+          <Route path="/wochenplan" element={<WochenplanPage />} />
           <Route path="/cropsteering" element={<CropSteeringPage />} />
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />

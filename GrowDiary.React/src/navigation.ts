@@ -102,6 +102,9 @@ export const navGroups: NavGroup[] = [
       { to: '/geraete', label: 'Geräte & Entitäten', end: true, icon: '⧉', short: 'Geräte', keywords: 'entität entity home assistant zuordnung controller port sensor steckdose gerät hardware ha mapping' },
       { to: '/regeln', label: 'Regeln & Automatik', end: true, icon: '≡', short: 'Regeln', keywords: 'grenzwerte schwellen alarm push zeitplan automation' },
       { to: '/sollwerte', label: 'Sollwert-Profile', end: true, icon: '◈', short: 'Sollwerte', keywords: 'zielwerte setpoints profil rdwc dwc phasen erfahrung eigene werte' },
+      // Fork AI (forkai.47): steht direkt hinter den Profilen, weil es die
+      // Ebene darueber ist — das Profil gilt je Phase, der Plan je Woche.
+      { to: '/wochenplan', label: 'Wochenplan', end: true, icon: '▦', short: 'Wochenplan', keywords: 'woche wochen plan duengeplan feed chart skx flip vegi bluete ernte klima zielwerte verlauf' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier

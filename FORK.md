@@ -75,6 +75,7 @@ Nicht gangbar sind zwei naheliegende Wege, beide ausprobiert: eine
 Sitzungs-Cookie, und `kiosk-mode` blendet nur Kopfzeilen von
 Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 | forkai.46 | **Klima je Woche**: `FeedChartColumn` trägt zusätzlich Wasser Tag/Nacht, VPD, CO₂, PPFD, RH max und Lufttemperatur; `MitFeedchart` legt sie über das Phasenprofil, SKX-Chart für alle 14 Spalten befüllt | wirkt überall, wo das Zielband gilt | `Services/Knowledge/Schema/NutrientProgramDefinition.cs`, `Services/MischplanService.cs`, `wwwroot/knowledge-defaults/nutrient-programs/skx-canna-aqua.json` |
+| forkai.47 | Seite **Wochenplan**: laufende Woche mit allen Plan-Werten, Anker (Vegi-Start, Flip, Erntefenster aus den Blütewochen der Sorte), Verlauf und Haltehinweis; liest nur, rechnet nichts eigenes | Betrieb → Wochenplan | `Api/Controllers/WochenplanApiController.cs`, `pages/WochenplanPage.tsx`, `features/wochenplan/wochenplan.css`, `navigation.ts`, `App.tsx`, `docs/referenz/sollwerte-und-wissen.md` |
 
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 

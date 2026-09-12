@@ -1,0 +1,58 @@
+/* Fork AI: Wochenplan-Seite. Nur Tokens; der Akzent markiert die laufende
+   Woche, sonst bleibt die Seite bewusst ruhig — sie wird oft nur ueberflogen. */
+@layer features {
+
+  .wp-jetzt {
+    position: relative;
+    border: 1px solid var(--hair-2); border-radius: var(--r);
+    background: var(--panel); padding: 13px;
+  }
+  .wp-jetzt::before {
+    content: ''; position: absolute; left: 0; top: 10px; bottom: 10px;
+    width: 2px; border-radius: 2px; background: var(--accent);
+  }
+  .wp-jetzt.ist-leer::before { background: var(--hair-2); }
+
+  .wp-kopf {
+    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 8px;
+  }
+  .wp-titel { margin: 0; font: 400 1rem/1.5 var(--font-mono); }
+  .wp-titel b { color: var(--accent-text); font-weight: 600; }
+  .wp-leise { color: var(--faint); }
+  .wp-halt { margin: 4px 0 0; font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--faint); }
+
+  .wp-anker { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .wp-pill {
+    border: 1px solid var(--hair); border-radius: 999px; background: var(--sunk);
+    padding: 5px 10px; font: 400 var(--fs-klein)/1.2 var(--font-mono); color: var(--muted);
+  }
+  .wp-pill b { color: var(--ink); font-weight: 500; }
+
+  .wp-gitter {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 7px; margin-top: 11px;
+  }
+  .wp-zelle {
+    border: 1px solid var(--hair); border-radius: 8px; background: var(--sunk); padding: 7px 9px;
+  }
+  .wp-zelle-n {
+    font: 400 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .wp-zelle-v { font: 400 var(--fs-text)/1.4 var(--font-mono); color: var(--ink); margin-top: 3px; }
+
+  .wp-dosis { margin: 10px 0 0; font: 400 var(--fs-klein)/1.55 var(--font-mono); color: var(--faint); }
+
+  .wp-liste { border: 1px solid var(--hair); border-radius: var(--r); overflow: hidden; }
+  .wp-zeile {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 9px 11px; font: 400 var(--fs-klein)/1.4 var(--font-mono);
+    border-bottom: 1px solid var(--hair);
+  }
+  .wp-zeile:last-child { border-bottom: 0; }
+  .wp-zeile-l { color: var(--ink); }
+  .wp-zeile-w { color: var(--muted); text-align: right; white-space: nowrap; }
+  .wp-zeile.ist-jetzt { background: var(--accent-wash); }
+  .wp-zeile.ist-jetzt .wp-zeile-l { color: var(--accent-text); font-weight: 600; }
+}

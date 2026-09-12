@@ -8,6 +8,7 @@
 | Was | Wo |
 |---|---|
 | Sollwert-Profile | Betrieb → Sollwert-Profile, `/sollwerte` |
+| Wochenplan (Fork AI) | Betrieb → Wochenplan, `/wochenplan` |
 | SOPs & Bibliothek | Wissen → SOPs & Bibliothek, `/wissen` |
 | Einkaufsliste | Wissen → Einkaufsliste, `/einkaufsliste` |
 | Profil als Vorgabe wählen | Hydro-System bearbeiten, `/hydro/new` bzw. `/hydro/:id/edit` |
@@ -65,6 +66,22 @@ verlangen. Kein eigener Datenbestand — die Liste entsteht bei jedem Abruf neu.
 | Gruppen der Einkaufsliste | 4 | `EinkaufslisteService.Reihenfolge`: Messen · Chemie & Dünger · Verbrauch · Werkzeug & Behälter |
 | Wissensdateien | 39 Regeln · 30 Behandlungen · 20 Symptome · 12 Verschleiß · 11 Abläufe · 8 Erreger · 3 Programme · 2 Profile | Verzeichnisse unter `knowledge-defaults/` |
 
+### Der Wochenplan (Fork AI)
+
+Ein Sollwert-Profil gilt je **Phase** — sechs Stufen für einen ganzen Durchgang.
+Das Düngeprogramm gliedert dagegen nach **Woche**, und seit forkai.46 trägt jede
+Wochenspalte nicht nur EC und pH, sondern auch Wasser Tag/Nacht, VPD, CO₂, PPFD,
+RH-Obergrenze und Lufttemperatur. Beim Auflösen legt `MitFeedchart` die Woche über
+das Profil; was die Spalte nicht nennt, bleibt beim Profilwert.
+
+Die Woche selbst wird nicht nach Kalender gezählt, sondern nach Ankern:
+Blütewochen ab dem Flip, Vegi-Wochen ab dem Vegi-Start. Läuft eine Phase über die
+letzte Spalte hinaus — der Normalfall, wenn die Vegi gestreckt wird —, bleibt der
+Plan auf dieser Spalte stehen und sagt es (`gehalten seit Woche N`).
+
+Die Seite `/wochenplan` zeigt das am Stück: die laufende Woche mit allen Werten,
+die Anker darüber und den ganzen Verlauf darunter.
+
 ## Was es bewusst NICHT tut
 
 - **Kein eigenes Profil ist eine Vollkopie.** Sie hätte den Nutzer beim ersten
@@ -103,6 +120,8 @@ verlangen. Kein eigener Datenbestand — die Liste entsteht bei jedem Abruf neu.
 | Einkaufsliste zusammenführen, gruppieren, sortieren | `GrowDiary.Web/Services/EinkaufslisteService.cs` |
 | Zelt-Grenzwert über das Profil legen | `GrowDiary.Web/Services/UserTargets.cs` |
 | Seite `/sollwerte` | `GrowDiary.React/src/pages/SetpointProfilesPage.tsx` |
+| `GET /api/wochenplan`, Seite `/wochenplan` | `GrowDiary.Web/Api/Controllers/WochenplanApiController.cs`, `GrowDiary.React/src/pages/WochenplanPage.tsx` |
+| Klima je Woche über das Phasenprofil legen | `GrowDiary.Web/Services/MischplanService.cs` (`MitFeedchart`) |
 | Profil-Auswahl an Grow und Hydro-System | `GrowDiary.React/src/features/setpoints/ProfileSelect.tsx` |
 | Seiten `/wissen` und `/einkaufsliste` | `GrowDiary.React/src/pages/KnowledgePage.tsx`, `…/ShoppingListPage.tsx` |
 

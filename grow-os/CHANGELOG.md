@@ -5,6 +5,28 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.47
+
+**Fork AI.** Neue Seite: Betrieb → **Wochenplan**.
+
+### Was Sie sehen
+
+- Die laufende Woche mit allen Werten des Düngeprogramms auf einen Blick: EC, pH,
+  Wasser Tag/Nacht, VPD, RH, Lufttemperatur, CO₂, PPFD und die wichtigsten
+  Anmischmengen.
+- Darüber die **Anker**, aus denen sich die Woche ergibt: Vegi-Start, Flip und —
+  sofern die Blütewochen der Sorte hinterlegt sind — das Erntefenster.
+- Darunter der ganze Verlauf, die laufende Woche hervorgehoben. Hält der Plan
+  seine letzte Spalte (gestreckte Vegi), steht es dort.
+- Benutzt ein Grow die Wochen-Ziele nicht, sagt die Seite das gleich oben: die
+  Werte gelten dann nur fürs Anmischen, nicht für Kacheln und Alarme.
+
+### Warum
+
+Die Wochenwerte wirken seit forkai.46 überall, waren aber nirgends am Stück zu
+sehen — EC und pH im Mischplan, das Klima nur indirekt über die Kacheln. Wer
+wissen wollte, was nächste Woche gilt, musste die Wissensdatenbank aufschlagen.
+
 ## 2.0.0-forkai.46
 
 **Fork AI.** Der Wochenplan bringt jetzt auch das Klima mit.
