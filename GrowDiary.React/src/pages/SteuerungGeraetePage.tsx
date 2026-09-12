@@ -4,6 +4,7 @@ import { ApiRequestError, apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
 import type { HomeAssistantEntity } from '../types'
 import type { GeraeteSeite, GeraetZeile } from '../features/steuerung/steuerung-typen'
+import { haWert } from '../utils'
 import '../features/steuerung/steuerung.css'
 
 /**
@@ -255,12 +256,12 @@ function RollenZeile({
           ))}
           {vorschlaege.map((entity) => (
             <option key={entity.entityId} value={entity.entityId}>
-              {entity.friendlyName ?? entity.entityId}{entity.state ? ` · ${entity.state}` : ''}
+              {entity.friendlyName ?? entity.entityId}{entity.state ? ` · ${haWert(entity.state, entity.unitOfMeasurement)}` : ''}
             </option>
           ))}
         </datalist>
         <span className={zeile.gefunden ? 'st-geraet-wert is-ok' : 'st-geraet-wert is-faint'}>
-          {zeile.gefunden ? (zeile.livewert ?? 'gefunden') : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}
+          {zeile.gefunden ? (haWert(zeile.livewert, zeile.einheit) ?? 'gefunden') : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}
         </span>
       </div>
     </V1Field>
@@ -325,7 +326,7 @@ function EigeneGeraete({
           </span>
           <span className="st-eingaben">
             <span className={geraet.gefunden ? 'st-geraet-wert is-ok' : 'st-geraet-wert is-faint'}>
-              {geraet.gefunden ? (geraet.livewert ?? 'gefunden') : 'unbekannt'}
+              {geraet.gefunden ? (haWert(geraet.livewert) ?? 'gefunden') : 'unbekannt'}
             </span>
             <V1Button onClick={() => void loeschen(geraet.name)}>Entfernen</V1Button>
           </span>
