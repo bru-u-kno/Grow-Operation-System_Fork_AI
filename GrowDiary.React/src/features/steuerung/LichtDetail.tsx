@@ -310,10 +310,10 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
               fehler={feldFehler.MaxWiederholungen}
             />
             <V1Switch
-              label="Helfer in Home Assistant mitschreiben"
+              label="Zeiten für eigene Automationen in Home Assistant bereitstellen"
               checked={entwurf.helferSpiegeln}
               onChange={(v) => setz('helferSpiegeln', v)}
-              hint="Hält die vier led_top_*-Helfer aktuell, die die alte Karte im Grow-Dashboard anzeigt. Aus, sobald die Karte weg ist."
+              hint="Nur nötig, wenn eine Automation in Home Assistant die Zeitpläne kennen muss. Dann vier Helfer vom Typ input_datetime anlegen — led_top_zeitplan_veggie_ein und _aus, led_top_zeitplan_blute_ein und _aus — und diesen Schalter einschalten; der Fork hält sie dann aktuell. Für die Bedienung hier ist er nicht nötig."
             />
           </V1Card>
         </V1Section>

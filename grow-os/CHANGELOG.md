@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.52
+
+**Fork AI.** Verständlichere Beschriftung auf der Licht-Seite.
+
+### Was Sie sehen
+
+- Der Schalter unter „Erweitert" hieß „Helfer in Home Assistant mitschreiben"
+  und erklärte sich über die alte Dashboard-Karte, die es nicht mehr gibt. Er
+  heißt jetzt „Zeiten für eigene Automationen in Home Assistant bereitstellen"
+  und sagt, welche vier Helfer dafür nötig wären — und dass er für die Bedienung
+  hier nicht gebraucht wird.
+
 ## 2.0.0-forkai.51
 
 **Fork AI.** Nachbesserung an der Licht-Seite.
