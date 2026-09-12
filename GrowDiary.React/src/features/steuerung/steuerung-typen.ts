@@ -183,3 +183,28 @@ export type GeraeteSeite = {
   module: GeraeteModul[]
   eigene: EigenesGeraet[]
 }
+
+// --------------------------------------------------- Bestand (forkai.45)
+
+/** Wie es um ein einzelnes Bauteil steht — Spiegel von `SteuerungBestandService.Stand`. */
+export type BauteilStand = {
+  entityId: string
+  name: string
+  art: string
+  zweck: string
+  /** `Da` | `Stumm` | `Fehlt` | `Entfaellt` */
+  stand: string
+  pflicht: boolean
+  ohneDas: string | null
+}
+
+export type Bestandsaufnahme = {
+  haErreichbar: boolean
+  eingerichtet: boolean
+  da: number
+  fehlt: number
+  entfaellt: number
+  fehlendeRollen: string[]
+  ausgefalleneFunktionen: string[]
+  bauteile: BauteilStand[]
+}

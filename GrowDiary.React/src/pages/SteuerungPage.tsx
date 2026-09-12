@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
 import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuerung-typen'
-import type { Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
+import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 
@@ -111,6 +111,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const [seite, setSeite] = useState<Co2Seite | null>(null)
   const [entwurf, setEntwurf] = useState<Co2Einstellungen | null>(null)
   const [reiter, setReiter] = useState<Co2Reiter>('ziel')
+  const [bestand, setBestand] = useState<Bestandsaufnahme | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
   const [meldung, setMeldung] = useState<string | null>(null)
@@ -131,6 +132,23 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       }
     }
     void laden()
+    return () => controller.abort()
+  }, [])
+
+  // Fork AI (forkai.45): Was die Steuerung in Home Assistant braucht. Ein
+  // eigener Abruf, damit ein Fehler hier die Seite nicht mitnimmt - fehlende
+  // Bauteile sind ein Hinweis, kein Grund, die Werte zu verbergen.
+  useEffect(() => {
+    const controller = new AbortController()
+    const pruefen = async () => {
+      try {
+        const geladen = await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand', { signal: controller.signal })
+        if (!controller.signal.aborted) setBestand(geladen)
+      } catch {
+        if (!controller.signal.aborted) setBestand(null)
+      }
+    }
+    void pruefen()
     return () => controller.abort()
   }, [])
 
@@ -208,6 +226,19 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       {meldung && <V1Alert tone={meldung.startsWith('Gespeichert und') ? 'ok' : 'warn'} message={meldung} />}
       {!live.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand." />}
 
+
+      {bestand && bestand.haErreichbar && (bestand.fehlt > 0 || bestand.fehlendeRollen.length > 0) && (
+        <V1Alert
+          tone="warn"
+          title={`Noch nicht vollständig eingerichtet — ${bestand.fehlt} von ${bestand.fehlt + bestand.da} Bauteilen fehlen`}
+          message={[
+            bestand.fehlendeRollen.length > 0
+              ? `Nicht zugeordnet: ${bestand.fehlendeRollen.join(', ')}.`
+              : null,
+            bestand.ausgefalleneFunktionen.join(' '),
+          ].filter(Boolean).join(' ')}
+        />
+      )}
       <V1Card>
         <div className="st-jetzt">
           <span className="st-gross">{live.co2Ppm != null ? formatNumber(live.co2Ppm, 0) : '–'}<span>ppm</span></span>
@@ -378,6 +409,26 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               </table>
             </div>
           )}
+        </V1Section>
+      )}
+
+      {bestand && bestand.fehlt > 0 && (
+        <V1Section title="Was in Home Assistant fehlt">
+          <V1Card>
+            {bestand.bauteile.filter((b) => b.stand === 'Fehlt').map((b) => (
+              <div className="st-feldzeile" key={b.entityId}>
+                <span className="st-etikett">
+                  {b.name}
+                  <small>{b.zweck}</small>
+                </span>
+                <span className="st-nurlesen">{b.entityId.split('.')[0]}</span>
+              </div>
+            ))}
+            <p className="st-hinweis">
+              Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Anlegen kann der Fork
+              sie noch nicht — das ist der nächste Schritt.
+            </p>
+          </V1Card>
         </V1Section>
       )}
 
