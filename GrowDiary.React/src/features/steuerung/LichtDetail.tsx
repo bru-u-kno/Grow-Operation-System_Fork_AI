@@ -203,7 +203,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
       {reiter === 'betrieb' && (
         <V1Section title="Betrieb">
           <V1Card>
-            <div className="st-feldzeile">
+            <div className="st-feldzeile is-gestapelt">
               <span className="st-etikett">
                 Betriebsart
                 <small>Der Controller führt sie selbst aus — auch wenn Home Assistant aus ist.</small>
@@ -214,10 +214,13 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
               </div>
             </div>
 
-            <div className="st-feldzeile">
+            <div className="st-feldzeile is-gestapelt">
               <span className="st-etikett">
                 Zeitplan anwenden
-                <small>Schreibt die gespeicherten Zeiten in den Controller und schaltet auf Zeitplan.</small>
+                <small>
+                  Schreibt die Zeiten in den Controller und schaltet auf Zeitplan.
+                  Veggie {entwurf.veggieEin}–{entwurf.veggieAus} · Blüte {entwurf.blueteEin}–{entwurf.blueteAus}
+                </small>
               </span>
               <div className="st-eingaben">
                 <V1Button
@@ -225,19 +228,19 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
                   onClick={() => void befehl('preset', { preset: 'veggie' })}
                   disabled={arbeitet}
                 >
-                  Veggie {entwurf.veggieEin}–{entwurf.veggieAus}
+                  Veggie
                 </V1Button>
                 <V1Button
                   variant={istZeitplan && live.aktivesPreset === 'bluete' ? 'primary' : 'ghost'}
                   onClick={() => void befehl('preset', { preset: 'bluete' })}
                   disabled={arbeitet}
                 >
-                  Blüte {entwurf.blueteEin}–{entwurf.blueteAus}
+                  Blüte
                 </V1Button>
               </div>
             </div>
 
-            <div className="st-feldzeile">
+            <div className="st-feldzeile is-gestapelt">
               <span className="st-etikett">
                 Leistungsstufe
                 <small>1 bis 10. Wirkt sofort, unabhängig von der Betriebsart.</small>

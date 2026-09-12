@@ -71,6 +71,14 @@
   .st-eingaben { flex: 0 0 auto; display: flex; align-items: center; gap: var(--s-2); }
   .st-eingaben input[type='number'] { width: 6rem; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .st-einheit { font-size: var(--fs-etikett); color: var(--faint); }
+
+  /* Fork AI: Zeile mit Knoepfen, die zu breit fuer eine Spalte sind.
+     `.st-eingaben` waechst und schrumpft nicht (flex: 0 0 auto) — bei langen
+     Knopfbeschriftungen quetscht das die Beschriftung links auf einen
+     Buchstaben je Zeile. Gestapelt steht die Beschriftung oben, die Knoepfe
+     darunter und duerfen umbrechen. */
+  .st-feldzeile.is-gestapelt { display: block; }
+  .st-feldzeile.is-gestapelt > .st-eingaben { flex-wrap: wrap; margin-top: var(--s-2); }
   .st-nurlesen { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
   .st-hinweis { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); color: var(--faint); line-height: 1.5; }

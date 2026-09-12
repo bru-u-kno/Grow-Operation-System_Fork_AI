@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.51
+
+**Fork AI.** Nachbesserung an der Licht-Seite.
+
+### Was Sie sehen
+
+- Auf dem Telefon quetschten die breiten Knöpfe die Beschriftung daneben auf
+  einen Buchstaben je Zeile. Beschriftung steht jetzt oben, die Knöpfe darunter
+  und dürfen umbrechen.
+- Die Zeitplan-Knöpfe heißen nur noch **Veggie** und **Blüte**; die Zeiten stehen
+  in der Zeile darüber.
+- Die vier Helfer der alten Dashboard-Karte werden nicht mehr erwartet: Die
+  Karte ist weg, und das Mitschreiben ist ab Werk aus (unter „Erweitert"
+  weiterhin einschaltbar).
+
 ## 2.0.0-forkai.50
 
 **Fork AI.** Das Licht wird jetzt hier bedient, nicht mehr im Grow-Dashboard.

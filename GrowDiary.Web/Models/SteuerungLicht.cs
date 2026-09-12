@@ -46,10 +46,13 @@ public sealed class LichtEinstellungen
 
     /// <summary>
     /// Die vier <c>input_datetime.led_top_zeitplan_*</c>-Helfer mitschreiben.
-    /// Sie speisen die alte Karte im Grow-Dashboard; solange die steht, dürfen
-    /// beide Oberflächen nicht auseinanderlaufen.
     /// </summary>
-    public bool HelferSpiegeln { get; set; } = true;
+    /// <remarks>
+    /// Aus als Vorgabe: die Helfer gehörten zur alten Dashboard-Karte, die es
+    /// nicht mehr gibt. Wer sie noch für eigene Automationen führt, schaltet
+    /// das Mitschreiben unter „Erweitert" wieder ein.
+    /// </remarks>
+    public bool HelferSpiegeln { get; set; }
 }
 
 /// <summary>Ein offener Schreibvorgang: was gewollt war, seit wann, wie oft schon versucht.</summary>
