@@ -83,6 +83,8 @@ Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 | forkai.52 | **Licht → Erweitert**: Schalter für den Helfer-Spiegel neu beschriftet — benennt Zweck (eigene Automationen) und die vier nötigen Helfer statt der entfernten Dashboard-Karte | Betrieb → Steuerung → Licht → Erweitert | `features/steuerung/LichtDetail.tsx` |
 | forkai.53 | **Übergabe an Home Assistant**: Wochenwerte (Chiller Tag/Nacht, RH-Obergrenze, CO₂-Ziel) gehen beim Wochenwechsel und täglich 06:00 an die HA-Helfer; von Hand verstellte Helfer werden erkannt, nicht überschrieben und auf der Seite zum Freigeben angeboten | Betrieb → Wochenplan | `Services/WochenplanSyncService.cs`, `Services/WochenplanSyncWorker.cs`, `Api/Controllers/WochenplanApiController.cs`, `pages/WochenplanPage.tsx`, `Program.cs` |
 
+| forkai.59 | **Alarmgrenzen folgen dem Plan**: der Wochenplan zieht zusätzlich die festen Zelt-Regeln für Lufttemperatur (Planwert ±3 K) und Luftfeuchte nach — beides hat kein Zielband und stand deshalb dauerhaft auf von Hand gesetzten Zahlen | Betrieb → Wochenplan | `Services/WochenplanSyncService.cs`, `Api/Controllers/WochenplanApiController.cs`, `Infrastructure/AlertRuleRepository.cs` (neue Methode `UpdateGrenzen`) |
+
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 
 - `grow-os/config.yaml`: Name, Slug, Image, Version `2.0.0-forkai.N`

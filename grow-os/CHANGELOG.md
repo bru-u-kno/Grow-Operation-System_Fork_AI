@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.59
+
+**Fork AI.** Die Alarmgrenzen für Lufttemperatur und Luftfeuchte wandern jetzt mit
+dem Wochenplan. Beide Messgrößen haben kein Zielband — sie können deshalb nicht auf
+„Plan" stehen und standen bis hierher auf Zahlen, die von Hand eingetragen waren
+(18–29 °C). Der wöchentliche Abgleich zieht sie nun nach: Lufttemperatur als Band um
+den Planwert (±3 K), Luftfeuchte als Obergrenze aus der Wochenspalte. Die Regeln
+bleiben „Fest", nur ihre Zahlen ändern sich. Von Hand verstellte Grenzen lässt der
+Plan in Ruhe — wie bei den Helfern werden sie als „von dir gesetzt" markiert und auf
+der Wochenplan-Seite zum Freigeben angeboten.
+
 ## 2.0.0-forkai.58
 
 **Fork AI.** Der Fork legt die Helfer einer Steuerung jetzt selbst in Home

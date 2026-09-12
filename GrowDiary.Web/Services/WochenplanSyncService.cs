@@ -60,7 +60,36 @@ public sealed class WochenplanSyncService
         public const string WasserNacht = "wasser-nacht";
         public const string RhObergrenze = "rh-obergrenze";
         public const string Co2Ziel = "co2-ziel";
+
+        /// <summary>Untere Alarmgrenze der Zelt-Regel „Lufttemperatur".</summary>
+        public const string LuftUnten = "luft-unten";
+
+        /// <summary>Obere Alarmgrenze der Zelt-Regel „Lufttemperatur".</summary>
+        public const string LuftOben = "luft-oben";
+
+        /// <summary>Obere Alarmgrenze der Zelt-Regel „Luftfeuchte".</summary>
+        public const string FeuchteOben = "feuchte-oben";
     }
+
+    /// <summary>
+    /// Wie weit die Lufttemperatur um den Planwert schwanken darf, bevor die
+    /// Zelt-Regel meldet.
+    /// </summary>
+    /// <remarks>
+    /// Der Plan nennt für die Luft EINE Zahl (SKX: 25 °C in der Blüte, 18 °C
+    /// zum Schluss), eine Alarmregel braucht aber zwei. ±3 K ist bewusst
+    /// grosszuegig: die Regel soll anschlagen, wenn etwas kaputt ist, nicht
+    /// wenn die Abluft eine Stufe hinterherhinkt.
+    /// </remarks>
+    public const double LufttemperaturSpanne = 3.0;
+
+    /// <summary>Messgrösse der Zelt-Regeln, die der Plan nachzieht.</summary>
+    private static readonly Dictionary<string, string> Zeltregeln = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [Rollen.LuftUnten] = "temperature",
+        [Rollen.LuftOben] = "temperature",
+        [Rollen.FeuchteOben] = "humidity",
+    };
 
     private static readonly Dictionary<string, string> Standardhelfer = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -73,6 +102,7 @@ public sealed class WochenplanSyncService
     private readonly GrowRepository _grows;
     private readonly KnowledgeBaseLoader _wissen;
     private readonly SteuerungRepository _repo;
+    private readonly AlertRuleRepository _regeln;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly ILogger<WochenplanSyncService> _logger;
@@ -81,6 +111,7 @@ public sealed class WochenplanSyncService
         GrowRepository grows,
         KnowledgeBaseLoader wissen,
         SteuerungRepository repo,
+        AlertRuleRepository regeln,
         HomeAssistantService ha,
         HomeAssistantSettingsRepository haSettings,
         ILogger<WochenplanSyncService> logger)
@@ -88,12 +119,29 @@ public sealed class WochenplanSyncService
         _grows = grows;
         _wissen = wissen;
         _repo = repo;
+        _regeln = regeln;
         _ha = ha;
         _haSettings = haSettings;
         _logger = logger;
     }
 
     public WochenplanSyncStand Stand => _repo.GetEinstellungen<WochenplanSyncStand>(Modul) ?? new WochenplanSyncStand();
+
+    /// <summary>
+    /// Woran eine Rolle hängt: ein Helfer in Home Assistant oder eine
+    /// Zelt-Regel im Fork (<c>zelt:{id}/{metrik}/{grenze}</c>).
+    /// </summary>
+    public string? ZielFuer(string rolle)
+    {
+        if (Zeltregeln.TryGetValue(rolle, out var metrik))
+        {
+            if (Spalte()?.Grow.TentId is not { } zeltId) return null;
+            var grenze = rolle == Rollen.LuftUnten ? "min" : "max";
+            return $"zelt:{zeltId}/{metrik}/{grenze}";
+        }
+
+        return HelferFuer(rolle);
+    }
 
     /// <summary>Welcher Helfer welche Rolle hat — Standard, sofern nichts zugeordnet ist.</summary>
     public string? HelferFuer(string rolle)
@@ -107,7 +155,7 @@ public sealed class WochenplanSyncService
     public void Freigeben(string rolle)
     {
         var stand = Stand;
-        if (HelferFuer(rolle) is not { } entity) return;
+        if (ZielFuer(rolle) is not { } entity) return;
 
         stand.VonDir.RemoveAll(x => string.Equals(x, entity, StringComparison.OrdinalIgnoreCase));
         stand.Geschrieben.Remove(entity);
@@ -119,11 +167,11 @@ public sealed class WochenplanSyncService
     {
         var stand = Stand;
         var liste = new List<WochenplanUebergabe>();
-        if (Spalte() is not { } spalte) return liste;
+        if (Spalte() is not { } jetzt) return liste;
 
-        foreach (var (rolle, wert) in Werte(spalte))
+        foreach (var (rolle, wert) in Werte(jetzt.Spalte))
         {
-            if (HelferFuer(rolle) is not { } entity) continue;
+            if (ZielFuer(rolle) is not { } entity) continue;
 
             var zustand = stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)
                 ? "von dir gesetzt"
@@ -138,7 +186,8 @@ public sealed class WochenplanSyncService
     /// <summary>Ein Durchlauf: vergleichen, schreiben, Stand fortschreiben.</summary>
     public async Task<int> UebergebenAsync(CancellationToken ct)
     {
-        if (Spalte() is not { } spalte) return 0;
+        if (Spalte() is not { } jetzt) return 0;
+        var (grow, spalte) = jetzt;
 
         var stand = Stand;
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
@@ -147,6 +196,7 @@ public sealed class WochenplanSyncService
 
         foreach (var (rolle, wert) in Werte(spalte))
         {
+            if (Zeltregeln.ContainsKey(rolle)) continue; // eigener Durchgang unten
             if (HelferFuer(rolle) is not { } entity) continue;
             if (stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)) continue;
 
@@ -190,15 +240,95 @@ public sealed class WochenplanSyncService
             geschrieben++;
         }
 
+        geschrieben += Zeltgrenzen(grow, spalte, stand, ersterLauf);
+
         stand.LetzteSpalte = spalte.Id;
         stand.LetzterLauf = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         _repo.SetEinstellungen(Modul, stand);
         return geschrieben;
     }
 
+    /// <summary>
+    /// Zieht die festen Zelt-Regeln für Lufttemperatur und Luftfeuchte nach.
+    /// </summary>
+    /// <remarks>
+    /// Gleiche Regel wie bei den Helfern: was der Dienst zuletzt geschrieben
+    /// hat, merkt er sich; steht beim naechsten Lauf etwas anderes drin, war es
+    /// ein Mensch und die Grenze bleibt in Ruhe. Regeln auf „Plan" werden nicht
+    /// angefasst — die holen ihre Grenzen ohnehin selbst.
+    /// </remarks>
+    private int Zeltgrenzen(GrowRun grow, FeedChartColumn spalte, WochenplanSyncStand stand, bool ersterLauf)
+    {
+        if (grow.TentId is not { } zeltId) return 0;
+
+        var ziele = Werte(spalte)
+            .Where(x => Zeltregeln.ContainsKey(x.Rolle))
+            .ToDictionary(x => x.Rolle, x => x.Wert, StringComparer.OrdinalIgnoreCase);
+        if (ziele.Count == 0) return 0;
+
+        var regeln = _regeln.GetForTent(zeltId);
+        var geschrieben = 0;
+
+        foreach (var metrik in Zeltregeln.Values.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (regeln.FirstOrDefault(r => string.Equals(r.MetricKey, metrik, StringComparison.OrdinalIgnoreCase)) is not { } regel)
+            {
+                continue;
+            }
+
+            if (regel.Quelle != Grenzwertquelle.Fest) continue;
+
+            var neuMin = regel.MinValue;
+            var neuMax = regel.MaxValue;
+            var beruehrt = false;
+
+            foreach (var (rolle, metrikDerRolle) in Zeltregeln)
+            {
+                if (!string.Equals(metrikDerRolle, metrik, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!ziele.TryGetValue(rolle, out var ziel)) continue;
+
+                var unten = rolle == Rollen.LuftUnten;
+                var schluessel = $"zelt:{zeltId}/{metrik}/{(unten ? "min" : "max")}";
+                var ist = unten ? regel.MinValue : regel.MaxValue;
+
+                if (stand.VonDir.Contains(schluessel, StringComparer.OrdinalIgnoreCase)) continue;
+
+                if (ersterLauf)
+                {
+                    if (ist is { } vorhanden) stand.Geschrieben[schluessel] = vorhanden;
+                    continue;
+                }
+
+                if (stand.Geschrieben.TryGetValue(schluessel, out var zuletzt)
+                    && ist is { } jetzt
+                    && Math.Abs(jetzt - zuletzt) > 0.001)
+                {
+                    stand.VonDir.Add(schluessel);
+                    _logger.LogInformation(
+                        "Wochenplan: Zelt-Grenze {Schluessel} wurde von Hand auf {Wert} gestellt — der Plan lässt sie in Ruhe.",
+                        schluessel, jetzt);
+                    continue;
+                }
+
+                if (ist is { } unveraendert && Math.Abs(unveraendert - ziel) < 0.001) continue;
+
+                if (unten) neuMin = ziel; else neuMax = ziel;
+                stand.Geschrieben[schluessel] = ziel;
+                beruehrt = true;
+            }
+
+            if (!beruehrt) continue;
+
+            _regeln.UpdateGrenzen(regel.Id, neuMin, neuMax);
+            geschrieben++;
+        }
+
+        return geschrieben;
+    }
+
     /// <summary>Hat die Woche gewechselt, seit zuletzt übergeben wurde?</summary>
     public bool Wochenwechsel()
-        => Spalte() is { } spalte && !string.Equals(spalte.Id, Stand.LetzteSpalte, StringComparison.OrdinalIgnoreCase);
+        => Spalte() is { } jetzt && !string.Equals(jetzt.Spalte.Id, Stand.LetzteSpalte, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Die Spalte des ersten laufenden Durchgangs mit aktiven Wochen-Zielen.
@@ -208,15 +338,24 @@ public sealed class WochenplanSyncService
     /// Liefen zwei Durchgänge mit verschiedenen Programmen, würden sie sich um
     /// dieselben Helfer streiten — dann lieber nichts schreiben.
     /// </remarks>
-    private FeedChartColumn? Spalte()
+    private (GrowRun Grow, FeedChartColumn Spalte)? Spalte()
     {
         var grows = _grows.GetActiveGrows().Where(g => g.UseFeedChartTargets).ToList();
         if (grows.Count != 1) return null;
 
-        return MischplanService.ZielSpalteFuerGrow(grows[0], _wissen.NutrientPrograms)?.Spalte;
+        if (MischplanService.ZielSpalteFuerGrow(grows[0], _wissen.NutrientPrograms)?.Spalte is not { } spalte)
+        {
+            return null;
+        }
+
+        return (grows[0], spalte);
     }
 
-    private static IEnumerable<(string Rolle, double Wert)> Werte(FeedChartColumn spalte)
+    /// <summary>
+    /// Was die Woche vorgibt, je Rolle. Öffentlich, damit die Zuordnung ohne
+    /// Datenbank und ohne Home Assistant geprüft werden kann.
+    /// </summary>
+    public static IEnumerable<(string Rolle, double Wert)> Werte(FeedChartColumn spalte)
     {
         if (spalte.WaterTempDayC is { } tag) yield return (Rollen.WasserTag, tag);
         if (spalte.WaterTempNightC is { } nacht) yield return (Rollen.WasserNacht, nacht);
@@ -226,6 +365,19 @@ public sealed class WochenplanSyncService
         // Die Untergrenze ist die sichere Wahl: sie ist das, was der Plan
         // mindestens sehen will, und überfordert die Anlage an warmen Tagen nicht.
         if (spalte.Co2Min is { } co2) yield return (Rollen.Co2Ziel, co2);
+
+        // Luft und Feuchte haben keinen Helfer, sondern eine Zelt-Regel: das
+        // Zielband kennt beide nicht (HydroTargetValues fuehrt sie nicht), sie
+        // koennen also nicht auf „Plan" stehen. Statt die Regeln alle paar
+        // Wochen von Hand nachzuziehen, tut es der Plan hier — die Regeln
+        // bleiben „Fest", nur ihre Zahlen wandern mit.
+        if (spalte.AirTempC is { } luft)
+        {
+            yield return (Rollen.LuftUnten, luft - LufttemperaturSpanne);
+            yield return (Rollen.LuftOben, luft + LufttemperaturSpanne);
+        }
+
+        if (spalte.RhMax is { } rhMax) yield return (Rollen.FeuchteOben, rhMax);
     }
 
     private static double? Zahl(string? zustand)

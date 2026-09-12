@@ -69,6 +69,9 @@ public sealed class WochenplanApiController : ApiControllerBase
         [WochenplanSyncService.Rollen.WasserNacht] = "Chiller Nacht",
         [WochenplanSyncService.Rollen.RhObergrenze] = "RH-Obergrenze",
         [WochenplanSyncService.Rollen.Co2Ziel] = "CO₂-Ziel",
+        [WochenplanSyncService.Rollen.LuftUnten] = "Alarmgrenze Luft unten",
+        [WochenplanSyncService.Rollen.LuftOben] = "Alarmgrenze Luft oben",
+        [WochenplanSyncService.Rollen.FeuchteOben] = "Alarmgrenze Luftfeuchte",
     };
 
     private readonly GrowRepository _grows;
@@ -134,7 +137,7 @@ public sealed class WochenplanApiController : ApiControllerBase
                     .Select(u => new WochenplanUebergabeDto(
                         u.Rolle,
                         Rollennamen.GetValueOrDefault(u.Rolle, u.Rolle),
-                        u.EntityId,
+                        u.EntityId, // Helfer-Kennung oder zelt:{id}/{metrik}/{grenze}
                         Zahl(u.Wert),
                         u.Zustand))
                     .ToList(),

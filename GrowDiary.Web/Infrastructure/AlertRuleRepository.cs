@@ -70,6 +70,34 @@ public sealed class AlertRuleRepository : RepositoryBase
         transaction.Commit();
     }
 
+    /// <summary>
+    /// Fork AI: zieht die Zahlen einer festen Regel nach, ohne sie neu anzulegen.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ReplaceForTent"/> loescht und schreibt neu — dabei fallen
+    /// <c>LastState</c> und <c>LastNotifiedUtc</c> ALLER Regeln des Zeltes auf
+    /// NULL. Fuer den woechentlichen Nachzug des Wochenplans waere das falsch:
+    /// eine laufende Ueberschreitung gaelte danach als neu und meldete sich ein
+    /// zweites Mal. Deshalb hier ein gezieltes UPDATE nur auf die Grenzen.
+    /// </remarks>
+    public void UpdateGrenzen(int id, double? minValue, double? maxValue)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE TentAlertRules
+               SET MinValue = $minValue,
+                   MaxValue = $maxValue,
+                   UpdatedAtUtc = $now
+             WHERE Id = $id;
+        """;
+        AddNullable(command, "$minValue", minValue);
+        AddNullable(command, "$maxValue", maxValue);
+        command.Parameters.AddWithValue("$now", ToStorageUtc(DateTime.UtcNow));
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
     public void UpdateState(int id, string lastState, DateTime? lastNotifiedUtc)
     {
         using var connection = OpenConnection();
