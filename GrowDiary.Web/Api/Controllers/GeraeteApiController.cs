@@ -42,6 +42,7 @@ public sealed class GeraeteApiController : ApiControllerBase
             g.IstController,
             g.Bestaetigt,
             g.Modell,
+            g.IstRubrik,
             g.TentId,
             g.HardwareItemId,
             g.Entitaeten.Select(e => new GeraetEntitaetDto(
@@ -51,7 +52,8 @@ public sealed class GeraeteApiController : ApiControllerBase
 
         return Ok(new GeraeteSeiteDto(
             zeilen,
-            zeilen.Count,
+            // Eine Rubrik ist ein Fach, kein Geraet — sie faelschte die Zahl.
+            zeilen.Count(z => !z.IstRubrik),
             zeilen.Sum(z => z.Entitaeten.Count),
             zeilen.Count(z => !z.Bestaetigt)));
     }
@@ -101,6 +103,31 @@ public sealed class GeraeteApiController : ApiControllerBase
             HardwareItemId = request.HardwareItemId,
             ElternSchluessel = request.ElternSchluessel?.Trim(),
             Anschluss = string.IsNullOrWhiteSpace(request.Anschluss) ? null : request.Anschluss.Trim(),
+            // Ein Umbenennen darf aus einer Rubrik kein Gerät machen.
+            IstRubrik = schluessel.StartsWith(GeraeteSchluessel.RubrikPraefix, StringComparison.OrdinalIgnoreCase),
+        });
+
+        return await Liste(ct);
+    }
+
+    /// <summary>
+    /// Eine Rubrik anlegen — ein Fach ohne Entitäten, unter das Geräte gehängt
+    /// werden können. Technisch ein Eltern-Gerät, nur ohne Entsprechung in Home
+    /// Assistant.
+    /// </summary>
+    [HttpPost("rubrik")]
+    [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GeraeteSeiteDto>> RubrikAnlegen([FromBody] RubrikRequest request, CancellationToken ct)
+    {
+        var name = request?.Name?.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return BadRequestError("name_missing", "Eine Rubrik braucht einen Namen.");
+
+        var schluessel = GeraeteSchluessel.RubrikSchluessel(name);
+        _repo.GeraetSpeichern(new GespeichertesGeraet
+        {
+            Schluessel = schluessel,
+            Name = name,
+            IstRubrik = true,
         });
 
         return await Liste(ct);
@@ -118,6 +145,8 @@ public sealed class GeraeteApiController : ApiControllerBase
 
 /// <param name="Schluessel">Zielgerät; leer löst die Zuordnung.</param>
 public sealed record EntitaetZuordnenRequest(string? EntityId, string? Schluessel);
+
+public sealed record RubrikRequest(string? Name);
 
 /// <param name="Name">Leer: der Name bleibt, wie er abgeleitet wird (Home Assistant, Inventar).</param>
 /// <param name="ElternSchluessel">Leerer String: hängt ausdrücklich an nichts. Null: nicht ändern.</param>
@@ -143,6 +172,7 @@ public sealed record GeraetDto(
     bool IstController,
     bool Bestaetigt,
     string? Modell,
+    bool IstRubrik,
     int? TentId,
     int? HardwareItemId,
     IReadOnlyList<GeraetEntitaetDto> Entitaeten)

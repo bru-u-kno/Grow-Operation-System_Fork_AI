@@ -39,6 +39,13 @@ public sealed record Geraet(
 
     /// <summary>Hersteller und Modell aus dem HA-Geräteregister, soweit bekannt.</summary>
     public string? Modell { get; init; }
+
+    /// <summary>
+    /// Eine selbst angelegte Rubrik — kein Gerät, sondern ein Fach. „Kameras",
+    /// „Klima". Technisch dasselbe wie ein Eltern-Gerät, nur ohne Entitäten und
+    /// ohne Entsprechung in Home Assistant; deshalb zählt sie nicht als Gerät.
+    /// </summary>
+    public bool IstRubrik { get; init; }
 }
 
 /// <summary>Eine Entität des Geräts samt allem, wofür sie im Fork benutzt wird.</summary>
@@ -79,6 +86,19 @@ public static class GeraetQuellen
 /// </remarks>
 public static class GeraeteSchluessel
 {
+    /// <summary>Namensraum der selbst angelegten Rubriken.</summary>
+    public const string RubrikPraefix = "rubrik:";
+
+    /// <summary>Aus einem Rubriknamen einen stabilen Schlüssel: „Kameras" → „rubrik:kameras".</summary>
+    public static string RubrikSchluessel(string name)
+    {
+        var sauber = new string(name.Trim().ToLowerInvariant()
+            .Select(zeichen => char.IsLetterOrDigit(zeichen) ? zeichen : '-').ToArray())
+            .Trim('-');
+        while (sauber.Contains("--", StringComparison.Ordinal)) sauber = sauber.Replace("--", "-", StringComparison.Ordinal);
+        return RubrikPraefix + (sauber.Length == 0 ? Guid.NewGuid().ToString("N")[..8] : sauber);
+    }
+
     public static string AusEntity(string entityId)
     {
         if (string.IsNullOrWhiteSpace(entityId)) return string.Empty;
@@ -114,6 +134,8 @@ public sealed class GespeichertesGeraet
     public string? ElternSchluessel { get; set; }
     /// <summary>Korrektur des Nutzers: an welcher Steckstelle.</summary>
     public string? Anschluss { get; set; }
+    /// <summary>Ein selbst angelegtes Fach statt eines echten Geräts.</summary>
+    public bool IstRubrik { get; set; }
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 

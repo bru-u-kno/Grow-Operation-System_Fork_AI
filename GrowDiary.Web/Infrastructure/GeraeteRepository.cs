@@ -48,6 +48,7 @@ public sealed class GeraeteRepository : RepositoryBase
                     HardwareItemId INTEGER NULL,
                     ElternSchluessel TEXT NULL,
                     Anschluss TEXT NULL,
+                    IstRubrik INTEGER NOT NULL DEFAULT 0,
                     UpdatedAtUtc TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS ForkGeraetEntitaeten (
@@ -59,6 +60,24 @@ public sealed class GeraeteRepository : RepositoryBase
                     ON ForkGeraetEntitaeten(Schluessel);
                 """;
             command.ExecuteNonQuery();
+
+            // Nachruesten fuer Anlagen, die die Tabelle vor forkai.27 angelegt haben.
+            // SQLite kennt kein "ADD COLUMN IF NOT EXISTS", also erst nachsehen.
+            using var spalten = connection.CreateCommand();
+            spalten.CommandText = "PRAGMA table_info(ForkGeraete);";
+            var vorhanden = new List<string>();
+            using (var leser = spalten.ExecuteReader())
+            {
+                while (leser.Read()) vorhanden.Add(leser.GetString(1));
+            }
+
+            if (!vorhanden.Contains("IstRubrik", StringComparer.OrdinalIgnoreCase))
+            {
+                using var ergaenzen = connection.CreateCommand();
+                ergaenzen.CommandText = "ALTER TABLE ForkGeraete ADD COLUMN IstRubrik INTEGER NOT NULL DEFAULT 0;";
+                ergaenzen.ExecuteNonQuery();
+            }
+
             _schemaEnsured = true;
         }
     }
@@ -68,7 +87,7 @@ public sealed class GeraeteRepository : RepositoryBase
     {
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT Schluessel, Name, TentId, HardwareItemId, ElternSchluessel, Anschluss, UpdatedAtUtc FROM ForkGeraete;";
+        command.CommandText = "SELECT Schluessel, Name, TentId, HardwareItemId, ElternSchluessel, Anschluss, UpdatedAtUtc, IstRubrik FROM ForkGeraete;";
 
         var liste = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase);
         using var leser = command.ExecuteReader();
@@ -83,6 +102,7 @@ public sealed class GeraeteRepository : RepositoryBase
                 ElternSchluessel = leser.IsDBNull(4) ? null : leser.GetString(4),
                 Anschluss = leser.IsDBNull(5) ? null : leser.GetString(5),
                 UpdatedAtUtc = ParseStoredUtcDateTime(leser.GetString(6)) ?? DateTime.UtcNow,
+                IstRubrik = !leser.IsDBNull(7) && leser.GetInt64(7) != 0,
             };
             liste[eintrag.Schluessel] = eintrag;
         }
@@ -108,13 +128,13 @@ public sealed class GeraeteRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkGeraete (Schluessel, Name, TentId, HardwareItemId, ElternSchluessel, Anschluss, UpdatedAtUtc)
-            VALUES ($schluessel, $name, $tent, $hardware, $eltern, $anschluss, $updated)
+            INSERT INTO ForkGeraete (Schluessel, Name, TentId, HardwareItemId, ElternSchluessel, Anschluss, IstRubrik, UpdatedAtUtc)
+            VALUES ($schluessel, $name, $tent, $hardware, $eltern, $anschluss, $rubrik, $updated)
             ON CONFLICT(Schluessel) DO UPDATE SET
                 Name = excluded.Name, TentId = excluded.TentId,
                 HardwareItemId = excluded.HardwareItemId,
                 ElternSchluessel = excluded.ElternSchluessel, Anschluss = excluded.Anschluss,
-                UpdatedAtUtc = excluded.UpdatedAtUtc;
+                IstRubrik = excluded.IstRubrik, UpdatedAtUtc = excluded.UpdatedAtUtc;
             """;
         command.Parameters.AddWithValue("$schluessel", geraet.Schluessel);
         command.Parameters.AddWithValue("$name", geraet.Name);
@@ -122,6 +142,7 @@ public sealed class GeraeteRepository : RepositoryBase
         command.Parameters.AddWithValue("$hardware", (object?)geraet.HardwareItemId ?? DBNull.Value);
         command.Parameters.AddWithValue("$eltern", (object?)geraet.ElternSchluessel ?? DBNull.Value);
         command.Parameters.AddWithValue("$anschluss", (object?)geraet.Anschluss ?? DBNull.Value);
+        command.Parameters.AddWithValue("$rubrik", geraet.IstRubrik ? 1 : 0);
         command.Parameters.AddWithValue("$updated", ToStorageUtc(DateTime.UtcNow));
         command.ExecuteNonQuery();
     }

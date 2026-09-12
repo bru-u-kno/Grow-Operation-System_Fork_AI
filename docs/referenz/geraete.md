@@ -26,6 +26,12 @@ Die Einheit ist das **Gerät**, nicht die Entität. Der Bluelab Guardian ist ein
 Zeile mit pH, EC und Wassertemperatur darin — nicht drei. Ein Controller ist
 eine Zeile, und was in seinen Ports steckt, hängt als eigenes Gerät darunter.
 
+## Rubriken
+
+Selbst angelegte Fächer („Kameras") sind technisch Eltern-Geräte ohne
+Entitäten. Ein Gerät hat **einen** Platz: entweder an seinem Controller oder in
+einer Rubrik. Eine Rubrik zählt nicht als Gerät.
+
 ## Die Zahlen und woher sie kommen
 
 - **Geräte** und **Entitäten**: Zählung aus `GET /api/geraete`.

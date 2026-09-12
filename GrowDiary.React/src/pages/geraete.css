@@ -74,3 +74,10 @@
 .gr-menue button:first-child { border-top: 0; }
 .gr-menue button:disabled { opacity: .5; cursor: default; }
 .gr-menue button span { color: var(--faint); }
+
+.gr-menue-ziel {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-2) var(--s-3); background: var(--surface2); border-top: 1px solid var(--hair);
+}
+.gr-menue-ziel > span { color: var(--faint); }
+.gr-menue-ziel select { flex: 1; min-width: 0; font: inherit; font-size: var(--fs-text); }

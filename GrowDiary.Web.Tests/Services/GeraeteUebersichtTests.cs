@@ -244,6 +244,49 @@ public sealed class GeraeteUebersichtTests
     }
 
     [Fact]
+    public void EineRubrikStehtInDerListeUndTraegtIhreGeraete()
+    {
+        var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["rubrik:kameras"] = new() { Schluessel = "rubrik:kameras", Name = "Kameras", IstRubrik = true },
+            ["ha:cam1"] = new() { Schluessel = "ha:cam1", Name = string.Empty, ElternSchluessel = "rubrik:kameras" },
+        };
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["camera.pro"] = new("camera.pro", "cam1", "Pro", "reolink_1", "fritz", "FRITZ!Box"),
+        };
+
+        var geraete = Bauen(Verwendungen(("camera.pro", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
+
+        var rubrik = Assert.Single(geraete, g => g.Schluessel == "rubrik:kameras");
+        Assert.True(rubrik.IstRubrik);
+        Assert.Empty(rubrik.Entitaeten);
+
+        var kamera = Assert.Single(geraete, g => g.Schluessel == "ha:cam1");
+        Assert.Equal("rubrik:kameras", kamera.ElternSchluessel);
+        Assert.Equal("Pro", kamera.Name);
+    }
+
+    [Fact]
+    public void EinEltenSchluesselInsLeereWirdFallenGelassen()
+    {
+        // Nach dem Loeschen einer Rubrik zeigt das Kind auf einen Geist. Bliebe der
+        // Verweis stehen, verschwaende das Geraet aus der Liste — die zeigt nur
+        // Wurzeln und deren Kinder.
+        var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ha:cam1"] = new() { Schluessel = "ha:cam1", Name = string.Empty, ElternSchluessel = "rubrik:geloescht" },
+        };
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["camera.pro"] = new("camera.pro", "cam1", "Pro", "reolink_1"),
+        };
+
+        var kamera = Assert.Single(Bauen(Verwendungen(("camera.pro", "Kamera")), gespeichert: gespeichert, herkunft: herkunft));
+        Assert.Null(kamera.ElternSchluessel);
+    }
+
+    [Fact]
     public void GeraeteOhneEntitaetBleibenInDerListe()
     {
         // Die CO₂-Flasche hat nichts in Home Assistant, trägt aber Wartung und

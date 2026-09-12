@@ -204,6 +204,16 @@ public sealed class GeraeteUebersichtService
             eimerEintrag.Name ??= eintrag.Name;
         }
 
+        // Selbst angelegte Rubriken sind Faecher ohne Entitaeten — sie entstehen
+        // nur hier, sonst faenden sie sich in keiner Quelle wieder.
+        foreach (var (schluessel, eintrag) in gespeichert.Where(eintrag => eintrag.Value.IstRubrik))
+        {
+            var fach = Holen(schluessel);
+            fach.IstRubrik = true;
+            fach.Bestaetigt = true;
+            fach.Name ??= eintrag.Name;
+        }
+
         var hardwareNachEntity = hardware
             .Where(h => !string.IsNullOrWhiteSpace(h.HaEntityId))
             .GroupBy(h => h.HaEntityId!.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -235,10 +245,21 @@ public sealed class GeraeteUebersichtService
                 Anschluss = eigen?.Anschluss ?? eintrag.Anschluss,
                 IstController = eintrag.IstController,
                 Modell = eintrag.Modell,
+                IstRubrik = eintrag.IstRubrik || (eigen?.IstRubrik ?? false),
             });
         }
 
         // Sortierung: Controller zuerst, darunter ihre Ports der Reihe nach.
+        // Ein Eltern-Schlüssel, den es nicht (mehr) gibt — etwa nach dem Löschen
+        // einer Rubrik — wird still fallen gelassen. Sonst hinge das Kind an einem
+        // Geist: die Liste zeigt nur Wurzeln und ihre Kinder, das Gerät wäre weg.
+        var bekannt = geraete.Select(g => g.Schluessel).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        geraete = geraete
+            .Select(g => g.ElternSchluessel is { } eltern && !bekannt.Contains(eltern)
+                ? g with { ElternSchluessel = null, Anschluss = null }
+                : g)
+            .ToList();
+
         return geraete
             .OrderBy(g => g.ElternSchluessel ?? g.Schluessel, StringComparer.OrdinalIgnoreCase)
             .ThenBy(g => g.ElternSchluessel is null ? 0 : 1)
@@ -262,6 +283,7 @@ public sealed class GeraeteUebersichtService
         public string? ElternSchluessel { get; set; }
         public string? Anschluss { get; set; }
         public string? Modell { get; set; }
+        public bool IstRubrik { get; set; }
     }
 
     private static (string Schluessel, bool Bestaetigt) SchluesselFuer(

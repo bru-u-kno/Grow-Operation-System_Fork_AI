@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.27
+
+**Fork AI.** Eigene **Rubriken** auf „Geräte & Entitäten".
+
+- **Rubrik anlegen** (z. B. „Kameras", „Klima") — ein Fach ohne Entitäten, unter
+  das Geräte gehängt werden. Im ⋯-Menü eines Geräts steht dafür
+  **Verschieben nach …** mit allen Rubriken und Controllern zur Auswahl,
+  dazu „an nichts".
+- Gedacht für Geräte, die Home Assistant zwar irgendwo einsortiert, aber nicht
+  dort, wo sie hingehören — etwa Kameras, die über die FRITZ!Box gemeldet werden.
+- Rubriken zählen nicht als Geräte in der Kopfzeile; sie sind ein Fach.
+
+### Technik
+
+- `POST /api/geraete/rubrik`; Spalte `IstRubrik` in `ForkGeraete` wird bei
+  bestehenden Anlagen nachgerüstet.
+- Ein Eltern-Schlüssel, den es nicht mehr gibt (gelöschte Rubrik), fällt still
+  weg — sonst wäre das Gerät aus der Liste verschwunden, obwohl es noch da ist.
+
 ## 2.0.0-forkai.26
 
 **Fork AI.** **Geräte & Entitäten** wird kompakter.

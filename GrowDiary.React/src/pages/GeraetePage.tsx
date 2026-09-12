@@ -26,6 +26,7 @@ type Geraet = {
   elternSchluessel: string | null
   anschluss: string | null
   istController: boolean
+  istRubrik: boolean
   modell: string | null
   bestaetigt: boolean
   vermutet: boolean
@@ -66,6 +67,7 @@ export default function GeraetePage() {
   // Offenes Aktionsmenue (⋯). Immer nur eines — zwei offene Menues auf einem
   // Handybildschirm sind genau der Platzfresser, den wir loswerden wollten.
   const [menue, setMenue] = useState<string | null>(null)
+  const [rubrikName, setRubrikName] = useState<string | null>(null)
   const [entwurf, setEntwurf] = useState('')
   const [speichert, setSpeichert] = useState(false)
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
@@ -130,6 +132,31 @@ export default function GeraetePage() {
   // Ausgeschrieben statt über `schreiben`: die Zählung der Löschwege sucht nach
   // `method: 'DELETE'` und einem Pfad davor — ein durchgereichter Parameter wäre
   // für sie unsichtbar, und der Knopf gälte als nicht vorhanden.
+  // Ein Gerät in eine Rubrik oder unter einen Controller hängen. Leeres Ziel =
+  // hängt an nichts; der Name bleibt leer, damit HA weiter durchschlägt.
+  const verschieben = (geraet: Geraet, ziel: string) => schreiben(
+    `/api/geraete/${encodeURIComponent(geraet.schluessel)}`, 'PUT',
+    {
+      name: '',
+      elternSchluessel: ziel,
+      anschluss: ziel === '' ? null : geraet.anschluss,
+      tentId: geraet.tentId,
+      hardwareItemId: geraet.hardwareItemId,
+    } satisfies SpeichernRequest,
+  )
+
+  async function rubrikAnlegen(name: string) {
+    setSpeichert(true)
+    try {
+      setSeite(await apiFetch<Seite>('/api/geraete/rubrik', { method: 'POST', body: JSON.stringify({ name }) }))
+      setRubrikName(null)
+    } catch (caught) {
+      setFehler(formatApiError(caught, 'Die Rubrik konnte nicht angelegt werden.'))
+    } finally {
+      setSpeichert(false)
+    }
+  }
+
   async function verwerfen(geraet: Geraet) {
     setSpeichert(true)
     try {
@@ -180,6 +207,11 @@ export default function GeraetePage() {
     )
   }
 
+  // Wohin sich ein Gerät hängen lässt: in eine Rubrik oder unter einen
+  // Controller. Ein Port-Gerät als Ziel wäre eine dritte Ebene — die zeigt die
+  // Liste nicht, also bietet sie es auch nicht an.
+  const ziele = (seite?.geraete ?? []).filter((g) => g.istRubrik || g.istController)
+
   function werkzeug(geraet: Geraet) {
     if (bearbeitet === geraet.schluessel) {
       return (
@@ -212,6 +244,27 @@ export default function GeraetePage() {
             <span aria-hidden="true">⤴</span>Aushängen
           </button>
         )}
+        {!geraet.istRubrik && ziele.length > 0 && (
+          <label className="gr-menue-ziel">
+            <span aria-hidden="true">⇄</span>
+            <select
+              value=""
+              disabled={speichert}
+              aria-label={`${geraet.name} verschieben`}
+              onChange={(event) => { const ziel = event.target.value; setMenue(null); void verschieben(geraet, ziel) }}
+            >
+              <option value="" disabled>Verschieben nach …</option>
+              {geraet.elternSchluessel && <option value="">— an nichts —</option>}
+              {ziele
+                .filter((ziel) => ziel.schluessel !== geraet.schluessel && ziel.schluessel !== geraet.elternSchluessel)
+                .map((ziel) => (
+                  <option key={ziel.schluessel} value={ziel.schluessel}>
+                    {ziel.istRubrik ? `Rubrik: ${ziel.name}` : ziel.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
         <button type="button" role="menuitem" disabled={speichert} onClick={() => { setMenue(null); void verwerfen(geraet) }}>
           <span aria-hidden="true">↺</span>Korrektur verwerfen
         </button>
@@ -231,6 +284,27 @@ export default function GeraetePage() {
           <div><b>{seite.anzahlEntitaeten}</b><span>Entitäten</span></div>
           <div><b className={seite.anzahlVermutet > 0 ? 'is-warn' : undefined}>{seite.anzahlVermutet}</b><span>vermutet</span></div>
         </div>
+        {rubrikName === null ? (
+          <div className="gr-knoepfe">
+            <V1Button onClick={() => setRubrikName('')}>Rubrik anlegen</V1Button>
+          </div>
+        ) : (
+          <div className="gr-werkzeug">
+            <input
+              value={rubrikName}
+              autoFocus
+              onChange={(event) => setRubrikName(event.target.value)}
+              aria-label="Name der Rubrik"
+              placeholder="z. B. Kameras"
+            />
+            <div className="gr-knoepfe">
+              <V1Button onClick={() => setRubrikName(null)}>Abbrechen</V1Button>
+              <V1Button variant="primary" disabled={speichert || rubrikName.trim() === ''} onClick={() => void rubrikAnlegen(rubrikName.trim())}>
+                {speichert ? 'Legt an …' : 'Anlegen'}
+              </V1Button>
+            </div>
+          </div>
+        )}
       </V1Card>
 
       {gruppen.map(({ geraet, kinder }) => {
