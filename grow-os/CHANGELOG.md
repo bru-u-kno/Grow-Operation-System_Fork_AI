@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.32
+
+**Fork AI.** Der Rückweg funktioniert jetzt wirklich.
+
+- **Korrektur verwerfen** löst am Gerät auch die Entitäten, die ihm von Hand
+  zugeschlagen wurden. Vorher blieben die hängen — man verwarf die Korrektur und
+  die zugewanderte Entität stand weiter da.
+- Die Auswahl **„Gehört zu"** hat einen ausdrücklichen Eintrag
+  **„— dorthin, wo Home Assistant sie zählt —"**. Damit braucht man nicht zu
+  wissen, aus welchem Gerät die Entität ursprünglich kam.
+
 ## 2.0.0-forkai.31
 
 **Fork AI.** Die Korrekturliste versteckt sich nicht mehr.

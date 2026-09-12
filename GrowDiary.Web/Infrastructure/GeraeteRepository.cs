@@ -147,14 +147,34 @@ public sealed class GeraeteRepository : RepositoryBase
         command.ExecuteNonQuery();
     }
 
-    /// <summary>Die Korrektur zu einem Gerät verwerfen — es gilt wieder, was abgeleitet wird.</summary>
+    /// <summary>
+    /// Die Korrektur zu einem Gerät verwerfen — es gilt wieder, was abgeleitet wird.
+    /// </summary>
+    /// <remarks>
+    /// Mit dem Gerät fallen auch die Entitäten zurück, die IHM von Hand zugeschlagen
+    /// wurden. Sonst verwirft man die Korrektur und die zugewanderte Entität bleibt
+    /// trotzdem hängen — genau der Fall, in dem niemand mehr einen Rückweg findet.
+    /// </remarks>
     public void GeraetVerwerfen(string schluessel)
     {
         using var connection = Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM ForkGeraete WHERE Schluessel = $schluessel;";
-        command.Parameters.AddWithValue("$schluessel", schluessel);
-        command.ExecuteNonQuery();
+        using var transaktion = connection.BeginTransaction();
+
+        using (var geraet = connection.CreateCommand())
+        {
+            geraet.CommandText = "DELETE FROM ForkGeraete WHERE Schluessel = $schluessel;";
+            geraet.Parameters.AddWithValue("$schluessel", schluessel);
+            geraet.ExecuteNonQuery();
+        }
+
+        using (var entitaeten = connection.CreateCommand())
+        {
+            entitaeten.CommandText = "DELETE FROM ForkGeraetEntitaeten WHERE Schluessel = $schluessel;";
+            entitaeten.Parameters.AddWithValue("$schluessel", schluessel);
+            entitaeten.ExecuteNonQuery();
+        }
+
+        transaktion.Commit();
     }
 
     /// <summary>Eine Entität einem Gerät zuschlagen; leerer Schlüssel löst die Zuordnung.</summary>

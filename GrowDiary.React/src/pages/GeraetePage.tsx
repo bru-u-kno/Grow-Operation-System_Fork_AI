@@ -504,6 +504,9 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
                   aria-label={`${entitaet.entityId} — gehört zu`}
                   onChange={(event) => aufGeraet(entitaet.entityId, event.target.value)}
                 >
+                  {/* Der Rueckweg gehoert in dieselbe Auswahl: wer hier etwas
+                      verstellt hat, sucht ihn genau hier. */}
+                  <option value="">— dorthin, wo Home Assistant sie zählt —</option>
                   {alleGeraete.map((ziel) => (
                     <option key={ziel.schluessel} value={ziel.schluessel}>{ziel.name}</option>
                   ))}
