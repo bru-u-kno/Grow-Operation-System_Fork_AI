@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.33
+
+**Fork AI.** Die gelbe Marke schlägt bis zum Controller durch.
+
+Steht eine von Hand zugeordnete Entität an einem Port, trägt jetzt auch der
+Controller darüber die gelbe Zahl — neben der grünen Zahl seiner angeschlossenen
+Geräte. Vorher sah man sie erst nach dem Aufklappen, also genau dann nicht, wenn
+man suchte.
+
 ## 2.0.0-forkai.32
 
 **Fork AI.** Der Rückweg funktioniert jetzt wirklich.

@@ -372,6 +372,13 @@ export default function GeraetePage() {
           <V1Card key={geraet.schluessel}>
             <GeraetZeile
               geraet={geraet}
+              // Beim Controller zaehlt der ganze Baum mit: sonst sieht man die
+              // gelbe Marke erst nach dem Aufklappen und sucht sie genau dort,
+              // wo man sie nicht vermutet.
+              verschobenImBaum={
+                geraet.entitaeten.filter((e) => e.verschoben).length
+                + kinder.reduce((summe, kind) => summe + kind.entitaeten.filter((e) => e.verschoben).length, 0)
+              }
               werkzeug={werkzeug(geraet)}
               onMenue={() => setMenue(menue === geraet.schluessel ? null : geraet.schluessel)}
               menueOffen={menue === geraet.schluessel}
@@ -399,6 +406,7 @@ export default function GeraetePage() {
               <GeraetZeile
                 key={kind.schluessel}
                 geraet={kind}
+                verschobenImBaum={kind.entitaeten.filter((e) => e.verschoben).length}
                 werkzeug={werkzeug(kind)}
                 onMenue={() => setMenue(menue === kind.schluessel ? null : kind.schluessel)}
                 menueOffen={menue === kind.schluessel}
@@ -422,7 +430,7 @@ export default function GeraetePage() {
   )
 }
 
-function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet, onMenue, menueOffen = false, eingerueckt = false, kinderZahl = 0, zugeklappt = false }: {
+function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet, onMenue, menueOffen = false, eingerueckt = false, kinderZahl = 0, zugeklappt = false, verschobenImBaum = 0 }: {
   geraet: Geraet
   offen: boolean
   onKlick: () => void
@@ -434,6 +442,7 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
   eingerueckt?: boolean
   kinderZahl?: number
   zugeklappt?: boolean
+  verschobenImBaum?: number
 }) {
   const hatKinder = kinderZahl > 0
   // Das Modell faellt weg, wenn es nur den Namen wiederholt: „FRITZ!Box 7590 (UI)
@@ -471,8 +480,15 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
             ⋯
           </span>
         )}
-        {geraet.entitaeten.some((e) => e.verschoben) && (
-          <span className="gr-anzahl is-warn" title="Enthält eine von Hand zugeordnete Entität">!</span>
+        {verschobenImBaum > 0 && (
+          <span
+            className="gr-anzahl is-warn"
+            title={verschobenImBaum === 1
+              ? '1 von Hand zugeordnete Entität — hier oder an einem Port'
+              : `${verschobenImBaum} von Hand zugeordnete Entitäten`}
+          >
+            {verschobenImBaum}
+          </span>
         )}
         {hatKinder && (
           <span className="gr-anzahl" title={kinderZahl === 1 ? '1 angeschlossenes Gerät' : `${kinderZahl} angeschlossene Geräte`}>
