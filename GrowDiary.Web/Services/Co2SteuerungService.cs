@@ -25,7 +25,16 @@ public sealed class Co2SteuerungService
 {
     public const string Modul = "co2";
 
-    /// <summary>Die HA-Helfer, an denen die Regelung hängt — an einer Stelle, damit ein Umbenennen einmal reicht.</summary>
+    /// <summary>
+    /// Die HA-Helfer, die zum Konzept der Regelung gehören: Sollwerte, abgeleitete
+    /// Sensoren, Zähler, die Automation. Die legt die Steuerung selbst an, sie sind
+    /// kein Gerät des Nutzers und bleiben deshalb fest.
+    /// </summary>
+    /// <remarks>
+    /// Die <b>Geräte</b> — Fühler, Steckdose, Abluft, Licht — stehen NICHT hier,
+    /// sondern als Rolle in <see cref="Models.SteuerungGeraeteRollen"/> und werden
+    /// über <see cref="SteuerungGeraeteService"/> aufgelöst (forkai.21).
+    /// </remarks>
     public static class Entitaeten
     {
         public const string ZielWarm = "input_number.co2_zielwert";
@@ -50,17 +59,10 @@ public sealed class Co2SteuerungService
         public const string EndeVorLichtAus = "input_number.co2_ende_vor_licht_aus";
         public const string Automatik = "automation.co2_dosierung_rdwc_port_5";
 
-        public const string Co2 = "sensor.big_co2_light_sensor_co2";
         public const string ZielEffektiv = "sensor.co2_ziel_effektiv";
         public const string Bedarf = "binary_sensor.co2_bedarf";
         public const string KlimaOk = "binary_sensor.co2_klima_ok";
-        public const string Port = "binary_sensor.big_port_5_zustand";
         public const string PortModus = "select.rdwc_venti_aktiver_modus_2";
-        public const string T6Stufe = "number.rdwc_venti_einschaltleistung";
-        public const string Licht = "binary_sensor.klein_abluft_zustand";
-        public const string Canopy = "sensor.big_probe_sensor_sonden_temperatur";
-        public const string Rh = "sensor.big_probe_sensor_sonden_luftfeuchtigkeit";
-        public const string Vpd = "sensor.big_probe_sensor_sonden_vpd";
         public const string Impulse = "counter.co2_impulse_heute";
         public const string GrammProSekunde = "input_number.co2_gramm_pro_sekunde";
         public const string LetzteMessung = "input_number.co2_g_s_letzte_messung";
@@ -78,6 +80,7 @@ public sealed class Co2SteuerungService
     private readonly KnowledgeBaseLoader _wissen;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
+    private readonly SteuerungGeraeteService _geraete;
     private readonly ILogger<Co2SteuerungService> _logger;
 
     public Co2SteuerungService(
@@ -90,6 +93,7 @@ public sealed class Co2SteuerungService
         KnowledgeBaseLoader wissen,
         HomeAssistantService ha,
         HomeAssistantSettingsRepository haSettings,
+        SteuerungGeraeteService geraete,
         ILogger<Co2SteuerungService> logger)
     {
         _repo = repo;
@@ -101,6 +105,7 @@ public sealed class Co2SteuerungService
         _wissen = wissen;
         _ha = ha;
         _haSettings = haSettings;
+        _geraete = geraete;
         _logger = logger;
     }
 
@@ -264,7 +269,14 @@ public sealed class Co2SteuerungService
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
         bool? An(string id) => Text(id) is { } t ? t is "on" or "On" : null;
 
-        var co2 = Zahl(Entitaeten.Co2);
+        // Fork AI (forkai.21): Geräte kommen aus der Zuordnung, nicht aus dem Code.
+        // Eine Rolle ohne Gerät liefert null — dann steht in der Kachel ein „–",
+        // statt dass eine fremde Entität einspringt.
+        var geraete = _geraete.EntitiesFuerModul(Modul);
+        double? ZahlRolle(string rolle) => geraete.TryGetValue(rolle, out var id) && id is not null ? Zahl(id) : null;
+        bool? AnRolle(string rolle) => geraete.TryGetValue(rolle, out var id) && id is not null ? An(id) : null;
+
+        var co2 = ZahlRolle("co2_sensor");
         var ziel = Zahl(Entitaeten.ZielEffektiv);
         return new Co2Live(
             HaErreichbar: entities.Count > 0,
@@ -278,13 +290,13 @@ public sealed class Co2SteuerungService
             NachschubUnterPpm: ziel is { } z2 ? (int)z2 - e.HysteresePpm : null,
             Bedarf: An(Entitaeten.Bedarf),
             KlimaOk: An(Entitaeten.KlimaOk),
-            VentilOffen: An(Entitaeten.Port),
+            VentilOffen: AnRolle("port_zustand"),
             AutomatikAn: An(Entitaeten.Automatik),
-            LichtAn: An(Entitaeten.Licht),
-            T6Stufe: Zahl(Entitaeten.T6Stufe) is { } t6 ? (int)t6 : null,
-            CanopyC: Zahl(Entitaeten.Canopy),
-            RhProzent: Zahl(Entitaeten.Rh),
-            Vpd: Zahl(Entitaeten.Vpd),
+            LichtAn: AnRolle("licht"),
+            T6Stufe: ZahlRolle("abluft_stufe") is { } t6 ? (int)t6 : null,
+            CanopyC: ZahlRolle("canopy"),
+            RhProzent: ZahlRolle("rh"),
+            Vpd: ZahlRolle("vpd"),
             ImpulseHeute: Zahl(Entitaeten.Impulse) is { } n ? (int)n : null,
             GrammProSekunde: Zahl(Entitaeten.GrammProSekunde),
             LetzteMessungGps: Zahl(Entitaeten.LetzteMessung),

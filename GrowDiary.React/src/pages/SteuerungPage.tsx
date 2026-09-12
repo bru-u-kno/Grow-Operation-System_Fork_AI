@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
-import { V1Alert, V1Button, V1Card, V1Empty, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
+import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
 import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
@@ -66,6 +66,20 @@ export default function SteuerungPage() {
 
   return (
     <V1Page eyebrow="Betrieb" title="Steuerung" subtitle="Alle Regelungen des RDWC-Zelts · laufen in Home Assistant">
+      {/* Fork AI (forkai.21): Geraete werden auf EINER Seite zugeordnet — hier steht
+          nur, wie viele Rollen belegt sind, und der Weg dorthin. Doppelte Pflege
+          waere doppelte Wahrheit. */}
+      <div className="st-geraete-zeile">
+        <span>
+          Geräte{' '}
+          <b className={seite.geraeteZugeordnet < seite.geraeteGesamt ? 'is-offen' : undefined}>
+            {seite.geraeteZugeordnet} / {seite.geraeteGesamt}
+          </b>{' '}
+          zugeordnet
+        </span>
+        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
+      </div>
+
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {uebersicht && !uebersicht.haErreichbar && (
         <V1Alert title="Home Assistant antwortet nicht" message="Die Werte unten sind der letzte bekannte Stand. Die Regelung läuft davon unabhängig weiter." />

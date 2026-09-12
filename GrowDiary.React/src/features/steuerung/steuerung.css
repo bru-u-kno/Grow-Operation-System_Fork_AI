@@ -38,6 +38,16 @@
   .st-chip[disabled] { cursor: default; opacity: .6; }
   .st-chip i { width: .45rem; height: .45rem; border-radius: 50%; background: var(--faint); }
   .st-chip i.is-an { background: var(--accent-text); }
+
+  /* Fork AI (forkai.21): Verweis auf die Geraete-Zuordnung. */
+  .st-geraete-zeile {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+    margin-top: var(--s-2); padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--hair); border-radius: var(--r-sm);
+    background: var(--surface); color: var(--muted); font-size: var(--fs-text);
+  }
+  .st-geraete-zeile b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .st-geraete-zeile b.is-offen { color: var(--warn-text); }
   .st-chip i.is-warn { background: var(--warn-text); }
 
   /* --- Statuskarte oben --- */
@@ -77,4 +87,23 @@
   .st-tage td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .st-tage th[scope='row'] { text-align: left; font-weight: 500; }
   .st-tage-huelle { overflow-x: auto; }
+
+  /* Fork AI (forkai.21): Geräte-Zuordnung. Das Feld traegt Entity-IDs, also
+     monospace — sonst liest sich big_port_5 wie ein Fliesstext. */
+  .st-geraet { display: flex; align-items: center; gap: var(--s-2); width: 100%; min-width: 0; }
+  .st-geraet-feld {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--font-mono); font-size: var(--fs-etikett);
+  }
+  .st-geraet-wert {
+    flex: 0 0 auto; max-width: 40%;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: var(--fs-etikett); text-align: right;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .st-geraet-wert.is-ok { color: var(--accent-text); }
+  .st-geraet-wert.is-faint { color: var(--faint); }
+
+  .st-knopfleiste { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
+  .st-knopfleiste > * { flex: 1 1 0; }
 }

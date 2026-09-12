@@ -107,6 +107,8 @@ export type Co2Seite = {
   planPpm: number | null
   planHerkunft: string | null
   haAngenommen: boolean | null
+  geraeteZugeordnet: number
+  geraeteGesamt: number
 }
 
 /** Die Reiter der CO₂-Seite, in der Reihenfolge des freigegebenen Entwurfs. */
@@ -141,4 +143,43 @@ export function wirksameZiele(e: Co2Einstellungen, planPpm: number | null): { wa
 /** Sekunden als Minuten, wie sie in der Tagesliste stehen. */
 export function minuten(sekunden: number): string {
   return `${Math.round(sekunden / 60)} min`
+}
+
+/**
+ * Fork AI (forkai.21): Geräte-Zuordnung. Eine Rolle beschreibt, WAS gebraucht
+ * wird; `eingetragen` ist, was im Feld steht (Entity-ID oder `@Name`),
+ * `entityId` das, worauf es am Ende hinausläuft.
+ */
+export type GeraetZeile = {
+  rolle: string
+  label: string
+  gruppe: string
+  einheit: string | null
+  hinweis: string | null
+  pflicht: boolean
+  domains: string[]
+  vorgabe: string
+  eingetragen: string
+  entityId: string | null
+  livewert: string | null
+  gefunden: boolean
+}
+
+export type GeraeteModul = {
+  modul: string
+  titel: string
+  zeilen: GeraetZeile[]
+}
+
+export type EigenesGeraet = {
+  name: string
+  entityId: string
+  livewert: string | null
+  gefunden: boolean
+}
+
+export type GeraeteSeite = {
+  haErreichbar: boolean
+  module: GeraeteModul[]
+  eigene: EigenesGeraet[]
 }

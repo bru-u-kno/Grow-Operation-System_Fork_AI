@@ -5,6 +5,41 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.21
+
+**Fork AI.** Die Steuerungen fragen ihre Geräte jetzt nach, statt sie fest im
+Code zu haben.
+
+### Was Sie sehen
+
+- Neue Seite **Steuerung → Geräte & Entitäten**: je Regelung eine Liste ihrer
+  Rollen — „CO₂-Sensor", „Dosier-Steckdose · Zustand", „Abluft T6 · Stufe",
+  „Licht-Status" — und dahinter ein Suchfeld. Tippen schlägt passende Entitäten
+  aus Home Assistant vor, gefiltert auf die Domain, die zur Rolle passt; rechts
+  steht der aktuelle Wert, damit sofort sichtbar ist, ob die richtige Entität
+  dranhängt.
+- **Eigene Geräte**: frei benannte Einträge wie „Zuluft Zelt" oder „Außenluft ·
+  Temperatur". Eine Rolle kann mit `@Zuluft Zelt` darauf verweisen. Wird das
+  Gerät getauscht, ändert sich eine Zeile — alle Regelungen ziehen mit.
+- Die **CO₂-Seite** zeigt oben, wie viele Rollen belegt sind, und führt mit
+  einem Tipp zur Zuordnung. Geändert wird nur dort, damit ein Gerät genau eine
+  Wahrheit behält.
+- Nichts müssen Sie eintragen: jede Rolle startet mit der Entität, die vorher
+  im Code stand. Nach dem Update läuft alles unverändert weiter.
+
+### Technik
+
+- Neue Tabelle `ForkSteuerungGeraete` (Modul, Rolle, EntityId); Rollen-Registry
+  in `Models/SteuerungGeraet.cs`, Auflösung in `Services/SteuerungGeraeteService.cs`.
+- `GET/PUT /api/steuerung/geraete`, `POST/DELETE /api/steuerung/geraete/eigene`.
+  `GET /api/steuerung/co2` liefert zusätzlich `geraeteZugeordnet`/`geraeteGesamt`.
+- Ein Verweis, der ins Leere zeigt, gilt als nicht zugeordnet und wird **nicht**
+  still durch die Vorgabe ersetzt — sonst schaltete eine Regelung heimlich auf
+  ein anderes Gerät um.
+- Die Sollwert-Helfer (`input_number.co2_*`), die abgeleiteten Sensoren und die
+  Automation selbst bleiben Konstanten: die legt die Steuerung an, sie sind kein
+  Gerät des Nutzers.
+
 ## 2.0.0-forkai.20
 
 **Fork AI.** Neuer Menüpunkt **Steuerung** — die CO₂-Begasung wird jetzt hier

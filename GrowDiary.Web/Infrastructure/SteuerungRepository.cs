@@ -48,6 +48,13 @@ public sealed class SteuerungRepository : RepositoryBase
                     Json TEXT NOT NULL,
                     UpdatedAtUtc TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS ForkSteuerungGeraete (
+                    Modul TEXT NOT NULL,
+                    Rolle TEXT NOT NULL,
+                    EntityId TEXT NOT NULL,
+                    UpdatedAtUtc TEXT NOT NULL,
+                    PRIMARY KEY (Modul, Rolle)
+                );
                 CREATE TABLE IF NOT EXISTS ForkCo2Tage (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     Datum TEXT NOT NULL UNIQUE,
@@ -130,6 +137,67 @@ public sealed class SteuerungRepository : RepositoryBase
         command.Parameters.AddWithValue("$updated", ToStorageUtc(DateTime.UtcNow));
         command.ExecuteNonQuery();
     }
+
+    // ----------------------------------------------------------------- Geräte
+
+    /// <summary>
+    /// Fork AI (forkai.21): Die Zuordnungen eines Moduls. Fehlt eine Rolle, gilt
+    /// ihre Vorgabe — die Tabelle wird also bewusst NICHT vorbefüllt. Eine
+    /// Vorgabe, die als Datensatz einzieht, friert den Stand vom Tag des Updates
+    /// ein; so wandert sie mit, bis jemand sie bewusst überschreibt.
+    /// </summary>
+    public IReadOnlyList<SteuerungGeraet> GetGeraete(string? modul = null)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = modul is null
+            ? "SELECT Modul, Rolle, EntityId, UpdatedAtUtc FROM ForkSteuerungGeraete;"
+            : "SELECT Modul, Rolle, EntityId, UpdatedAtUtc FROM ForkSteuerungGeraete WHERE Modul = $modul;";
+        if (modul is not null) command.Parameters.AddWithValue("$modul", modul);
+
+        var liste = new List<SteuerungGeraet>();
+        using var leser = command.ExecuteReader();
+        while (leser.Read())
+        {
+            liste.Add(new SteuerungGeraet
+            {
+                Modul = leser.GetString(0),
+                Rolle = leser.GetString(1),
+                EntityId = leser.GetString(2),
+                UpdatedAtUtc = ParseStoredUtcDateTime(leser.GetString(3)) ?? DateTime.UtcNow,
+            });
+        }
+        return liste;
+    }
+
+    /// <summary>Eine Zuordnung setzen; leere Entity-ID löscht sie (dann gilt wieder die Vorgabe).</summary>
+    public void SetGeraet(string modul, string rolle, string? entityId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        if (string.IsNullOrWhiteSpace(entityId))
+        {
+            command.CommandText = "DELETE FROM ForkSteuerungGeraete WHERE Modul = $modul AND Rolle = $rolle;";
+            command.Parameters.AddWithValue("$modul", modul);
+            command.Parameters.AddWithValue("$rolle", rolle);
+            command.ExecuteNonQuery();
+            return;
+        }
+
+        command.CommandText = """
+            INSERT INTO ForkSteuerungGeraete (Modul, Rolle, EntityId, UpdatedAtUtc)
+            VALUES ($modul, $rolle, $entity, $updated)
+            ON CONFLICT(Modul, Rolle) DO UPDATE SET EntityId = excluded.EntityId, UpdatedAtUtc = excluded.UpdatedAtUtc;
+            """;
+        command.Parameters.AddWithValue("$modul", modul);
+        command.Parameters.AddWithValue("$rolle", rolle);
+        command.Parameters.AddWithValue("$entity", entityId.Trim());
+        command.Parameters.AddWithValue("$updated", ToStorageUtc(DateTime.UtcNow));
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>Ein eigenes Gerät entfernen (nur dort erlaubt — Rollen kennen kein Löschen, nur Zurücksetzen).</summary>
+    public void RemoveGeraet(string modul, string rolle) => SetGeraet(modul, rolle, null);
 
     // ---------------------------------------------------------------- CO₂-Tage
 

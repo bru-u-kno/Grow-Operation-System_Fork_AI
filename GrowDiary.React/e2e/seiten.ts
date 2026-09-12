@@ -81,6 +81,11 @@ const DETAILSEITEN = [
   // Er zeigt bewusst eine Leerseite statt ersatzweise CO₂ — auch das gehört
   // geprüft.
   '/steuerung/1',
+
+  // Fork AI (forkai.21): die Geräte-Zuordnung aller Steuerungen. Sie trägt
+  // Suchfelder mit Vorschlägen und rechts Livewerte — also Zahlen, schmale
+  // Zeilen und Kollisionsgefahr auf dem Handy.
+  '/steuerung/geraete',
 ]
 
 /** Jede Seite genau einmal. */

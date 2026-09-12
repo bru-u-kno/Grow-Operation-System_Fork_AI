@@ -26,13 +26,15 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly KostenRepository _kosten;
+    private readonly SteuerungGeraeteService _geraete;
 
-    public SteuerungApiController(Co2SteuerungService co2, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten)
+    public SteuerungApiController(Co2SteuerungService co2, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete)
     {
         _co2 = co2;
         _ha = ha;
         _haSettings = haSettings;
         _kosten = kosten;
+        _geraete = geraete;
     }
 
     // ------------------------------------------------------------ Übersicht
@@ -114,6 +116,7 @@ public sealed class SteuerungApiController : ApiControllerBase
             .Select(a => new KostenArtikelKurzDto(a.Id, a.Name, a.Einheit))
             .ToList();
         var (grow, stage) = _co2.LaufenderGrow();
+        var geraete = _geraete.EntitiesFuerModul(Co2SteuerungService.Modul);
         return Ok(new Co2SeiteDto(
             _co2.Einstellungen,
             live,
@@ -122,7 +125,11 @@ public sealed class SteuerungApiController : ApiControllerBase
             grow?.Name,
             stage is { } st ? GeltendeZieleApiController.StageLabel(st) : null,
             _co2.PlanZielPpm(),
-            _co2.PlanHerkunft()));
+            _co2.PlanHerkunft())
+        {
+            GeraeteZugeordnet = geraete.Values.Count(entity => !string.IsNullOrWhiteSpace(entity)),
+            GeraeteGesamt = geraete.Count,
+        });
     }
 
     [HttpPut("co2")]
@@ -143,6 +150,94 @@ public sealed class SteuerungApiController : ApiControllerBase
         }
         return seite;
     }
+
+    // -------------------------------------------------------------- Geräte
+
+    /// <summary>
+    /// Fork AI (forkai.21): Die Geräte-Zuordnung aller Steuerungen samt Livewert,
+    /// damit in der Oberfläche sichtbar ist, ob hinter einer Rolle wirklich das
+    /// gemeinte Gerät hängt.
+    /// </summary>
+    [HttpGet("geraete")]
+    [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SteuerungGeraeteSeiteDto>> Geraete(CancellationToken ct)
+    {
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var entities = await _ha.GetEntitiesAsync(settings, ct);
+        var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
+
+        string? Wert(string? id) => id is not null && nachId.TryGetValue(id, out var s) ? s.State : null;
+
+        var module = new List<SteuerungGeraeteModulDto>();
+        foreach (var modul in SteuerungGeraeteRollen.Module)
+        {
+            var gespeichert = _geraete.Gespeichert(modul);
+            var aufgeloest = _geraete.EntitiesFuerModul(modul);
+            var zeilen = SteuerungGeraeteRollen.FuerModul(modul).Select(rolle =>
+            {
+                var roh = gespeichert.TryGetValue(rolle.Schluessel, out var eigen) && !string.IsNullOrWhiteSpace(eigen)
+                    ? eigen
+                    : rolle.Vorgabe;
+                var ziel = aufgeloest.TryGetValue(rolle.Schluessel, out var id) ? id : null;
+                return new SteuerungGeraetZeileDto(
+                    rolle.Schluessel, rolle.Label, rolle.Gruppe, rolle.Einheit, rolle.Hinweis,
+                    rolle.Pflicht, rolle.Domains, rolle.Vorgabe, roh, ziel, Wert(ziel),
+                    ziel is not null && nachId.ContainsKey(ziel));
+            }).ToList();
+            module.Add(new SteuerungGeraeteModulDto(modul, ModulTitel(modul), zeilen));
+        }
+
+        var eigene = _geraete.EigeneGeraete()
+            .Select(g => new EigenesGeraetDto(g.Rolle, g.EntityId, Wert(g.EntityId), nachId.ContainsKey(g.EntityId)))
+            .ToList();
+
+        return Ok(new SteuerungGeraeteSeiteDto(entities.Count > 0, module, eigene));
+    }
+
+    [HttpPut("geraete/{modul}")]
+    [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SteuerungGeraeteSeiteDto>> GeraeteSpeichern(string modul, [FromBody] SteuerungGeraeteRequest request, CancellationToken ct)
+    {
+        if (request?.Zuordnungen is null) return BadRequestError("geraete_invalid", "Es wurde nichts übergeben.");
+        if (!SteuerungGeraeteRollen.Module.Contains(modul, StringComparer.OrdinalIgnoreCase))
+            return BadRequestError("modul_unbekannt", $"Die Steuerung „{modul}\" hat keine Geräte-Rollen.");
+
+        var fehler = _geraete.Speichern(modul, request.Zuordnungen);
+        if (fehler.Count > 0)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+        return await Geraete(ct);
+    }
+
+    [HttpPost("geraete/eigene")]
+    [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SteuerungGeraeteSeiteDto>> EigenesGeraet([FromBody] EigenesGeraetRequest request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("geraet_invalid", "Es wurde nichts übergeben.");
+        if (_geraete.EigenesGeraetSpeichern(request.Name ?? string.Empty, request.EntityId ?? string.Empty, request.AlterName) is { } fehler)
+        {
+            ModelState.AddModelError("name", fehler);
+            return ValidationError();
+        }
+        return await Geraete(ct);
+    }
+
+    [HttpDelete("geraete/eigene/{name}")]
+    [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SteuerungGeraeteSeiteDto>> EigenesGeraetLoeschen(string name, CancellationToken ct)
+    {
+        if (_geraete.EigenesGeraetLoeschen(name) is { } fehler)
+            return BadRequestError("geraet_in_benutzung", fehler);
+        return await Geraete(ct);
+    }
+
+    private static string ModulTitel(string modul) => modul switch
+    {
+        "co2" => "CO₂ · Begasung",
+        _ => modul,
+    };
 
     private static Co2TagDto ToDto(Co2Tag t) => new(
         t.Datum, t.Impulse, Math.Round(t.VentilSekunden), Math.Round(t.Gramm), t.ZielErreichtUm, t.Abgeschlossen,
@@ -165,4 +260,34 @@ public sealed record Co2SeiteDto(
 {
     /// <summary>Nach dem Speichern: ob Home Assistant alle Sollwerte angenommen hat (null beim Lesen).</summary>
     public bool? HaAngenommen { get; init; }
+
+    /// <summary>
+    /// Fork AI (forkai.21): Wie viele Rollen dieser Steuerung eine Entität haben.
+    /// Die Seite zeigt damit eine Zeile zur Geräte-Zuordnung — bearbeitet wird dort,
+    /// nicht hier, damit ein Gerät genau eine Wahrheit behält.
+    /// </summary>
+    public int GeraeteZugeordnet { get; init; }
+    public int GeraeteGesamt { get; init; }
 }
+
+public sealed record SteuerungGeraetZeileDto(
+    string Rolle,
+    string Label,
+    string Gruppe,
+    string? Einheit,
+    string? Hinweis,
+    bool Pflicht,
+    IReadOnlyList<string> Domains,
+    string Vorgabe,
+    // Eingetragen: was in der Oberfläche im Feld steht — Entity-ID oder @Verweis.
+    string Eingetragen,
+    // EntityId: worauf es am Ende hinausläuft; null bei leerem oder totem Verweis.
+    string? EntityId,
+    string? Livewert,
+    bool Gefunden);
+
+public sealed record SteuerungGeraeteModulDto(string Modul, string Titel, IReadOnlyList<SteuerungGeraetZeileDto> Zeilen);
+public sealed record EigenesGeraetDto(string Name, string EntityId, string? Livewert, bool Gefunden);
+public sealed record EigenesGeraetRequest(string? Name, string? EntityId, string? AlterName);
+public sealed record SteuerungGeraeteRequest(Dictionary<string, string?> Zuordnungen);
+public sealed record SteuerungGeraeteSeiteDto(bool HaErreichbar, IReadOnlyList<SteuerungGeraeteModulDto> Module, IReadOnlyList<EigenesGeraetDto> Eigene);

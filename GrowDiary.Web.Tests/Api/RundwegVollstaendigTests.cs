@@ -281,6 +281,12 @@ public sealed class RundwegVollstaendigTests
             + "lehnt sie mit 400 ab. Ein Rundweg, der nur Ablehnungen einsammelt, prueft "
             + "nichts. Die Felder fahren Co2SteuerungTests (Rechnung und Grenzen) und die "
             + "Oberflaechen-Erfassung auf /steuerung/co2.",
+        // Fork AI (forkai.21)
+        ["SteuerungGeraeteRequest"] =
+            "Der Rundweg faehrt jedes Feld mit einer festen Probe. Das eine Feld ist "
+            + "ein Woerterbuch Rolle -> Entity-ID; eine Probe wie \"1\" ist weder eine "
+            + "bekannte Rolle noch eine Entity-ID, das PUT lehnt sie mit 400 ab. Die "
+            + "Zuordnung faehrt SteuerungGeraeteTests.",
         // Fork AI (forkai.6)
         ["ArtikelRequest"] =
             "Der Demobestand legt keinen Verbrauchsartikel an; ohne Bestand faehrt der "
