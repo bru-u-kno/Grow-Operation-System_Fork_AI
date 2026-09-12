@@ -4,7 +4,7 @@ import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Skeleton, V1Switch } from '../../components/v1'
 import { V1Select } from '../../components/V1Select'
 import type { V1Option } from '../../components/V1Select'
-import { definitions, groups, suggestionsForMetric, entityOptionLabel } from '../../pages/HomeAssistantPage'
+import { definitions, groups, suggestionsForMetric, entityOptionLabel } from '../home-assistant/messgroessen'
 import type { HomeAssistantEntity } from '../../types'
 import { haWert } from '../../utils'
 
