@@ -56,3 +56,21 @@
 .gr-werkzeug { padding: 0 0 var(--s-3); }
 .gr-werkzeug input { width: 100%; margin-bottom: var(--s-2); }
 .gr-umhaengen { margin-top: var(--s-2); max-width: 100%; }
+
+/* Fork AI (forkai.26): Aktionen hinter ⋯ statt als Knopfreihe — drei Knöpfe je
+   Gerät zogen die Karte auf dem Handy weit auseinander. */
+.gr-mehr {
+  flex: 0 0 auto; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--hair); border-radius: var(--r-sm); color: var(--muted); cursor: pointer;
+}
+.gr-mehr.is-offen { border-color: var(--hair-2); background: var(--accent-wash); color: var(--accent-text); }
+
+.gr-menue { margin: 0 0 var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-sm); overflow: hidden; }
+.gr-menue button {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%;
+  padding: var(--s-3); background: var(--surface2); border: 0; border-top: 1px solid var(--hair);
+  color: var(--ink); font: inherit; font-size: var(--fs-text); text-align: left; cursor: pointer;
+}
+.gr-menue button:first-child { border-top: 0; }
+.gr-menue button:disabled { opacity: .5; cursor: default; }
+.gr-menue button span { color: var(--faint); }

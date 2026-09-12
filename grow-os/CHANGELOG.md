@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.26
+
+**Fork AI.** **Geräte & Entitäten** wird kompakter.
+
+- Die drei Knöpfe je Gerät (Umbenennen, Aushängen, Auf Vorgabe) zogen die Karte
+  auf dem Handy weit auseinander. Sie sitzen jetzt hinter einem **⋯** in der
+  Gerätezeile und erscheinen erst beim Antippen — mit Text, nicht als Symbole.
+- „Auf Vorgabe" heißt jetzt **„Korrektur verwerfen"**. Das sagt, was passiert:
+  Ihre Änderung fällt weg, es gilt wieder, was aus Home Assistant abgeleitet wird.
+- Die Unterzeile wiederholt das Modell nicht mehr, wenn es dem Gerätenamen
+  entspricht („FRITZ!Box 7590 (UI) · Controller · FRITZ!Box 7590 (UI)").
+
 ## 2.0.0-forkai.25
 
 **Fork AI.** **Geräte & Entitäten** lässt sich jetzt korrigieren.

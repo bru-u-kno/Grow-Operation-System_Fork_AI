@@ -63,6 +63,9 @@ export default function GeraetePage() {
   const [laedt, setLaedt] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
   const [bearbeitet, setBearbeitet] = useState<string | null>(null)
+  // Offenes Aktionsmenue (⋯). Immer nur eines — zwei offene Menues auf einem
+  // Handybildschirm sind genau der Platzfresser, den wir loswerden wollten.
+  const [menue, setMenue] = useState<string | null>(null)
   const [entwurf, setEntwurf] = useState('')
   const [speichert, setSpeichert] = useState(false)
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
@@ -197,13 +200,21 @@ export default function GeraetePage() {
       )
     }
 
+    if (menue !== geraet.schluessel) return null
+
     return (
-      <div className="gr-knoepfe">
-        <V1Button onClick={() => { setBearbeitet(geraet.schluessel); setEntwurf(geraet.name) }}>Umbenennen</V1Button>
+      <div className="gr-menue" role="menu" aria-label={`Aktionen für ${geraet.name}`}>
+        <button type="button" role="menuitem" onClick={() => { setMenue(null); setBearbeitet(geraet.schluessel); setEntwurf(geraet.name) }}>
+          <span aria-hidden="true">✎</span>Umbenennen
+        </button>
         {geraet.elternSchluessel && (
-          <V1Button disabled={speichert} onClick={() => void aushaengen(geraet)}>Aushängen</V1Button>
+          <button type="button" role="menuitem" disabled={speichert} onClick={() => { setMenue(null); void aushaengen(geraet) }}>
+            <span aria-hidden="true">⤴</span>Aushängen
+          </button>
         )}
-        <V1Button disabled={speichert} onClick={() => void verwerfen(geraet)}>Auf Vorgabe</V1Button>
+        <button type="button" role="menuitem" disabled={speichert} onClick={() => { setMenue(null); void verwerfen(geraet) }}>
+          <span aria-hidden="true">↺</span>Korrektur verwerfen
+        </button>
       </div>
     )
   }
@@ -229,6 +240,8 @@ export default function GeraetePage() {
             <GeraetZeile
               geraet={geraet}
               werkzeug={werkzeug(geraet)}
+              onMenue={() => setMenue(menue === geraet.schluessel ? null : geraet.schluessel)}
+              menueOffen={menue === geraet.schluessel}
               alleGeraete={seite.geraete}
               aufGeraet={(entityId, ziel) => void schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: ziel })}
               kinderZahl={kinder.length}
@@ -254,6 +267,8 @@ export default function GeraetePage() {
                 key={kind.schluessel}
                 geraet={kind}
                 werkzeug={werkzeug(kind)}
+                onMenue={() => setMenue(menue === kind.schluessel ? null : kind.schluessel)}
+                menueOffen={menue === kind.schluessel}
                 alleGeraete={seite.geraete}
                 aufGeraet={(entityId, ziel) => void schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: ziel })}
                 eingerueckt
@@ -274,11 +289,13 @@ export default function GeraetePage() {
   )
 }
 
-function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet, eingerueckt = false, kinderZahl = 0, zugeklappt = false }: {
+function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet, onMenue, menueOffen = false, eingerueckt = false, kinderZahl = 0, zugeklappt = false }: {
   geraet: Geraet
   offen: boolean
   onKlick: () => void
   werkzeug: ReactNode
+  onMenue?: () => void
+  menueOffen?: boolean
   alleGeraete: Geraet[]
   aufGeraet: (entityId: string, ziel: string) => void
   eingerueckt?: boolean
@@ -286,12 +303,15 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
   zugeklappt?: boolean
 }) {
   const hatKinder = kinderZahl > 0
-  // Traegt die Zeile Ports, steht die Zahl als Pille rechts — die Unterzeile
-  // gehoert dann der Rolle und dem Modell.
+  // Das Modell faellt weg, wenn es nur den Namen wiederholt: „FRITZ!Box 7590 (UI)
+  // · Controller · FRITZ!Box 7590 (UI)" liest sich wie ein Fehler.
+  const modell = geraet.modell && geraet.modell.trim().toLowerCase() !== geraet.name.trim().toLowerCase()
+    ? geraet.modell
+    : null
   const unterzeile = [
     geraet.anschluss,
     geraet.istController ? 'Controller' : null,
-    hatKinder ? geraet.modell : null,
+    hatKinder ? modell : null,
     geraet.entitaeten.length === 0
       ? null
       : geraet.entitaeten.length === 1 ? '1 Entität' : `${geraet.entitaeten.length} Entitäten`,
@@ -305,6 +325,19 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
           {geraet.vermutet && <em className="gr-vermutet">vermutet</em>}
           <small>{unterzeile}</small>
         </span>
+        {onMenue && (
+          <span
+            className={menueOffen ? 'gr-mehr is-offen' : 'gr-mehr'}
+            role="button"
+            tabIndex={0}
+            aria-label={`Aktionen für ${geraet.name}`}
+            aria-expanded={menueOffen}
+            onClick={(event) => { event.stopPropagation(); onMenue() }}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); onMenue() } }}
+          >
+            ⋯
+          </span>
+        )}
         {hatKinder && (
           <span className="gr-anzahl" title={kinderZahl === 1 ? '1 angeschlossenes Gerät' : `${kinderZahl} angeschlossene Geräte`}>
             {kinderZahl}
