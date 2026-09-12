@@ -145,6 +145,57 @@ export function minuten(sekunden: number): string {
   return `${Math.round(sekunden / 60)} min`
 }
 
+// ------------------------------------------------------------------- Licht
+
+export type LichtEinstellungen = {
+  veggieEin: string
+  veggieAus: string
+  blueteEin: string
+  blueteAus: string
+  stufe: number
+  schreibAbstandMs: number
+  verifySekunden: number
+  maxWiederholungen: number
+  helferSpiegeln: boolean
+}
+
+export type LichtLive = {
+  haErreichbar: boolean
+  /** `Off` | `On` | `Schedule` | … — die Betriebsart am Controller. */
+  modus: string | null
+  stufe: number | null
+  einZeit: string | null
+  ausZeit: string | null
+  lichtAn: boolean | null
+  controllerOnline: boolean | null
+  /** `veggie` | `bluete` | null, wenn die Zeiten zu keinem Zeitplan passen. */
+  aktivesPreset: string | null
+  naechsterWechsel: string | null
+  /** Befehle, die der Controller noch nicht übernommen hat. */
+  unbestaetigt: string[]
+  /** Befehle, bei denen auch die Wiederholungen nichts gebracht haben. */
+  fehlgeschlagen: string[]
+  standUtc: string
+}
+
+export type LichtSeite = {
+  einstellungen: LichtEinstellungen
+  live: LichtLive
+  haAngenommen: boolean | null
+  geraeteZugeordnet: number
+  geraeteGesamt: number
+}
+
+/** Die Modus-Werte des AC-Infinity-Selects. */
+export const LICHT_MODI = { aus: 'Off', an: 'On', zeitplan: 'Schedule' } as const
+
+export type LichtReiter = 'betrieb' | 'zeitplan' | 'erweitert'
+export const LICHT_REITER: Array<{ value: LichtReiter; label: string }> = [
+  { value: 'betrieb', label: 'Betrieb' },
+  { value: 'zeitplan', label: 'Zeitplan' },
+  { value: 'erweitert', label: 'Erweitert' },
+]
+
 /**
  * Fork AI (forkai.21): Geräte-Zuordnung. Eine Rolle beschreibt, WAS gebraucht
  * wird; `eingetragen` ist, was im Feld steht (Entity-ID oder `@Name`),

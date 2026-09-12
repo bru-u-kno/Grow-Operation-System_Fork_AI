@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
+import LichtDetail from '../features/steuerung/LichtDetail'
 import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
@@ -65,6 +66,10 @@ export default function SteuerungPage() {
 
   if (modul === 'co2') {
     return <Co2Detail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+  }
+
+  if (modul === 'licht') {
+    return <LichtDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
   // Ein Pfad, den keine Steuerung kennt. Er landet bewusst NICHT ersatzweise
