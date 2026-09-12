@@ -39,8 +39,10 @@ eine Zeile, und was in seinen Ports steckt, hängt als eigenes Gerät darunter.
 
 ## Was es bewusst NICHT tut
 
-- **Nicht ändern.** Diese Etappe schreibt nichts. Wer eine Entität austauschen
-  will, tut es weiter dort, wo sie heute steht; die Marke sagt, wo das ist.
+- **Keine Entität austauschen.** Korrigiert wird hier der Zuschnitt der Geräte
+  (Name, woran etwas hängt, welche Entität dazugehört). Welche Entität eine
+  Messgröße oder eine Steuerungs-Rolle benutzt, steht weiter an ihrer Stelle;
+  die Marke sagt, wo das ist.
 - **Nicht raten, was am Port hängt.** Home Assistant kennt den Port, aber nicht
   das Gerät darin. „Port 5" steht als Steckstelle da; dass dort das CO₂-Ventil
   hängt, weiß nur der Nutzer.

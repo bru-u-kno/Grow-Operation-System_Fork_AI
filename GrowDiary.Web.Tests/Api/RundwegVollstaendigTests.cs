@@ -281,6 +281,17 @@ public sealed class RundwegVollstaendigTests
             + "lehnt sie mit 400 ab. Ein Rundweg, der nur Ablehnungen einsammelt, prueft "
             + "nichts. Die Felder fahren Co2SteuerungTests (Rechnung und Grenzen) und die "
             + "Oberflaechen-Erfassung auf /steuerung/co2.",
+        // Fork AI (forkai.25)
+        ["EntitaetZuordnenRequest"] =
+            "Kein Vertrag mit Feldern, die sich zurueckspielen lassen: der Aufruf ordnet "
+            + "eine Entitaet einem Geraet zu und antwortet mit der GANZEN Liste, nicht mit "
+            + "dem Gesendeten. Ein Rundweg haette nichts zu vergleichen. Geprueft wird die "
+            + "Wirkung in GeraeteUebersichtTests (Zuordnung sticht die Vermutung).",
+        ["GeraetSpeichernRequest"] =
+            "Derselbe Fall: die Antwort ist die neu berechnete Geraeteliste. Dazu traegt "
+            + "ein Feld absichtlich zwei Bedeutungen — ElternSchluessel null heisst 'nicht "
+            + "aendern', leer heisst 'haengt an nichts'; die feste Probe des Rundwegs trifft "
+            + "keine davon. Geprueft wird in GeraeteUebersichtTests.",
         // Fork AI (forkai.21)
         ["SteuerungGeraeteRequest"] =
             "Der Rundweg faehrt jedes Feld mit einer festen Probe. Das eine Feld ist "

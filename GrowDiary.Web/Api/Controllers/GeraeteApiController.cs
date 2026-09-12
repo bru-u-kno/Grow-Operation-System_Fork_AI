@@ -1,3 +1,4 @@
+using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,16 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/geraete")]
 [Produces("application/json")]
-public sealed class GeraeteApiController : ControllerBase
+public sealed class GeraeteApiController : ApiControllerBase
 {
     private readonly GeraeteUebersichtService _geraete;
+    private readonly GeraeteRepository _repo;
 
-    public GeraeteApiController(GeraeteUebersichtService geraete) => _geraete = geraete;
+    public GeraeteApiController(GeraeteUebersichtService geraete, GeraeteRepository repo)
+    {
+        _geraete = geraete;
+        _repo = repo;
+    }
 
     [HttpGet]
     [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
@@ -49,7 +55,78 @@ public sealed class GeraeteApiController : ControllerBase
             zeilen.Sum(z => z.Entitaeten.Count),
             zeilen.Count(z => !z.Bestaetigt)));
     }
+
+    /// <summary>
+    /// Eine Entität einem Gerät zuschlagen — oder mit leerem Schlüssel die Zuordnung
+    /// lösen, dann gilt wieder, was Home Assistant sagt.
+    /// </summary>
+    [HttpPut("entitaet")]
+    [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GeraeteSeiteDto>> EntitaetZuordnen([FromBody] EntitaetZuordnenRequest request, CancellationToken ct)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.EntityId))
+        {
+            return BadRequestError("entity_missing", "Ohne Entität geht es nicht.");
+        }
+
+        _repo.EntitaetZuordnen(request.EntityId.Trim(), request.Schluessel?.Trim());
+        return await Liste(ct);
+    }
+
+    /// <summary>
+    /// Ein Gerät ändern: Name, an welchem Gerät es hängt, an welcher Steckstelle.
+    /// <c>ElternSchluessel</c> leer heißt ausdrücklich „hängt an nichts" — so wird ein
+    /// von Home Assistant geerbter Controller ausgehängt.
+    /// </summary>
+    [HttpPut("{schluessel}")]
+    [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GeraeteSeiteDto>> Speichern(string schluessel, [FromBody] GeraetSpeichernRequest request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("leer", "Es wurde nichts übergeben.");
+
+        if (!string.IsNullOrWhiteSpace(request.ElternSchluessel)
+            && string.Equals(request.ElternSchluessel.Trim(), schluessel, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequestError("eltern_selbst", "Ein Gerät kann nicht an sich selbst hängen.");
+        }
+
+        _repo.GeraetSpeichern(new GespeichertesGeraet
+        {
+            Schluessel = schluessel,
+            // Leerer Name heißt „nicht ändern" — wie beim Eltern-Schlüssel. Sonst
+            // schriebe schon ein Aushängen den aktuellen Namen als Korrektur fest,
+            // und ein späteres Umbenennen in Home Assistant käme nie mehr an.
+            Name = request.Name?.Trim() ?? string.Empty,
+            TentId = request.TentId,
+            HardwareItemId = request.HardwareItemId,
+            ElternSchluessel = request.ElternSchluessel?.Trim(),
+            Anschluss = string.IsNullOrWhiteSpace(request.Anschluss) ? null : request.Anschluss.Trim(),
+        });
+
+        return await Liste(ct);
+    }
+
+    /// <summary>Die Korrektur verwerfen — es gilt wieder, was abgeleitet wird.</summary>
+    [HttpDelete("{schluessel}/korrektur")]
+    [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GeraeteSeiteDto>> Verwerfen(string schluessel, CancellationToken ct)
+    {
+        _repo.GeraetVerwerfen(schluessel);
+        return await Liste(ct);
+    }
 }
+
+/// <param name="Schluessel">Zielgerät; leer löst die Zuordnung.</param>
+public sealed record EntitaetZuordnenRequest(string? EntityId, string? Schluessel);
+
+/// <param name="Name">Leer: der Name bleibt, wie er abgeleitet wird (Home Assistant, Inventar).</param>
+/// <param name="ElternSchluessel">Leerer String: hängt ausdrücklich an nichts. Null: nicht ändern.</param>
+public sealed record GeraetSpeichernRequest(
+    string? Name,
+    string? ElternSchluessel,
+    string? Anschluss,
+    int? TentId,
+    int? HardwareItemId);
 
 public sealed record GeraetVerwendungDto(string Zweck, string Quelle);
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { apiFetch, formatApiError } from '../api'
-import { V1Alert, V1Card, V1Empty, V1Page, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Button, V1Card, V1Empty, V1Page, V1Skeleton } from '../components/v1'
 import './geraete.css'
 
 /**
@@ -48,11 +49,22 @@ const QUELLEN: Record<string, string> = {
   strom: 'Strom',
 }
 
+type SpeichernRequest = {
+  name: string
+  elternSchluessel: string | null
+  anschluss: string | null
+  tentId: number | null
+  hardwareItemId: number | null
+}
+
 export default function GeraetePage() {
   const [seite, setSeite] = useState<Seite | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
+  const [bearbeitet, setBearbeitet] = useState<string | null>(null)
+  const [entwurf, setEntwurf] = useState('')
+  const [speichert, setSpeichert] = useState(false)
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
   // RDWC ist die kurze Uebersicht der Zweck der Seite, nicht die lange Liste.
   const [auf, setAuf] = useState<Set<string>>(new Set())
@@ -70,6 +82,63 @@ export default function GeraetePage() {
     })()
     return () => abbruch.abort()
   }, [])
+
+  async function schreiben(pfad: string, methode: 'PUT', koerper?: unknown) {
+    setSpeichert(true)
+    try {
+      setSeite(await apiFetch<Seite>(pfad, {
+        method: methode,
+        ...(koerper ? { body: JSON.stringify(koerper) } : {}),
+      }))
+      setFehler(null)
+      setBearbeitet(null)
+    } catch (caught) {
+      setFehler(formatApiError(caught, 'Das Speichern hat nicht geklappt.'))
+    } finally {
+      setSpeichert(false)
+    }
+  }
+
+  const umbenennen = (geraet: Geraet, name: string) => schreiben(
+    `/api/geraete/${encodeURIComponent(geraet.schluessel)}`, 'PUT',
+    {
+      name,
+      // null heisst 'nicht aendern', leer heisst 'haengt an nichts' — deshalb
+      // den heutigen Wert mitschicken statt null.
+      elternSchluessel: geraet.elternSchluessel ?? '',
+      anschluss: geraet.anschluss,
+      tentId: geraet.tentId,
+      hardwareItemId: geraet.hardwareItemId,
+    } satisfies SpeichernRequest,
+  )
+
+  // Kein Name: Aushängen soll den Namen nicht als Korrektur festschreiben.
+  const aushaengen = (geraet: Geraet) => schreiben(
+    `/api/geraete/${encodeURIComponent(geraet.schluessel)}`, 'PUT',
+    {
+      name: '',
+      elternSchluessel: '',
+      anschluss: null,
+      tentId: geraet.tentId,
+      hardwareItemId: geraet.hardwareItemId,
+    } satisfies SpeichernRequest,
+  )
+
+  // Ausgeschrieben statt über `schreiben`: die Zählung der Löschwege sucht nach
+  // `method: 'DELETE'` und einem Pfad davor — ein durchgereichter Parameter wäre
+  // für sie unsichtbar, und der Knopf gälte als nicht vorhanden.
+  async function verwerfen(geraet: Geraet) {
+    setSpeichert(true)
+    try {
+      setSeite(await apiFetch<Seite>(`/api/geraete/${encodeURIComponent(geraet.schluessel)}/korrektur`, { method: 'DELETE' }))
+      setFehler(null)
+      setBearbeitet(null)
+    } catch (caught) {
+      setFehler(formatApiError(caught, 'Das Zurücksetzen hat nicht geklappt.'))
+    } finally {
+      setSpeichert(false)
+    }
+  }
 
   // Controller zuerst, ihre Ports direkt darunter — die Reihenfolge kommt aus
   // dem Dienst, hier wird nur die Verschachtelung sichtbar gemacht.
@@ -108,6 +177,37 @@ export default function GeraetePage() {
     )
   }
 
+  function werkzeug(geraet: Geraet) {
+    if (bearbeitet === geraet.schluessel) {
+      return (
+        <div className="gr-werkzeug">
+          <input
+            value={entwurf}
+            onChange={(event) => setEntwurf(event.target.value)}
+            aria-label={`Name von ${geraet.name}`}
+            placeholder="Name des Geräts"
+          />
+          <div className="gr-knoepfe">
+            <V1Button onClick={() => setBearbeitet(null)}>Abbrechen</V1Button>
+            <V1Button variant="primary" disabled={speichert || entwurf.trim() === ''} onClick={() => void umbenennen(geraet, entwurf.trim())}>
+              {speichert ? 'Speichert …' : 'Speichern'}
+            </V1Button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="gr-knoepfe">
+        <V1Button onClick={() => { setBearbeitet(geraet.schluessel); setEntwurf(geraet.name) }}>Umbenennen</V1Button>
+        {geraet.elternSchluessel && (
+          <V1Button disabled={speichert} onClick={() => void aushaengen(geraet)}>Aushängen</V1Button>
+        )}
+        <V1Button disabled={speichert} onClick={() => void verwerfen(geraet)}>Auf Vorgabe</V1Button>
+      </div>
+    )
+  }
+
   return (
     <V1Page
       eyebrow="Betrieb"
@@ -128,6 +228,9 @@ export default function GeraetePage() {
           <V1Card key={geraet.schluessel}>
             <GeraetZeile
               geraet={geraet}
+              werkzeug={werkzeug(geraet)}
+              alleGeraete={seite.geraete}
+              aufGeraet={(entityId, ziel) => void schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: ziel })}
               kinderZahl={kinder.length}
               zugeklappt={zugeklappt}
               offen={offen === geraet.schluessel}
@@ -150,6 +253,9 @@ export default function GeraetePage() {
               <GeraetZeile
                 key={kind.schluessel}
                 geraet={kind}
+                werkzeug={werkzeug(kind)}
+                alleGeraete={seite.geraete}
+                aufGeraet={(entityId, ziel) => void schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: ziel })}
                 eingerueckt
                 offen={offen === kind.schluessel}
                 onKlick={() => setOffen(offen === kind.schluessel ? null : kind.schluessel)}
@@ -168,10 +274,13 @@ export default function GeraetePage() {
   )
 }
 
-function GeraetZeile({ geraet, offen, onKlick, eingerueckt = false, kinderZahl = 0, zugeklappt = false }: {
+function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet, eingerueckt = false, kinderZahl = 0, zugeklappt = false }: {
   geraet: Geraet
   offen: boolean
   onKlick: () => void
+  werkzeug: ReactNode
+  alleGeraete: Geraet[]
+  aufGeraet: (entityId: string, ziel: string) => void
   eingerueckt?: boolean
   kinderZahl?: number
   zugeklappt?: boolean
@@ -204,25 +313,40 @@ function GeraetZeile({ geraet, offen, onKlick, eingerueckt = false, kinderZahl =
         <span className="gr-pfeil" aria-hidden="true">{(hatKinder ? !zugeklappt : offen) ? '⌄' : '›'}</span>
       </button>
 
+      {hatKinder && !zugeklappt && werkzeug}
+
       {!hatKinder && offen && (
-        geraet.entitaeten.length === 0 ? (
-          <p className="gr-leer">Keine Entität — das Gerät steht nur im Inventar.</p>
-        ) : (
-          <ul className="gr-entitaeten">
+        <>
+          {werkzeug}
+          {geraet.entitaeten.length === 0 ? (
+            <p className="gr-leer">Keine Entität — das Gerät steht nur im Inventar.</p>
+          ) : (
+            <ul className="gr-entitaeten">
             {geraet.entitaeten.map((entitaet) => (
               <li key={entitaet.entityId}>
                 <code>{entitaet.entityId}</code>
+                <select
+                  className="gr-umhaengen"
+                  value={geraet.schluessel}
+                  aria-label={`${entitaet.entityId} einem Gerät zuordnen`}
+                  onChange={(event) => aufGeraet(entitaet.entityId, event.target.value)}
+                >
+                  {alleGeraete.map((ziel) => (
+                    <option key={ziel.schluessel} value={ziel.schluessel}>{ziel.name}</option>
+                  ))}
+                </select>
                 <span className="gr-marken">
-                  {entitaet.verwendungen.map((verwendung) => (
+                    {entitaet.verwendungen.map((verwendung) => (
                     <em key={`${verwendung.quelle}-${verwendung.zweck}`} title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>
                       {verwendung.zweck}
                     </em>
                   ))}
                 </span>
               </li>
-            ))}
-          </ul>
-        )
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   )

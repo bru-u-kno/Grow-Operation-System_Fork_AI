@@ -88,6 +88,15 @@ public sealed class HomeAssistantRegistryTests
     }
 
     [Theory]
+    [InlineData("AVM", "FRITZ!Smart Energy 210", "AVM FRITZ!Smart Energy 210")]
+    [InlineData("FRITZ!", "FRITZ!Box 7590 (UI)", "FRITZ!Box 7590 (UI)")]
+    [InlineData("AC Infinity", "UIS Controller AI+ (CTR89Q)", "AC Infinity UIS Controller AI+ (CTR89Q)")]
+    [InlineData("Bluelab", null, "Bluelab")]
+    [InlineData(null, null, null)]
+    public void DieModellzeileDoppeltDenHerstellerNicht(string? hersteller, string? modell, string? erwartet)
+        => Assert.Equal(erwartet, HomeAssistantRegistryService.Modellzeile(hersteller, modell));
+
+    [Theory]
     [InlineData("http://supervisor/core", "ws://supervisor/core/api/websocket")]
     [InlineData("https://smarthome.k9d.world/", "wss://smarthome.k9d.world/api/websocket")]
     [InlineData("http://homeassistant.local:8123", "ws://homeassistant.local:8123/api/websocket")]

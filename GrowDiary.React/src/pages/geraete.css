@@ -50,3 +50,9 @@
 .gr-leer { margin: 0 0 var(--s-3); font-size: var(--fs-micro, .625rem); color: var(--muted); }
 
 .gr-fuss { margin: var(--s-4) 0 0; font-size: var(--fs-micro, .625rem); color: var(--muted); line-height: 1.5; }
+
+/* Fork AI (forkai.25): Bedienung auf der Geraeteseite. */
+.gr-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s-2); padding: 0 0 var(--s-3); }
+.gr-werkzeug { padding: 0 0 var(--s-3); }
+.gr-werkzeug input { width: 100%; margin-bottom: var(--s-2); }
+.gr-umhaengen { margin-top: var(--s-2); max-width: 100%; }

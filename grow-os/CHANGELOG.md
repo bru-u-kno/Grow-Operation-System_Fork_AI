@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.25
+
+**Fork AI.** **Geräte & Entitäten** lässt sich jetzt korrigieren.
+
+### Was Sie sehen
+
+- **Umbenennen**: ein Gerät bekommt seinen eigenen Namen, unabhängig davon, wie
+  es in Home Assistant heißt.
+- **Aushängen**: ein Gerät, das Home Assistant unter einem anderen einsortiert
+  hat, steht danach für sich. Gedacht für Fälle wie die Kameras, die über die
+  FRITZ!Box gemeldet werden, aber eigene Geräte im Zelt sind.
+- **Entität zuschlagen oder lösen**: eine Entität einem anderen Gerät zuordnen —
+  für alles, was Home Assistant keinem Gerät zurechnet (Template-Schalter,
+  Helfer).
+- **Verwerfen**: die Korrektur fällt weg, es gilt wieder das Abgeleitete.
+- Die Modellzeile doppelt den Hersteller nicht mehr: aus „FRITZ! FRITZ!Box 7590"
+  wird „FRITZ!Box 7590".
+
+### Technik
+
+- `PUT /api/geraete/entitaet`, `PUT /api/geraete/{schluessel}`,
+  `DELETE /api/geraete/{schluessel}/korrektur`
+- Leer heißt beim Namen wie beim Eltern-Schlüssel **„nicht ändern"**; ein leerer
+  Eltern-Schlüssel dagegen ausdrücklich „hängt an nichts". Sonst schriebe schon
+  ein Aushängen den aktuellen Namen als Korrektur fest, und ein späteres
+  Umbenennen in Home Assistant käme nie mehr an.
+
 ## 2.0.0-forkai.24
 
 **Fork AI.** **Geräte & Entitäten** startet eingeklappt.

@@ -97,9 +97,7 @@ public sealed class HomeAssistantRegistryService
                 if (Text(geraet, "via_device_id") is { } via) eltern[id] = via;
 
                 // Hersteller und Modell — die Unterzeile der Geräteliste.
-                var modell = string.Join(' ', new[] { Text(geraet, "manufacturer"), Text(geraet, "model") }
-                    .Where(teil => !string.IsNullOrWhiteSpace(teil)));
-                if (modell.Length > 0) modelle[id] = modell;
+                if (Modellzeile(Text(geraet, "manufacturer"), Text(geraet, "model")) is { } modell) modelle[id] = modell;
             }
         }
 
@@ -143,6 +141,20 @@ public sealed class HomeAssistantRegistryService
     // ---------------------------------------------------------------- Kleinkram
 
     private static Dictionary<string, HerkunftEintrag> Leer() => new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Hersteller und Modell zu einer Zeile — ohne Dopplung. AVM trägt den Hersteller
+    /// im Modellnamen („FRITZ!" + „FRITZ!Box 7590"), und „FRITZ! FRITZ!Box 7590" liest
+    /// sich wie ein Fehler.
+    /// </summary>
+    public static string? Modellzeile(string? hersteller, string? modell)
+    {
+        var h = hersteller?.Trim();
+        var m = modell?.Trim();
+        if (string.IsNullOrEmpty(m)) return string.IsNullOrEmpty(h) ? null : h;
+        if (string.IsNullOrEmpty(h)) return m;
+        return m.StartsWith(h, StringComparison.OrdinalIgnoreCase) ? m : $"{h} {m}";
+    }
 
     private static string? Text(JsonElement element, string name)
         => element.TryGetProperty(name, out var wert) && wert.ValueKind == JsonValueKind.String

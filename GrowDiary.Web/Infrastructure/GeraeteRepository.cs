@@ -126,6 +126,16 @@ public sealed class GeraeteRepository : RepositoryBase
         command.ExecuteNonQuery();
     }
 
+    /// <summary>Die Korrektur zu einem Gerät verwerfen — es gilt wieder, was abgeleitet wird.</summary>
+    public void GeraetVerwerfen(string schluessel)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM ForkGeraete WHERE Schluessel = $schluessel;";
+        command.Parameters.AddWithValue("$schluessel", schluessel);
+        command.ExecuteNonQuery();
+    }
+
     /// <summary>Eine Entität einem Gerät zuschlagen; leerer Schlüssel löst die Zuordnung.</summary>
     public void EntitaetZuordnen(string entityId, string? schluessel)
     {

@@ -88,6 +88,34 @@ public sealed class GeraeteUebersichtTests
     }
 
     [Fact]
+    public void EinLeererElternSchluesselHaengtDasGeraetAus()
+    {
+        // Die Reolink-Kameras haengen in Home Assistant an der FRITZ!Box, weil sie
+        // ueber sie gemeldet werden. Der Nutzer muss sie loesen koennen — und ein
+        // leeres Feld darf nicht als 'nichts eingetragen' durchrutschen, sonst
+        // erbte das Geraet den Controller sofort wieder.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["camera.rdwc_overview"] = new("camera.rdwc_overview", "cam1", "RDWC Overview", "reolink_cam1", "fritz", "FRITZ!Box"),
+        };
+        var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
+        {
+            [GeraeteUebersichtService.HaSchluessel("cam1")] = new()
+            {
+                Schluessel = GeraeteUebersichtService.HaSchluessel("cam1"),
+                Name = "RDWC Overview",
+                ElternSchluessel = string.Empty,
+            },
+        };
+
+        var ohne = Bauen(Verwendungen(("camera.rdwc_overview", "Kamera")), herkunft: herkunft);
+        var mit = Bauen(Verwendungen(("camera.rdwc_overview", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
+
+        Assert.NotNull(Assert.Single(ohne, g => !g.IstController).ElternSchluessel);
+        Assert.Null(Assert.Single(mit, g => !g.IstController).ElternSchluessel);
+    }
+
+    [Fact]
     public void ViaDeviceSchlaegtDieMacVermutung()
     {
         // Der Controller heisst in HA "RDWC" — der Fork soll diesen Namen zeigen und
@@ -192,6 +220,27 @@ public sealed class GeraeteUebersichtTests
         var geraete = Bauen(Verwendungen(("sensor.big_probe_sensor_sonden_temperatur", "Messgröße AirTemperature")), hardware, gespeichert);
 
         Assert.Equal("Big Probe Sensor", Assert.Single(geraete).Name);
+    }
+
+    [Fact]
+    public void EinLeerGespeicherterNameLaesstDenNamenAusHomeAssistantGelten()
+    {
+        // Aushaengen speichert eine Korrektur, aber keinen Namen. Zaehlte der leere
+        // Name als Korrektur, kaeme ein spaeteres Umbenennen in Home Assistant nie an.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["camera.rdwc_overview"] = new("camera.rdwc_overview", "cam1", "RDWC Overview", "reolink_1", "fritz", "FRITZ!Box"),
+        };
+        var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ha:cam1"] = new() { Schluessel = "ha:cam1", Name = string.Empty, ElternSchluessel = string.Empty },
+        };
+
+        var geraete = Bauen(Verwendungen(("camera.rdwc_overview", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
+
+        var kamera = Assert.Single(geraete, g => g.Schluessel == "ha:cam1");
+        Assert.Equal("RDWC Overview", kamera.Name);
+        Assert.Null(kamera.ElternSchluessel);
     }
 
     [Fact]

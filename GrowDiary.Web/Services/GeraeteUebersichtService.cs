@@ -217,13 +217,21 @@ public sealed class GeraeteUebersichtService
 
             geraete.Add(new Geraet(
                 schluessel,
-                eigen?.Name ?? eintrag.Name ?? hardwareItem?.Name ?? GeraeteSchluessel.AlsName(schluessel),
+                // Ein leer gespeicherter Name ist keine Korrektur, sondern das
+                // Fehlen einer — dann gilt weiter, was Home Assistant sagt.
+                (string.IsNullOrWhiteSpace(eigen?.Name) ? null : eigen!.Name)
+                    ?? eintrag.Name ?? hardwareItem?.Name ?? GeraeteSchluessel.AlsName(schluessel),
                 eigen?.TentId ?? hardwareItem?.TentId,
                 eigen?.HardwareItemId ?? hardwareItem?.Id,
                 eintrag.Entitaeten.OrderBy(e => e.EntityId, StringComparer.OrdinalIgnoreCase).ToList())
             {
                 Bestaetigt = eintrag.Bestaetigt || eigen is not null,
-                ElternSchluessel = eigen?.ElternSchluessel ?? eintrag.ElternSchluessel,
+                // Ein LEERER Eltern-Schlüssel ist die ausdrückliche Ansage „hängt an
+                // nichts" — nicht dasselbe wie „nichts eingetragen", sonst liesse sich
+                // ein von Home Assistant geerbter Controller nie aushängen.
+                ElternSchluessel = eigen?.ElternSchluessel is { } gesetzt
+                    ? (gesetzt.Length == 0 ? null : gesetzt)
+                    : eintrag.ElternSchluessel,
                 Anschluss = eigen?.Anschluss ?? eintrag.Anschluss,
                 IstController = eintrag.IstController,
                 Modell = eintrag.Modell,
