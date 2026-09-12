@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.37
+
+**Fork AI.** Farben getauscht: **„vermutet" ist jetzt blau**, **„korrigiert"
+gelb** — samt Marke an der Gerätezeile, Hinweis an der Entität und der Zeile
+über der Korrekturliste.
+
 ## 2.0.0-forkai.36
 
 **Fork AI.** Korrekturen sind jetzt klar von Vermutungen zu unterscheiden — und

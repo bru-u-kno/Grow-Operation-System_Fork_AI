@@ -4,7 +4,7 @@
 .gr-zahlen { display: flex; gap: var(--s-4); }
 .gr-zahlen div { flex: 1; }
 .gr-zahlen b { display: block; font-size: var(--fs-lg, 1.25rem); font-variant-numeric: tabular-nums; }
-.gr-zahlen b.is-warn, .gr-zahlen b.is-warn * { color: var(--warn-text) !important; }
+.gr-zahlen b.is-warn, .gr-zahlen b.is-warn * { color: var(--info-text) !important; }
 .gr-zahlen span {
   display: block; margin-top: var(--s-1); font-size: var(--fs-micro, .625rem);
   letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
@@ -25,7 +25,7 @@
 .gr-vermutet {
   margin-left: var(--s-2); padding: 1px var(--s-2); border-radius: var(--r-sm);
   border: 1px solid var(--hair-2); font-style: normal; font-size: var(--fs-micro, .625rem);
-  letter-spacing: .05em; text-transform: uppercase; color: var(--warn-text);
+  letter-spacing: .05em; text-transform: uppercase; color: var(--info-text);
 }
 
 .gr-anzahl {
@@ -105,18 +105,18 @@
 .gr-gehoert select { flex: 1; min-width: 0; font: inherit; font-size: var(--fs-text); }
 
 /* Fork AI (forkai.30): verschobene Entitaeten sichtbar machen. */
-/* forkai.36: „vermutet" und „korrigiert" standen beide in Gelb und waren auf
-   dem Schirm kaum zu unterscheiden. Vermutet bleibt die Warnung (da ist etwas
-   unklar); eine Korrektur ist keine Warnung, sondern ein Hinweis — deshalb
-   Cyan, durchgaengig bis zur Marke an der Geraetezeile. */
-.gr-anzahl.is-korrigiert { border-color: var(--info-text); background: var(--info-wash); color: var(--info-text); }
-.gr-zahlen b.is-korrigiert, .gr-zahlen b.is-korrigiert * { color: var(--info-text) !important; }
+/* forkai.36/37: Zwei Zustaende, zwei Farben. „vermutet" ist blau — der Fork hat
+   geraten, gehandelt hat niemand. „korrigiert" ist gelb: hier hat der Nutzer
+   eingegriffen, und das faellt beim Suchen staerker ins Auge. Durchgaengig bis
+   zur Marke an der Geraetezeile. */
+.gr-anzahl.is-korrigiert { border-color: var(--warn-text); background: var(--warn-wash); color: var(--warn-text); }
+.gr-zahlen b.is-korrigiert, .gr-zahlen b.is-korrigiert * { color: var(--warn-text) !important; }
 
 .gr-korrekturen-schalter {
   display: flex; align-items: center; gap: var(--s-2); width: 100%;
   margin-top: var(--s-4); padding: var(--s-2) 0;
   background: none; border: 0; border-top: 1px solid var(--hair);
-  color: var(--info-text); font: inherit; font-size: var(--fs-micro, .625rem);
+  color: var(--warn-text); font: inherit; font-size: var(--fs-micro, .625rem);
   letter-spacing: .04em; text-align: left; cursor: pointer;
 }
 .gr-korrekturen-schalter span { flex: 1; min-width: 0; }
@@ -139,6 +139,6 @@
 .gr-verschoben-hinweis { margin: var(--s-1) 0 0; font-size: var(--fs-micro, .625rem); color: var(--muted); }
 .gr-verschoben-hinweis em {
   font-style: normal; margin-right: var(--s-2); padding: 1px var(--s-2); border-radius: var(--r-sm);
-  border: 1px solid var(--hair-2); color: var(--info-text);
+  border: 1px solid var(--hair-2); color: var(--warn-text);
   letter-spacing: .05em; text-transform: uppercase;
 }
