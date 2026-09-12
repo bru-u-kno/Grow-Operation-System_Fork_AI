@@ -70,7 +70,13 @@ for (const ziel of ziele) {
     // tragen.
     if (ohneGruppenPfad.has(ziel.to) || eigeneUeberschrift.has(ziel.to)) return
     const titel = (await page.locator('main h1').first().textContent())?.trim() ?? ''
+    // Ein Klammerzusatz im Menue ist eine Unterscheidungshilfe, kein Titel:
+    // „Home Assistant (Verbindung)" steht neben „Sensoren & Wartung (erfassen)",
+    // damit man in der Liste das Richtige trifft. Auf der Seite selbst ist
+    // ohnehin klar, wo man ist — die Klammer gehoert dort nicht in die
+    // Ueberschrift. Deshalb vor dem Vergleich abschneiden.
+    const erwartet = ziel.label.replace(/\s*\([^)]*\)\s*$/, '').split(' & ')[0].toLowerCase()
     expect(titel.toLowerCase(), `${ziel.to}: Überschrift „${titel}" passt nicht zum Menüpunkt „${ziel.label}"`)
-      .toContain(ziel.label.split(' & ')[0].toLowerCase())
+      .toContain(erwartet)
   })
 }

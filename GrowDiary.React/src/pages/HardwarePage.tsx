@@ -466,7 +466,7 @@ function HardwarePage() {
 
   return (
     <V1Page
-      eyebrow="Betrieb / Sensoren"
+      eyebrow="Einrichtung / Sensoren"
       title="Sensoren & Wartung"
       subtitle="Deine Geräte: was verbaut ist, wann es geprüft, kalibriert oder getauscht gehört. Welche Home-Assistant-Entität welchen Messwert liefert, stellst du unter Home Assistant ein — gemessene Sensoren erscheinen dann hier von selbst."
       action={<button type="button" className="ls-btn is-primary" onClick={openCreate}>+ Gerät anlegen</button>}
