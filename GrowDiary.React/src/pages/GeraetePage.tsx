@@ -420,11 +420,13 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
         <span className="gr-pfeil" aria-hidden="true">{(hatKinder ? !zugeklappt : offen) ? '⌄' : '›'}</span>
       </button>
 
-      {hatKinder && !zugeklappt && werkzeug}
+      {/* Das Menue haengt am ⋯, nicht am Aufklappen: es soll auch bei einer
+          zugeklappten Zeile erscheinen. `werkzeug` liefert null, solange das
+          Menue dieses Geraets nicht offen ist. */}
+      {werkzeug}
 
       {!hatKinder && offen && (
         <>
-          {werkzeug}
           {geraet.entitaeten.length === 0 ? (
             <p className="gr-leer">Keine Entität — das Gerät steht nur im Inventar.</p>
           ) : (

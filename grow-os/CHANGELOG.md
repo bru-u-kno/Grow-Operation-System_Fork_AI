@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.28
+
+**Fork AI.** Bugfix auf „Geräte & Entitäten": Das ⋯-Menü öffnete sich nur, wenn
+die Zeile ohnehin aufgeklappt war — bei einem zugeklappten Controller tat der
+Tipp nichts. Das Menü hängt jetzt am ⋯ selbst und erscheint in jedem Zustand.
+
 ## 2.0.0-forkai.27
 
 **Fork AI.** Eigene **Rubriken** auf „Geräte & Entitäten".
