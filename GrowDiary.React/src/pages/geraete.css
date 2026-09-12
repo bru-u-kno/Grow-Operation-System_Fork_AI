@@ -148,7 +148,13 @@
 .gr-sec span { font-size: var(--fs-micro, .625rem); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .gr-sec b { font-family: var(--font-mono); font-size: var(--fs-micro, .625rem); color: var(--faint); }
 
-.gr-messgroesse { display: flex; align-items: flex-end; gap: var(--s-3); padding: var(--s-2) 0; border-top: 1px solid var(--hair); }
-.gr-messgroesse > label { flex: 1; min-width: 0; }
-.gr-messwert { flex: 0 0 auto; font-family: var(--font-mono); font-size: var(--fs-text); color: var(--accent-text); padding-bottom: 10px; }
-.gr-messwert.is-leer { color: var(--faint); }
+/* forkai.40: Wert ueber das Feld statt daneben. Nebeneinander legte sich der
+   Livewert bei langen Geraetenamen ueber den Text im Auswahlfeld. */
+.gr-messgroesse { padding: var(--s-3) 0; border-top: 1px solid var(--hair); }
+.gr-messkopf { display: flex; align-items: baseline; gap: var(--s-3); margin-bottom: var(--s-2); }
+.gr-messkopf span {
+  flex: 1; min-width: 0; font-family: var(--font-mono); font-size: var(--fs-micro, .625rem);
+  letter-spacing: .1em; color: var(--faint);
+}
+.gr-messkopf b { flex: 0 0 auto; font-family: var(--font-mono); font-size: var(--fs-text); color: var(--accent-text); }
+.gr-messkopf b.is-leer { color: var(--faint); }

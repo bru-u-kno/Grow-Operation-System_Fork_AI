@@ -125,8 +125,13 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
               const wert = livewert(entityId)
               return (
                 <div key={definition.metricType} className="gr-messgroesse">
+                  <div className="gr-messkopf">
+                    <span>{definition.label}{definition.unit ? ` (${definition.unit})` : ''}</span>
+                    <b className={wert ? undefined : 'is-leer'}>{wert ?? '—'}</b>
+                  </div>
                   <V1Select
-                    label={`${definition.label}${definition.unit ? ` (${definition.unit})` : ''}`}
+                    label=""
+                    ariaLabel={definition.label}
                     titel={definition.label}
                     unterzeile={definition.placeholder}
                     wert={entityId}
@@ -142,7 +147,6 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
                       })),
                     ]}
                   />
-                  <span className={wert ? 'gr-messwert' : 'gr-messwert is-leer'}>{wert ?? '—'}</span>
                 </div>
               )
             })}

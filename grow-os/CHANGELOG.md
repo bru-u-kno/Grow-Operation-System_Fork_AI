@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.40
+
+**Fork AI.** Formatfehler im Reiter „Messgrößen" behoben.
+
+Der Livewert stand neben dem Auswahlfeld und legte sich bei langen Gerätenamen
+über dessen Text — „RDWC Probe Sensor Sonden-Temperatur" und „28,3 °C"
+überlagerten sich. Beschriftung und Wert stehen jetzt in einer Kopfzeile über
+dem Feld: links die Messgröße mit Einheit, rechts der aktuelle Wert, darunter
+das Feld über die volle Breite.
+
 ## 2.0.0-forkai.39
 
 **Fork AI.** Die Messgrößen des Zelts stehen jetzt bei den Geräten.

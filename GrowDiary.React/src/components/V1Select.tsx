@@ -29,8 +29,10 @@ export type V1Option = {
   betont?: boolean
 }
 
-export function V1Select({ label, wert, optionen, onWahl, titel, unterzeile, platzhalter, disabled }: {
+export function V1Select({ label, ariaLabel, wert, optionen, onWahl, titel, unterzeile, platzhalter, disabled }: {
+  /** Sichtbare Beschriftung. Leer lassen, wenn sie schon daneben steht. */
   label: string
+  ariaLabel?: string
   wert: string
   optionen: V1Option[]
   onWahl: (wert: string) => void
@@ -71,12 +73,13 @@ export function V1Select({ label, wert, optionen, onWahl, titel, unterzeile, pla
   return (
     <>
       <label className="v1-field v1-select">
-        <span>{label}</span>
+        {label !== '' && <span>{label}</span>}
         <button
           type="button"
           className="v1-select-feld"
           disabled={disabled}
           aria-haspopup="dialog"
+          aria-label={ariaLabel ?? label}
           onClick={() => { setSuche(''); setOffen(true) }}
         >
           <span className={gewaehlt ? undefined : 'is-leer'}>
