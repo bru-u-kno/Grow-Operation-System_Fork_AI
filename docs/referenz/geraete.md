@@ -32,6 +32,12 @@ Selbst angelegte Fächer („Kameras") sind technisch Eltern-Geräte ohne
 Entitäten. Ein Gerät hat **einen** Platz: entweder an seinem Controller oder in
 einer Rubrik. Eine Rubrik zählt nicht als Gerät.
 
+## Wo dieses Gerät vorkommt
+
+Beim aufgeklappten Gerät steht die Gegenrichtung: je Quelle (Messgröße,
+Steuerung, Dosierung, Strom …) die betroffenen Zwecke und ein Weg dorthin. Vor
+einer Umstellung ist das die eigentliche Frage — was hängt daran?
+
 ## Die Zahlen und woher sie kommen
 
 - **Geräte** und **Entitäten**: Zählung aus `GET /api/geraete`.

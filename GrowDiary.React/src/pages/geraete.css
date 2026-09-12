@@ -170,3 +170,18 @@
   color: var(--muted);
 }
 .gr-frist.is-faellig { border-color: var(--warn-text); background: var(--warn-wash); color: var(--warn-text); }
+
+/* forkai.43: „Wo dieses Gerät vorkommt" — die Gegenrichtung zur Zuordnung. */
+.gr-verwendung { margin: var(--s-2) 0 var(--s-3); border: 1px solid var(--hair); border-radius: var(--r-sm); }
+.gr-verwendung-kopf {
+  margin: 0; padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-micro, .625rem); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--faint); background: var(--accent-wash);
+}
+.gr-verwendung-zeile {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3); border-top: 1px solid var(--hair);
+}
+.gr-verwendung-zeile > span { flex: 1; min-width: 0; }
+.gr-verwendung-zeile b { display: block; font-size: var(--fs-text); font-weight: 600; }
+.gr-verwendung-zeile small { display: block; margin-top: 2px; font-size: var(--fs-micro, .625rem); color: var(--muted); overflow-wrap: anywhere; }

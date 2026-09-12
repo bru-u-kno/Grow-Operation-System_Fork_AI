@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.43
+
+**Fork AI.** Neu am Gerät: **„Wo dieses Gerät vorkommt"**.
+
+Beim Aufklappen steht jetzt zuerst, woran das Gerät im Fork hängt — Messgröße,
+Steuerung, Dosierung, Strom — mit den betroffenen Zwecken und einem **Öffnen**
+zur jeweiligen Stelle. Das ist die Frage vor jeder Umstellung: *Wenn ich diese
+Entität tausche, was hört auf zu funktionieren?* Bisher stand die Antwort
+verstreut in den Marken der einzelnen Entitäten.
+
 ## 2.0.0-forkai.42
 
 **Fork AI.** Eine Stelle im Menü, an der gepflegt wird.

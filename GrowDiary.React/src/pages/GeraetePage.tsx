@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { apiFetch, formatApiError } from '../api'
-import { V1Alert, V1Button, V1Card, V1Empty, V1Page, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Skeleton } from '../components/v1'
 import { V1Select } from '../components/V1Select'
 import type { V1Option } from '../components/V1Select'
 import { V1Sheet } from '../components/V1Sheet'
@@ -63,6 +63,16 @@ function zielOptionen(alle: Geraet[]): V1Option[] {
       gruppe: ziel.istRubrik ? 'Rubriken' : 'Geräte',
     })),
   ]
+}
+
+/** Wohin eine Verwendung führt — die Stelle, an der sie gepflegt wird. */
+const QUELLEN_ZIEL: Record<string, string> = {
+  messgroesse: '/geraete',
+  zelt: '/zelte',
+  inventar: '/sensoren',
+  dosierung: '/dosierung',
+  steuerung: '/steuerung/geraete',
+  strom: '/kosten',
 }
 
 const QUELLEN: Record<string, string> = {
@@ -628,6 +638,8 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
           {geraet.entitaeten.length === 0 ? (
             <p className="gr-leer">Keine Entität — das Gerät steht nur im Inventar.</p>
           ) : (
+            <>
+            <VerwendungBlock geraet={geraet} />
             <ul className="gr-entitaeten">
             {geraet.entitaeten.map((entitaet) => (
               <li key={entitaet.entityId}>
@@ -656,9 +668,50 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
               </li>
               ))}
             </ul>
+            </>
           )}
         </>
       )}
+    </div>
+  )
+}
+
+
+/**
+ * Fork AI (forkai.43): Die Gegenrichtung — woran hängt dieses Gerät im Fork?
+ *
+ * Vor einer Umstellung ist das die Frage, die zählt: Wenn ich diese Entität
+ * tausche, was hört auf zu funktionieren? Die Antwort steckte bisher verstreut
+ * in den Marken der einzelnen Entitäten; hier steht sie gesammelt, mit dem Weg
+ * zu der Stelle, an der es gepflegt wird.
+ */
+function VerwendungBlock({ geraet }: { geraet: Geraet }) {
+  const verwendungen = geraet.entitaeten.flatMap((entitaet) => entitaet.verwendungen)
+  if (verwendungen.length === 0) return null
+
+  // Je Quelle eine Zeile, die Zwecke gesammelt: „Steuerung · CO₂-Sensor, Licht-Status".
+  const nachQuelle = new Map<string, string[]>()
+  for (const verwendung of verwendungen) {
+    const bisher = nachQuelle.get(verwendung.quelle) ?? []
+    const zweck = verwendung.zweck.replace(/^Steuerung [A-Z0-9]+ · /, '').replace(/^Messgröße /, '')
+    if (!bisher.includes(zweck)) bisher.push(zweck)
+    nachQuelle.set(verwendung.quelle, bisher)
+  }
+
+  return (
+    <div className="gr-verwendung">
+      <p className="gr-verwendung-kopf">Wo dieses Gerät vorkommt</p>
+      {[...nachQuelle.entries()].map(([quelle, zwecke]) => (
+        <div key={quelle} className="gr-verwendung-zeile">
+          <span>
+            <b>{QUELLEN[quelle] ?? quelle}</b>
+            <small>{zwecke.join(', ')}</small>
+          </span>
+          {QUELLEN_ZIEL[quelle] && (
+            <V1LinkButton to={QUELLEN_ZIEL[quelle]} variant="ghost">Öffnen</V1LinkButton>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
