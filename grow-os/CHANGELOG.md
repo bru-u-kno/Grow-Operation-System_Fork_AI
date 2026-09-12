@@ -5,6 +5,45 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.58
+
+**Fork AI.** Der Fork legt die Helfer einer Steuerung jetzt selbst in Home
+Assistant an — der erste Teil des Einrichtens.
+
+Bisher zeigte die Steuerungsseite in einer fremden Installation nur „nicht
+verfügbar": Die rund zwanzig Einstellwerte, Schalter, Zeitstempel und Zähler
+hinter der CO₂-Regelung sind hier über Tage von Hand entstanden und entstehen
+anderswo gar nicht. Ein Knopf in der Karte „Was in Home Assistant fehlt" legt
+sie nun an.
+
+Drei Regeln stecken fest darin. Angelegt wird nur, was fehlt; Vorhandenes wird
+nie überschrieben, weil ein Helfer mit richtigem Namen und zurückgesetztem Wert
+schlimmer wäre als gar keiner. Und was an einem nicht zugeordneten Gerät hängt,
+entsteht nicht: Wer keinen Abluft-Regler hat, bekommt keine Drosselungs-Helfer.
+Antwortet Home Assistant nicht, wird gar nichts angelegt — sonst entstünden
+blind zwanzig Helfer, die es vielleicht schon gibt.
+
+Rechenwerte und Automationen fehlen noch; sie brauchen andere Wege und kommen
+getrennt, weil sie getrennt schiefgehen.
+
+Nebenbei behoben: Zwei Namen im Katalog hätten neue Entitäten erzeugt statt der
+bestehenden. Home Assistant leitet die Kennung aus dem Namen ab, und
+„CO2 Impulsdauer min" wäre `co2_impulsdauer_min` geworden — beim nächsten Lauf
+wäre derselbe Helfer ein zweites Mal entstanden. Ein Test fährt das jetzt für
+alle Bauteile durch.
+
+## 2.0.0-forkai.57
+
+**Fork AI.** Behebt die Ursache hinter den Licht-Testfehlern, die forkai.56 im
+Test selbst umgangen hat.
+
+`SteuerungRepository` merkte sich in einem einzelnen Schalter, dass die Tabellen
+stehen. Im Betrieb stimmt das — dort gibt es eine Datenbank. In den Tests bekommt
+jeder Fall seine eigene Datei: Der erste legte die Tabellen an und setzte den
+Schalter, jeder weitere sprang über das Anlegen hinweg und stand vor einer leeren
+Datei. Gemerkt wird jetzt pro Datenbankdatei, damit der nächste neue Test nicht
+über dieselbe Stelle stolpert.
+
 ## 2.0.0-forkai.56
 
 **Fork AI.** Behebt die beiden neuen Licht-Tests aus forkai.55: ihnen fehlte die

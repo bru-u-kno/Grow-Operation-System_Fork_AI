@@ -134,6 +134,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const [entwurf, setEntwurf] = useState<Co2Einstellungen | null>(null)
   const [reiter, setReiter] = useState<Co2Reiter>('ziel')
   const [bestand, setBestand] = useState<Bestandsaufnahme | null>(null)
+  const [legtAn, setLegtAn] = useState(false)
+  const [anlegeMeldung, setAnlegeMeldung] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
   const [meldung, setMeldung] = useState<string | null>(null)
@@ -194,6 +196,33 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
       setSpeichert(false)
+    }
+  }
+
+  /**
+   * Die fehlenden Helfer anlegen lassen.
+   *
+   * Nur die einfachen Arten — Zahlen, Schalter, Zeitstempel, Zähler. Was danach
+   * noch fehlt, sind Rechen-Sensoren und Automationen; die brauchen andere Wege
+   * und bleiben in der Liste stehen, bis es sie gibt.
+   */
+  const helferAnlegen = async () => {
+    setLegtAn(true)
+    setAnlegeMeldung(null)
+    try {
+      const bilanz = await apiFetch<{ angelegt: number; fehlgeschlagen: number }>(
+        '/api/steuerung/co2/helfer', { method: 'POST' },
+      )
+      setAnlegeMeldung(
+        bilanz.fehlgeschlagen > 0
+          ? `${bilanz.angelegt} angelegt, ${bilanz.fehlgeschlagen} nicht — Einzelheiten stehen im Protokoll.`
+          : `${bilanz.angelegt} Helfer angelegt.`,
+      )
+      setBestand(await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand'))
+    } catch (caught) {
+      setAnlegeMeldung(formatApiError(caught, 'Anlegen fehlgeschlagen.'))
+    } finally {
+      setLegtAn(false)
     }
   }
 
@@ -448,9 +477,13 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               </div>
             ))}
             <p className="st-hinweis">
-              Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Anlegen kann der Fork
-              sie noch nicht — das ist der nächste Schritt.
+              Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Einstellwerte, Schalter,
+              Zeitstempel und Zähler legt der Fork an; Rechenwerte und Automationen folgen.
             </p>
+            {anlegeMeldung && <p className="st-hinweis">{anlegeMeldung}</p>}
+            <V1Button variant="primary" onClick={helferAnlegen} disabled={legtAn}>
+              {legtAn ? 'Legt an …' : 'Fehlende Helfer anlegen'}
+            </V1Button>
           </V1Card>
         </V1Section>
       )}

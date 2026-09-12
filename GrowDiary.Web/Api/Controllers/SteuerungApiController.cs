@@ -270,10 +270,11 @@ public sealed class SteuerungApiController : ApiControllerBase
         var bilanz = await _helfer.AnlegenAsync(modul, belegt, settings, ct);
         if (!bilanz.Erreichbar)
         {
-            return Problem(
-                title: "Home Assistant antwortet nicht",
-                detail: "Es wurde nichts angelegt. Ohne Antwort ist nicht zu erkennen, welche Helfer es schon gibt.",
-                statusCode: StatusCodes.Status503ServiceUnavailable);
+            // Der Fork hat ein eigenes Fehlerformat; Problem() waere das von
+            // ASP.NET und damit das zweite, das die Oberflaeche kennen muesste.
+            return ConflictError(
+                "home_assistant_stumm",
+                "Es wurde nichts angelegt. Ohne Antwort von Home Assistant ist nicht zu erkennen, welche Helfer es schon gibt.");
         }
 
         return Ok(bilanz);
