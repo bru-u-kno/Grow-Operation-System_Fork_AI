@@ -73,7 +73,6 @@ export default function GeraetePage() {
   // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
   // spaeter und sucht die Entitaet dann im falschen Geraet.
   const [letzte, setLetzte] = useState<{ text: string; zurueck?: () => Promise<void> } | null>(null)
-  const [zeigeVerschobene, setZeigeVerschobene] = useState(false)
   const [entwurf, setEntwurf] = useState('')
   const [speichert, setSpeichert] = useState(false)
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
@@ -319,19 +318,15 @@ export default function GeraetePage() {
           <div><b>{seite.anzahlGeraete}</b><span>Geräte</span></div>
           <div><b>{seite.anzahlEntitaeten}</b><span>Entitäten</span></div>
           <div><b className={seite.anzahlVermutet > 0 ? 'is-warn' : undefined}>{seite.anzahlVermutet}</b><span>vermutet</span></div>
-          <div
-            className={seite.anzahlVerschoben > 0 ? 'gr-klickbar' : undefined}
-            role={seite.anzahlVerschoben > 0 ? 'button' : undefined}
-            tabIndex={seite.anzahlVerschoben > 0 ? 0 : undefined}
-            onClick={() => seite.anzahlVerschoben > 0 && setZeigeVerschobene((offen) => !offen)}
-            onKeyDown={(event) => { if (event.key === 'Enter' && seite.anzahlVerschoben > 0) setZeigeVerschobene((offen) => !offen) }}
-          >
+          <div>
             <b className={seite.anzahlVerschoben > 0 ? 'is-warn' : undefined}>{seite.anzahlVerschoben}</b>
             <span>verschoben</span>
           </div>
         </div>
 
-        {zeigeVerschobene && verschobene.length > 0 && (
+        {verschobene.length > 0 && (
+          <>
+          <p className="gr-verschobene-kopf">Von Hand zugeordnet — „Zurück" gibt die Entität dorthin, wohin Home Assistant sie zählt.</p>
           <ul className="gr-verschobene">
             {verschobene.map(({ entitaet, geraet }) => (
               <li key={entitaet.entityId}>
@@ -346,6 +341,7 @@ export default function GeraetePage() {
               </li>
             ))}
           </ul>
+          </>
         )}
         {rubrikName === null ? (
           <div className="gr-knoepfe">
@@ -474,6 +470,9 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
           >
             ⋯
           </span>
+        )}
+        {geraet.entitaeten.some((e) => e.verschoben) && (
+          <span className="gr-anzahl is-warn" title="Enthält eine von Hand zugeordnete Entität">!</span>
         )}
         {hatKinder && (
           <span className="gr-anzahl" title={kinderZahl === 1 ? '1 angeschlossenes Gerät' : `${kinderZahl} angeschlossene Geräte`}>

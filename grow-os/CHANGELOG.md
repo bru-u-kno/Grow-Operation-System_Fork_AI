@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.31
+
+**Fork AI.** Die Korrekturliste versteckt sich nicht mehr.
+
+- Gibt es von Hand zugeordnete Entitäten, steht die Liste **sichtbar** oben —
+  vorher musste man die Zahl antippen, was niemand erraten konnte. Je Zeile ein
+  **Zurück**.
+- Die Kennzahl „verschoben" ist gelb statt grün, und ein Gerät, in dem etwas von
+  Hand liegt, trägt ein gelbes **!** in der Zeile.
+
 ## 2.0.0-forkai.30
 
 **Fork AI.** Verschobene Entitäten sind jetzt zu sehen — und zu finden.

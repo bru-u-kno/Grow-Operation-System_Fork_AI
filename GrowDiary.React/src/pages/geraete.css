@@ -4,7 +4,7 @@
 .gr-zahlen { display: flex; gap: var(--s-4); }
 .gr-zahlen div { flex: 1; }
 .gr-zahlen b { display: block; font-size: var(--fs-lg, 1.25rem); font-variant-numeric: tabular-nums; }
-.gr-zahlen b.is-warn { color: var(--warn-text); }
+.gr-zahlen b.is-warn, .gr-zahlen b.is-warn * { color: var(--warn-text) !important; }
 .gr-zahlen span {
   display: block; margin-top: var(--s-1); font-size: var(--fs-micro, .625rem);
   letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
@@ -105,7 +105,12 @@
 .gr-gehoert select { flex: 1; min-width: 0; font: inherit; font-size: var(--fs-text); }
 
 /* Fork AI (forkai.30): verschobene Entitaeten sichtbar machen. */
-.gr-klickbar { cursor: pointer; }
+.gr-anzahl.is-warn { border-color: var(--warn-text); background: var(--warn-wash); color: var(--warn-text); }
+
+.gr-verschobene-kopf {
+  margin: var(--s-4) 0 0; font-size: var(--fs-micro, .625rem); color: var(--warn-text);
+  letter-spacing: .04em;
+}
 
 .gr-verschobene { list-style: none; margin: var(--s-3) 0 0; padding: 0; }
 .gr-verschobene li {
