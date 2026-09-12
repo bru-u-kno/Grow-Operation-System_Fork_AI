@@ -5,6 +5,43 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.50
+
+**Fork AI.** Das Licht wird jetzt hier bedient, nicht mehr im Grow-Dashboard.
+
+### Was Sie sehen
+
+- Unter **Betrieb → Steuerung** führt die Zeile „Licht LED Top" jetzt auf eine
+  eigene Seite mit drei Reitern.
+- **Betrieb**: Aus, An und die beiden Zeitpläne (Veggie, Blüte) auf Knopfdruck,
+  dazu die Leistungsstufe 1–10.
+- **Zeitplan**: die vier Zeiten der beiden Zeitpläne. Wer den gerade aktiven
+  Zeitplan ändert, schickt ihn sofort an den Controller.
+- **Erweitert**: wie hartnäckig geschrieben wird — Abstand, Prüffrist,
+  Wiederholungen.
+- Kommt ein Befehl beim Gerät nicht an, steht das dort: erst „wird übernommen",
+  nach den Wiederholungen eine deutliche Warnung mit dem echten Zustand.
+
+### Warum
+
+Die Lampe ließ sich bisher nur über eine eigene Karte im Home-Assistant-Dashboard
+bedienen. Die Zeitpläne lagen damit woanders als die übrigen Sollwerte des Zelts.
+
+Der Zeitplan selbst läuft weiter im AC-Infinity-Controller — er schaltet auch
+dann, wenn Add-on, Home Assistant und Internet aus sind. Geschrieben wird nur,
+wenn Sie etwas ändern.
+
+### Technisch
+
+- Neu: `LichtSteuerungService`, `LichtEinstellungen`, `GET/PUT /api/steuerung/licht`,
+  `POST /api/steuerung/licht/befehl`, Seite `features/steuerung/LichtDetail.tsx`.
+- Sechs Geräte-Rollen (`licht_modus`, `licht_stufe`, `licht_ein_zeit`,
+  `licht_aus_zeit`, `licht_zustand`, `licht_status`) unter Steuerung → Geräte.
+- Gegen die AC-Infinity-Cloud, die parallele Befehle verwirft: nur Abweichendes
+  schreiben, Abstand zwischen den Aufrufen, Prüfung nach Frist, Wiederholung.
+- Die vier `input_datetime.led_top_zeitplan_*`-Helfer werden mitgeschrieben,
+  solange die alte Dashboard-Karte sie braucht (abschaltbar unter Erweitert).
+
 ## 2.0.0-forkai.49
 
 **Fork AI.** Sie bestimmen selbst, welche Knöpfe oben auf der Live-Seite stehen.
