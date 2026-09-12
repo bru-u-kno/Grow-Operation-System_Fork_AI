@@ -30,8 +30,9 @@ public sealed class HomeAssistantRegistryTests
 
     private const string Geraete = """
         [
-          { "id": "e3a70d", "name": "RDWC Port 5", "name_by_user": "CO2-Ventil" },
-          { "id": "8efd96", "name": "Bluelab Guardian", "name_by_user": null }
+          { "id": "372e54", "name": "RDWC", "name_by_user": null, "via_device_id": null },
+          { "id": "e3a70d", "name": "RDWC Port 5", "name_by_user": "CO2-Ventil", "via_device_id": "372e54" },
+          { "id": "8efd96", "name": "Bluelab Guardian", "name_by_user": null, "via_device_id": null }
         ]
         """;
 
@@ -43,6 +44,21 @@ public sealed class HomeAssistantRegistryTests
         Assert.Equal("CO2-Ventil", herkunft["binary_sensor.big_port_5_zustand"].DeviceName);
         Assert.Equal("Bluelab Guardian", herkunft["sensor.bluelab_guardian_ph"].DeviceName);
     }
+
+    [Fact]
+    public void ViaDeviceNenntDenControllerSamtNamen()
+    {
+        // Home Assistant modelliert die Kette selbst: jedes Port-Geraet zeigt auf
+        // seinen Controller. Das ist die Wahrheit, nicht die MAC-Vermutung.
+        var eintrag = HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete))["binary_sensor.big_port_5_zustand"];
+
+        Assert.Equal("372e54", eintrag.ViaDeviceId);
+        Assert.Equal("RDWC", eintrag.ViaDeviceName);
+    }
+
+    [Fact]
+    public void EinControllerOhneViaDeviceHaengtAnNichts()
+        => Assert.Null(HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete))["sensor.bluelab_guardian_ph"].ViaDeviceId);
 
     [Fact]
     public void DeviceIdUndUniqueIdKommenMit()

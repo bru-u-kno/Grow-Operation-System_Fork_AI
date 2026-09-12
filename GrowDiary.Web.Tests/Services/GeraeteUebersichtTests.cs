@@ -88,6 +88,28 @@ public sealed class GeraeteUebersichtTests
     }
 
     [Fact]
+    public void ViaDeviceSchlaegtDieMacVermutung()
+    {
+        // Der Controller heisst in HA "RDWC" — der Fork soll diesen Namen zeigen und
+        // nicht "Controller 4C16" aus der MAC bauen.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "RDWC CO2",
+                "ac_infinity_34CDB02C4C16_port_5_loadState", "372e54", "RDWC"),
+        };
+
+        var geraete = Bauen(Verwendungen(("binary_sensor.big_port_5_zustand", "CO₂-Ventil")), herkunft: herkunft);
+
+        var ventil = Assert.Single(geraete, g => !g.IstController);
+        var controller = Assert.Single(geraete, g => g.IstController);
+
+        Assert.Equal("RDWC CO2", ventil.Name);
+        Assert.Equal("Port 5", ventil.Anschluss);
+        Assert.Equal(controller.Schluessel, ventil.ElternSchluessel);
+        Assert.Equal("RDWC", controller.Name);
+    }
+
+    [Fact]
     public void PortsEinesControllersHaengenAnEinemGeraet()
     {
         // AC Infinity legt je Port ein eigenes HA-Gerät an. Die MAC in der

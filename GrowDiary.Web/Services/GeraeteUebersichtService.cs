@@ -152,18 +152,33 @@ public sealed class GeraeteUebersichtService
             eintrag.Bestaetigt |= bestaetigt;
             eintrag.Name ??= quelle?.DeviceName;
 
-            // Zweite Stufe: steckt dieses Gerät in einem Port?
+            // Zweite Stufe: an welchem Gerät hängt dieses? Home Assistant sagt es
+            // selbst über via_device; die MAC ist nur der Notnagel für Integrationen,
+            // die kein via_device setzen.
             var (mac, anschluss) = GeraeteHerkunft.Lesen(quelle?.UniqueId);
-            if (mac is not null && !schluessel.StartsWith("mac:", StringComparison.Ordinal))
+            eintrag.Anschluss ??= anschluss;
+
+            string? controller = null;
+            string? controllerName = null;
+            if (!string.IsNullOrWhiteSpace(quelle?.ViaDeviceId))
             {
-                var controller = GeraeteHerkunft.ControllerSchluessel(mac);
+                controller = HaSchluessel(quelle!.ViaDeviceId!);
+                controllerName = quelle.ViaDeviceName;
+            }
+            else if (mac is not null)
+            {
+                controller = GeraeteHerkunft.ControllerSchluessel(mac);
+                controllerName = GeraeteHerkunft.ControllerName(mac);
+            }
+
+            if (controller is not null && !controller.Equals(schluessel, StringComparison.OrdinalIgnoreCase))
+            {
                 eintrag.ElternSchluessel ??= controller;
-                eintrag.Anschluss ??= anschluss;
 
                 var eltern = Holen(controller);
                 eltern.IstController = true;
                 eltern.Bestaetigt = true;
-                eltern.Name ??= GeraeteHerkunft.ControllerName(mac);
+                eltern.Name ??= controllerName;
             }
         }
 

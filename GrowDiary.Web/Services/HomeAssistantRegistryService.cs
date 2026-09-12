@@ -83,6 +83,7 @@ public sealed class HomeAssistantRegistryService
         JsonElement? geraete)
     {
         var namen = new Dictionary<string, string>(StringComparer.Ordinal);
+        var eltern = new Dictionary<string, string>(StringComparer.Ordinal);
         if (geraete is { ValueKind: JsonValueKind.Array } geraeteliste)
         {
             foreach (var geraet in geraeteliste.EnumerateArray())
@@ -91,6 +92,8 @@ public sealed class HomeAssistantRegistryService
                 if (id is null) continue;
                 // name_by_user ist der Name, den der Nutzer vergeben hat — der gilt.
                 namen[id] = Text(geraet, "name_by_user") ?? Text(geraet, "name") ?? id;
+                // via_device_id: der Controller, an dem dieses Gerät hängt.
+                if (Text(geraet, "via_device_id") is { } via) eltern[id] = via;
             }
         }
 
@@ -105,12 +108,22 @@ public sealed class HomeAssistantRegistryService
                 var deviceId = Text(eintrag, "device_id");
                 var geraetename = deviceId is not null && namen.TryGetValue(deviceId, out var name) ? name : null;
 
+                string? viaId = null;
+                string? viaName = null;
+                if (deviceId is not null && eltern.TryGetValue(deviceId, out var via))
+                {
+                    viaId = via;
+                    viaName = namen.TryGetValue(via, out var name2) ? name2 : null;
+                }
+
                 treffer[entityId] = new HerkunftEintrag(
                     entityId,
                     deviceId,
                     // Der Name der Entität ist der bessere Rückfall als die rohe Id.
                     geraetename ?? Text(eintrag, "name") ?? Text(eintrag, "original_name"),
-                    Text(eintrag, "unique_id"));
+                    Text(eintrag, "unique_id"),
+                    viaId,
+                    viaName);
             }
         }
 

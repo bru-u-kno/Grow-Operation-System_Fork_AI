@@ -123,8 +123,19 @@ public sealed class GespeichertesGeraet
 /// Name und Wert. <c>DeviceId</c> und <c>UniqueId</c> kommen aus dem Geräte- und
 /// Entitätsregister. Fehlen sie (alte Anlage, Registry nicht erreichbar), fällt die
 /// Ableitung auf die Namensvermutung zurück; nichts bricht, es wird nur gröber.</para>
+///
+/// <para><c>ViaDeviceId</c> ist Home Assistants eigene Auskunft darüber, an welchem
+/// Gerät dieses hängt — bei AC Infinity zeigt jedes Port-Gerät auf seinen Controller.
+/// Das ist die Wahrheit; die MAC aus der <c>unique_id</c> ist nur noch der Notnagel
+/// für Integrationen, die kein <c>via_device</c> setzen.</para>
 /// </remarks>
-public sealed record HerkunftEintrag(string EntityId, string? DeviceId, string? DeviceName, string? UniqueId);
+public sealed record HerkunftEintrag(
+    string EntityId,
+    string? DeviceId,
+    string? DeviceName,
+    string? UniqueId,
+    string? ViaDeviceId = null,
+    string? ViaDeviceName = null);
 
 /// <summary>
 /// Die Klammer über den Geräten, die Home Assistant je Port einzeln anlegt.
