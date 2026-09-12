@@ -108,7 +108,17 @@
         ],
         "ecTarget": 0.4,
         "phMin": 6.2,
-        "phMax": 6.2
+        "phMax": 6.2,
+        "waterTempDayC": 22,
+        "waterTempNightC": 22,
+        "vpdMin": 0.3,
+        "vpdMax": 0.5,
+        "co2Min": 400,
+        "co2Max": 500,
+        "ppfdMin": 150,
+        "ppfdMax": 250,
+        "rhMax": 90,
+        "airTempC": 30
       },
       {
         "id": "veg-w1",
@@ -139,7 +149,17 @@
         ],
         "ecTarget": 0.5,
         "phMin": 6.2,
-        "phMax": 6.2
+        "phMax": 6.2,
+        "waterTempDayC": 20,
+        "waterTempNightC": 20,
+        "vpdMin": 0.4,
+        "vpdMax": 0.6,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 250,
+        "ppfdMax": 350,
+        "rhMax": 85,
+        "airTempC": 25
       },
       {
         "id": "veg-w2",
@@ -170,7 +190,17 @@
         ],
         "ecTarget": 0.6,
         "phMin": 6.1,
-        "phMax": 6.1
+        "phMax": 6.1,
+        "waterTempDayC": 20,
+        "waterTempNightC": 20,
+        "vpdMin": 0.5,
+        "vpdMax": 0.7,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 350,
+        "ppfdMax": 450,
+        "rhMax": 80,
+        "airTempC": 25
       },
       {
         "id": "veg-w3",
@@ -201,7 +231,17 @@
         ],
         "ecTarget": 0.7,
         "phMin": 6.0,
-        "phMax": 6.0
+        "phMax": 6.0,
+        "waterTempDayC": 20,
+        "waterTempNightC": 20,
+        "vpdMin": 0.7,
+        "vpdMax": 0.9,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 450,
+        "ppfdMax": 550,
+        "rhMax": 75,
+        "airTempC": 25
       },
       {
         "id": "veg-w4",
@@ -232,7 +272,17 @@
         ],
         "ecTarget": 0.8,
         "phMin": 6.0,
-        "phMax": 6.0
+        "phMax": 6.0,
+        "waterTempDayC": 20,
+        "waterTempNightC": 20,
+        "vpdMin": 0.8,
+        "vpdMax": 1.0,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 500,
+        "ppfdMax": 600,
+        "rhMax": 70,
+        "airTempC": 25
       },
       {
         "id": "flower-w1",
@@ -263,7 +313,17 @@
         ],
         "ecTarget": 0.9,
         "phMin": 6.0,
-        "phMax": 6.0
+        "phMax": 6.0,
+        "waterTempDayC": 20,
+        "waterTempNightC": 20,
+        "vpdMin": 1.0,
+        "vpdMax": 1.4,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 800,
+        "ppfdMax": 900,
+        "rhMax": 65,
+        "airTempC": 25
       },
       {
         "id": "flower-w2",
@@ -294,7 +354,17 @@
         ],
         "ecTarget": 1.0,
         "phMin": 6.0,
-        "phMax": 6.0
+        "phMax": 6.0,
+        "waterTempDayC": 20,
+        "waterTempNightC": 18,
+        "vpdMin": 1.0,
+        "vpdMax": 1.4,
+        "co2Min": 800,
+        "co2Max": 1000,
+        "ppfdMin": 850,
+        "ppfdMax": 950,
+        "rhMax": 65,
+        "airTempC": 25
       },
       {
         "id": "flower-w3",
@@ -330,7 +400,17 @@
         ],
         "ecTarget": 1.2,
         "phMin": 6.0,
-        "phMax": 6.0
+        "phMax": 6.0,
+        "waterTempDayC": 20,
+        "waterTempNightC": 17,
+        "vpdMin": 1.0,
+        "vpdMax": 1.4,
+        "co2Min": 1000,
+        "co2Max": 1200,
+        "ppfdMin": 900,
+        "ppfdMax": 1000,
+        "rhMax": 65,
+        "airTempC": 25
       },
       {
         "id": "flower-w4",
@@ -366,7 +446,17 @@
         ],
         "ecTarget": 1.4,
         "phMin": 5.9,
-        "phMax": 5.9
+        "phMax": 5.9,
+        "waterTempDayC": 20,
+        "waterTempNightC": 17,
+        "vpdMin": 1.2,
+        "vpdMax": 1.4,
+        "co2Min": 1200,
+        "co2Max": 1400,
+        "ppfdMin": 1000,
+        "ppfdMax": 1100,
+        "rhMax": 60,
+        "airTempC": 25
       },
       {
         "id": "flower-w5",
@@ -402,7 +492,17 @@
         ],
         "ecTarget": 1.5,
         "phMin": 5.9,
-        "phMax": 5.9
+        "phMax": 5.9,
+        "waterTempDayC": 19,
+        "waterTempNightC": 16,
+        "vpdMin": 1.2,
+        "vpdMax": 1.4,
+        "co2Min": 1200,
+        "co2Max": 1400,
+        "ppfdMin": 1050,
+        "ppfdMax": 1150,
+        "rhMax": 55,
+        "airTempC": 24
       },
       {
         "id": "flower-w6",
@@ -438,7 +538,17 @@
         ],
         "ecTarget": 1.6,
         "phMin": 5.8,
-        "phMax": 5.8
+        "phMax": 5.8,
+        "waterTempDayC": 18,
+        "waterTempNightC": 16,
+        "vpdMin": 1.2,
+        "vpdMax": 1.4,
+        "co2Min": 1200,
+        "co2Max": 1400,
+        "ppfdMin": 1100,
+        "ppfdMax": 1200,
+        "rhMax": 50,
+        "airTempC": 23
       },
       {
         "id": "flower-w7",
@@ -474,7 +584,17 @@
         ],
         "ecTarget": 1.2,
         "phMin": 5.8,
-        "phMax": 5.8
+        "phMax": 5.8,
+        "waterTempDayC": 18,
+        "waterTempNightC": 16,
+        "vpdMin": 1.4,
+        "vpdMax": 1.6,
+        "co2Min": 1000,
+        "co2Max": 1200,
+        "ppfdMin": 1000,
+        "ppfdMax": 1200,
+        "rhMax": 40,
+        "airTempC": 20
       },
       {
         "id": "flower-w8",
@@ -510,7 +630,17 @@
         ],
         "ecTarget": 1.0,
         "phMin": 5.8,
-        "phMax": 5.8
+        "phMax": 5.8,
+        "waterTempDayC": 17,
+        "waterTempNightC": 15,
+        "vpdMin": 1.4,
+        "vpdMax": 1.6,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 800,
+        "ppfdMax": 1000,
+        "rhMax": 40,
+        "airTempC": 18
       },
       {
         "id": "flush",
@@ -536,7 +666,17 @@
         ],
         "ecTarget": 0.4,
         "phMin": 5.6,
-        "phMax": 5.8
+        "phMax": 5.8,
+        "waterTempDayC": 15,
+        "waterTempNightC": 15,
+        "vpdMin": 1.5,
+        "vpdMax": 1.7,
+        "co2Min": 600,
+        "co2Max": 800,
+        "ppfdMin": 450,
+        "ppfdMax": 550,
+        "rhMax": 30,
+        "airTempC": 16
       }
     ]
   }

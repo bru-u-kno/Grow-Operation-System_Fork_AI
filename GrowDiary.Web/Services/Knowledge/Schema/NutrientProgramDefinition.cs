@@ -101,6 +101,52 @@ public sealed class FeedChartColumn
 
     [JsonPropertyName("phMax")]
     public double? PhMax { get; set; }
+
+    // ---- Fork AI: Klima je Woche ----
+    // Der Klimateil eines Plans (Wasser, VPD, RH, Luft, CO2, PPFD) stand bisher
+    // nur als Fliesstext in den Phasennotizen und wirkte nirgends. Er gehoert an
+    // dieselbe Wochenspalte wie EC und pH: dann erbt er ohne Zutun deren Anker
+    // (Bluetewochen ab Flip, Vegi-Wochen ab Start, letzte Spalte wird gehalten)
+    // und jede Stelle, die das Zielband liest, sieht ihn automatisch mit.
+    // Alles optional — ein Programm ohne diese Angaben verhaelt sich wie bisher.
+
+    [JsonPropertyName("waterTempDayC")]
+    public double? WaterTempDayC { get; set; }
+
+    [JsonPropertyName("waterTempNightC")]
+    public double? WaterTempNightC { get; set; }
+
+    [JsonPropertyName("vpdMin")]
+    public double? VpdMin { get; set; }
+
+    [JsonPropertyName("vpdMax")]
+    public double? VpdMax { get; set; }
+
+    [JsonPropertyName("co2Min")]
+    public double? Co2Min { get; set; }
+
+    [JsonPropertyName("co2Max")]
+    public double? Co2Max { get; set; }
+
+    [JsonPropertyName("ppfdMin")]
+    public double? PpfdMin { get; set; }
+
+    [JsonPropertyName("ppfdMax")]
+    public double? PpfdMax { get; set; }
+
+    /// <summary>Obergrenze der Luftfeuchte in Prozent.</summary>
+    /// <remarks>
+    /// Steht bewusst NICHT im Zielband: <c>HydroTargetValues</c> kennt weder RH
+    /// noch Lufttemperatur, und diese Felder aufzubohren hiesse, jeden Aufrufer
+    /// im Original anzufassen. Beide Werte bleiben deshalb an der Spalte und
+    /// werden von der Wochenplan-Seite und der HA-Uebergabe gelesen.
+    /// </remarks>
+    [JsonPropertyName("rhMax")]
+    public double? RhMax { get; set; }
+
+    /// <summary>Ziel-Lufttemperatur in °C.</summary>
+    [JsonPropertyName("airTempC")]
+    public double? AirTempC { get; set; }
 }
 
 /// <summary>Eine Komponente in einer Spalte — als Spanne, wo das Chart eine nennt.</summary>

@@ -90,6 +90,36 @@ public sealed class MischplanService
             ergebnis = ergebnis with { PhMin = phMin, PhMax = phMax };
         }
 
+        /* Fork AI: der Klimateil der Woche. Anders als beim EC wird hier nicht
+           zentriert, sondern ersetzt — der Plan nennt fuer Wasser, VPD, CO2 und
+           PPFD bereits Spannen bzw. Punktwerte, eine Breite aus dem Phasenprofil
+           daraufzurechnen wuerde sie nur verfaelschen. Was die Spalte nicht
+           nennt, bleibt beim Profilwert. */
+        if (spalte.WaterTempDayC is { } wasserTag)
+        {
+            ergebnis = ergebnis with { WaterTempDayC = wasserTag };
+        }
+
+        if (spalte.WaterTempNightC is { } wasserNacht)
+        {
+            ergebnis = ergebnis with { WaterTempNightC = wasserNacht };
+        }
+
+        if (spalte.VpdMin is { } vpdMin && spalte.VpdMax is { } vpdMax)
+        {
+            ergebnis = ergebnis with { VpdMin = vpdMin, VpdMax = vpdMax };
+        }
+
+        if (spalte.Co2Min is { } co2Min && spalte.Co2Max is { } co2Max)
+        {
+            ergebnis = ergebnis with { Co2Min = co2Min, Co2Max = co2Max };
+        }
+
+        if (spalte.PpfdMin is { } ppfdMin && spalte.PpfdMax is { } ppfdMax)
+        {
+            ergebnis = ergebnis with { PpfdMin = ppfdMin, PpfdMax = ppfdMax };
+        }
+
         return ergebnis;
     }
 

@@ -74,6 +74,7 @@ Nicht gangbar sind zwei naheliegende Wege, beide ausprobiert: eine
 `webpage`-Karte auf die Ingress-Adresse verliert nach kurzer Zeit ihr
 Sitzungs-Cookie, und `kiosk-mode` blendet nur Kopfzeilen von
 Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
+| forkai.46 | **Klima je Woche**: `FeedChartColumn` trägt zusätzlich Wasser Tag/Nacht, VPD, CO₂, PPFD, RH max und Lufttemperatur; `MitFeedchart` legt sie über das Phasenprofil, SKX-Chart für alle 14 Spalten befüllt | wirkt überall, wo das Zielband gilt | `Services/Knowledge/Schema/NutrientProgramDefinition.cs`, `Services/MischplanService.cs`, `wwwroot/knowledge-defaults/nutrient-programs/skx-canna-aqua.json` |
 
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 

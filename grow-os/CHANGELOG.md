@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.46
+
+**Fork AI.** Der Wochenplan bringt jetzt auch das Klima mit.
+
+### Was Sie sehen
+
+- Wasser Tag/Nacht, VPD, CO₂ und PPFD kommen in der Blüte und in der Vegi aus der
+  **Woche** des Düngeprogramms, nicht mehr aus der Phase. Live-Kacheln,
+  Messprotokoll, Diagnose und alle Grenzwerte mit der Quelle „Plan" wandern damit
+  von selbst mit — ohne dass Sie alle paar Wochen etwas nachstellen.
+- Für „SKX Canna Aqua" sind alle 14 Spalten gefüllt: Bewurzelung, Vega W1–4,
+  Flores W1–8 und Flush.
+
+### Warum
+
+Der Klimateil eines Plans stand bisher nur als Fließtext in den Phasennotizen und
+wirkte nirgends. Er sitzt jetzt an derselben Wochenspalte wie EC und pH und erbt
+damit deren Anker: Blütewochen ab Flip, Vegi-Wochen ab Start, und beim Strecken der
+Vegi bleibt die letzte Spalte stehen. Ein Programm ohne diese Angaben verhält sich
+wie zuvor.
+
+### Was noch nicht drin ist
+
+Luftfeuchte und Lufttemperatur stehen an der Spalte, wirken aber noch nicht: das
+Zielband des Originals kennt beide Größen nicht. Sie sind für die Wochenplan-Seite
+und die Übergabe an Home Assistant vorgesehen.
+
 ## 2.0.0-forkai.44
 
 **Fork AI.** Der Fork warnt, wenn Anzeige und Regelung Verschiedenes meinen.
