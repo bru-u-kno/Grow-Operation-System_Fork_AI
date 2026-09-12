@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.54
+
+**Fork AI.** Behebt einen Baufehler in forkai.53 — die Übergabe an Home Assistant
+fragte die Helferzustände über die falsche Quelle ab. Das Zustandswörterbuch ist
+nach Metrik-Kennungen geschlüsselt, nicht nach Entitäten; jetzt wird jeder Helfer
+einzeln abgefragt. Inhaltlich ändert sich nichts.
+
 ## 2.0.0-forkai.53
 
 **Fork AI.** Der Wochenplan schreibt seine Werte jetzt selbst nach Home Assistant.

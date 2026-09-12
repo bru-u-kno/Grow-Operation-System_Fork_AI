@@ -142,7 +142,6 @@ public sealed class WochenplanSyncService
 
         var stand = Stand;
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        var states = await _ha.GetStatesAsync(settings, ct);
         var ersterLauf = stand.LetzterLauf is null;
         var geschrieben = 0;
 
@@ -151,7 +150,11 @@ public sealed class WochenplanSyncService
             if (HelferFuer(rolle) is not { } entity) continue;
             if (stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)) continue;
 
-            var istWert = Zahl(states.GetValueOrDefault(entity)?.State);
+            // Einzelabfrage je Helfer statt GetStatesAsync: dessen Wörterbuch
+            // ist nach METRIK-Kennungen geschlüsselt (chiller, reservoir-temp),
+            // nicht nach Entitäts-Kennungen — wer dort `input_number.…`
+            // nachschlägt, findet grundsätzlich nichts.
+            var istWert = Zahl((await _ha.GetEntityStateAsync(settings, entity, ct))?.State);
 
             // Beim ersten Lauf nur merken, nicht schreiben: was in HA steht, ist
             // die Ausgangslage, nicht ein Fremdeingriff.
