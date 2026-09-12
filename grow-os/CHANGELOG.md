@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.23
+
+**Fork AI.** Kleine Korrektur auf **Geräte & Entitäten**: Der Pfeil an einem
+Controller klappt jetzt seine **angeschlossenen Geräte** auf und zu — vorher
+zeigte er dessen eigene Entitäten, wovon ein Controller oft gar keine hat. Bei
+acht Ports am RDWC ist das Zuklappen der eigentliche Sinn der Zeile. Die
+Unterzeile nennt die Zahl („4 angeschlossene Geräte"); die Entitäten eines
+Ports klappen weiter an der Portzeile selbst auf.
+
 ## 2.0.0-forkai.22
 
 **Fork AI.** Neue Seite **Geräte & Entitäten** — alles, was der Fork an Home

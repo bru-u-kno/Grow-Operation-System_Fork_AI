@@ -52,6 +52,9 @@ export default function GeraetePage() {
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
+  // Zugeklappte Controller. Der Pfeil am Controller gehoert seinen Ports, nicht
+  // seinen eigenen Entitaeten — bei acht Ports ist das Zuklappen der Sinn der Zeile.
+  const [zu, setZu] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const abbruch = new AbortController()
@@ -118,20 +121,42 @@ export default function GeraetePage() {
         </div>
       </V1Card>
 
-      {gruppen.map(({ geraet, kinder }) => (
-        <V1Card key={geraet.schluessel}>
-          <GeraetZeile geraet={geraet} offen={offen === geraet.schluessel} onKlick={() => setOffen(offen === geraet.schluessel ? null : geraet.schluessel)} />
-          {kinder.map((kind) => (
+      {gruppen.map(({ geraet, kinder }) => {
+        const zugeklappt = zu.has(geraet.schluessel)
+        return (
+          <V1Card key={geraet.schluessel}>
             <GeraetZeile
-              key={kind.schluessel}
-              geraet={kind}
-              eingerueckt
-              offen={offen === kind.schluessel}
-              onKlick={() => setOffen(offen === kind.schluessel ? null : kind.schluessel)}
+              geraet={geraet}
+              kinderZahl={kinder.length}
+              zugeklappt={zugeklappt}
+              offen={offen === geraet.schluessel}
+              onKlick={() => {
+                // Traegt das Geraet Ports, klappt der Pfeil DIE auf und zu.
+                // Sonst — ein Geraet fuer sich — seine eigenen Entitaeten.
+                if (kinder.length > 0) {
+                  setZu((bisher) => {
+                    const neu = new Set(bisher)
+                    if (neu.has(geraet.schluessel)) neu.delete(geraet.schluessel)
+                    else neu.add(geraet.schluessel)
+                    return neu
+                  })
+                  return
+                }
+                setOffen(offen === geraet.schluessel ? null : geraet.schluessel)
+              }}
             />
-          ))}
-        </V1Card>
-      ))}
+            {!zugeklappt && kinder.map((kind) => (
+              <GeraetZeile
+                key={kind.schluessel}
+                geraet={kind}
+                eingerueckt
+                offen={offen === kind.schluessel}
+                onKlick={() => setOffen(offen === kind.schluessel ? null : kind.schluessel)}
+              />
+            ))}
+          </V1Card>
+        )
+      })}
 
       <p className="gr-fuss">
         „Vermutet" heißt: weder Home Assistant noch du habt gesagt, zu welchem Gerät die Entität
@@ -142,30 +167,36 @@ export default function GeraetePage() {
   )
 }
 
-function GeraetZeile({ geraet, offen, onKlick, eingerueckt = false }: {
+function GeraetZeile({ geraet, offen, onKlick, eingerueckt = false, kinderZahl = 0, zugeklappt = false }: {
   geraet: Geraet
   offen: boolean
   onKlick: () => void
   eingerueckt?: boolean
+  kinderZahl?: number
+  zugeklappt?: boolean
 }) {
+  const hatKinder = kinderZahl > 0
   const unterzeile = [
     geraet.anschluss,
-    geraet.entitaeten.length === 1 ? '1 Entität' : `${geraet.entitaeten.length} Entitäten`,
+    hatKinder ? (kinderZahl === 1 ? '1 angeschlossenes Gerät' : `${kinderZahl} angeschlossene Geräte`) : null,
+    geraet.entitaeten.length === 0
+      ? null
+      : geraet.entitaeten.length === 1 ? '1 Entität' : `${geraet.entitaeten.length} Entitäten`,
     geraet.istController ? 'Controller' : null,
   ].filter(Boolean).join(' · ')
 
   return (
     <div className={eingerueckt ? 'gr-zeile is-kind' : 'gr-zeile'}>
-      <button type="button" className="gr-kopf" onClick={onKlick} aria-expanded={offen}>
+      <button type="button" className="gr-kopf" onClick={onKlick} aria-expanded={hatKinder ? !zugeklappt : offen}>
         <span className="gr-name">
           {geraet.name}
           {geraet.vermutet && <em className="gr-vermutet">vermutet</em>}
           <small>{unterzeile}</small>
         </span>
-        <span className="gr-pfeil" aria-hidden="true">{offen ? '⌄' : '›'}</span>
+        <span className="gr-pfeil" aria-hidden="true">{(hatKinder ? !zugeklappt : offen) ? '⌄' : '›'}</span>
       </button>
 
-      {offen && (
+      {!hatKinder && offen && (
         geraet.entitaeten.length === 0 ? (
           <p className="gr-leer">Keine Entität — das Gerät steht nur im Inventar.</p>
         ) : (
