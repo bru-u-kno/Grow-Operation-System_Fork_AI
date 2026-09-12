@@ -8,6 +8,23 @@ import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 
 /**
+ * Fork AI (forkai.45): Die Bauteil-Arten in Klartext.
+ *
+ * Die Namen aus dem Katalog sind die Namen der Helfer in Home Assistant — gut
+ * zum Anlegen, aber nichts, was jemand lesen will. Auf der Seite steht deshalb
+ * der Zweck, nicht der Bezeichner.
+ */
+const ART_LESBAR: Record<string, string> = {
+  Zahl: 'Einstellwert',
+  Schalter: 'Schalter',
+  Zeitpunkt: 'Zeitstempel',
+  Zaehler: 'Zähler',
+  RechenSensor: 'Rechenwert',
+  RechenSchalter: 'Rechenwert',
+  Automation: 'Automation',
+}
+
+/**
  * Fork AI (forkai.20): Steuerung — der Leitstand der Regelungen.
  *
  * <b>Was hier liegt und was nicht.</b> Geregelt wird in Home Assistant: Impuls,
@@ -418,10 +435,10 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             {bestand.bauteile.filter((b) => b.stand === 'Fehlt').map((b) => (
               <div className="st-feldzeile" key={b.entityId}>
                 <span className="st-etikett">
-                  {b.name}
-                  <small>{b.zweck}</small>
+                  {b.zweck}
+                  <small>{b.pflicht ? 'Wird gebraucht' : (b.ohneDas ?? 'Optional')}</small>
                 </span>
-                <span className="st-nurlesen">{b.entityId.split('.')[0]}</span>
+                <span className="st-nurlesen">{ART_LESBAR[b.art] ?? b.art}</span>
               </div>
             ))}
             <p className="st-hinweis">
