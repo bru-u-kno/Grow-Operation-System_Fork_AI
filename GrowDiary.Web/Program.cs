@@ -115,6 +115,7 @@ builder.Services.AddSingleton<GeraeteRepository>();
 builder.Services.AddSingleton<HomeAssistantRegistryService>();
 builder.Services.AddScoped<GeraeteUebersichtService>();
 builder.Services.AddScoped<Co2SteuerungService>();
+builder.Services.AddScoped<LichtSteuerungService>();
 // Fork AI (forkai.45): stellt fest, welche Helfer und Automationen einer
 // Steuerung in Home Assistant fehlen.
 builder.Services.AddScoped<SteuerungBestandService>();

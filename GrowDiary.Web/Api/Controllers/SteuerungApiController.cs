@@ -23,15 +23,17 @@ namespace GrowDiary.Web.Api.Controllers;
 public sealed class SteuerungApiController : ApiControllerBase
 {
     private readonly Co2SteuerungService _co2;
+    private readonly LichtSteuerungService _licht;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly KostenRepository _kosten;
     private readonly SteuerungGeraeteService _geraete;
     private readonly SteuerungBestandService _bestand;
 
-    public SteuerungApiController(Co2SteuerungService co2, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand)
     {
         _co2 = co2;
+        _licht = licht;
         _ha = ha;
         _haSettings = haSettings;
         _kosten = kosten;
@@ -46,6 +48,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     public async Task<ActionResult<SteuerungUebersichtDto>> Uebersicht(CancellationToken ct)
     {
         var live = await _co2.LiveAsync(ct);
+        var licht = await _licht.LiveAsync(ct);
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
@@ -96,11 +99,11 @@ public sealed class SteuerungApiController : ApiControllerBase
             new(
                 Kennung: "licht",
                 Titel: "Licht LED Top",
-                Status: live.LichtAn == true ? "an" : "aus",
-                Kurz: $"Zeitplan {Text("time.klein_abluft_geplante_ein_zeit") ?? "–"} – {Text("time.klein_abluft_geplante_aus_zeit") ?? "–"} · Stufe {F(Zahl("number.klein_abluft_eingeschaltete_leistung"), "")}",
-                Wert: live.LichtAn == true ? "an" : "aus",
-                Unterzeile: live.LichtAn == true ? "Lichtphase" : "Dunkelphase",
-                HatDetail: false),
+                Status: licht.Fehlgeschlagen.Count > 0 ? "warn" : licht.LichtAn == true ? "an" : "aus",
+                Kurz: LichtKurz(licht),
+                Wert: licht.LichtAn == true ? "an" : "aus",
+                Unterzeile: licht.NaechsterWechsel ?? (licht.LichtAn == true ? "Lichtphase" : "Dunkelphase"),
+                HatDetail: true),
         };
 
         return Ok(new SteuerungUebersichtDto(live.HaErreichbar, module, DateTime.UtcNow));
@@ -151,6 +154,78 @@ public sealed class SteuerungApiController : ApiControllerBase
             return Ok(dto with { HaAngenommen = erreicht });
         }
         return seite;
+    }
+
+    // ---------------------------------------------------------------- Licht
+
+    /// <summary>
+    /// Fork AI: Die Licht-Seite — Zeitpläne, Stufe und der Zustand am Controller.
+    /// </summary>
+    [HttpGet("licht")]
+    [ProducesResponseType(typeof(LichtSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<LichtSeiteDto>> Licht(CancellationToken ct)
+    {
+        var geraete = _geraete.EntitiesFuerModul(LichtSteuerungService.Modul);
+        return Ok(new LichtSeiteDto(_licht.Einstellungen, await _licht.LiveAsync(ct))
+        {
+            GeraeteZugeordnet = geraete.Values.Count(entity => !string.IsNullOrWhiteSpace(entity)),
+            GeraeteGesamt = geraete.Count,
+        });
+    }
+
+    [HttpPut("licht")]
+    [ProducesResponseType(typeof(LichtSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<LichtSeiteDto>> LichtSpeichern([FromBody] LichtEinstellungen request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("licht_invalid", "Es wurde nichts übergeben.");
+        var (gespeichert, fehler, erreicht) = await _licht.SpeichernAsync(request, ct);
+        if (gespeichert is null)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+        var seite = await Licht(ct);
+        if (seite.Result is OkObjectResult ok && ok.Value is LichtSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
+        return seite;
+    }
+
+    /// <summary>Aus, An, Preset anwenden, Stufe setzen — oder eine gemeldete Fehlmeldung wegräumen.</summary>
+    [HttpPost("licht/befehl")]
+    [ProducesResponseType(typeof(LichtSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<LichtSeiteDto>> LichtBefehl([FromBody] LichtBefehlRequest request, CancellationToken ct)
+    {
+        var art = request?.Art?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(art)) return BadRequestError("befehl_invalid", "Es wurde kein Befehl übergeben.");
+
+        if (art == "quittieren")
+        {
+            LichtSteuerungService.OffeneVergessen();
+            return await Licht(ct);
+        }
+
+        if (art is not ("aus" or "an" or "preset" or "stufe"))
+            return BadRequestError("befehl_unbekannt", $"Der Befehl „{art}\" ist nicht bekannt.");
+
+        var erreicht = await _licht.BefehlAsync(art, request!.Preset, request.Stufe, ct);
+        var seite = await Licht(ct);
+        if (seite.Result is OkObjectResult ok && ok.Value is LichtSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
+        return seite;
+    }
+
+    private static string LichtKurz(LichtLive licht)
+    {
+        var stufe = licht.Stufe?.ToString(CultureInfo.InvariantCulture) ?? "–";
+        if (licht.Modus == LichtSteuerungService.Modi.Aus) return $"Aus · Stufe {stufe}";
+        if (licht.Modus == LichtSteuerungService.Modi.An) return $"Dauerlicht · Stufe {stufe}";
+        if (licht.Modus != LichtSteuerungService.Modi.Zeitplan) return $"Modus {licht.Modus ?? "–"} · Stufe {stufe}";
+
+        var preset = licht.AktivesPreset switch
+        {
+            "veggie" => "Veggie",
+            "bluete" => "Blüte",
+            _ => "eigen",
+        };
+        return $"Zeitplan {preset} {licht.EinZeit ?? "–"} – {licht.AusZeit ?? "–"} · Stufe {stufe}";
     }
 
     // -------------------------------------------------------------- Geräte
@@ -262,6 +337,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     private static string ModulTitel(string modul) => modul switch
     {
         "co2" => "CO₂ · Begasung",
+        "licht" => "Licht · LED Top",
         _ => modul,
     };
 
@@ -292,6 +368,16 @@ public sealed record Co2SeiteDto(
     /// Die Seite zeigt damit eine Zeile zur Geräte-Zuordnung — bearbeitet wird dort,
     /// nicht hier, damit ein Gerät genau eine Wahrheit behält.
     /// </summary>
+    public int GeraeteZugeordnet { get; init; }
+    public int GeraeteGesamt { get; init; }
+}
+
+public sealed record LichtBefehlRequest(string? Art, string? Preset, int? Stufe);
+
+public sealed record LichtSeiteDto(LichtEinstellungen Einstellungen, LichtLive Live)
+{
+    /// <summary>Nach einem Befehl: ob Home Assistant alle Aufrufe angenommen hat (null beim Lesen).</summary>
+    public bool? HaAngenommen { get; init; }
     public int GeraeteZugeordnet { get; init; }
     public int GeraeteGesamt { get; init; }
 }

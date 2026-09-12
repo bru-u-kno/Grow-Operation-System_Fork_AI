@@ -72,7 +72,28 @@ public static class SteuerungGeraeteRollen
         new("co2", "licht", "Licht-Status", GruppeUmfeld,
             "binary_sensor.klein_abluft_zustand", new[] { "binary_sensor", "switch", "light" },
             Hinweis: "Begast wird nur bei Licht."),
+
+        // Licht: alle sechs Rollen zeigen auf denselben Controller-Port. Getrennt,
+        // weil ein anderes Geraet sie anders aufteilt — manche Lampen haben keine
+        // Stufe, manche keinen eigenen Zeitplan.
+        new("licht", "licht_modus", "Betriebsart der Lampe", GruppeSchalten,
+            "select.klein_abluft_aktiver_modus", new[] { "select" },
+            Hinweis: "Aus / An / Zeitplan. Beim AC-Infinity-Port heißt das Off, On, Schedule."),
+        new("licht", "licht_stufe", "Leistungsstufe", GruppeSchalten,
+            "number.klein_abluft_eingeschaltete_leistung", new[] { "number" }, Pflicht: false,
+            Hinweis: "Ohne sie fehlt der Stufenbalken; Aus, An und Zeitplan bleiben."),
+        new("licht", "licht_ein_zeit", "Geplante Ein-Zeit", GruppeSchalten,
+            "time.klein_abluft_geplante_ein_zeit", new[] { "time" }, Pflicht: false,
+            Hinweis: "Ohne die beiden Zeiten entfallen die Zeitpläne; Aus und An gehen weiter."),
+        new("licht", "licht_aus_zeit", "Geplante Aus-Zeit", GruppeSchalten,
+            "time.klein_abluft_geplante_aus_zeit", new[] { "time" }, Pflicht: false),
+        new("licht", "licht_zustand", "Lampe · Zustand", GruppeMessen,
+            "binary_sensor.klein_abluft_zustand", new[] { "binary_sensor", "switch", "light" },
+            Hinweis: "Brennt die Lampe wirklich — nicht nur „Port online“."),
+        new("licht", "licht_status", "Lampe · Port online", GruppeMessen,
+            "binary_sensor.klein_abluft_status", new[] { "binary_sensor" }, Pflicht: false),
     };
+
 
     public static IReadOnlyList<GeraeteRolle> FuerModul(string modul)
         => Alle.Where(rolle => string.Equals(rolle.Modul, modul, StringComparison.OrdinalIgnoreCase)).ToList();

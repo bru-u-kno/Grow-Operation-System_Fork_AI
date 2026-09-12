@@ -84,6 +84,7 @@ public sealed record Bauteil(
 public static class SteuerungBauteile
 {
     private const string Co2 = "co2";
+    private const string Licht = "licht";
 
     // Rollen, an denen Bauteile hängen — Schreibweise wie in SteuerungGeraeteRollen.
     private static readonly string[] BrauchtAbluft = { "abluft_stufe" };
@@ -201,6 +202,23 @@ public static class SteuerungBauteile
         new(Co2, "automation.co2_abluft_drosselung_t6_rdwc_port_1", "CO2 Abluft-Drosselung", BauteilArt.Automation,
             "Senkt die Abluft während des Dosierens.", Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung."),
+
+        // --- Licht --------------------------------------------------------
+        // Die Zeitplaene selbst liegen im Fork. Diese vier Helfer sind nur der
+        // Spiegel fuer die alte Karte im Grow-Dashboard: wer sie nicht hat,
+        // verliert nichts ausser der Karte.
+        new(Licht, "input_datetime.led_top_zeitplan_veggie_ein", "LED Top Zeitplan Veggie Ein", BauteilArt.Zeitpunkt,
+            "Spiegel der Veggie-Ein-Zeit für die Karte im Grow-Dashboard.", Pflicht: false,
+            OhneDas: "Ohne ihn zeigt die alte Dashboard-Karte veraltete Zeiten."),
+        new(Licht, "input_datetime.led_top_zeitplan_veggie_aus", "LED Top Zeitplan Veggie Aus", BauteilArt.Zeitpunkt,
+            "Spiegel der Veggie-Aus-Zeit.", Pflicht: false,
+            OhneDas: "Ohne ihn zeigt die alte Dashboard-Karte veraltete Zeiten."),
+        new(Licht, "input_datetime.led_top_zeitplan_blute_ein", "LED Top Zeitplan Blüte Ein", BauteilArt.Zeitpunkt,
+            "Spiegel der Blüte-Ein-Zeit.", Pflicht: false,
+            OhneDas: "Ohne ihn zeigt die alte Dashboard-Karte veraltete Zeiten."),
+        new(Licht, "input_datetime.led_top_zeitplan_blute_aus", "LED Top Zeitplan Blüte Aus", BauteilArt.Zeitpunkt,
+            "Spiegel der Blüte-Aus-Zeit.", Pflicht: false,
+            OhneDas: "Ohne ihn zeigt die alte Dashboard-Karte veraltete Zeiten."),
     };
 
     /// <summary>Die Bauteile einer Steuerung.</summary>
