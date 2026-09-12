@@ -21,7 +21,23 @@ namespace GrowDiary.Web.Infrastructure;
 public sealed class SteuerungRepository : RepositoryBase
 {
     private static readonly object SchemaLock = new();
-    private static bool _schemaEnsured;
+
+    /// <summary>
+    /// Für welche Datenbankdateien das Schema schon steht.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (forkai.55): Früher stand hier ein einzelnes <c>bool</c>. Das
+    /// hielt, solange es genau eine Datenbank gibt — im Betrieb trifft das zu.
+    /// In den Tests bekommt jeder Fall seine eigene Datei: der erste legte das
+    /// Schema an und setzte das Merkzeichen, jeder weitere sprang über das
+    /// Anlegen hinweg und fand eine leere Datei vor. Der Licht-Rundweg fiel
+    /// deshalb mit „no such table: ForkSteuerungEinstellungen" um — nicht wegen
+    /// eines Fehlers in seinem eigenen Code.
+    ///
+    /// Der Schlüssel ist der Dateipfad, nicht die Verbindung: mehrere
+    /// Verbindungen auf dieselbe Datei sollen weiterhin nur einmal anlegen.
+    /// </remarks>
+    private static readonly HashSet<string> SchemaSteht = new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions JsonOptionen = new(JsonSerializerDefaults.Web);
 
     public SteuerungRepository(AppPaths paths) : base(paths)
@@ -37,10 +53,10 @@ public sealed class SteuerungRepository : RepositoryBase
 
     private static void EnsureSchema(SqliteConnection connection)
     {
-        if (_schemaEnsured) return;
+        var datei = connection.DataSource ?? string.Empty;
         lock (SchemaLock)
         {
-            if (_schemaEnsured) return;
+            if (SchemaSteht.Contains(datei)) return;
             using var command = connection.CreateCommand();
             command.CommandText = """
                 CREATE TABLE IF NOT EXISTS ForkSteuerungEinstellungen (
@@ -97,7 +113,7 @@ public sealed class SteuerungRepository : RepositoryBase
                     // Spalte existiert bereits.
                 }
             }
-            _schemaEnsured = true;
+            SchemaSteht.Add(datei);
         }
     }
 
