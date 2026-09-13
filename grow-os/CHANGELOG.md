@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.92
+
+**Fork AI.** Live-Kachel Licht: gleiche Schreibweise, und die Restzeit stimmt auch nach dem Weglegen.
+
+Die Kachel schreibt die Restzeit jetzt wie die Licht-Steuerung — „Nächster
+Wechsel: in 7 h 5 min". Zwei Schreibweisen für dieselbe Angabe lesen sich wie
+zwei verschiedene Angaben.
+
+Dazu: ein Telefon im Standby lässt Zeitgeber ruhen. Wer die Übersicht offen
+liegen lässt und später wieder hinschaut, sah sonst die Restzeit von vorhin. Die
+Kachel stellt sich beim Zurückkehren auf den Bildschirm sofort nach, zusätzlich
+zum Halbminutentakt beim Zuschauen.
+
 ## 2.0.0-forkai.91
 
 **Fork AI.** „Nächster Wechsel" sagt nur noch, wann.

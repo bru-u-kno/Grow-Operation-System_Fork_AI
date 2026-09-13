@@ -24,24 +24,32 @@ export function naechsterZeitpunkt(jetzt: Date, hhmm: string): Date | null {
   return ziel
 }
 
-/** „3 Std 25 Min", „48 Min", „gleich". */
+/**
+ * „3 h 25 min", „48 min", „gleich".
+ *
+ * Dieselbe Schreibweise wie auf der Licht-Steuerung — zwei Schreibweisen für
+ * dieselbe Angabe in einer App lesen sich wie zwei verschiedene Angaben.
+ */
 export function dauerInWorten(millisekunden: number): string {
   const minutenGesamt = Math.round(millisekunden / 60000)
   if (minutenGesamt <= 0) return 'gleich'
 
   const stunden = Math.floor(minutenGesamt / 60)
   const minuten = minutenGesamt % 60
-  if (stunden === 0) return `${minuten} Min`
-  if (minuten === 0) return `${stunden} Std`
-  return `${stunden} Std ${minuten} Min`
+  if (stunden === 0) return `${minuten} min`
+  return `${stunden} h ${minuten} min`
 }
 
 /**
- * Die Zeile unter den Schaltzeiten: „noch 3 Std 25 Min bis an".
+ * Die Zeile unter den Schaltzeiten: „Nächster Wechsel: in 3 h 25 min".
  *
  * `anJetzt` sagt, was das Licht gerade tut — daraus folgt, welche der beiden
  * Zeiten die nächste ist. Ohne die passende Zeit gibt es keine Zeile: eine
  * Restzeit zu raten wäre schlimmer als keine zu zeigen.
+ *
+ * Die Richtung steht nicht dabei: ob als Nächstes an- oder ausgeschaltet wird,
+ * sagt schon der Wert der Kachel („Aus"), und die Uhrzeiten stehen in der Zeile
+ * darüber. Dreimal dasselbe in zwei Zeilen ist keine Auskunft, sondern Lärm.
  */
 export function restzeitText(
   jetzt: Date,
@@ -55,6 +63,6 @@ export function restzeitText(
   const zeitpunkt = naechsterZeitpunkt(jetzt, ziel)
   if (zeitpunkt == null) return null
 
-  const richtung = anJetzt ? 'aus' : 'an'
-  return `noch ${dauerInWorten(zeitpunkt.getTime() - jetzt.getTime())} bis ${richtung}`
+  const rest = dauerInWorten(zeitpunkt.getTime() - jetzt.getTime())
+  return `Nächster Wechsel: ${rest === 'gleich' ? 'gleich' : `in ${rest}`}`
 }

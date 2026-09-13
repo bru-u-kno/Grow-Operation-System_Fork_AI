@@ -56,8 +56,23 @@ function useMinutentakt(aktiv: boolean): Date {
   const [jetzt, setJetzt] = useState(() => new Date())
   useEffect(() => {
     if (!aktiv) return
-    const zeiger = window.setInterval(() => setJetzt(new Date()), 30_000)
-    return () => window.clearInterval(zeiger)
+    const stellen = () => setJetzt(new Date())
+    const zeiger = window.setInterval(stellen, 30_000)
+    /* Zurueck auf dem Bildschirm heisst: sofort nachstellen.
+     *
+     * Ein Telefon im Standby laesst Zeitgeber ruhen oder bremst sie stark aus.
+     * Wer die Seite offen liegen laesst und nach einer halben Stunde wieder
+     * hinschaut, saehe sonst die Restzeit von vorhin — und die ist dann
+     * schlicht falsch. Beides zusammen: der Takt fuers Zuschauen, das
+     * Wiedersehen fuers Weglegen. */
+    const beiRueckkehr = () => { if (!document.hidden) stellen() }
+    document.addEventListener('visibilitychange', beiRueckkehr)
+    window.addEventListener('focus', stellen)
+    return () => {
+      window.clearInterval(zeiger)
+      document.removeEventListener('visibilitychange', beiRueckkehr)
+      window.removeEventListener('focus', stellen)
+    }
   }, [aktiv])
   return jetzt
 }
