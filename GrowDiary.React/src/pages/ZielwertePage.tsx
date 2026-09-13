@@ -38,6 +38,7 @@ type Wert = {
   istZahl: number | null
   min: number | null
   max: number | null
+  band: string | null
   quelle: string
   quelleZusatz: string | null
   lage: string
@@ -193,9 +194,7 @@ function ZielwertePage() {
 
                   <div className="zw-fuss">
                     <span>
-                      {wert.min !== null || wert.max !== null
-                        ? `${wert.min ?? '–'} – ${wert.max ?? '–'}${wert.einheit ? ` ${wert.einheit}` : ''}`
-                        : 'kein Ziel'}
+                      {wert.band ? `${wert.band}${wert.einheit ? ` ${wert.einheit}` : ''}` : 'kein Ziel'}
                     </span>
                     <span className="zw-herkunft">
                       <QuellePill wert={wert} />

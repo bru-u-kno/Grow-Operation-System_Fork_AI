@@ -62,7 +62,7 @@
 
   .zw-alarm {
     padding: 7px 12px 10px;
-    font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--hint);
+    font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--faint);
   }
 
   /* Herkunftskette */
@@ -72,9 +72,9 @@
     font: 400 var(--fs-klein)/1.45 var(--font-mono);
   }
   .zw-stufe:last-child { border-bottom: 0; }
-  .zw-stufe-n { color: var(--hint); width: 12px; flex: none; }
+  .zw-stufe-n { color: var(--faint); width: 12px; flex: none; }
   .zw-stufe-t { flex: 1; color: var(--muted); }
-  .zw-stufe-t em { display: block; font-style: normal; color: var(--hint); }
+  .zw-stufe-t em { display: block; font-style: normal; color: var(--faint); }
   .zw-stufe-w { color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   .zw-stufe.ist-gilt { background: var(--accent-wash); }
@@ -115,6 +115,6 @@
 
   .zw-gruppe-h {
     margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--hair);
-    font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--hint);
+    font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--faint);
   }
 }

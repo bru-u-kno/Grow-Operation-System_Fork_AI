@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.65
+
+**Fork AI.** Zwei Mängel der Zielwerte-Seite, die erst die strenge Prüfung gegen
+die laufende App gefunden hat.
+
+Das Zielband auf den Karten stand mit englischem Punkt da („1.3 – 1.5"): die Zahl
+geht als JSON mit Punkt über die Leitung, und die Anzeige gab sie roh weiter.
+Jetzt kommt sie fertig formatiert aus dem Endpunkt, wie überall sonst.
+
+Die Fußzeilen — Alarmangabe und Gruppenhinweis — waren zu blass: Kontrast 2,48
+gegen die geforderten 4,5. Das betraf beide Ansichten. Sie stehen jetzt eine
+Stufe kräftiger.
+
 ## 2.0.0-forkai.64
 
 **Fork AI.** Drei Fehler der neuen Zielwerte-Seite.

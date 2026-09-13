@@ -19,6 +19,7 @@ public sealed record ZielwertDto(
     double? IstZahl,
     double? Min,
     double? Max,
+    string? Band,
     string Quelle,
     string? QuelleZusatz,
     string Lage,
@@ -250,6 +251,10 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 karte.NumericValue,
                 karte.TargetMin,
                 karte.TargetMax,
+                // Fertig formatiert mitgeben: die Zahl selbst wird als JSON mit
+                // Punkt übertragen, und die Anzeige hätte daraus „1.3 – 1.5“
+                // gemacht — in einer durchweg deutschen Oberfläche.
+                Band(karte.TargetMin, karte.TargetMax),
                 quelle,
                 zusatz,
                 Lage(karte),
