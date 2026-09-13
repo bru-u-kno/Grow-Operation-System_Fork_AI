@@ -5,6 +5,26 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.78
+
+**Fork AI.** Die Artikel-Karten auf der Kosten-Seite werden kleiner und ruhiger.
+
+**Aus vier Knöpfen werden Textlinks.** „Nachfüllung erfassen", „Als leer
+markieren", „Bearbeiten" und „Löschen" standen als vier gleich große Knöpfe
+untereinander und brauchten mehr Höhe als alle Stammdaten der Karte zusammen.
+Jetzt: „Nachfüllen" und „Leer" als Links, der Rest hinter einem ···. Ein
+Löschen, das einen Tipp mehr kostet, passiert seltener versehentlich — und es
+stand vorher gleichberechtigt neben allem anderen.
+
+**Der Verbrauch bekommt eine Aufklappzeile** statt eines Knopfes, der schief am
+Rand klebte. Rechts steht, was drinsteht — nach dem ersten Aufklappen der
+Zeitraum und die Summe, sonst der Grund, warum es nichts zu zeigen gibt.
+Zugeklappt wird dort, wo aufgeklappt wurde; der große gestrichelte Knopf unten
+entfällt.
+
+**Die Zeiträume sind eine schiebbare Zeile** statt vier umbrechender Knöpfe, in
+derselben Pillenform wie in der Steuerung.
+
 ## 2.0.0-forkai.77
 
 **Fork AI.** Verbrauch je Artikel über einen wählbaren Zeitraum — auf der

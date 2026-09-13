@@ -68,7 +68,10 @@
   .ko-artikel-fakten, .ko-artikel-prognose { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
   .ko-balken { height: 8px; border-radius: var(--r-pill); overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
   .ko-balken i { display: block; height: 100%; background: var(--accent); border-radius: var(--r-pill); }
-  .ko-artikel-aktionen { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-2); }
+  .ko-artikel-aktionen {
+    display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+    margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair);
+  }
   .ko-artikel-aktionen .ls-btn { margin-left: 0; }
 
   /* Formulare: Erfassung und Quelle. */
@@ -98,13 +101,49 @@
 
 /* Fork AI (forkai.77): Verbrauch je Artikel über einen Zeitraum. */
 @layer components {
-  .ko-verbrauch-auf { margin-top: var(--s-2); }
+  /* Aufklappzeile: links der Titel, rechts was drinsteht. */
+  .ko-verbrauch-zeile {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    width: 100%; padding: var(--s-3) 0; background: none; border: 0; color: inherit; font: inherit;
+    cursor: pointer; text-align: left;
+  }
+  .ko-verbrauch-zeile b { font-size: var(--fs-text); font-weight: 500; }
+  .ko-verbrauch-zeile span {
+    font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); white-space: nowrap;
+  }
+  .ko-verbrauch-zeile:hover span, .ko-verbrauch-zeile:focus-visible span { color: var(--muted); }
 
-  .ko-verbrauch { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair); }
-  .ko-verbrauch-spannen { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }
-  .ko-verbrauch-spannen .ls-btn[aria-pressed='true'] {
+  /* Aktionen als Textlinks — vier gleich grosse Knoepfe brauchten mehr Hoehe
+     als alle Stammdaten der Karte zusammen. */
+  .ko-link {
+    background: none; border: 0; padding: 0 0 1px; font: inherit; font-size: var(--fs-text);
+    color: var(--muted); border-bottom: 1px solid var(--hair-2, rgba(94, 231, 160, .25)); cursor: pointer;
+  }
+  .ko-link.is-primary { color: var(--accent-text); border-bottom-color: var(--accent-dim); }
+  .ko-link.is-danger { color: var(--danger-text); border-bottom-color: var(--danger-text); }
+  .ko-link[disabled] { opacity: .5; cursor: default; }
+
+  .ko-mehr {
+    margin-left: auto; background: none; border: 0; padding: 0 var(--s-2); color: var(--faint);
+    font-size: 1.05rem; line-height: 1; letter-spacing: .08em; cursor: pointer;
+  }
+  .ko-mehr-auf { flex-basis: 100%; display: flex; gap: var(--s-3); padding-top: var(--s-2); }
+
+  .ko-chip {
+    flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--hair); border-radius: 999px;
+    background: var(--surface); color: var(--faint); font: inherit; font-size: var(--fs-text);
+    white-space: nowrap; cursor: pointer;
+  }
+  .ko-chip[aria-pressed='true'] {
     border-color: var(--accent); color: var(--accent-text); background: var(--accent-wash); font-weight: 600;
   }
+
+  .ko-verbrauch { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair); }
+  .ko-verbrauch-spannen {
+    display: flex; gap: var(--s-2); margin-bottom: var(--s-3);
+    overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .ko-verbrauch-spannen::-webkit-scrollbar { display: none; }
   .ko-verbrauch-fehler { margin: 0 0 var(--s-2); font-size: var(--fs-etikett); color: var(--danger-text); }
 
   .ko-verbrauch-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }

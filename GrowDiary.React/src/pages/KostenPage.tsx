@@ -477,6 +477,7 @@ function anlassText(anlass: Zaehlerstand['anlass']): string {
 function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { artikel: KostenArtikel; seite: KostenSeite; onErfassen: () => void; onChanged: (text?: string) => void; onError: (text: string) => void }) {
   const [busy, setBusy] = useState(false)
   const [bearbeiten, setBearbeiten] = useState(false)
+  const [mehr, setMehr] = useState(false)
   const a = artikel.aktuell
 
   if (bearbeiten) {
@@ -548,11 +549,32 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
 
       <VerbrauchBlock artikel={artikel} />
 
+      {/*
+        Fork AI (forkai.78): Textlinks statt vier gleich grosser Knoepfe. Die
+        Knoepfe brauchten mehr Hoehe als alle Stammdaten der Karte zusammen, und
+        „Loeschen" stand gleichberechtigt neben „Nachfuellen". Bearbeiten und
+        Loeschen liegen jetzt hinter ··· — selten gebraucht, und ein Loeschen,
+        das einen Tipp mehr kostet, passiert seltener versehentlich.
+      */}
       <div className="ko-artikel-aktionen">
-        <button type="button" className="ls-btn is-small is-primary" disabled={busy} onClick={onErfassen}>Nachfüllung erfassen</button>
-        {a && <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => void leerMarkieren()}>Als leer markieren</button>}
-        <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => setBearbeiten(true)}>Bearbeiten</button>
-        <button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen()}>Löschen</button>
+        <button type="button" className="ko-link is-primary" disabled={busy} onClick={onErfassen}>Nachfüllen</button>
+        {a && <button type="button" className="ko-link" disabled={busy} onClick={() => void leerMarkieren()}>Leer</button>}
+        <button
+          type="button"
+          className="ko-mehr"
+          aria-label="Weitere Aktionen"
+          aria-expanded={mehr}
+          disabled={busy}
+          onClick={() => setMehr((v) => !v)}
+        >
+          ···
+        </button>
+        {mehr && (
+          <div className="ko-mehr-auf">
+            <button type="button" className="ko-link" disabled={busy} onClick={() => { setMehr(false); setBearbeiten(true) }}>Bearbeiten</button>
+            <button type="button" className="ko-link is-danger" disabled={busy} onClick={() => void loeschen()}>Löschen</button>
+          </div>
+        )}
       </div>
       </div>
     </V1Card>
@@ -730,22 +752,35 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
     return () => controller.abort()
   }, [offen, spanne, artikel.id])
 
-  if (!offen) {
-    return (
-      <button type="button" className="ls-btn is-small is-ghost ko-verbrauch-auf" onClick={() => setOffen(true)}>
-        Verbrauch zeigen
-      </button>
-    )
-  }
+  // Rechts in der Zeile steht, was drinsteht — dann muss man zum Nachsehen
+  // nicht erst aufklappen. Zugeklappt der Zeitraum und die Summe, sonst der
+  // Grund, warum es nichts zu zeigen gibt.
+  const zustand = ansicht === null
+    ? 'zeigen'
+    : ansicht.buchungen === 0
+      ? 'noch nichts gebucht'
+      : `${SPANNEN.find((s) => s.wert === spanne)?.label ?? ''} · ${formatNumber(ansicht.summeEur, 2)} €`
 
   return (
     <div className="ko-verbrauch">
+      <button
+        type="button"
+        className="ko-verbrauch-zeile"
+        aria-expanded={offen}
+        onClick={() => setOffen((v) => !v)}
+      >
+        <b>Verbrauch</b>
+        <span>{zustand} {offen ? '▴' : '▾'}</span>
+      </button>
+
+      {!offen ? null : (
+      <>
       <div className="ko-verbrauch-spannen" role="group" aria-label="Zeitraum">
         {SPANNEN.map((s) => (
           <button
             key={s.wert}
             type="button"
-            className="ls-btn is-small"
+            className="ko-chip"
             aria-pressed={s.wert === spanne}
             onClick={() => setSpanne(s.wert)}
           >
@@ -801,7 +836,8 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
         </>
       ))}
 
-      <button type="button" className="ls-btn is-small is-ghost" onClick={() => setOffen(false)}>Zuklappen</button>
+      </>
+      )}
     </div>
   )
 }
