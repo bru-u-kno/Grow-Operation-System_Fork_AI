@@ -137,4 +137,88 @@ public class SteuerungBauteileTests
         Assert.DoesNotContain("automation.co2_abluft_drosselung_t6_rdwc_port_1", ohneAbluft);
         Assert.Contains("input_number.co2_hysterese", ohneAbluft);
     }
+    // ------------------------------------------- Vorlagen der Rechenwerte
+
+    [Fact]
+    public void JederRechenwertBringtEineVorschriftMit()
+    {
+        // Ohne Vorschrift laesst sich ein Template-Helfer nicht anlegen - er
+        // waere eine leere Huelle, die stumm nichts liefert.
+        foreach (var b in SteuerungBauteile.Alle
+                     .Where(x => x.Art is BauteilArt.RechenSensor or BauteilArt.RechenSchalter))
+        {
+            Assert.False(string.IsNullOrWhiteSpace(b.Vorlage), b.EntityId);
+        }
+    }
+
+    [Fact]
+    public void JederPlatzhalterMeintEineEchteRolle()
+    {
+        foreach (var b in SteuerungBauteile.Alle.Where(x => x.Vorlage is not null))
+        {
+            foreach (var rolle in SteuerungBauteile.PlatzhalterIn(b.Vorlage!))
+            {
+                Assert.NotNull(SteuerungGeraeteRollen.Finden(b.Modul, rolle));
+            }
+        }
+    }
+
+    [Fact]
+    public void EineVorlageHaengtAnDenRollenIhrerPlatzhalter()
+    {
+        // Sonst wird ein Rechenwert erwartet, dessen Geraet gar nicht da ist -
+        // und beim Anlegen faellt er dann ueber einen leeren Platzhalter.
+        foreach (var b in SteuerungBauteile.Alle.Where(x => x.Vorlage is not null))
+        {
+            var platzhalter = SteuerungBauteile.PlatzhalterIn(b.Vorlage!);
+            if (platzhalter.Count == 0) continue;
+
+            var haengtAn = b.HaengtAn ?? Array.Empty<string>();
+            foreach (var rolle in platzhalter)
+            {
+                var rollePflicht = SteuerungGeraeteRollen.Finden(b.Modul, rolle)?.Pflicht ?? false;
+                Assert.True(rollePflicht || haengtAn.Contains(rolle),
+                    $"{b.EntityId} nutzt [[{rolle}]], haengt aber nicht daran.");
+            }
+        }
+    }
+
+    [Fact]
+    public void GefuellteVorlageTraegtKeinenPlatzhalterMehr()
+    {
+        var zuordnung = SteuerungGeraeteRollen.FuerModul("co2")
+            .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
+
+        foreach (var b in SteuerungBauteile.Alle.Where(x => x.Vorlage is not null))
+        {
+            var fertig = SteuerungBauteile.VorlageFuellen(b.Vorlage!, zuordnung);
+            Assert.NotNull(fertig);
+            Assert.DoesNotContain("[[", fertig);
+        }
+    }
+
+    [Fact]
+    public void OhneZuordnungBleibtDieVorlageUngefuellt()
+    {
+        // Null statt einer Vorschrift mit stehendem Platzhalter: die wuerde
+        // nicht ungueltig, sondern stumm mit einem Ausweichwert weiterrechnen.
+        var mitPlatzhalter = SteuerungBauteile.Alle
+            .First(b => b.Vorlage is not null && SteuerungBauteile.PlatzhalterIn(b.Vorlage).Count > 0);
+
+        Assert.Null(SteuerungBauteile.VorlageFuellen(
+            mitPlatzhalter.Vorlage!, new Dictionary<string, string>(StringComparer.Ordinal)));
+    }
+
+    [Fact]
+    public void DerPlatzhalterPasstAnBeidenStellen()
+    {
+        // states('[[x]]') liefert den Wert, states.[[x]] das Objekt mit
+        // last_changed - beides faellt aus derselben Ersetzung.
+        var zuordnung = new Dictionary<string, string>(StringComparer.Ordinal) { ["canopy"] = "sensor.blatt" };
+        var fertig = SteuerungBauteile.VorlageFuellen(
+            "{{ states('[[canopy]]') }} {{ states.[[canopy]].last_changed }}", zuordnung);
+
+        Assert.Equal("{{ states('sensor.blatt') }} {{ states.sensor.blatt.last_changed }}", fertig);
+    }
+
 }

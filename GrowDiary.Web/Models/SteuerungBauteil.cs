@@ -71,7 +71,24 @@ public enum BauteilArt
 /// <param name="Min">Untergrenze bei <see cref="BauteilArt.Zahl"/>.</param>
 /// <param name="Max">Obergrenze bei <see cref="BauteilArt.Zahl"/>.</param>
 /// <param name="Schritt">Schrittweite bei <see cref="BauteilArt.Zahl"/>.</param>
-/// <param name="Einheit">Einheit bei <see cref="BauteilArt.Zahl"/>.</param>
+/// <param name="Einheit">Einheit bei <see cref="BauteilArt.Zahl"/> und den Rechenwerten.</param>
+/// <param name="Vorlage">
+/// Die Rechenvorschrift eines Rechenwerts, mit Platzhaltern für die Geräte.
+/// <para>
+/// Ein Platzhalter steht für den Rollen-Schlüssel in doppelten eckigen Klammern
+/// und wird beim Anlegen durch die zugeordnete Entität ersetzt. Er passt
+/// absichtlich an beiden Stellen: <c>states('[[canopy]]')</c> ergibt den Wert,
+/// <c>states.[[canopy]]</c> das Objekt mit <c>last_changed</c> — weil eine
+/// Entitäts-Id mit ihrem Punkt genau das ist, was nach <c>states.</c> gehört.
+/// </para>
+/// <para>
+/// Die Vorschriften bilden den Stand ab, der in Brus Anlage läuft, samt
+/// Hysterese und dem Halten des letzten Zustands bei Geräteaussetzern. Ändert er
+/// dort etwas, laufen Anlage und Vorlage auseinander — der Abgleich meldet das,
+/// überschrieben wird nichts.
+/// </para>
+/// </param>
+/// <param name="Zustandsklasse">Die <c>state_class</c> eines Rechenwerts, etwa <c>measurement</c>.</param>
 public sealed record Bauteil(
     string Modul,
     string EntityId,
@@ -84,7 +101,9 @@ public sealed record Bauteil(
     double? Min = null,
     double? Max = null,
     double? Schritt = null,
-    string? Einheit = null)
+    string? Einheit = null,
+    string? Vorlage = null,
+    string? Zustandsklasse = null)
 {
     /// <summary>Die Domäne der Entität — <c>input_number</c>, <c>sensor</c>, …</summary>
     public string Domaene => EntityId.Split('.', 2)[0];
@@ -197,14 +216,20 @@ public static class SteuerungBauteile
 
         // --- Rechen-Sensoren ----------------------------------------------
         new(Co2, "sensor.co2_ziel_effektiv", "CO2 Ziel effektiv", BauteilArt.RechenSensor,
-            "Welches der drei Ziele gerade gilt, mit Hysterese an den Temperaturstufen."),
+            "Welches der drei Ziele gerade gilt, mit Hysterese an den Temperaturstufen.",
+            Einheit: "ppm", Zustandsklasse: "measurement",
+            Vorlage: "{% set t = states('[[canopy]]') | float(30) %}{% set kuehl = states('input_number.co2_ziel_kuehl_unter_25_c') | int(650) %}{% set mittel = states('input_number.co2_ziel_mittel_25_bis_27_c') | int(820) %}{% set warm = states('input_number.co2_zielwert') | int(920) %}{% set alt = states('sensor.co2_ziel_effektiv') | int(0) %}{% if t >= 27.0 %}{{ warm }}{% elif t >= 26.5 and alt == warm %}{{ warm }}{% elif t >= 25.0 %}{{ mittel }}{% elif t >= 24.5 and alt == mittel %}{{ mittel }}{% else %}{{ kuehl }}{% endif %}"),
         new(Co2, "binary_sensor.co2_bedarf", "CO2 Bedarf", BauteilArt.RechenSchalter,
-            "An, solange nachdosiert werden soll. Hält seinen Zustand, wenn der Sensor schweigt."),
+            "An, solange nachdosiert werden soll. Hält seinen Zustand, wenn der Sensor schweigt.",
+            Vorlage: "{% set co2_s = states.[[co2_sensor]] %}{% set weg = co2_s is none or co2_s.state in ['unknown','unavailable'] %}{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% if weg or ziel <= 0 %}{% set seit = (as_timestamp(now()) - as_timestamp(co2_s.last_changed)) if co2_s is not none else 9999 %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% else %}{% set ist = co2_s.state | float(0) %}{% set h = states('input_number.co2_hysterese') | float(100) %}{% if ist <= 0 %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% elif ist < ziel - h %}true{% elif ist >= ziel %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% endif %}"),
         new(Co2, "binary_sensor.co2_klima_ok", "CO2 Klima OK", BauteilArt.RechenSchalter,
             "Ob das Klima die Dosierung erlaubt.", Pflicht: false, HaengtAn: BrauchtRh,
-            OhneDas: "Ohne Feuchtefühler ist die Freigabe immer erteilt."),
+            OhneDas: "Ohne Feuchtefühler ist die Freigabe immer erteilt.",
+            Vorlage: "{% set t_s = states.[[canopy]] %}{% set rh_s = states.[[rh]] %}{% set weg = t_s is none or rh_s is none or t_s.state in ['unknown','unavailable'] or rh_s.state in ['unknown','unavailable'] %}{% if weg %}{% set seit = [ (as_timestamp(now()) - as_timestamp(t_s.last_changed)) if t_s is not none else 9999, (as_timestamp(now()) - as_timestamp(rh_s.last_changed)) if rh_s is not none else 9999 ] | max %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_klima_ok', 'on') }}{% endif %}{% else %}{% set rh = rh_s.state | float(100) %}{% set t = t_s.state | float(100) %}{% set rh_ob = states('input_number.co2_rh_obergrenze') | float(65) %}{% set t_ob = states('input_number.co2_canopy_obergrenze') | float(29) %}{% set h = states('input_number.co2_klima_hysterese') | float(3) %}{% if rh > rh_ob or t > t_ob %}false{% elif rh <= rh_ob - h and t <= t_ob - 0.2 %}true{% else %}{{ is_state('binary_sensor.co2_klima_ok', 'on') }}{% endif %}{% endif %}"),
         new(Co2, "sensor.co2_impuls_bedarf", "CO2 Impuls Bedarf", BauteilArt.RechenSensor,
-            "Wie lang der nächste Impuls sein muss — aus fehlenden ppm, Volumen und Durchfluss."),
+            "Wie lang der nächste Impuls sein muss — aus fehlenden ppm, Volumen und Durchfluss.",
+            Einheit: "s", Zustandsklasse: "measurement",
+            Vorlage: "{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% set ist = states('[[co2_sensor]]') | float(0) %}{% set gps = states('input_number.co2_gramm_pro_sekunde') | float(0.26) %}{% set vol = states('input_number.co2_zeltvolumen') | float(5.76) %}{% set mn = states('input_number.co2_impulsdauer') | float(5) %}{% set mx = states('input_number.co2_impulsdauer_max') | float(20) %}{% set gramm = ([ziel - ist, 0] | max) * vol / 557 %}{{ ([ [gramm / gps, mn] | max, mx ] | min) | round(0) | int }}"),
 
         // --- Automationen -------------------------------------------------
         new(Co2, "automation.co2_dosierung_rdwc_port_5", "CO2 Dosierung", BauteilArt.Automation,
@@ -216,6 +241,54 @@ public static class SteuerungBauteile
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung."),
 
     };
+
+    /// <summary>
+    /// Die Platzhalter einer Vorlage durch die zugeordneten Entitäten ersetzen.
+    /// </summary>
+    /// <param name="vorlage">Die Rechenvorschrift mit <c>[[rolle]]</c>-Platzhaltern.</param>
+    /// <param name="zuordnung">Rollen-Schlüssel auf Entitäts-Id.</param>
+    /// <returns>
+    /// Die fertige Vorschrift — oder null, wenn eine gebrauchte Rolle frei ist.
+    /// </returns>
+    /// <remarks>
+    /// Null statt einer Vorschrift mit stehengebliebenem Platzhalter: Ein
+    /// Rechenwert, der <c>states('[[canopy]]')</c> auswertet, wird nicht
+    /// ungültig — er liefert stumm den Ausweichwert und die Regelung rechnet
+    /// mit einer erfundenen Temperatur weiter. Lieber gar nicht anlegen.
+    /// </remarks>
+    public static string? VorlageFuellen(string vorlage, IReadOnlyDictionary<string, string> zuordnung)
+    {
+        var fertig = vorlage;
+        foreach (var (rolle, entity) in zuordnung)
+        {
+            if (!string.IsNullOrWhiteSpace(entity))
+            {
+                fertig = fertig.Replace($"[[{rolle}]]", entity, StringComparison.Ordinal);
+            }
+        }
+
+        return fertig.Contains("[[", StringComparison.Ordinal) ? null : fertig;
+    }
+
+    /// <summary>Welche Rollen eine Vorlage braucht.</summary>
+    public static IReadOnlyList<string> PlatzhalterIn(string vorlage)
+    {
+        var gefunden = new List<string>();
+        var rest = vorlage.AsSpan();
+        while (true)
+        {
+            var auf = rest.IndexOf("[[", StringComparison.Ordinal);
+            if (auf < 0) break;
+            var zu = rest[auf..].IndexOf("]]", StringComparison.Ordinal);
+            if (zu < 0) break;
+
+            var name = rest.Slice(auf + 2, zu - 2).ToString();
+            if (!gefunden.Contains(name, StringComparer.Ordinal)) gefunden.Add(name);
+            rest = rest[(auf + zu + 2)..];
+        }
+
+        return gefunden;
+    }
 
     /// <summary>Die Bauteile einer Steuerung.</summary>
     public static IReadOnlyList<Bauteil> FuerModul(string modul)
