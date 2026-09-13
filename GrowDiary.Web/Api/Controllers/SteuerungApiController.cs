@@ -24,6 +24,7 @@ public sealed class SteuerungApiController : ApiControllerBase
 {
     private readonly Co2SteuerungService _co2;
     private readonly LichtSteuerungService _licht;
+    private readonly ZuluftSteuerungService _zuluft;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly KostenRepository _kosten;
@@ -34,10 +35,11 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungAutomationService _automationen;
     private readonly SteuerungProbeService _probe;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
     {
         _co2 = co2;
         _licht = licht;
+        _zuluft = zuluft;
         _ha = ha;
         _haSettings = haSettings;
         _kosten = kosten;
@@ -57,6 +59,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     {
         var live = await _co2.LiveAsync(ct);
         var licht = await _licht.LiveAsync(ct);
+        var zuluft = await _zuluft.LiveAsync(ct);
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
@@ -104,6 +107,16 @@ public sealed class SteuerungApiController : ApiControllerBase
                 Wert: $"Stufe {live.T6Stufe?.ToString(de) ?? "–"}",
                 Unterzeile: live.KlimaOk == true ? "gedrosselt" : "Klima gesperrt",
                 HatDetail: false),
+            new(
+                Kennung: "zuluft",
+                Titel: "Zuluft Keller",
+                Status: zuluft.AutomatikAn == false ? "aus" : zuluft.PortAn == true ? "an" : "aus",
+                Kurz: $"Ansaugen ab {F(Zahl(ZuluftSteuerungService.Entitaeten.MindestDifferenz), " g/m³", "0.0")} · {(zuluft.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
+                Wert: F(zuluft.DifferenzGm3, " g/m³", "0.00"),
+                Unterzeile: zuluft.PortAn == true
+                    ? $"saugt · Stufe {zuluft.IstStufe?.ToString(de) ?? "–"}"
+                    : zuluft.Bedarf == true ? "wartet auf Schaltsperre" : "bereit",
+                HatDetail: true),
             new(
                 Kennung: "licht",
                 Titel: "Licht LED Top",
@@ -161,6 +174,45 @@ public sealed class SteuerungApiController : ApiControllerBase
         {
             return Ok(dto with { HaAngenommen = erreicht });
         }
+        return seite;
+    }
+
+    // --------------------------------------------------------------- Zuluft
+
+    /// <summary>
+    /// Fork AI (forkai.76): Die Zuluft-Seite — Sollwerte und das Livebild der
+    /// Kellerzuluft. Geregelt wird weiter in Home Assistant.
+    /// </summary>
+    [HttpGet("zuluft")]
+    [ProducesResponseType(typeof(ZuluftSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ZuluftSeiteDto>> Zuluft(CancellationToken ct)
+    {
+        var geraete = _geraete.EntitiesFuerModul(ZuluftSteuerungService.Modul);
+        return Ok(new ZuluftSeiteDto(await _zuluft.EinstellungenAsync(ct), await _zuluft.LiveAsync(ct))
+        {
+            // Solange nichts gespeichert ist, stehen die Werte der vorhandenen
+            // Helfer in der Seite. Die Seite sagt das, damit niemand sie für
+            // Werkseinstellungen haelt und blind speichert.
+            AusHomeAssistantUebernommen = _zuluft.Gespeichert is null,
+            GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
+            GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(ZuluftSteuerungService.Modul).Count,
+        });
+    }
+
+    [HttpPut("zuluft")]
+    [ProducesResponseType(typeof(ZuluftSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ZuluftSeiteDto>> ZuluftSpeichern([FromBody] ZuluftEinstellungen request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("zuluft_invalid", "Es wurde nichts übergeben.");
+        var (gespeichert, fehler, erreicht) = await _zuluft.SpeichernAsync(request, ct);
+        if (gespeichert is null)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+
+        var seite = await Zuluft(ct);
+        if (seite.Result is OkObjectResult ok && ok.Value is ZuluftSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
         return seite;
     }
 
@@ -450,6 +502,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     {
         "co2" => "CO₂ · Begasung",
         "licht" => "Licht · LED Top",
+        "zuluft" => "Zuluft · Keller",
         _ => modul,
     };
 
@@ -480,6 +533,18 @@ public sealed record Co2SeiteDto(
     /// Die Seite zeigt damit eine Zeile zur Geräte-Zuordnung — bearbeitet wird dort,
     /// nicht hier, damit ein Gerät genau eine Wahrheit behält.
     /// </summary>
+    public int GeraeteZugeordnet { get; init; }
+    public int GeraeteGesamt { get; init; }
+}
+
+public sealed record ZuluftSeiteDto(ZuluftEinstellungen Einstellungen, ZuluftLive Live)
+{
+    /// <summary>Nach dem Speichern: ob Home Assistant alle Sollwerte angenommen hat (null beim Lesen).</summary>
+    public bool? HaAngenommen { get; init; }
+
+    /// <summary>True, solange die Werte aus den vorhandenen Helfern kommen und nicht aus der Datenbank.</summary>
+    public bool AusHomeAssistantUebernommen { get; init; }
+
     public int GeraeteZugeordnet { get; init; }
     public int GeraeteGesamt { get; init; }
 }

@@ -287,6 +287,13 @@ public sealed class RundwegVollstaendigTests
             + "lehnt sie mit 400 ab. Ein Rundweg, der nur Ablehnungen einsammelt, prueft "
             + "nichts. Die Felder fahren Co2SteuerungTests (Rechnung und Grenzen) und die "
             + "Oberflaechen-Erfassung auf /steuerung/co2.",
+        // Fork AI (forkai.76)
+        ["ZuluftEinstellungen"] =
+            "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Bei den Luefterstufen "
+            + "kollidiert das mit der Pruefung \"min nicht ueber max\": Stufe max = 1 bei "
+            + "Stufe min = 3 wird mit 400 abgelehnt. Dass kein Feld beim Speichern "
+            + "verlorengeht, faehrt ZuluftEinstellungenTests — dort auch die Grenzen und "
+            + "die Uebernahme vorhandener Helfer.",
         // Fork AI (forkai.25)
         ["EntitaetZuordnenRequest"] =
             "Kein Vertrag mit Feldern, die sich zurueckspielen lassen: der Aufruf ordnet "
