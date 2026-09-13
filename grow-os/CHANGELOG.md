@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.63
+
+**Fork AI.** Neue Seite **Betrieb → Zielwerte**. Sie beantwortet die Frage, die
+bisher an vier Stellen entstand und an keiner stand: welche Regel greift gerade,
+und wo ändere ich sie.
+
+Oben die Werte als Karten — das Zielband als Streifen, der Ist-Wert als Nadel
+darin. Damit sieht man nicht nur, DASS etwas danebenliegt, sondern wie weit. Ein
+Tipp auf die Karte klappt die Herkunftskette auf: Profil, Feed-Chart-Woche,
+Zelt-Grenze untereinander, das Überstimmte durchgestrichen, das Geltende in
+Akzentfarbe. Bei einer festen Grenze steht dabei, wer sie gesetzt hat — der
+Wochenplan oder ein Mensch.
+
+Darunter dieselben Werte nach Änderungsort gruppiert, je Gruppe ein Sprung
+dorthin, und die Übergabe an Home Assistant mit ihrem Zustand. Ganz oben warnt
+die Seite vor den zwei Stellen, die die Kette still kappen: eine Zelt-Regel auf
+„Fest" und ein von Hand verstellter Helfer.
+
+Licht, Füllstand und Sauerstoff stehen bewusst nicht auf der Seite — sie haben in
+keiner der vier Quellen ein Ziel und läsen sich mit „–" wie ein Versäumnis.
+
 ## 2.0.0-forkai.62
 
 **Fork AI.** Unterbau für die Seite „Zielwerte": ein Endpunkt, der zu jeder

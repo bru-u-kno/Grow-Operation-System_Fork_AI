@@ -6,6 +6,7 @@ import GettingStartedPage from './pages/GettingStartedPage'
 import DosingPage from './pages/DosingPage'
 import SetpointProfilesPage from './pages/SetpointProfilesPage'
 import WochenplanPage from './pages/WochenplanPage'
+import ZielwertePage from './pages/ZielwertePage'
 import { CropSteeringPage } from './pages/CropSteeringPage'
 import { AcTestPage } from './pages/AcTestPage'
 import MobilePage from './pages/MobilePage'
@@ -127,6 +128,7 @@ function App() {
 
           <Route path="/sollwerte" element={<SetpointProfilesPage />} />
           <Route path="/wochenplan" element={<WochenplanPage />} />
+          <Route path="/zielwerte" element={<ZielwertePage />} />
           <Route path="/cropsteering" element={<CropSteeringPage />} />
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />

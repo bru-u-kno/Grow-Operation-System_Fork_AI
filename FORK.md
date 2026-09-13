@@ -87,6 +87,8 @@ Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 
 | forkai.62 | **Zielwerte (Unterbau)**: `GET /api/zielwerte` — geltendes Band, Herkunftskette je Messgröße, Gruppierung nach Änderungsort, Hinweise auf abgeschnittene Wochenwerte und fehlende Alarmregeln | (Seite folgt) | `Api/Controllers/ZielwerteApiController.cs` |
 
+| forkai.63 | **Seite Zielwerte**: Karten mit Zielband und Nadel, aufklappbare Herkunftskette je Messgröße, Gruppierung nach Änderungsort, Übergabe-Zustand, Warnhinweise bei gekappter Kette | Betrieb → Zielwerte | `pages/ZielwertePage.tsx`, `features/zielwerte/zielwerte.css`, `App.tsx`, `navigation.ts`, `docs/referenz/sollwerte-und-wissen.md` |
+
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 
 - `grow-os/config.yaml`: Name, Slug, Image, Version `2.0.0-forkai.N`

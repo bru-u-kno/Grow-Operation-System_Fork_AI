@@ -105,6 +105,9 @@ export const navGroups: NavGroup[] = [
       // Fork AI (forkai.47): steht direkt hinter den Profilen, weil es die
       // Ebene darueber ist — das Profil gilt je Phase, der Plan je Woche.
       { to: '/wochenplan', label: 'Wochenplan', end: true, icon: '▦', short: 'Wochenplan', keywords: 'woche wochen plan duengeplan feed chart skx flip vegi bluete ernte klima zielwerte verlauf' },
+      // Fork AI: beantwortet die Frage, die an vier Stellen entsteht und an
+      // keiner steht — welche Regel greift gerade, und wo aendere ich sie.
+      { to: '/zielwerte', label: 'Zielwerte', end: true, icon: '◈', short: 'Zielwerte', keywords: 'ziel sollwert band grenzwert alarm herkunft quelle fest plan profil feedchart woche wo einstellen' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier

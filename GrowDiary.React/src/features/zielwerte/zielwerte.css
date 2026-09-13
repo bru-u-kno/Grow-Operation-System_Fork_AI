@@ -1,0 +1,120 @@
+/* Fork AI: Zielwerte-Seite. Nur Tokens.
+
+   Der Akzent markiert die geltende Stufe der Herkunftskette — auf dieser Seite
+   ist „was gilt gerade" die einzige Frage, die zaehlt, und sie soll ohne Lesen
+   beantwortet sein. */
+@layer features {
+
+  .zw-karten {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 9px;
+  }
+
+  .zw-karte {
+    border: 1px solid var(--hair); border-radius: var(--r);
+    background: var(--panel); overflow: hidden;
+  }
+
+  .zw-kopf {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    width: 100%; padding: 11px 12px 8px; background: none; border: 0; cursor: pointer;
+    text-align: left; color: inherit;
+  }
+  .zw-kopf:hover { background: var(--accent-wash); }
+
+  .zw-name {
+    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .zw-ist {
+    font: 400 var(--fs-zahl)/1 var(--font-mono); font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .zw-ist small { font-size: var(--fs-klein); color: var(--faint); }
+  .zw-ist.ist-im { color: var(--accent-text); }
+  .zw-ist.ist-darunter, .zw-ist.ist-darueber { color: var(--warn-text); }
+
+  .zw-balken {
+    position: relative; height: 6px; margin: 0 12px;
+    background: var(--sunk); border-radius: 3px; overflow: hidden;
+  }
+  .zw-zone { position: absolute; top: 0; bottom: 0; background: var(--accent-wash); }
+  .zw-nadel {
+    position: absolute; top: -2px; width: 2px; height: 10px; background: var(--ink);
+    border-radius: 1px;
+  }
+  .zw-nadel.ist-darunter, .zw-nadel.ist-darueber { background: var(--warn); }
+
+  .zw-fuss {
+    display: flex; justify-content: space-between; gap: 8px; padding: 9px 12px 0;
+    font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .zw-herkunft { color: var(--faint); text-align: right; }
+
+  .zw-pill {
+    display: inline-block; margin-right: 5px; padding: 2px 6px; border-radius: var(--r-sm);
+    font: 500 var(--fs-etikett)/1.3 var(--font-mono); letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .zw-pill.ist-plan { background: var(--accent-wash); color: var(--accent-text); }
+  .zw-pill.ist-fest { background: var(--warn-wash); color: var(--warn-text); }
+  .zw-pill.ist-profil { background: var(--info-wash); color: var(--info-text); }
+
+  .zw-alarm {
+    padding: 7px 12px 10px;
+    font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--hint);
+  }
+
+  /* Herkunftskette */
+  .zw-kette { border-top: 1px solid var(--hair); background: var(--sunk); }
+  .zw-stufe {
+    display: flex; gap: 9px; padding: 8px 12px; border-bottom: 1px solid var(--hair);
+    font: 400 var(--fs-klein)/1.45 var(--font-mono);
+  }
+  .zw-stufe:last-child { border-bottom: 0; }
+  .zw-stufe-n { color: var(--hint); width: 12px; flex: none; }
+  .zw-stufe-t { flex: 1; color: var(--muted); }
+  .zw-stufe-t em { display: block; font-style: normal; color: var(--hint); }
+  .zw-stufe-w { color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .zw-stufe.ist-gilt { background: var(--accent-wash); }
+  .zw-stufe.ist-gilt .zw-stufe-t, .zw-stufe.ist-gilt .zw-stufe-w { color: var(--accent-text); }
+  /* Durchgestrichen heisst: steht da, wirkt aber nicht. */
+  .zw-stufe.ist-weg .zw-stufe-t, .zw-stufe.ist-weg .zw-stufe-w {
+    text-decoration: line-through; opacity: .5;
+  }
+
+  /* Gruppen „wo stelle ich das ein" */
+  .zw-gruppe {
+    border: 1px solid var(--hair); border-radius: var(--r);
+    background: var(--panel); margin-bottom: 9px;
+  }
+  .zw-gruppe-k {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 12px; border-bottom: 1px solid var(--hair);
+  }
+  .zw-gruppe-k b {
+    font: 500 var(--fs-klein)/1.2 var(--font-mono); letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .zw-gruppe-k a {
+    font: 400 var(--fs-klein)/1.2 var(--font-mono); color: var(--accent-text);
+    text-decoration: none; white-space: nowrap;
+  }
+
+  .zw-zeile {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 8px 12px; border-bottom: 1px solid var(--hair);
+    font: 400 var(--fs-text)/1.4 var(--font-mono); color: var(--muted);
+  }
+  .zw-zeile:last-of-type { border-bottom: 0; }
+  .zw-zeile-r { color: var(--faint); font-variant-numeric: tabular-nums; text-align: right; }
+
+  .zw-zustand { display: block; font-size: var(--fs-etikett); color: var(--accent-text); }
+  .zw-zustand.ist-hand { color: var(--warn-text); }
+
+  .zw-gruppe-h {
+    margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--hair);
+    font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--hint);
+  }
+}

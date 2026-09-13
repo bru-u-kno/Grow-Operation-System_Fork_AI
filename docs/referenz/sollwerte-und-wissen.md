@@ -9,6 +9,7 @@
 |---|---|
 | Sollwert-Profile | Betrieb → Sollwert-Profile, `/sollwerte` |
 | Wochenplan (Fork AI) | Betrieb → Wochenplan, `/wochenplan` |
+| Zielwerte (Fork AI) | Betrieb → Zielwerte, `/zielwerte` |
 | SOPs & Bibliothek | Wissen → SOPs & Bibliothek, `/wissen` |
 | Einkaufsliste | Wissen → Einkaufsliste, `/einkaufsliste` |
 | Profil als Vorgabe wählen | Hydro-System bearbeiten, `/hydro/new` bzw. `/hydro/:id/edit` |
@@ -82,6 +83,23 @@ Plan auf dieser Spalte stehen und sagt es (`gehalten seit Woche N`).
 Die Seite `/wochenplan` zeigt das am Stück: die laufende Woche mit allen Werten,
 die Anker darüber und den ganzen Verlauf darunter.
 
+## Welche Regel greift gerade (Fork AI)
+
+Vier Quellen hintereinander — Anbaustil, Sollwertprofil, Feed-Chart-Woche,
+Zelt-Grenzwert — beantworten die Frage „was gilt" erst zusammen, und auf der
+Kachel steht davon nur das Ergebnis. `/zielwerte` klappt die ganze Kette je
+Messgröße auf: welche Stufe gilt, welche überstimmt wurde, und bei einer festen
+Grenze WER sie gesetzt hat — der Wochenplan oder ein Mensch. Darunter dieselben
+Werte nach Änderungsort gruppiert, jeweils mit Sprung dorthin.
+
+Zwei Stellen kappen die Kette still und stehen deshalb oben als Hinweis: eine
+Zelt-Regel auf `Fest` (die Wochenspalte kommt nicht mehr an) und ein von Hand
+verstellter Helfer in Home Assistant (der Sync lässt ihn in Ruhe, bis er
+freigegeben wird).
+
+Die Seite rechnet nichts selbst: sie liest `Zielband.FuerGrow` wie Kacheln und
+Alarme — sonst stünden auf zwei Bildschirmen zwei Antworten.
+
 ## Was es bewusst NICHT tut
 
 - **Kein eigenes Profil ist eine Vollkopie.** Sie hätte den Nutzer beim ersten
@@ -121,6 +139,7 @@ die Anker darüber und den ganzen Verlauf darunter.
 | Zelt-Grenzwert über das Profil legen | `GrowDiary.Web/Services/UserTargets.cs` |
 | Seite `/sollwerte` | `GrowDiary.React/src/pages/SetpointProfilesPage.tsx` |
 | `GET /api/wochenplan`, Seite `/wochenplan` | `GrowDiary.Web/Api/Controllers/WochenplanApiController.cs`, `GrowDiary.React/src/pages/WochenplanPage.tsx` |
+| `GET /api/zielwerte`, Seite `/zielwerte` (Herkunftskette) | `GrowDiary.Web/Api/Controllers/ZielwerteApiController.cs`, `GrowDiary.React/src/pages/ZielwertePage.tsx` |
 | Klima je Woche über das Phasenprofil legen | `GrowDiary.Web/Services/MischplanService.cs` (`MitFeedchart`) |
 | Profil-Auswahl an Grow und Hydro-System | `GrowDiary.React/src/features/setpoints/ProfileSelect.tsx` |
 | Seiten `/wissen` und `/einkaufsliste` | `GrowDiary.React/src/pages/KnowledgePage.tsx`, `…/ShoppingListPage.tsx` |
