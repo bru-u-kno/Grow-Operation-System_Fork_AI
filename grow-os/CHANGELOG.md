@@ -5,10 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
-## 2.0.0-forkai.60
+## 2.0.0-forkai.61
 
-**Fork AI.** Baufehler aus forkai.59 behoben (doppelt vergebener Name im
-Übergabe-Durchlauf); inhaltlich unverändert.
+**Fork AI.** Behebt einen Baufehler aus forkai.59: im Übergabe-Durchlauf war der
+Name „jetzt" zweimal vergeben — einmal für die laufende Wochenspalte, einmal für
+den aus Home Assistant gelesenen Ist-Wert. Der Übersetzer lehnt das ab, das Image
+von forkai.59 ist deshalb gar nicht erst entstanden. Der äußere Name heißt jetzt
+anders; an der Übergabe selbst ändert sich nichts. Ebenfalls nachgetragen: der
+Eintrag zu forkai.60 war zu knapp für die Prüfung der Release Notes.
 
 ## 2.0.0-forkai.59
 
