@@ -101,13 +101,14 @@ export const navGroups: NavGroup[] = [
       { to: '/dosierung', label: 'Dosierung', end: false, icon: '⚗', short: 'Dosierung', keywords: 'pumpe peristaltik ph minus plus säure nährstoff dosieren kalibrieren' },
       { to: '/geraete', label: 'Geräte & Entitäten', end: true, icon: '⧉', short: 'Geräte', keywords: 'entität entity home assistant zuordnung controller port sensor steckdose gerät hardware ha mapping' },
       { to: '/regeln', label: 'Regeln & Automatik', end: true, icon: '≡', short: 'Regeln', keywords: 'grenzwerte schwellen alarm push zeitplan automation' },
-      { to: '/sollwerte', label: 'Sollwert-Profile', end: true, icon: '◈', short: 'Sollwerte', keywords: 'zielwerte setpoints profil rdwc dwc phasen erfahrung eigene werte' },
       // Fork AI (forkai.47): steht direkt hinter den Profilen, weil es die
       // Ebene darueber ist — das Profil gilt je Phase, der Plan je Woche.
       { to: '/wochenplan', label: 'Wochenplan', end: true, icon: '▦', short: 'Wochenplan', keywords: 'woche wochen plan duengeplan feed chart skx flip vegi bluete ernte klima zielwerte verlauf' },
       // Fork AI: beantwortet die Frage, die an vier Stellen entsteht und an
       // keiner steht — welche Regel greift gerade, und wo aendere ich sie.
-      { to: '/zielwerte', label: 'Zielwerte', end: true, icon: '◈', short: 'Zielwerte', keywords: 'ziel sollwert band grenzwert alarm herkunft quelle fest plan profil feedchart woche wo einstellen' },
+      // Fork AI (forkai.67): Auskunft und die beiden Editoren dahinter unter
+      // einem Menuepunkt — „Sollwert-Profile" ist der Reiter „Profile".
+      { to: '/zielwerte', label: 'Zielwerte', end: true, icon: '◈', short: 'Zielwerte', keywords: 'ziel sollwert sollwerte profil profile setpoint band grenzwert schwelle alarm herkunft quelle fest plan feedchart woche rdwc dwc phasen wo einstellen' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
@@ -213,6 +214,8 @@ export const defaultBarRoutes: string[] = ['/', '/messungen', '/wissen', '/koste
  */
 export const legacyRedirects: Record<string, string> = {
   '/automatik': '/regeln?tab=automatik',
+  // Fork AI (forkai.67): die Profile sind ein Reiter der Zielwerte geworden.
+  '/sollwerte': '/zielwerte?tab=profile',
   '/alarme': '/regeln?tab=grenzwerte',
   '/benachrichtigungen': '/regeln?tab=push',
   // Die KI wurde entfernt; das Lesezeichen darf trotzdem nicht ins Leere laufen.

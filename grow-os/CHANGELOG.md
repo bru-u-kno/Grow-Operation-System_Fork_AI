@@ -5,6 +5,22 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.67
+
+**Fork AI.** Zielwerte, Profile und Grenzwerte liegen jetzt unter einem Menüpunkt.
+
+Bisher standen drei Menüpunkte für eine Frage: „Zielwerte" sagte, was gilt,
+„Sollwert-Profile" und die Grenzwerte in „Regeln & Automatik" waren die Orte, an
+denen man es ändert. Wer von der Auskunft zum Ändern wollte, verliess die Seite.
+`/zielwerte` hat nun drei Reiter — Jetzt gültig, Profile, Grenzwerte — nach dem
+Muster, das „Regeln & Automatik" schon benutzt. Die Sprünge in der Gruppenliste
+zeigen auf den passenden Reiter statt auf eine andere Seite.
+
+Der alte Pfad `/sollwerte` leitet auf den Reiter „Profile" um; Lesezeichen und
+Links aus Home-Assistant-Dashboards laufen also weiter. Der Feed-Chart bleibt
+bewusst draussen: er wohnt in der Wissensdatenbank und ist mehr als Zielwerte —
+Dosiermengen und Spülwochen stehen dort mit drin.
+
 ## 2.0.0-forkai.66
 
 **Fork AI.** Die Frage „was gilt gerade" hat jetzt genau eine Antwort.

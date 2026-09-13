@@ -34,7 +34,8 @@ export const KETTEN_AKTIONEN: Record<string, KettenAktion> = {
   'verbindung': { art: 'weg', ziel: '/home-assistant', label: 'Zur Einrichtung' },
 
   'plan-untergrenze-zu-hoch': { art: 'anker', ziel: 'untergrenze', label: 'Zur Untergrenze' },
-  'plan-ohne-profil': { art: 'weg', ziel: '/sollwerte', label: 'Zu den Sollwert-Profilen' },
+  // Fork AI (forkai.67): die Profile sind der Reiter „Profile" der Zielwerte.
+  'plan-ohne-profil': { art: 'weg', ziel: '/zielwerte?tab=profile', label: 'Zu den Sollwert-Profilen' },
   'plan-vor-dem-flip': { art: 'weg', ziel: '/grows/{growId}', label: 'Flip eintragen' },
   'plan-abgeschaltet': { art: 'anker', ziel: 'night-ramp', label: 'Zum Schalter' },
 

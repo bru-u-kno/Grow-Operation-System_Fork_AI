@@ -296,7 +296,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
         {
             gruppen.Add(new ZielGruppeDto(
                 profil is null ? "Sollwertprofil" : $"Profil · {profil}",
-                "/sollwerte", "Sollwerte ›",
+                "/zielwerte?tab=profile", "Profile ›",
                 ausProfil.Select(w => new ZielZeileDto(w.Name, Band(w.Min, w.Max) ?? "–")).ToList(),
                 "Je Phase, nicht je Woche — springt erst beim Phasenwechsel."));
         }
@@ -306,7 +306,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
         {
             gruppen.Add(new ZielGruppeDto(
                 "Zelt · feste Grenzen",
-                "/regeln?tab=grenzwerte", "Regeln ›",
+                "/zielwerte?tab=grenzwerte", "Grenzwerte ›",
                 fest.Select(w => new ZielZeileDto(w.Name, Band(w.Min, w.Max) ?? "–")).ToList(),
                 "Feste Zahlen sind zugleich das angezeigte Ziel — sie stechen Profil und Wochenspalte."));
         }

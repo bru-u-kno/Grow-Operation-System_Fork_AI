@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../api'
-import { Link } from 'react-router-dom'
-import { V1Alert, V1Button, V1Card, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Button, V1Card, V1Field, V1Section, V1Skeleton } from '../components/v1'
 import { classNames } from '../utils'
 import '../features/setpoints/setpoints.css'
 
@@ -220,26 +219,14 @@ function SetpointProfilesPage() {
 
   if (loading) return <V1Skeleton rows={6} label="Lade Profile" />
 
+  /* Fork AI (forkai.67): kein eigener Seitenkopf mehr — diese Seite ist der
+     Reiter „Profile" der Sammelseite /zielwerte, und Kopf plus Reiterleiste
+     gehören dort der Sammelseite (wie bei „Regeln & Automatik"). Der alte Pfad
+     /sollwerte leitet auf den Reiter um, Lesezeichen laufen also nicht ins Leere. */
   return (
-    <V1Page
-      eyebrow="Betrieb"
-      title="Sollwert-Profile"
-      subtitle="Was Grow OS als Ziel ansieht — je Phase. Die mitgelieferten kannst du kopieren und mit deinen Erfahrungswerten überschreiben."
-    >
+    <>
       {error && <V1Alert message={error} tone="critical" />}
       {message && <V1Alert message={message} tone="ok" />}
-
-      {/* Fork AI: erst was gerade gilt, dann die Profile. Die Tabelle darunter
-          zeigt Phasenwerte — ohne diesen Kopf liest man sie als das Ergebnis,
-          obwohl Feed-Chart und eigene Grenzwerte noch darüber liegen. */}
-      {/* Fork AI (forkai.66): hier stand bis forkai.65 der Kasten „Gilt gerade".
-          Er war die Notlösung für eine Frage, die inzwischen eine eigene Seite
-          hat — und zwei Antworten auf dieselbe Frage sind schlechter als eine.
-          Diese Seite ist der Editor, /zielwerte die Auskunft. */}
-      <p className="sp-verweis">
-        Was gerade wirklich gilt — samt Herkunft und Alarmgrenzen — steht unter{' '}
-        <Link to="/zielwerte">Zielwerte ›</Link>
-      </p>
 
       <V1Section title="Profile">
         <div className="sp-list">
@@ -373,7 +360,7 @@ function SetpointProfilesPage() {
         </V1Section>
       </div>
       )}
-    </V1Page>
+    </>
   )
 }
 

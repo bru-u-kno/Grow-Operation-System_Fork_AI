@@ -4,9 +4,7 @@ import AddbackPage from './pages/AddbackPage'
 import { GrowScopedSectionPage } from './pages/GrowScopedSectionPage'
 import GettingStartedPage from './pages/GettingStartedPage'
 import DosingPage from './pages/DosingPage'
-import SetpointProfilesPage from './pages/SetpointProfilesPage'
 import WochenplanPage from './pages/WochenplanPage'
-import ZielwertePage from './pages/ZielwertePage'
 import { CropSteeringPage } from './pages/CropSteeringPage'
 import { AcTestPage } from './pages/AcTestPage'
 import MobilePage from './pages/MobilePage'
@@ -55,7 +53,7 @@ import './styles/forkai-shell.css'
 import { AppShell } from './AppShell'
 import { legacyRedirects } from './navigation'
 import { useNavCounts } from './useNavCounts'
-import { RulesCollectionPage } from './pages/collections'
+import { RulesCollectionPage, ZielwerteCollectionPage } from './pages/collections'
 import AdvisorPage from './pages/AdvisorPage'
 import WaterProfilePage from './pages/WaterProfilePage'
 import StrainsPage from './pages/StrainsPage'
@@ -126,9 +124,9 @@ function App() {
         
           <Route path="/sensoren" element={<HardwarePage />} />
 
-          <Route path="/sollwerte" element={<SetpointProfilesPage />} />
+          
           <Route path="/wochenplan" element={<WochenplanPage />} />
-          <Route path="/zielwerte" element={<ZielwertePage />} />
+          <Route path="/zielwerte" element={<ZielwerteCollectionPage />} />
           <Route path="/cropsteering" element={<CropSteeringPage />} />
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />

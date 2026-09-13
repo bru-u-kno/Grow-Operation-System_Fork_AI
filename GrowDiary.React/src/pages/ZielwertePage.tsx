@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
-import { V1Alert, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Section, V1Skeleton } from '../components/v1'
 import '../features/zielwerte/zielwerte.css'
 
 /**
@@ -151,11 +151,7 @@ function ZielwertePage() {
     : null
 
   return (
-    <V1Page
-      eyebrow="Betrieb"
-      title="Zielwerte"
-      subtitle="Was gerade gilt, woher es kommt und wo man es ändert. Vier Quellen stehen hintereinander — jede spätere sticht die früheren."
-    >
+    <>
       {error && <V1Alert message={error} tone="critical" />}
 
       {!error && (!daten || daten.werte.length === 0) && (
@@ -262,7 +258,7 @@ function ZielwertePage() {
           )}
         </>
       )}
-    </V1Page>
+    </>
   )
 }
 

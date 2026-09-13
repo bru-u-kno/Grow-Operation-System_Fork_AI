@@ -91,6 +91,8 @@ Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 
 | forkai.66 | **Eine Auskunft statt zwei**: Kasten „Gilt gerade" von der Sollwerte-Seite entfernt (ersetzt durch einen Verweis auf `/zielwerte`), `GeltendeZieleApiController` samt Komponente gelöscht; die Phasen-Schreibweise zieht in `Services/Phasenname.cs` — sie stand zuletzt in drei Fassungen im Code | Betrieb → Sollwert-Profile | `pages/SetpointProfilesPage.tsx`, `features/setpoints/setpoints.css`, `Services/Phasenname.cs`, `Api/Controllers/SteuerungApiController.cs`, `Services/Co2SteuerungService.cs` |
 
+| forkai.67 | **Zielwerte als Sammelseite**: Reiter „Jetzt gültig / Profile / Grenzwerte" (Muster wie „Regeln & Automatik"), `/sollwerte` leitet auf den Reiter um, Menüpunkt „Sollwert-Profile" entfällt, Sprünge zeigen auf Reiter | Betrieb → Zielwerte | `pages/collections.tsx`, `pages/ZielwertePage.tsx`, `pages/SetpointProfilesPage.tsx` (Seitenkopf entfernt), `App.tsx`, `navigation.ts`, `features/cropsteering/ketten-aktionen.ts(+.node.test.ts)`, `Api/Controllers/ZielwerteApiController.cs` |
+
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 
 - `grow-os/config.yaml`: Name, Slug, Image, Version `2.0.0-forkai.N`

@@ -7,9 +7,9 @@
 
 | Was | Wo |
 |---|---|
-| Sollwert-Profile | Betrieb → Sollwert-Profile, `/sollwerte` |
+| Sollwert-Profile | Betrieb → Zielwerte, Reiter „Profile" (`/zielwerte?tab=profile`; `/sollwerte` leitet dorthin um) |
 | Wochenplan (Fork AI) | Betrieb → Wochenplan, `/wochenplan` |
-| Zielwerte (Fork AI) | Betrieb → Zielwerte, `/zielwerte` |
+| Zielwerte (Fork AI) | Betrieb → Zielwerte, `/zielwerte` — Reiter „Jetzt gültig", „Profile", „Grenzwerte" |
 | SOPs & Bibliothek | Wissen → SOPs & Bibliothek, `/wissen` |
 | Einkaufsliste | Wissen → Einkaufsliste, `/einkaufsliste` |
 | Profil als Vorgabe wählen | Hydro-System bearbeiten, `/hydro/new` bzw. `/hydro/:id/edit` |
@@ -137,7 +137,7 @@ Alarme — sonst stünden auf zwei Bildschirmen zwei Antworten.
 | `GET /api/knowledge/…` (SOPs, Symptome, Setpoints, …) | `GrowDiary.Web/Api/Controllers/KnowledgeApiController.cs` |
 | Einkaufsliste zusammenführen, gruppieren, sortieren | `GrowDiary.Web/Services/EinkaufslisteService.cs` |
 | Zelt-Grenzwert über das Profil legen | `GrowDiary.Web/Services/UserTargets.cs` |
-| Seite `/sollwerte` | `GrowDiary.React/src/pages/SetpointProfilesPage.tsx` |
+| Reiter „Profile" (ohne eigenen Seitenkopf) | `GrowDiary.React/src/pages/SetpointProfilesPage.tsx`, eingehängt in `pages/collections.tsx` |
 | `GET /api/wochenplan`, Seite `/wochenplan` | `GrowDiary.Web/Api/Controllers/WochenplanApiController.cs`, `GrowDiary.React/src/pages/WochenplanPage.tsx` |
 | `GET /api/zielwerte`, Seite `/zielwerte` (Herkunftskette) | `GrowDiary.Web/Api/Controllers/ZielwerteApiController.cs`, `GrowDiary.React/src/pages/ZielwertePage.tsx` |
 | Klima je Woche über das Phasenprofil legen | `GrowDiary.Web/Services/MischplanService.cs` (`MitFeedchart`) |

@@ -1,4 +1,6 @@
 import AutomationPage from './AutomationPage'
+import SetpointProfilesPage from './SetpointProfilesPage'
+import ZielwertePage from './ZielwertePage'
 import AlertsPage from './AlertsPage'
 import NotificationsPage from './NotificationsPage'
 import { TabbedCollectionPage } from './TabbedCollectionPage'
@@ -25,6 +27,31 @@ export function RulesCollectionPage() {
         { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
         { key: 'automatik', label: 'Auto-Messungen', render: () => <AutomationPage /> },
         { key: 'push', label: 'Benachrichtigungen', render: () => <NotificationsPage /> },
+      ]}
+    />
+  )
+}
+
+/**
+ * Fork AI (forkai.67): Zielwerte — Auskunft und die beiden Editoren dahinter.
+ *
+ * Die Frage „was gilt gerade" und die Frage „wo ändere ich das" gehören
+ * zusammen: der erste Reiter beantwortet die eine und verweist für die andere
+ * auf Profile und Grenzwerte — die nun einen Reiter weiter liegen statt zwei
+ * Menüpunkte entfernt. Der Feed-Chart fehlt hier bewusst: er wohnt in der
+ * Wissensdatenbank und ist mehr als Zielwerte (Dosiermengen, Spülen), das
+ * Herausbrechen wäre der grössere Eingriff als der Nutzen.
+ */
+export function ZielwerteCollectionPage() {
+  return (
+    <TabbedCollectionPage
+      eyebrow="Betrieb"
+      title="Zielwerte"
+      subtitle="Was gerade gilt, woher es kommt und wo man es ändert. Vier Quellen stehen hintereinander — jede spätere sticht die früheren."
+      tabs={[
+        { key: 'jetzt', label: 'Jetzt gültig', render: () => <ZielwertePage /> },
+        { key: 'profile', label: 'Profile', render: () => <SetpointProfilesPage /> },
+        { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
       ]}
     />
   )

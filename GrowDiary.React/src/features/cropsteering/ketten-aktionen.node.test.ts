@@ -47,8 +47,12 @@ describe('Ketten-Aktionen', () => {
 
     for (const aktion of Object.values(KETTEN_AKTIONEN)) {
       if (aktion.art !== 'weg') continue
-      const pfad = aktion.ziel.replace('{growId}', ':growId')
-      const bekannt = routen.some((r) => r === pfad || r === aktion.ziel
+      /* Fork AI (forkai.67): Der Reiter steht als ?tab= in der Adresse, die
+         Route selbst kennt ihn nicht — verglichen wird deshalb der Pfadteil.
+         Ohne das faellt jedes Ziel durch, das auf einen Reiter einer
+         Sammelseite zeigt, obwohl die Route existiert. */
+      const pfad = aktion.ziel.replace('{growId}', ':growId').split('?')[0]
+      const bekannt = routen.some((r) => r === pfad || r === aktion.ziel.split('?')[0]
         || (pfad.includes(':') && r.split('/').length === pfad.split('/').length
             && r.split('/').every((teil, i) => teil.startsWith(':') || pfad.split('/')[i].startsWith(':') || teil === pfad.split('/')[i])))
       expect(bekannt, `${aktion.ziel} steht in keiner Route von App.tsx`).toBe(true)
