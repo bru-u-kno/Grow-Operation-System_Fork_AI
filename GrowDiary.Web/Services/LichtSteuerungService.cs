@@ -384,7 +384,13 @@ public sealed class LichtSteuerungService
         var ziel = lichtphase ? ausZeit : einZeit;
         var stunden = (ziel - jetzt + TimeSpan.FromDays(1)).TotalHours % 24;
         var rest = TimeSpan.FromHours(stunden);
-        return $"{(lichtphase ? "aus" : "an")} {ziel:hh\\:mm} · in {(int)rest.TotalHours} h {rest.Minutes} min";
+        /* Nur die Restzeit (13.09.2026).
+         *
+         * Vorher stand hier „an 05:00 · in 7 h 5 min". Die Uhrzeit steht eine
+         * Zeile darueber im Zeitplan und die Richtung gross daneben (AUS) —
+         * dreimal dasselbe in zwei Zeilen. Uebrig bleibt die Zahl, nach der man
+         * tatsaechlich schaut. */
+        return $"in {(int)rest.TotalHours} h {rest.Minutes} min";
     }
 
     private static bool InFenster(TimeSpan jetzt, TimeSpan ein, TimeSpan aus)

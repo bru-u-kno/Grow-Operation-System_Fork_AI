@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.91
+
+**Fork AI.** „Nächster Wechsel" sagt nur noch, wann.
+
+Auf der Licht-Steuerung stand „Nächster Wechsel: an 05:00 · in 7 h 5 min". Die
+Uhrzeit steht eine Zeile darüber im Zeitplan, die Richtung groß daneben — dreimal
+dasselbe in zwei Zeilen. Übrig bleibt die Zahl, nach der man tatsächlich schaut.
+
 ## 2.0.0-forkai.90
 
 **Fork AI.** Die Sonne war immer noch ein Emoji.
