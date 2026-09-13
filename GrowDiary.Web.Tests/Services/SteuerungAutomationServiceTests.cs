@@ -70,7 +70,14 @@ public class SteuerungAutomationServiceTests
         Assert.NotNull(fertig);
         var bedingungen = fertig!["conditions"]!.AsArray();
         Assert.Single(bedingungen);
-        Assert.DoesNotContain("abluft", fertig.ToJsonString(), StringComparison.OrdinalIgnoreCase);
+
+        // Nur der Block mit der freien Rolle faellt weg. Der Schalter
+        // co2_abluft_drosseln bleibt - er ist ein eigener Helfer, kein Geraet,
+        // und ohne Luefter steht er einfach auf aus. Eine Pruefung auf das Wort
+        // 'abluft' waere deshalb zu scharf gewesen.
+        Assert.DoesNotContain("[[", fertig.ToJsonString());
+        Assert.DoesNotContain("number.abluft", fertig.ToJsonString());
+        Assert.Contains("input_boolean.co2_abluft_drosseln", fertig.ToJsonString());
     }
 
     [Fact]
