@@ -5,6 +5,30 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.77
+
+**Fork AI.** Verbrauch je Artikel über einen wählbaren Zeitraum — auf der
+Kosten-Seite, nicht in der Steuerung.
+
+Jede Artikel-Karte bekommt „Verbrauch zeigen": 7 Tage, 30 Tage, dieser Grow oder
+alles, darunter die Buchungen mit Menge, Kosten und Herkunft, und eine
+Summenzeile. Geladen wird erst beim Aufklappen — für jeden Artikel ungefragt
+eine Abfrage zu fahren kostet Zeit für etwas, das vielleicht niemand ansieht.
+
+**Der Preis kommt von der Füllung, nicht vom Artikel.** Die jüngste Füllung vor
+einer Buchung hat sie bezahlt; war sie teurer als die vorige, rechnet die
+Tabelle das richtig. Der Artikelpreis ist nur der Rückfall für Altdaten. Ist gar
+kein Preis bekannt, bleibt die Zeile leer statt auf null zu stehen — eine Null
+sähe aus wie „hat nichts gekostet" und die Summe wäre vollständig und zu niedrig
+zugleich. Die Seite sagt es dann auch.
+
+**Der laufende Tag fehlt absichtlich.** Er ist noch nicht gebucht; sein Stand
+steht in der Steuerung. Zwei Zahlen mit zwei Wahrheiten in einer Tabelle machen
+beide unbrauchbar.
+
+Damit funktioniert die Ansicht für jeden Verbrauchsartikel, nicht nur für CO₂ —
+Purolyt und Dünger bekommen sie, sobald dort Verbräuche gebucht werden.
+
 ## 2.0.0-forkai.76
 
 **Fork AI.** Die Kellerzuluft zieht aus dem Home-Assistant-Dashboard in den Fork.

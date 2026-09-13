@@ -546,6 +546,8 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
         </p>
       )}
 
+      <VerbrauchBlock artikel={artikel} />
+
       <div className="ko-artikel-aktionen">
         <button type="button" className="ls-btn is-small is-primary" disabled={busy} onClick={onErfassen}>Nachfüllung erfassen</button>
         {a && <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => void leerMarkieren()}>Als leer markieren</button>}
@@ -670,6 +672,140 @@ function HerstellerProduktFelder({ id, seite, hersteller, produkt, onHersteller,
 }
 
 /** Anlegen oder — mit `artikel` — Bearbeiten; dieselben Felder, derselbe Vertrag. */
+
+/** Die Zeiträume, die der Block anbietet. */
+const SPANNEN: Array<{ wert: string; label: string }> = [
+  { wert: 'SiebenTage', label: '7 Tage' },
+  { wert: 'DreissigTage', label: '30 Tage' },
+  { wert: 'DieserGrow', label: 'Dieser Grow' },
+  { wert: 'Alles', label: 'Alles' },
+]
+
+type VerbrauchsAnsicht = {
+  einheit: string
+  summeMenge: number
+  summeEur: number
+  buchungen: number
+  kostenVollstaendig: boolean
+  zeilen: Array<{ datum: string; menge: number; eur: number | null; quelle: string; notiz: string | null }>
+}
+
+/**
+ * Fork AI (forkai.77): Was von einem Artikel verbraucht wurde, über einen
+ * wählbaren Zeitraum.
+ *
+ * <b>Der laufende Tag fehlt hier.</b> Er wird abends gebucht; sein Stand steht
+ * in der Steuerung. Beides in eine Tabelle zu mischen macht zwei Zahlen mit
+ * zwei Wahrheiten daraus — deshalb der Hinweis statt einer Zeile.
+ *
+ * Geladen wird erst beim Aufklappen: Die Kosten-Seite zeigt mehrere Artikel, und
+ * für jeden ungefragt eine Abfrage zu fahren kostet Zeit für etwas, das
+ * vielleicht niemand ansieht.
+ */
+function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
+  const [offen, setOffen] = useState(false)
+  const [spanne, setSpanne] = useState('DreissigTage')
+  const [ansicht, setAnsicht] = useState<VerbrauchsAnsicht | null>(null)
+  const [fehler, setFehler] = useState<string | null>(null)
+  const [laedt, setLaedt] = useState(false)
+
+  useEffect(() => {
+    if (!offen) return
+    const controller = new AbortController()
+    const laden = async () => {
+      setLaedt(true)
+      try {
+        const geladen = await apiFetch<VerbrauchsAnsicht>(
+          `/api/kosten/artikel/${artikel.id}/verbrauch?spanne=${spanne}`,
+          { signal: controller.signal },
+        )
+        if (!controller.signal.aborted) { setAnsicht(geladen); setFehler(null) }
+      } catch (caught) {
+        if (!controller.signal.aborted) setFehler(formatApiError(caught, 'Verbrauch konnte nicht geladen werden.'))
+      } finally {
+        if (!controller.signal.aborted) setLaedt(false)
+      }
+    }
+    void laden()
+    return () => controller.abort()
+  }, [offen, spanne, artikel.id])
+
+  if (!offen) {
+    return (
+      <button type="button" className="ls-btn is-small is-ghost ko-verbrauch-auf" onClick={() => setOffen(true)}>
+        Verbrauch zeigen
+      </button>
+    )
+  }
+
+  return (
+    <div className="ko-verbrauch">
+      <div className="ko-verbrauch-spannen" role="group" aria-label="Zeitraum">
+        {SPANNEN.map((s) => (
+          <button
+            key={s.wert}
+            type="button"
+            className="ls-btn is-small"
+            aria-pressed={s.wert === spanne}
+            onClick={() => setSpanne(s.wert)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {fehler && <p className="ko-verbrauch-fehler">{fehler}</p>}
+      {laedt && !ansicht && <p className="ko-artikel-fakten">Wird geladen …</p>}
+
+      {ansicht && (ansicht.buchungen === 0 ? (
+        <p className="ko-artikel-fakten">In diesem Zeitraum wurde nichts gebucht.</p>
+      ) : (
+        <>
+          <table className="ko-verbrauch-tabelle">
+            <thead>
+              <tr>
+                <th scope="col">Tag</th>
+                <th scope="col">Menge</th>
+                <th scope="col">€</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ansicht.zeilen.map((z, i) => (
+                <tr key={`${z.datum}-${i}`}>
+                  <th scope="row">
+                    {z.datum}
+                    <small>{z.notiz ?? z.quelle}</small>
+                  </th>
+                  <td>{formatNumber(z.menge, 2)} {ansicht.einheit}</td>
+                  <td>{z.eur == null ? '–' : formatNumber(z.eur, 2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Summe · {ansicht.buchungen} Buchungen</th>
+                <td>{formatNumber(ansicht.summeMenge, 2)} {ansicht.einheit}</td>
+                <td>{formatNumber(ansicht.summeEur, 2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {!ansicht.kostenVollstaendig && (
+            <p className="ko-artikel-fakten">
+              Für manche Buchungen ist kein Preis hinterlegt — die Summe ist deshalb zu niedrig.
+            </p>
+          )}
+          <p className="ko-artikel-fakten">
+            Der laufende Tag fehlt: Er wird abends gebucht. Der aktuelle Stand steht bei der Steuerung.
+          </p>
+        </>
+      ))}
+
+      <button type="button" className="ls-btn is-small is-ghost" onClick={() => setOffen(false)}>Zuklappen</button>
+    </div>
+  )
+}
+
 function ArtikelForm({ artikel, seite, onDone, onError, onCancel }: { artikel?: KostenArtikel; seite: KostenSeite; onDone: (text: string) => void; onError: (text: string) => void; onCancel?: () => void }) {
   const einheiten = seite.einheiten
   const [name, setName] = useState(artikel?.name ?? '')

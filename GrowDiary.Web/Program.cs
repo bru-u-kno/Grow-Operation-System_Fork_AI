@@ -106,6 +106,8 @@ builder.Services.AddSingleton<WaterProfileStore>();
 builder.Services.AddScoped<GrowCostService>();
 // Fork AI (forkai.6): Kosten-Seite
 builder.Services.AddSingleton<KostenRepository>();
+// Fork AI (forkai.77): Verbrauch je Artikel ueber einen Zeitraum.
+builder.Services.AddScoped<VerbrauchsansichtService>();
 builder.Services.AddScoped<KostenSeiteService>();
 // Fork AI (forkai.20): Steuerung — CO₂-Leitstand
 builder.Services.AddSingleton<SteuerungRepository>();

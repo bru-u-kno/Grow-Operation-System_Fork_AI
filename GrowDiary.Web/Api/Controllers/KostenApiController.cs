@@ -20,6 +20,7 @@ public sealed class KostenApiController : ApiControllerBase
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly HardwareRepository _hardware;
+    private readonly VerbrauchsansichtService _verbrauch;
 
     public KostenApiController(
         KostenSeiteService seite,
@@ -28,7 +29,8 @@ public sealed class KostenApiController : ApiControllerBase
         GrowRepository grows,
         HomeAssistantService ha,
         HomeAssistantSettingsRepository haSettings,
-        HardwareRepository hardware)
+        HardwareRepository hardware,
+        VerbrauchsansichtService verbrauch)
     {
         _seite = seite;
         _repo = repo;
@@ -37,6 +39,7 @@ public sealed class KostenApiController : ApiControllerBase
         _ha = ha;
         _haSettings = haSettings;
         _hardware = hardware;
+        _verbrauch = verbrauch;
     }
 
     // ------------------------------------------------------------- Seite
@@ -110,6 +113,36 @@ public sealed class KostenApiController : ApiControllerBase
     [HttpGet("artikel")]
     [ProducesResponseType(typeof(IReadOnlyList<Verbrauchsartikel>), StatusCodes.Status200OK)]
     public ActionResult<IReadOnlyList<Verbrauchsartikel>> GetArtikel() => Ok(_repo.GetArtikel());
+
+    /// <summary>Der Verbrauch eines Artikels über einen Zeitraum.</summary>
+    /// <remarks>
+    /// <para>Fork AI (forkai.77): Zeigt die gebuchten Verbräuche mit Menge,
+    /// Kosten und Herkunft. Der laufende Tag fehlt — er wird abends gebucht;
+    /// sein Stand steht in der Steuerung.</para>
+    /// <para><c>spanne</c>: <c>SiebenTage</c>, <c>DreissigTage</c>,
+    /// <c>DieserGrow</c>, <c>Alles</c> oder <c>Eigen</c> mit <c>von</c>/<c>bis</c>.</para>
+    /// </remarks>
+    [HttpGet("artikel/{id:int}/verbrauch")]
+    public ActionResult<VerbrauchsansichtService.Ansicht> Verbrauch(
+        int id,
+        [FromQuery] string spanne = "DreissigTage",
+        [FromQuery] DateTime? von = null,
+        [FromQuery] DateTime? bis = null)
+    {
+        if (_repo.GetArtikel(id) is null) return NotFoundError("artikel_unbekannt", "Diesen Artikel gibt es nicht.");
+
+        if (!Enum.TryParse<VerbrauchsansichtService.Spanne>(spanne, ignoreCase: true, out var gewaehlt))
+        {
+            return BadRequestError("spanne_unbekannt", $"'{spanne}' ist kein bekannter Zeitraum.");
+        }
+
+        if (gewaehlt == VerbrauchsansichtService.Spanne.Eigen && von is null && bis is null)
+        {
+            return BadRequestError("zeitraum_fehlt", "Für einen eigenen Zeitraum braucht es von und/oder bis.");
+        }
+
+        return Ok(_verbrauch.Zusammenstellen(id, gewaehlt, von, bis, _seite.LaufenderGrow(DateTime.Today).GrowId));
+    }
 
     [HttpPost("artikel")]
     [ProducesResponseType(typeof(Verbrauchsartikel), StatusCodes.Status201Created)]

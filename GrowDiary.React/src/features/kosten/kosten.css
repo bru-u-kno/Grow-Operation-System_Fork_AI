@@ -95,3 +95,32 @@
   .ko-vorschlaege button small { color: var(--muted); font-size: var(--fs-klein); white-space: nowrap; }
   .ko-vorschlaege button:hover, .ko-vorschlaege button.is-markiert { background: var(--accent-wash); color: var(--accent-text); }
 }
+
+/* Fork AI (forkai.77): Verbrauch je Artikel über einen Zeitraum. */
+@layer components {
+  .ko-verbrauch-auf { margin-top: var(--s-2); }
+
+  .ko-verbrauch { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair); }
+  .ko-verbrauch-spannen { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }
+  .ko-verbrauch-spannen .ls-btn[aria-pressed='true'] {
+    border-color: var(--accent); color: var(--accent-text); background: var(--accent-wash); font-weight: 600;
+  }
+  .ko-verbrauch-fehler { margin: 0 0 var(--s-2); font-size: var(--fs-etikett); color: var(--danger-text); }
+
+  .ko-verbrauch-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
+  .ko-verbrauch-tabelle th[scope='col'] {
+    text-align: right; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--faint); padding: 0 0 var(--s-2) var(--s-2);
+    white-space: nowrap;
+  }
+  .ko-verbrauch-tabelle th[scope='col']:first-child { text-align: left; padding-left: 0; }
+  .ko-verbrauch-tabelle td,
+  .ko-verbrauch-tabelle th[scope='row'] { border-top: 1px solid var(--hair); padding: var(--s-2) 0 var(--s-2) var(--s-2); }
+  .ko-verbrauch-tabelle td {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+  }
+  .ko-verbrauch-tabelle th[scope='row'] { text-align: left; font-weight: 500; padding-left: 0; }
+  .ko-verbrauch-tabelle th[scope='row'] small { display: block; font-size: var(--fs-etikett); color: var(--faint); font-weight: 400; }
+  .ko-verbrauch-tabelle tfoot th,
+  .ko-verbrauch-tabelle tfoot td { border-top: 1px solid var(--accent-dim); font-weight: 700; }
+}
