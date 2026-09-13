@@ -124,6 +124,8 @@ builder.Services.AddScoped<SteuerungBestandService>();
 builder.Services.AddScoped<SteuerungHelferService>();
 // Fork AI (forkai.69): legt die Rechenwerte ueber den Einrichtungsdialog an.
 builder.Services.AddScoped<SteuerungRechenwertService>();
+// Fork AI (forkai.72): legt die Automationen an - nur auf ausdrueckliche Zustimmung.
+builder.Services.AddScoped<SteuerungAutomationService>();
 builder.Services.AddScoped<MischplanService>();
 builder.Services.AddScoped<SopDueService>();
 builder.Services.AddScoped<WasserwechselStandService>();

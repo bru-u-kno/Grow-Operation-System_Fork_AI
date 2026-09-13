@@ -5,6 +5,30 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.72
+
+**Fork AI.** Der Fork kann die Automationen einer Steuerung jetzt anlegen — der
+letzte und heikelste Teil des Einrichtens, weil am Ende ein Ventil an einer
+Gasflasche hängt.
+
+**Nur was der Fork selbst angelegt hat, fasst er wieder an.** Jede erzeugte
+Automation trägt eine Herkunftsmarke. Findet der Dienst unter derselben Kennung
+eine Automation ohne diese Marke, rührt er sie nicht an und sagt das. Von Hand
+gebaute Automationen enthalten Dinge, die keine Vorlage kennt — in dieser Anlage
+etwa die Nachführung des Durchflusses und das Halten des letzten Zustands bei
+Geräteaussetzern. Ein Generator, der darüberschreibt, nimmt sie weg, ohne dass
+es jemand merkt.
+
+Vor dem Überschreiben wird der alte Stand weggeschrieben, damit ein Zurück
+existiert. Nach dem Schreiben wird nachgesehen, ob die Automation wirklich
+geladen ist — sonst steht eine Regelung da, die stumm nichts tut.
+
+Der Endpunkt kennt eine Vorschau, die nichts schreibt und nur sagt, was
+geschähe. Sie ist die Grundlage für den Knopf, der vor dem Anlegen zeigt, was
+entsteht.
+
+Noch nicht dabei: dieser Knopf selbst und die Probeschaltung des Ventils.
+
 ## 2.0.0-forkai.71
 
 **Fork AI.** Alle drei Automationen der CO₂-Steuerung liegen jetzt als Vorlage

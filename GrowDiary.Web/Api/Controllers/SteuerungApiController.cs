@@ -31,8 +31,9 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungBestandService _bestand;
     private readonly SteuerungHelferService _helfer;
     private readonly SteuerungRechenwertService _rechenwerte;
+    private readonly SteuerungAutomationService _automationen;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen)
     {
         _co2 = co2;
         _licht = licht;
@@ -43,6 +44,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         _bestand = bestand;
         _helfer = helfer;
         _rechenwerte = rechenwerte;
+        _automationen = automationen;
     }
 
     // ------------------------------------------------------------ Übersicht
@@ -263,6 +265,28 @@ public sealed class SteuerungApiController : ApiControllerBase
     /// den Einrichtungsdialog entstehen und damit anders scheitern. Zuerst die
     /// Helfer anlegen — die Rechenwerte lesen sie.
     /// </remarks>
+    /// <summary>Die Automationen einer Steuerung anlegen.</summary>
+    /// <remarks>
+    /// <para>Fork AI (forkai.72): Getrennt von Helfern und Rechenwerten und mit
+    /// eigener Zustimmung, weil am Ende dieser Automationen ein Ventil an einer
+    /// Gasflasche hängt.</para>
+    /// <para><c>vorschau=true</c> schreibt nichts und sagt nur, was geschähe —
+    /// das ist der Stand, den der Knopf vor der Bestätigung zeigt.</para>
+    /// </remarks>
+    [HttpPost("{modul}/automationen")]
+    public async Task<ActionResult<SteuerungAutomationService.Bilanz>> AutomationenAnlegen(
+        string modul, [FromQuery] bool vorschau, CancellationToken ct)
+    {
+        if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
+
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var zuordnung = _geraete.EntitiesFuerModul(modul)
+            .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+            .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
+
+        return Ok(await _automationen.AnlegenAsync(modul, zuordnung, settings, vorschau, ct));
+    }
+
     [HttpPost("{modul}/rechenwerte")]
     public async Task<ActionResult<SteuerungRechenwertService.Bilanz>> RechenwerteAnlegen(
         string modul, CancellationToken ct)

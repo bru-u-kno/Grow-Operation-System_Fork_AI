@@ -8,6 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Fork AI (forkai.72): Die Automations-Vorlagen liegen im Web-Projekt.
+         Der Test liest sie aus dem Ausgabeverzeichnis - sonst prueft er
+         Dateien, die im Betrieb gar nicht mitgeliefert werden. -->
+    <Content Include="..\GrowDiary.Web\Vorlagen\**\*.json"
+             Link="Vorlagen\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />

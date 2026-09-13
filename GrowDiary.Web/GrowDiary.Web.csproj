@@ -21,6 +21,12 @@
     <Content Remove="App_Data\ha-config.json" />
     <Content Remove="App_Data\local-secrets\**\*" />
     <Content Remove="wwwroot\uploads\**\*" />
+    <!-- Fork AI (forkai.72): Die Automations-Vorlagen der Steuerungen. Nicht
+         unter wwwroot, weil sie niemand abrufen soll - nur der Dienst liest
+         sie beim Anlegen. -->
+    <Content Include="Vorlagen\**\*.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
     <Content Update="wwwroot\knowledge-defaults\**\*.json"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
