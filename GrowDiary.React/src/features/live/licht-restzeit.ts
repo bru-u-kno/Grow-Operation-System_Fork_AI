@@ -41,7 +41,7 @@ export function dauerInWorten(millisekunden: number): string {
 }
 
 /**
- * Die Zeile unter den Schaltzeiten: „Nächster Wechsel: in 3 h 25 min".
+ * Die Zeile unter den Schaltzeiten: „Wechsel in: 3 h 25 min".
  *
  * `anJetzt` sagt, was das Licht gerade tut — daraus folgt, welche der beiden
  * Zeiten die nächste ist. Ohne die passende Zeit gibt es keine Zeile: eine
@@ -64,5 +64,7 @@ export function restzeitText(
   if (zeitpunkt == null) return null
 
   const rest = dauerInWorten(zeitpunkt.getTime() - jetzt.getTime())
-  return `Nächster Wechsel: ${rest === 'gleich' ? 'gleich' : `in ${rest}`}`
+  // Kurz, weil die Kachel schmal ist: „Nächster Wechsel: in …" brach über zwei
+  // Zeilen um. Dass es der nächste ist, versteht sich von selbst.
+  return rest === 'gleich' ? 'Wechsel: gleich' : `Wechsel in: ${rest}`
 }

@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.94
+
+**Fork AI.** Kürzere Wechselzeile in der Licht-Kachel.
+
+„Nächster Wechsel: in 6 h 12 min" brach in der schmalen Kachel über zwei Zeilen
+um. Jetzt steht dort „Wechsel in: 6 h 12 min" — dass es der nächste ist,
+versteht sich von selbst.
+
 ## 2.0.0-forkai.93
 
 **Fork AI.** Bugfix: Zyklus und Restzeit fehlten auf der Live-Seite.

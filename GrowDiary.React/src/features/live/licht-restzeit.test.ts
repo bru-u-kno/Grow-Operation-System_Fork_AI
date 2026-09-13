@@ -6,12 +6,12 @@ describe('Restzeit bis zum Lichtwechsel', () => {
 
   it('nennt die Zeit bis zum Einschalten, wenn das Licht aus ist', () => {
     // 21:11 -> 05:04 am nächsten Morgen sind 7 Std 53 Min.
-    expect(restzeitText(abends, false, '05:04', '17:04')).toBe('Nächster Wechsel: in 7 h 53 min')
+    expect(restzeitText(abends, false, '05:04', '17:04')).toBe('Wechsel in: 7 h 53 min')
   })
 
   it('nennt die Zeit bis zum Ausschalten, wenn das Licht an ist', () => {
     const mittags = new Date(2026, 8, 13, 12, 0, 0)
-    expect(restzeitText(mittags, true, '05:04', '17:04')).toBe('Nächster Wechsel: in 5 h 4 min')
+    expect(restzeitText(mittags, true, '05:04', '17:04')).toBe('Wechsel in: 5 h 4 min')
   })
 
   it('rechnet über Mitternacht', () => {
