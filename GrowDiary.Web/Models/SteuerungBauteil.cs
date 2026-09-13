@@ -89,6 +89,15 @@ public enum BauteilArt
 /// </para>
 /// </param>
 /// <param name="Zustandsklasse">Die <c>state_class</c> eines Rechenwerts, etwa <c>measurement</c>.</param>
+/// <param name="Verfuegbarkeit">
+/// Wann ein Rechenwert überhaupt einen Wert hat — dieselben <c>[[rolle]]</c>-Platzhalter
+/// wie in <see cref="Bauteil.Vorlage"/>.
+/// <para>
+/// Ohne das wird ein Rechenwert bei fehlendem Fühler nicht „nicht verfügbar", sondern
+/// rechnet mit dem Vorgabewert weiter — bei der Zuluft hieße das: der Lüfter saugt
+/// nach einer Differenz, die aus 0 °C und 0 % entstanden ist.
+/// </para>
+/// </param>
 public sealed record Bauteil(
     string Modul,
     string EntityId,
@@ -103,7 +112,8 @@ public sealed record Bauteil(
     double? Schritt = null,
     string? Einheit = null,
     string? Vorlage = null,
-    string? Zustandsklasse = null)
+    string? Zustandsklasse = null,
+    string? Verfuegbarkeit = null)
 {
     /// <summary>Die Domäne der Entität — <c>input_number</c>, <c>sensor</c>, …</summary>
     public string Domaene => EntityId.Split('.', 2)[0];
@@ -116,11 +126,13 @@ public sealed record Bauteil(
 public static class SteuerungBauteile
 {
     private const string Co2 = "co2";
+    private const string Zuluft = "zuluft";
 
     // Rollen, an denen Bauteile hängen — Schreibweise wie in SteuerungGeraeteRollen.
     private static readonly string[] BrauchtAbluft = { "abluft_stufe" };
     private static readonly string[] BrauchtRh = { "rh" };
     private static readonly string[] BrauchtCanopy = { "canopy" };
+    private static readonly string[] BrauchtStufe = { "port_stufe" };
 
     /// <summary>Alle Bauteile aller Steuerungen.</summary>
     public static IReadOnlyList<Bauteil> Alle { get; } = new Bauteil[]
@@ -239,6 +251,69 @@ public static class SteuerungBauteile
         new(Co2, "automation.co2_abluft_drosselung_t6_rdwc_port_1", "CO2 Abluft-Drosselung", BauteilArt.Automation,
             "Senkt die Abluft während des Dosierens.", Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung."),
+
+        // ====================================================================
+        // Zuluft Keller — Außenluft ansaugen, solange sie trockener ist als die
+        // Kellerluft. Gerechnet wird mit ABSOLUTER Feuchte: 88 % bei 12 °C tragen
+        // weniger Wasser als 57 % bei 22 °C, die Prozente allein führen in die Irre.
+        // ====================================================================
+
+        // --- Regel ----------------------------------------------------------
+        new(Zuluft, "input_number.zuluft_mindest_differenz", "Zuluft Mindest-Differenz", BauteilArt.Zahl,
+            "Ab wie viel Unterschied das Ansaugen lohnt.", Min: 0.2, Max: 10, Schritt: 0.1, Einheit: "g/m³"),
+        new(Zuluft, "input_number.zuluft_aussentemperatur_min", "Zuluft Aussentemperatur min", BauteilArt.Zahl,
+            "Darunter bleibt der Lüfter aus, egal wie trocken es draußen ist.",
+            Min: -10, Max: 25, Schritt: 0.5, Einheit: "°C"),
+
+        // --- Lüfter ---------------------------------------------------------
+        new(Zuluft, "input_number.zuluft_stufe_min", "Zuluft Stufe min", BauteilArt.Zahl,
+            "Stufe bei knapper Differenz.", Pflicht: false, HaengtAn: BrauchtStufe,
+            OhneDas: "Ohne Stufenregler läuft der Lüfter nur ein und aus.",
+            Min: 1, Max: 10, Schritt: 1),
+        new(Zuluft, "input_number.zuluft_stufe_max", "Zuluft Stufe max", BauteilArt.Zahl,
+            "Stufe bei großer Differenz.", Pflicht: false, HaengtAn: BrauchtStufe,
+            OhneDas: "Ohne Stufenregler läuft der Lüfter nur ein und aus.",
+            Min: 1, Max: 10, Schritt: 1),
+        new(Zuluft, "input_number.zuluft_mindestlaufzeit", "Zuluft Mindestlaufzeit", BauteilArt.Zahl,
+            "Wie lange der Lüfter mindestens läuft, bevor er wieder aus darf.",
+            Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
+        new(Zuluft, "input_number.zuluft_mindestpause", "Zuluft Mindestpause", BauteilArt.Zahl,
+            "Wie lange er mindestens aus bleibt.", Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
+        new(Zuluft, "input_datetime.zuluft_letzter_schaltvorgang", "Zuluft letzter Schaltvorgang", BauteilArt.Zeitpunkt,
+            "Zeitstempel statt last_changed — die Port-Entitäten setzen bei Controller-Aussetzern kurz aus."),
+
+        // --- Rechenwerte ----------------------------------------------------
+        // Magnus-Formel. Beide Seiten stehen einzeln, weil die Differenz sonst
+        // nicht nachvollziehbar wäre — und weil das Dashboard sie einzeln zeigt.
+        new(Zuluft, "sensor.absolute_feuchte_draussen", "Absolute Feuchte Draussen", BauteilArt.RechenSensor,
+            "Wie viel Wasser die Außenluft wirklich trägt.",
+            Einheit: "g/m³", Zustandsklasse: "measurement",
+            Vorlage: "{% set t = states('[[aussen_temp]]') | float %}{% set rh = states('[[aussen_rh]]') | float %}{{ (216.7 * (rh / 100 * 6.112 * e ** (17.62 * t / (243.12 + t))) / (t + 273.15)) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('[[aussen_temp]]') and has_value('[[aussen_rh]]') }}"),
+        new(Zuluft, "sensor.absolute_feuchte_keller", "Absolute Feuchte Keller", BauteilArt.RechenSensor,
+            "Dasselbe für die Kellerluft.",
+            Einheit: "g/m³", Zustandsklasse: "measurement",
+            Vorlage: "{% set t = states('[[keller_temp]]') | float %}{% set rh = states('[[keller_rh]]') | float %}{{ (216.7 * (rh / 100 * 6.112 * e ** (17.62 * t / (243.12 + t))) / (t + 273.15)) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('[[keller_temp]]') and has_value('[[keller_rh]]') }}"),
+        new(Zuluft, "sensor.zuluft_differenz", "Zuluft Differenz", BauteilArt.RechenSensor,
+            "Keller minus draußen. Positiv heißt: Ansaugen trocknet.",
+            Einheit: "g/m³", Zustandsklasse: "measurement",
+            Vorlage: "{{ (states('sensor.absolute_feuchte_keller') | float - states('sensor.absolute_feuchte_draussen') | float) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('sensor.absolute_feuchte_keller') and has_value('sensor.absolute_feuchte_draussen') }}"),
+        new(Zuluft, "sensor.zuluft_zielstufe", "Zuluft Zielstufe", BauteilArt.RechenSensor,
+            "Stufe proportional zur Differenz, zwischen Stufe min und max.",
+            Pflicht: false, HaengtAn: BrauchtStufe,
+            OhneDas: "Ohne Stufenregler entfällt die proportionale Stufe.",
+            Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set lo = states('input_number.zuluft_stufe_min') | float %}{% set hi = states('input_number.zuluft_stufe_max') | float %}{% set f = [([(d - s) / 3.0, 0] | max), 1] | min %}{{ (lo + (hi - lo) * f) | round(0) | int }}",
+            Verfuegbarkeit: "{{ has_value('sensor.zuluft_differenz') }}"),
+        new(Zuluft, "binary_sensor.zuluft_bedarf", "Zuluft Bedarf", BauteilArt.RechenSchalter,
+            "An, solange Ansaugen lohnt. Mit Hysterese, damit er an der Schwelle nicht flattert.",
+            Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set t = states('[[aussen_temp]]') | float %}{% set tm = states('input_number.zuluft_aussentemperatur_min') | float %}{% set prev = (this.state == 'on') if this is defined else false %}{% if d >= s and t >= tm %}on{% elif d < s - 0.5 or t < tm - 1 %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
+            Verfuegbarkeit: "{{ has_value('sensor.zuluft_differenz') and has_value('[[aussen_temp]]') }}"),
+
+        // --- Automation -----------------------------------------------------
+        new(Zuluft, "automation.zuluft_keller_regelung", "Zuluft Keller Regelung", BauteilArt.Automation,
+            "Schaltet den Lüfter-Port und führt die Stufe nach."),
 
     };
 

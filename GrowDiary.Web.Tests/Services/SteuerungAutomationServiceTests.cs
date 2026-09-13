@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 
 namespace GrowDiary.Web.Tests.Services;
@@ -101,16 +102,22 @@ public class SteuerungAutomationServiceTests
     [Fact]
     public void JedeMitgelieferteVorlageLaesstSichFuellen()
     {
-        var ordner = Path.Combine(AppContext.BaseDirectory, "Vorlagen", "co2");
-        Assert.True(Directory.Exists(ordner), $"Vorlagen fehlen: {ordner}");
+        // Ueber alle Module, nicht nur co2: eine neue Steuerung soll dieselbe
+        // Pruefung mitbekommen, ohne dass jemand daran denken muss.
+        var wurzel = Path.Combine(AppContext.BaseDirectory, "Vorlagen");
+        Assert.True(Directory.Exists(wurzel), $"Vorlagen fehlen: {wurzel}");
 
-        var dateien = Directory.GetFiles(ordner, "*.json");
+        var dateien = Directory.GetFiles(wurzel, "*.json", SearchOption.AllDirectories);
         Assert.NotEmpty(dateien);
 
         foreach (var datei in dateien)
         {
+            var modul = Path.GetFileName(Path.GetDirectoryName(datei))!;
+            var zuordnung = SteuerungGeraeteRollen.FuerModul(modul)
+                .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
+
             var vorlage = (JsonObject)JsonNode.Parse(File.ReadAllText(datei))!;
-            var fertig = SteuerungAutomationService.Fuellen(vorlage, MitAllem);
+            var fertig = SteuerungAutomationService.Fuellen(vorlage, zuordnung);
 
             Assert.NotNull(fertig);
             Assert.DoesNotContain("[[", fertig!.ToJsonString());
@@ -123,8 +130,8 @@ public class SteuerungAutomationServiceTests
     {
         // Ohne sie haelt der Fork seine eigene Automation spaeter fuer
         // handgebaut und fasst sie nie wieder an.
-        var ordner = Path.Combine(AppContext.BaseDirectory, "Vorlagen", "co2");
-        foreach (var datei in Directory.GetFiles(ordner, "*.json"))
+        var wurzel = Path.Combine(AppContext.BaseDirectory, "Vorlagen");
+        foreach (var datei in Directory.GetFiles(wurzel, "*.json", SearchOption.AllDirectories))
         {
             var beschreibung = ((JsonObject)JsonNode.Parse(File.ReadAllText(datei))!)["description"]
                 ?.GetValue<string>() ?? string.Empty;

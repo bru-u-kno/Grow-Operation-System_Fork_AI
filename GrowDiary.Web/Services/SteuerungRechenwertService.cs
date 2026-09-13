@@ -91,7 +91,14 @@ public sealed class SteuerungRechenwertService
                 continue;
             }
 
-            var (erfolg, fehler) = await AnlegenAsync(client, b, vorschrift, ct);
+            // Dieselbe Ersetzung wie oben: steht in der Verfügbarkeit ein
+            // Platzhalter ohne Gerät, wird der Rechenwert ohne sie angelegt —
+            // sonst scheitert der Dialog an einer Vorschrift mit [[…]] darin.
+            var verfuegbarkeit = b.Verfuegbarkeit is null
+                ? null
+                : SteuerungBauteile.VorlageFuellen(b.Verfuegbarkeit, zuordnung);
+
+            var (erfolg, fehler) = await AnlegenAsync(client, b, vorschrift, verfuegbarkeit, ct);
             einzeln.Add(new Ergebnis(b.EntityId, b.Name, erfolg, fehler));
 
             if (erfolg)
@@ -116,7 +123,7 @@ public sealed class SteuerungRechenwertService
 
     /// <summary>Den dreistufigen Dialog für ein Bauteil durchspielen.</summary>
     private async Task<(bool Erfolg, string? Fehler)> AnlegenAsync(
-        HttpClient client, Bauteil b, string vorschrift, CancellationToken ct)
+        HttpClient client, Bauteil b, string vorschrift, string? verfuegbarkeit, CancellationToken ct)
     {
         try
         {
@@ -145,7 +152,7 @@ public sealed class SteuerungRechenwertService
             }
 
             // 3. Felder abschicken.
-            var abgeschickt = await client.PostAsJsonAsync($"{DialogPfad}/{dialog}", Felder(b, vorschrift), ct);
+            var abgeschickt = await client.PostAsJsonAsync($"{DialogPfad}/{dialog}", Felder(b, vorschrift, verfuegbarkeit), ct);
             var antwort = await abgeschickt.Content.ReadFromJsonAsync<JsonElement>(ct);
 
             if (!abgeschickt.IsSuccessStatusCode)
@@ -171,7 +178,7 @@ public sealed class SteuerungRechenwertService
     }
 
     /// <summary>Die Felder des letzten Dialogschritts.</summary>
-    public static IReadOnlyDictionary<string, object?> Felder(Bauteil b, string vorschrift)
+    public static IReadOnlyDictionary<string, object?> Felder(Bauteil b, string vorschrift, string? verfuegbarkeit = null)
     {
         var felder = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -184,6 +191,11 @@ public sealed class SteuerungRechenwertService
             if (!string.IsNullOrWhiteSpace(b.Einheit)) felder["unit_of_measurement"] = b.Einheit;
             if (!string.IsNullOrWhiteSpace(b.Zustandsklasse)) felder["state_class"] = b.Zustandsklasse;
         }
+
+        // Ohne Verfügbarkeit rechnet ein Rechenwert bei fehlendem Fühler mit dem
+        // Vorgabewert weiter, statt sich abzumelden. Bei der Zuluft entstünde so
+        // eine Differenz aus 0 °C und 0 %, nach der der Lüfter dann schaltet.
+        if (!string.IsNullOrWhiteSpace(verfuegbarkeit)) felder["availability"] = verfuegbarkeit;
 
         return felder;
     }

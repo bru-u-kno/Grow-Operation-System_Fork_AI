@@ -184,16 +184,52 @@ public class SteuerungBauteileTests
     }
 
     [Fact]
+    public void JederPlatzhalterDerVerfuegbarkeitMeintEineEchteRolle()
+    {
+        // Fork AI: Die Verfuegbarkeit wird genauso gefuellt wie die Vorschrift.
+        // Ein Platzhalter ohne Rolle laesst den Rechenwert stumm ausfallen.
+        foreach (var b in SteuerungBauteile.Alle.Where(x => x.Verfuegbarkeit is not null))
+        {
+            foreach (var rolle in SteuerungBauteile.PlatzhalterIn(b.Verfuegbarkeit!))
+            {
+                Assert.NotNull(SteuerungGeraeteRollen.Finden(b.Modul, rolle));
+                Assert.True(SteuerungGeraeteRollen.Finden(b.Modul, rolle)!.Pflicht
+                    || (b.HaengtAn ?? KeineRolle).Contains(rolle),
+                    $"{b.EntityId} prueft [[{rolle}]], haengt aber nicht daran.");
+            }
+        }
+    }
+
+    [Fact]
+    public void NurRechenwerteTragenEineVerfuegbarkeit()
+    {
+        // Der Dialog eines Helfers kennt das Feld nicht - es waere tote Angabe.
+        foreach (var b in SteuerungBauteile.Alle.Where(x => x.Verfuegbarkeit is not null))
+        {
+            Assert.True(b.Art is BauteilArt.RechenSensor or BauteilArt.RechenSchalter, b.EntityId);
+        }
+    }
+
+    [Fact]
     public void GefuellteVorlageTraegtKeinenPlatzhalterMehr()
     {
-        var zuordnung = SteuerungGeraeteRollen.FuerModul("co2")
-            .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
-
+        // Die Zuordnung gehoert zum Modul des Bauteils. Stand hier fest "co2",
+        // fiel jede Vorlage einer zweiten Steuerung durch, weil ihre Rollen im
+        // Woerterbuch fehlten - und der Test meldete einen Fehler im Katalog,
+        // wo keiner war.
         foreach (var b in SteuerungBauteile.Alle.Where(x => x.Vorlage is not null))
         {
+            var zuordnung = SteuerungGeraeteRollen.FuerModul(b.Modul)
+                .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
+
             var fertig = SteuerungBauteile.VorlageFuellen(b.Vorlage!, zuordnung);
             Assert.NotNull(fertig);
             Assert.DoesNotContain("[[", fertig);
+
+            if (b.Verfuegbarkeit is null) continue;
+            var wann = SteuerungBauteile.VorlageFuellen(b.Verfuegbarkeit, zuordnung);
+            Assert.NotNull(wann);
+            Assert.DoesNotContain("[[", wann);
         }
     }
 

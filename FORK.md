@@ -93,6 +93,8 @@ Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 
 | forkai.67 | **Zielwerte als Sammelseite**: Reiter „Jetzt gültig / Profile / Grenzwerte" (Muster wie „Regeln & Automatik"), `/sollwerte` leitet auf den Reiter um, Menüpunkt „Sollwert-Profile" entfällt, Sprünge zeigen auf Reiter | Betrieb → Zielwerte | `pages/collections.tsx`, `pages/ZielwertePage.tsx`, `pages/SetpointProfilesPage.tsx` (Seitenkopf entfernt), `App.tsx`, `navigation.ts`, `features/cropsteering/ketten-aktionen.ts(+.node.test.ts)`, `Api/Controllers/ZielwerteApiController.cs` |
 
+| forkai.76 | **Steuerungsmodul „Zuluft" (Backend)**: neun Geräterollen und dreizehn Bauteile für die Kellerzuluft, Automations-Vorlage `Vorlagen/zuluft/regelung.json` mit Rollen-Gate für den Stufenregler; Rechenwerte tragen neu eine **Verfügbarkeit** (`Bauteil.Verfuegbarkeit`) — ohne sie rechnet ein Template-Helfer bei fehlendem Fühler mit dem Vorgabewert weiter statt sich abzumelden. Die Vorlagen- und Katalogtests laufen jetzt über alle Module statt nur über `co2` | Steuerung → Geräte & Entitäten | `Models/SteuerungGeraet.cs`, `Models/SteuerungBauteil.cs`, `Services/SteuerungRechenwertService.cs`, `Vorlagen/zuluft/regelung.json` |
+
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 
 - `grow-os/config.yaml`: Name, Slug, Image, Version `2.0.0-forkai.N`

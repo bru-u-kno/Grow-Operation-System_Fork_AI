@@ -100,6 +100,33 @@ public static class SteuerungGeraeteRollen
             Hinweis: "Brennt die Lampe wirklich — nicht nur „Port online“."),
         new("licht", "licht_status", "Lampe · Port online", GruppeMessen,
             "binary_sensor.klein_abluft_status", new[] { "binary_sensor" }, Pflicht: false),
+
+        // Zuluft: zwei Fuehlerpaare und ein Luefter-Port. Temperatur und Feuchte
+        // stehen getrennt, weil die absolute Feuchte aus beiden gerechnet wird —
+        // ein kombinierter Fuehler waere die Ausnahme, nicht die Regel.
+        new("zuluft", "aussen_temp", "Außenfühler · Temperatur", GruppeMessen,
+            "sensor.air_temperatur", new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Die Luft, die angesaugt wird."),
+        new("zuluft", "aussen_rh", "Außenfühler · Feuchte", GruppeMessen,
+            "sensor.air_luftfeuchtigkeit", new[] { "sensor" }, Einheit: "%"),
+        new("zuluft", "keller_temp", "Kellerfühler · Temperatur", GruppeMessen,
+            "sensor.big_controller_temperatur", new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Die Luft, die verdrängt werden soll."),
+        new("zuluft", "keller_rh", "Kellerfühler · Feuchte", GruppeMessen,
+            "sensor.big_controller_luftfeuchtigkeit", new[] { "sensor" }, Einheit: "%"),
+        new("zuluft", "port_schalter", "Zuluft-Lüfter · schalten", GruppeSchalten,
+            "select.air_zuluft_aktiver_modus", new[] { "select", "switch", "input_boolean" },
+            Hinweis: "Was den Lüfter wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
+        new("zuluft", "port_zustand", "Zuluft-Lüfter · Zustand", GruppeMessen,
+            "binary_sensor.air_zuluft_zustand", new[] { "binary_sensor", "switch" },
+            Hinweis: "Läuft der Lüfter wirklich — nicht nur „Port online“."),
+        new("zuluft", "port_stufe", "Zuluft-Lüfter · Stufe setzen", GruppeSchalten,
+            "number.air_zuluft_einschaltleistung", new[] { "number" }, Pflicht: false,
+            Hinweis: "Ohne sie läuft der Lüfter nur ein und aus."),
+        new("zuluft", "port_ist_stufe", "Zuluft-Lüfter · laufende Stufe", GruppeMessen,
+            "sensor.air_zuluft_aktuelle_leistung", new[] { "sensor", "number" }, Pflicht: false),
+        new("zuluft", "port_status", "Zuluft-Lüfter · Port online", GruppeMessen,
+            "binary_sensor.air_zuluft_status", new[] { "binary_sensor" }, Pflicht: false),
     };
 
 
