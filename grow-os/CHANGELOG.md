@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.83
+
+**Fork AI.** Der Rauchtest meldete einen Fehler, wo keiner war.
+
+Er zählte alle Navigationsgruppen; die Oberfläche rendert nur die, in denen
+etwas übrig ist. „Versuch" hat genau einen Eintrag, und der ist versteckt — also
+fünf statt sechs. Der Test liest jetzt `sichtbareGruppen()` statt `navGroups`.
+
+Bemerkenswert dabei: Im Test steht selbst der Hinweis, solche Zahlen nicht
+anzupassen, sondern die Quelle zu lesen. Genau das war hier nötig — nur war die
+gelesene Quelle die falsche.
+
 ## 2.0.0-forkai.82
 
 **Fork AI.** Nachtwerte der Wassertemperatur im SKX-Programm angehoben: Blüte

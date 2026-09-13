@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { navGroups } from '../src/navigation'
+import { sichtbareGruppen } from '../src/navigation'
 
 // Every navigable route in the app. The backend is not running under this smoke
 // suite, so each page is expected to reach its loading/error/empty state — but it
@@ -129,15 +129,21 @@ test('zeigt alle Navigationsgruppen, ohne globale Kontextleiste', async ({ page 
   // war richtig, bis eine sechste Gruppe dazukam („Versuch"), und dann meldet
   // der Test einen Fehler, wo keiner ist — solche Tests werden angepasst statt
   // gelesen, und irgendwann passt jemand einen an, der echt war.
+  // Fork AI (forkai.83): sichtbareGruppen statt navGroups. Die Oberflaeche
+  // rendert nur Gruppen, in denen etwas uebrig ist - „Versuch" hat genau einen
+  // Eintrag, und der ist versteckt. Der Test zaehlte alle und meldete einen
+  // Fehler, wo keiner war. Genau das, wovor der Kommentar oben warnt: er haette
+  // hier fast dazu gefuehrt, die Zahl anzupassen statt die Quelle zu lesen.
+  const sichtbar = sichtbareGruppen()
   const gruppen = page.locator('.v1-desktop-nav .v1-nav-group')
-  await expect(gruppen).toHaveCount(navGroups.length)
-  for (const gruppe of navGroups) {
+  await expect(gruppen).toHaveCount(sichtbar.length)
+  for (const gruppe of sichtbar) {
     await expect(page.locator('.v1-nav-group-head', { hasText: gruppe.label })).toBeVisible()
   }
 
   // Und ein Mengenwaechter: waere `navGroups` leer, bestuende alles darueber
   // grundlos.
-  expect(navGroups.length).toBeGreaterThanOrEqual(5)
+  expect(sichtbar.length).toBeGreaterThanOrEqual(5)
 
   // Die globale Zelt/Grow-Leiste ist bewusst weg: sie steuerte nur zwei Badges
   // und keine einzige Seite — man stellte oben etwas ein und unten passierte
