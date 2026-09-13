@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.74
+
+**Fork AI.** Behebt den Baufehler aus forkai.72: Die Automations-Vorlagen waren
+doppelt eingebunden.
+
+Das SDK nimmt Dateien aus dem Projektordner ohnehin als Inhalt auf. Das
+zusätzliche `Include` legte sie ein zweites Mal dazu, und der Bau brach mit
+NETSDK1022 ab — deshalb waren forkai.72 und .73 rot. Richtig ist `Update`, so
+wie es bei den anderen Ordnern im Projekt auch steht. Im Testprojekt bleibt
+`Include` stehen: Dort liegen die Dateien außerhalb des Projektordners, das SDK
+findet sie also nicht von selbst.
+
+Am Programm ändert sich nichts.
+
 ## 2.0.0-forkai.73
 
 **Fork AI.** Das Einrichten einer Steuerung ist vollständig: Vorschau,

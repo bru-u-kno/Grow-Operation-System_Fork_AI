@@ -23,8 +23,10 @@
     <Content Remove="wwwroot\uploads\**\*" />
     <!-- Fork AI (forkai.72): Die Automations-Vorlagen der Steuerungen. Nicht
          unter wwwroot, weil sie niemand abrufen soll - nur der Dienst liest
-         sie beim Anlegen. -->
-    <Content Include="Vorlagen\**\*.json"
+         sie beim Anlegen. Update statt Include: Das SDK nimmt Content-Dateien
+         aus dem Projektordner ohnehin auf - ein Include legt sie ein zweites
+         Mal dazu und der Bau bricht mit NETSDK1022 ab. -->
+    <Content Update="Vorlagen\**\*.json"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
     <Content Update="wwwroot\knowledge-defaults\**\*.json"
