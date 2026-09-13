@@ -79,6 +79,13 @@ public sealed class MetricPayload
     /// <summary>Welches der beiden Baender gerade gilt: <c>day</c> oder <c>night</c>.</summary>
     public string? TargetPhase { get; set; }
 
+    /// <summary>Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht.</summary>
+    public string? StatusNote { get; set; }
+
+    /// <summary>Schaltzeiten des Lichts als <c>HH:mm</c>; die Restzeit rechnet die Oberflaeche.</summary>
+    public string? LightOnAt { get; set; }
+    public string? LightOffAt { get; set; }
+
     /// <summary>Woher der Wert kommt: live (Sensor) oder hand (erfasste Messung).</summary>
     public string? ValueSource { get; set; }
 

@@ -5,8 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
-## 2.0.0-forkai.88
+## 2.0.0-forkai.89
 
+**Fork AI.** Ruhigere Kopfzeile, und das Licht sagt, wann es umschlägt.
+
+Sonne und Mond standen als Emoji im Monospace-Satz direkt am Wort — das einzige
+farbige Zeichen auf dem Bildschirm, und zu eng. Sie sind jetzt Schriftzeichen in
+der gedeckten Farbe der Zeile, mit Luft zum Wort.
+
+Die Licht-Kachel ist neu geordnet: „12/12" steht oben in der Statusecke, wo auch
+sonst „im Ziel" steht, die Schaltzeiten passen damit in eine Zeile. Darunter neu
+die Restzeit — „noch 7 Std 53 Min bis an". Gerechnet wird sie in der Oberfläche
+und jede halbe Minute neu, nicht auf dem Server: eine mitgelieferte Restzeit
+altert zwischen zwei Abrufen und stünde nach fünf Minuten falsch da.
 **Fork AI.** Blätter lassen sich nach unten wegziehen.
 
 Der Griff oben an jedem Blatt war bisher nur ein Balken. Er verspricht die

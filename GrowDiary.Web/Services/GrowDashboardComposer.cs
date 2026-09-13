@@ -656,8 +656,14 @@ public sealed class GrowDashboardComposer
                     Label = "Licht",
                     Value = isOn ? "An" : "Aus",
                     Tone = isOn ? "accent" : "info",
+                    // Der Zyklus gehoert in die Statusecke, die Uhrzeiten in die
+                    // Fusszeile: so passt beides in je eine Zeile, statt als ein
+                    // langer Satz mittendrin umzubrechen.
+                    StatusNote = cycle?.Label,
+                    LightOnAt = cycle?.OnAt.ToString("HH:mm"),
+                    LightOffAt = cycle?.OffAt.ToString("HH:mm"),
                     Hint = cycle is not null
-                        ? $"{cycle.Label} · an {cycle.OnAt:HH:mm}, aus {cycle.OffAt:HH:mm}"
+                        ? $"an {cycle.OnAt:HH:mm} · aus {cycle.OffAt:HH:mm}"
                         : lightState.FriendlyName ?? (isOn ? "Licht eingeschaltet" : "Licht ausgeschaltet")
                 };
             }

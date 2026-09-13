@@ -1,5 +1,7 @@
 import { bandText, metricScale, metricStatus, statusLabel, targetLabel, type MetricStatus } from './metric-tile-model'
 import { Sparkline, type HistoryPoint } from '../../components/SensorChart'
+import { useEffect, useState } from 'react'
+import { restzeitText } from './licht-restzeit'
 import { classNames } from '../../utils'
 
 export type MetricTileProps = {
@@ -35,6 +37,29 @@ export type MetricTileProps = {
   nightMax?: number | null
   /** Welches der beiden Baender gerade gilt: 'day' oder 'night'. */
   targetPhase?: string | null
+  /** Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht. */
+  statusText?: string | null
+  /** Schaltzeiten des Lichts; daraus rechnet die Kachel die Restzeit bis zum Wechsel. */
+  lightOnAt?: string | null
+  lightOffAt?: string | null
+  /** Ob das Licht gerade an ist — entscheidet, welche der beiden Zeiten die naechste ist. */
+  lightIsOn?: boolean
+}
+
+/**
+ * Eine Uhr, die nur tickt, wenn jemand sie liest.
+ *
+ * Ohne `aktiv` laeuft kein Intervall: die Kachel steht auf jedem Bildschirm
+ * mehrfach, und ein Zeitgeber je Kachel waere Arbeit fuer nichts.
+ */
+function useMinutentakt(aktiv: boolean): Date {
+  const [jetzt, setJetzt] = useState(() => new Date())
+  useEffect(() => {
+    if (!aktiv) return
+    const zeiger = window.setInterval(() => setJetzt(new Date()), 30_000)
+    return () => window.clearInterval(zeiger)
+  }, [aktiv])
+  return jetzt
 }
 
 /**
@@ -53,7 +78,10 @@ export type MetricTileProps = {
 export function MetricTile({
   label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open,
   dayMin = null, dayMax = null, nightMin = null, nightMax = null, targetPhase = null,
+  statusText = null, lightOnAt = null, lightOffAt = null, lightIsOn = false,
 }: MetricTileProps) {
+  const jetzt = useMinutentakt(Boolean(lightOnAt || lightOffAt))
+  const restzeit = restzeitText(jetzt, lightIsOn, lightOnAt, lightOffAt)
   const status: MetricStatus = display != null && targetMin == null && targetMax == null
     ? 'unknown'
     : metricStatus(value, targetMin, targetMax, critical)
@@ -98,7 +126,9 @@ export function MetricTile({
     >
       <div className="gos-metric-head">
         <span className="gos-metric-label">{label}</span>
-        {status !== 'unknown' && <span className="gos-metric-status">{statusLabel(status)}</span>}
+        {status !== 'unknown'
+          ? <span className="gos-metric-status">{statusLabel(status)}</span>
+          : statusText && <span className="gos-metric-status is-note">{statusText}</span>}
       </div>
 
       <div className="gos-metric-value">
@@ -131,10 +161,10 @@ export function MetricTile({
         <>
           <div className="gos-metric-bands">
             <div className={classNames('spalte', !baender.nachtAktiv && 'is-aktiv')}>
-              <i>☀ Tag</i>{baender.tag}
+              <i><span className="zeichen tag" aria-hidden="true">☀</span>Tag</i>{baender.tag}
             </div>
             <div className={classNames('spalte', baender.nachtAktiv && 'is-aktiv')}>
-              <i>☾ Nacht</i>{baender.nacht}
+              <i><span className="zeichen nacht" aria-hidden="true">☾</span>Nacht</i>{baender.nacht}
             </div>
           </div>
           {targetNote && <div className="gos-metric-target">{targetNote}</div>}
@@ -142,6 +172,10 @@ export function MetricTile({
       ) : target && <div className="gos-metric-target">{target}{targetNote ? ` · ${targetNote}` : ''}</div>}
       {/* Herkunft neutral, Veraltet warnend — beides zusammen waere doppelt,
           also gewinnt die Warnung. */}
+      {/* Wann es umschlaegt — die Frage, die man vor der Licht-Kachel hat.
+          Gerechnet in der Oberflaeche, damit die Angabe nicht zwischen zwei
+          Abrufen altert. */}
+      {restzeit && <div className="gos-metric-source">{restzeit}</div>}
       {stale
         ? <div className="gos-metric-stale">{stale}</div>
         : sourceNote && <div className="gos-metric-source">{sourceNote}</div>}

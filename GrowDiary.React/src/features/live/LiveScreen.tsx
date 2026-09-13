@@ -525,6 +525,10 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
               nightMin={metric.targetNightMin}
               nightMax={metric.targetNightMax}
               targetPhase={metric.targetPhase}
+              statusText={metric.statusNote}
+              lightOnAt={metric.lightOnAt}
+              lightOffAt={metric.lightOffAt}
+              lightIsOn={metric.value === 'An'}
               sourceNote={herkunft.sourceNote}
               stale={herkunft.stale}
               onOpen={hatVerlauf ? () => setOffeneMetrik(offeneMetrik === metric.key ? null : metric.key) : undefined}

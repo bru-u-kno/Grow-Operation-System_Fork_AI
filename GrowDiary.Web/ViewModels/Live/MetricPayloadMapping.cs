@@ -23,6 +23,9 @@ public static class MetricPayloadMapping
             TargetNightMin = metric.TargetNightMin,
             TargetNightMax = metric.TargetNightMax,
             TargetPhase = metric.TargetPhase,
+            StatusNote = metric.StatusNote,
+            LightOnAt = metric.LightOnAt,
+            LightOffAt = metric.LightOffAt,
             ValueSource = metric.ValueSource,
             MeasuredAgeMinutes = metric.MeasuredAgeMinutes
         };

@@ -83,6 +83,14 @@
      ruhig — es ist Auskunft ueber spaeter, keine Bewertung von jetzt. */
   .gos-metric-bands .spalte.is-aktiv { background: var(--sunk); color: var(--ink); }
   .gos-metric-bands .spalte i { display: block; font-style: normal; color: var(--muted); }
+  /* Das Zeichen steht neben dem Wort, nicht daran geklebt: im Monospace-Satz
+     ist der Zwischenraum fest und damit zu knapp. Ohne eigene Farbe: es
+     erbt die gedeckte Schrift der Zeile und ueberstrahlt die Zahl daneben
+     nicht — ein Emoji taete genau das, es ist das einzige farbige Zeichen
+     auf dem Bildschirm. */
+  .gos-metric-bands .spalte i .zeichen { margin-right: 5px; }
+  /* Ein Status ohne Bewertung ist Auskunft, keine Note — deshalb gedeckt. */
+  .gos-metric-status.is-note { color: var(--muted); }
 
   .gos-metric-target { margin-top: 6px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--faint); }
   .gos-metric-stale { margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--warn-text); }

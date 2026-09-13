@@ -43,6 +43,25 @@ public sealed class MetricCard
     public string? TargetPhase { get; set; }
 
     /// <summary>
+    /// Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI, 13.09.2026. Der Lichtzyklus ist ein Status, keine Fussnote: er
+    /// aendert sich nicht mit der Stunde und gehoert deshalb nach oben zu „im
+    /// Ziel"/„daneben", nicht in die Zeile mit den Uhrzeiten.
+    /// </remarks>
+    public string? StatusNote { get; set; }
+
+    /// <summary>Schaltzeiten des Lichts als <c>HH:mm</c> — fuer die Restzeit bis zum Wechsel.</summary>
+    /// <remarks>
+    /// Als Uhrzeit und nicht als fertige Restzeit: eine vom Server gerechnete
+    /// Angabe („noch 3 Std 25 Min") altert zwischen zwei Abrufen und steht
+    /// dann falsch da. Die Oberflaeche rechnet sie jede Minute neu.
+    /// </remarks>
+    public string? LightOnAt { get; set; }
+    public string? LightOffAt { get; set; }
+
+    /// <summary>
     /// Woher der WERT kommt: <c>live</c> (Sensor) oder <c>hand</c> (erfasste Messung).
     /// </summary>
     /// <remarks>

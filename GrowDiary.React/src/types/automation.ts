@@ -368,6 +368,11 @@ export interface MetricPayload {
   targetNightMax?: number | null
   /** Welches der beiden Baender gerade gilt: 'day' oder 'night'. */
   targetPhase?: string | null
+  /** Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht. */
+  statusNote?: string | null
+  /** Schaltzeiten des Lichts als 'HH:mm'; die Restzeit rechnet die Oberflaeche. */
+  lightOnAt?: string | null
+  lightOffAt?: string | null
   /** Woher der WERT kommt: 'live' (Sensor) oder 'hand' (erfasste Messung). */
   valueSource?: string | null
   /** Alter der Handmessung in Minuten; null bei Live-Werten. */
