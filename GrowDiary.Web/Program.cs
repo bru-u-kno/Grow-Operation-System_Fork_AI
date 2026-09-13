@@ -122,6 +122,8 @@ builder.Services.AddScoped<LichtSteuerungService>();
 builder.Services.AddScoped<SteuerungBestandService>();
 // Fork AI (forkai.58): legt die fehlenden Helfer in Home Assistant an.
 builder.Services.AddScoped<SteuerungHelferService>();
+// Fork AI (forkai.69): legt die Rechenwerte ueber den Einrichtungsdialog an.
+builder.Services.AddScoped<SteuerungRechenwertService>();
 builder.Services.AddScoped<MischplanService>();
 builder.Services.AddScoped<SopDueService>();
 builder.Services.AddScoped<WasserwechselStandService>();

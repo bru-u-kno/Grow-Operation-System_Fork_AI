@@ -606,7 +606,17 @@ public sealed class HomeAssistantService
         };
     }
 
-    private HttpClient CreateClient(HomeAssistantSettings settings)
+    /// <summary>
+    /// Ein angemeldeter Client für Home Assistant.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (forkai.69): öffentlich, weil das Anlegen von Rechenwerten über
+    /// den Einrichtungsdialog läuft — den gibt es nur als REST, und er besteht
+    /// aus drei Aufrufen, die sich dieselbe Adresse und dasselbe Token teilen
+    /// müssen. Ein zweiter Aufbau daneben würde die Feinheit mit dem
+    /// Schrägstrich am Ende verlieren, die den Add-on-Pfad rettet.
+    /// </remarks>
+    public HttpClient CreateClient(HomeAssistantSettings settings)
     {
         var client = _httpClientFactory.CreateClient(nameof(HomeAssistantService));
         // Trailing slash + relative request paths (no leading slash) so a base with a

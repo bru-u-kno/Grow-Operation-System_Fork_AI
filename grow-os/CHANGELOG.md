@@ -5,6 +5,41 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.69
+
+**Fork AI.** Der Fork legt jetzt auch die Rechenwerte einer Steuerung an — Ziel,
+Bedarf, Klima-Freigabe und Impulslänge.
+
+Anders als Einstellwerte und Schalter entstehen Template-Helfer nicht über einen
+Befehl, sondern über denselben Einrichtungsdialog, den ein Mensch im Browser
+durchklickt: Dialog öffnen, Art wählen, Felder abschicken. Bricht ein Schritt
+ab, bleibt ein halb offener Dialog zurück — deshalb wird nach einem Fehlschlag
+abgebrochen statt weitergemacht.
+
+Die Rechenvorschriften kommen aus dem Katalog, mit Platzhaltern für die Geräte.
+Ist eine gebrauchte Rolle nicht zugeordnet, entsteht der Rechenwert gar nicht
+und die Seite sagt, welcher übersprungen wurde. Eine Vorschrift mit stehendem
+Platzhalter wäre die schlechtere Wahl: Sie würde nicht ungültig, sondern stumm
+mit einem Ausweichwert weiterrechnen.
+
+Der Knopf heißt jetzt „Fehlende anlegen" und macht beides in einem Zug — erst
+die Helfer, dann die Rechenwerte, weil die Rechenwerte die Helfer lesen.
+
+Die Automationen fehlen weiterhin; sie brauchen einen anderen Weg und eine
+ausdrückliche Zustimmung, weil am Ende ein Gasventil daran hängt.
+
+## 2.0.0-forkai.68
+
+**Fork AI.** Die vier Rechenvorschriften der CO₂-Steuerung stehen jetzt im
+Katalog — abgelesen aus der laufenden Anlage, samt Hysterese an den
+Temperaturstufen und dem Halten des letzten Zustands, wenn ein Gerät kurz
+aussetzt.
+
+Die Geräte darin sind Platzhalter. Derselbe passt an beiden Stellen:
+`states('[[canopy]]')` ergibt den Wert, `states.[[canopy]]` das Objekt mit
+`last_changed` — weil eine Entitäts-Id mit ihrem Punkt genau das ist, was nach
+`states.` gehört.
+
 ## 2.0.0-forkai.67
 
 **Fork AI.** Zielwerte, Profile und Grenzwerte liegen jetzt unter einem Menüpunkt.

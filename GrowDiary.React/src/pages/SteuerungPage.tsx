@@ -210,14 +210,23 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
     setLegtAn(true)
     setAnlegeMeldung(null)
     try {
-      const bilanz = await apiFetch<{ angelegt: number; fehlgeschlagen: number }>(
+      // Erst die Helfer, dann die Rechenwerte: die Rechenwerte lesen die
+      // Helfer, und ein Rechenwert vor seinem Helfer stünde kurz auf „nicht
+      // verfügbar".
+      const helfer = await apiFetch<{ angelegt: number; fehlgeschlagen: number }>(
         '/api/steuerung/co2/helfer', { method: 'POST' },
       )
-      setAnlegeMeldung(
-        bilanz.fehlgeschlagen > 0
-          ? `${bilanz.angelegt} angelegt, ${bilanz.fehlgeschlagen} nicht — Einzelheiten stehen im Protokoll.`
-          : `${bilanz.angelegt} Helfer angelegt.`,
+      const rechen = await apiFetch<{ angelegt: number; fehlgeschlagen: number; ohneGeraet: string[] }>(
+        '/api/steuerung/co2/rechenwerte', { method: 'POST' },
       )
+
+      const teile = [`${helfer.angelegt + rechen.angelegt} angelegt`]
+      const daneben = helfer.fehlgeschlagen + rechen.fehlgeschlagen
+      if (daneben > 0) teile.push(`${daneben} nicht — Einzelheiten stehen im Protokoll`)
+      if (rechen.ohneGeraet.length > 0) {
+        teile.push(`ohne zugeordnetes Gerät übersprungen: ${rechen.ohneGeraet.join(', ')}`)
+      }
+      setAnlegeMeldung(`${teile.join(', ')}.`)
       setBestand(await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand'))
     } catch (caught) {
       setAnlegeMeldung(formatApiError(caught, 'Anlegen fehlgeschlagen.'))
@@ -478,11 +487,11 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             ))}
             <p className="st-hinweis">
               Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Einstellwerte, Schalter,
-              Zeitstempel und Zähler legt der Fork an; Rechenwerte und Automationen folgen.
+              Zeitstempel, Zähler und Rechenwerte legt der Fork an; die Automationen folgen.
             </p>
             {anlegeMeldung && <p className="st-hinweis">{anlegeMeldung}</p>}
             <V1Button variant="primary" onClick={helferAnlegen} disabled={legtAn}>
-              {legtAn ? 'Legt an …' : 'Fehlende Helfer anlegen'}
+              {legtAn ? 'Legt an …' : 'Fehlende anlegen'}
             </V1Button>
           </V1Card>
         </V1Section>

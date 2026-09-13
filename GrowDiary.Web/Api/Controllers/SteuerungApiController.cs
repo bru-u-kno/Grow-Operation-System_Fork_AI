@@ -30,8 +30,9 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungGeraeteService _geraete;
     private readonly SteuerungBestandService _bestand;
     private readonly SteuerungHelferService _helfer;
+    private readonly SteuerungRechenwertService _rechenwerte;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte)
     {
         _co2 = co2;
         _licht = licht;
@@ -41,6 +42,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         _geraete = geraete;
         _bestand = bestand;
         _helfer = helfer;
+        _rechenwerte = rechenwerte;
     }
 
     // ------------------------------------------------------------ Übersicht
@@ -255,6 +257,34 @@ public sealed class SteuerungApiController : ApiControllerBase
     /// Zustand von Home Assistant und darf nicht durch einen Vorlauf des
     /// Browsers ausgelöst werden.</para>
     /// </remarks>
+    /// <summary>Die fehlenden Rechenwerte einer Steuerung anlegen.</summary>
+    /// <remarks>
+    /// Fork AI (forkai.69): Getrennt von den Helfern, weil Template-Helfer über
+    /// den Einrichtungsdialog entstehen und damit anders scheitern. Zuerst die
+    /// Helfer anlegen — die Rechenwerte lesen sie.
+    /// </remarks>
+    [HttpPost("{modul}/rechenwerte")]
+    public async Task<ActionResult<SteuerungRechenwertService.Bilanz>> RechenwerteAnlegen(
+        string modul, CancellationToken ct)
+    {
+        if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
+
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var zuordnung = _geraete.EntitiesFuerModul(modul)
+            .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+            .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
+
+        var bilanz = await _rechenwerte.AnlegenAsync(modul, zuordnung, settings, ct);
+        if (!bilanz.Erreichbar)
+        {
+            return ConflictError(
+                "home_assistant_stumm",
+                "Es wurde nichts angelegt. Ohne Antwort von Home Assistant ist nicht zu erkennen, welche Rechenwerte es schon gibt.");
+        }
+
+        return Ok(bilanz);
+    }
+
     [HttpPost("{modul}/helfer")]
     public async Task<ActionResult<SteuerungHelferService.Bilanz>> HelferAnlegen(
         string modul, CancellationToken ct)
