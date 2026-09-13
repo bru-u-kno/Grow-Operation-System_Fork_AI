@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.86
+
+**Fork AI.** Bugfix: Das Nachtband kam auf der Kachel nicht an.
+
+Zwischen dem, was der Server für eine Kachel ausrechnet, und dem, was an sie
+ausgeliefert wird, liegt eine von Hand geschriebene Abbildung — und die kannte
+die fünf neuen Felder aus forkai.85 nicht. Kein Fehler, kein Log, HTTP 200: die
+Werte fielen still auf dem letzten Meter heraus. Gewirkt hat das Nachtband
+trotzdem, in Score und Alarm; nur sehen konnte man es nicht.
+
+Dazu eine Zählung, die das künftig von selbst findet: jedes Feld der Kachel muss
+auch im ausgelieferten Stand stehen.
+
 ## 2.0.0-forkai.85
 
 **Fork AI.** Eigene Zielwerte für die Nacht.

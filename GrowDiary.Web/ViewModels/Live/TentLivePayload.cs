@@ -70,6 +70,15 @@ public sealed class MetricPayload
     /// <summary>Zurueckgerechnet statt aus dem Wissen: wird gezeigt, zaehlt aber nicht extra im Score.</summary>
     public bool TargetDerived { get; set; }
 
+    /// <summary>Tag- und Nachtband nebeneinander, wo die Messgroesse eins hat.</summary>
+    public double? TargetDayMin { get; set; }
+    public double? TargetDayMax { get; set; }
+    public double? TargetNightMin { get; set; }
+    public double? TargetNightMax { get; set; }
+
+    /// <summary>Welches der beiden Baender gerade gilt: <c>day</c> oder <c>night</c>.</summary>
+    public string? TargetPhase { get; set; }
+
     /// <summary>Woher der Wert kommt: live (Sensor) oder hand (erfasste Messung).</summary>
     public string? ValueSource { get; set; }
 
