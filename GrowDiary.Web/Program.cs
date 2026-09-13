@@ -126,6 +126,8 @@ builder.Services.AddScoped<SteuerungHelferService>();
 builder.Services.AddScoped<SteuerungRechenwertService>();
 // Fork AI (forkai.72): legt die Automationen an - nur auf ausdrueckliche Zustimmung.
 builder.Services.AddScoped<SteuerungAutomationService>();
+// Fork AI (forkai.73): schaltet das Ventil beim Einrichten kurz zur Probe.
+builder.Services.AddScoped<SteuerungProbeService>();
 builder.Services.AddScoped<MischplanService>();
 builder.Services.AddScoped<SopDueService>();
 builder.Services.AddScoped<WasserwechselStandService>();

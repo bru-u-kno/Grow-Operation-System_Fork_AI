@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.73
+
+**Fork AI.** Das Einrichten einer Steuerung ist vollständig: Vorschau,
+Zustimmung, Probeschaltung.
+
+**Die Automationen bekommen einen eigenen Schritt.** Ein Knopf zeigt erst, was
+entstünde — angelegt, erneuert, unangetastet oder entfallen —, und erst ein
+zweiter schreibt. Ein Trockenlauf, der nichts anfasst, ist an einem Gasventil
+die Mühe wert.
+
+**Neu ist die Probeschaltung.** Sie öffnet das Ventil zwei Sekunden und sieht
+nach, ob der Port wirklich umschlägt. In dieser Anlage hat es Tage gedauert
+herauszufinden, dass der Port „an" meldete und trotzdem kein Gas ankam — der
+Arbeitsdruck stand zu niedrig, das Nadelventil war zu. Zwei Sekunden beim
+Einrichten ersparen dem Nächsten diese Suche.
+
+Sie prüft den Schaltweg, nicht den Gasfluss: Ob Gas strömt, zeigen zwei Sekunden
+nicht. Der CO₂-Wert vorher und nachher steht trotzdem dabei — ein Sprung ist ein
+gutes Zeichen, sein Ausbleiben beweist nichts. Geschlossen wird das Ventil in
+jedem Fall, auch wenn das Nachsehen dazwischen scheitert.
+
 ## 2.0.0-forkai.72
 
 **Fork AI.** Der Fork kann die Automationen einer Steuerung jetzt anlegen — der

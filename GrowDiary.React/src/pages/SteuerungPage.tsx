@@ -8,6 +8,14 @@ import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, Steuerung
 import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 
+/** Was der Vorschau-Lauf über die Automationen meldet. */
+type AutoBilanz = {
+  angelegt: number
+  fremd: number
+  fehlgeschlagen: number
+  einzeln: Array<{ kennung: string; name: string; stand: string; hinweis: string | null }>
+}
+
 /**
  * Fork AI (forkai.45): Die Bauteil-Arten in Klartext.
  *
@@ -15,6 +23,14 @@ import '../features/steuerung/steuerung.css'
  * zum Anlegen, aber nichts, was jemand lesen will. Auf der Seite steht deshalb
  * der Zweck, nicht der Bezeichner.
  */
+const STAND_LESBAR: Record<string, string> = {
+  Angelegt: 'wird angelegt',
+  Erneuert: 'wird erneuert',
+  Fremd: 'bleibt unangetastet',
+  OhneGeraet: 'entfällt',
+  Fehlgeschlagen: 'fehlgeschlagen',
+}
+
 const ART_LESBAR: Record<string, string> = {
   Zahl: 'Einstellwert',  // steht in der breiten Zeile, nicht in einer engen Spalte
   Schalter: 'Schalter',
@@ -136,6 +152,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const [bestand, setBestand] = useState<Bestandsaufnahme | null>(null)
   const [legtAn, setLegtAn] = useState(false)
   const [anlegeMeldung, setAnlegeMeldung] = useState<string | null>(null)
+  const [vorschau, setVorschau] = useState<AutoBilanz | null>(null)
+  const [probe, setProbe] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
   const [meldung, setMeldung] = useState<string | null>(null)
@@ -232,6 +250,56 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       setAnlegeMeldung(formatApiError(caught, 'Anlegen fehlgeschlagen.'))
     } finally {
       setLegtAn(false)
+    }
+  }
+
+  /**
+   * Erst zeigen, dann anlegen.
+   *
+   * Die Automationen bekommen einen eigenen Schritt mit eigener Zustimmung,
+   * weil an ihrem Ende ein Ventil an einer Gasflasche hängt. Der Vorschau-Lauf
+   * schreibt nichts.
+   */
+  const automationenZeigen = async () => {
+    setLegtAn(true)
+    setAnlegeMeldung(null)
+    try {
+      setVorschau(await apiFetch<AutoBilanz>('/api/steuerung/co2/automationen?vorschau=true', { method: 'POST' }))
+    } catch (caught) {
+      setAnlegeMeldung(formatApiError(caught, 'Vorschau fehlgeschlagen.'))
+    } finally {
+      setLegtAn(false)
+    }
+  }
+
+  const automationenAnlegen = async () => {
+    setLegtAn(true)
+    try {
+      const bilanz = await apiFetch<AutoBilanz>('/api/steuerung/co2/automationen', { method: 'POST' })
+      setVorschau(null)
+      setAnlegeMeldung(
+        `${bilanz.angelegt} Automationen geschrieben`
+        + (bilanz.fremd > 0 ? `, ${bilanz.fremd} von Hand gebaute blieben unangetastet` : '')
+        + (bilanz.fehlgeschlagen > 0 ? `, ${bilanz.fehlgeschlagen} nicht` : '') + '.',
+      )
+      setBestand(await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand'))
+    } catch (caught) {
+      setAnlegeMeldung(formatApiError(caught, 'Anlegen fehlgeschlagen.'))
+    } finally {
+      setLegtAn(false)
+    }
+  }
+
+  const ventilProbieren = async () => {
+    setProbe('Ventil wird zwei Sekunden geöffnet …')
+    try {
+      const e = await apiFetch<{ urteil: string; co2Vorher: string | null; co2Nachher: string | null }>(
+        '/api/steuerung/co2/probe', { method: 'POST' },
+      )
+      const werte = e.co2Vorher && e.co2Nachher ? ` CO₂ ${e.co2Vorher} → ${e.co2Nachher} ppm.` : ''
+      setProbe(e.urteil + werte)
+    } catch (caught) {
+      setProbe(formatApiError(caught, 'Probeschaltung fehlgeschlagen.'))
     }
   }
 
@@ -493,6 +561,60 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             <V1Button variant="primary" onClick={helferAnlegen} disabled={legtAn}>
               {legtAn ? 'Legt an …' : 'Fehlende anlegen'}
             </V1Button>
+          </V1Card>
+
+          <V1Card>
+            <div className="st-feldzeile">
+              <span className="st-etikett">
+                Automationen
+                <small>
+                  Sie schalten das Ventil. Deshalb ein eigener Schritt — erst zeigen, dann anlegen.
+                  Von Hand gebaute bleiben unangetastet.
+                </small>
+              </span>
+            </div>
+
+            {vorschau ? (
+              <>
+                {vorschau.einzeln.map((a) => (
+                  <div className="st-feldzeile" key={a.kennung}>
+                    <span className="st-etikett">
+                      {a.name}
+                      <small>{a.hinweis ?? STAND_LESBAR[a.stand] ?? a.stand}</small>
+                    </span>
+                    <span className="st-nurlesen">{STAND_LESBAR[a.stand] ?? a.stand}</span>
+                  </div>
+                ))}
+                <p className="st-hinweis">
+                  Der vorhandene Stand wird vorher gesichert. Danach wird nachgesehen, ob Home Assistant
+                  die Automationen wirklich geladen hat.
+                </p>
+                <V1Button variant="primary" onClick={automationenAnlegen} disabled={legtAn}>
+                  {legtAn ? 'Schreibt …' : 'Jetzt anlegen'}
+                </V1Button>
+                <V1Button variant="ghost" onClick={() => setVorschau(null)} disabled={legtAn}>
+                  Abbrechen
+                </V1Button>
+              </>
+            ) : (
+              <V1Button variant="ghost" onClick={automationenZeigen} disabled={legtAn}>
+                Zeigen, was angelegt würde
+              </V1Button>
+            )}
+          </V1Card>
+
+          <V1Card>
+            <div className="st-feldzeile">
+              <span className="st-etikett">
+                Probeschaltung
+                <small>
+                  Öffnet das Ventil zwei Sekunden und sieht nach, ob der Port reagiert. Zwei Sekunden CO₂
+                  sind harmlos — ein Ventil, das nur meldet zu schalten, ist es nicht.
+                </small>
+              </span>
+            </div>
+            {probe && <p className="st-hinweis">{probe}</p>}
+            <V1Button variant="ghost" onClick={ventilProbieren}>Ventil kurz öffnen</V1Button>
           </V1Card>
         </V1Section>
       )}

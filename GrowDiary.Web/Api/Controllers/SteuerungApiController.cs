@@ -32,8 +32,9 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungHelferService _helfer;
     private readonly SteuerungRechenwertService _rechenwerte;
     private readonly SteuerungAutomationService _automationen;
+    private readonly SteuerungProbeService _probe;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
     {
         _co2 = co2;
         _licht = licht;
@@ -45,6 +46,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         _helfer = helfer;
         _rechenwerte = rechenwerte;
         _automationen = automationen;
+        _probe = probe;
     }
 
     // ------------------------------------------------------------ Übersicht
@@ -273,6 +275,26 @@ public sealed class SteuerungApiController : ApiControllerBase
     /// <para><c>vorschau=true</c> schreibt nichts und sagt nur, was geschähe —
     /// das ist der Stand, den der Knopf vor der Bestätigung zeigt.</para>
     /// </remarks>
+    /// <summary>Das Dosier-Ventil zwei Sekunden öffnen und nachsehen.</summary>
+    /// <remarks>
+    /// Fork AI (forkai.73): In dieser Anlage hat es Tage gedauert
+    /// herauszufinden, dass der Port „an" meldete und trotzdem kein Gas kam.
+    /// Zwei Sekunden beim Einrichten ersparen dem Nächsten diese Suche.
+    /// </remarks>
+    [HttpPost("{modul}/probe")]
+    public async Task<ActionResult<SteuerungProbeService.Ergebnis>> Probeschaltung(
+        string modul, CancellationToken ct)
+    {
+        if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
+
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var zuordnung = _geraete.EntitiesFuerModul(modul)
+            .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+            .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
+
+        return Ok(await _probe.ProbierenAsync(zuordnung, settings, ct));
+    }
+
     [HttpPost("{modul}/automationen")]
     public async Task<ActionResult<SteuerungAutomationService.Bilanz>> AutomationenAnlegen(
         string modul, [FromQuery] bool vorschau, CancellationToken ct)
