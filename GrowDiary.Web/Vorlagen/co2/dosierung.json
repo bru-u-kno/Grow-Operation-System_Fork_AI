@@ -1,0 +1,263 @@
+{
+  "alias": "CO2 Dosierung",
+  "description": "Bedarfsgerechte Impuls-Dosierung. Je Impuls: Ventil auf, Impulsdauer aus sensor.co2_impuls_bedarf, Ventil zu, 20 s spaeter Nachpruefung (noch einmal zu, falls der Befehl verworfen wurde), Rest der Wartezeit. Zaehler, Zeitstempel und Flaschenrest werden je Impuls fortgeschrieben. Die Schleife endet, sobald der Bedarf weg ist, das Licht aus geht, das Klima sperrt, die Abluft nicht mehr gedrosselt ist oder die Hoechstzahl erreicht ist. Zuletzt wird das Ventil in jedem Fall geschlossen. Autokalibrierung: bei erteilter Freigabe und gedrosselter Abluft wird der ppm-Anstieg je Impuls gemessen und der Durchfluss als gleitender Mittelwert (80/20) nachgefuehrt - ein Netto-Wert nach Abluftverlust, fuer die Impulslaenge richtig, fuer den Flaschenverbrauch eine Untergrenze. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/dosierung/1. Abweichung zur handgebauten Fassung: Dort endet das Dosierfenster rechnerisch vor der geplanten Aus-Zeit des Licht-Controllers. Ohne eine Rolle fuer diese Zeit laesst sich das nicht allgemeingueltig ableiten; die Vorlage dosiert daher bis Licht-aus. co2_ende_vor_licht_aus bleibt wirkungslos, bis es diese Rolle gibt - die Seite sagt das. Bloecke mit dem Schluessel 'wenn' entfallen, wenn die genannte Rolle frei ist: Wer keinen Abluft-Regler hat, bekommt die Drosselungs-Bedingungen nicht - dosiert wird trotzdem.",
+  "mode": "single",
+  "max_exceeded": "silent",
+  "triggers": [
+    {
+      "trigger": "state",
+      "entity_id": "binary_sensor.co2_bedarf",
+      "to": "on",
+      "id": "bedarf"
+    },
+    {
+      "trigger": "time_pattern",
+      "minutes": "/2",
+      "id": "zyklus"
+    }
+  ],
+  "conditions": [
+    {
+      "alias": "Licht laenger als co2_start_nach_licht_an an",
+      "condition": "template",
+      "value_template": "{% set lz = states.[[licht]] %}{% set min_an = states('input_number.co2_start_nach_licht_an') | float(15) %}{{ lz is not none and lz.state == 'on' and (as_timestamp(now()) - as_timestamp(lz.last_changed)) / 60 >= min_an }}"
+    },
+    {
+      "condition": "state",
+      "entity_id": "[[port_zustand]]",
+      "state": "on"
+    },
+    {
+      "condition": "state",
+      "entity_id": "binary_sensor.co2_klima_ok",
+      "state": "on"
+    },
+    {
+      "condition": "state",
+      "entity_id": "binary_sensor.co2_bedarf",
+      "state": "on"
+    },
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.co2_abluft_drosseln",
+          "state": "off"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('[[abluft_stufe]]') | int(99) <= states('input_number.co2_t6_stufe_dosierung') | int(5) }}",
+          "wenn": "abluft_stufe"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "repeat": {
+        "sequence": [
+          {
+            "variables": {
+              "impuls": "{{ states('sensor.co2_impuls_bedarf') | int(states('input_number.co2_impulsdauer') | int(5)) }}",
+              "co2_vor": "{{ states('[[co2_sensor]]') | float(0) }}"
+            }
+          },
+          {
+            "action": "select.select_option",
+            "data": {
+              "option": "On"
+            },
+            "target": {
+              "entity_id": "[[port_schalter]]"
+            }
+          },
+          {
+            "delay": {
+              "seconds": "{{ impuls }}"
+            }
+          },
+          {
+            "action": "select.select_option",
+            "data": {
+              "option": "Off"
+            },
+            "target": {
+              "entity_id": "[[port_schalter]]"
+            }
+          },
+          {
+            "action": "counter.increment",
+            "target": {
+              "entity_id": "counter.co2_impulse_heute"
+            }
+          },
+          {
+            "action": "input_datetime.set_datetime",
+            "data": {
+              "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+            },
+            "target": {
+              "entity_id": "input_datetime.co2_letzter_impuls"
+            }
+          },
+          {
+            "action": "input_number.set_value",
+            "data": {
+              "value": "{{ [states('input_number.co2_flasche_rest') | float(0) - impuls | float * states('input_number.co2_gramm_pro_sekunde') | float(0.26) / 1000, 0] | max | round(4) }}"
+            },
+            "target": {
+              "entity_id": "input_number.co2_flasche_rest"
+            }
+          },
+          {
+            "delay": {
+              "seconds": 20
+            }
+          },
+          {
+            "alias": "Nachpruefung - noch einmal zu, falls der Befehl verworfen wurde",
+            "if": [
+              {
+                "condition": "not",
+                "conditions": [
+                  {
+                    "condition": "state",
+                    "entity_id": "[[port_schalter]]",
+                    "state": "Off"
+                  }
+                ]
+              }
+            ],
+            "then": [
+              {
+                "action": "select.select_option",
+                "data": {
+                  "option": "Off"
+                },
+                "target": {
+                  "entity_id": "[[port_schalter]]"
+                }
+              }
+            ]
+          },
+          {
+            "delay": {
+              "seconds": "{{ [states('input_number.co2_wartezeit') | int(95) - 20, 10] | max }}"
+            }
+          },
+          {
+            "alias": "Autokalibrierung g/s aus ppm-Anstieg",
+            "if": [
+              {
+                "condition": "state",
+                "entity_id": "input_boolean.co2_autokalibrierung",
+                "state": "on"
+              },
+              {
+                "condition": "state",
+                "entity_id": "binary_sensor.co2_klima_ok",
+                "state": "on"
+              },
+              {
+                "condition": "or",
+                "conditions": [
+                  {
+                    "condition": "state",
+                    "entity_id": "input_boolean.co2_abluft_drosseln",
+                    "state": "off"
+                  },
+                  {
+                    "condition": "template",
+                    "value_template": "{{ states('[[abluft_stufe]]') | int(99) <= states('input_number.co2_t6_stufe_dosierung') | int(5) }}",
+                    "wenn": "abluft_stufe"
+                  }
+                ]
+              },
+              {
+                "condition": "template",
+                "value_template": "{{ (states('[[co2_sensor]]') | float(0)) - (co2_vor | float(0)) >= 5 }}"
+              }
+            ],
+            "then": [
+              {
+                "variables": {
+                  "gps_mess": "{{ (((states('[[co2_sensor]]') | float(0)) - (co2_vor | float(0))) * states('input_number.co2_zeltvolumen') | float(5.76) / 557 / (impuls | float(5))) | round(4) }}"
+                }
+              },
+              {
+                "action": "input_number.set_value",
+                "target": {
+                  "entity_id": "input_number.co2_g_s_letzte_messung"
+                },
+                "data": {
+                  "value": "{{ [ [gps_mess | float(0), 0] | max, 2 ] | min }}"
+                }
+              },
+              {
+                "action": "input_number.set_value",
+                "target": {
+                  "entity_id": "input_number.co2_gramm_pro_sekunde"
+                },
+                "data": {
+                  "value": "{{ [ [ (states('input_number.co2_gramm_pro_sekunde') | float(0.26)) * 0.8 + (gps_mess | float(0)) * 0.2, 0.005 ] | max, 2 ] | min | round(3) }}"
+                }
+              }
+            ]
+          }
+        ],
+        "until": [
+          {
+            "condition": "or",
+            "conditions": [
+              {
+                "condition": "state",
+                "entity_id": "binary_sensor.co2_bedarf",
+                "state": "off"
+              },
+              {
+                "condition": "state",
+                "entity_id": "[[licht]]",
+                "state": "off"
+              },
+              {
+                "condition": "state",
+                "entity_id": "binary_sensor.co2_klima_ok",
+                "state": "off"
+              },
+              {
+                "condition": "and",
+                "conditions": [
+                  {
+                    "condition": "state",
+                    "entity_id": "input_boolean.co2_abluft_drosseln",
+                    "state": "on"
+                  },
+                  {
+                    "condition": "template",
+                    "value_template": "{{ states('[[abluft_stufe]]') | int(99) > states('input_number.co2_t6_stufe_dosierung') | int(5) }}",
+                    "wenn": "abluft_stufe"
+                  }
+                ]
+              },
+              {
+                "condition": "template",
+                "value_template": "{{ repeat.index >= states('input_number.co2_max_impulse_je_zyklus') | int(10) }}"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "alias": "In jedem Fall zu",
+      "action": "select.select_option",
+      "data": {
+        "option": "Off"
+      },
+      "target": {
+        "entity_id": "[[port_schalter]]"
+      }
+    }
+  ]
+}

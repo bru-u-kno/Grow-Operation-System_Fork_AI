@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.71
+
+**Fork AI.** Alle drei Automationen der CO₂-Steuerung liegen jetzt als Vorlage
+im Repo — Wächter, Abluft-Drosselung und die Dosierung selbst, abgelesen aus der
+laufenden Anlage.
+
+Neu ist der Schlüssel `wenn` in einer Vorlage: Ein Block, der ihn trägt,
+entfällt, wenn die genannte Rolle frei ist. Die Dosierung prüft, ob die Abluft
+wirklich gedrosselt ist — wer keinen Abluft-Regler hat, bekommt diese Prüfung
+nicht und dosiert trotzdem. Ohne diesen Schlüssel wäre die ganze Automation an
+einem Gerät gescheitert, das sie gar nicht braucht.
+
+Zwei Abweichungen zur handgebauten Fassung sind in den Vorlagen vermerkt: Beide
+enden mit dem Licht statt zu einer festen Uhrzeit, weil sich ohne eine Rolle für
+die geplante Aus-Zeit des Lichts keine allgemeingültige Zeit ableiten lässt.
+`co2_ende_vor_licht_aus` bleibt dadurch bei einer frisch angelegten Steuerung
+wirkungslos.
+
+Es fehlt der Dienst, der die Vorlagen anlegt — mit Herkunftsmarke, Sicherung des
+vorhandenen Stands und Nachprüfung.
+
 ## 2.0.0-forkai.70
 
 **Fork AI.** Vorarbeit für das Anlegen der Automationen — und dabei zwei Lücken
