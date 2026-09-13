@@ -67,6 +67,14 @@ public static class SteuerungGeraeteRollen
         new("co2", "port_zustand", "Dosier-Steckdose · Zustand", GruppeSchalten,
             "binary_sensor.big_port_5_zustand", new[] { "binary_sensor", "switch" },
             Hinweis: "Läuft das Ventil wirklich — nicht nur „Port online“."),
+        // Fork AI (forkai.70): Zustand und Schalter sind zwei Rollen, weil es bei
+        // AC-Infinity zwei Entitaeten sind - ein binary_sensor sagt, ob der Port
+        // laeuft, ein select schaltet ihn. Ohne diese Trennung kann der Fork die
+        // Dosier-Automation nicht anlegen: er wuesste, woran er den Zustand
+        // abliest, aber nicht, was er umlegen soll.
+        new("co2", "port_schalter", "Dosier-Steckdose · schalten", GruppeSchalten,
+            "select.rdwc_venti_aktiver_modus_2", new[] { "select", "switch", "input_boolean" },
+            Hinweis: "Was das Ventil wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
         new("co2", "abluft_stufe", "Abluft T6 · Stufe", GruppeSchalten,
             "number.rdwc_venti_einschaltleistung", new[] { "number" }, Pflicht: false),
         new("co2", "licht", "Licht-Status", GruppeUmfeld,

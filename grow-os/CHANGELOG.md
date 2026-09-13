@@ -5,6 +5,26 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.70
+
+**Fork AI.** Vorarbeit für das Anlegen der Automationen — und dabei zwei Lücken
+gefunden.
+
+**Eine Rolle fehlte.** Das Modell kannte nur den *Zustand* des Dosier-Ports,
+nicht die Entität, die ihn *schaltet*. Bei AC Infinity sind das zwei Dinge: ein
+`binary_sensor` sagt, ob der Port läuft, ein `select` legt ihn um. Ohne die
+zweite Rolle könnte der Fork die Dosier-Automation nicht anlegen — er wüsste,
+woran er abliest, aber nicht, was er umlegen soll. Neu: „Dosier-Steckdose ·
+schalten".
+
+**Der Wächter wäre anderswo stumm.** Die laufende Fassung schickt eine
+Push-Nachricht an ein bestimmtes Telefon; diese Entität gibt es bei niemand
+sonst. Die Vorlage schreibt stattdessen ins Logbuch. Das Ventil schließt er so
+oder so — aber dass er es getan hat, muss irgendwo stehen.
+
+Die Vorlage des Wächters liegt jetzt als Datei im Repo. Dosierung und
+Abluft-Drosselung folgen, ebenso der Dienst, der sie anlegt.
+
 ## 2.0.0-forkai.69
 
 **Fork AI.** Der Fork legt jetzt auch die Rechenwerte einer Steuerung an — Ziel,

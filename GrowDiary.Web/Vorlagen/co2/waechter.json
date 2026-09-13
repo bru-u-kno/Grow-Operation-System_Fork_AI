@@ -1,0 +1,73 @@
+{
+  "alias": "CO2 Wächter",
+  "description": "Sicherheitsnetz der CO2-Dosierung. (1) Bleibt der Dosier-Port laenger als 90 s an - laenger als jeder zulaessige Impuls plus Cloud-Verzoegerung -, wurde vermutlich der Abschaltbefehl verworfen: Port zwangsweise zu, Meldung raus. (2) Der Tageszaehler wird beim Einschalten des Lichts zurueckgesetzt; hier statt in der Dosier-Automation, weil dort der Ausloeser im Modus 'single' verlorenging, wenn die Schleife schon lief. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/waechter/1.",
+  "mode": "queued",
+  "max": 5,
+  "triggers": [
+    {
+      "trigger": "state",
+      "id": "port_lang",
+      "entity_id": "[[port_zustand]]",
+      "to": "on",
+      "for": "00:01:30"
+    },
+    {
+      "trigger": "state",
+      "id": "licht_an",
+      "entity_id": "[[licht]]",
+      "from": "off",
+      "to": "on"
+    }
+  ],
+  "actions": [
+    {
+      "choose": [
+        {
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "port_lang"
+              ]
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "data": {
+                "option": "Off"
+              },
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              }
+            },
+            {
+              "action": "logbook.log",
+              "data": {
+                "name": "CO2-Wächter",
+                "message": "Dosier-Port war länger als 90 s offen — Ventil zwangsweise geschlossen.",
+                "entity_id": "[[port_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": "licht_an"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "counter.reset",
+              "target": {
+                "entity_id": "counter.co2_impulse_heute"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
