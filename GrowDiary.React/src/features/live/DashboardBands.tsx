@@ -152,6 +152,10 @@ export function DashboardBands({
                     nightMin={metric.targetNightMin}
                     nightMax={metric.targetNightMax}
                     targetPhase={metric.targetPhase}
+                    statusText={metric.statusNote}
+                    lightOnAt={metric.lightOnAt}
+                    lightOffAt={metric.lightOffAt}
+                    lightIsOn={metric.value === 'An'}
                     sourceNote={metricProvenance(metric).sourceNote}
                     stale={metricProvenance(metric).stale}
                     onOpen={!editing && tile.kind === 'Metric' && tile.metricKey && (trends.get(tile.metricKey)?.length ?? 0) > 1

@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.93
+
+**Fork AI.** Bugfix: Zyklus und Restzeit fehlten auf der Live-Seite.
+
+Die Live-Seite baut ihre Kacheln über die Bereichsansicht, daneben gibt es einen
+zweiten Aufruf im Live-Bildschirm. Zyklus („12/12") und Restzeit wurden nur an
+der zweiten Stelle durchgereicht — auf dem Bildschirm fehlten sie damit genau
+dort, wo man hinschaut. Es sah nach einem alten Zwischenspeicher aus: der Server
+lieferte das Neue, die Oberfläche zeigte es nicht.
+
+Dazu ein Test, der beide Aufrufe vergleicht: was die eine Stelle übergibt, muss
+die andere auch übergeben. Das ist in dieser Runde zweimal passiert, einmal beim
+Nachtband und einmal hier.
+
 ## 2.0.0-forkai.92
 
 **Fork AI.** Live-Kachel Licht: gleiche Schreibweise, und die Restzeit stimmt auch nach dem Weglegen.
