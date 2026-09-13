@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.76
+
+**Fork AI.** Die Kellerzuluft zieht aus dem Home-Assistant-Dashboard in den Fork.
+
+**Neu: Betrieb → Steuerung → Zuluft.** Oben stehen die vier Zahlen, um die es geht
+— Differenz, Stufe, Zustand, Schaltsperre. Darunter in Reitern die Regel
+(Mindest-Differenz, Außentemperatur-Minimum), der Lüfter (Stufe min/max,
+Mindestlaufzeit und -pause) und der Betrieb mit dem Schalter „Automatik aktiv".
+
+**Der Rechenweg auf Tipp.** Draußen 88 % und der Lüfter saugt trotzdem — das ergibt
+erst Sinn, wenn man sieht, dass 12 °C bei 88 % weniger Wasser tragen als 22 °C bei
+57 %. Ein Tipp auf die Differenz-Kachel zeigt die Kette von den vier Messwerten bis
+zur Zielstufe.
+
+**Geregelt wird weiter in Home Assistant.** Der Fork hält die Sollwerte und schreibt
+sie in die Helfer; das Schalten bleibt dort, wo es auch dann noch läuft, wenn dieses
+Add-on gerade neu startet.
+
+**Für eine frische Anlage.** Die Steuerung bringt neun Geräterollen und dreizehn
+Bauteile mit — Helfer, Rechenwerte und die Automation legt der Fork auf Wunsch selbst
+an. Wer die Regelung schon von Hand gebaut hat, behält sie: vorhandene Objekte werden
+erkannt, eine handgebaute Automation bleibt unangetastet, und die Seite zeigt beim
+ersten Aufruf die Werte der vorhandenen Helfer statt der Werkseinstellungen.
+
+**Behoben.** Selbst angelegte Rechenwerte hatten keine Verfügbarkeit und rechneten bei
+ausgefallenem Fühler mit dem Vorgabewert weiter, statt sich abzumelden.
+
 ## 2.0.0-forkai.75
 
 **Fork AI.** Zwei Anzeigefehler auf der Seite Geräte & Entitäten.

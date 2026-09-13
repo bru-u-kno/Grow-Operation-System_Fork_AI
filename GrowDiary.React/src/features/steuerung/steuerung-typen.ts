@@ -196,6 +196,56 @@ export const LICHT_REITER: Array<{ value: LichtReiter; label: string }> = [
   { value: 'erweitert', label: 'Erweitert' },
 ]
 
+// ------------------------------------------------------------------ Zuluft
+
+export type ZuluftEinstellungen = {
+  mindestDifferenzGm3: number
+  aussentemperaturMinC: number
+  stufeMin: number
+  stufeMax: number
+  mindestlaufzeitMin: number
+  mindestpauseMin: number
+  automatikAktiv: boolean
+}
+
+export type ZuluftLive = {
+  haErreichbar: boolean
+  differenzGm3: number | null
+  aussenAbsolutGm3: number | null
+  kellerAbsolutGm3: number | null
+  aussenTempC: number | null
+  aussenRhProzent: number | null
+  kellerTempC: number | null
+  kellerRhProzent: number | null
+  bedarf: boolean | null
+  zielstufe: number | null
+  istStufe: number | null
+  portAn: boolean | null
+  portOnline: boolean | null
+  automatikAn: boolean | null
+  /** Restliche Sperrzeit in Minuten; 0 = frei, null = noch nie geschaltet. */
+  sperreRestMin: number | null
+  letzterWechsel: string | null
+}
+
+export type ZuluftSeite = {
+  einstellungen: ZuluftEinstellungen
+  live: ZuluftLive
+  haAngenommen: boolean | null
+  /** True, solange die Werte aus den vorhandenen Helfern kommen. */
+  ausHomeAssistantUebernommen: boolean
+  geraeteZugeordnet: number
+  geraeteGesamt: number
+}
+
+export type ZuluftReiter = 'regel' | 'luefter' | 'betrieb'
+
+export const ZULUFT_REITER: Array<{ value: ZuluftReiter; label: string }> = [
+  { value: 'regel', label: 'Regel' },
+  { value: 'luefter', label: 'Lüfter' },
+  { value: 'betrieb', label: 'Betrieb' },
+]
+
 /**
  * Fork AI (forkai.21): Geräte-Zuordnung. Eine Rolle beschreibt, WAS gebraucht
  * wird; `eingetragen` ist, was im Feld steht (Entity-ID oder `@Name`),

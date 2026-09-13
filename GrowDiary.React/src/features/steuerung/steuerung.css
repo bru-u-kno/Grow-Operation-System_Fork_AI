@@ -124,4 +124,29 @@
 
   .st-knopfleiste { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
   .st-knopfleiste > * { flex: 1 1 0; }
+
+  /* Fork AI (forkai.76): Zuluft — die Differenz-Kachel oeffnet den Rechenweg.
+     Der Knopf traegt keine eigene Gestaltung; er reicht die Kachel durch, damit
+     sie im Raster nicht aus der Reihe faellt. */
+  .zl-kachel {
+    display: block; width: 100%; padding: 0; text-align: left;
+    border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+  }
+  .zl-kachel:focus-visible > .v1-stat { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Der Rechenweg im Blatt: vier Glieder, dazwischen ein Pfeil. */
+  .zl-kette { display: grid; gap: var(--s-2); }
+  .zl-glied {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--sunk);
+  }
+  .zl-glied .l {
+    font-family: var(--font-mono); font-size: var(--fs-etikett);
+    letter-spacing: .10em; text-transform: uppercase; color: var(--faint);
+  }
+  .zl-glied .r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-text); }
+  .zl-glied.ziel { border-color: var(--accent-dim); background: var(--accent-wash); }
+  .zl-glied.ziel .r { color: var(--accent-text); font-weight: 700; }
+  .zl-pfeil { margin: calc(-1 * var(--s-1)) 0; text-align: center; color: var(--hint); font-size: 11px; line-height: 1; }
 }
