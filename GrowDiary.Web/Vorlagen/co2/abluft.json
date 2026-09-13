@@ -1,0 +1,114 @@
+{
+  "alias": "CO2 Abluft-Drosselung",
+  "description": "Senkt die Abluft waehrend der CO2-Dosierung, damit weniger Gas verloren geht. Klima hat Vorrang: nur bei eingeschalteter Drosselung, Licht seit 10 Min an, im Dosierfenster und bei seit 3 Min erteilter Klima-Freigabe. Zweistufig - bei kuehler UND trockener Luft auf die tiefe Stufe, sonst auf die Dosierstufe, mit Haltebereich gegen Flattern. Auf der tiefen Stufe sammelt sich Feuchte schneller an, als ein Entfeuchter sie abfuehrt; deshalb die Feuchtebedingung. Hochgefahren wird nur, wenn der Regler selbst antwortet - Controller-Aussetzer haben sonst das Zelt leergespuelt. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/abluft/1. Abweichung zur handgebauten Fassung: Dort endet die Drosselung um eine feste Uhrzeit. Die Vorlage laesst sie mit dem Licht enden, weil sich ohne eine Rolle fuer die geplante Aus-Zeit des Lichts keine allgemeingueltige Uhrzeit ableiten laesst. Wirkung: In der letzten halben Stunde vor Licht-aus bleibt die Abluft gedrosselt, obwohl nicht mehr dosiert wird - das kostet kein Gas, nur etwas Frischluft.",
+  "mode": "restart",
+  "triggers": [
+    {
+      "trigger": "state",
+      "entity_id": "binary_sensor.co2_klima_ok",
+      "to": "off"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "binary_sensor.co2_klima_ok",
+      "to": "on",
+      "for": "00:03:00"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "[[licht]]",
+      "to": "off"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "[[licht]]",
+      "to": "on",
+      "for": "00:10:00"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "input_boolean.co2_abluft_drosseln"
+    },
+    {
+      "trigger": "state",
+      "entity_id": [
+        "input_number.co2_t6_stufe_dosierung",
+        "input_number.co2_t6_stufe_normal",
+        "input_number.co2_t6_stufe_tief",
+        "input_number.co2_t6_tief_max_temp"
+      ]
+    },
+    {
+      "trigger": "state",
+      "entity_id": [
+        "[[canopy]]",
+        "[[rh]]"
+      ]
+    },
+    {
+      "trigger": "time_pattern",
+      "minutes": "/5"
+    }
+  ],
+  "actions": [
+    {
+      "if": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.co2_abluft_drosseln",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "[[licht]]",
+          "state": "on",
+          "for": "00:10:00"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.co2_klima_ok",
+          "state": "on",
+          "for": "00:03:00"
+        }
+      ],
+      "then": [
+        {
+          "variables": {
+            "stufe": "{% set t = states('[[canopy]]') | float(99) %}{% set rh = states('[[rh]]') | float(99) %}{% set g = states('input_number.co2_t6_tief_max_temp') | float(29.5) %}{% set rh_ob = states('input_number.co2_rh_obergrenze') | float(65) %}{% set h = states('input_number.co2_klima_hysterese') | float(3) %}{% set tief = states('input_number.co2_t6_stufe_tief') | int(4) %}{% set norm = states('input_number.co2_t6_stufe_dosierung') | int(5) %}{% set ist = states('[[abluft_stufe]]') | int(norm) %}{% set rh_tief_ok = rh <= rh_ob - h - 1 %}{% set rh_tief_halten = rh < rh_ob - h + 1 %}{% set t_tief_ok = t <= g - 0.5 %}{% set t_tief_halten = t < g %}{% if t_tief_ok and rh_tief_ok %}{{ tief }}{% elif ist == tief and t_tief_halten and rh_tief_halten %}{{ tief }}{% else %}{{ norm }}{% endif %}"
+          }
+        },
+        {
+          "action": "number.set_value",
+          "data": {
+            "value": "{{ stufe | int(5) }}"
+          },
+          "target": {
+            "entity_id": "[[abluft_stufe]]"
+          }
+        }
+      ],
+      "else": [
+        {
+          "alias": "Nur wirklich hochfahren, wenn der Regler antwortet",
+          "if": [
+            {
+              "condition": "template",
+              "value_template": "{% set p = states.[[abluft_stufe]] %}{{ p is not none and p.state not in ['unknown','unavailable'] }}"
+            }
+          ],
+          "then": [
+            {
+              "action": "number.set_value",
+              "data": {
+                "value": "{{ states('input_number.co2_t6_stufe_normal') | int(7) }}"
+              },
+              "target": {
+                "entity_id": "[[abluft_stufe]]"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
