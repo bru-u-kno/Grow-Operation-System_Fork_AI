@@ -146,7 +146,16 @@
   .ko-verbrauch-spannen::-webkit-scrollbar { display: none; }
   .ko-verbrauch-fehler { margin: 0 0 var(--s-2); font-size: var(--fs-etikett); color: var(--danger-text); }
 
-  .ko-verbrauch-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
+  /* Fork AI (forkai.79): table-layout fixed, sonst richtet sich die Breite
+     nach dem laengsten Inhalt und die Euro-Spalte wird rechts abgeschnitten.
+     Die erste Spalte nimmt den Rest und darf umbrechen, die beiden Zahlen-
+     spalten bekommen feste Breiten. */
+  .ko-verbrauch-tabelle {
+    width: 100%; max-width: 100%; table-layout: fixed;
+    border-collapse: collapse; font-size: var(--fs-text);
+  }
+  .ko-verbrauch-tabelle col.ko-col-zahl { width: 5.5rem; }
+  .ko-verbrauch-tabelle col.ko-col-eur { width: 4rem; }
   .ko-verbrauch-tabelle th[scope='col'] {
     text-align: right; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
     letter-spacing: .1em; text-transform: uppercase; color: var(--faint); padding: 0 0 var(--s-2) var(--s-2);
@@ -156,10 +165,17 @@
   .ko-verbrauch-tabelle td,
   .ko-verbrauch-tabelle th[scope='row'] { border-top: 1px solid var(--hair); padding: var(--s-2) 0 var(--s-2) var(--s-2); }
   .ko-verbrauch-tabelle td {
-    font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .ko-verbrauch-tabelle th[scope='row'] { text-align: left; font-weight: 500; padding-left: 0; }
-  .ko-verbrauch-tabelle th[scope='row'] small { display: block; font-size: var(--fs-etikett); color: var(--faint); font-weight: 400; }
+  .ko-verbrauch-tabelle th[scope='row'] {
+    overflow-wrap: anywhere;
+  }
+  .ko-verbrauch-tabelle th[scope='row'] small {
+    display: block; font-size: var(--fs-etikett); color: var(--faint); font-weight: 400;
+    overflow-wrap: anywhere;
+  }
   .ko-verbrauch-tabelle tfoot th,
   .ko-verbrauch-tabelle tfoot td { border-top: 1px solid var(--accent-dim); font-weight: 700; }
 }

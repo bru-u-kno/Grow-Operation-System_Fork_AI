@@ -695,6 +695,37 @@ function HerstellerProduktFelder({ id, seite, hersteller, produkt, onHersteller,
 
 /** Anlegen oder — mit `artikel` — Bearbeiten; dieselben Felder, derselbe Vertrag. */
 
+
+/** „2026-09-12" wird zu „12.09." — auf einem schmalen Gerät zählt jedes Zeichen. */
+function kurzesDatum(iso: string): string {
+  const teile = iso.split('-')
+  return teile.length === 3 ? `${teile[2]}.${teile[1]}.` : iso
+}
+
+/**
+ * Das Datum aus der Notiz nehmen, wenn es links daneben ohnehin schon steht.
+ *
+ * Die CO₂-Steuerung schreibt „2026-09-12: 203 Impulse, 38 min Ventil" — als
+ * Journaltext richtig, in einer Tabelle mit Datumsspalte doppelt.
+ */
+function ohneDatum(notiz: string | null, datum: string): string | null {
+  if (!notiz) return null
+  const geputzt = notiz.startsWith(`${datum}:`) ? notiz.slice(datum.length + 1).trim() : notiz
+  return geputzt.length > 0 ? geputzt : null
+}
+
+/**
+ * Eine Menge in der Einheit, in der man sie liest.
+ *
+ * 0,08 kg sagt weniger als 77 g, und bei drei Stellen hinter dem Komma wird die
+ * Spalte zu breit. Unter einem Kilo bzw. Liter wird deshalb umgerechnet.
+ */
+function menge(wert: number, einheit: string): string {
+  if (einheit === 'kg' && Math.abs(wert) < 1) return `${formatNumber(wert * 1000, 0)} g`
+  if (einheit === 'L' && Math.abs(wert) < 1) return `${formatNumber(wert * 1000, 0)} ml`
+  return `${formatNumber(wert, wert >= 100 ? 0 : 2)} ${einheit}`
+}
+
 /** Die Zeiträume, die der Block anbietet. */
 const SPANNEN: Array<{ wert: string; label: string }> = [
   { wert: 'SiebenTage', label: '7 Tage' },
@@ -797,6 +828,11 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
       ) : (
         <>
           <table className="ko-verbrauch-tabelle">
+            <colgroup>
+              <col />
+              <col className="ko-col-zahl" />
+              <col className="ko-col-eur" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">Tag</th>
@@ -808,18 +844,18 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
               {ansicht.zeilen.map((z, i) => (
                 <tr key={`${z.datum}-${i}`}>
                   <th scope="row">
-                    {z.datum}
-                    <small>{z.notiz ?? z.quelle}</small>
+                    {kurzesDatum(z.datum)}
+                    <small>{ohneDatum(z.notiz, z.datum) ?? z.quelle}</small>
                   </th>
-                  <td>{formatNumber(z.menge, 2)} {ansicht.einheit}</td>
+                  <td>{menge(z.menge, ansicht.einheit)}</td>
                   <td>{z.eur == null ? '–' : formatNumber(z.eur, 2)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
-                <th scope="row">Summe · {ansicht.buchungen} Buchungen</th>
-                <td>{formatNumber(ansicht.summeMenge, 2)} {ansicht.einheit}</td>
+                <th scope="row">{ansicht.buchungen} {ansicht.buchungen === 1 ? 'Buchung' : 'Buchungen'}</th>
+                <td>{menge(ansicht.summeMenge, ansicht.einheit)}</td>
                 <td>{formatNumber(ansicht.summeEur, 2)}</td>
               </tr>
             </tfoot>

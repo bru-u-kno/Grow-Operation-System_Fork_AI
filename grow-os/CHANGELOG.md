@@ -5,6 +5,23 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.79
+
+**Fork AI.** Die Verbrauchstabelle war auf dem Handy unbrauchbar.
+
+**Sie lief rechts aus dem Bild.** Die Breite richtete sich nach dem längsten
+Inhalt, und die Euro-Spalte lag außerhalb. Jetzt bekommen die beiden
+Zahlenspalten feste Breiten und die erste nimmt den Rest.
+
+**Das Datum stand zweimal.** Links „2026-09-12", darunter nochmal „2026-09-12:
+203 Impulse". Als Journaltext ist das richtig, in einer Tabelle mit
+Datumsspalte doppelt — jetzt „12.09." und darunter nur noch der Inhalt.
+
+**0,08 kg sagt weniger als 77 g.** Unter einem Kilo bzw. Liter wird umgerechnet;
+das spart auch Stellen in einer engen Spalte.
+
+Und „1 Buchungen" heißt jetzt „1 Buchung".
+
 ## 2.0.0-forkai.78
 
 **Fork AI.** Die Artikel-Karten auf der Kosten-Seite werden kleiner und ruhiger.
