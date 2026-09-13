@@ -5,6 +5,42 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.80
+
+**Fork AI.** Der Wasserkühler bekommt eine eigene Seite unter Steuerung.
+
+**Bisher stand er nur als Zeile da.** Sie meldete außerdem den falschen Zustand:
+abgelesen wurde der Kühl*bedarf*, nicht die Steckdose — also der Wunsch zu
+kühlen und nicht die Tat. Hing der Kühler an einer Schaltsperre, behauptete die
+Zeile „kühlt". Jetzt kommt der Zustand vom Schalter, und in genau diesem Fall
+steht dort „wartet auf Schaltsperre".
+
+**Die Seite zeigt oben vier Zahlen** — Wasser, Ziel jetzt, Gerät und die
+laufende Schaltsperre — und darunter die Reiter Betrieb und Schutz. Geschaltet
+wird weiter in Home Assistant: an der Mindestpause hängt die Lebensdauer des
+Kompressors, und sie soll weiterlaufen, wenn dieses Add-on gerade neu startet.
+
+**Das Ziel gehört nicht dieser Seite.** Tag- und Nachtwert kommen aus dem
+Wochenplan oder aus der Crop-Steering-Absenkung. Die Seite sagt, woher der Wert
+stammt, und verlinkt dorthin, statt ihn ein zweites Mal zu schreiben.
+
+**Neu: eine Warnung vor zwei Händen an derselben Dose.** Schaltet die
+Steckdosen-Funktion auf der Crop-Steering-Seite dieselbe Entität wie die
+Regelung, greifen zwei Stellen nach demselben Kompressor — sichtbar erst als
+Dose, die von selbst umspringt. Das steht jetzt als rotes Band auf der Seite,
+mit dem Entity-Namen und dem Weg zum Abstellen.
+
+**Crop Steering wohnt jetzt unter Steuerung.** Dieselbe Seite, nur ein zweiter
+Weg dorthin (`/steuerung/cropsteering`) und eine eigene Zeile in der Übersicht —
+keine Kopie, damit Änderungen am Original ankommen.
+
+**Zwei Menüpunkte sind aus dem Menü verschwunden, nicht aus der App.** „Crop
+Steering" steht jetzt unter Steuerung, und der Versuch „Zelt (AC-Test)" ist
+durch die Steuerungsseiten abgelöst. Beide bleiben über ihre Adresse und die
+Suche erreichbar: ein neues Feld `versteckt` nimmt einen Eintrag aus den Menüs,
+ohne ihn aus `navigation.ts` zu streichen — dort hängen auch Suche,
+Referenz-Doku und die Erreichbarkeitsprüfungen dran.
+
 ## 2.0.0-forkai.79
 
 **Fork AI.** Die Verbrauchstabelle war auf dem Handy unbrauchbar.

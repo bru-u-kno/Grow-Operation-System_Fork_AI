@@ -246,6 +246,56 @@ export const ZULUFT_REITER: Array<{ value: ZuluftReiter; label: string }> = [
   { value: 'betrieb', label: 'Betrieb' },
 ]
 
+// ----------------------------------------------------------------- Chiller
+
+export type ChillerEinstellungen = {
+  zielTagC: number
+  zielNachtC: number
+  hystereseK: number
+  mindestlaufzeitMin: number
+  mindestpauseMin: number
+  automatikAktiv: boolean
+}
+
+export type ChillerLive = {
+  haErreichbar: boolean
+  wasserC: number | null
+  zielAktivC: number | null
+  zielTagC: number | null
+  zielNachtC: number | null
+  /** True, solange die Lampe brennt — daran hängt, welches Ziel gilt. */
+  tagPhase: boolean | null
+  kuehlbedarf: boolean | null
+  steckdoseAn: boolean | null
+  leistungW: number | null
+  automatikAn: boolean | null
+  waechterAn: boolean | null
+  /** Woher das Zielpaar kommt: plan, cropsteering oder hand. */
+  zielQuelle: string
+  sperreRestMin: number | null
+  letzterWechsel: string | null
+  einschaltenAbC: number | null
+  ausschaltenUnterC: number | null
+  /** Gesetzt, wenn Crop Steering dieselbe Steckdose schaltet wie die Regelung. */
+  doppelSteuerungEntity: string | null
+}
+
+export type ChillerSeite = {
+  einstellungen: ChillerEinstellungen
+  live: ChillerLive
+  haAngenommen: boolean | null
+  ausHomeAssistantUebernommen: boolean
+  geraeteZugeordnet: number
+  geraeteGesamt: number
+}
+
+export type ChillerReiter = 'betrieb' | 'schutz'
+
+export const CHILLER_REITER: Array<{ value: ChillerReiter; label: string }> = [
+  { value: 'betrieb', label: 'Betrieb' },
+  { value: 'schutz', label: 'Schutz' },
+]
+
 /**
  * Fork AI (forkai.21): Geräte-Zuordnung. Eine Rolle beschreibt, WAS gebraucht
  * wird; `eingetragen` ist, was im Feld steht (Entity-ID oder `@Name`),

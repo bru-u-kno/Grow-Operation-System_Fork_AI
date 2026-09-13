@@ -4,6 +4,7 @@ import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
 import LichtDetail from '../features/steuerung/LichtDetail'
 import ZuluftDetail from '../features/steuerung/ZuluftDetail'
+import ChillerDetail from '../features/steuerung/ChillerDetail'
 import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
@@ -87,6 +88,10 @@ export default function SteuerungPage() {
 
   if (modul === 'licht') {
     return <LichtDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+  }
+
+  if (modul === 'chiller') {
+    return <ChillerDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
   if (modul === 'zuluft') {

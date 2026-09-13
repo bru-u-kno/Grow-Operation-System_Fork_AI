@@ -37,12 +37,39 @@ export type NavLeaf = {
   icon?: string
   /** Fork AI: kurze Beschriftung für die Leiste, wenn das Menüwort zu lang ist. */
   short?: string
+  /**
+   * Fork AI: aus dem Menü nehmen, ohne den Eintrag zu löschen.
+   *
+   * <b>Warum nicht einfach streichen.</b> Aus dieser Datei leben mehr als die
+   * beiden Menüs: die Suche zieht ihre Stichwörter hier heraus, die
+   * Referenz-Doku zählt gegen diese Liste, und die Erreichbarkeits-Prüfung hält
+   * eine Route für verwaist, sobald sie hier fehlt. Ein gestrichener Eintrag
+   * nähme der Seite also ihre Auffindbarkeit statt nur ihren Platz im Menü.
+   *
+   * <b>Wofür gedacht.</b> Seiten, die es weiter gibt, aber woanders wohnen:
+   * Crop Steering steht jetzt unter Steuerung, und der AC-Test ist durch die
+   * Steuerung abgelöst. Beide bleiben über ihre Adresse und die Suche erreichbar.
+   */
+  versteckt?: boolean
 }
 
 export type NavGroup = {
   id: 'now' | 'grow' | 'ops' | 'plant' | 'library' | 'versuch'
   label: string
   items: NavLeaf[]
+}
+
+/**
+ * Fork AI: die Gruppen fürs Menü — ohne die versteckten Einträge.
+ *
+ * Eine Stelle statt drei: die Seitenleiste, das „Mehr"-Blatt und die Icon-Leiste
+ * lesen dasselbe, damit ein verstecktes Ziel nicht an einem der drei Orte
+ * stehenbleibt.
+ */
+export function sichtbareGruppen(gruppen: NavGroup[] = navGroups): NavGroup[] {
+  return gruppen
+    .map((gruppe) => ({ ...gruppe, items: gruppe.items.filter((item) => !item.versteckt) }))
+    .filter((gruppe) => gruppe.items.length > 0)
 }
 
 export const navGroups: NavGroup[] = [
@@ -109,7 +136,7 @@ export const navGroups: NavGroup[] = [
       // Fork AI (forkai.67): Auskunft und die beiden Editoren dahinter unter
       // einem Menuepunkt — „Sollwert-Profile" ist der Reiter „Profile".
       { to: '/zielwerte', label: 'Zielwerte', end: true, icon: '◈', short: 'Zielwerte', keywords: 'ziel sollwert sollwerte profil profile setpoint band grenzwert schwelle alarm herkunft quelle fest plan feedchart woche rdwc dwc phasen wo einstellen' },
-      { to: '/cropsteering', label: 'Crop Steering', end: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
+      { to: '/cropsteering', label: 'Crop Steering', end: true, versteckt: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
       // erfasst. Das Archiv rechnet den Strom aus Lampen-Watt; hier kommt er
@@ -127,7 +154,7 @@ export const navGroups: NavGroup[] = [
     id: 'versuch',
     label: 'Versuch',
     items: [
-      { to: '/ac-test', label: 'Zelt (AC-Test)', end: true, keywords: 'ac infinity controller uis licht lüfter abluft stufe leistung 0 10 dimmen versuch test gerät steuern zentrale' },
+      { to: '/ac-test', label: 'Zelt (AC-Test)', end: true, versteckt: true, keywords: 'ac infinity controller uis licht lüfter abluft stufe leistung 0 10 dimmen versuch test gerät steuern zentrale' },
     ],
   },
   {
@@ -192,7 +219,7 @@ export const mobilePrimaryNav = navGroups[0].items
  */
 export const barCandidates: NavLeaf[] = navGroups
   .flatMap((group) => group.items)
-  .filter((item) => item.icon != null)
+  .filter((item) => item.icon != null && !item.versteckt)
 
 /**
  * Werkseinstellung der Leiste.

@@ -131,6 +131,10 @@ function App() {
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />
           <Route path="/steuerung/geraete" element={<SteuerungGeraetePage />} />
+          {/* Fork AI: Crop Steering wohnt thematisch unter der Steuerung, bleibt
+              aber DIESELBE Seite des Entwicklers — eine zweite Route statt einer
+              Kopie, damit seine Datei unberührt bleibt und Updates ankommen. */}
+          <Route path="/steuerung/cropsteering" element={<CropSteeringPage />} />
           <Route path="/geraete" element={<GeraetePage />} />
           <Route path="/steuerung/:modul" element={<SteuerungPage />} />
           <Route path="/ac-test" element={<AcTestPage />} />

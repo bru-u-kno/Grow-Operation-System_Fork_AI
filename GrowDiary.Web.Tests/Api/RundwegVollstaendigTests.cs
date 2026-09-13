@@ -294,6 +294,14 @@ public sealed class RundwegVollstaendigTests
             + "Stufe min = 3 wird mit 400 abgelehnt. Dass kein Feld beim Speichern "
             + "verlorengeht, faehrt ZuluftEinstellungenTests — dort auch die Grenzen und "
             + "die Uebernahme vorhandener Helfer.",
+        // Fork AI
+        ["ChillerEinstellungen"] =
+            "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Bei den Zieltemperaturen "
+            + "kollidiert das mit dem zulaessigen Bereich: 1 Grad liegt unter der Untergrenze "
+            + "von 4 Grad, und das PUT lehnt mit 400 ab. Ein Rundweg, der nur Ablehnungen "
+            + "einsammelt, prueft nichts. Dass kein Feld beim Speichern verlorengeht, faehrt "
+            + "ChillerEinstellungenTests - dort auch die Grenzen, die Uebernahme vorhandener "
+            + "Helfer und die Erkennung der doppelt geschalteten Steckdose.",
         // Fork AI (forkai.25)
         ["EntitaetZuordnenRequest"] =
             "Kein Vertrag mit Feldern, die sich zurueckspielen lassen: der Aufruf ordnet "

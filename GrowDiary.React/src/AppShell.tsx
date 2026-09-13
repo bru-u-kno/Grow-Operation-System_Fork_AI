@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import { AppSearch } from './components/AppSearch'
-import { isNavLeafActive, navGroups, searchablePages } from './navigation'
+import { isNavLeafActive, navGroups, searchablePages, sichtbareGruppen } from './navigation'
 import { useTheme } from './useTheme'
 import { useHomeAssistantHealth } from './useHomeAssistantHealth'
 import { useDemoMode } from './useDemoMode'
@@ -107,7 +107,7 @@ export function AppShell({ children, counts }: Props) {
 
         <AppSearch pages={searchablePages} />
 
-        {navGroups.map((group) => (
+        {sichtbareGruppen().map((group) => (
           <nav key={group.id} className="v1-nav-group" aria-label={group.label}>
             <div className="v1-nav-group-head">{group.label}</div>
             {group.items.map((item) => (
@@ -282,7 +282,7 @@ export function AppShell({ children, counts }: Props) {
           >
             ⚙ Einstellungen
           </NavLink>
-          {navGroups.map((group) => (
+          {sichtbareGruppen().map((group) => (
             <section key={group.id}>
               <div className="v1-nav-group-head">{group.label}</div>
               <div className="v1-mobile-more-grid">

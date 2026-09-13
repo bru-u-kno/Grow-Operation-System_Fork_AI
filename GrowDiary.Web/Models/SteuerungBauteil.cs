@@ -127,6 +127,7 @@ public static class SteuerungBauteile
 {
     private const string Co2 = "co2";
     private const string Zuluft = "zuluft";
+    private const string Chiller = "chiller";
 
     // Rollen, an denen Bauteile hängen — Schreibweise wie in SteuerungGeraeteRollen.
     private static readonly string[] BrauchtAbluft = { "abluft_stufe" };
@@ -314,6 +315,51 @@ public static class SteuerungBauteile
         // --- Automation -----------------------------------------------------
         new(Zuluft, "automation.zuluft_keller_regelung", "Zuluft Keller Regelung", BauteilArt.Automation,
             "Schaltet den Lüfter-Port und führt die Stufe nach."),
+
+        // ====================================================================
+        // Water Chiller — Wassertemperatur auf zwei Zielen halten, Tag und Nacht.
+        // Der Kompressor ist das empfindliche Teil: Mindestlaufzeit und -pause
+        // sind keine Kosmetik, und das Totband verhindert, dass er im
+        // Messrauschen taktet.
+        // ====================================================================
+
+        // --- Ziel -----------------------------------------------------------
+        new(Chiller, "input_number.chiller_zieltemperatur_tag", "Chiller Zieltemperatur Tag", BauteilArt.Zahl,
+            "Ziel, solange die Lampe brennt.", Min: 4, Max: 30, Schritt: 0.5, Einheit: "°C"),
+        new(Chiller, "input_number.chiller_zieltemperatur_nacht", "Chiller Zieltemperatur Nacht", BauteilArt.Zahl,
+            "Ziel in der Dunkelphase.", Min: 4, Max: 30, Schritt: 0.5, Einheit: "°C"),
+
+        // --- Schutz ---------------------------------------------------------
+        new(Chiller, "input_number.chiller_mindestlaufzeit", "Chiller Mindestlaufzeit", BauteilArt.Zahl,
+            "Wie lange der Kompressor mindestens läuft, bevor er wieder aus darf.",
+            Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
+        new(Chiller, "input_number.chiller_mindestpause", "Chiller Mindestpause", BauteilArt.Zahl,
+            "Wie lange er mindestens aus bleibt. Zu kurze Pausen kosten ihn das Leben.",
+            Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
+        new(Chiller, "input_datetime.chiller_letzter_schaltvorgang", "Chiller letzter Schaltvorgang", BauteilArt.Zeitpunkt,
+            "Zeitstempel statt last_changed — eine Funksteckdose fällt bei WLAN-Aussetzern kurz aus."),
+
+        // --- Rechenwerte ----------------------------------------------------
+        // Das aktive Ziel hängt am Licht, nicht an der Uhr. Fällt der
+        // Lichtzustand kurz aus, bleibt der letzte Wert stehen: ein Blip darf
+        // das Ziel nicht um Grade springen lassen.
+        new(Chiller, "sensor.chiller_zieltemperatur_aktiv", "Chiller Zieltemperatur aktiv", BauteilArt.RechenSensor,
+            "Tag- oder Nachtziel, je nach Lichtzustand.",
+            Einheit: "°C", Zustandsklasse: "measurement",
+            Vorlage: "{% set licht = states('[[licht_zustand]]') %}{% if licht == 'on' %}{{ states('input_number.chiller_zieltemperatur_tag') | float }}{% elif licht == 'off' %}{{ states('input_number.chiller_zieltemperatur_nacht') | float }}{% else %}{{ this.state | float(states('input_number.chiller_zieltemperatur_tag') | float) }}{% endif %}",
+            Verfuegbarkeit: "{{ has_value('input_number.chiller_zieltemperatur_tag') and has_value('input_number.chiller_zieltemperatur_nacht') }}"),
+        new(Chiller, "binary_sensor.chiller_kuhlbedarf", "Chiller Kuhlbedarf", BauteilArt.RechenSchalter,
+            "An, sobald das Wasser über dem Ziel steht. Mit Totband, damit der Kompressor nicht taktet.",
+            Vorlage: "{% set t = states('[[wasser_temp]]') | float %}{% set z = states('sensor.chiller_zieltemperatur_aktiv') | float %}{% set prev = (this.state == 'on') if this is defined else false %}{% if t >= z + 0.3 %}on{% elif t <= z - 0.3 %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
+            Verfuegbarkeit: "{{ has_value('[[wasser_temp]]') and has_value('sensor.chiller_zieltemperatur_aktiv') }}"),
+
+        // --- Automationen ---------------------------------------------------
+        new(Chiller, "automation.water_chiller_regelung", "Water Chiller Regelung", BauteilArt.Automation,
+            "Schaltet die Steckdose nach Kühlbedarf, gegen Mindestlaufzeit und -pause."),
+        new(Chiller, "automation.water_chiller_wachter", "Water Chiller Wachter", BauteilArt.Automation,
+            "Schaltet ab, wenn der Wasserfühler ausfällt, und warnt bei zu warmem Wasser.",
+            Pflicht: false,
+            OhneDas: "Ohne Wächter läuft der Kühler weiter, wenn der Fühler stumm wird."),
 
     };
 

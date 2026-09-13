@@ -86,6 +86,12 @@ const DETAILSEITEN = [
   // Suchfelder mit Vorschlägen und rechts Livewerte — also Zahlen, schmale
   // Zeilen und Kollisionsgefahr auf dem Handy.
   '/steuerung/geraete',
+
+  // Fork AI: Crop Steering unter der Steuerung. DIESELBE Seite wie
+  // `/cropsteering` — eine zweite Route statt einer Kopie, damit die Seite des
+  // Entwicklers unberührt bleibt. Sie steht hier, weil die Menü-Zeile zu
+  // `/cropsteering` gehört und diesen Weg sonst niemand prüft.
+  '/steuerung/cropsteering',
 ]
 
 /** Jede Seite genau einmal. */

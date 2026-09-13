@@ -25,6 +25,8 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly Co2SteuerungService _co2;
     private readonly LichtSteuerungService _licht;
     private readonly ZuluftSteuerungService _zuluft;
+    private readonly ChillerSteuerungService _chiller;
+    private readonly GrowRepository _grows;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly KostenRepository _kosten;
@@ -35,11 +37,13 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungAutomationService _automationen;
     private readonly SteuerungProbeService _probe;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
     {
         _co2 = co2;
         _licht = licht;
         _zuluft = zuluft;
+        _chiller = chiller;
+        _grows = grows;
         _ha = ha;
         _haSettings = haSettings;
         _kosten = kosten;
@@ -60,6 +64,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         var live = await _co2.LiveAsync(ct);
         var licht = await _licht.LiveAsync(ct);
         var zuluft = await _zuluft.LiveAsync(ct);
+        var chiller = await _chiller.LiveAsync(ct);
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
@@ -68,6 +73,14 @@ public sealed class SteuerungApiController : ApiControllerBase
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
         double? Zahl(string id) => double.TryParse(Text(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
         string F(double? v, string einheit, string format = "0") => v is { } x ? x.ToString(format, de) + einheit : "–";
+
+        // Die Absenkung haengt am laufenden Grow, das Zielgeraet am Zelt — beides
+        // gehoert dem Entwickler, wir lesen es nur.
+        var zelte = _grows.GetTents();
+        var absenkungAn = _grows.GetActiveGrows().Any(g => g.NightRampEnabled);
+        var zielgeraet = zelte
+            .Select(z => z.WaterTargetEntityId)
+            .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
 
         var module = new List<SteuerungModulDto>
         {
@@ -94,11 +107,31 @@ public sealed class SteuerungApiController : ApiControllerBase
             new(
                 Kennung: "chiller",
                 Titel: "Water Chiller",
-                Status: Text("binary_sensor.chiller_kuhlbedarf") == "on" ? "an" : "aus",
-                Kurz: $"Tag {F(Zahl("input_number.chiller_zieltemperatur_tag"), " °C", "0.0")} · Nacht {F(Zahl("input_number.chiller_zieltemperatur_nacht"), " °C", "0.0")}",
-                Wert: F(Zahl("sensor.bluelab_guardian_temperature"), " °C", "0.0"),
-                Unterzeile: Text("binary_sensor.chiller_kuhlbedarf") == "on" ? "kühlt" : "bereit",
-                HatDetail: false),
+                // Der Zustand kommt vom SCHALTER, nicht vom Kuehlbedarf: die
+                // Zeile meldete „kuehlt", waehrend die Steckdose an einer
+                // Schaltsperre haengen blieb — der Bedarf ist der Wunsch, nicht
+                // die Tat.
+                Status: chiller.AutomatikAn == false ? "aus" : chiller.SteckdoseAn == true ? "an" : "aus",
+                Kurz: $"Tag {F(chiller.ZielTagC, " °C", "0.0")} · Nacht {F(chiller.ZielNachtC, " °C", "0.0")} · {(chiller.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
+                Wert: F(chiller.WasserC, " °C", "0.0"),
+                Unterzeile: chiller.SteckdoseAn == true
+                    ? "kühlt"
+                    : chiller.Kuehlbedarf == true ? "wartet auf Schaltsperre" : "bereit",
+                HatDetail: true),
+            // Fork AI: Crop Steering gehoert thematisch hierher — die Absenkung
+            // fuehrt dasselbe Zielpaar, das der Kuehler abarbeitet. Die Zeile
+            // verweist auf die Seite des Entwicklers (zweite Route, keine
+            // Kopie), damit beide Haelften an einem Ort stehen.
+            new(
+                Kennung: "cropsteering",
+                Titel: "Crop Steering",
+                Status: absenkungAn ? "an" : "aus",
+                Kurz: absenkungAn
+                    ? "Absenkung führt die Wassertemperatur über den Tag"
+                    : "Absenkung aus · das Ziel führt der Wochenplan",
+                Wert: F(chiller.ZielAktivC, " °C", "0.0"),
+                Unterzeile: zielgeraet is { } ziel ? $"schreibt {ziel}" : "kein Zielgerät zugeordnet",
+                HatDetail: true),
             new(
                 Kennung: "abluft",
                 Titel: "Abluft T6",
@@ -213,6 +246,42 @@ public sealed class SteuerungApiController : ApiControllerBase
 
         var seite = await Zuluft(ct);
         if (seite.Result is OkObjectResult ok && ok.Value is ZuluftSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
+        return seite;
+    }
+
+    // -------------------------------------------------------------- Chiller
+
+    /// <summary>
+    /// Fork AI: Die Kühler-Seite — Sollwerte, Schutz und das Livebild der
+    /// Steckdose. Geschaltet wird weiter in Home Assistant.
+    /// </summary>
+    [HttpGet("chiller")]
+    [ProducesResponseType(typeof(ChillerSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ChillerSeiteDto>> Chiller(CancellationToken ct)
+    {
+        var geraete = _geraete.EntitiesFuerModul(ChillerSteuerungService.Modul);
+        return Ok(new ChillerSeiteDto(await _chiller.EinstellungenAsync(ct), await _chiller.LiveAsync(ct))
+        {
+            AusHomeAssistantUebernommen = _chiller.Gespeichert is null,
+            GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
+            GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(ChillerSteuerungService.Modul).Count,
+        });
+    }
+
+    [HttpPut("chiller")]
+    [ProducesResponseType(typeof(ChillerSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ChillerSeiteDto>> ChillerSpeichern([FromBody] ChillerEinstellungen request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("chiller_invalid", "Es wurde nichts übergeben.");
+        var (gespeichert, fehler, erreicht) = await _chiller.SpeichernAsync(request, ct);
+        if (gespeichert is null)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+
+        var seite = await Chiller(ct);
+        if (seite.Result is OkObjectResult ok && ok.Value is ChillerSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
         return seite;
     }
 
@@ -503,6 +572,8 @@ public sealed class SteuerungApiController : ApiControllerBase
         "co2" => "CO₂ · Begasung",
         "licht" => "Licht · LED Top",
         "zuluft" => "Zuluft · Keller",
+        "chiller" => "Water Chiller",
+        "cropsteering" => "Crop Steering",
         _ => modul,
     };
 
@@ -538,6 +609,18 @@ public sealed record Co2SeiteDto(
 }
 
 public sealed record ZuluftSeiteDto(ZuluftEinstellungen Einstellungen, ZuluftLive Live)
+{
+    /// <summary>Nach dem Speichern: ob Home Assistant alle Sollwerte angenommen hat (null beim Lesen).</summary>
+    public bool? HaAngenommen { get; init; }
+
+    /// <summary>True, solange die Werte aus den vorhandenen Helfern kommen und nicht aus der Datenbank.</summary>
+    public bool AusHomeAssistantUebernommen { get; init; }
+
+    public int GeraeteZugeordnet { get; init; }
+    public int GeraeteGesamt { get; init; }
+}
+
+public sealed record ChillerSeiteDto(ChillerEinstellungen Einstellungen, ChillerLive Live)
 {
     /// <summary>Nach dem Speichern: ob Home Assistant alle Sollwerte angenommen hat (null beim Lesen).</summary>
     public bool? HaAngenommen { get; init; }

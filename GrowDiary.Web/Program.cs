@@ -120,6 +120,7 @@ builder.Services.AddScoped<Co2SteuerungService>();
 builder.Services.AddScoped<WochenplanSyncService>(); // Fork AI (forkai.53)
 builder.Services.AddScoped<LichtSteuerungService>();
 builder.Services.AddScoped<ZuluftSteuerungService>();
+builder.Services.AddScoped<ChillerSteuerungService>();
 // Fork AI (forkai.45): stellt fest, welche Helfer und Automationen einer
 // Steuerung in Home Assistant fehlen.
 builder.Services.AddScoped<SteuerungBestandService>();

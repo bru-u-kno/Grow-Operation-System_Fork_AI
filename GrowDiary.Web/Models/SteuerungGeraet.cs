@@ -127,6 +127,25 @@ public static class SteuerungGeraeteRollen
             "sensor.air_zuluft_aktuelle_leistung", new[] { "sensor", "number" }, Pflicht: false),
         new("zuluft", "port_status", "Zuluft-Lüfter · Port online", GruppeMessen,
             "binary_sensor.air_zuluft_status", new[] { "binary_sensor" }, Pflicht: false),
+
+        // Kühler: ein Fühler im Wasser, eine Steckdose und der Lichtzustand.
+        // Die Lampe steht hier, weil Tag und Nacht am Licht hängen und nicht an
+        // der Uhr — verschiebt sich die Lichtphase, verschiebt sich das Ziel mit.
+        new("chiller", "wasser_temp", "Wasserfühler", GruppeMessen,
+            "sensor.bluelab_guardian_temperature", new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Die Temperatur, die geregelt wird."),
+        new("chiller", "steckdose", "Kühler · schalten", GruppeSchalten,
+            "switch.grow_shelly_plusplugs_slot_1", new[] { "switch", "input_boolean" },
+            Hinweis: "Was den Kompressor wirklich umlegt."),
+        new("chiller", "steckdose_zustand", "Kühler · Zustand", GruppeMessen,
+            "switch.grow_shelly_plusplugs_slot_1", new[] { "binary_sensor", "switch" }, Pflicht: false,
+            Hinweis: "Nur nötig, wenn Schalten und Rückmeldung getrennt sind — eine Funksteckdose ist beides."),
+        new("chiller", "leistung", "Kühler · Leistung", GruppeMessen,
+            "sensor.grow_shelly_plusplugs_slot_1_leistung", new[] { "sensor" }, Pflicht: false, Einheit: "W",
+            Hinweis: "Zeigt, ob der Kompressor wirklich zieht — und füttert die Kosten."),
+        new("chiller", "licht_zustand", "Lampe · Zustand", GruppeUmfeld,
+            "binary_sensor.klein_abluft_zustand", new[] { "binary_sensor", "switch", "light" },
+            Hinweis: "Entscheidet zwischen Tag- und Nachtziel."),
     };
 
 
