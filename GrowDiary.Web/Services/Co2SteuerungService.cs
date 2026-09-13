@@ -204,7 +204,7 @@ public sealed class Co2SteuerungService
     {
         var (grow, stage) = LaufenderGrow();
         if (grow is null || stage is null) return null;
-        return $"Sollwertprofil der Phase {GeltendeZieleApiController.StageLabel(stage.Value)} — gilt die ganze Phase, nicht je Woche";
+        return $"Sollwertprofil der Phase {Phasenname.Fuer(stage.Value)} — gilt die ganze Phase, nicht je Woche";
     }
 
     /// <summary>Die drei wirksamen Ziele (warm / mittel / kühl) — bei Plan skaliert, sonst die festen Werte.</summary>

@@ -130,7 +130,7 @@ public sealed class SteuerungApiController : ApiControllerBase
             tage.Select(ToDto).ToList(),
             artikel,
             grow?.Name,
-            stage is { } st ? GeltendeZieleApiController.StageLabel(st) : null,
+            stage is { } st ? Phasenname.Fuer(st) : null,
             _co2.PlanZielPpm(),
             _co2.PlanHerkunft())
         {

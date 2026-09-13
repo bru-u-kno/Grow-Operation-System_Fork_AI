@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.66
+
+**Fork AI.** Die Frage „was gilt gerade" hat jetzt genau eine Antwort.
+
+Auf der Sollwerte-Seite stand seit forkai.18 der Kasten „Gilt gerade" — damals die
+Notlösung für ein Problem, das inzwischen eine eigene Seite hat. Zwei Antworten auf
+dieselbe Frage sind schlechter als eine, auch wenn beide stimmen. An seiner Stelle
+steht nun ein Verweis: die Sollwerte-Seite ist der Editor, `/zielwerte` die Auskunft.
+Der zugehörige Endpunkt und seine Komponente sind mit entfernt statt als toter Weg
+liegen zu bleiben.
+
+Dabei aufgefallen: die Übersetzung der Phasennamen stand in drei Fassungen im Code,
+zuletzt sagte eine „Vegetativ" und eine andere „Vegi". Sie sitzt jetzt in
+`Services/Phasenname.cs`, und alle drei Stellen lesen dort.
+
 ## 2.0.0-forkai.65
 
 **Fork AI.** Zwei Mängel der Zielwerte-Seite, die erst die strenge Prüfung gegen

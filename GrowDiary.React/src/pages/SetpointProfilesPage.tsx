@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../api'
+import { Link } from 'react-router-dom'
 import { V1Alert, V1Button, V1Card, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
 import { classNames } from '../utils'
-import GiltGerade from '../features/setpoints/GiltGerade'
 import '../features/setpoints/setpoints.css'
 
 /**
@@ -232,7 +232,14 @@ function SetpointProfilesPage() {
       {/* Fork AI: erst was gerade gilt, dann die Profile. Die Tabelle darunter
           zeigt Phasenwerte — ohne diesen Kopf liest man sie als das Ergebnis,
           obwohl Feed-Chart und eigene Grenzwerte noch darüber liegen. */}
-      <GiltGerade />
+      {/* Fork AI (forkai.66): hier stand bis forkai.65 der Kasten „Gilt gerade".
+          Er war die Notlösung für eine Frage, die inzwischen eine eigene Seite
+          hat — und zwei Antworten auf dieselbe Frage sind schlechter als eine.
+          Diese Seite ist der Editor, /zielwerte die Auskunft. */}
+      <p className="sp-verweis">
+        Was gerade wirklich gilt — samt Herkunft und Alarmgrenzen — steht unter{' '}
+        <Link to="/zielwerte">Zielwerte ›</Link>
+      </p>
 
       <V1Section title="Profile">
         <div className="sp-list">

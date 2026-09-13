@@ -197,7 +197,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
 
             kette.Add(new ZielStufeDto(
                 profilName is null ? "Anbaustil" : $"Profil · {profilName}",
-                Leise(ausProfil) is null ? "kennt diese Messgröße nicht" : $"Phase {PhaseName(phase)}",
+                Leise(ausProfil) is null ? "kennt diese Messgröße nicht" : $"Phase {Phasenname.Fuer(phase)}",
                 Leise(ausProfil),
                 Gilt: eigene is null && Leise(ausWoche) is null && Leise(ausProfil) is not null,
                 Weg: Leise(ausProfil) is not null && (eigene is not null || Leise(ausWoche) is not null)));
@@ -265,7 +265,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
         return Ok(new ZielwerteDto(
             grow.Id,
             string.IsNullOrWhiteSpace(grow.Name) ? $"Grow {grow.Id}" : grow.Name,
-            PhaseName(phase),
+            Phasenname.Fuer(phase),
             spalte?.Label,
             profilName,
             hinweise,
@@ -386,19 +386,6 @@ public sealed class ZielwerteApiController : ApiControllerBase
     }
 
     private static string Zahl(double wert) => wert.ToString("0.##", AppCulture.German);
-
-    private static string PhaseName(GrowStage phase) => phase switch
-    {
-        GrowStage.Seedling => "Keimling",
-        GrowStage.Clone => "Steckling",
-        GrowStage.Veg => "Vegi",
-        GrowStage.Transition => "Übergang",
-        GrowStage.Flower => "Blüte",
-        GrowStage.Finish => "Finish",
-        GrowStage.Dry => "Trocknung",
-        GrowStage.Cure => "Reifung",
-        _ => phase.ToString(),
-    };
 
     private static string Rollenname(string rolle) => rolle switch
     {
