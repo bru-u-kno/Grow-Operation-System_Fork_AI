@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { barCandidates, defaultBarRoutes, type NavLeaf } from '../navigation'
 import { formatApiError } from '../api'
+import { useBlattZiehen } from './blatt-ziehen'
 
 type Props = {
   open: boolean
@@ -40,6 +41,8 @@ export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Prop
     setFehler(null)
     onClose()
   }
+
+  const zug = useBlattZiehen(schliessen)
 
   if (!open) return null
 
@@ -103,10 +106,19 @@ export function LeisteAnpassen({ open, aktuell, onClose, onSave, onReset }: Prop
 
   return (
     <>
-      <div className="forkai-sheet-dim" onClick={schliessen} />
-      <div className="forkai-anpassen" role="dialog" aria-modal="true" aria-label="Leiste anpassen" data-audit="leiste-anpassen">
-        <div className="forkai-sheet-grip" aria-hidden="true" />
-        <h2 className="forkai-sheet-title">Leiste anpassen</h2>
+      <div className="forkai-sheet-dim" onClick={schliessen} style={zug.schleierStil} />
+      <div
+        className="forkai-anpassen"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Leiste anpassen"
+        style={zug.blattStil}
+        data-audit="leiste-anpassen"
+      >
+        <div className="forkai-sheet-griff" aria-hidden="true" data-audit="sheet-griff" {...zug.griffProps}>
+          <div className="forkai-sheet-grip" />
+        </div>
+        <h2 className="forkai-sheet-title" {...zug.griffProps}>Leiste anpassen</h2>
         <p className="forkai-anpassen-hinweis">
           Bis zu {MAX} Ziele stehen oben in der Leiste, alles Übrige bleibt unter „Mehr“ erreichbar.
         </p>

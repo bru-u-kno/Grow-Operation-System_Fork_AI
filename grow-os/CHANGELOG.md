@@ -5,6 +5,23 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.88
+
+**Fork AI.** Blätter lassen sich nach unten wegziehen.
+
+Der Griff oben an jedem Blatt war bisher nur ein Balken. Er verspricht die
+Geste, die jedes Telefon-Blatt kann, und tat nichts — wer daran zog, hielt das
+Blatt für hängen geblieben. Jetzt folgt das Blatt dem Finger, der Schleier wird
+dabei heller, und beim Loslassen entscheidet der Weg: ab etwa 90 px oder nach
+einem schnellen Wisch schliesst es, sonst federt es zurück. Gezogen wird am
+Griff und am Titel, nicht am ganzen Blatt — sonst würde jede lange Liste darin
+beim Scrollen das Blatt mitnehmen. Die Trefferfläche des Griffs ist rund 24 px
+hoch statt 4; der sichtbare Balken sitzt unverändert. Schleier, „Abbrechen" und
+Escape schliessen weiter wie bisher.
+
+Gilt für alle Blätter: Erfassen, „⋯" auf der Live-Seite, Auswahllisten, Geräte,
+Rechenweg der Zuluft und „Leiste anpassen".
+
 ## 2.0.0-forkai.87
 
 **Fork AI.** Tag/Nacht-Leiste: mittig und ohne erfundene Nachkommastellen.

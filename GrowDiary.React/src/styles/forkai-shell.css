@@ -148,6 +148,14 @@
   background: var(--panel-solid, var(--bg));
   border-top: 1px solid var(--hair);
   border-radius: 16px 16px 0 0;
+  /* forkai.88: `--blatt-zug` setzt `blatt-ziehen.ts` waehrend des Zugs; ohne
+     Zug ist es 0 und das Blatt steht wie vorher. */
+  transform: translateY(var(--blatt-zug, 0px));
+  transition: transform 180ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .forkai-sheet,
+  .forkai-anpassen { transition: none; }
 }
 @media (min-width: 861px) {
   /* Am Schreibtisch nicht ueber die ganze Breite: ein Blatt mit fuenf
@@ -155,15 +163,29 @@
   .forkai-sheet,
   .forkai-anpassen {
     left: 50%; right: auto; bottom: auto; top: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, calc(-50% + var(--blatt-zug, 0px)));
     width: min(460px, calc(100vw - 48px));
     border-radius: 14px; border: 1px solid var(--hair);
   }
 }
+/* forkai.88: Der Griff ist die Ziehflaeche. Der sichtbare Balken bleibt
+   40 x 4 px, die Trefferflaeche ist mit Innenabstand rund 24 px hoch — ein
+   4-px-Ziel trifft kein Daumen. Der negative Aussenabstand oben holt den
+   Innenabstand aus dem Blattrand zurueck, damit der Balken exakt dort sitzt
+   wie vorher. `touch-action: none`, sonst scrollt der Browser das Blatt,
+   statt den Zeigerereignissen zu folgen. */
+.forkai-sheet-griff {
+  margin: calc(-1 * var(--s-2)) 0 0;
+  padding: var(--s-2) 0 calc(var(--s-2) + 2px);
+  touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none;
+}
+.forkai-sheet-griff:active { cursor: grabbing; }
 .forkai-sheet-grip {
   width: 40px; height: 4px; border-radius: 2px;
-  background: var(--hair-2); margin: 0 auto var(--s-2);
+  background: var(--hair-2); margin: 0 auto;
 }
+/* Der Titel zieht mit — oben am Blatt ist er die groesste ruhige Flaeche. */
+.forkai-sheet-title { touch-action: none; -webkit-user-select: none; user-select: none; }
 .forkai-sheet-title {
   margin: 0 0 var(--s-2);
   font: 600 var(--fs-text)/1.2 var(--font-mono); color: var(--ink);

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { useBlattZiehen } from './blatt-ziehen'
 
 /**
  * Fork AI (forkai.35): Das Blatt von unten — jetzt für alle, nicht nur fürs
@@ -11,6 +12,9 @@ import type { ReactNode } from 'react'
  * trotzdem zu Inline-Kästen mitten in der Karte, weil es das Blatt nur als
  * fertige Seite gab. Dieselbe Gestaltung, dasselbe CSS (`.forkai-sheet`) — nur
  * mit freiem Inhalt.
+ *
+ * <b>forkai.88.</b> Der Griff ist nicht mehr nur Deko: Ziehen am Griff oder am
+ * Titel schiebt das Blatt nach unten weg (siehe `blatt-ziehen.ts`).
  *
  * <b>Was es NICHT tut.</b> Es fängt den Tabulator nicht ein. Escape und der Klick
  * auf den Schleier schließen; mehr hatte das Erfassen-Blatt auch nicht, und ein
@@ -28,6 +32,7 @@ export function V1Sheet({ open, onClose, title, subtitle, children, footer, labe
   label?: string
 }) {
   const blatt = useRef<HTMLDivElement>(null)
+  const zug = useBlattZiehen(onClose)
 
   useEffect(() => {
     if (!open) return
@@ -48,9 +53,10 @@ export function V1Sheet({ open, onClose, title, subtitle, children, footer, labe
 
   return (
     <>
-      <div className="forkai-sheet-dim" onClick={onClose} data-audit="sheet-dim" />
+      <div className="forkai-sheet-dim" onClick={onClose} style={zug.schleierStil} data-audit="sheet-dim" />
       <div
         className="forkai-sheet"
+        style={zug.blattStil}
         role="dialog"
         aria-modal="true"
         aria-label={label ?? title}
@@ -58,8 +64,10 @@ export function V1Sheet({ open, onClose, title, subtitle, children, footer, labe
         ref={blatt}
         data-audit="v1-sheet"
       >
-        <div className="forkai-sheet-grip" aria-hidden="true" />
-        <h2 className="forkai-sheet-title">{title}</h2>
+        <div className="forkai-sheet-griff" aria-hidden="true" data-audit="sheet-griff" {...zug.griffProps}>
+          <div className="forkai-sheet-grip" />
+        </div>
+        <h2 className="forkai-sheet-title" {...zug.griffProps}>{title}</h2>
         {subtitle && <p className="forkai-sheet-unter">{subtitle}</p>}
         {children}
         {footer ?? (
