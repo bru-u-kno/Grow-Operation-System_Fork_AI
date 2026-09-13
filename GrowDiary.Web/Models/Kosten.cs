@@ -31,6 +31,19 @@ public sealed class Verbrauchsartikel
     public int? TentId { get; set; }
     public string? Notiz { get; set; }
     public bool Aktiv { get; set; } = true;
+
+    /// <summary>
+    /// Fork AI (forkai.90): Wohin die Kosten dieses Artikels zaehlen.
+    /// <para><c>true</c> — die Nachfuellung ist lagerneutral und erst der
+    /// gebuchte Verbrauch trifft den Durchgang. Richtig fuer alles, was ueber
+    /// mehrere Grows reicht: ein 10-L-Kanister Purolyt, eine CO2-Flasche.</para>
+    /// <para><c>false</c> — die Nachfuellung zaehlt weiter voll im Durchgang,
+    /// dem sie zugeordnet ist. Richtig fuer alles, was in einem Lauf aufgeht.
+    /// Das ist das bisherige Verhalten und bleibt die Voreinstellung, damit
+    /// bestehende Installationen ihre Zahlen behalten.</para>
+    /// </summary>
+    public bool AufGrowBuchen { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
@@ -162,6 +175,14 @@ public sealed class Verbrauch
     public int Id { get; set; }
     public int ArtikelId { get; set; }
     public int? GrowId { get; set; }
+
+    /// <summary>
+    /// Fork AI (forkai.90): Die Messung, bei der die Gabe erfasst wurde.
+    /// Null bei Buchungen, die nicht am Becken entstanden sind — die
+    /// CO2-Steuerung bucht abends ohne Messung.
+    /// </summary>
+    public int? MessungId { get; set; }
+
     public DateTime ZeitpunktUtc { get; set; } = DateTime.UtcNow;
     public double Menge { get; set; }
     /// <summary>Woher die Buchung stammt, z. B. <c>co2-steuerung</c> oder <c>manuell</c>.</summary>

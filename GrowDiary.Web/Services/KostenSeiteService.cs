@@ -268,7 +268,34 @@ public sealed class KostenSeiteService
             })
             .ToList();
 
-        var artikelEur = grow is null ? 0 : fuellungen.Where(f => f.GrowId == grow.Id).Sum(f => f.KostenEur ?? 0);
+        // forkai.90: Zwei Buchungsziele, je Artikel gewaehlt.
+        //  * AufGrowBuchen = false (Voreinstellung, bisheriges Verhalten):
+        //    die Nachfuellung zaehlt voll in dem Durchgang, dem sie zugeordnet ist.
+        //  * AufGrowBuchen = true: die Nachfuellung ist lagerneutral, und nur der
+        //    gebuchte Verbrauch trifft den Durchgang — bewertet ueber
+        //    VerbrauchsansichtService.PreisJeEinheit, also mit dem Preis der
+        //    Fuellung, aus der die Menge stammt.
+        // Ohne die Trennung zaehlte ein 10-L-Kanister voll auf den Lauf, in dem
+        // er gekauft wurde, obwohl er drei Laeufe haelt.
+        var aufGrow = artikel.Where(a => a.AufGrowBuchen).Select(a => a.Id).ToHashSet();
+
+        var fuellungenEur = grow is null
+            ? 0
+            : fuellungen.Where(f => f.GrowId == grow.Id && !aufGrow.Contains(f.ArtikelId)).Sum(f => f.KostenEur ?? 0);
+
+        var verbrauchEur = grow is null || verbraeuche is null
+            ? 0
+            : verbraeuche
+                .Where(v => v.GrowId == grow.Id && aufGrow.Contains(v.ArtikelId))
+                .Sum(v =>
+                {
+                    artikelNachId.TryGetValue(v.ArtikelId, out var a);
+                    var preis = VerbrauchsansichtService.PreisJeEinheit(
+                        fuellungen.Where(f => f.ArtikelId == v.ArtikelId).ToList(), v.ZeitpunktUtc, a);
+                    return preis is { } p ? v.Menge * p : 0;
+                });
+
+        var artikelEur = fuellungenEur + verbrauchEur;
         var anschaffungenEur = grow is null ? 0 : anschaffungen.Where(a => a.GrowId == grow.Id).Sum(a => a.GesamtEur);
         var gesamt = (strom.EurSeitStart ?? 0) + artikelEur + anschaffungenEur;
 

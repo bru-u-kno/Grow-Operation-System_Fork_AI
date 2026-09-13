@@ -109,6 +109,23 @@ public sealed class KostenRepository : RepositoryBase
                     alter.ExecuteNonQuery();
                 }
             }
+
+            // forkai.90: zwei weitere Spalten. AufGrowBuchen faellt bewusst auf 0
+            // zurueck — bestehende Installationen behalten damit exakt die Zahlen,
+            // die sie vorher hatten, und entscheiden je Artikel neu.
+            foreach (var (tabelle, spalte, typ) in new[]
+            {
+                ("ForkVerbrauchsartikel", "AufGrowBuchen", "INTEGER NOT NULL DEFAULT 0"),
+                ("ForkVerbraeuche", "MessungId", "INTEGER NULL"),
+            })
+            {
+                if (!SpalteVorhanden(connection, tabelle, spalte))
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = $"ALTER TABLE {tabelle} ADD COLUMN {spalte} {typ};";
+                    alter.ExecuteNonQuery();
+                }
+            }
             _schemaEnsured = true;
         }
     }
@@ -155,8 +172,8 @@ public sealed class KostenRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkVerbrauchsartikel (Name, Hersteller, Produkt, PreisEur, Einheit, Gebinde, TentId, Notiz, Aktiv, CreatedAtUtc)
-            VALUES ($name, $hersteller, $produkt, $preisEur, $einheit, $gebinde, $tentId, $notiz, $aktiv, $createdAtUtc);
+            INSERT INTO ForkVerbrauchsartikel (Name, Hersteller, Produkt, PreisEur, Einheit, Gebinde, TentId, Notiz, Aktiv, AufGrowBuchen, CreatedAtUtc)
+            VALUES ($name, $hersteller, $produkt, $preisEur, $einheit, $gebinde, $tentId, $notiz, $aktiv, $aufGrowBuchen, $createdAtUtc);
             SELECT last_insert_rowid();
             """;
         BindArtikel(command, artikel);
@@ -170,7 +187,7 @@ public sealed class KostenRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE ForkVerbrauchsartikel
-            SET Name = $name, Hersteller = $hersteller, Produkt = $produkt, PreisEur = $preisEur, Einheit = $einheit, Gebinde = $gebinde, TentId = $tentId, Notiz = $notiz, Aktiv = $aktiv
+            SET Name = $name, Hersteller = $hersteller, Produkt = $produkt, PreisEur = $preisEur, Einheit = $einheit, Gebinde = $gebinde, TentId = $tentId, Notiz = $notiz, Aktiv = $aktiv, AufGrowBuchen = $aufGrowBuchen
             WHERE Id = $id;
             """;
         BindArtikel(command, artikel);
@@ -198,6 +215,7 @@ public sealed class KostenRepository : RepositoryBase
         command.Parameters.AddWithValue("$tentId", (object?)artikel.TentId ?? DBNull.Value);
         command.Parameters.AddWithValue("$notiz", (object?)NormalizeOptional(artikel.Notiz) ?? DBNull.Value);
         command.Parameters.AddWithValue("$aktiv", artikel.Aktiv ? 1 : 0);
+        command.Parameters.AddWithValue("$aufGrowBuchen", artikel.AufGrowBuchen ? 1 : 0);
     }
 
     private static Verbrauchsartikel MapArtikel(SqliteDataReader reader) => new()
@@ -212,6 +230,7 @@ public sealed class KostenRepository : RepositoryBase
         TentId = reader["TentId"] is DBNull ? null : Convert.ToInt32(reader["TentId"], CultureInfo.InvariantCulture),
         Notiz = NullString(reader["Notiz"]),
         Aktiv = Convert.ToInt32(reader["Aktiv"], CultureInfo.InvariantCulture) == 1,
+        AufGrowBuchen = reader["AufGrowBuchen"] is DBNull || Convert.ToInt32(reader["AufGrowBuchen"], CultureInfo.InvariantCulture) == 1,
         CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"].ToString()) ?? DateTime.UtcNow,
     };
 
@@ -413,12 +432,13 @@ public sealed class KostenRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
-            VALUES ($artikelId, $growId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
+            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, MessungId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
+            VALUES ($artikelId, $growId, $messungId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$artikelId", v.ArtikelId);
         command.Parameters.AddWithValue("$growId", (object?)v.GrowId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$messungId", (object?)v.MessungId ?? DBNull.Value);
         command.Parameters.AddWithValue("$zeitpunktUtc", ToStorageUtc(v.ZeitpunktUtc));
         command.Parameters.AddWithValue("$menge", v.Menge);
         command.Parameters.AddWithValue("$quelle", v.Quelle);
@@ -451,6 +471,7 @@ public sealed class KostenRepository : RepositoryBase
         Id = Convert.ToInt32(reader["Id"], CultureInfo.InvariantCulture),
         ArtikelId = Convert.ToInt32(reader["ArtikelId"], CultureInfo.InvariantCulture),
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
+        MessungId = reader["MessungId"] is DBNull ? null : Convert.ToInt32(reader["MessungId"], CultureInfo.InvariantCulture),
         ZeitpunktUtc = ParseStoredUtcDateTime(reader["ZeitpunktUtc"].ToString()) ?? DateTime.UtcNow,
         Menge = Convert.ToDouble(reader["Menge"], CultureInfo.InvariantCulture),
         Quelle = reader["Quelle"].ToString() ?? "manuell",

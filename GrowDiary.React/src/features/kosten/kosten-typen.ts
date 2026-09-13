@@ -81,6 +81,13 @@ export type KostenArtikel = {
   tentId: number | null
   notiz: string | null
   aktiv: boolean
+  /**
+   * Wohin die Kosten zählen (forkai.90).
+   * true = die Füllung ist lagerneutral, erst der gebuchte Verbrauch trifft den
+   * Durchgang. false = die Füllung zählt voll im Durchgang, dem sie zugeordnet
+   * ist (bisheriges Verhalten, Voreinstellung).
+   */
+  aufGrowBuchen: boolean
   aktuell: KostenFuellungAktuell | null
   anzahlFuellungen: number
   mittlereLaufzeitTage: number | null

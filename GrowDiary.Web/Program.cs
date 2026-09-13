@@ -109,6 +109,7 @@ builder.Services.AddSingleton<KostenRepository>();
 // Fork AI (forkai.77): Verbrauch je Artikel ueber einen Zeitraum.
 builder.Services.AddScoped<VerbrauchsansichtService>();
 builder.Services.AddScoped<KostenSeiteService>();
+builder.Services.AddScoped<ZaehlerstandImportService>();
 // Fork AI (forkai.20): Steuerung — CO₂-Leitstand
 builder.Services.AddSingleton<SteuerungRepository>();
 builder.Services.AddScoped<SteuerungGeraeteService>();
