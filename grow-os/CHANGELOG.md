@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.75
+
+**Fork AI.** Zwei Anzeigefehler auf der Seite Geräte & Entitäten.
+
+**Jede Beschriftung stand doppelt.** Das Auswahlfeld brachte seine eigene mit,
+obwohl die Zeile außen schon eine hat — einmal mit Einheit, einmal ohne. Für
+die Vorlesehilfe bleibt sie erhalten, sichtbar ist sie nur noch einmal.
+
+**Der Livewert lag über dem Namen.** Das Auswahlfeld durfte nicht schrumpfen und
+behielt die Breite seines Inhalts; bei langen Entitätsnamen schob sich der Wert
+rechts darüber. Jetzt schrumpft es, und ein zu langer Name endet mit drei
+Punkten statt unter der Zahl zu verschwinden.
+
 ## 2.0.0-forkai.74
 
 **Fork AI.** Behebt den Baufehler aus forkai.72: Die Automations-Vorlagen waren

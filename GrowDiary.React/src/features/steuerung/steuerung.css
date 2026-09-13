@@ -98,7 +98,17 @@
 
   /* Fork AI (forkai.21): Geräte-Zuordnung. Das Feld traegt Entity-IDs, also
      monospace — sonst liest sich big_port_5 wie ein Fliesstext. */
-  .st-geraet { display: flex; align-items: center; gap: var(--s-2); width: 100%; min-width: 0; }
+  .st-geraet {
+    display: flex; align-items: center; gap: var(--s-2); width: 100%; min-width: 0;
+  }
+  /* Fork AI (forkai.75): Das Auswahlfeld muss schrumpfen duerfen. Ohne
+     min-width behielt es seine Inhaltsbreite, und der Livewert daneben lag bei
+     langen Entitaetsnamen halb ueber dem Text. */
+  .st-geraet > .v1-select { flex: 1 1 auto; min-width: 0; }
+  .st-geraet > .v1-select .v1-select-feld { width: 100%; min-width: 0; }
+  .st-geraet > .v1-select .v1-select-feld > span {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .st-geraet-feld {
     flex: 1 1 auto; min-width: 0;
     font-family: var(--font-mono); font-size: var(--fs-etikett);

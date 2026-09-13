@@ -241,7 +241,11 @@ function RollenZeile({
     >
       <div className="st-geraet">
         <V1Select
-          label={zeile.label}
+          // Fork AI (forkai.75): ariaLabel statt label - die sichtbare
+          // Beschriftung steht schon aussen im V1Field. Mit label stand sie
+          // zweimal untereinander, einmal mit Einheit und einmal ohne.
+          label=""
+          ariaLabel={zeile.label}
           titel={zeile.label}
           unterzeile={zeile.hinweis ?? undefined}
           wert={wert}
