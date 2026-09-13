@@ -161,10 +161,10 @@ export function MetricTile({
         <>
           <div className="gos-metric-bands">
             <div className={classNames('spalte', !baender.nachtAktiv && 'is-aktiv')}>
-              <i><span className="zeichen tag" aria-hidden="true">☀</span>Tag</i>{baender.tag}
+              <i><span className="zeichen" aria-hidden="true">{'\u2600\uFE0E'}</span>Tag</i>{baender.tag}
             </div>
             <div className={classNames('spalte', baender.nachtAktiv && 'is-aktiv')}>
-              <i><span className="zeichen nacht" aria-hidden="true">☾</span>Nacht</i>{baender.nacht}
+              <i><span className="zeichen" aria-hidden="true">{'\u263E\uFE0E'}</span>Nacht</i>{baender.nacht}
             </div>
           </div>
           {targetNote && <div className="gos-metric-target">{targetNote}</div>}

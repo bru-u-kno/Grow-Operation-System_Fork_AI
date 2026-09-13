@@ -88,7 +88,10 @@
      erbt die gedeckte Schrift der Zeile und ueberstrahlt die Zahl daneben
      nicht — ein Emoji taete genau das, es ist das einzige farbige Zeichen
      auf dem Bildschirm. */
-  .gos-metric-bands .spalte i .zeichen { margin-right: 5px; }
+  /* Android zeichnet ☀ von sich aus als buntes Emoji. Der Variantenwaehler
+     U+FE0E in der Auszeichnung bittet um die Schriftform, font-variant-emoji
+     sagt dasselbe noch einmal fuer Browser, die es kennen. */
+  .gos-metric-bands .spalte i .zeichen { margin-right: 5px; font-variant-emoji: text; }
   /* Ein Status ohne Bewertung ist Auskunft, keine Note — deshalb gedeckt. */
   .gos-metric-status.is-note { color: var(--muted); }
 

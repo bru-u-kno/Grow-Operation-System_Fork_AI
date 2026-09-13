@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.90
+
+**Fork AI.** Die Sonne war immer noch ein Emoji.
+
+Android zeichnet ☀ von sich aus bunt, auch wenn es als Schriftzeichen dasteht.
+Jetzt bittet der Variantenwähler U+FE0E ausdrücklich um die Schriftform, damit
+das Zeichen die gedeckte Farbe der Zeile erbt statt als einziger Farbklecks im
+Klima-Band zu stehen.
+
 ## 2.0.0-forkai.89
 
 **Fork AI.** Ruhigere Kopfzeile, und das Licht sagt, wann es umschlägt.
