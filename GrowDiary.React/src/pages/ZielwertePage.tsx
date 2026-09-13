@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
 import { V1Alert, V1Page, V1Section, V1Skeleton } from '../components/v1'
@@ -221,7 +222,11 @@ function ZielwertePage() {
               <div key={gruppe.titel} className="zw-gruppe">
                 <div className="zw-gruppe-k">
                   <b>{gruppe.titel}</b>
-                  <a href={gruppe.route}>{gruppe.routeText}</a>
+                  {/* Link, nicht <a href>: die App laeuft unter dem
+                      Ingress-Praefix von Home Assistant, und ein roher href
+                      verlaesst diesen Grundpfad — die Seite endete in einer
+                      Fehlermeldung statt bei den Sollwerten. */}
+                  <Link to={gruppe.route}>{gruppe.routeText}</Link>
                 </div>
                 {gruppe.zeilen.map((zeile) => (
                   <div key={zeile.links} className="zw-zeile">

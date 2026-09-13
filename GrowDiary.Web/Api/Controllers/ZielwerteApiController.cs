@@ -2,6 +2,7 @@ using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.Knowledge;
+using GrowDiary.Web.Services.Knowledge.Schema;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
@@ -168,14 +169,22 @@ public sealed class ZielwerteApiController : ApiControllerBase
         {
             if (Kachel(key) is not { } karte) continue;
 
+            /* Ohne Messwert ist die Zeile keine Auskunft, sondern ein Vorwurf:
+               PPFD steht im Plan, aber wer kein Lichtmessgerät hat, kann daran
+               nichts richtig machen. Dieselbe Begründung wie bei Sauerstoff. */
+            if (karte.NumericValue is null) continue;
+
             var ausProfil = Zielband.FuerMetrik(key, profilBand);
             var ausKette = Zielband.FuerMetrik(key, wochenBand);
 
-            /* Nur was die Wochenspalte WIRKLICH beisteuert, zählt als Stufe 3.
-               Ohne Chart-Wert liefert die Kette denselben Wert wie das Profil —
-               stünde der hier, läse sich jede Zeile so, als käme sie aus der
-               Woche. */
-            (double? Min, double? Max) ausWoche = spalte is not null && Leise(ausKette) != Leise(ausProfil)
+            /* Stufe 3 gilt, sobald die Wochenspalte die Messgröße NENNT — auch
+               wenn sie zufällig dieselbe Zahl nennt wie das Profil.
+               
+               Der erste Entwurf verglich stattdessen die Bänder und schrieb bei
+               Gleichstand „Profil“ daran. Rechnerisch egal, als Antwort aber
+               falsch: wer VPD ändern will, wird zum Profil geschickt, obwohl
+               die Woche es vorgibt und beim nächsten Wochenwechsel übersteuert. */
+            (double? Min, double? Max) ausWoche = spalte is not null && NenntSpalte(spalte, key)
                 ? ausKette
                 : (null, null);
             var eigene = UserTargets.For(key, regeln);
@@ -299,6 +308,23 @@ public sealed class ZielwerteApiController : ApiControllerBase
 
         return gruppen;
     }
+
+    /// <summary>Nennt die Wochenspalte diese Messgröße überhaupt?</summary>
+    /// <remarks>
+    /// Nur eine Anwesenheitsprüfung an der Spalte — das Überlagern selbst
+    /// bleibt bei <see cref="Zielband"/>, sonst stünde die Kette zweimal im
+    /// Code (siehe <c>EineZielbandketteTests</c>).
+    /// </remarks>
+    private static bool NenntSpalte(FeedChartColumn spalte, string key) => key switch
+    {
+        "reservoir-ph" => spalte.PhMin is not null || spalte.PhMax is not null,
+        "reservoir-ec" => spalte.EcTarget is not null,
+        "reservoir-temp" => spalte.WaterTempDayC is not null || spalte.WaterTempNightC is not null,
+        "vpd" => spalte.VpdMin is not null || spalte.VpdMax is not null,
+        "co2" => spalte.Co2Min is not null || spalte.Co2Max is not null,
+        "ppfd" => spalte.PpfdMin is not null || spalte.PpfdMax is not null,
+        _ => false,
+    };
 
     private string? SystemProfil(GrowRun grow)
         => grow.SystemId is { } id ? _hydro.GetSystem(id)?.SetpointProfileId : null;

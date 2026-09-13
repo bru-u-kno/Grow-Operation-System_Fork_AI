@@ -5,6 +5,24 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.64
+
+**Fork AI.** Drei Fehler der neuen Zielwerte-Seite.
+
+Die Sprünge rechts in den Gruppen („Sollwerte ›", „Regeln ›") endeten in einer
+Fehlermeldung: sie waren als rohe Links gebaut und verließen damit den
+Grundpfad, unter dem das Add-on im Ingress von Home Assistant läuft. Jetzt
+navigieren sie innerhalb der App.
+
+Die Herkunft stand bei VPD, CO₂, pH und Wassertemperatur auf „Profil", obwohl
+die Wochenspalte diese Werte vorgibt — sie nennt dort zufällig dieselben Zahlen,
+und verglichen wurden die Bänder statt der Quellen. Wer VPD ändern wollte, wurde
+so zum Profil geschickt, obwohl die Woche es beim nächsten Wechsel übersteuert.
+
+PPFD stand ohne Messwert auf der Seite. Ohne Lichtmessgerät ist die Zeile keine
+Auskunft, sondern ein Vorwurf — dieselbe Begründung, aus der Sauerstoff und
+Füllstand nicht auftauchen.
+
 ## 2.0.0-forkai.63
 
 **Fork AI.** Neue Seite **Betrieb → Zielwerte**. Sie beantwortet die Frage, die
