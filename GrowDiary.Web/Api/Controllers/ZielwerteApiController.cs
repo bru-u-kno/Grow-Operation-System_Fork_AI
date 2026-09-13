@@ -394,6 +394,8 @@ public sealed class ZielwerteApiController : ApiControllerBase
         WochenplanSyncService.Rollen.RhObergrenze => "RH-Obergrenze",
         WochenplanSyncService.Rollen.Co2Ziel => "CO₂-Ziel",
         WochenplanSyncService.Rollen.LuftUnten => "Alarmgrenze Luft unten",
+        WochenplanSyncService.Rollen.LuftNachtUnten => "Alarmgrenze Luft unten (Nacht)",
+        WochenplanSyncService.Rollen.LuftNachtOben => "Alarmgrenze Luft oben (Nacht)",
         WochenplanSyncService.Rollen.LuftOben => "Alarmgrenze Luft oben",
         WochenplanSyncService.Rollen.FeuchteOben => "Alarmgrenze Luftfeuchte",
         _ => rolle,

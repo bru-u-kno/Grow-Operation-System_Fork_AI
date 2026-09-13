@@ -357,6 +357,17 @@ export interface MetricPayload {
   targetNote?: string | null
   /** Zurueckgerechnet statt aus dem Wissen: wird gezeigt, zaehlt aber nicht extra im Score. */
   targetDerived?: boolean
+  /**
+   * Tag- und Nachtband nebeneinander, wo die Messgroesse eins hat (Luft, RLF).
+   * targetMin/targetMax bleibt das Band, das GERADE gilt — daran haengen Skala,
+   * Status und Score. Diese vier Felder sind allein fuer die Anzeige.
+   */
+  targetDayMin?: number | null
+  targetDayMax?: number | null
+  targetNightMin?: number | null
+  targetNightMax?: number | null
+  /** Welches der beiden Baender gerade gilt: 'day' oder 'night'. */
+  targetPhase?: string | null
   /** Woher der WERT kommt: 'live' (Sensor) oder 'hand' (erfasste Messung). */
   valueSource?: string | null
   /** Alter der Handmessung in Minuten; null bei Live-Werten. */

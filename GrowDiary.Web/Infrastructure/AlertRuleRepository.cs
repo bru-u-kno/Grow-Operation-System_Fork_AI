@@ -50,14 +50,16 @@ public sealed class AlertRuleRepository : RepositoryBase
             insert.Transaction = transaction;
             insert.CommandText = """
                 INSERT INTO TentAlertRules
-                    (TentId, MetricKey, MinValue, MaxValue, NotifyService, Enabled, CooldownMinutes, Quelle, Toleranz, LastState, LastNotifiedUtc, CreatedAtUtc, UpdatedAtUtc)
+                    (TentId, MetricKey, MinValue, MaxValue, NightMinValue, NightMaxValue, NotifyService, Enabled, CooldownMinutes, Quelle, Toleranz, LastState, LastNotifiedUtc, CreatedAtUtc, UpdatedAtUtc)
                 VALUES
-                    ($tentId, $metricKey, $minValue, $maxValue, $notifyService, $enabled, $cooldown, $quelle, $toleranz, NULL, NULL, $now, $now);
+                    ($tentId, $metricKey, $minValue, $maxValue, $nightMinValue, $nightMaxValue, $notifyService, $enabled, $cooldown, $quelle, $toleranz, NULL, NULL, $now, $now);
             """;
             insert.Parameters.AddWithValue("$tentId", tentId);
             insert.Parameters.AddWithValue("$metricKey", rule.MetricKey);
             AddNullable(insert, "$minValue", rule.MinValue);
             AddNullable(insert, "$maxValue", rule.MaxValue);
+            AddNullable(insert, "$nightMinValue", rule.NightMinValue);
+            AddNullable(insert, "$nightMaxValue", rule.NightMaxValue);
             insert.Parameters.AddWithValue("$notifyService", rule.NotifyService);
             insert.Parameters.AddWithValue("$enabled", rule.Enabled ? 1 : 0);
             insert.Parameters.AddWithValue("$cooldown", rule.CooldownMinutes);
@@ -80,7 +82,7 @@ public sealed class AlertRuleRepository : RepositoryBase
     /// eine laufende Ueberschreitung gaelte danach als neu und meldete sich ein
     /// zweites Mal. Deshalb hier ein gezieltes UPDATE nur auf die Grenzen.
     /// </remarks>
-    public void UpdateGrenzen(int id, double? minValue, double? maxValue)
+    public void UpdateGrenzen(int id, double? minValue, double? maxValue, double? nightMinValue = null, double? nightMaxValue = null)
     {
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
@@ -88,11 +90,15 @@ public sealed class AlertRuleRepository : RepositoryBase
             UPDATE TentAlertRules
                SET MinValue = $minValue,
                    MaxValue = $maxValue,
+                   NightMinValue = $nightMinValue,
+                   NightMaxValue = $nightMaxValue,
                    UpdatedAtUtc = $now
              WHERE Id = $id;
         """;
         AddNullable(command, "$minValue", minValue);
         AddNullable(command, "$maxValue", maxValue);
+        AddNullable(command, "$nightMinValue", nightMinValue);
+        AddNullable(command, "$nightMaxValue", nightMaxValue);
         command.Parameters.AddWithValue("$now", ToStorageUtc(DateTime.UtcNow));
         command.Parameters.AddWithValue("$id", id);
         command.ExecuteNonQuery();
@@ -133,6 +139,9 @@ public sealed class AlertRuleRepository : RepositoryBase
             ? quelle
             : Services.Grenzwertquelle.Fest,
         Toleranz = HasColumn(reader, "Toleranz") ? NullableDouble(reader["Toleranz"]) : null,
+        // Dieselbe Vorsicht wie oben: die Nachtspalten kamen am 13.09.2026 dazu.
+        NightMinValue = HasColumn(reader, "NightMinValue") ? NullableDouble(reader["NightMinValue"]) : null,
+        NightMaxValue = HasColumn(reader, "NightMaxValue") ? NullableDouble(reader["NightMaxValue"]) : null,
         LastState = NullString(reader["LastState"]),
         LastNotifiedUtc = ParseStoredUtcDateTime(NullString(reader["LastNotifiedUtc"])),
     };

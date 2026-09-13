@@ -40,6 +40,20 @@ public static class LightClock
     public static bool IsDaytimeOnly(string metricKey)
         => DaytimeOnlyKeys.Contains(metricKey, StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Messgrößen, für die sich ein eigenes Nachtband lohnt.</summary>
+    /// <remarks>
+    /// Nur die beiden Klima-Kacheln. Temperatur darf nachts fallen, und die
+    /// Luftfeuchte steigt dabei von selbst — beides Fragen der Lichtphase.
+    /// pH und EC kennen keinen Unterschied zwischen Tag und Nacht; ein zweites
+    /// Band waere dort eine Spalte ohne Aussage. Die Wassertemperatur hat ihr
+    /// Tag/Nacht-Paar schon im Wissen (siehe Wasserband) und bleibt deshalb
+    /// hier aussen vor.
+    /// </remarks>
+    public static readonly string[] NightBandKeys = ["temperature", "humidity"];
+
+    public static bool HasNightBand(string metricKey)
+        => NightBandKeys.Contains(metricKey, StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Sensor zuerst, sonst Plan, sonst Unbekannt.</summary>
     public static LightsNow Resolve(
         HomeAssistantState? lightState,

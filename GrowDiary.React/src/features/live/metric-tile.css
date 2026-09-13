@@ -68,6 +68,22 @@
      hier nichts zu bewerten, nur etwas zu zeigen. */
   .gos-metric.is-unknown .gos-metric-spark { color: var(--muted); }
 
+  /* Tag und Nacht nebeneinander, das geltende Band hell. Zwei Spalten statt
+     einer Zeile, damit der Vergleich ohne Rechnen geht: „22,7 ist nachts mittig,
+     taegsueber waere es am unteren Rand." Gleiche Breite, damit keine der
+     beiden Phasen wichtiger aussieht als die andere. */
+  .gos-metric-bands {
+    display: grid; grid-template-columns: 1fr 1fr; margin-top: 6px;
+    border: 1px solid var(--hair); border-radius: var(--r-lg); overflow: hidden;
+    font: 400 var(--fs-etikett)/1.35 var(--font-mono);
+  }
+  .gos-metric-bands .spalte { padding: 4px 6px; color: var(--faint); }
+  .gos-metric-bands .spalte + .spalte { border-left: 1px solid var(--hair); }
+  /* Das geltende Band traegt den Kontrast; das andere bleibt lesbar, aber
+     ruhig — es ist Auskunft ueber spaeter, keine Bewertung von jetzt. */
+  .gos-metric-bands .spalte.is-aktiv { background: var(--sunk); color: var(--ink); }
+  .gos-metric-bands .spalte i { display: block; font-style: normal; color: var(--muted); }
+
   .gos-metric-target { margin-top: 6px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--faint); }
   .gos-metric-stale { margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--warn-text); }
   /* Herkunft ist Auskunft, keine Warnung — deshalb gedeckt statt amber.

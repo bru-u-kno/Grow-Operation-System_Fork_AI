@@ -67,6 +67,12 @@ public sealed class WochenplanSyncService
         /// <summary>Obere Alarmgrenze der Zelt-Regel „Lufttemperatur".</summary>
         public const string LuftOben = "luft-oben";
 
+        /// <summary>Untere Alarmgrenze der Zelt-Regel „Lufttemperatur" in der Dunkelphase.</summary>
+        public const string LuftNachtUnten = "luft-nacht-unten";
+
+        /// <summary>Obere Alarmgrenze der Zelt-Regel „Lufttemperatur" in der Dunkelphase.</summary>
+        public const string LuftNachtOben = "luft-nacht-oben";
+
         /// <summary>Obere Alarmgrenze der Zelt-Regel „Luftfeuchte".</summary>
         public const string FeuchteOben = "feuchte-oben";
     }
@@ -83,11 +89,32 @@ public sealed class WochenplanSyncService
     /// </remarks>
     public const double LufttemperaturSpanne = 3.0;
 
+    /// <summary>
+    /// Um wie viel Kelvin das Nachtband unter dem Tagband liegt, wenn der Plan
+    /// für die Nacht nichts Eigenes nennt.
+    /// </summary>
+    /// <remarks>
+    /// 4 K, abgestimmt am 13.09.2026. Eine Absenkung in dieser Grössenordnung
+    /// ist erwünscht — sie hält die Pflanze kompakt. Deutlich mehr wäre es
+    /// nicht: dieselbe Wassermenge in kälterer Luft ergibt eine höhere relative
+    /// Feuchte, und je tiefer die Nachttemperatur, desto näher rückt der
+    /// Taupunkt an das Blatt. Genannt wird die Absenkung in Kelvin, weil es ein
+    /// Unterschied ist und kein Messwert.
+    /// </remarks>
+    public const double Nachtabsenkung = 4.0;
+
     /// <summary>Messgrösse der Zelt-Regeln, die der Plan nachzieht.</summary>
     private static readonly Dictionary<string, string> Zeltregeln = new(StringComparer.OrdinalIgnoreCase)
     {
         [Rollen.LuftUnten] = "temperature",
         [Rollen.LuftOben] = "temperature",
+        [Rollen.LuftNachtUnten] = "temperature",
+        [Rollen.LuftNachtOben] = "temperature",
+        // Die Feuchte bekommt bewusst KEIN Nachtband: nachts steigt sie von
+        // selbst, und gerade dann ist sie gefährlich — Kondensat schlägt sich
+        // auf dem kühlsten Punkt nieder, und das ist im Dunkeln das Blatt.
+        // Eine nachts gelockerte Grenze wäre eine leisere Anzeige, kein
+        // besserer Grow.
         [Rollen.FeuchteOben] = "humidity",
     };
 
@@ -136,12 +163,29 @@ public sealed class WochenplanSyncService
         if (Zeltregeln.TryGetValue(rolle, out var metrik))
         {
             if (Spalte()?.Grow.TentId is not { } zeltId) return null;
-            var grenze = rolle == Rollen.LuftUnten ? "min" : "max";
-            return $"zelt:{zeltId}/{metrik}/{grenze}";
+            return $"zelt:{zeltId}/{metrik}/{Grenzfeld(rolle)}";
         }
 
         return HelferFuer(rolle);
     }
+
+    /// <summary>
+    /// Welches Feld der Zelt-Regel eine Rolle beschreibt: <c>min</c>, <c>max</c>,
+    /// <c>nacht-min</c> oder <c>nacht-max</c>.
+    /// </summary>
+    /// <remarks>
+    /// Der Name landet im Schlüssel, unter dem sich der Dienst merkt, was er
+    /// zuletzt geschrieben hat. <c>min</c> und <c>max</c> heissen deshalb weiter
+    /// so wie vorher — ein anderer Name wäre für den gemerkten Stand eine neue
+    /// Grenze, und der erste Lauf danach hielte die alte für von Hand gesetzt.
+    /// </remarks>
+    public static string Grenzfeld(string rolle) => rolle switch
+    {
+        Rollen.LuftUnten => "min",
+        Rollen.LuftNachtUnten => "nacht-min",
+        Rollen.LuftNachtOben => "nacht-max",
+        _ => "max",
+    };
 
     /// <summary>Welcher Helfer welche Rolle hat — Standard, sofern nichts zugeordnet ist.</summary>
     public string? HelferFuer(string rolle)
@@ -280,6 +324,8 @@ public sealed class WochenplanSyncService
 
             var neuMin = regel.MinValue;
             var neuMax = regel.MaxValue;
+            var neuNachtMin = regel.NightMinValue;
+            var neuNachtMax = regel.NightMaxValue;
             var beruehrt = false;
 
             foreach (var (rolle, metrikDerRolle) in Zeltregeln)
@@ -287,9 +333,15 @@ public sealed class WochenplanSyncService
                 if (!string.Equals(metrikDerRolle, metrik, StringComparison.OrdinalIgnoreCase)) continue;
                 if (!ziele.TryGetValue(rolle, out var ziel)) continue;
 
-                var unten = rolle == Rollen.LuftUnten;
-                var schluessel = $"zelt:{zeltId}/{metrik}/{(unten ? "min" : "max")}";
-                var ist = unten ? regel.MinValue : regel.MaxValue;
+                var feld = Grenzfeld(rolle);
+                var schluessel = $"zelt:{zeltId}/{metrik}/{feld}";
+                var ist = feld switch
+                {
+                    "min" => regel.MinValue,
+                    "max" => regel.MaxValue,
+                    "nacht-min" => regel.NightMinValue,
+                    _ => regel.NightMaxValue,
+                };
 
                 if (stand.VonDir.Contains(schluessel, StringComparer.OrdinalIgnoreCase)) continue;
 
@@ -312,14 +364,20 @@ public sealed class WochenplanSyncService
 
                 if (ist is { } unveraendert && Math.Abs(unveraendert - ziel) < 0.001) continue;
 
-                if (unten) neuMin = ziel; else neuMax = ziel;
+                switch (feld)
+                {
+                    case "min": neuMin = ziel; break;
+                    case "max": neuMax = ziel; break;
+                    case "nacht-min": neuNachtMin = ziel; break;
+                    default: neuNachtMax = ziel; break;
+                }
                 stand.Geschrieben[schluessel] = ziel;
                 beruehrt = true;
             }
 
             if (!beruehrt) continue;
 
-            _regeln.UpdateGrenzen(regel.Id, neuMin, neuMax);
+            _regeln.UpdateGrenzen(regel.Id, neuMin, neuMax, neuNachtMin, neuNachtMax);
             geschrieben++;
         }
 
@@ -375,6 +433,13 @@ public sealed class WochenplanSyncService
         {
             yield return (Rollen.LuftUnten, luft - LufttemperaturSpanne);
             yield return (Rollen.LuftOben, luft + LufttemperaturSpanne);
+
+            // Nennt der Plan keine Nachttemperatur, gilt der Tagwert minus der
+            // üblichen Absenkung — mit derselben Spanne, damit Tag und Nacht
+            // gleich streng sind und nur der Mittelpunkt wandert.
+            var nachtLuft = spalte.AirTempNightC ?? luft - Nachtabsenkung;
+            yield return (Rollen.LuftNachtUnten, nachtLuft - LufttemperaturSpanne);
+            yield return (Rollen.LuftNachtOben, nachtLuft + LufttemperaturSpanne);
         }
 
         if (spalte.RhMax is { } rhMax) yield return (Rollen.FeuchteOben, rhMax);

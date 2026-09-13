@@ -110,6 +110,22 @@ export function statusLabel(status: MetricStatus): string {
  * schreibt man mit einer Nachkommastelle, Luftfeuchte ohne. Ohne Angabe wird so
  * geschrieben, wie die Zahl es hergibt.
  */
+/**
+ * Ein Zielband als nackte Spanne: „22,0–28,0", „≥ 7,0", „≤ 60".
+ *
+ * Fuer die Tag/Nacht-Leiste, die zwei Baender nebeneinander zeigt. Dort waere
+ * „Ziel" zweimal dieselbe Auskunft und die Einheit dritte Wiederholung — sie
+ * steht schon gross am Wert.
+ */
+export function bandText(min: number | null, max: number | null, decimals?: number): string | null {
+  const format = (x: number) => (decimals == null ? String(x) : x.toFixed(decimals)).replace('.', ',')
+  if (min != null && max != null && min === max) return format(min)
+  if (min != null && max != null) return `${format(min)}–${format(max)}`
+  if (min != null) return `≥ ${format(min)}`
+  if (max != null) return `≤ ${format(max)}`
+  return null
+}
+
 export function targetLabel(
   min: number | null,
   max: number | null,

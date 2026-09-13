@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.85
+
+**Fork AI.** Eigene Zielwerte für die Nacht.
+
+Ohne Licht kühlt das Zelt ab, und dieselbe Wassermenge ergibt in kälterer Luft
+eine höhere relative Feuchte. Ein Zielband, das rund um die Uhr gilt, meldet
+deshalb jede Nacht dasselbe — und wer jede Nacht falschen Alarm bekommt, glaubt
+auch dem echten nicht mehr.
+
+Die Zelt-Grenzwerte tragen jetzt ein zweites Band für die Dunkelphase. Es gilt,
+sobald das Licht aus ist, und zwar überall gleich: auf der Live-Kachel, im Score
+und im Alarm. Die Meldung nennt die Grenze der Phase, die gerade geprüft wurde,
+und schreibt „Nachtband" dazu.
+
+Auf der Kachel stehen beide Bänder nebeneinander, das geltende hell. So sieht
+man ohne Rechnen, ob ein Wert nur gerade passt oder auch in der anderen Phase
+passen würde. Wo für die Nacht nichts Eigenes hinterlegt ist, steht zweimal
+dasselbe — das ist die Aussage, nicht ein vergessenes Feld.
+
+Der Wochenplan füllt das Band selbst: Nacht ist der Tagwert minus 4 K, mit
+derselben Toleranz. Wer für eine Woche etwas anderes will, trägt `airTempNightC`
+in die Spalte ein. Die Luftfeuchte bekommt bewusst kein Nachtband — Kondensat
+entsteht im Dunkeln, eine nachts gelockerte Grenze wäre eine leisere Anzeige und
+kein besserer Grow.
+
+Wer nichts einträgt, merkt nichts: ohne Nachtwerte verhält sich alles wie bisher.
+
 ## 2.0.0-forkai.84
 
 **Fork AI.** Keine Laufzeit mehr aus zu wenig Verbrauch.

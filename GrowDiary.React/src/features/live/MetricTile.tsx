@@ -1,4 +1,4 @@
-import { metricScale, metricStatus, statusLabel, targetLabel, type MetricStatus } from './metric-tile-model'
+import { bandText, metricScale, metricStatus, statusLabel, targetLabel, type MetricStatus } from './metric-tile-model'
 import { Sparkline, type HistoryPoint } from '../../components/SensorChart'
 import { classNames } from '../../utils'
 
@@ -28,6 +28,13 @@ export type MetricTileProps = {
   trend?: HistoryPoint[]
   /** Woran ein zurueckgerechnetes Ziel haengt — „bei 46 % RLF". */
   targetNote?: string | null
+  /** Tag- und Nachtband, wo die Messgroesse eins hat. Zusammen mit `targetPhase`. */
+  dayMin?: number | null
+  dayMax?: number | null
+  nightMin?: number | null
+  nightMax?: number | null
+  /** Welches der beiden Baender gerade gilt: 'day' oder 'night'. */
+  targetPhase?: string | null
 }
 
 /**
@@ -45,12 +52,30 @@ export type MetricTileProps = {
  */
 export function MetricTile({
   label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open,
+  dayMin = null, dayMax = null, nightMin = null, nightMax = null, targetPhase = null,
 }: MetricTileProps) {
   const status: MetricStatus = display != null && targetMin == null && targetMax == null
     ? 'unknown'
     : metricStatus(value, targetMin, targetMax, critical)
   const scale = metricScale(value, targetMin, targetMax)
   const target = footer ?? targetLabel(targetMin, targetMax, unit, decimals)
+
+  /* Tag und Nacht nebeneinander statt der Zielzeile.
+   *
+   * Nur wo beide Baender bekannt sind und ein Zielband ueberhaupt gilt: die
+   * Leiste ersetzt die Zeile „Ziel …", sie kommt nicht dazu. `footer` gewinnt,
+   * denn wo eine eigene Fusszeile steht (Licht: „12/12 · an 05:04"), gibt es
+   * kein Band zu zeigen.
+   *
+   * Warum beide Spalten auch dann, wenn dieselbe Spanne zweimal dasteht: das
+   * ist die Aussage. Bei der Luftfeuchte heisst es „hier wird nachts nicht
+   * gelockert" — und genau das ist die Frage, die man sich nachts vor der
+   * Kachel stellt. */
+  const tagText = bandText(dayMin, dayMax, decimals)
+  const nachtText = bandText(nightMin, nightMax, decimals)
+  const baender = footer == null && tagText != null && nachtText != null && targetPhase != null
+    ? { tag: tagText, nacht: nachtText, nachtAktiv: targetPhase === 'night' }
+    : null
 
   const shown = display ?? (value == null || Number.isNaN(value)
     ? '—'
@@ -102,7 +127,19 @@ export function MetricTile({
       {/* Der Zusatz nennt, woran ein zurueckgerechnetes Ziel haengt. „Ziel
           15,8–19,6 °C" allein liest sich als „kuehl runter", obwohl in
           Wahrheit die Feuchte zu niedrig ist. */}
-      {target && <div className="gos-metric-target">{target}{targetNote ? ` · ${targetNote}` : ''}</div>}
+      {baender ? (
+        <>
+          <div className="gos-metric-bands">
+            <div className={classNames('spalte', !baender.nachtAktiv && 'is-aktiv')}>
+              <i>☀ Tag</i>{baender.tag}
+            </div>
+            <div className={classNames('spalte', baender.nachtAktiv && 'is-aktiv')}>
+              <i>☾ Nacht</i>{baender.nacht}
+            </div>
+          </div>
+          {targetNote && <div className="gos-metric-target">{targetNote}</div>}
+        </>
+      ) : target && <div className="gos-metric-target">{target}{targetNote ? ` · ${targetNote}` : ''}</div>}
       {/* Herkunft neutral, Veraltet warnend — beides zusammen waere doppelt,
           also gewinnt die Warnung. */}
       {stale

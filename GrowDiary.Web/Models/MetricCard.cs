@@ -22,6 +22,27 @@ public sealed class MetricCard
     public double? TargetMax { get; set; }
 
     /// <summary>
+    /// Tag- und Nachtband nebeneinander, wenn die Messgroesse eins hat.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI, 13.09.2026. <see cref="TargetMin"/>/<see cref="TargetMax"/>
+    /// bleibt das Band, das GERADE gilt — daran haengen Score, Skala und
+    /// Abweichungsanalyse, und die sollen nicht zwei Baender gegeneinander
+    /// abwaegen muessen. Die vier Felder hier sind allein fuer die Anzeige:
+    /// die Kachel zeigt beide Baender, das aktive hell.
+    ///
+    /// Alle null heisst: diese Messgroesse kennt keinen Unterschied zwischen
+    /// Tag und Nacht (pH, EC), und die Kachel bleibt wie bisher.
+    /// </remarks>
+    public double? TargetDayMin { get; set; }
+    public double? TargetDayMax { get; set; }
+    public double? TargetNightMin { get; set; }
+    public double? TargetNightMax { get; set; }
+
+    /// <summary>Welches der beiden Baender gerade gilt: <c>day</c> oder <c>night</c>.</summary>
+    public string? TargetPhase { get; set; }
+
+    /// <summary>
     /// Woher der WERT kommt: <c>live</c> (Sensor) oder <c>hand</c> (erfasste Messung).
     /// </summary>
     /// <remarks>

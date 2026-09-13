@@ -45,7 +45,8 @@ public sealed class AlertsApiController : ApiControllerBase
         var rules = _alertRules.GetForTent(tentId)
             .Select(rule => new AlertRuleDto(
                 rule.MetricKey, rule.MinValue, rule.MaxValue, rule.NotifyService,
-                rule.Enabled, rule.CooldownMinutes, rule.Quelle.ToString(), rule.Toleranz))
+                rule.Enabled, rule.CooldownMinutes, rule.Quelle.ToString(), rule.Toleranz,
+                rule.NightMinValue, rule.NightMaxValue))
             .ToList();
 
         return Ok(new TentAlertRulesDto(tentId, rules));
@@ -81,6 +82,9 @@ public sealed class AlertsApiController : ApiControllerBase
                 CooldownMinutes = dto.CooldownMinutes <= 0 ? 30 : dto.CooldownMinutes,
                 Quelle = IstPlan(dto) ? Grenzwertquelle.Plan : Grenzwertquelle.Fest,
                 Toleranz = IstPlan(dto) && dto.Toleranz is { } t && t > 0 ? t : null,
+                // Wie bei Min/Max: eine Plan-Regel traegt keine eigenen Zahlen.
+                NightMinValue = IstPlan(dto) ? null : dto.NightMinValue,
+                NightMaxValue = IstPlan(dto) ? null : dto.NightMaxValue,
             })
             .ToList();
 
@@ -116,6 +120,23 @@ public sealed class AlertsApiController : ApiControllerBase
                 + "So gemeldet wuerde die Regel dauerhaft warnen.");
         }
 
+        /* Dieselbe Falle, dieselbe Pruefung — fuer das Nachtband. Geprueft wird
+           das Paar, das nachts wirklich gilt, also samt seitenweisem Rueckfall
+           auf die Tagwerte: wer nur die Untergrenze auf 26 setzt und tagsueber
+           eine Obergrenze von 24 hat, baut sich sonst genau die Regel, die
+           jede Nacht dauerhaft warnt. */
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest && r.HatNachtband))
+        {
+            var (min, max) = regel.GrenzenFuer(LightsNow.Off);
+            if (min is { } untere && max is { } obere && untere > obere)
+            {
+                ModelState.AddModelError(nameof(AlertRuleDto.NightMinValue),
+                    $"Bei der Messgroesse {regel.MetricKey} liegt die naechtliche Untergrenze "
+                    + $"({untere}) ueber der naechtlichen Obergrenze ({obere}). "
+                    + "So gemeldet wuerde die Regel jede Nacht dauerhaft warnen.");
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             // ValidationError() und nicht ValidationProblem(): letzteres liefert
@@ -149,7 +170,8 @@ public sealed class AlertsApiController : ApiControllerBase
         var saved = rules
             .Select(rule => new AlertRuleDto(
                 rule.MetricKey, rule.MinValue, rule.MaxValue, rule.NotifyService,
-                rule.Enabled, rule.CooldownMinutes, rule.Quelle.ToString(), rule.Toleranz))
+                rule.Enabled, rule.CooldownMinutes, rule.Quelle.ToString(), rule.Toleranz,
+                rule.NightMinValue, rule.NightMaxValue))
             .ToList();
 
         return Ok(new TentAlertRulesDto(tentId, saved));

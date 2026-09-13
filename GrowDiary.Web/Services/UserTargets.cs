@@ -27,7 +27,36 @@ public static class UserTargets
     /// Eine halbe Grenze ist erlaubt: wer nur „nicht über 6,2" will, bekommt
     /// genau das, und nach unten bleibt es offen.
     /// </remarks>
-    public static (double? Min, double? Max)? For(string metricKey, IEnumerable<TentAlertRule>? rules)
+    public static (double? Min, double? Max)? For(
+        string metricKey,
+        IEnumerable<TentAlertRule>? rules,
+        LightsNow lichter = LightsNow.Unknown)
+    {
+        if (Regel(metricKey, rules) is not { } rule) return null;
+        return rule.GrenzenFuer(lichter);
+    }
+
+    /// <summary>
+    /// Tag- und Nachtband nebeneinander — fuer die Anzeige, die beide zeigt.
+    /// </summary>
+    /// <remarks>
+    /// Die Kachel zeigt beide Baender, damit man ohne Rechnen sieht, wie weit
+    /// ein Wert von dem Band entfernt ist, das in ein paar Stunden gilt. Wo
+    /// nichts Eigenes fuer die Nacht hinterlegt ist, steht auf beiden Seiten
+    /// dasselbe: das ist keine Wiederholung, sondern die Aussage „hier wird
+    /// nachts nicht gelockert".
+    /// </remarks>
+    public static (double? TagMin, double? TagMax, double? NachtMin, double? NachtMax, bool NachtEigen)? Baender(
+        string metricKey,
+        IEnumerable<TentAlertRule>? rules)
+    {
+        if (Regel(metricKey, rules) is not { } rule) return null;
+
+        var nacht = rule.GrenzenFuer(LightsNow.Off);
+        return (rule.MinValue, rule.MaxValue, nacht.Min, nacht.Max, rule.HatNachtband);
+    }
+
+    private static TentAlertRule? Regel(string metricKey, IEnumerable<TentAlertRule>? rules)
     {
         if (rules is null) return null;
 
@@ -38,13 +67,11 @@ public static class UserTargets
          * mit, legte sich das Band spaeter ueber sich selbst — und jede
          * Toleranz waere nach einem Durchlauf Teil des Ziels. Ausdruecklich
          * geprueft und nicht dem Zufall ueberlassen, dass Min/Max leer sind. */
-        var rule = rules.FirstOrDefault(r =>
+        return rules.FirstOrDefault(r =>
             r.Enabled
             && r.Quelle != Grenzwertquelle.Plan
             && string.Equals(r.MetricKey, metricKey, StringComparison.OrdinalIgnoreCase)
             && (r.MinValue is not null || r.MaxValue is not null));
-
-        return rule is null ? null : (rule.MinValue, rule.MaxValue);
     }
 
     /// <summary>true, sobald der Nutzer für diese Messgröße etwas eingetragen hat.</summary>

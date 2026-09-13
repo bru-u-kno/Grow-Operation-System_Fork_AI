@@ -520,6 +520,11 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
               footer={metric.targetMin == null && metric.targetMax == null ? (metric.hint ?? undefined) : undefined}
               trend={trends.get(metric.key)}
               targetNote={metric.targetNote}
+              dayMin={metric.targetDayMin}
+              dayMax={metric.targetDayMax}
+              nightMin={metric.targetNightMin}
+              nightMax={metric.targetNightMax}
+              targetPhase={metric.targetPhase}
               sourceNote={herkunft.sourceNote}
               stale={herkunft.stale}
               onOpen={hatVerlauf ? () => setOffeneMetrik(offeneMetrik === metric.key ? null : metric.key) : undefined}

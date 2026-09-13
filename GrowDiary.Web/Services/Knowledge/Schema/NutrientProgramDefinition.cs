@@ -147,6 +147,17 @@ public sealed class FeedChartColumn
     /// <summary>Ziel-Lufttemperatur in °C.</summary>
     [JsonPropertyName("airTempC")]
     public double? AirTempC { get; set; }
+
+    /// <summary>Ziel-Lufttemperatur der Dunkelphase in °C.</summary>
+    /// <remarks>
+    /// Fork AI, 13.09.2026. Optional: fehlt der Wert, rechnet der Wochenplan
+    /// die uebliche Nachtabsenkung vom Tagwert ab (siehe
+    /// <c>WochenplanSyncService.Nachtabsenkung</c>). Der SKX-Plan nennt fuer
+    /// die Luft nur eine Zahl je Woche — die gilt fuer den Tag, denn ohne Licht
+    /// kuehlt das Zelt ohnehin ab.
+    /// </remarks>
+    [JsonPropertyName("airTempNightC")]
+    public double? AirTempNightC { get; set; }
 }
 
 /// <summary>Eine Komponente in einer Spalte — als Spanne, wo das Chart eine nennt.</summary>

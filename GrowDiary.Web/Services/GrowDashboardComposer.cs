@@ -499,10 +499,20 @@ public sealed class GrowDashboardComposer
             // Licht aus würde er jede Nacht anschlagen.
             if (lights == LightsNow.Off && LightClock.IsDaytimeOnly(card.Key)) continue;
 
-            if (UserTargets.For(card.Key, rules) is not { } eigene) continue;
+            if (UserTargets.For(card.Key, rules, lights) is not { } eigene) continue;
 
             card.TargetMin = eigene.Min;
             card.TargetMax = eigene.Max;
+
+            // Beide Baender an die Kachel, aber nur wo sie etwas bedeuten.
+            if (LightClock.HasNightBand(card.Key) && UserTargets.Baender(card.Key, rules) is { } baender)
+            {
+                card.TargetDayMin = baender.TagMin;
+                card.TargetDayMax = baender.TagMax;
+                card.TargetNightMin = baender.NachtMin;
+                card.TargetNightMax = baender.NachtMax;
+                card.TargetPhase = lights == LightsNow.Off ? "night" : "day";
+            }
             card.TargetNote = UserTargets.SourceLabel;
             // Kein abgeleiteter Wert mehr: was der Nutzer setzt, zaehlt voll in
             // den Score. Sonst waere sein eigener Grenzwert der einzige, der

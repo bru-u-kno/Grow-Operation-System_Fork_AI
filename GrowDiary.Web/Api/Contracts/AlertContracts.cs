@@ -21,7 +21,13 @@ public sealed record AlertRuleDto(
     bool Enabled,
     int CooldownMinutes,
     string Quelle = "Fest",
-    double? Toleranz = null);
+    double? Toleranz = null,
+    // Fork AI, 13.09.2026: eigenes Band fuer die Dunkelphase. Muss durch den
+    // Vertrag durch, weil das Speichern die Regeln loescht und neu schreibt —
+    // fehlten die Felder hier, waere jedes Speichern auf der Grenzwerte-Seite
+    // ein stilles Loeschen des Nachtbands.
+    double? NightMinValue = null,
+    double? NightMaxValue = null);
 
 public sealed record TentAlertRulesDto(int TentId, IReadOnlyList<AlertRuleDto> Rules);
 

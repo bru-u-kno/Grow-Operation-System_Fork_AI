@@ -147,6 +147,11 @@ export function DashboardBands({
                     footer={metric.targetMin == null && metric.targetMax == null ? (metric.hint ?? undefined) : undefined}
                     trend={trend}
                     targetNote={metric.targetNote}
+                    dayMin={metric.targetDayMin}
+                    dayMax={metric.targetDayMax}
+                    nightMin={metric.targetNightMin}
+                    nightMax={metric.targetNightMax}
+                    targetPhase={metric.targetPhase}
                     sourceNote={metricProvenance(metric).sourceNote}
                     stale={metricProvenance(metric).stale}
                     onOpen={!editing && tile.kind === 'Metric' && tile.metricKey && (trends.get(tile.metricKey)?.length ?? 0) > 1

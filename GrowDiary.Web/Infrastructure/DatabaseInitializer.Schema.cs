@@ -76,6 +76,9 @@ public sealed partial class DatabaseInitializer
         // weiter gegen ihre eingetragenen Zahlen, bis jemand umschaltet.
         EnsureColumn(connection, "TentAlertRules", "Quelle", "TEXT NOT NULL DEFAULT 'Fest'");
         EnsureColumn(connection, "TentAlertRules", "Toleranz", "REAL NULL");
+        // Fork AI, 13.09.2026: eigenes Zielband fuer die Dunkelphase.
+        EnsureColumn(connection, "TentAlertRules", "NightMinValue", "REAL NULL");
+        EnsureColumn(connection, "TentAlertRules", "NightMaxValue", "REAL NULL");
         EnsureColumn(connection, "Grows", "NightRampEnabled", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "Grows", "NightRampFloorC", "REAL NULL");
 

@@ -55,11 +55,16 @@ public sealed class AlertEvaluationService
     /// Given a rule, the current value and the time, it returns the new persisted state and
     /// whether a breach or recovery notification should be sent.
     /// </summary>
-    public static AlertDecision Decide(TentAlertRule rule, double value, DateTime nowUtc)
+    public static AlertDecision Decide(TentAlertRule rule, double value, DateTime nowUtc, LightsNow lichter = LightsNow.Unknown)
     {
+        // Dieselben Grenzen, die die Kachel zeigt. Liefe der Alarm weiter gegen
+        // das Tagband, waere der Widerspruch nur verschoben: die Kachel saehe
+        // nachts gruen aus, waehrend das Telefon klingelt.
+        var (untere, obere) = rule.GrenzenFuer(lichter);
+
         var breach =
-            rule.MinValue is { } min && value < min ? Below :
-            rule.MaxValue is { } max && value > max ? Above :
+            untere is { } min && value < min ? Below :
+            obere is { } max && value > max ? Above :
             InRange;
 
         if (breach == InRange)
@@ -141,7 +146,7 @@ public sealed class AlertEvaluationService
                 continue;
             }
 
-            var decision = Decide(rule, value, nowUtc);
+            var decision = Decide(rule, value, nowUtc, lights);
 
             try
             {
@@ -149,7 +154,7 @@ public sealed class AlertEvaluationService
                 {
                     var sent = await _notifications.SendAsync(
                         NotificationCategory.Threshold, BuildTitle(tent),
-                        BuildBreachMessage(rule, value, decision.NewState, band.Herkunft), cancellationToken);
+                        BuildBreachMessage(rule, value, decision.NewState, band.Herkunft, lights), cancellationToken);
                     if (sent)
                     {
                         _rules.UpdateState(rule.Id, decision.NewState, nowUtc);
@@ -257,12 +262,16 @@ public sealed class AlertEvaluationService
     /// Grenzwerten und findet dort ein leeres Feld.
     /// </remarks>
     private static string BuildBreachMessage(
-        TentAlertRule rule, double value, string breach, string? herkunft = null)
+        TentAlertRule rule, double value, string breach, string? herkunft = null, LightsNow lichter = LightsNow.Unknown)
     {
         var (label, unit) = MetricDisplay(rule.MetricKey);
         var direction = breach == Below ? "unter" : "über";
-        var limit = breach == Below ? rule.MinValue : rule.MaxValue;
-        var limitText = limit is { } l ? $" (Grenze {Format(l)}{unit})" : string.Empty;
+        // Die Grenze der geltenden Lichtphase — sonst nennt die Meldung eine
+        // Zahl, die im Moment gar nicht geprueft wurde.
+        var (untere, obere) = rule.GrenzenFuer(lichter);
+        var limit = breach == Below ? untere : obere;
+        var nachtText = lichter == LightsNow.Off && rule.HatNachtband ? " · Nachtband" : string.Empty;
+        var limitText = limit is { } l ? $" (Grenze {Format(l)}{unit}{nachtText})" : string.Empty;
         var planText = rule.Quelle == Grenzwertquelle.Plan && !string.IsNullOrWhiteSpace(herkunft)
             ? $" — {herkunft}"
             : string.Empty;
