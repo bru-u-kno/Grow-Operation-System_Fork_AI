@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.82
+
+**Fork AI.** Nachtwerte der Wassertemperatur im SKX-Programm angehoben: Blüte
+Woche 4 bis 6 stehen nachts jetzt auf 18 °C statt 17 bzw. 16 °C. Die Tagwerte
+(20 / 19 / 18 °C) bleiben, wie sie waren.
+
+**Warum.** Wurzeln sind wechselwarm — unter 18 °C bremst die Aufnahme spürbar,
+während der Sauerstoffgewinn gegenüber 18 °C rechnerisch bei etwa 0,3 mg/L
+liegt. Im RDWC hängen die Wurzeln rund um die Uhr im Wasser, anders als im
+Substrat, wo eine Nachtabsenkung im Wurzelraum kaum ankommt. Wer die tiefere
+Absenkung als Reiz will, stellt sie am Helfer ein — der Wochenplan-Abgleich
+merkt sich das als „von dir gesetzt".
+
 ## 2.0.0-forkai.81
 
 **Fork AI.** Aufräumen direkt hinterher: die Prüfung auf die doppelt geschaltete
