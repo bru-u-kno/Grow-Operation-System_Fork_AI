@@ -1,0 +1,99 @@
+{
+  "alias": "Zuluft Keller Regelung",
+  "description": "Saugt Aussenluft in den Keller, solange deren absolute Feuchte um mindestens die Mindest-Differenz unter der Kellerluft liegt (binary_sensor.zuluft_bedarf, mit Hysterese). Ist ein Stufenregler zugeordnet, folgt die Luefterstufe der Differenz (sensor.zuluft_zielstufe); ohne ihn laeuft der Luefter nur ein und aus. Mindestlaufzeit und -pause laufen gegen input_datetime.zuluft_letzter_schaltvorgang statt gegen last_changed, weil die Port-Entitaeten bei Controller-Aussetzern kurz unavailable werden. Der Minutentakt holt Schaltungen nach, die an einer Sperre gescheitert sind. Automation ausschalten heisst: Regelung pausiert, der Port bleibt, wie er ist. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/zuluft/regelung/1.",
+  "mode": "single",
+  "max_exceeded": "silent",
+  "variables": {
+    "alter_s": "{% set ts = state_attr('input_datetime.zuluft_letzter_schaltvorgang', 'timestamp') %}{{ 999999 if ts is none else (now().timestamp() - ts) }}",
+    "laufzeit_frei": "{{ alter_s >= (states('input_number.zuluft_mindestlaufzeit') | float(10) * 60) }}",
+    "pause_frei": "{{ alter_s >= (states('input_number.zuluft_mindestpause') | float(10) * 60) }}"
+  },
+  "triggers": [
+    { "trigger": "state", "entity_id": "binary_sensor.zuluft_bedarf" },
+    { "wenn": "port_stufe", "trigger": "state", "entity_id": "sensor.zuluft_zielstufe" },
+    { "trigger": "time_pattern", "minutes": "/1" },
+    { "trigger": "homeassistant", "event": "start" }
+  ],
+  "actions": [
+    {
+      "choose": [
+        {
+          "alias": "Einschalten",
+          "conditions": [
+            { "condition": "state", "entity_id": "binary_sensor.zuluft_bedarf", "state": "on" },
+            { "condition": "state", "entity_id": "[[port_zustand]]", "state": "off" },
+            { "condition": "template", "value_template": "{{ pause_frei }}" },
+            {
+              "wenn": "port_stufe",
+              "condition": "template",
+              "value_template": "{{ states('sensor.zuluft_zielstufe') | int(0) > 0 }}"
+            }
+          ],
+          "sequence": [
+            {
+              "wenn": "port_stufe",
+              "action": "number.set_value",
+              "target": { "entity_id": "[[port_stufe]]" },
+              "data": { "value": "{{ states('sensor.zuluft_zielstufe') | int(0) }}" }
+            },
+            { "wenn": "port_stufe", "delay": { "seconds": 2 } },
+            {
+              "action": "select.select_option",
+              "target": { "entity_id": "[[port_schalter]]" },
+              "data": { "option": "On" }
+            },
+            {
+              "action": "input_datetime.set_datetime",
+              "target": { "entity_id": "input_datetime.zuluft_letzter_schaltvorgang" },
+              "data": { "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" }
+            }
+          ]
+        },
+        {
+          "wenn": "port_stufe",
+          "alias": "Stufe nachfuehren",
+          "conditions": [
+            { "condition": "state", "entity_id": "binary_sensor.zuluft_bedarf", "state": "on" },
+            { "condition": "state", "entity_id": "[[port_zustand]]", "state": "on" },
+            {
+              "condition": "template",
+              "value_template": "{% set ziel = states('sensor.zuluft_zielstufe') | int(0) %}{{ ziel > 0 and (states('[[port_stufe]]') | int(-1)) != ziel }}"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "number.set_value",
+              "target": { "entity_id": "[[port_stufe]]" },
+              "data": { "value": "{{ states('sensor.zuluft_zielstufe') | int(0) }}" }
+            }
+          ]
+        },
+        {
+          "alias": "Ausschalten",
+          "conditions": [
+            {
+              "condition": "not",
+              "conditions": [
+                { "condition": "state", "entity_id": "binary_sensor.zuluft_bedarf", "state": "on" }
+              ]
+            },
+            { "condition": "state", "entity_id": "[[port_zustand]]", "state": "on" },
+            { "condition": "template", "value_template": "{{ laufzeit_frei }}" }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": { "entity_id": "[[port_schalter]]" },
+              "data": { "option": "Off" }
+            },
+            {
+              "action": "input_datetime.set_datetime",
+              "target": { "entity_id": "input_datetime.zuluft_letzter_schaltvorgang" },
+              "data": { "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
