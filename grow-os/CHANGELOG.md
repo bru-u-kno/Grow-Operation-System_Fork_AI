@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.95
+
+**Fork AI.** „noch 5 h 52 min" — und die Dauer bleibt zusammen.
+
+Die Wechselzeile brach in der schmalen Licht-Kachel um, und auf der zweiten
+Zeile blieb „min" allein stehen. Jetzt steht dort nur noch die Dauer, und sie
+hält als Block zusammen: bricht die Zeile doch einmal, dann davor.
+
 ## 2.0.0-forkai.94
 
 **Fork AI.** Kürzere Wechselzeile in der Licht-Kachel.

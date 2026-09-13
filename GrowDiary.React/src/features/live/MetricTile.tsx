@@ -1,7 +1,7 @@
 import { bandText, metricScale, metricStatus, statusLabel, targetLabel, type MetricStatus } from './metric-tile-model'
 import { Sparkline, type HistoryPoint } from '../../components/SensorChart'
 import { useEffect, useState } from 'react'
-import { restzeitText } from './licht-restzeit'
+import { restdauer } from './licht-restzeit'
 import { classNames } from '../../utils'
 
 export type MetricTileProps = {
@@ -96,7 +96,7 @@ export function MetricTile({
   statusText = null, lightOnAt = null, lightOffAt = null, lightIsOn = false,
 }: MetricTileProps) {
   const jetzt = useMinutentakt(Boolean(lightOnAt || lightOffAt))
-  const restzeit = restzeitText(jetzt, lightIsOn, lightOnAt, lightOffAt)
+  const restzeit = restdauer(jetzt, lightIsOn, lightOnAt, lightOffAt)
   const status: MetricStatus = display != null && targetMin == null && targetMax == null
     ? 'unknown'
     : metricStatus(value, targetMin, targetMax, critical)
@@ -190,7 +190,11 @@ export function MetricTile({
       {/* Wann es umschlaegt — die Frage, die man vor der Licht-Kachel hat.
           Gerechnet in der Oberflaeche, damit die Angabe nicht zwischen zwei
           Abrufen altert. */}
-      {restzeit && <div className="gos-metric-source">{restzeit}</div>}
+      {restzeit && (
+        <div className="gos-metric-source">
+          {restzeit === 'gleich' ? 'Wechsel gleich' : <>noch <span className="dauer">{restzeit}</span></>}
+        </div>
+      )}
       {stale
         ? <div className="gos-metric-stale">{stale}</div>
         : sourceNote && <div className="gos-metric-source">{sourceNote}</div>}

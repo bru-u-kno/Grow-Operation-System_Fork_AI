@@ -41,7 +41,7 @@ export function dauerInWorten(millisekunden: number): string {
 }
 
 /**
- * Die Zeile unter den Schaltzeiten: „Wechsel in: 3 h 25 min".
+ * Die Restdauer bis zum nächsten Schalten: „3 h 25 min", „gleich".
  *
  * `anJetzt` sagt, was das Licht gerade tut — daraus folgt, welche der beiden
  * Zeiten die nächste ist. Ohne die passende Zeit gibt es keine Zeile: eine
@@ -51,7 +51,7 @@ export function dauerInWorten(millisekunden: number): string {
  * sagt schon der Wert der Kachel („Aus"), und die Uhrzeiten stehen in der Zeile
  * darüber. Dreimal dasselbe in zwei Zeilen ist keine Auskunft, sondern Lärm.
  */
-export function restzeitText(
+export function restdauer(
   jetzt: Date,
   anJetzt: boolean,
   onAt: string | null | undefined,
@@ -63,8 +63,11 @@ export function restzeitText(
   const zeitpunkt = naechsterZeitpunkt(jetzt, ziel)
   if (zeitpunkt == null) return null
 
-  const rest = dauerInWorten(zeitpunkt.getTime() - jetzt.getTime())
-  // Kurz, weil die Kachel schmal ist: „Nächster Wechsel: in …" brach über zwei
-  // Zeilen um. Dass es der nächste ist, versteht sich von selbst.
-  return rest === 'gleich' ? 'Wechsel: gleich' : `Wechsel in: ${rest}`
+  /* Nur die Dauer, ohne Beiwerk.
+   *
+   * „Nächster Wechsel: in 5 h 52 min" brach in der schmalen Kachel um, und was
+   * auf der zweiten Zeile uebrigblieb, war „min". Das Wort davor setzt die
+   * Kachel selbst — so kann sie die Dauer als Block zusammenhalten und nur
+   * davor umbrechen. */
+  return dauerInWorten(zeitpunkt.getTime() - jetzt.getTime())
 }

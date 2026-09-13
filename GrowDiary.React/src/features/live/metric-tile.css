@@ -94,6 +94,9 @@
   .gos-metric-bands .spalte i .zeichen { margin-right: 5px; font-variant-emoji: text; }
   /* Ein Status ohne Bewertung ist Auskunft, keine Note — deshalb gedeckt. */
   .gos-metric-status.is-note { color: var(--muted); }
+  /* Die Dauer bleibt ein Block: bricht die Zeile, dann vor „noch" und nicht
+     mitten in „5 h 52 min" — sonst steht „min" allein auf der zweiten Zeile. */
+  .gos-metric-source .dauer { white-space: nowrap; }
 
   .gos-metric-target { margin-top: 6px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--faint); }
   .gos-metric-stale { margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--warn-text); }

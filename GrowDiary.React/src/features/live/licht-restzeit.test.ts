@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { dauerInWorten, naechsterZeitpunkt, restzeitText } from './licht-restzeit'
+import { dauerInWorten, naechsterZeitpunkt, restdauer } from './licht-restzeit'
 
 describe('Restzeit bis zum Lichtwechsel', () => {
   const abends = new Date(2026, 8, 13, 21, 11, 0)
 
   it('nennt die Zeit bis zum Einschalten, wenn das Licht aus ist', () => {
     // 21:11 -> 05:04 am nächsten Morgen sind 7 Std 53 Min.
-    expect(restzeitText(abends, false, '05:04', '17:04')).toBe('Wechsel in: 7 h 53 min')
+    expect(restdauer(abends, false, '05:04', '17:04')).toBe('7 h 53 min')
   })
 
   it('nennt die Zeit bis zum Ausschalten, wenn das Licht an ist', () => {
     const mittags = new Date(2026, 8, 13, 12, 0, 0)
-    expect(restzeitText(mittags, true, '05:04', '17:04')).toBe('Wechsel in: 5 h 4 min')
+    expect(restdauer(mittags, true, '05:04', '17:04')).toBe('5 h 4 min')
   })
 
   it('rechnet über Mitternacht', () => {
@@ -21,8 +21,8 @@ describe('Restzeit bis zum Lichtwechsel', () => {
   })
 
   it('schweigt ohne brauchbare Zeit', () => {
-    expect(restzeitText(abends, false, null, '17:04')).toBeNull()
-    expect(restzeitText(abends, false, 'Zeitplan', '17:04')).toBeNull()
+    expect(restdauer(abends, false, null, '17:04')).toBeNull()
+    expect(restdauer(abends, false, 'Zeitplan', '17:04')).toBeNull()
     expect(naechsterZeitpunkt(abends, '25:70')).toBeNull()
   })
 
