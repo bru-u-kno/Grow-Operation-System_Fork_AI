@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { metricScale, metricStatus, statusLabel, targetLabel } from './metric-tile-model'
+import { bandText, metricScale, metricStatus, statusLabel, targetLabel } from './metric-tile-model'
 
 describe('metricScale', () => {
   it('setzt den Marker mittig, wenn der Wert in der Mitte des Ziels liegt', () => {
@@ -110,6 +110,21 @@ describe('Beschriftungen', () => {
 
   it('schweigt ohne Zielbereich', () => {
     expect(targetLabel(null, null)).toBeNull()
+  })
+
+  it('schreibt ein Band nur so genau, wie es ist', () => {
+    // Eingetragen wurde 22 und 28 — „22,0–28,0" liest sich genauer als die Zahl.
+    expect(bandText(22, 28, 1)).toBe('22–28')
+    // Eine eingetippte Stelle bleibt dagegen stehen.
+    expect(bandText(22.5, 28, 1)).toBe('22,5–28')
+    // Rechenrauschen faellt weg.
+    expect(bandText(22.700000000000003, 28, 1)).toBe('22,7–28')
+  })
+
+  it('schreibt halbe Baender und schweigt ohne', () => {
+    expect(bandText(3, null, 1)).toBe('≥ 3')
+    expect(bandText(null, 60, 0)).toBe('≤ 60')
+    expect(bandText(null, null)).toBeNull()
   })
 
   it('sagt den Status in Worten', () => {

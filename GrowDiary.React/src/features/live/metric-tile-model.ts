@@ -118,7 +118,21 @@ export function statusLabel(status: MetricStatus): string {
  * steht schon gross am Wert.
  */
 export function bandText(min: number | null, max: number | null, decimals?: number): string | null {
-  const format = (x: number) => (decimals == null ? String(x) : x.toFixed(decimals)).replace('.', ',')
+  /* Nachkommastellen so viele wie noetig, nicht so viele wie erlaubt.
+   *
+   * „Ziel 22,0–28,0" liest sich genauer, als die Zahl ist — eingetragen wurde
+   * 22 und 28. Steht dort spaeter 22,5, gehoert die Stelle hin. Gerundet wird
+   * eine Stelle grosszuegiger als die Konvention der Messgroesse, damit
+   * Rechenrauschen (22.700000000000003) wegfaellt, eine tatsaechlich
+   * eingetippte Stelle aber nicht.
+   *
+   * Nur fuer die Tag/Nacht-Leiste: die Zeile „Ziel …" behaelt ihre feste
+   * Schreibweise, damit Kachel und Grenzwertseite dieselbe Zahl zeigen. */
+  const format = (x: number) => {
+    const gerundet = x.toFixed((decimals ?? 1) + 1)
+    const knapp = gerundet.includes('.') ? gerundet.replace(/0+$/, '').replace(/\.$/, '') : gerundet
+    return knapp.replace('.', ',')
+  }
   if (min != null && max != null && min === max) return format(min)
   if (min != null && max != null) return `${format(min)}–${format(max)}`
   if (min != null) return `≥ ${format(min)}`

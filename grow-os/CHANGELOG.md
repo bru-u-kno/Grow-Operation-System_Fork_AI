@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.87
+
+**Fork AI.** Tag/Nacht-Leiste: mittig und ohne erfundene Nachkommastellen.
+
+Die beiden Spalten stehen jetzt zentriert. Und ein Band wird nur so genau
+geschrieben, wie es ist: aus „22,0–28,0" wird „22–28", aus einem eingetragenen
+22,5 bleibt „22,5–28". Eine Null hinter dem Komma behauptet eine Genauigkeit,
+die niemand eingetragen hat — und kostet auf dem Telefon die Zeile, die das Band
+umbrechen lässt.
+
 ## 2.0.0-forkai.86
 
 **Fork AI.** Bugfix: Das Nachtband kam auf der Kachel nicht an.

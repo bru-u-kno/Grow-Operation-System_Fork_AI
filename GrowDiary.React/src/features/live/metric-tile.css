@@ -77,7 +77,7 @@
     border: 1px solid var(--hair); border-radius: var(--r-lg); overflow: hidden;
     font: 400 var(--fs-etikett)/1.35 var(--font-mono);
   }
-  .gos-metric-bands .spalte { padding: 4px 6px; color: var(--faint); }
+  .gos-metric-bands .spalte { padding: 4px 6px; color: var(--faint); text-align: center; }
   .gos-metric-bands .spalte + .spalte { border-left: 1px solid var(--hair); }
   /* Das geltende Band traegt den Kontrast; das andere bleibt lesbar, aber
      ruhig — es ist Auskunft ueber spaeter, keine Bewertung von jetzt. */
