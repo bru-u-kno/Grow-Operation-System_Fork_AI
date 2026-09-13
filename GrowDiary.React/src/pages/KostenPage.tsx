@@ -286,12 +286,47 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
 
 // ------------------------------------------------------------- Strom
 
+/**
+ * Fork AI (forkai.90): Zählerstände eines Grows aus der HA-Langzeitstatistik
+ * nachtragen. Home Assistant behält die Statistik dauerhaft — der Worker des
+ * Add-ons erst ab seiner Einrichtung. Ein Grow, der vorher begann, zeigt sonst
+ * nur die Tage seit der Einrichtung als Strom.
+ */
+function ZaehlerImportButton({ growId, onChanged, onError }: { growId: number | null; onChanged: (text?: string) => void; onError: (text: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  if (growId == null) return null
+
+  async function nachziehen() {
+    setBusy(true)
+    try {
+      const ergebnis = await apiFetch<{ angelegt: number; uebersprungen: number; hinweis: string }>(
+        `/api/kosten/zaehlerstaende/import/${growId}`,
+        { method: 'POST', body: JSON.stringify({}) },
+      )
+      onChanged(ergebnis.hinweis)
+    } catch (caught) {
+      onError(formatApiError(caught, 'Zählerstände konnten nicht nachgetragen werden.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <V1Button onClick={() => void nachziehen()} disabled={busy} audit="kosten-zaehler-import">
+      {busy ? 'Wird geholt …' : 'Zählerstände nachtragen'}
+    </V1Button>
+  )
+}
+
 function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onChanged: (text?: string) => void; onError: (text: string) => void }) {
   const { strom } = seite
   const [quelleOffen, setQuelleOffen] = useState(!strom.eingerichtet)
 
   return (
-    <V1Section title="Strom" action={<V1Button onClick={() => setQuelleOffen((v) => !v)} audit="kosten-strom-quelle">{quelleOffen ? 'Quelle schließen' : 'Strom-Quelle einstellen'}</V1Button>}>
+    <V1Section title="Strom" action={<>
+      <ZaehlerImportButton growId={seite.grow?.id ?? null} onChanged={onChanged} onError={onError} />
+      <V1Button onClick={() => setQuelleOffen((v) => !v)} audit="kosten-strom-quelle">{quelleOffen ? 'Quelle schließen' : 'Strom-Quelle einstellen'}</V1Button>
+    </>}>
       <div className="ko-stapel">
         <section className="v1-kpi-grid" data-audit="kosten-strom">
           <V1Stat label="Leistung jetzt" value={strom.leistungW != null ? formatNumber(strom.leistungW, 0) : '–'} unit="W" hint={strom.leistungEntityId ? (strom.leistungW != null ? 'aus Home Assistant' : 'kein Wert von Home Assistant') : 'keine Leistungs-Entität gewählt'} />
@@ -904,6 +939,7 @@ function ArtikelForm({ artikel, seite, onDone, onError, onCancel }: { artikel?: 
   const [gebinde, setGebinde] = useState(feldText(artikel?.gebinde))
   const [preis, setPreis] = useState(feldText(artikel?.preisEur))
   const [notiz, setNotiz] = useState(artikel?.notiz ?? '')
+  const [aufGrowBuchen, setAufGrowBuchen] = useState(artikel?.aufGrowBuchen ?? false)
   const [busy, setBusy] = useState(false)
 
   async function speichern() {
@@ -922,6 +958,7 @@ function ArtikelForm({ artikel, seite, onDone, onError, onCancel }: { artikel?: 
           gebinde: zahlOderNull(gebinde),
           notiz: notiz.trim() || null,
           aktiv: artikel?.aktiv ?? true,
+          aufGrowBuchen,
         }),
       })
       onDone(artikel ? `${name.trim()} gespeichert.` : `${name.trim()} angelegt — jetzt die erste Füllung erfassen.`)
@@ -949,6 +986,12 @@ function ArtikelForm({ artikel, seite, onDone, onError, onCancel }: { artikel?: 
         </V1Field>
         <V1Field label="Preis je Packung (€)" hint="belegt die Kosten beim Erfassen vor; pro Füllung änderbar">
           <input type="text" inputMode="decimal" value={preis} onChange={(e) => setPreis(e.target.value)} placeholder="36,75" />
+        </V1Field>
+        <V1Field label="Kosten zählen" hint="ein Kanister, der drei Läufe hält, gehört nicht komplett in den Lauf, in dem er gekauft wurde" wide>
+          <select value={aufGrowBuchen ? 'verbrauch' : 'fuellung'} onChange={(e) => setAufGrowBuchen(e.target.value === 'verbrauch')}>
+            <option value="fuellung">beim Kauf — die ganze Füllung zählt im Durchgang</option>
+            <option value="verbrauch">beim Verbrauch — die Füllung ist lagerneutral, gebuchte Mengen zählen</option>
+          </select>
         </V1Field>
         <V1Field label="Notiz" wide>
           <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Tauschflasche, Lieferant …" />

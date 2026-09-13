@@ -21,6 +21,7 @@ public sealed class KostenApiController : ApiControllerBase
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly HardwareRepository _hardware;
     private readonly VerbrauchsansichtService _verbrauch;
+    private readonly ZaehlerstandImportService _import;
 
     public KostenApiController(
         KostenSeiteService seite,
@@ -30,7 +31,8 @@ public sealed class KostenApiController : ApiControllerBase
         HomeAssistantService ha,
         HomeAssistantSettingsRepository haSettings,
         HardwareRepository hardware,
-        VerbrauchsansichtService verbrauch)
+        VerbrauchsansichtService verbrauch,
+        ZaehlerstandImportService import)
     {
         _seite = seite;
         _repo = repo;
@@ -40,6 +42,7 @@ public sealed class KostenApiController : ApiControllerBase
         _haSettings = haSettings;
         _hardware = hardware;
         _verbrauch = verbrauch;
+        _import = import;
     }
 
     // ------------------------------------------------------------- Seite
@@ -451,6 +454,94 @@ public sealed class KostenApiController : ApiControllerBase
         return NoContent();
     }
 
+    // -------------------------------------------------------- Verbrauch
+
+    /// <summary>
+    /// Fork AI (forkai.90): Verbrauch buchen — eine oder mehrere Zeilen auf einmal.
+    /// </summary>
+    /// <remarks>
+    /// Eine Gabe am Becken besteht selten aus einem Mittel: Purolyt und pH-Minus
+    /// am selben Abend, vier Naehrstoffe beim Addback. Deshalb nimmt der
+    /// Endpunkt eine Liste. Entweder alle Zeilen gehen durch oder keine — eine
+    /// halb gebuchte Gabe waere schlimmer als gar keine, weil sie aussieht wie
+    /// eine vollstaendige.
+    /// </remarks>
+    [HttpPost("verbrauch")]
+    [ProducesResponseType(typeof(IReadOnlyList<Verbrauch>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    public ActionResult<IReadOnlyList<Verbrauch>> CreateVerbrauch([FromBody] VerbrauchRequest request)
+    {
+        if (request.Zeilen is not { Count: > 0 })
+        {
+            return BadRequestError("zeilen_leer", "Mindestens eine Zeile mit Artikel und Menge angeben.");
+        }
+
+        var artikel = _repo.GetArtikel().ToDictionary(a => a.Id);
+        var zeitpunkt = ZuUtc(request.Zeitpunkt);
+
+        // Erst alles pruefen, dann alles schreiben.
+        foreach (var zeile in request.Zeilen)
+        {
+            if (!artikel.ContainsKey(zeile.ArtikelId))
+            {
+                return BadRequestError("artikel_not_found", $"Verbrauchsartikel {zeile.ArtikelId} existiert nicht.");
+            }
+
+            if (!double.IsFinite(zeile.Menge) || zeile.Menge <= 0)
+            {
+                return BadRequestError("menge_invalid", $"Die Menge fuer Artikel {zeile.ArtikelId} muss groesser als 0 sein.");
+            }
+        }
+
+        if (request.GrowId is { } gid && _grows.GetGrow(gid) is null)
+        {
+            return BadRequestError("grow_not_found", $"Grow {gid} existiert nicht.");
+        }
+
+        var gebucht = new List<Verbrauch>(request.Zeilen.Count);
+        foreach (var zeile in request.Zeilen)
+        {
+            var v = new Verbrauch
+            {
+                ArtikelId = zeile.ArtikelId,
+                GrowId = request.GrowId,
+                MessungId = request.MessungId,
+                ZeitpunktUtc = zeitpunkt,
+                Menge = zeile.Menge,
+                Quelle = Leer(request.Quelle) ?? "manuell",
+                Notiz = Leer(zeile.Notiz) ?? Leer(request.Notiz),
+            };
+            v.Id = _repo.CreateVerbrauch(v);
+            gebucht.Add(v);
+        }
+
+        return StatusCode(StatusCodes.Status201Created, gebucht);
+    }
+
+    /// <summary>Eine Verbrauchsbuchung zuruecknehmen.</summary>
+    [HttpDelete("verbrauch/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public IActionResult DeleteVerbrauch(int id)
+    {
+        _repo.DeleteVerbrauch(id);
+        return NoContent();
+    }
+
+    // --------------------------------------------------- Zaehlerstand-Import
+
+    /// <summary>
+    /// Fork AI (forkai.90): Zaehlerstaende eines Grows aus der HA-Langzeitstatistik
+    /// nachtragen. Wiederholbar — vorhandene Tage bleiben unangetastet.
+    /// </summary>
+    [HttpPost("zaehlerstaende/import/{growId:int}")]
+    [ProducesResponseType(typeof(ZaehlerstandImportService.Ergebnis), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ZaehlerstandImportService.Ergebnis>> ZaehlerstaendeImportieren(int growId, CancellationToken ct)
+    {
+        var ergebnis = await _import.NachziehenAsync(growId, ct);
+        return ergebnis.Erfolg ? Ok(ergebnis) : BadRequestError("import_failed", ergebnis.Hinweis);
+    }
+
     private static string? Leer(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     /// <summary>Hersteller/Produkt an die vorhandene Schreibweise angleichen (forkai.11).</summary>
@@ -477,3 +568,19 @@ public sealed class KostenApiController : ApiControllerBase
         };
     }
 }
+
+/// <summary>Fork AI (forkai.90): Eine Gabe — mehrere Artikel, ein Zeitpunkt.</summary>
+/// <param name="GrowId">Der Durchgang, den die Kosten treffen. Null = lagerintern.</param>
+/// <param name="MessungId">Die Messung, bei der die Gabe erfasst wurde, falls es eine gibt.</param>
+/// <param name="Zeitpunkt">Ohne Kennzeichnung gilt Ortszeit des Add-ons. Null = jetzt.</param>
+/// <param name="Quelle">Woher die Buchung stammt. Voreinstellung <c>manuell</c>.</param>
+public sealed record VerbrauchRequest(
+    int? GrowId,
+    int? MessungId,
+    DateTime? Zeitpunkt,
+    string? Quelle,
+    string? Notiz,
+    List<VerbrauchZeile> Zeilen);
+
+/// <param name="Menge">In der Einheit des Artikels — ml bei Purolyt, kg bei CO2.</param>
+public sealed record VerbrauchZeile(int ArtikelId, double Menge, string? Notiz);
