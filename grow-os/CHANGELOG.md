@@ -5,6 +5,23 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.84
+
+**Fork AI.** Keine Laufzeit mehr aus zu wenig Verbrauch.
+
+Die CO₂-Flasche hatte nach sechs Tagen 77 g von 10 kg gebucht — 0,8 %. Daraus
+ergaben sich rechnerisch 794 Tage und „leer am 09.11.2028". Beides stimmt und
+beides ist wertlos: Eine Hochrechnung um Faktor 130 trägt nicht, schon gar nicht
+wenn der gebuchte Verbrauch ein Netto-Wert ist, der den echten untertreibt.
+
+Eine Laufzeit aus gebuchtem Verbrauch gibt es jetzt erst ab einem Zwanzigstel
+der Füllung und zwei Wochen. Vorher steht da, woran es liegt und was hilft —
+statt einer Zahl, der niemand trauen sollte.
+
+Nebenbei: Die Prognose sagt jetzt auch, woher sie kommt — aus dem gebuchten
+Verbrauch oder aus früheren Laufzeiten. Das stand vorher pauschal als
+„geschätzt aus den letzten Laufzeiten" da, auch wenn gemessen wurde.
+
 ## 2.0.0-forkai.83
 
 **Fork AI.** Der Rauchtest meldete einen Fehler, wo keiner war.

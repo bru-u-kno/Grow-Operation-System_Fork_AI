@@ -467,10 +467,36 @@ public sealed class KostenSeiteService
                 quelle = "gemessen";
                 var tageSeitFuellung = Math.Max((jetztUtc - offen.ZeitpunktUtc).TotalDays, 0.5);
                 var jeTag = verbraucht / tageSeitFuellung;
-                if (jeTag > 0)
+
+                // Fork AI (forkai.84): Aus wenig Verbrauch keine Laufzeit
+                // hochrechnen.
+                //
+                // Die CO2-Flasche hatte nach sechs Tagen 77 g von 10 kg
+                // gebucht - das sind 0,8 %. Daraus ergaben sich rechnerisch 794
+                // Tage und "leer am 09.11.2028". Beides stimmt und beides ist
+                // wertlos: eine Hochrechnung um Faktor 130 traegt nicht, schon
+                // gar nicht wenn der gebuchte Verbrauch ein Netto-Wert ist, der
+                // den echten untertreibt.
+                //
+                // Erst ab einem Zwanzigstel der Fuellung und zwei Wochen
+                // Laufzeit ist die Grundlage breit genug. Vorher bleibt die
+                // Prognose leer - die Seite sagt dann, woran es liegt, statt
+                // eine Zahl zu zeigen, der niemand trauen sollte.
+                var anteilVerbraucht = verbraucht / offen.Menge;
+                var grundlageTraegt = anteilVerbraucht >= 0.05 && tageSeitFuellung >= 14;
+
+                if (jeTag > 0 && grundlageTraegt)
                 {
                     prognoseTage = offen.Menge / jeTag;
                     prognoseLeer = offen.ZeitpunktUtc.AddDays(prognoseTage.Value);
+                }
+                else if (jeTag > 0)
+                {
+                    // Auch die Schaetzung aus frueheren Laufzeiten faellt weg,
+                    // wenn es keine gibt - sonst stuende hier die alte Zahl
+                    // neben einem Fuellstand, der aus Messung stammt.
+                    prognoseTage = tageJeEinheit is { } t2 ? t2 * offen.Menge : null;
+                    prognoseLeer = prognoseTage is { } pt2 ? offen.ZeitpunktUtc.AddDays(pt2) : null;
                 }
             }
             double? eurProTag = offen.KostenEur is { } k && prognoseTage is > 0 ? k / prognoseTage.Value : null;

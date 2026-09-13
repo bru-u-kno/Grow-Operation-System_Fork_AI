@@ -534,8 +534,25 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
           </p>
           {a.fuellstandProzent != null ? (
             <>
-              <div className="ko-balken" role="img" aria-label={`Geschätzt noch ${formatNumber(a.fuellstandProzent, 0)} %`}><i style={{ width: `${a.fuellstandProzent}%` }} /></div>
-              <p className="ko-artikel-prognose">leer ≈ {formatDate(a.prognoseLeerAmUtc)} — geschätzt aus den letzten Laufzeiten (Ø {tage(artikel.mittlereLaufzeitTage)}), nicht gewogen.</p>
+              <div className="ko-balken" role="img" aria-label={`${a.quelle === 'gemessen' ? 'Noch' : 'Geschätzt noch'} ${formatNumber(a.fuellstandProzent, 0)} %`}><i style={{ width: `${a.fuellstandProzent}%` }} /></div>
+              {/*
+                Fork AI (forkai.84): Ohne Prognose kein Datum. Die Flasche stand
+                nach sechs Tagen bei 0,8 % Verbrauch — daraus „leer am
+                09.11.2028" zu rechnen ist arithmetisch richtig und praktisch
+                wertlos. Lieber sagen, was fehlt.
+              */}
+              {a.prognoseLeerAmUtc != null ? (
+                <p className="ko-artikel-prognose">
+                  leer ≈ {formatDate(a.prognoseLeerAmUtc)} — {a.quelle === 'gemessen'
+                    ? 'aus dem gebuchten Verbrauch'
+                    : `geschätzt aus den letzten Laufzeiten (Ø ${tage(artikel.mittlereLaufzeitTage)})`}, nicht gewogen.
+                </p>
+              ) : (
+                <p className="ko-artikel-prognose">
+                  Für eine Laufzeit ist zu wenig verbraucht — sie kommt, sobald ein Zwanzigstel der Füllung
+                  weg ist und zwei Wochen vergangen sind. Oder sofort, wenn du eine Füllung als leer meldest.
+                </p>
+              )}
             </>
           ) : (
             <p className="ko-artikel-prognose">Erste Füllung — eine Prognose gibt es, sobald eine Füllung als leer markiert wurde.</p>

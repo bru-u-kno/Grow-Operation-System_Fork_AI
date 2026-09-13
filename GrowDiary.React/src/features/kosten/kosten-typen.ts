@@ -62,6 +62,10 @@ export type KostenFuellungAktuell = {
   prognoseLeerAmUtc: string | null
   fuellstandProzent: number | null
   eurProTag: number | null
+  /** Wie viel seit dieser Füllung gebucht wurde. */
+  verbraucht: number
+  /** `gemessen` aus gebuchten Verbräuchen, `geschaetzt` aus früheren Laufzeiten. */
+  quelle: string
 }
 
 export type KostenArtikel = {
