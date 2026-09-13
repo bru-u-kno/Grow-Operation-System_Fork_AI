@@ -85,6 +85,8 @@ Lovelace-Dashboards aus — ein Ingress-Panel ist keines.
 
 | forkai.59 | **Alarmgrenzen folgen dem Plan**: der Wochenplan zieht zusätzlich die festen Zelt-Regeln für Lufttemperatur (Planwert ±3 K) und Luftfeuchte nach — beides hat kein Zielband und stand deshalb dauerhaft auf von Hand gesetzten Zahlen | Betrieb → Wochenplan | `Services/WochenplanSyncService.cs`, `Api/Controllers/WochenplanApiController.cs`, `Infrastructure/AlertRuleRepository.cs` (neue Methode `UpdateGrenzen`) |
 
+| forkai.62 | **Zielwerte (Unterbau)**: `GET /api/zielwerte` — geltendes Band, Herkunftskette je Messgröße, Gruppierung nach Änderungsort, Hinweise auf abgeschnittene Wochenwerte und fehlende Alarmregeln | (Seite folgt) | `Api/Controllers/ZielwerteApiController.cs` |
+
 ## Nur für den Fork geändert (nicht zur Übernahme gedacht)
 
 - `grow-os/config.yaml`: Name, Slug, Image, Version `2.0.0-forkai.N`

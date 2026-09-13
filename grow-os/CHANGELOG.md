@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.62
+
+**Fork AI.** Unterbau für die Seite „Zielwerte": ein Endpunkt, der zu jeder
+Messgröße nicht nur das geltende Band liefert, sondern die ganze Herkunftskette —
+Profil, Feed-Chart-Woche, Zelt-Grenze — mit der Angabe, welche Stufe gilt und
+welche überstimmt wurde. Bei festen Grenzen steht dabei, WER sie gesetzt hat: der
+Wochenplan oder ein Mensch. Genau das verschweigt „dein Wert" auf der Kachel
+bisher. Dazu die Gruppierung nach Änderungsort und die Hinweise auf Stellen, an
+denen eine feste Grenze die Wochenspalte abschneidet oder eine Alarmregel fehlt.
+Die Seite selbst kommt im nächsten Schritt; der Endpunkt rechnet nichts eigenes,
+sondern liest dieselbe Kette wie Kacheln und Alarme.
+
 ## 2.0.0-forkai.61
 
 **Fork AI.** Behebt einen Baufehler aus forkai.59: im Übergabe-Durchlauf war der
