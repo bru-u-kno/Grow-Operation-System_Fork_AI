@@ -207,8 +207,6 @@ public sealed class ChillerSteuerungService
 
         var doppelt = Doppelsteuerung(_grows.GetTents(), Rolle(Rollen.Steckdose));
 
-        var fremd = FremdSchalterFinden(Rolle(Rollen.Steckdose));
-
         return new ChillerLive(
             HaErreichbar: entities.Count > 0,
             WasserC: ZahlRolle(Rollen.WasserFuehler),
@@ -226,38 +224,7 @@ public sealed class ChillerSteuerungService
             LetzterWechsel: gewechselt,
             DoppelSteuerungEntity: doppelt,
             EinschaltenAbC: zielAktiv is { } z1 ? Math.Round(z1 + e.HystereseK, 2) : null,
-            AusschaltenUnterC: zielAktiv is { } z2 ? Math.Round(z2 - e.HystereseK, 2) : null,
-            Doppelsteuerung: fremd is not null,
-            FremdSchalter: fremd);
-    }
-
-    /// <summary>
-    /// Schaltet die Kühler-Steuerung der Crop-Steering-Seite dieselbe Dose?
-    /// </summary>
-    /// <remarks>
-    /// <b>Zwei Wege auf denselben Kompressor sind kein Randfall.</b> Die
-    /// Absenkung des Entwicklers bringt eine eigene Steckdosen-Funktion mit
-    /// (<see cref="Tent.ChillerSwitchEntityId"/>). Steht sie auf derselben
-    /// Entität wie die Regelung hier, schalten zwei Stellen gegeneinander — die
-    /// eine nach ihrem Rampenwert, die andere nach dem Kühlbedarf, und die
-    /// Mindestpause gilt nur für eine davon. Das ist ein Befund für die Seite
-    /// und keiner, den der Nutzer im Kopf behalten muss.
-    /// </remarks>
-    private string? FremdSchalterFinden(string? eigeneSteckdose)
-    {
-        if (string.IsNullOrWhiteSpace(eigeneSteckdose)) return null;
-
-        foreach (var zelt in _grows.GetTents(includeArchived: false))
-        {
-            if (!zelt.ChillerControlEnabled) continue;
-            if (string.IsNullOrWhiteSpace(zelt.ChillerSwitchEntityId)) continue;
-            if (string.Equals(zelt.ChillerSwitchEntityId, eigeneSteckdose, StringComparison.OrdinalIgnoreCase))
-            {
-                return zelt.ChillerSwitchEntityId;
-            }
-        }
-
-        return null;
+            AusschaltenUnterC: zielAktiv is { } z2 ? Math.Round(z2 - e.HystereseK, 2) : null);
     }
 
     /// <summary>

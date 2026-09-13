@@ -74,6 +74,4 @@ public sealed record ChillerLive(
     /// </summary>
     string? DoppelSteuerungEntity,
     double? EinschaltenAbC,
-    double? AusschaltenUnterC,
-    bool Doppelsteuerung,
-    string? FremdSchalter);
+    double? AusschaltenUnterC);

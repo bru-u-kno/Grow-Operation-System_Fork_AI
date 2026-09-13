@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.81
+
+**Fork AI.** Aufräumen direkt hinterher: die Prüfung auf die doppelt geschaltete
+Steckdose stand zweimal im Code — einmal mit Entity-Namen, einmal als
+Ja/Nein-Antwort daneben. Zwei Fassungen derselben Frage laufen irgendwann
+auseinander; geblieben ist die mit dem Namen, weil die Warnung ihn anzeigt.
+Am Verhalten ändert sich nichts.
+
 ## 2.0.0-forkai.80
 
 **Fork AI.** Der Wasserkühler bekommt eine eigene Seite unter Steuerung.
