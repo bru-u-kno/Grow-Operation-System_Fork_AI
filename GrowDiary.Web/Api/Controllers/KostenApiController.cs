@@ -555,13 +555,18 @@ public sealed class KostenApiController : ApiControllerBase
     /// <summary>
     /// Fork AI (forkai.90): Zaehlerstaende eines Grows aus der HA-Langzeitstatistik
     /// nachtragen. Wiederholbar — vorhandene Tage bleiben unangetastet.
+    /// Mit <c>?neuAufbauen=true</c> wird die Reihe des Grows stattdessen verworfen
+    /// und vollstaendig aus der Statistik neu geschrieben.
     /// </summary>
     [HttpPost("zaehlerstaende/import/{growId:int}")]
     [ProducesResponseType(typeof(ZaehlerstandImportService.Ergebnis), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ZaehlerstandImportService.Ergebnis>> ZaehlerstaendeImportieren(int growId, CancellationToken ct)
+    public async Task<ActionResult<ZaehlerstandImportService.Ergebnis>> ZaehlerstaendeImportieren(
+        int growId,
+        [FromQuery] bool neuAufbauen,
+        CancellationToken ct)
     {
-        var ergebnis = await _import.NachziehenAsync(growId, ct);
+        var ergebnis = await _import.NachziehenAsync(growId, neuAufbauen, ct);
         return ergebnis.Erfolg ? Ok(ergebnis) : BadRequestError("import_failed", ergebnis.Hinweis);
     }
 
