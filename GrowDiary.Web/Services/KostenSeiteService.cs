@@ -63,6 +63,12 @@ public sealed record KostenArtikel(
     int? TentId,
     string? Notiz,
     bool Aktiv,
+    /// <summary>
+    /// forkai.101: Muss mit heraus, sonst zeigt das Artikel-Formular immer
+    /// „beim Kauf". Wer dann irgendetwas anderes am Artikel speichert, stellt
+    /// das Buchungsziel unbemerkt zurueck — der Wert stand nie im Formular.
+    /// </summary>
+    bool AufGrowBuchen,
     KostenFuellungAktuell? Aktuell,
     int AnzahlFuellungen,
     double? MittlereLaufzeitTage,
@@ -530,10 +536,25 @@ public sealed class KostenSeiteService
             aktuell = new KostenFuellungAktuell(offen.Id, offen.ZeitpunktUtc, offen.Menge, offen.KostenEur, tag, prognoseTage, prognoseLeer, fuellstand, eurProTag, verbraucht, quelle);
         }
 
+        // forkai.101: Die Zeile je Artikel muss dasselbe rechnen wie die Summe
+        // darueber. Bei AufGrowBuchen zaehlen die Verbrauchsbuchungen, sonst die
+        // Fuellungen. Vorher kannte diese Zeile nur Fuellungen — Purolyt stand
+        // deshalb auf 0 EUR, obwohl 2,93 EUR gebucht waren und in der
+        // Gesamtsumme auch auftauchten.
+        double summeImGrow = 0;
+        if (growId is { } g)
+        {
+            summeImGrow = a.AufGrowBuchen
+                ? verbraeuche
+                    .Where(v => v.ArtikelId == a.Id && v.GrowId == g)
+                    .Sum(v => VerbrauchsansichtService.PreisJeEinheit(eigene, v.ZeitpunktUtc, a) is { } preis ? v.Menge * preis : 0)
+                : eigene.Where(f => f.GrowId == g).Sum(f => f.KostenEur ?? 0);
+        }
+
         return new KostenArtikel(
-            a.Id, a.Name, a.Hersteller, a.Produkt, a.PreisEur, a.Einheit, a.Gebinde, a.TentId, a.Notiz, a.Aktiv, aktuell,
-            eigene.Count, mittlereLaufzeit,
-            growId is { } g ? eigene.Where(f => f.GrowId == g).Sum(f => f.KostenEur ?? 0) : 0);
+            a.Id, a.Name, a.Hersteller, a.Produkt, a.PreisEur, a.Einheit, a.Gebinde, a.TentId, a.Notiz, a.Aktiv,
+            a.AufGrowBuchen, aktuell,
+            eigene.Count, mittlereLaufzeit, summeImGrow);
     }
 
     public static string PhaseLabel(string phase) => phase switch
