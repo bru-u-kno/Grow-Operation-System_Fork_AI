@@ -113,21 +113,6 @@ public static class Demobestand
             new AcGeraet("LED Top (Testdaten)", DemoData.LichtLeistung, null,
                 DemoData.LichtEinZeit, DemoData.LichtAusZeit),
         ]);
-        /* forkai.97: Ein Verbrauchsartikel im Demobestand.
-           Der Anlass: AufGrowBuchen wurde in .96 still verworfen — Feld im
-           Modell, nicht im Request. RundwegVollstaendigTests prueft genau das,
-           liess ArtikelRequest aber aus, weil es hier keinen Bestand gab. Die
-           Ausnahme war die Luecke, nicht der fehlende Test. */
-        var kosten = dienste.GetRequiredService<KostenRepository>();
-        kosten.CreateArtikel(new Verbrauchsartikel
-        {
-            Name = "CO\u2082-Flasche (Testdaten)",
-            Einheit = "kg",
-            Gebinde = 10,
-            PreisEur = 36.75,
-            Aktiv = true,
-        });
-
         return $"1 Zelt, 1 RDWC-Aufbau, 3 Grows (1 laufend, 2 im Archiv), {anzahl} Messungen";
     }
 

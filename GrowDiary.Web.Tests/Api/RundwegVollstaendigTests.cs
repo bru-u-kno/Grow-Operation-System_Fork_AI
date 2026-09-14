@@ -319,6 +319,11 @@ public sealed class RundwegVollstaendigTests
             + "ein Woerterbuch Rolle -> Entity-ID; eine Probe wie \"1\" ist weder eine "
             + "bekannte Rolle noch eine Entity-ID, das PUT lehnt sie mit 400 ab. Die "
             + "Zuordnung faehrt SteuerungGeraeteTests.",
+        // Fork AI (forkai.6)
+        ["ArtikelRequest"] =
+            "Der Demobestand legt keinen Verbrauchsartikel an; ohne Bestand faehrt der "
+            + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen. Die Felder "
+            + "fahren KostenSeiteTests und die Oberflaechen-Erfassung.",
         ["AnschaffungRequest"] =
             "Der Demobestand legt keine Anschaffung an; ohne Bestand faehrt der Rundweg ins "
             + "Leere und waere gruen, ohne etwas zu pruefen. Die Felder fahren KostenSeiteTests "
