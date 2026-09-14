@@ -5,6 +5,150 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.105
+
+**Fork AI.** Töpfe belegen und leeren an einer Stelle.
+
+Zwei Karten mit fast gleichem Namen, und nur eine konnte entfernen: „Töpfe
+& Sorten" im Formular wies zu, „Pflanzen & Sorten" am Grow löschte. Wer im
+Formular vier Töpfe auf „leer" stellte und speicherte, sah danach wieder
+sechs belegte — die Auswahl sah aus wie eine Aktion und war keine.
+
+Jetzt liegt beides im Formular, und „leer" wirkt sofort statt beim
+Speichern. Das Formular speichert alles auf einmal; ein Fehlgriff im
+Auswahlfeld plus Speichern hätte sonst eine Pflanze samt Pheno-Bogen
+entfernt, ohne Rückfrage und womöglich mitten in der Blüte. Die Rückfrage
+kommt deshalb beim Wählen. „Alle auf leer" fällt weg — sechs Pflanzen mit
+einem Klick zu entfernen ist keine Bequemlichkeit, sondern ein Unfall. Ein
+nur geplanter Topf verschwindet weiter ohne Rückfrage; dort gibt es nichts
+zu verlieren.
+
+## 2.0.0-forkai.104
+
+**Fork AI.** Zwei Wächter erfüllt, die eigene Änderungen gerissen hatten.
+
+Die Mengen im neuen Gaben-Abschnitt rechneten mit `Number(text)`. `Number('')`
+ist 0 und gilt als gültige Zahl: eine geleerte Menge wäre still als 0 gebucht
+worden, mit Erfolgsmeldung. Unlesbare Mengen brechen das Speichern jetzt ab.
+
+Und die beiden Löschwege aus .96 und .97 — Verbrauchsbuchung und Zählerstand —
+gab es nur in der API. Gebaut und von niemandem erreichbar. Jetzt trägt jede
+Zeile einen Entfernen-Knopf: in der Verbrauchstabelle des Artikels und in der
+Zählerstands-Tabelle unter Strom. Beide Fälle sind real — ein Vertipper bei der
+Menge verschiebt Füllstand und Kosten dauerhaft, ein schief einsortierter
+Zählerstand hebt die Stromsumme um mehrere tausend kWh.
+
+## 2.0.0-forkai.103
+
+**Fork AI.** Nachbesserung zu .102: Sperrt das Klima ganz — Feuchte oder Blatt
+über der Obergrenze —, steht der T6 auf der normalen Stufe. Der Begründungstext
+behauptete dann trotzdem die Dosierstufe. Dafür gibt es jetzt einen eigenen Fall.
+
+## 2.0.0-forkai.102
+
+**Fork AI.** Warum der T6 gerade tief läuft.
+
+Der Reiter Klima der CO₂-Steuerung zeigt über den Einstellungen eine
+Statuskarte: aktuelle T6-Stufe, je eine Zeile für Blatt und Feuchte mit
+Ist-Wert, geltender Tief-Grenze und der Marke erfüllt/zu warm/zu feucht, dazu
+ein Satz Klartext für den Haltebereich. Die Grenzen kommen aus denselben
+Helfern, mit denen der Template-Helfer in Home Assistant entscheidet — der Fork
+liest ihn nur, geregelt wird weiter dort.
+
+## 2.0.0-forkai.101
+
+**Fork AI.** Buchungsziel und Artikelsumme stimmen wieder in der Anzeige.
+
+Zwei Anzeigefehler aus .96, beide erst an der laufenden Instanz sichtbar. Das
+Buchungsziel fehlte im DTO der Kosten-Seite: die API lieferte es, das
+Artikel-Formular zeigte immer „beim Kauf". Wer danach irgendetwas anderes am
+Artikel speicherte, stellte es unbemerkt zurück — stiller Datenverlust, kein
+Schönheitsfehler. Und die Summe je Artikel kannte nur Füllungen, während die
+Gesamtsumme seit .96 nach Buchungsziel unterscheidet; ein Artikel stand auf
+0 €, obwohl gebuchter Verbrauch in der Gesamtsumme auftauchte. Beide rechnen
+jetzt dasselbe.
+
+## 2.0.0-forkai.100
+
+**Fork AI.** Gaben direkt bei der Messung buchen.
+
+Die Verbrauchsbuchung gab es seit .96, aber nur über die API — am Becken kam man
+nicht dran, und jede Gabe landete weiter als Freitext in der Notiz. Die manuelle
+Messseite hat jetzt den Abschnitt **Gaben**: beliebig viele Zeilen aus Artikel
+und Menge, denn eine Gabe ist selten ein Mittel. Gebucht wird nach dem Speichern
+der Messung; geht dabei etwas schief, steht die Messung trotzdem und die Meldung
+sagt genau das.
+
+Diese Änderung und der Blatt-Offset aus .99 entstanden nebeneinander und trugen
+beide die Nummer .99; überschnitten haben sie sich nur in der Versionsdatei.
+
+## 2.0.0-forkai.99
+
+**Fork AI.** Der Blatt-Offset geht an den Klimacontroller.
+
+Das Feld „Blatt kühler als Luft" bleibt die eine Stelle, an der der Wert gepflegt
+wird — es bekommt nur einen Ausgang: zwei neue Zelt-Einstellungen nennen den
+HA-Dienst und den Port, an den der Offset beim Speichern durchgereicht wird
+(leer = aus, wie bisher). Das Vorzeichen wird dabei gedreht, weil Grow OS +2
+führt und die AC-Infinity-App −2. Scheitert der Dienst, wird trotzdem gespeichert
+und gewarnt — ein stilles Auseinanderlaufen ist genau der Zustand, den das Feld
+beseitigen soll.
+
+## 2.0.0-forkai.98
+
+**Fork AI.** Der Import kann die Zählerreihe eines Grows neu aufbauen.
+
+Die Dublettenprüfung aus .97 verhindert neue Mischungen, räumt aber nicht auf,
+was schon gemischt dasteht: 76 Importwerte um Mitternacht neben sechs
+Worker-Ständen um 22 Uhr. Aus 1.585 kWh wurden so 10.024, aus 507 € Strom 3.208.
+Ohne Löschweg in der Anwendung bliebe nur Handarbeit an der Datenbank im
+`/data`-Volume.
+
+Auf Wunsch verwirft der Import deshalb alle Stände im Zeitraum des Grows und
+schreibt die Reihe vollständig neu — absichtlich ohne Rücksicht auf den Anlass:
+die Mischung *ist* der Fehler, eine Reihe aus einer Quelle zu einer Tageszeit
+das Ziel.
+
+## 2.0.0-forkai.97
+
+**Fork AI.** Drei Fehler aus .96, alle erst an der laufenden Instanz sichtbar.
+
+Das Buchungsziel kam nie an: Modell, Tabelle, Repository und Formular hatten das
+Feld, der Request nicht. Der Aufruf antwortete 200 und lieferte trotzdem den
+alten Wert zurück. Der Compiler kann das nicht sehen — die Klasse ist gültig,
+sie hat das Feld nur nicht. Der Rundweg-Test prüft genau diese Fehlerklasse,
+liess den Artikel-Request aber als Ausnahme aus. Die Ausnahme ist gestrichen und
+der Demobestand legt jetzt einen Verbrauchsartikel an.
+
+Der Import verglich außerdem das UTC-Datum statt des Ortsdatums. Tagesbuckets
+aus Home Assistant beginnen um lokale Mitternacht, in Europe/Berlin also 22:00
+UTC des Vortags — die Dublettenprüfung lag damit systematisch einen Tag daneben.
+Folge war nicht nur eine Dublette: ein Rückwärtssprung gilt als Zählerwechsel und
+addiert den vollen Stand. Der Import schreibt jetzt nur noch vor dem ersten
+vorhandenen Stand. Dazu ein Löschweg für einzelne Zählerstände, damit sich ein
+misslungener Import zurücknehmen lässt.
+
+## 2.0.0-forkai.96
+
+**Fork AI.** Gaben buchen, Zählerstände nachtragen.
+
+Zwei Lücken mit derselben Form: das Backend kann es, aber kein Mensch kommt dran.
+Die Verbrauchsbuchung gab es seit .20 mit genau einem Schreiber, der
+CO₂-Steuerung. Jetzt nimmt sie mehrere Zeilen auf einmal an — eine Gabe ist
+selten ein Mittel —, prüft erst alles und schreibt dann alles, und lässt sich
+einzeln zurücknehmen.
+
+Dazu ein **Buchungsziel je Artikel**: in der Voreinstellung zählt die Füllung
+weiterhin voll im Durchgang. Umgestellt ist sie lagerneutral, und nur gebuchter
+Verbrauch trifft den Durchgang, bewertet über den Preis je Einheit. Ein
+10-L-Kanister, der drei Läufe hält, verzerrt sonst den Lauf, in dem er gekauft
+wurde.
+
+Neu ist außerdem der **Zählerstand-Import**: er holt die Tageswerte aus dem
+Recorder von Home Assistant und legt je Tag einen Stand an, mit Phase aus dem
+Durchgang. Damit lässt sich Strom auch für Zeiträume nachtragen, in denen der
+Worker noch nicht lief.
+
 ## 2.0.0-forkai.95
 
 **Fork AI.** „noch 5 h 52 min" — und die Dauer bleibt zusammen.
@@ -78,6 +222,9 @@ sonst „im Ziel" steht, die Schaltzeiten passen damit in eine Zeile. Darunter n
 die Restzeit — „noch 7 Std 53 Min bis an". Gerechnet wird sie in der Oberfläche
 und jede halbe Minute neu, nicht auf dem Server: eine mitgelieferte Restzeit
 altert zwischen zwei Abrufen und stünde nach fünf Minuten falsch da.
+
+## 2.0.0-forkai.88
+
 **Fork AI.** Blätter lassen sich nach unten wegziehen.
 
 Der Griff oben an jedem Blatt war bisher nur ein Balken. Er verspricht die
@@ -568,6 +715,11 @@ den aus Home Assistant gelesenen Ist-Wert. Der Übersetzer lehnt das ab, das Ima
 von forkai.59 ist deshalb gar nicht erst entstanden. Der äußere Name heißt jetzt
 anders; an der Übergabe selbst ändert sich nichts. Ebenfalls nachgetragen: der
 Eintrag zu forkai.60 war zu knapp für die Prüfung der Release Notes.
+
+## 2.0.0-forkai.60
+
+**Fork AI.** Baufehler aus forkai.59 behoben (doppelt vergebener Name im
+Übergabe-Durchlauf); inhaltlich unverändert.
 
 ## 2.0.0-forkai.59
 
