@@ -11,7 +11,7 @@
 
 const KEY = 'growos.live.kopfknoepfe'
 
-export type KopfKnopf = 'messen' | 'addback' | 'anpassen'
+export type KopfKnopf = 'messen' | 'addback' | 'grow' | 'anpassen'
 
 /** Reihenfolge hier = Reihenfolge im Blatt. */
 export const KOPF_KNOEPFE: ReadonlyArray<{
@@ -19,6 +19,7 @@ export const KOPF_KNOEPFE: ReadonlyArray<{
 }> = [
   { id: 'messen', icon: '＋', titel: 'Messen', hinweis: 'Messung erfassen' },
   { id: 'addback', icon: '↻', titel: 'Addback starten', hinweis: 'Nachfüllen mit Zielwerten' },
+  { id: 'grow', icon: '✿', titel: 'Grow bearbeiten', hinweis: 'Stammblatt des laufenden Grows' },
   { id: 'anpassen', icon: '▦', titel: 'Anpassen', hinweis: 'Kacheln dieser Seite umstellen' },
 ]
 

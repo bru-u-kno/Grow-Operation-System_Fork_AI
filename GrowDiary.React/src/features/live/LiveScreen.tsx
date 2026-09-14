@@ -129,7 +129,11 @@ export function LiveScreen({
   const anpassenMoeglich = Boolean(dashboard) && !dashboard?.editing
   /* „Anpassen" gehört nur in die Zeile, solange es etwas anzupassen gibt —
      im laufenden Editor führt die Leiste darunter. */
-  const sichtbar = angeheftet.filter((id) => id !== 'anpassen' || anpassenMoeglich)
+  /* „Grow bearbeiten" nur, solange dieses Zelt einen laufenden Grow hat —
+     ein Knopf, der ins Leere fuehrt, ist schlechter als keiner. */
+  const verfuegbar = (id: KopfKnopf) =>
+    id === 'anpassen' ? anpassenMoeglich : id === 'grow' ? Boolean(grow) : true
+  const sichtbar = angeheftet.filter(verfuegbar)
 
   const blattSchliessen = () => { setWeitereOffen(false); setKnoepfeBearbeiten(false) }
 
@@ -137,6 +141,7 @@ export function LiveScreen({
     blattSchliessen()
     if (id === 'messen') navigate('/messung')
     else if (id === 'addback') navigate('/addback')
+    else if (id === 'grow') { if (grow) navigate(`/grows/${grow.id}/setup`) }
     else dashboard?.onToggleEditing()
   }
 
@@ -178,6 +183,13 @@ export function LiveScreen({
               if (id === 'addback') {
                 return <Link key={id} className="ls-btn" to="/addback">Addback</Link>
               }
+              if (id === 'grow') {
+                // Kurz beschriftet: die Zeile traegt neben Score und „⋯" keine
+                // zwei Woerter, das Blatt nennt die lange Fassung.
+                return grow
+                  ? <Link key={id} className="ls-btn" to={`/grows/${grow.id}/setup`}>✿ Grow</Link>
+                  : null
+              }
               return (
                 <button
                   key={id}
@@ -210,7 +222,7 @@ export function LiveScreen({
       >
         {knoepfeBearbeiten ? (
           <>
-            {KOPF_KNOEPFE.filter((knopf) => knopf.id !== 'anpassen' || anpassenMoeglich).map((knopf) => (
+            {KOPF_KNOEPFE.filter((knopf) => verfuegbar(knopf.id)).map((knopf) => (
               <button
                 key={knopf.id}
                 type="button"
@@ -237,7 +249,7 @@ export function LiveScreen({
           <>
             {KOPF_KNOEPFE
               .filter((knopf) => !sichtbar.includes(knopf.id))
-              .filter((knopf) => knopf.id !== 'anpassen' || anpassenMoeglich)
+              .filter((knopf) => verfuegbar(knopf.id))
               .map((knopf) => (
                 <button
                   key={knopf.id}

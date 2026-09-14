@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.106
+
+**Fork AI.** Vom Livebild direkt ins Stammblatt des Grows.
+
+Wer auf der Live-Seite etwas am laufenden Grow ändern wollte — Sorte,
+Zelt, Veg-Dauer, Töpfe — musste über die Grow-Liste gehen und den
+richtigen Lauf heraussuchen, obwohl die Seite genau weiß, welcher Grow
+gerade gezeigt wird.
+
+Im „⋯" neben „Messen" steht jetzt **Grow bearbeiten** und führt direkt in
+das Formular des gezeigten Laufs. Wie die anderen Einträge lässt es sich
+über „Knöpfe bearbeiten" nach oben in die Zeile heften. Zeigt das Zelt
+keinen laufenden Grow, erscheint der Eintrag nicht, statt ins Leere zu
+führen.
+
 ## 2.0.0-forkai.105
 
 **Fork AI.** Töpfe belegen und leeren an einer Stelle.

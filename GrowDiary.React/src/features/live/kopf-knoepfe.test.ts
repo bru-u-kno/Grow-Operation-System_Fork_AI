@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_ANGEHEFTET, umschalten, type KopfKnopf } from './kopf-knoepfe'
+import { KOPF_KNOEPFE, MAX_ANGEHEFTET, umschalten, type KopfKnopf } from './kopf-knoepfe'
 
 describe('umschalten', () => {
   it('heftet an, was noch nicht oben steht', () => {
@@ -19,5 +19,17 @@ describe('umschalten', () => {
   it('kommt auch mit leerer Zeile klar', () => {
     const leer: KopfKnopf[] = []
     expect(umschalten(leer, 'messen')).toEqual(['messen'])
+  })
+})
+
+describe('KOPF_KNOEPFE', () => {
+  it('bietet den Sprung ins Stammblatt des Grows an', () => {
+    // Steht der Eintrag nicht in dieser Liste, taucht er weder im „⋯" noch
+    // unter „Knöpfe bearbeiten" auf — beide Listen lesen nur von hier.
+    expect(KOPF_KNOEPFE.map((knopf) => knopf.id)).toContain('grow')
+  })
+
+  it('lässt sich wie jeder andere Knopf anheften', () => {
+    expect(umschalten(['messen'], 'grow')).toEqual(['messen', 'grow'])
   })
 })
