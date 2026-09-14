@@ -5,6 +5,38 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.107
+
+**Fork AI.** Alle lesen jetzt dieselbe Woche — und die Wassertemperatur
+sinkt erst zum Schluss.
+
+### Was Sie sehen
+
+- Behoben — **Trendwächter urteilte gegen die Phase:** der Wächter, der
+  Messreihen bewertet und Push-Nachrichten schickt, rechnete weiter mit
+  dem Band der Phase, während Live-Kachel, Messprotokoll und Mischplan
+  längst die Wochenspalte des Feedcharts lasen. In Blütewoche 4 hieß das:
+  EC 1,4 steht im Plan, gemeldet wurde es gegen 1,0–1,2.
+- Behoben — **Addback schlug ein anderes EC vor als der Mischplan:** der
+  Vorschlag kam aus der Mitte des Phasenbands statt aus der Woche. Auf
+  einem Bildschirm standen damit zwei Ziele.
+- Behoben — **CO₂-Seite beschriftete ihr Planziel falsch:** dort stand
+  „gilt die ganze Phase, nicht je Woche". Gerechnet wurde längst mit dem
+  Wochenwert; jetzt steht auch das dort.
+- Geändert — **SKX Canna Aqua, Wassertemperatur der Blüte:** Flores 2 bis 8
+  laufen durchgehend auf 20 °C Tag / 18 °C Nacht statt bis auf 17/15 °C
+  abzusinken. Die Absenkung auf 15 °C bleibt der Flush-Spalte vorbehalten —
+  dort, wo der Plan sie als Endphasen-Maßnahme für wenige Tage vorsieht.
+  Kühleres Wasser bremst davor nur die Aufnahme.
+
+### Technik
+
+- `TrendWatchRunner` und `GrowWorkflowApiController` holen ihre Sollwerte
+  über `Zielband.FuerGrow` statt über `TargetValueService.GetTargets`; beide
+  bekommen dafür die Wissensbasis als Abhängigkeit.
+- `Co2SteuerungService.PlanHerkunft` nennt die Wochenspalte, wenn der Grow
+  Wochenziele führt und die Spalte ein CO₂-Band hat.
+
 ## 2.0.0-forkai.106
 
 **Fork AI.** Vom Livebild direkt ins Stammblatt des Grows.

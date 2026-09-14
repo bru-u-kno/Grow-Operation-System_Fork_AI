@@ -78,6 +78,14 @@ Drei Dinge, die nicht am Fork lagen — falls sie von Interesse sind:
   Zielband der laufenden Woche, die Alarmauswertung kannte es nicht und prüfte nur
   gegen die eingetragenen Regeln. Für dieselbe Messgröße standen so zwei Bänder
   nebeneinander. Im Fork gehen beide durch dieselbe Lesart.
+- **Sollwerte an zwei Stellen abgeholt.** Die meisten Leser gehen über
+  `Zielband.FuerGrow` (Profil → Phase → Wochenspalte → eigene Grenzen). Der
+  Trendwächter (`TrendWatchRunner`) und der Addback-Vorschlag
+  (`GrowWorkflowApiController`) riefen dagegen `TargetValueService.GetTargets`
+  direkt auf und übergingen damit die Wochenspalte — im Original ohne Folgen,
+  weil dort nur EC und pH je Woche stehen, im Fork mit Klimawerten je Woche
+  aber spürbar. Behoben in forkai.107; beide Stellen brauchen dafür die
+  Wissensbasis als Abhängigkeit.
 - **Reiterzeile am Telefon.** Auf schmalen Bildschirmen brach die Reiterzeile um
   und halbierte die Bewertungsscheibe darunter. Im Fork gelöst, aber durch einen
   eigenen Rahmen — als Vorlage taugt das eher zum Nachbauen als zum Übernehmen.
@@ -87,7 +95,8 @@ Drei Dinge, die nicht am Fork lagen — falls sie von Interesse sind:
 Eigene Funktionen liegen möglichst in eigenen Dateien und Tabellen (`Fork*`).
 Angefasst ist der Bestandscode dort, wo es nicht anders ging: Alarmauswertung und
 Zielband, Kachel-Modell und Live-Payload, Wissens-Schema und Mischplan (Klimawerte
-je Woche), Navigation und App-Shell, Zelt-Einstellungen (Blatt-Offset an den
+je Woche), Trendwächter und Grow-Workflow (Sollwerte über das Zielband),
+Navigation und App-Shell, Zelt-Einstellungen (Blatt-Offset an den
 Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback. Welche
 Datei zu welcher Änderung gehört, steht in
 [docs/fork-historie.md](docs/fork-historie.md).

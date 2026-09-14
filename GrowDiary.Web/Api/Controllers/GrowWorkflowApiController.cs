@@ -17,6 +17,8 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
     private readonly JournalRepository _journalRepository;
     private readonly AuditRepository _auditRepository;
     private readonly TargetValueService _targetValueService;
+    // Fork AI (forkai.107): fuer die Wochenspalte im Addback-Vorschlag.
+    private readonly Services.Knowledge.KnowledgeBaseLoader _wissen;
 
     public GrowWorkflowApiController(
         GrowRepository repository,
@@ -24,6 +26,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         JournalRepository journalRepository,
         AuditRepository auditRepository,
         TargetValueService targetValueService,
+        Services.Knowledge.KnowledgeBaseLoader wissen,
         WasserwechselStandService wasserwechselStand,
         WaterProfileStore? waterProfile = null)
     {
@@ -32,6 +35,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         _journalRepository = journalRepository;
         _auditRepository = auditRepository;
         _targetValueService = targetValueService;
+        _wissen = wissen;
         _wasserwechselStand = wasserwechselStand;
         _waterProfile = waterProfile;
     }
@@ -103,11 +107,17 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         // uebergeht damit das eigene Profil des Nutzers. Genau dieser Fehler
         // stand in der Diagnose und hat dort EC 0,6-0,8 gemeldet, waehrend die
         // Live-Kachel fuer denselben Grow 0,9-1,1 sagte.
-        var profil = SetpointProfileResolver.Resolve(
-            grow.SetpointProfileId,
+        // Fork AI (forkai.107): ueber Zielband.FuerGrow statt nur ueber das
+        // Phasenprofil. Der Mischplan daneben rechnet mit der Wochenspalte;
+        // schlug der Addback die Mitte des Phasenbands vor, standen auf einem
+        // Bildschirm zwei EC-Ziele.
+        var targets = Zielband.FuerGrow(
+            _targetValueService,
+            _wissen,
+            grow,
+            stage,
             grow.SystemId is { } systemId ? _repository.GetSystem(systemId)?.SetpointProfileId : null,
-            grow.HydroStyle);
-        var targets = _targetValueService.GetTargets(profil.ProfileId, stage);
+            null);
         double? suggestedEcTarget = targets is null
             ? null
             : Math.Round((targets.EcMin + targets.EcMax) / 2, 2);

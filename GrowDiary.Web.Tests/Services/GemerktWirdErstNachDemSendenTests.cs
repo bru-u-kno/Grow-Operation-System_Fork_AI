@@ -163,6 +163,7 @@ public sealed class GemerktWirdErstNachDemSendenTests : IDisposable
         return new TrendWatchRunner(
             _grows,
             new TargetValueService(wissen),
+            wissen,
             new NotificationService(
                 new NotificationSettingsRepository(_pfade), _grows,
                 new HomeAssistantService(

@@ -280,6 +280,7 @@ public sealed class EinePhaseJeGrowTests : IDisposable
         var laeufer = new TrendWatchRunner(
             _grows,
             new TargetValueService(Wissen()),
+            Wissen(),
             new NotificationService(
                 new NotificationSettingsRepository(_pfade),
                 _grows,

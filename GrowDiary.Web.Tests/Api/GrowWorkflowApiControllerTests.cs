@@ -33,6 +33,7 @@ public sealed class GrowWorkflowApiControllerTests : IDisposable
             new JournalRepository(_paths),
             new AuditRepository(_paths),
             CreateTargetValueService(),
+            WissenLaden(),
             new WasserwechselStandService(_repository, WissenLaden()));
     }
 

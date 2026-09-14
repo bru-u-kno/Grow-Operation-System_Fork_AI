@@ -1,5 +1,6 @@
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
+using GrowDiary.Web.Services.Knowledge;
 
 namespace GrowDiary.Web.Services;
 
@@ -16,6 +17,9 @@ public sealed class TrendWatchRunner
 
     private readonly GrowRepository _repository;
     private readonly TargetValueService _targets;
+    // Fork AI (forkai.107): fuer die Wochenspalte des Feedcharts — ohne die
+    // Wissensbasis kann Zielband.FuerGrow sie nicht auflegen.
+    private readonly KnowledgeBaseLoader _wissen;
     private readonly NotificationService _notifications;
     private readonly AppSettingsRepository _settings;
     private readonly ILogger<TrendWatchRunner> _logger;
@@ -23,12 +27,14 @@ public sealed class TrendWatchRunner
     public TrendWatchRunner(
         GrowRepository repository,
         TargetValueService targets,
+        KnowledgeBaseLoader wissen,
         NotificationService notifications,
         AppSettingsRepository settings,
         ILogger<TrendWatchRunner> logger)
     {
         _repository = repository;
         _targets = targets;
+        _wissen = wissen;
         _notifications = notifications;
         _settings = settings;
         _logger = logger;
@@ -61,14 +67,23 @@ public sealed class TrendWatchRunner
     }
 
     /// <summary>Die Sollwerte über die volle Profil-Kette.</summary>
+    /// <remarks>
+    /// Fork AI (forkai.107): ueber <see cref="Zielband.FuerGrow"/> statt direkt
+    /// ueber das Phasenprofil. Vorher urteilte der Waechter gegen das Band der
+    /// PHASE, waehrend Live-Kachel, Messprotokoll und Mischplan laengst die
+    /// Wochenspalte des Feedcharts lasen — bei EC 1,4 in Bluetewoche 4 gegen
+    /// ein Blueteband von 1,0-1,2 sind das Push-Nachrichten fuer einen Wert,
+    /// der genau im Plan liegt. Eigene Grenzwerte bleiben aussen vor (null),
+    /// wie bei der Alarmauswertung: der Waechter beurteilt den Plan.
+    /// </remarks>
     private HydroTargetValues? ZieleFuer(GrowRun grow, GrowStage stage)
-    {
-        var profil = SetpointProfileResolver.Resolve(
-            grow.SetpointProfileId,
+        => Zielband.FuerGrow(
+            _targets,
+            _wissen,
+            grow,
+            stage,
             grow.SystemId is { } systemId ? _repository.GetSystem(systemId)?.SetpointProfileId : null,
-            grow.HydroStyle);
-        return _targets.GetTargets(profil.ProfileId, stage);
-    }
+            null);
 
     public async Task RunAsync(DateTime now, CancellationToken cancellationToken = default)
     {

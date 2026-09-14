@@ -186,15 +186,16 @@ public sealed class Co2SteuerungService
     }
 
     /// <summary>
-    /// Das CO₂-Planziel: die Untergrenze des Bands der laufenden <b>Phase</b> —
-    /// null ohne Grow oder Band.
+    /// Das CO₂-Planziel: die Untergrenze des Bands der laufenden <b>Woche</b>
+    /// (ersatzweise der Phase) — null ohne Grow oder Band.
     /// </summary>
     /// <remarks>
-    /// Fork AI (forkai.20): Das ist bewusst ein Phasen- und kein Wochenwert. Das
-    /// Feedchart hat keine CO₂-Spalte je Woche; der Wert kommt aus dem
-    /// Sollwertprofil und wechselt mit der Phase. Die Seite muss ihn auch so
-    /// beschriften — <see cref="PlanHerkunft"/> liefert den Text dafür, damit
-    /// niemand eine wöchentliche Änderung erwartet, die es nicht gibt.
+    /// Fork AI (forkai.107): Seit die Wochenspalten des Feedcharts
+    /// <c>co2Min</c>/<c>co2Max</c> führen (forkai.46), liefert
+    /// <see cref="Zielband.FuerGrow"/> hier den WOCHENWERT und fällt nur auf den
+    /// Phasenwert zurück, wenn die Woche keinen nennt. Der Kommentar aus
+    /// forkai.20 behauptete das Gegenteil; <see cref="PlanHerkunft"/> beschriftet
+    /// jetzt, was wirklich gilt.
     /// </remarks>
     public int? PlanZielPpm()
     {
@@ -211,6 +212,16 @@ public sealed class Co2SteuerungService
     {
         var (grow, stage) = LaufenderGrow();
         if (grow is null || stage is null) return null;
+
+        // Fork AI (forkai.107): nennen, was wirklich gilt. Fuehrt der Grow die
+        // Wochenziele und nennt die Spalte ein CO₂-Band, kommt das Planziel von
+        // dort — der alte Text sagte pauschal „Phase" und war damit falsch.
+        if (MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms) is { } ziel
+            && ziel.Spalte.Co2Min is not null)
+        {
+            return $"{ziel.Herkunft} — wechselt mit der Woche";
+        }
+
         return $"Sollwertprofil der Phase {Phasenname.Fuer(stage.Value)} — gilt die ganze Phase, nicht je Woche";
     }
 
