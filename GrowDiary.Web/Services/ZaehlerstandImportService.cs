@@ -108,10 +108,30 @@ public sealed class ZaehlerstandImportService
                 + "(total oder total_increasing), sonst legt Home Assistant keine an.");
         }
 
-        // Ein Tag, fuer den schon ein Stand existiert, bleibt unangetastet.
-        var vorhanden = _kosten.GetZaehlerstaende()
-            .Select(s => s.ZeitpunktUtc.Date)
+        // forkai.97: Die Dublettenpruefung laeuft ueber das ORTSDATUM, nicht ueber
+        // das UTC-Datum. Home Assistant beginnt seine Tagesbuckets um lokale
+        // Mitternacht — in Europe/Berlin also 22:00 oder 23:00 UTC des Vortags.
+        // Wer in UTC vergleicht, liegt systematisch einen Tag daneben, laesst
+        // Ueberlappungen durch und mischt die Reihe.
+        //
+        // Und eine durchmischte Reihe ist hier nicht nur unschoen: KwhZwischen
+        // deutet einen Rueckwaertssprung als Zaehlerwechsel und addiert dann den
+        // VOLLEN Zaehlerstand. Ein einziger falsch einsortierter Stand hebt die
+        // Summe damit um mehrere tausend kWh.
+        var alle = _kosten.GetZaehlerstaende();
+        var vorhanden = alle
+            .Select(s => s.ZeitpunktUtc.ToLocalTime().Date)
             .ToHashSet();
+
+        // Nur VOR dem ersten vorhandenen Stand nachtragen. Innerhalb eines
+        // Zeitraums, den der Worker schon abdeckt, wird nichts eingefuegt — dort
+        // liegen die echten Messzeitpunkte, und ein Importwert daneben erzeugt
+        // genau den Rueckwaertssprung, den KwhZwischen falsch deutet.
+        var ersterVorhandener = alle
+            .Where(s => s.GrowId == grow.Id || s.GrowId is null)
+            .OrderBy(s => s.ZeitpunktUtc)
+            .Select(s => (DateTime?)s.ZeitpunktUtc)
+            .FirstOrDefault();
 
         var angelegt = 0;
         var uebersprungen = 0;
@@ -124,7 +144,13 @@ public sealed class ZaehlerstandImportService
             if (Zahl(eintrag, "state") is not { } kwh) continue;
             if (zeitpunkt.Date < von.Date || zeitpunkt.Date > bis.Date) continue;
 
-            if (!vorhanden.Add(zeitpunkt.Date))
+            if (ersterVorhandener is { } grenze && zeitpunkt >= grenze)
+            {
+                uebersprungen++;
+                continue;
+            }
+
+            if (!vorhanden.Add(zeitpunkt.ToLocalTime().Date))
             {
                 uebersprungen++;
                 continue;

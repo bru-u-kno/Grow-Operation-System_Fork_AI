@@ -501,6 +501,17 @@ public sealed class KostenRepository : RepositoryBase
         return reader.Read() ? MapZaehlerstand(reader) : null;
     }
 
+    /// <summary>forkai.97: Einen Zaehlerstand entfernen.</summary>
+    public void DeleteZaehlerstand(int id)
+    {
+        EnsureSchema();
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM ForkZaehlerstaende WHERE Id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
     public int CreateZaehlerstand(Zaehlerstand stand)
     {
         using var connection = Open();
