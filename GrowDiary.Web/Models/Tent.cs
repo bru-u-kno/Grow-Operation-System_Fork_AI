@@ -116,6 +116,23 @@ public sealed class Tent
 
     /// <summary>The documented RDWC leaf offset, per the workshop material and the Ben Green calculator.</summary>
     public const double DefaultLeafTempOffsetC = 2.0;
+
+    /// <summary>
+    /// Home-Assistant-Dienst, der den Blattversatz an die Hardware weiterreicht —
+    /// z. B. <c>pyscript.acinfinity_offset_setzen</c>. Leer heisst: nichts
+    /// weiterreichen, der Wert bleibt eine reine Rechengroesse in Grow OS.
+    /// </summary>
+    /// <remarks>
+    /// <para>Hintergrund: Beim AC-Infinity-AI+ liegt der Blattversatz NICHT in
+    /// Home Assistant, sondern als Kalibrierung pro Sensor in der Hersteller-Cloud.
+    /// Die Integration legt dafuer bei AI-Controllern keine Entitaet an. Wer den
+    /// Wert hier aendert, aendert sonst nur die Rechnung in Grow OS — die Sonde
+    /// meldet weiter ihren alten VPD, und beide Zahlen laufen auseinander.</para>
+    /// <para><b>Vorzeichen:</b> Grow OS fuehrt den Versatz positiv („Blatt 2 °C
+    /// kuehler"), die AC-Infinity-App negativ (−2). Beim Aufruf wird das
+    /// Vorzeichen gedreht.</para>
+    /// </remarks>
+    public string? LeafOffsetSyncService { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 

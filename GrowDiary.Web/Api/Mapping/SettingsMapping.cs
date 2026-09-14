@@ -45,6 +45,7 @@ public static class SettingsMapping
             s.Id, s.TentId, s.MetricType.ToString(), s.HaEntityId, s.DisplayLabel, s.IsActive
         )).ToList(),
         Cameras: TentCameraList.Parse(tent.CameraEntityIds, tent.CameraEntityId),
-        LeafTempOffsetC: tent.LeafTempOffsetC
+        LeafTempOffsetC: tent.LeafTempOffsetC,
+        LeafOffsetSyncService: tent.LeafOffsetSyncService
     );
 }

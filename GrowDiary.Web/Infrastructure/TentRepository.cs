@@ -89,14 +89,14 @@ public sealed class TentRepository : RepositoryBase
                 WidthCm, DepthCm, TentHeightCm, LightType, LightWatt,
                 LightController, LightControllerEntityId, ExhaustFanCount, ExhaustM3h,
                 CirculationFanCount, HvacController, HvacControllerEntityId,
-                Co2Available, HasCo2Enrichment, CameraEntityId, CameraEntityIds, WaterTargetEntityId, ChillerSwitchEntityId, ChillerControlEnabled, ChillerHysteresisC, ChillerMinRunMinutes, ChillerMinPauseMinutes, ChillerMaxReadingAgeMinutes, LeafTempOffsetC, CreatedAtUtc, UpdatedAtUtc
+                Co2Available, HasCo2Enrichment, CameraEntityId, CameraEntityIds, WaterTargetEntityId, ChillerSwitchEntityId, ChillerControlEnabled, ChillerHysteresisC, ChillerMinRunMinutes, ChillerMinPauseMinutes, ChillerMaxReadingAgeMinutes, LeafTempOffsetC, LeafOffsetSyncService, CreatedAtUtc, UpdatedAtUtc
             )
             VALUES (
                 $name, $kind, $tentType, $status, $notes, $displayOrder, $accentColor,
                 $widthCm, $depthCm, $tentHeightCm, $lightType, $lightWatt,
                 $lightController, $lightControllerEntityId, $exhaustFanCount, $exhaustM3h,
                 $circulationFanCount, $hvacController, $hvacControllerEntityId,
-                $co2Available, $hasCo2Enrichment, $cameraEntityId, $cameraEntityIds, $waterTargetEntityId, $chillerSwitchEntityId, $chillerControlEnabled, $chillerHysteresisC, $chillerMinRunMinutes, $chillerMinPauseMinutes, $chillerMaxReadingAgeMinutes, $leafTempOffsetC, datetime('now'), datetime('now')
+                $co2Available, $hasCo2Enrichment, $cameraEntityId, $cameraEntityIds, $waterTargetEntityId, $chillerSwitchEntityId, $chillerControlEnabled, $chillerHysteresisC, $chillerMinRunMinutes, $chillerMinPauseMinutes, $chillerMaxReadingAgeMinutes, $leafTempOffsetC, $leafOffsetSyncService, datetime('now'), datetime('now')
             );
             SELECT last_insert_rowid();
         """;
@@ -150,6 +150,7 @@ public sealed class TentRepository : RepositoryBase
                 ChillerMinPauseMinutes = $chillerMinPauseMinutes,
                 ChillerMaxReadingAgeMinutes = $chillerMaxReadingAgeMinutes,
                 LeafTempOffsetC = $leafTempOffsetC,
+                LeafOffsetSyncService = $leafOffsetSyncService,
                 UpdatedAtUtc = datetime('now')
             WHERE Id = $id;
         """;
@@ -512,6 +513,7 @@ public sealed class TentRepository : RepositoryBase
             ChillerMinPauseMinutes = HasColumn(reader, "ChillerMinPauseMinutes") ? Convert.ToInt32(reader["ChillerMinPauseMinutes"]) : KuehlerService.StandardMindestpauseMinuten,
             ChillerMaxReadingAgeMinutes = HasColumn(reader, "ChillerMaxReadingAgeMinutes") ? Convert.ToInt32(reader["ChillerMaxReadingAgeMinutes"]) : KuehlerService.StandardHoechstalterMinuten,
             LeafTempOffsetC = HasColumn(reader, "LeafTempOffsetC") ? Convert.ToDouble(reader["LeafTempOffsetC"] is DBNull ? 0d : reader["LeafTempOffsetC"]) : 0d,
+            LeafOffsetSyncService = HasColumn(reader, "LeafOffsetSyncService") ? NullString(reader["LeafOffsetSyncService"]) : null,
             ActiveGrowCount = reader["ActiveGrowCount"] is DBNull ? 0 : Convert.ToInt32(reader["ActiveGrowCount"], CultureInfo.InvariantCulture),
             ArchivedGrowCount = reader["ArchivedGrowCount"] is DBNull ? 0 : Convert.ToInt32(reader["ArchivedGrowCount"], CultureInfo.InvariantCulture),
             ActiveSetupCount = reader["ActiveSetupCount"] is DBNull ? 0 : Convert.ToInt32(reader["ActiveSetupCount"], CultureInfo.InvariantCulture),
@@ -580,6 +582,7 @@ public sealed class TentRepository : RepositoryBase
         command.Parameters.AddWithValue("$chillerMinPauseMinutes", tent.ChillerMinPauseMinutes);
         command.Parameters.AddWithValue("$chillerMaxReadingAgeMinutes", tent.ChillerMaxReadingAgeMinutes);
         command.Parameters.AddWithValue("$leafTempOffsetC", tent.LeafTempOffsetC);
+        command.Parameters.AddWithValue("$leafOffsetSyncService", (object?)tent.LeafOffsetSyncService ?? DBNull.Value);
     }
 
     private static void AddTentSensorParameters(SqliteCommand command, TentSensor sensor)

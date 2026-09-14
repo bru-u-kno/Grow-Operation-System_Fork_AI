@@ -25,7 +25,13 @@ public sealed class SettingsApiControllerTests : IDisposable
             _repository,
             new GrowDiary.Web.Services.TentSensorHardwareSyncService(
                 new HardwareRepository(_paths),
-                NullLogger<GrowDiary.Web.Services.TentSensorHardwareSyncService>.Instance));
+                NullLogger<GrowDiary.Web.Services.TentSensorHardwareSyncService>.Instance),
+            // Ohne hinterlegten Dienst am Zelt ruft der Controller Home Assistant
+            // gar nicht erst — der Client bleibt im Test unbenutzt.
+            new GrowDiary.Web.Services.HomeAssistantService(
+                new GrowDiary.Web.Tests.TestFakes.StubHttpClientFactory(new HttpClientHandler()),
+                NullLogger<GrowDiary.Web.Services.HomeAssistantService>.Instance),
+            NullLogger<SettingsApiController>.Instance);
     }
 
     public void Dispose()
@@ -198,7 +204,7 @@ public sealed class SettingsApiControllerTests : IDisposable
                     IsActive = true
                 }
             ]
-        });
+        }, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var dto = Assert.IsType<TentDto>(created.Value);
@@ -253,11 +259,11 @@ public sealed class SettingsApiControllerTests : IDisposable
     }
 
     [Fact]
-    public void UpdateTent_WithDetailedRequest_PersistsAllTentDetails()
+    public async Task UpdateTent_WithDetailedRequest_PersistsAllTentDetails()
     {
         var created = _repository.CreateTent("Update Zelt");
 
-        var result = _controller.SaveTent(created.Id, new UpdateTentRequest
+        var result = await _controller.SaveTent(created.Id, new UpdateTentRequest
         {
             Name = "Update Blüte",
             Kind = "Grow Tent",
@@ -290,7 +296,7 @@ public sealed class SettingsApiControllerTests : IDisposable
                     IsActive = true
                 }
             ]
-        });
+        }, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TentDto>(ok.Value);
@@ -329,7 +335,7 @@ public sealed class SettingsApiControllerTests : IDisposable
                     IsActive = true
                 }
             ]
-        });
+        }, CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
         var error = Assert.IsType<ApiError>(badRequest.Value);

@@ -14,11 +14,19 @@ public sealed class SettingsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
     private readonly TentSensorHardwareSyncService _sensorHardwareSync;
+    private readonly HomeAssistantService _homeAssistant;
+    private readonly ILogger<SettingsApiController> _logger;
 
-    public SettingsApiController(GrowRepository repository, TentSensorHardwareSyncService sensorHardwareSync)
+    public SettingsApiController(
+        GrowRepository repository,
+        TentSensorHardwareSyncService sensorHardwareSync,
+        HomeAssistantService homeAssistant,
+        ILogger<SettingsApiController> logger)
     {
         _repository = repository;
         _sensorHardwareSync = sensorHardwareSync;
+        _homeAssistant = homeAssistant;
+        _logger = logger;
     }
 
     [HttpGet("")]
@@ -108,7 +116,7 @@ public sealed class SettingsApiController : ApiControllerBase
     [ProducesResponseType(typeof(TentDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
-    public ActionResult<TentDto> SaveTent(int id, [FromBody] UpdateTentRequest request)
+    public async Task<ActionResult<TentDto>> SaveTent(int id, [FromBody] UpdateTentRequest request, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
@@ -157,6 +165,12 @@ public sealed class SettingsApiController : ApiControllerBase
             ? Math.Clamp(offset, 0, 10)
             : existing.LeafTempOffsetC;
 
+        // Derselbe Teilaktualisierungs-Schutz wie oben: ein Sensor-Mapping-Formular
+        // traegt den Dienst nicht mit und darf ihn deshalb nicht loeschen.
+        tentToSave.LeafOffsetSyncService = request.LeafOffsetSyncService is { } dienst
+            ? (string.IsNullOrWhiteSpace(dienst) ? null : dienst.Trim())
+            : existing.LeafOffsetSyncService;
+
         // Das Zielgeraet der Nachtabsenkung setzt allein der Night-Ramp-Endpunkt.
         // Kein Zelt-Formular traegt es — ohne diese Zeile nahm jedes Speichern
         // (auch ein blosses Sensor-Mapping) der Rampe still ihr Ziel.
@@ -186,9 +200,80 @@ public sealed class SettingsApiController : ApiControllerBase
             _sensorHardwareSync.SyncForTent(saved);
         }
 
+        await BlattversatzWeitergebenAsync(existing, saved, cancellationToken);
+
         return Ok(saved.ToDto());
     }
 
+
+    /// <summary>
+    /// Reicht einen geaenderten Blattversatz an die Hardware weiter.
+    /// </summary>
+    /// <remarks>
+    /// <para>Nur wenn am Zelt ein Dienst hinterlegt ist UND sich der Wert
+    /// tatsaechlich geaendert hat. Ohne die Aenderungspruefung schriebe jedes
+    /// Speichern des Zelt-Formulars in die Hersteller-Cloud.</para>
+    /// <para><b>Vorzeichen:</b> Grow OS fuehrt den Versatz positiv, die
+    /// AC-Infinity-App negativ. Deshalb das Minus.</para>
+    /// <para><b>Ganze Grad:</b> Die App nimmt nur ganze Zahlen an. Ein
+    /// gerundeter Wert ist besser als einer, den der Betreiber dort nicht mehr
+    /// sehen und korrigieren kann.</para>
+    /// <para>Ein Fehlschlag kippt das Speichern NICHT — der Wert in Grow OS
+    /// steht dann, die Hardware nicht. Das steht im Log.</para>
+    /// </remarks>
+    private async Task BlattversatzWeitergebenAsync(Tent vorher, Tent nachher, CancellationToken cancellationToken)
+    {
+        var dienst = nachher.LeafOffsetSyncService;
+        if (string.IsNullOrWhiteSpace(dienst))
+        {
+            return;
+        }
+
+        if (Math.Abs(vorher.LeafTempOffsetC - nachher.LeafTempOffsetC) < 0.001)
+        {
+            return;
+        }
+
+        var teile = dienst.Split('.', 2);
+        if (teile.Length != 2 || string.IsNullOrWhiteSpace(teile[0]) || string.IsNullOrWhiteSpace(teile[1]))
+        {
+            _logger.LogWarning(
+                "Zelt {TentId}: \"{Dienst}\" ist keine Dienstkennung der Form domain.service — Blattversatz nicht weitergegeben.",
+                nachher.Id, dienst);
+            return;
+        }
+
+        var ganzeGrad = Math.Round(nachher.LeafTempOffsetC, MidpointRounding.AwayFromZero);
+        if (Math.Abs(ganzeGrad - nachher.LeafTempOffsetC) > 0.001)
+        {
+            _logger.LogInformation(
+                "Zelt {TentId}: Blattversatz {Wert} °C auf {Gerundet} °C gerundet — die AC-Infinity-App nimmt nur ganze Grad.",
+                nachher.Id, nachher.LeafTempOffsetC, ganzeGrad);
+        }
+
+        var einstellungen = _repository.GetEffectiveHomeAssistantSettings();
+        var daten = new Dictionary<string, object>
+        {
+            ["blatt_offset_c"] = -ganzeGrad,
+            ["dry_run"] = false
+        };
+
+        var erfolg = await _homeAssistant.CallServiceAsync(
+            einstellungen, teile[0], teile[1], daten, cancellationToken);
+
+        if (erfolg)
+        {
+            _logger.LogInformation(
+                "Zelt {TentId}: Blattversatz {Alt} → {Neu} °C an {Dienst} weitergegeben (gesendet: {Gesendet}).",
+                nachher.Id, vorher.LeafTempOffsetC, ganzeGrad, dienst, -ganzeGrad);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Zelt {TentId}: {Dienst} schlug fehl — Grow OS steht jetzt auf {Neu} °C, die Hardware nicht.",
+                nachher.Id, dienst, ganzeGrad);
+        }
+    }
 
     [HttpPost("tents/{id:int}/archive")]
     [ProducesResponseType(typeof(TentDto), StatusCodes.Status200OK)]

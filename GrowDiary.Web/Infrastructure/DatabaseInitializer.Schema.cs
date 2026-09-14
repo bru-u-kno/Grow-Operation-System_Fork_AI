@@ -165,6 +165,7 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "Tents", "ChillerMinPauseMinutes", "INTEGER NOT NULL DEFAULT 5");
         EnsureColumn(connection, "Tents", "ChillerMaxReadingAgeMinutes", "INTEGER NOT NULL DEFAULT 10");
         EnsureColumn(connection, "Tents", "LeafTempOffsetC", "REAL NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "Tents", "LeafOffsetSyncService", "TEXT NULL");
         EnsureColumn(connection, "GrowSystems", "TentId", "INTEGER NULL");
         EnsureColumn(connection, "GrowSystems", "Status", "TEXT NOT NULL DEFAULT 'Active'");
         EnsureColumn(connection, "GrowSystems", "LayoutType", "TEXT NOT NULL DEFAULT 'SingleBucket'");
