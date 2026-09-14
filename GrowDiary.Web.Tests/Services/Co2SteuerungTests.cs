@@ -110,8 +110,42 @@ public sealed class Co2SteuerungTests
         Assert.Equal(96, f.FuellstandProzent!.Value, 0);
         Assert.Equal("gemessen", f.FuellstandQuelle);
         Assert.Equal(0.4, f.VerbrauchtMenge, 3);
+
+        // forkai.101: Der Fuellstand steht, die Prognose bewusst nicht.
+        // forkai.84 rechnet erst ab einem Zwanzigstel der Fuellung UND zwei
+        // Wochen Laufzeit eine Laufzeit hoch. Hier sind es 4 % in 3,7 Tagen -
+        // eine Hochrechnung um Faktor 25, und genau die soll unterbleiben.
+        // Bis .84 erwartete dieser Test hier eine Zahl; die Erwartung ist mit
+        // der Schwelle entfallen, der Test war seitdem rot.
+        Assert.Null(f.PrognoseTage);
+    }
+
+    [Fact]
+    public void UeberDerSchwelleRechnetDieLaufzeitWiederHoch()
+    {
+        // Dieselbe Flasche, aber mit tragfaehiger Grundlage: 1,5 kg von 10 kg
+        // (15 %) ueber 30 Tage. Beide Bedingungen aus forkai.84 erfuellt.
+        // Der Fall gehoert dazu, sonst deckt nichts mehr ab, DASS eine Prognose
+        // ueberhaupt noch entsteht - die Schwelle wuerde still alles abwuergen.
+        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂-Flasche 10 kg", Einheit = "kg" };
+        var fuellung = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 36.75, GrowId = 1, ZeitpunktUtc = new DateTime(2026, 8, 1, 12, 0, 0, DateTimeKind.Utc) };
+        var jetzt = new DateTime(2026, 8, 31, 12, 0, 0, DateTimeKind.Utc);
+        var grow = new GrowRun { Id = 1, Name = "2026-01", Status = GrowStatus.Running, StartDate = new DateTime(2026, 6, 26), FlipDate = new DateTime(2026, 8, 23), PlantCount = 6, BreederFlowerWeeksMin = 9, BreederFlowerWeeksMax = 9 };
+
+        var buchungen = Enumerable.Range(0, 30).Select(i => new Verbrauch
+        {
+            Id = i + 1, ArtikelId = 1, GrowId = 1, Menge = 0.05, Quelle = "co2-steuerung",
+            ZeitpunktUtc = new DateTime(2026, 8, 1, 18, 0, 0, DateTimeKind.Utc).AddDays(i),
+        }).ToList();
+
+        var seite = KostenSeiteService.Berechnen(grow, [grow], new StromQuelle(), 32, null, [], [co2], [fuellung], [], jetzt, null, buchungen);
+        var f = Assert.Single(seite.Artikel).Aktuell!;
+
+        Assert.Equal("gemessen", f.FuellstandQuelle);
+        Assert.Equal(1.5, f.VerbrauchtMenge, 3);
+        Assert.Equal(85, f.FuellstandProzent!.Value, 0);
         Assert.NotNull(f.PrognoseTage);
-        Assert.InRange(f.PrognoseTage!.Value, 80, 100); // 0,4 kg in ~3,7 Tagen → ~92 Tage für 10 kg
+        Assert.InRange(f.PrognoseTage!.Value, 190, 210); // 1,5 kg in 30 Tagen → 0,05 kg/Tag → 200 Tage für 10 kg
         Assert.NotNull(f.EurProTag);
     }
 
