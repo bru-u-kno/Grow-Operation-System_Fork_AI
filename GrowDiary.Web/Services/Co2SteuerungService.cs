@@ -54,6 +54,13 @@ public sealed class Co2SteuerungService
         public const string T6Dosierung = "input_number.co2_t6_stufe_dosierung";
         public const string T6Tief = "input_number.co2_t6_stufe_tief";
         public const string T6TiefMaxTemp = "input_number.co2_t6_tief_max_temp";
+
+        /// <summary>
+        /// Fork AI: Der Template-Helfer in HA, der Temperatur und Feuchte samt Halteband
+        /// zur Entscheidung „Stufe tief sinnvoll" zusammenfasst. Die Abluft-Automation
+        /// triggert darauf; der Fork liest ihn nur, um den Grund anzuzeigen.
+        /// </summary>
+        public const string StufeTiefSinnvoll = "binary_sensor.co2_t6_stufe_tief_sinnvoll";
         public const string AbluftDrosseln = "input_boolean.co2_abluft_drosseln";
         public const string StartNachLichtAn = "input_number.co2_start_nach_licht_an";
         public const string EndeVorLichtAus = "input_number.co2_ende_vor_licht_aus";
@@ -349,6 +356,9 @@ public sealed class Co2SteuerungService
             AutomatikAn: An(Entitaeten.Automatik),
             LichtAn: AnRolle("licht"),
             T6Stufe: ZahlRolle("abluft_stufe") is { } t6 ? (int)t6 : null,
+            TiefAktiv: An(Entitaeten.StufeTiefSinnvoll),
+            TiefBisTempC: e.T6TiefMaxTempC - 0.5,
+            TiefBisRhProzent: e.RhObergrenzeProzent - e.KlimaHystereseProzent - 1,
             CanopyC: ZahlRolle("canopy"),
             RhProzent: ZahlRolle("rh"),
             Vpd: ZahlRolle("vpd"),
@@ -545,6 +555,9 @@ public sealed record Co2Live(
     bool? AutomatikAn,
     bool? LichtAn,
     int? T6Stufe,
+    bool? TiefAktiv,
+    double? TiefBisTempC,
+    double? TiefBisRhProzent,
     double? CanopyC,
     double? RhProzent,
     double? Vpd,
