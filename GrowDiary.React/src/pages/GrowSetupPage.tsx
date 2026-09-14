@@ -49,6 +49,10 @@ function GrowSetupPage() {
   // Wie viele Pflanzen einzeln erfasst sind. Sind es welche, sind SIE die
   // Wahrheit ueber die Anzahl — der Server zieht plantCount danach.
   const [erfasstePflanzen, setErfasstePflanzen] = useState(0)
+  /* forkai.105: Die Pflanzen selbst, nicht nur ihre Zahl. „Leer" im Topf muss
+     wissen, WELCHE Pflanze es entfernt — sonst kann es nur zuweisen, so wie
+     bisher. */
+  const [pflanzenListe, setPflanzenListe] = useState<PlantInstanceDto[]>([])
 
   /* Die Pflanzen werden MIT dem Grow geladen, nicht daneben.
 
@@ -95,6 +99,7 @@ function GrowSetupPage() {
           if (grow.nutrients && !kartenTreffer) setCustomProgram(grow.nutrients)
         }
         setErfasstePflanzen(pflanzen.length)
+        setPflanzenListe(pflanzen)
         if (grow) setForm({ ...emptyForm(), name: grow.name, tentId: grow.tentId, systemId: grow.systemId, setupId: grow.setupId, strain: grow.strain, breeder: grow.breeder, seedType: grow.seedType, startMaterial: grow.startMaterial, hydroStyle: grow.hydroStyle, plantCount: grow.plantCount, reservoirSize: grow.reservoirSize, containerSize: grow.containerSize, light: grow.light, hasChiller: grow.hasChiller, waterSource: grow.waterSource, nutrients: grow.nutrients, startDate: nurDatum(grow.startDate) ?? emptyForm().startDate, entryPoint: grow.entryPoint, daysAlreadyInPhase: grow.daysAlreadyInPhase, autoflowerDaysSinceGermination: grow.autoflowerDaysSinceGermination, flipDate: nurDatum(grow.flipDate), notes: grow.notes, status: grow.status, environment: grow.environment, germinationMethod: grow.germinationMethod, propagationMedium: grow.propagationMedium, cloneSource: grow.cloneSource, cloneIsRooted: grow.cloneIsRooted, phenoNumber: grow.phenoNumber, breederFlowerWeeksMin: grow.breederFlowerWeeksMin, breederFlowerWeeksMax: grow.breederFlowerWeeksMax, plannedVegDays: grow.plannedVegDays, strainId: grow.strainId, setpointProfileId: grow.setpointProfileId ?? null,
           /* Die Belegung kommt aus den PFLANZEN — im selben setForm wie alles
              andere, damit sie niemand ueberschreibt. */
@@ -252,7 +257,18 @@ function GrowSetupPage() {
           <RunStep form={form} patch={patch} strains={strains} erfasstePflanzen={erfasstePflanzen} belegteToepfe={belegteToepfe} pflanzenzahl={pflanzenzahl} />
           <TentStep tents={tents} selectedId={form.tentId} onSelect={selectTent} />
           <HydroStep setups={availableHydro} exactCount={exactHydro.length} selectedId={form.systemId ?? null} onSelect={selectHydro} tent={selectedTent} />
-          <ToepfeStep form={form} patch={patch} strains={strains} hydro={selectedHydro} />
+          <ToepfeStep
+            form={form}
+            patch={patch}
+            strains={strains}
+            hydro={selectedHydro}
+            pflanzen={pflanzenListe}
+            onPflanzeEntfernt={(id) => {
+              setPflanzenListe((v) => v.filter((pf) => pf.id !== id))
+              setErfasstePflanzen((v) => Math.max(0, v - 1))
+            }}
+            onFehler={setError}
+          />
           <TimeStep form={form} patch={patch} />
           <ProgramStep programs={programs} selected={form.nutrients ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} />
         </div>
@@ -299,11 +315,14 @@ function GrowSetupPage() {
  * Vor dessen Auswahl gibt es nichts zu belegen — deshalb steht der Abschnitt
  * darunter und nicht im Kopf des Formulars.
  */
-function ToepfeStep({ form, patch, strains, hydro }: {
+function ToepfeStep({ form, patch, strains, hydro, pflanzen, onPflanzeEntfernt, onFehler }: {
   form: GrowUpsertPayload
   patch: (value: Partial<GrowUpsertPayload>) => void
   strains: StrainDto[]
   hydro: HydroSetupDto | null
+  pflanzen: PlantInstanceDto[]
+  onPflanzeEntfernt: (id: number) => void
+  onFehler: (text: string) => void
 }) {
   const sorten = [...strains].sort((a, b) => a.name.localeCompare(b.name, 'de'))
   const topfzahl = hydro?.potCount ?? 0
@@ -319,18 +338,58 @@ function ToepfeStep({ form, patch, strains, hydro }: {
     return belegung.find((eintrag) => eintrag.topf === topf)?.strainId ?? null
   }
 
-  /** Setzt einen Topf; „leer" nimmt ihn aus der Liste. */
-  function setzeTopf(topf: number, wert: string) {
-    const ohne = belegung.filter((eintrag) => eintrag.topf !== topf)
-    const neu = wert === ''
-      ? ohne
-      : [...ohne, { topf, strainId: Number(wert) }]
-    patch({ toepfe: neu.sort((a, b) => a.topf - b.topf) })
+  /** Die wirklich erfasste Pflanze in einem Topf — null, wenn er nur geplant ist. */
+  function pflanzeIn(topf: number): PlantInstanceDto | null {
+    return pflanzen.find((pf) => pf.siteIndex === topf) ?? null
   }
 
-  /** Alle Töpfe auf dieselbe Sorte — der häufigste Fall in einem Griff. */
+  /**
+   * Setzt einen Topf.
+   *
+   * <b>„Leer" wirkt sofort, nicht beim Speichern.</b> Das Formular speichert
+   * alles auf einmal; würde „leer" erst dort greifen, genügte ein Fehlgriff im
+   * Auswahlfeld plus Speichern, und eine Pflanze samt Pheno-Bewertung wäre weg
+   * — ohne Rückfrage, womöglich mitten in der Blüte. Genau dieser Datenverlust
+   * war der Grund, das Entfernen überhaupt auszulagern. Die Rückfrage hier
+   * holt ihn zurück an die Stelle, an der der Nutzer sie erwartet.
+   *
+   * Ein Topf, der nur geplant und noch nicht erfasst ist, verschwindet ohne
+   * Rückfrage aus der Liste — dort gibt es nichts zu verlieren.
+   */
+  async function setzeTopf(topf: number, wert: string) {
+    const ohne = belegung.filter((eintrag) => eintrag.topf !== topf)
+
+    if (wert !== '') {
+      patch({ toepfe: [...ohne, { topf, strainId: Number(wert) }].sort((a, b) => a.topf - b.topf) })
+      return
+    }
+
+    const vorhanden = pflanzeIn(topf)
+    if (vorhanden) {
+      const jaWirklich = window.confirm(
+        `Topf ${topf} leeren? „${vorhanden.label}" wird entfernt, eine Pheno-Bewertung dieser Pflanze geht mit.`)
+      if (!jaWirklich) return
+      try {
+        await apiFetch(`/api/plants/${vorhanden.id}`, { method: 'DELETE' })
+        onPflanzeEntfernt(vorhanden.id)
+      } catch (caught) {
+        onFehler(formatApiError(caught, `Topf ${topf} konnte nicht geleert werden.`))
+        return
+      }
+    }
+
+    patch({ toepfe: ohne.sort((a, b) => a.topf - b.topf) })
+  }
+
+  /**
+   * Alle Töpfe auf dieselbe Sorte — der häufigste Fall in einem Griff.
+   *
+   * forkai.105: „leer" fehlt hier bewusst. Sechs Pflanzen auf einen Schlag zu
+   * entfernen ist keine Bequemlichkeit mehr, sondern ein Unfall mit einem
+   * Klick. Wer leeren will, tut es Topf für Topf, jeder mit eigener Rückfrage.
+   */
   function alleAuf(wert: string) {
-    if (wert === '') { patch({ toepfe: [] }); return }
+    if (wert === '') return
     const strainId = Number(wert)
     patch({ toepfe: Array.from({ length: topfzahl }, (_, i) => ({ topf: i + 1, strainId })) })
   }
@@ -373,7 +432,7 @@ function ToepfeStep({ form, patch, strains, hydro }: {
               <span className="gw-topf-nr">Topf {topf}</span>
               <select
                 value={sorteFuer(topf) ?? ''}
-                onChange={(event) => setzeTopf(topf, event.target.value)}
+                onChange={(event) => void setzeTopf(topf, event.target.value)}
                 aria-label={`Sorte in Topf ${topf}`}
               >
                 <option value="">— leer —</option>

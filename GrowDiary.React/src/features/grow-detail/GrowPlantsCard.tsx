@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../../api'
-import type { HydroSetupDto, PlantInstanceDto, StrainDto } from '../../types'
+import type { HydroSetupDto, PlantInstanceDto } from '../../types'
 import { pflanzenRolleName } from '../../deutsche-woerter'
-import { istAutomatischerName, naechsterFreierTopf, pflanzenName } from './pflanzen-namen'
-import { V1Button, V1Card, V1Section } from '../../components/v1'
+import { istAutomatischerName, pflanzenName } from './pflanzen-namen'
+import { V1Card, V1LinkButton, V1Section } from '../../components/v1'
 
 /**
  * Die Pflanzen dieses Grows — jede mit ihrer eigenen Sorte.
@@ -44,23 +44,16 @@ export function GrowPlantsCard({ growId, growPlantCount, systemId, onSorten, onA
   onAnzahl?: (anzahl: number) => void
 }) {
   const [plants, setPlants] = useState<PlantInstanceDto[]>([])
-  const [strains, setStrains] = useState<StrainDto[]>([])
   // Zusammen abgelegt, nicht getrennt: sonst zeigt die Karte nach einem
   // Systemwechsel kurz die Topfzahl des VORIGEN Systems.
   const [systemToepfe, setSystemToepfe] = useState<{ systemId: number, potCount: number | null } | null>(null)
-  const [neuStrainId, setNeuStrainId] = useState('')
-  const [busy, setBusy] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [geladen, setGeladen] = useState(false)
 
   async function laden(signal?: AbortSignal) {
-    const [pflanzen, sorten] = await Promise.all([
-      apiFetch<PlantInstanceDto[]>(`/api/plants?growId=${growId}`, { signal }),
-      apiFetch<StrainDto[]>('/api/strains', { signal }),
-    ])
+    const pflanzen = await apiFetch<PlantInstanceDto[]>(`/api/plants?growId=${growId}`, { signal })
     if (signal?.aborted) return
     setPlants(pflanzen)
-    setStrains(sorten.sort((a, b) => a.name.localeCompare(b.name, 'de')))
     onSorten?.([...new Set(pflanzen.map((p) => p.strainName).filter((n): n is string => !!n))])
     onAnzahl?.(pflanzen.length)
   }
@@ -165,10 +158,6 @@ export function GrowPlantsCard({ growId, growPlantCount, systemId, onSorten, onA
     }
   }
 
-  function sorteAendern(plant: PlantInstanceDto, strainId: string) {
-    return feldAendern(plant, { strainId: strainId === '' ? null : Number(strainId) }, 'Sorte')
-  }
-
   /**
    * Der Topf ab 1 — leer heisst „kein Topf zugeordnet".
    *
@@ -187,55 +176,6 @@ export function GrowPlantsCard({ growId, growPlantCount, systemId, onSorten, onA
     const aenderung: Partial<PlantInstanceDto> = { siteIndex: zahl }
     if (istAutomatischerName(plant.label)) aenderung.label = pflanzenName(zahl)
     return feldAendern(plant, aenderung, 'Topf')
-  }
-
-  /**
-   * Eine Pflanze entfernen.
-   *
-   * Bis zum 25.08.2026 ging das nirgends — nicht hier und nicht über die API.
-   * Wer eine zu viel anlegte, behielt sie; bei acht Pflanzen in einem
-   * Vier-Topf-System gab es keinen Weg zurück.
-   */
-  async function entfernen(plant: PlantInstanceDto) {
-    // Rückfrage, wie beim Verwerfen einer Pflanze aus der Quarantäne: das
-    // Entfernen nimmt auch den Pheno-Bogen mit (ON DELETE CASCADE), und der
-    // Knopf sitzt am Ende jeder Zeile.
-    const jaWirklich = window.confirm(
-      `„${plant.label}" wirklich entfernen? Eine Pheno-Bewertung dieser Pflanze geht mit.`)
-    if (!jaWirklich) return
-
-    setFehler(null)
-    try {
-      await apiFetch(`/api/plants/${plant.id}`, { method: 'DELETE' })
-      await laden()
-    } catch (caught) {
-      setFehler(caught instanceof Error ? caught.message : 'Pflanze konnte nicht entfernt werden.')
-    }
-  }
-
-  async function hinzufuegen() {
-    setBusy(true)
-    setFehler(null)
-    try {
-      const freierTopf = naechsterFreierTopf(plants)
-
-      await apiFetch('/api/plants', {
-        method: 'POST',
-        body: JSON.stringify({
-          growId,
-          strainId: neuStrainId === '' ? null : Number(neuStrainId),
-          label: pflanzenName(freierTopf),
-          plantRole: 'Production',
-          plantStatus: 'Active',
-          siteIndex: freierTopf,
-        }),
-      })
-      await laden()
-    } catch (caught) {
-      setFehler(caught instanceof Error ? caught.message : 'Pflanze konnte nicht angelegt werden.')
-    } finally {
-      setBusy(false)
-    }
   }
 
   if (!geladen) return null
@@ -322,24 +262,11 @@ export function GrowPlantsCard({ growId, growPlantCount, systemId, onSorten, onA
                         gibt es zwei je Zeile — und ein Zugriff ueber die
                         Position trifft das falsche. Genau daran ist eine
                         bestehende Pruefung gescheitert. */}
-                    <select
-                      className="gp-sorte"
-                      value={plant.strainId ?? ''}
-                      onChange={(event) => void sorteAendern(plant, event.target.value)}
-                      aria-label={`Sorte von ${plant.label}`}
-                    >
-                      <option value="">Ohne Sorte</option>
-                      {strains.map((strain) => <option key={strain.id} value={strain.id}>{strain.name}</option>)}
-                    </select>
-                    <button
-                      type="button"
-                      className="gp-weg"
-                      onClick={() => void entfernen(plant)}
-                      aria-label={`${plant.label} entfernen`}
-                      title={`${plant.label} entfernen`}
-                    >
-                      Entfernen
-                    </button>
+                    {/* forkai.105: Nur noch Anzeige. Belegen und Leeren liegen
+                        seit dieser Fassung an einer Stelle — im Formular unter
+                        „Töpfe & Sorten". Zwei Karten mit fast gleichem Namen,
+                        von denen nur eine entfernen konnte, waren die Falle. */}
+                    <span className="gp-sorte-text">{plant.strainName ?? 'Ohne Sorte'}</span>
                   </li>
                 ))}
               </ul>
@@ -347,13 +274,7 @@ export function GrowPlantsCard({ growId, growPlantCount, systemId, onSorten, onA
           )}
 
           <div className="gp-neu">
-            <select value={neuStrainId} onChange={(event) => setNeuStrainId(event.target.value)} aria-label="Sorte der neuen Pflanze">
-              <option value="">Sorte wählen …</option>
-              {strains.map((strain) => <option key={strain.id} value={strain.id}>{strain.name}</option>)}
-            </select>
-            <V1Button onClick={() => void hinzufuegen()} disabled={busy || freiePlaetze === 0}>
-              {busy ? 'Lege an…' : 'Pflanze hinzufügen'}
-            </V1Button>
+            <V1LinkButton to={`/grows/${growId}/bearbeiten`}>Töpfe & Sorten bearbeiten</V1LinkButton>
           </div>
           {/* Ein gesperrter Knopf ohne Grund ist ein kaputter Knopf. */}
           {freiePlaetze === 0 && (
