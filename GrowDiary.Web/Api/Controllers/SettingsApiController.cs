@@ -14,11 +14,19 @@ public sealed class SettingsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
     private readonly TentSensorHardwareSyncService _sensorHardwareSync;
+    private readonly HomeAssistantService _homeAssistant;
+    private readonly ILogger<SettingsApiController> _logger;
 
-    public SettingsApiController(GrowRepository repository, TentSensorHardwareSyncService sensorHardwareSync)
+    public SettingsApiController(
+        GrowRepository repository,
+        TentSensorHardwareSyncService sensorHardwareSync,
+        HomeAssistantService homeAssistant,
+        ILogger<SettingsApiController> logger)
     {
         _repository = repository;
         _sensorHardwareSync = sensorHardwareSync;
+        _homeAssistant = homeAssistant;
+        _logger = logger;
     }
 
     [HttpGet("")]
@@ -108,7 +116,7 @@ public sealed class SettingsApiController : ApiControllerBase
     [ProducesResponseType(typeof(TentDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
-    public ActionResult<TentDto> SaveTent(int id, [FromBody] UpdateTentRequest request)
+    public async Task<ActionResult<TentDto>> SaveTent(int id, [FromBody] UpdateTentRequest request, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
         {
@@ -157,6 +165,16 @@ public sealed class SettingsApiController : ApiControllerBase
             ? Math.Clamp(offset, 0, 10)
             : existing.LeafTempOffsetC;
 
+        // Ziel des Durchschreibens: wie beim Offset selbst nur ersetzen, wenn der Request
+        // es mitbringt — sonst nimmt ein Teil-Update (Sensor-Mapping) dem Zelt still den
+        // Draht zum Controller. Leerstring ist dabei eine Ansage und schaltet ab.
+        tentToSave.LeafOffsetSyncService = request.LeafOffsetSyncService is null
+            ? existing.LeafOffsetSyncService
+            : (string.IsNullOrWhiteSpace(request.LeafOffsetSyncService) ? null : request.LeafOffsetSyncService.Trim());
+        tentToSave.LeafOffsetSyncPort = request.LeafOffsetSyncPort is { } syncPort
+            ? syncPort
+            : existing.LeafOffsetSyncPort;
+
         // Das Zielgeraet der Nachtabsenkung setzt allein der Night-Ramp-Endpunkt.
         // Kein Zelt-Formular traegt es — ohne diese Zeile nahm jedes Speichern
         // (auch ein blosses Sensor-Mapping) der Rampe still ihr Ziel.
@@ -186,7 +204,71 @@ public sealed class SettingsApiController : ApiControllerBase
             _sensorHardwareSync.SyncForTent(saved);
         }
 
+        var warnung = await SyncLeafOffsetAsync(existing, saved, cancellationToken);
+        if (warnung is not null)
+        {
+            Response.Headers["X-GrowOs-Warning"] = warnung;
+        }
+
         return Ok(saved.ToDto());
+    }
+
+    /// <summary>
+    /// Reicht ein geaendertes Blatt-Offset an den Klimacontroller weiter.
+    ///
+    /// Das Speichern selbst scheitert dabei NICHT, wenn der Dienst nicht durchkommt —
+    /// sonst haette der Nutzer einen Wert im Formular, der nirgends steht. Stattdessen
+    /// geht eine Warnung zurueck, damit die Oberflaeche es sagen kann. Ein stilles
+    /// Auseinanderlaufen zwischen App, Controller und Grow OS ist genau der Zustand,
+    /// den dieses Feld beseitigen soll.
+    ///
+    /// Vorzeichen: Grow OS fuehrt das Offset positiv ("Blatt 2 °C kuehler"), die
+    /// AC-Infinity-App negativ (-2). Gleiche Bedeutung, andere Schreibweise — gedreht
+    /// wird genau hier, damit es nur an einer Stelle passiert.
+    /// </summary>
+    private async Task<string?> SyncLeafOffsetAsync(Tent vorher, Tent nachher, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(nachher.LeafOffsetSyncService))
+        {
+            return null;
+        }
+
+        if (Math.Abs(vorher.LeafTempOffsetC - nachher.LeafTempOffsetC) < 0.001)
+        {
+            return null;
+        }
+
+        var teile = nachher.LeafOffsetSyncService.Split('.', 2);
+        if (teile.Length != 2 || string.IsNullOrWhiteSpace(teile[0]) || string.IsNullOrWhiteSpace(teile[1]))
+        {
+            _logger.LogWarning(
+                "Blatt-Offset: {Dienst} ist keine gueltige Dienstkennung (erwartet domain.service).",
+                nachher.LeafOffsetSyncService);
+            return $"Blatt-Offset nicht uebertragen: \"{nachher.LeafOffsetSyncService}\" ist keine gueltige Dienstkennung.";
+        }
+
+        var settings = HomeAssistantAddon.ResolveEffective(_repository.GetHomeAssistantSettings());
+        var ok = await _homeAssistant.CallServiceAsync(
+            settings,
+            teile[0],
+            teile[1],
+            new Dictionary<string, object>
+            {
+                ["blatt_offset_c"] = -nachher.LeafTempOffsetC,
+                ["port"] = nachher.LeafOffsetSyncPort,
+                ["dry_run"] = false,
+            },
+            cancellationToken);
+
+        if (ok)
+        {
+            _logger.LogInformation(
+                "Blatt-Offset {Offset} °C an {Dienst} (Port {Port}) uebergeben.",
+                nachher.LeafTempOffsetC, nachher.LeafOffsetSyncService, nachher.LeafOffsetSyncPort);
+            return null;
+        }
+
+        return "Gespeichert, aber nicht an den Controller uebertragen — Home Assistant hat den Dienst nicht angenommen.";
     }
 
 

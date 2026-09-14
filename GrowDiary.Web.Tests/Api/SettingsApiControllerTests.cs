@@ -25,7 +25,20 @@ public sealed class SettingsApiControllerTests : IDisposable
             _repository,
             new GrowDiary.Web.Services.TentSensorHardwareSyncService(
                 new HardwareRepository(_paths),
-                NullLogger<GrowDiary.Web.Services.TentSensorHardwareSyncService>.Instance));
+                NullLogger<GrowDiary.Web.Services.TentSensorHardwareSyncService>.Instance),
+            new GrowDiary.Web.Services.HomeAssistantService(
+                new NullHttpClientFactory(),
+                NullLogger<GrowDiary.Web.Services.HomeAssistantService>.Instance),
+            NullLogger<SettingsApiController>.Instance);
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
+        };
+    }
+
+    private sealed class NullHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
     }
 
     public void Dispose()
@@ -253,11 +266,11 @@ public sealed class SettingsApiControllerTests : IDisposable
     }
 
     [Fact]
-    public void UpdateTent_WithDetailedRequest_PersistsAllTentDetails()
+    public async Task UpdateTent_WithDetailedRequest_PersistsAllTentDetails()
     {
         var created = _repository.CreateTent("Update Zelt");
 
-        var result = _controller.SaveTent(created.Id, new UpdateTentRequest
+        var result = await _controller.SaveTent(created.Id, new UpdateTentRequest
         {
             Name = "Update Blüte",
             Kind = "Grow Tent",
