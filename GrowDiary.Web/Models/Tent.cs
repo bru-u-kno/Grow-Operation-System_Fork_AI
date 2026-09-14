@@ -116,6 +116,27 @@ public sealed class Tent
 
     /// <summary>The documented RDWC leaf offset, per the workshop material and the Ben Green calculator.</summary>
     public const double DefaultLeafTempOffsetC = 2.0;
+
+    /// <summary>
+    /// Home-Assistant-Dienst, der <see cref="LeafTempOffsetC"/> beim Speichern an den
+    /// Klimacontroller weiterreicht — etwa <c>pyscript.acinfinity_offset_setzen</c>.
+    /// Leer heisst: nur rechnen, nichts schreiben (Verhalten vor diesem Feld).
+    ///
+    /// Bewusst als Einstellung und nicht als Konstante: Skriptnamen aendern sich, und ein
+    /// zweites Zelt haengt an einem anderen Controller. Fest verdrahtet muesste man dafuer
+    /// den Code anfassen.
+    /// </summary>
+    public string? LeafOffsetSyncService { get; set; }
+
+    /// <summary>
+    /// Sensor-Port am Controller, dessen Kalibrierung gesetzt wird. Beim AC Infinity AI+
+    /// sitzt das Blatt-Offset pro Sensor, nicht am Controller — die Zeltsonde haengt dort
+    /// ueblicherweise auf Port 2.
+    /// </summary>
+    public int LeafOffsetSyncPort { get; set; } = DefaultLeafOffsetSyncPort;
+
+    /// <summary>Port der Zeltsonde am AC Infinity AI+.</summary>
+    public const int DefaultLeafOffsetSyncPort = 2;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 

@@ -372,6 +372,57 @@ public sealed class HomeAssistantService
     /// Assistant. Dieselbe Strecke, die schon die Push-Nachrichten geht, nur mit
     /// <c>entity_id</c> statt Titel und Text.
     /// </remarks>
+    /// <summary>
+    /// Ruft einen Home-Assistant-Dienst OHNE Entitaet — etwa ein pyscript, das seine
+    /// Ziele selbst kennt. <see cref="CallEntityServiceAsync"/> steigt bei leerer
+    /// entity_id aus, und das ist dort auch richtig: ein Schalter ohne Entitaet waere
+    /// ein Tippfehler. Hier ist die fehlende Entitaet der Normalfall.
+    /// </summary>
+    public async Task<bool> CallServiceAsync(
+        HomeAssistantSettings settings,
+        string domain,
+        string service,
+        IReadOnlyDictionary<string, object>? daten = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!settings.IsConfigured || string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(service))
+        {
+            return false;
+        }
+
+        if (DemoData.IsEnabled)
+        {
+            _logger.LogInformation("Testdaten: {Domain}.{Service} ohne Entitaet — nicht ausgefuehrt.", domain, service);
+            return true;
+        }
+
+        try
+        {
+            var client = CreateClient(settings);
+            var payload = JsonSerializer.Serialize(daten ?? new Dictionary<string, object>());
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            using var response = await client.PostAsync($"api/services/{domain}/{service}", content, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Home Assistant {Domain}.{Service} schlug fehl: HTTP {StatusCode}.",
+                    domain, service, (int)response.StatusCode);
+                return false;
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Home Assistant {Domain}.{Service} schlug fehl.", domain, service);
+            return false;
+        }
+    }
+
     public async Task<bool> CallEntityServiceAsync(
         HomeAssistantSettings settings,
         string domain,

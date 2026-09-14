@@ -135,7 +135,9 @@ public static class RequestMapping
         HvacControllerEntityId = Normalize(request.HvacControllerEntityId),
         Co2Available = request.Co2Available,
         HasCo2Enrichment = request.HasCo2Enrichment,
-        CameraEntityId = Normalize(request.CameraEntityId)
+        CameraEntityId = Normalize(request.CameraEntityId),
+        LeafOffsetSyncService = Normalize(request.LeafOffsetSyncService),
+        LeafOffsetSyncPort = request.LeafOffsetSyncPort ?? Tent.DefaultLeafOffsetSyncPort
     };
 
     public static Tent ToModel(this CreateTentRequest request) => new()
@@ -161,7 +163,9 @@ public static class RequestMapping
         HvacControllerEntityId = Normalize(request.HvacControllerEntityId),
         Co2Available = request.Co2Available,
         HasCo2Enrichment = request.HasCo2Enrichment,
-        CameraEntityId = Normalize(request.CameraEntityId)
+        CameraEntityId = Normalize(request.CameraEntityId),
+        LeafOffsetSyncService = Normalize(request.LeafOffsetSyncService),
+        LeafOffsetSyncPort = request.LeafOffsetSyncPort ?? Tent.DefaultLeafOffsetSyncPort
     };
 
     public static List<TentSensor> ToSensors(this CreateTentRequest request, int tentId)

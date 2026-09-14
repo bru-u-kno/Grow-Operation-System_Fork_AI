@@ -201,6 +201,8 @@ export interface TentDto {
   cameraEntityId: string | null
   cameras: string[]
   leafTempOffsetC: number
+  leafOffsetSyncService: string | null
+  leafOffsetSyncPort: number
   activeGrowCount: number
   archivedGrowCount: number
   activeSetupCount: number
@@ -241,6 +243,8 @@ export interface UpdateTentRequest {
   cameraEntityId: string | null
   cameras?: string[]
   leafTempOffsetC?: number
+  leafOffsetSyncService?: string | null
+  leafOffsetSyncPort?: number
   sensors: UpdateTentSensorRequest[]
 }
 
@@ -269,6 +273,8 @@ export interface CreateTentRequest {
   cameraEntityId: string | null
   cameras?: string[]
   leafTempOffsetC?: number
+  leafOffsetSyncService?: string | null
+  leafOffsetSyncPort?: number
   sensors: UpdateTentSensorRequest[]
 }
 

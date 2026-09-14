@@ -28,6 +28,12 @@ public sealed class CreateTentRequest
 
     /// <summary>°C the leaf sits below air temperature (leaf VPD). Null keeps the stored value.</summary>
     public double? LeafTempOffsetC { get; set; }
+
+    /// <summary>HA-Dienst, der das Offset an den Controller weiterreicht. Null behaelt den gespeicherten Wert, "" schaltet ab.</summary>
+    public string? LeafOffsetSyncService { get; set; }
+
+    /// <summary>Sensor-Port am Controller. Null behaelt den gespeicherten Wert.</summary>
+    public int? LeafOffsetSyncPort { get; set; }
     public List<UpdateTentSensorRequest>? Sensors { get; set; }
 }
 
@@ -59,6 +65,12 @@ public sealed class UpdateTentRequest
 
     /// <summary>°C the leaf sits below air temperature (leaf VPD). Null keeps the stored value.</summary>
     public double? LeafTempOffsetC { get; set; }
+
+    /// <summary>HA-Dienst, der das Offset an den Controller weiterreicht. Null behaelt den gespeicherten Wert, "" schaltet ab.</summary>
+    public string? LeafOffsetSyncService { get; set; }
+
+    /// <summary>Sensor-Port am Controller. Null behaelt den gespeicherten Wert.</summary>
+    public int? LeafOffsetSyncPort { get; set; }
     public List<UpdateTentSensorRequest>? Sensors { get; set; }
 }
 
