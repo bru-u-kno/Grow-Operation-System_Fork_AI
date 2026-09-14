@@ -326,7 +326,9 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const rhOk = live.rhProzent != null && live.tiefBisRhProzent != null ? live.rhProzent <= live.tiefBisRhProzent : null
   const tiefGrund = !entwurf.abluftDrosseln
     ? 'Die Drosselung ist ausgeschaltet — der T6 bleibt auf der normalen Stufe.'
-    : live.tiefAktiv == null
+    : live.klimaOk === false
+      ? 'Das Klima sperrt gerade — der T6 läuft auf der normalen Stufe, bis Feuchte und Blatt wieder unter den Obergrenzen sind.'
+      : live.tiefAktiv == null
       ? 'Der Helfer binary_sensor.co2_t6_stufe_tief_sinnvoll meldet sich nicht.'
       : live.tiefAktiv && tempOk === true && rhOk === true
         ? 'Beide Bedingungen erfüllt — der T6 läuft auf der tiefen Stufe.'
