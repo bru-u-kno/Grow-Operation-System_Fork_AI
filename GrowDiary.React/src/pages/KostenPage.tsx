@@ -398,6 +398,24 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
   const [busy, setBusy] = useState(false)
   const [staende, setStaende] = useState<Zaehlerstand[] | null>(null)
 
+  /**
+   * forkai.104: Einen Zaehlerstand entfernen.
+   *
+   * Der Loeschweg gab es seit .97 nur in der API. Gebraucht wird er, wenn ein
+   * Stand falsch einsortiert ist: KwhZwischen deutet einen Rueckwaertssprung
+   * als Zaehlerwechsel und addiert dann den vollen Stand — ein einziger
+   * schiefer Wert hebt die Summe um mehrere tausend kWh.
+   */
+  async function entferneStand(id: number) {
+    try {
+      await apiFetch(`/api/kosten/zaehlerstand/${id}`, { method: 'DELETE' })
+      setStaende(await apiFetch<Zaehlerstand[]>('/api/kosten/zaehlerstaende'))
+      onChanged('Zählerstand entfernt.')
+    } catch (caught) {
+      onError(formatApiError(caught, 'Der Zählerstand konnte nicht entfernt werden.'))
+    }
+  }
+
   /** Der Stand von jetzt — ohne auf den Takt des Workers zu warten. */
   async function jetztFesthalten() {
     setBusy(true)
@@ -477,7 +495,7 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
       {staende && (
         <div className="ko-tabelle-huelle">
           <table className="ko-tabelle" data-audit="kosten-zaehlerstaende">
-            <thead><tr><th scope="col">Zeitpunkt</th><th scope="col">kWh</th><th scope="col">Anlass</th><th scope="col">Phase</th></tr></thead>
+            <thead><tr><th scope="col">Zeitpunkt</th><th scope="col">kWh</th><th scope="col">Anlass</th><th scope="col">Phase</th><th scope="col"><span className="v1-sr-only">Entfernen</span></th></tr></thead>
             <tbody>
               {[...staende].reverse().slice(0, 30).map((z) => (
                 <tr key={z.id}>
@@ -485,9 +503,21 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
                   <td>{formatNumber(z.kwh, 1)}</td>
                   <th scope="row">{anlassText(z.anlass)}</th>
                   <td>{z.phase ? phaseName(z.phase) : '–'}</td>
+                  <td>
+                    {/* forkai.104: Ein einzelner falscher Stand verfaelscht die
+                        ganze Summe darueber — KwhZwischen deutet jeden
+                        Rueckwaertssprung als Zaehlerwechsel und addiert den
+                        vollen Stand. Ohne Knopf bliebe nur die Datenbank. */}
+                    <V1Button
+                      onClick={() => void entferneStand(z.id)}
+                      audit="kosten-zaehlerstand-entfernen"
+                    >
+                      Entfernen
+                    </V1Button>
+                  </td>
                 </tr>
               ))}
-              {staende.length === 0 && <tr><td colSpan={4}>Noch kein Stand festgehalten.</td></tr>}
+              {staende.length === 0 && <tr><td colSpan={5}>Noch kein Stand festgehalten.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -792,7 +822,7 @@ type VerbrauchsAnsicht = {
   summeEur: number
   buchungen: number
   kostenVollstaendig: boolean
-  zeilen: Array<{ datum: string; menge: number; eur: number | null; quelle: string; notiz: string | null }>
+  zeilen: Array<{ id: number; datum: string; menge: number; eur: number | null; quelle: string; notiz: string | null }>
 }
 
 /**
@@ -807,7 +837,7 @@ type VerbrauchsAnsicht = {
  * für jeden ungefragt eine Abfrage zu fahren kostet Zeit für etwas, das
  * vielleicht niemand ansieht.
  */
-function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
+function VerbrauchBlock({ artikel, onChanged }: { artikel: KostenArtikel; onChanged?: (text?: string) => void }) {
   const [offen, setOffen] = useState(false)
   const [spanne, setSpanne] = useState('DreissigTage')
   const [ansicht, setAnsicht] = useState<VerbrauchsAnsicht | null>(null)
@@ -834,6 +864,24 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
     void laden()
     return () => controller.abort()
   }, [offen, spanne, artikel.id])
+
+  /**
+   * forkai.104: Eine Buchung wieder entfernen.
+   *
+   * Den Loeschweg gab es seit .96 nur in der API. Gebraucht wird er bei jedem
+   * Vertipper — eine 250 statt 25 verschiebt Fuellstand und Kosten des Artikels,
+   * und beides rechnet ab da falsch weiter.
+   */
+  async function entferneBuchung(id: number) {
+    try {
+      await apiFetch(`/api/kosten/verbrauch/${id}`, { method: 'DELETE' })
+      setAnsicht(await apiFetch<VerbrauchsAnsicht>(`/api/kosten/artikel/${artikel.id}/verbrauch?spanne=${spanne}`))
+      setFehler(null)
+      onChanged?.('Buchung entfernt.')
+    } catch (caught) {
+      setFehler(formatApiError(caught, 'Die Buchung konnte nicht entfernt werden.'))
+    }
+  }
 
   // Rechts in der Zeile steht, was drinsteht — dann muss man zum Nachsehen
   // nicht erst aufklappen. Zugeklappt der Zeitraum und die Summe, sonst der
@@ -884,23 +932,30 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
               <col />
               <col className="ko-col-zahl" />
               <col className="ko-col-eur" />
+              <col />
             </colgroup>
             <thead>
               <tr>
                 <th scope="col">Tag</th>
                 <th scope="col">Menge</th>
                 <th scope="col">€</th>
+                <th scope="col"><span className="v1-sr-only">Entfernen</span></th>
               </tr>
             </thead>
             <tbody>
-              {ansicht.zeilen.map((z, i) => (
-                <tr key={`${z.datum}-${i}`}>
+              {ansicht.zeilen.map((z) => (
+                <tr key={z.id}>
                   <th scope="row">
                     {kurzesDatum(z.datum)}
                     <small>{ohneDatum(z.notiz, z.datum) ?? z.quelle}</small>
                   </th>
                   <td>{menge(z.menge, ansicht.einheit)}</td>
                   <td>{z.eur == null ? '–' : formatNumber(z.eur, 2)}</td>
+                  <td>
+                    <V1Button onClick={() => void entferneBuchung(z.id)} audit="kosten-verbrauch-entfernen">
+                      Entfernen
+                    </V1Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -909,6 +964,7 @@ function VerbrauchBlock({ artikel }: { artikel: KostenArtikel }) {
                 <th scope="row">{ansicht.buchungen} {ansicht.buchungen === 1 ? 'Buchung' : 'Buchungen'}</th>
                 <td>{menge(ansicht.summeMenge, ansicht.einheit)}</td>
                 <td>{formatNumber(ansicht.summeEur, 2)}</td>
+                <td />
               </tr>
             </tfoot>
           </table>

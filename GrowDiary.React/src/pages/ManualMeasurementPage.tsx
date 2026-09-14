@@ -12,6 +12,7 @@ import { checkDraft, type CheckSeverity } from '../features/measurement/live-che
 import '../features/measurement/measurement-edit.css'
 import { formatNumber, toLocalInputValue } from '../utils'
 import { FOTO_TAGS, PHASEN, fotoTagName, phaseName } from '../deutsche-woerter'
+import { istUnlesbar, zahlOderNull } from '../zahlenfeld'
 
 type NumericKey = Exclude<keyof MeasurementDraft, 'takenAtLocal' | 'stage' | 'source' | 'notes' | 'solutionChange'>
 
@@ -384,7 +385,19 @@ function ManualMeasurementPage() {
       // Die Buchung haengt an der gespeicherten Messung, laeuft aber als
       // eigener Aufruf: die Messung ist dann schon sicher, und ein Fehler beim
       // Buchen kostet sie nicht. Der Hinweis sagt, was durchkam und was nicht.
-      const zuBuchen = gaben.filter((g) => g.artikelId != null && g.menge.trim() !== '')
+      // forkai.104: zahlOderNull statt eigener Umwandlung. Number('') ist 0 und
+      // Number.isFinite(0) ist true — eine geleerte Menge waere als 0 gebucht
+      // worden, still und mit Erfolgsmeldung. Genau der Fehler, den die
+      // Dosierpumpe schon einmal hatte.
+      const unlesbar = gaben.find((g) => istUnlesbar(g.menge))
+      if (unlesbar) {
+        setError('Eine Menge im Abschnitt Gaben ist nicht lesbar. Bitte korrigieren oder die Zeile entfernen.')
+        setSaving(false)
+        return
+      }
+      const zuBuchen = gaben
+        .map((g) => ({ artikelId: g.artikelId, menge: zahlOderNull(g.menge) }))
+        .filter((g): g is { artikelId: number; menge: number } => g.artikelId != null && g.menge != null && g.menge > 0)
       let gabenHinweis = ''
       if (zuBuchen.length > 0) {
         try {
@@ -395,7 +408,7 @@ function ManualMeasurementPage() {
               messungId: measurement.id,
               zeitpunkt: draft.takenAtLocal || null,
               quelle: 'messung',
-              zeilen: zuBuchen.map((g) => ({ artikelId: g.artikelId, menge: Number(g.menge.replace(',', '.')) })),
+              zeilen: zuBuchen,
             }),
           })
           gabenHinweis = ` ${zuBuchen.length} ${zuBuchen.length === 1 ? 'Gabe' : 'Gaben'} gebucht.`

@@ -37,6 +37,12 @@ public sealed class VerbrauchsansichtService
     }
 
     public sealed record Zeile(
+        /// <summary>
+        /// forkai.104: Die Id der Buchung. Eine Zeile IST eine Buchung — ohne
+        /// die Id kann die Oberflaeche sie nicht wieder entfernen, und der
+        /// Loeschweg bleibt in der API haengen.
+        /// </summary>
+        int Id,
         string Datum,
         double Menge,
         double? Eur,
@@ -89,6 +95,7 @@ public sealed class VerbrauchsansichtService
             if (preis is null) fehlenderPreis = true;
 
             zeilen.Add(new Zeile(
+                v.Id,
                 v.ZeitpunktUtc.ToString("yyyy-MM-dd"),
                 v.Menge,
                 preis is { } p ? Math.Round(v.Menge * p, 2) : null,
