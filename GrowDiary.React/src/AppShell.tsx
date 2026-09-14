@@ -231,7 +231,15 @@ export function AppShell({ children, counts }: Props) {
             key={item.to}
             to={item.to}
             end={item.end}
-            className={isNavLeafActive(item, location.pathname) ? 'v1-mobile-nav-item forkai-leiste-item active' : 'v1-mobile-nav-item forkai-leiste-item'}
+            /* Fork AI (forkai.108): Bei offenem „Mehr“ darf kein zweites Ziel
+               aktiv aussehen — die Markierung der Ziele haengt an der Route,
+               die des Mehr-Knopfes am Panel, und beide leuchteten gleichzeitig. */
+            className={!moreOpen && isNavLeafActive(item, location.pathname) ? 'v1-mobile-nav-item forkai-leiste-item active' : 'v1-mobile-nav-item forkai-leiste-item'}
+            /* Fork AI (forkai.108): Schliessen haengt sonst allein am
+               Pfadwechsel. Tippt man bei offenem Panel auf das Ziel, auf dem
+               man schon steht (typisch „Live“), aendert sich die Route nicht —
+               und das Panel blieb stehen. */
+            onClick={() => setMoreOpen(false)}
           >
             <span className="forkai-leiste-icon" aria-hidden="true">{item.icon}</span>
             <span className="forkai-leiste-text">{item.short ?? item.label}</span>

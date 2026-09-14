@@ -667,7 +667,7 @@
         "ecTarget": 0.4,
         "phMin": 5.6,
         "phMax": 5.8,
-        "waterTempDayC": 15,
+        "waterTempDayC": 17,
         "waterTempNightC": 15,
         "vpdMin": 1.5,
         "vpdMax": 1.7,

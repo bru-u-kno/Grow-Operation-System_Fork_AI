@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.108
+
+**Fork AI.** Die Leiste gehorcht wieder, und der Flush bekommt seine
+Plan-Temperatur.
+
+### Was Sie sehen
+
+- Behoben — **„Mehr" blieb offen und zwei Ziele leuchteten:** war das
+  Mehr-Menü offen und man tippte auf das Ziel, auf dem man ohnehin schon
+  stand, passierte nichts — das Menü schloss nur bei einem Seitenwechsel.
+  Gleichzeitig war der Mehr-Knopf grün und daneben das Ziel der laufenden
+  Seite. Jetzt schließt jeder Tipp auf ein Leisten-Ziel das Menü, und
+  solange es offen ist, ist nur „Mehr" markiert.
+- Geändert — **SKX Canna Aqua, Flush:** Wassertemperatur 17 °C Tag /
+  15 °C Nacht statt 15/15, wie im Plan.
+
+### Technik
+
+- `AppShell.tsx`: `setMoreOpen(false)` am `onClick` jedes Leisten-Ziels,
+  Route-Markierung unterdrückt, solange `moreOpen` gilt.
+
 ## 2.0.0-forkai.107
 
 **Fork AI.** Alle lesen jetzt dieselbe Woche — und die Wassertemperatur
