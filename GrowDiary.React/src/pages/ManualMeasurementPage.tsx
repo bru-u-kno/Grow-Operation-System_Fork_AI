@@ -133,8 +133,19 @@ function normalizeLiveValue(value: string): string | null {
   return Number.isFinite(Number(cleaned)) ? cleaned.replace('.', ',') : null
 }
 
+/** forkai.99: Ein Verbrauchsartikel, so weit ihn das Messformular braucht. */
+type KostenArtikelOption = { id: number; name: string; einheit: string; aktiv: boolean }
+
+/** Eine Zeile im Gaben-Block. Menge bleibt Text, damit „0,5" waehrend des Tippens nicht zerfaellt. */
+type GabeZeile = { schluessel: number; artikelId: number | null; menge: string }
+
 function ManualMeasurementPage() {
   const navigate = useNavigate()
+  // forkai.99: Gaben zur Messung. Eine Gabe am Becken ist selten ein Mittel —
+  // Purolyt und pH-Minus am selben Abend, vier Naehrstoffe beim Addback.
+  // Deshalb eine Liste und kein einzelnes Feld.
+  const [artikel, setArtikel] = useState<KostenArtikelOption[]>([])
+  const [gaben, setGaben] = useState<GabeZeile[]>([])
   const [grows, setGrows] = useState<GrowSummary[]>([])
   const [selectedGrowId, setSelectedGrowId] = useState<number | null>(null)
   const [draft, setDraft] = useState<MeasurementDraft>(() => createDraft())
@@ -184,6 +195,9 @@ function ManualMeasurementPage() {
       setLoading(true)
       setError(null)
       try {
+        const artikelListe = await apiFetch<KostenArtikelOption[]>('/api/kosten/artikel', { signal: controller.signal })
+          .catch(() => [] as KostenArtikelOption[])
+        setArtikel(artikelListe.filter((a) => a.aktiv))
         const data = await apiFetch<GrowSummary[]>('/api/grows?archived=false', { signal: controller.signal })
         if (controller.signal.aborted) return
         const active = data.filter((grow) => grow.status === 'Running' || grow.status === 'Planning')
@@ -367,7 +381,32 @@ function ManualMeasurementPage() {
         await uploadPhotos(measurement.id, photoDraft)
       }
 
-      setMessage('Messung gespeichert.')
+      // Die Buchung haengt an der gespeicherten Messung, laeuft aber als
+      // eigener Aufruf: die Messung ist dann schon sicher, und ein Fehler beim
+      // Buchen kostet sie nicht. Der Hinweis sagt, was durchkam und was nicht.
+      const zuBuchen = gaben.filter((g) => g.artikelId != null && g.menge.trim() !== '')
+      let gabenHinweis = ''
+      if (zuBuchen.length > 0) {
+        try {
+          await apiFetch('/api/kosten/verbrauch', {
+            method: 'POST',
+            body: JSON.stringify({
+              growId: selectedGrowId,
+              messungId: measurement.id,
+              zeitpunkt: draft.takenAtLocal || null,
+              quelle: 'messung',
+              zeilen: zuBuchen.map((g) => ({ artikelId: g.artikelId, menge: Number(g.menge.replace(',', '.')) })),
+            }),
+          })
+          gabenHinweis = ` ${zuBuchen.length} ${zuBuchen.length === 1 ? 'Gabe' : 'Gaben'} gebucht.`
+        } catch (caught) {
+          setError(formatApiError(caught, 'Die Messung ist gespeichert, die Gaben konnten nicht gebucht werden.'))
+          setSaving(false)
+          return
+        }
+      }
+
+      setMessage('Messung gespeichert.' + gabenHinweis)
       navigate(after === 'addback' ? `/grows/${selectedGrowId}/addback` : `/grows/${selectedGrowId}`)
     } catch (caught) {
       setError(formatApiError(caught, 'Messung konnte nicht gespeichert werden.'))
@@ -508,6 +547,60 @@ function ManualMeasurementPage() {
             </div>
 
             <div data-audit="measurement-section-photo">
+              <V1Section title="Gaben" action={
+                <V1Button
+                  onClick={() => setGaben((v) => [...v, { schluessel: Date.now(), artikelId: null, menge: '' }])}
+                  audit="messung-gabe-hinzufuegen"
+                >
+                  Gabe hinzufügen
+                </V1Button>
+              }>
+                <div className="rc2-measurement-extra">
+                  {artikel.length === 0 ? (
+                    <V1Empty title="Keine Artikel" text="Unter Kosten → Artikel anlegen, dann erscheinen sie hier." />
+                  ) : gaben.length === 0 ? (
+                    <V1Empty title="Nichts dosiert" text="Was du bei dieser Messung gegeben hast — Nährstoffe, Purolyt, pH-Minus. Wird als Verbrauch gebucht und an diese Messung gehängt." />
+                  ) : (
+                    gaben.map((zeile, index) => {
+                      const gewaehlt = artikel.find((a) => a.id === zeile.artikelId)
+                      return (
+                        <div key={zeile.schluessel} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
+                          <V1Field label={index === 0 ? 'Artikel' : ''}>
+                            <select
+                              value={zeile.artikelId ?? ''}
+                              onChange={(e) => setGaben((v) => v.map((z) => z.schluessel === zeile.schluessel
+                                ? { ...z, artikelId: e.target.value === '' ? null : Number(e.target.value) }
+                                : z))}
+                              aria-label="Artikel wählen"
+                            >
+                              <option value="">– wählen –</option>
+                              {artikel.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                          </V1Field>
+                          <V1Field label={index === 0 ? 'Menge' : ''} hint={gewaehlt ? gewaehlt.einheit : undefined}>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={zeile.menge}
+                              onChange={(e) => setGaben((v) => v.map((z) => z.schluessel === zeile.schluessel
+                                ? { ...z, menge: e.target.value }
+                                : z))}
+                              placeholder="–"
+                              aria-label="Menge"
+                            />
+                          </V1Field>
+                          <V1Button
+                            onClick={() => setGaben((v) => v.filter((z) => z.schluessel !== zeile.schluessel))}
+                            audit="messung-gabe-entfernen"
+                          >
+                            Entfernen
+                          </V1Button>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </V1Section>
               <V1Section title="Foto">
               <div className="rc2-measurement-extra rc2-measurement-photo">
                 {cameras.length > 0 && (
