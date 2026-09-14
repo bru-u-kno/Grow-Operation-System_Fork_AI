@@ -204,7 +204,7 @@ public sealed class SettingsApiControllerTests : IDisposable
                     IsActive = true
                 }
             ]
-        }, CancellationToken.None);
+        });
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var dto = Assert.IsType<TentDto>(created.Value);
@@ -335,7 +335,7 @@ public sealed class SettingsApiControllerTests : IDisposable
                     IsActive = true
                 }
             ]
-        }, CancellationToken.None);
+        });
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
         var error = Assert.IsType<ApiError>(badRequest.Value);
