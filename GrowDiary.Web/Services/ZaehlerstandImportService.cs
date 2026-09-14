@@ -52,23 +52,34 @@ public sealed class ZaehlerstandImportService
         bool Erfolg,
         int Angelegt,
         int Uebersprungen,
+        int Geloescht,
         DateTime? VonUtc,
         DateTime? BisUtc,
         string Hinweis);
 
     /// <summary>Die Staende eines Grows aus der HA-Statistik nachziehen.</summary>
-    public async Task<Ergebnis> NachziehenAsync(int growId, CancellationToken ct = default)
+    /// <param name="neuAufbauen">
+    /// Die Reihe dieses Grows verwerfen und komplett aus der Statistik neu
+    /// aufbauen. Gebraucht, wenn sich Staende aus verschiedenen Quellen
+    /// gemischt haben: der Worker misst um 22 Uhr, der Import um Mitternacht.
+    /// Liegen beide in derselben Reihe, springt der Zaehlerwert zwischen den
+    /// Tagen vor und zurueck, und jeder Sprung zaehlt als Verbrauch — genau so
+    /// entstanden aus 1.585 kWh einmal 10.024. Ein Neuaufbau stellt sicher,
+    /// dass alle Staende eines Grows von derselben Quelle zur selben Tageszeit
+    /// stammen.
+    /// </param>
+    public async Task<Ergebnis> NachziehenAsync(int growId, bool neuAufbauen = false, CancellationToken ct = default)
     {
         var grow = _grows.GetGrow(growId);
         if (grow is null)
         {
-            return new Ergebnis(false, 0, 0, null, null, $"Grow {growId} existiert nicht.");
+            return new Ergebnis(false, 0, 0, 0, null, null, $"Grow {growId} existiert nicht.");
         }
 
         var entityId = _seite.StromQuelle.ZaehlerEntityId;
         if (string.IsNullOrWhiteSpace(entityId))
         {
-            return new Ergebnis(false, 0, 0, null, null,
+            return new Ergebnis(false, 0, 0, 0, null, null,
                 "Keine Strom-Quelle eingerichtet — kWh-Zaehler in den Kosten-Einstellungen waehlen.");
         }
 
@@ -82,7 +93,7 @@ public sealed class ZaehlerstandImportService
             _haSettings.GetEffectiveHomeAssistantSettings(), ct);
         if (socket is null)
         {
-            return new Ergebnis(false, 0, 0, null, null,
+            return new Ergebnis(false, 0, 0, 0, null, null,
                 "Keine Verbindung zu Home Assistant — Adresse und Token in den Einstellungen pruefen.");
         }
 
@@ -97,13 +108,13 @@ public sealed class ZaehlerstandImportService
 
         if (!antwort.Erfolg || antwort.Ergebnis is not { } ergebnis)
         {
-            return new Ergebnis(false, 0, 0, null, null,
+            return new Ergebnis(false, 0, 0, 0, null, null,
                 antwort.Fehler ?? "Home Assistant hat keine Statistik geliefert.");
         }
 
         if (!ergebnis.TryGetProperty(entityId, out var reihe) || reihe.ValueKind != JsonValueKind.Array)
         {
-            return new Ergebnis(false, 0, 0, null, null,
+            return new Ergebnis(false, 0, 0, 0, null, null,
                 $"Fuer {entityId} liegt keine Langzeitstatistik vor. Der Sensor braucht eine state_class "
                 + "(total oder total_increasing), sonst legt Home Assistant keine an.");
         }
@@ -119,6 +130,29 @@ public sealed class ZaehlerstandImportService
         // VOLLEN Zaehlerstand. Ein einziger falsch einsortierter Stand hebt die
         // Summe damit um mehrere tausend kWh.
         var alle = _kosten.GetZaehlerstaende();
+
+        // forkai.98: Neuaufbau. Alles, was im Zeitraum dieses Grows liegt, wird
+        // verworfen und danach vollstaendig aus der Statistik geschrieben.
+        // Absichtlich OHNE Ruecksicht auf den Anlass: gerade die Mischung aus
+        // Worker-Staenden (22 Uhr) und Importwerten (Mitternacht) ist der
+        // Fehler, den der Neuaufbau beheben soll. Eine Reihe aus einer Quelle
+        // zu einer Tageszeit ist das Ziel.
+        var geloescht = 0;
+        if (neuAufbauen)
+        {
+            var imZeitraum = alle
+                .Where(z => z.ZeitpunktUtc >= von && z.ZeitpunktUtc <= bis)
+                .ToList();
+
+            foreach (var z in imZeitraum)
+            {
+                _kosten.DeleteZaehlerstand(z.Id);
+                geloescht++;
+            }
+
+            alle = _kosten.GetZaehlerstaende();
+        }
+
         var vorhanden = alle
             .Select(s => s.ZeitpunktUtc.ToLocalTime().Date)
             .ToHashSet();
@@ -183,7 +217,12 @@ public sealed class ZaehlerstandImportService
                 + (uebersprungen > 0 ? $", {uebersprungen} Tage waren schon vorhanden" : string.Empty)
                 + ".";
 
-        return new Ergebnis(true, angelegt, uebersprungen, ersterTag, letzterTag, hinweis);
+        if (geloescht > 0)
+        {
+            hinweis = $"Reihe neu aufgebaut: {geloescht} alte Staende verworfen, " + hinweis;
+        }
+
+        return new Ergebnis(true, angelegt, uebersprungen, geloescht, ersterTag, letzterTag, hinweis);
     }
 
     /// <summary>Der Zeitstempel einer Statistikzeile — HA liefert ms seit Epoche oder ISO-Text.</summary>
