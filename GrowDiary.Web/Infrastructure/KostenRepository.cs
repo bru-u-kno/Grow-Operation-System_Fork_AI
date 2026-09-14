@@ -504,7 +504,6 @@ public sealed class KostenRepository : RepositoryBase
     /// <summary>forkai.97: Einen Zaehlerstand entfernen.</summary>
     public void DeleteZaehlerstand(int id)
     {
-        EnsureSchema();
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM ForkZaehlerstaende WHERE Id = $id;";
