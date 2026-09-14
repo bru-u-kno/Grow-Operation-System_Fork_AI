@@ -201,7 +201,8 @@ public sealed class Co2SteuerungTests
         HaErreichbar: true, Co2Ppm: 900, ZielPpm: 960, ZielQuelle: "plan", PlanPpm: 1200, PlanHerkunft: null,
         ZielWarm: 960, ZielMittel: 840, ZielKuehl: 660, HysteresePpm: 50, NachschubUnterPpm: 910,
         Bedarf: false, KlimaOk: true, VentilOffen: false, AutomatikAn: true, LichtAn: true,
-        T6Stufe: 4, CanopyC: 27.6, RhProzent: 61, Vpd: 1.28, ImpulseHeute: impulse,
+        T6Stufe: 4, TiefAktiv: true, TiefBisTempC: 29, TiefBisRhProzent: 56,
+        CanopyC: 27.6, RhProzent: 61, Vpd: 1.28, ImpulseHeute: impulse,
         GrammProSekunde: gps, LetzteMessungGps: gps, FlascheRestKg: restKg,
         ImpulsBedarfSekunden: 15, LetzterImpuls: null);
 

@@ -320,6 +320,21 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 
   const live = seite.live
   const ziele = wirksameZiele(entwurf, seite.planPpm)
+  // Fork AI: Warum der T6 gerade tief läuft — die Grenzen kommen aus dem
+  // Livebild, weil der Helfer in HA mit genau diesen Werten rechnet.
+  const tempOk = live.canopyC != null && live.tiefBisTempC != null ? live.canopyC <= live.tiefBisTempC : null
+  const rhOk = live.rhProzent != null && live.tiefBisRhProzent != null ? live.rhProzent <= live.tiefBisRhProzent : null
+  const tiefGrund = !entwurf.abluftDrosseln
+    ? 'Die Drosselung ist ausgeschaltet — der T6 bleibt auf der normalen Stufe.'
+    : live.klimaOk === false
+      ? 'Das Klima sperrt gerade — der T6 läuft auf der normalen Stufe, bis Feuchte und Blatt wieder unter den Obergrenzen sind.'
+      : live.tiefAktiv == null
+      ? 'Der Helfer binary_sensor.co2_t6_stufe_tief_sinnvoll meldet sich nicht.'
+      : live.tiefAktiv && tempOk === true && rhOk === true
+        ? 'Beide Bedingungen erfüllt — der T6 läuft auf der tiefen Stufe.'
+        : live.tiefAktiv
+          ? 'Haltebereich: die tiefe Stufe bleibt vorerst, damit es nicht flattert — zurück geht es erst am oberen Rand.'
+          : 'Zu warm oder zu feucht für die tiefe Stufe — der T6 läuft auf der Dosierstufe, solange das Klima passt.'
   const setz = <K extends keyof Co2Einstellungen>(feld: K, wert: Co2Einstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
 
   return (
@@ -471,6 +486,33 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 
       {reiter === 'klima' && (
         <V1Section title="Klima hat Vorrang">
+          <V1Card>
+            <div className="st-feldzeile">
+              <span className="st-etikett">Abluft T6 jetzt</span>
+              <span className="st-nurlesen">{live.t6Stufe != null ? `Stufe ${live.t6Stufe}` : '–'}</span>
+            </div>
+            <div className="st-feldzeile">
+              <span className="st-etikett">
+                Blatt
+                <small>tief nur bis {live.tiefBisTempC != null ? `${formatNumber(live.tiefBisTempC, 1)} °C` : '–'}</small>
+              </span>
+              <span className="st-eingaben">
+                <span className="st-nurlesen">{live.canopyC != null ? `${formatNumber(live.canopyC, 1)} °C` : '–'}</span>
+                {tempOk != null && <span className={`st-marke ${tempOk ? 'is-ok' : 'is-warn'}`}>{tempOk ? 'erfüllt' : 'zu warm'}</span>}
+              </span>
+            </div>
+            <div className="st-feldzeile">
+              <span className="st-etikett">
+                Feuchte
+                <small>tief nur bis {live.tiefBisRhProzent != null ? `${formatNumber(live.tiefBisRhProzent, 0)} %` : '–'}</small>
+              </span>
+              <span className="st-eingaben">
+                <span className="st-nurlesen">{live.rhProzent != null ? `${formatNumber(live.rhProzent, 1)} %` : '–'}</span>
+                {rhOk != null && <span className={`st-marke ${rhOk ? 'is-ok' : 'is-warn'}`}>{rhOk ? 'erfüllt' : 'zu feucht'}</span>}
+              </span>
+            </div>
+            <p className="st-hinweis">{tiefGrund}</p>
+          </V1Card>
           <V1Card>
             <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird nicht dosiert — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
             <Zahl label="Wieder frei ab" hinweis="Abstand unter der Obergrenze, damit es nicht flattert." einheit="%" schritt={0.5} wert={entwurf.klimaHystereseProzent} onChange={(v) => setz('klimaHystereseProzent', v)} fehler={feldFehler.KlimaHystereseProzent} />

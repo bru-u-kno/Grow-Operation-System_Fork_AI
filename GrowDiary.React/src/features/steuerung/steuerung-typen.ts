@@ -72,6 +72,9 @@ export type Co2Live = {
   automatikAn: boolean | null
   lichtAn: boolean | null
   t6Stufe: number | null
+  tiefAktiv: boolean | null
+  tiefBisTempC: number | null
+  tiefBisRhProzent: number | null
   canopyC: number | null
   rhProzent: number | null
   vpd: number | null
