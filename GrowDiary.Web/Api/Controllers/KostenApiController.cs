@@ -111,6 +111,15 @@ public sealed class KostenApiController : ApiControllerBase
         public int? TentId { get; set; }
         public string? Notiz { get; set; }
         public bool Aktiv { get; set; } = true;
+
+        /// <summary>
+        /// forkai.97: Wohin die Kosten zaehlen. false = die Fuellung zaehlt beim
+        /// Kauf im Durchgang (Voreinstellung). true = die Fuellung ist
+        /// lagerneutral, erst der gebuchte Verbrauch trifft den Durchgang.
+        /// In .96 fehlte das Feld hier: das Modell konnte es, der Request nicht,
+        /// und der Wert fiel beim Speichern still auf false zurueck.
+        /// </summary>
+        public bool AufGrowBuchen { get; set; }
     }
 
     [HttpGet("artikel")]
@@ -157,7 +166,7 @@ public sealed class KostenApiController : ApiControllerBase
         if (request.PreisEur is < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
         if (!VerbrauchsEinheiten.IstGueltig(request.Einheit)) return BadRequestError("einheit_invalid", $"Einheit muss eine von {string.Join(", ", VerbrauchsEinheiten.Alle)} sein.");
         var (herstellerA, produktA) = Angleichen(request.Hersteller, request.Produkt);
-        var artikel = new Verbrauchsartikel { Name = request.Name, Hersteller = herstellerA, Produkt = produktA, PreisEur = request.PreisEur, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv };
+        var artikel = new Verbrauchsartikel { Name = request.Name, Hersteller = herstellerA, Produkt = produktA, PreisEur = request.PreisEur, Einheit = request.Einheit, Gebinde = request.Gebinde, TentId = request.TentId, Notiz = request.Notiz, Aktiv = request.Aktiv, AufGrowBuchen = request.AufGrowBuchen };
         artikel.Id = _repo.CreateArtikel(artikel);
         return Created($"/api/kosten/artikel/{artikel.Id}", _repo.GetArtikel(artikel.Id));
     }
@@ -183,6 +192,7 @@ public sealed class KostenApiController : ApiControllerBase
         artikel.TentId = request.TentId;
         artikel.Notiz = request.Notiz;
         artikel.Aktiv = request.Aktiv;
+        artikel.AufGrowBuchen = request.AufGrowBuchen;
         _repo.UpdateArtikel(artikel);
         return Ok(_repo.GetArtikel(id));
     }
@@ -451,6 +461,19 @@ public sealed class KostenApiController : ApiControllerBase
     {
         if (_repo.GetAnschaffung(id) is null) return NotFoundError("anschaffung_not_found", $"Anschaffung {id} existiert nicht.");
         _repo.DeleteAnschaffung(id);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// forkai.97: Einen Zaehlerstand loeschen. Gebraucht, um einen misslungenen
+    /// Import zurueckzunehmen — ohne Loeschweg bleibt eine falsche Reihe stehen
+    /// und verfaelscht jede Summe darueber.
+    /// </summary>
+    [HttpDelete("zaehlerstand/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public IActionResult DeleteZaehlerstand(int id)
+    {
+        _repo.DeleteZaehlerstand(id);
         return NoContent();
     }
 
