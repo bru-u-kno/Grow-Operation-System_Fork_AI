@@ -4,7 +4,7 @@ namespace GrowDiary.Web.Tests.Services;
 
 public sealed class ClimateBandCalculatorTests
 {
-    private const double LeafOffset = 2.0;
+    private const double LeafOffset = -2.0;
 
     [Fact]
     public void HumidityBand_LandsInsideTheVpdTarget()

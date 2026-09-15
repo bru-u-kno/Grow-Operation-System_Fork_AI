@@ -140,7 +140,7 @@ public static class Demobestand
             // eingeschlossen — saehe je, was sie zeigt.
             ChillerControlEnabled = true,
             ChillerSwitchEntityId = DemoData.KuehlerSteckdose,
-            // LeafTempOffsetC bleibt auf seinem Standard (2,0). Auf 0 gesetzt
+            // LeafTempOffsetC bleibt auf seinem Standard (-2,0). Auf 0 gesetzt
             // rechnete die App Luft- statt Blatt-VPD.
         });
     }

@@ -19,7 +19,7 @@ public sealed class VpdCalculatorTests
     {
         // A cooler leaf holds less moisture, so the deficit against it is smaller.
         var air = VpdCalculator.Calculate(25, 60, 0)!.Value;
-        var leaf = VpdCalculator.Calculate(25, 60, 2)!.Value;
+        var leaf = VpdCalculator.Calculate(25, 60, -2)!.Value;
 
         // 25 °C air / 60 % RH with the leaf at 23 °C: 2.809 kPa (leaf) − 1.901 kPa (air) ≈ 0.91
         Assert.True(leaf < air, $"leaf VPD {leaf} should be below air VPD {air}");
@@ -29,8 +29,8 @@ public sealed class VpdCalculatorTests
     [Fact]
     public void LargerOffset_LowersVpdFurther()
     {
-        var small = VpdCalculator.Calculate(26, 55, 1)!.Value;
-        var large = VpdCalculator.Calculate(26, 55, 3)!.Value;
+        var small = VpdCalculator.Calculate(26, 55, -1)!.Value;
+        var large = VpdCalculator.Calculate(26, 55, -3)!.Value;
 
         Assert.True(large < small);
     }
@@ -39,7 +39,7 @@ public sealed class VpdCalculatorTests
     public void SaturatedAirWithCoolLeaf_ClampsAtZero()
     {
         // 100 % RH and a cooler leaf would give a negative deficit — report 0, not below.
-        var vpd = VpdCalculator.Calculate(24, 100, 3);
+        var vpd = VpdCalculator.Calculate(24, 100, -3);
 
         Assert.Equal(0, vpd);
     }

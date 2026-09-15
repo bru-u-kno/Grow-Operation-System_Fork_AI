@@ -254,7 +254,7 @@ public sealed class SettingsApiController : ApiControllerBase
             teile[1],
             new Dictionary<string, object>
             {
-                ["blatt_offset_c"] = -nachher.LeafTempOffsetC,
+                ["blatt_offset_c"] = nachher.LeafTempOffsetC,
                 ["port"] = nachher.LeafOffsetSyncPort,
                 ["dry_run"] = false,
             },

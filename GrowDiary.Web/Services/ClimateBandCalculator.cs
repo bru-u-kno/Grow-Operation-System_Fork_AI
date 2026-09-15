@@ -58,7 +58,7 @@ public static class ClimateBandCalculator
         var luft = VpdCalculator.SaturationKpa(airTemperatureC);
         if (luft <= 0) return (null, null);
 
-        var blatt = VpdCalculator.SaturationKpa(airTemperatureC - leafOffsetC);
+        var blatt = VpdCalculator.SaturationKpa(airTemperatureC + leafOffsetC);
 
         // VPD = blatt − luft · rh/100  ⇒  rh = 100 · (blatt − VPD) / luft.
         // Viel VPD heisst wenig Feuchte, deshalb kreuzen sich die Grenzen.

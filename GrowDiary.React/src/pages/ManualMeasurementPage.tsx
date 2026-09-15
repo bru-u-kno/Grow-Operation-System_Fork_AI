@@ -507,7 +507,7 @@ function ManualMeasurementPage() {
               <V1Section title="Klima">
                 <FieldGrid fields={climateFields} draft={draft} patch={patch} status={fieldStatus}>
                   <div className="rc2-measurement-derived" data-audit="measurement-vpd">
-                    <span>VPD{leafOffset > 0 ? ` · Blatt −${leafOffset} °C` : ''}</span>
+                    <span>VPD{leafOffset < 0 ? ` · Blatt ${leafOffset} °C` : ''}</span>
                     <strong>{vpd ?? '–'}<em>kPa</em></strong>
                   </div>
                 </FieldGrid>
@@ -834,7 +834,7 @@ function calculateVpd(temperatureValue: string, humidityValue: string, leafOffse
   const humidity = parseNullableNumber(humidityValue)
   if (temperature == null || humidity == null || humidity < 0 || humidity > 100) return null
   const actual = saturationKpa(temperature) * (humidity / 100)
-  const leaf = saturationKpa(temperature - leafOffsetC)
+  const leaf = saturationKpa(temperature + leafOffsetC)
 
   // `toFixed` schreibt IMMER mit Punkt — im Formular stand deshalb „1.00 kPa"
   // mitten in einer deutschen Oberflaeche. Dieselbe Falle wie an den

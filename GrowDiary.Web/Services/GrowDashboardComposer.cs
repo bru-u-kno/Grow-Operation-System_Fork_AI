@@ -782,7 +782,7 @@ public sealed class GrowDashboardComposer
             fromLive ? liveHumidity : latest?.HumidityPercent,
             tent.LeafTempOffsetC);
 
-        var offsetHint = tent.LeafTempOffsetC > 0 ? $", Blatt −{tent.LeafTempOffsetC:0.#} °C" : string.Empty;
+        var offsetHint = tent.LeafTempOffsetC < 0 ? $", Blatt {tent.LeafTempOffsetC:0.#} °C" : string.Empty;
         return new MetricCard
         {
             Key = "vpd",

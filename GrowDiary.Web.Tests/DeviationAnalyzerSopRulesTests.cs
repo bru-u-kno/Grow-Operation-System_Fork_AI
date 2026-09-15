@@ -214,7 +214,7 @@ public sealed class DeviationAnalyzerSopRulesTests : IDisposable
         measurement.AirTemperatureC = 26.0;
         measurement.HumidityPercent = 55.0;
 
-        var asLeaf = _service.Analyze(Grow(), new List<Measurement> { measurement }, leafTempOffsetC: 2.0);
+        var asLeaf = _service.Analyze(Grow(), new List<Measurement> { measurement }, leafTempOffsetC: -2.0);
         var asAir = _service.Analyze(Grow(), new List<Measurement> { measurement }, leafTempOffsetC: 0.0);
 
         Assert.DoesNotContain(asLeaf, d => d.StableKey == "hydro.vpd");

@@ -107,7 +107,11 @@ public sealed class Tent
     /// <summary>
     /// How many °C the leaf sits below air temperature, used for leaf VPD (0 = plain air VPD).
     ///
-    /// Defaults to 2 °C, which is what the workshop material specifies for RDWC and what the
+    /// Signed difference, leaf minus air — the same convention climate controllers use
+    /// (AC Infinity states it as "Blatttemperatur − Lufttemperatur = Offset"). A cooler
+    /// leaf is therefore negative.
+    ///
+    /// Defaults to −2 °C, which is what the workshop material specifies for RDWC and what the
     /// reference VPD calculator uses in its worked example (air 28 °C, leaf 26 °C). It used
     /// to default to 0, so a new tent silently computed air VPD — a different number than
     /// the one every RDWC chart is drawn for.
@@ -115,7 +119,7 @@ public sealed class Tent
     public double LeafTempOffsetC { get; set; } = DefaultLeafTempOffsetC;
 
     /// <summary>The documented RDWC leaf offset, per the workshop material and the Ben Green calculator.</summary>
-    public const double DefaultLeafTempOffsetC = 2.0;
+    public const double DefaultLeafTempOffsetC = -2.0;
 
     /// <summary>
     /// Home-Assistant-Dienst, der <see cref="LeafTempOffsetC"/> beim Speichern an den
