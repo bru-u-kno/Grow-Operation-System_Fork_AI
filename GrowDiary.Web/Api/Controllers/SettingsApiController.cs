@@ -162,7 +162,7 @@ public sealed class SettingsApiController : ApiControllerBase
         // Leaf-temperature offset: only replaced when the request actually carries one, so
         // a partial update (e.g. the HA mapping form) never resets it.
         tentToSave.LeafTempOffsetC = request.LeafTempOffsetC is { } offset
-            ? Math.Clamp(offset, 0, 10)
+            ? Math.Clamp(offset, -10, 0)
             : existing.LeafTempOffsetC;
 
         // Ziel des Durchschreibens: wie beim Offset selbst nur ersetzen, wenn der Request
