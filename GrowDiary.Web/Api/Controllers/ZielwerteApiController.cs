@@ -233,6 +233,18 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 : Leise(ausProfil) is not null ? profilName
                 : null;
 
+            // Beim VPD entscheidet der Blattversatz mit, worauf sich die Zahl ueberhaupt
+            // bezieht: mit Versatz ist es Blatt-VPD, ohne ist es Luft-VPD. Die RDWC-Baender
+            // sind fuer Blatt-VPD gezeichnet, also steht ohne diesen Zusatz eine Zahl auf der
+            // Seite, deren Bezugsgroesse man ihr nicht ansieht.
+            if (key == "vpd")
+            {
+                var bezug = zelt.LeafTempOffsetC < 0
+                    ? $"Blatt {zelt.LeafTempOffsetC:0.#} °C"
+                    : "Luft-VPD — kein Blattversatz gesetzt";
+                zusatz = string.IsNullOrWhiteSpace(zusatz) ? bezug : $"{zusatz} · {bezug}";
+            }
+
             if (eigene is not null && Leise(ausWoche) is not null)
             {
                 hinweise.Add($"{Namen.GetValueOrDefault(key, key)} steht auf Fest — die Wochenspalte kommt nicht an.");
