@@ -5,6 +5,63 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.112
+
+**Fork AI.** Wochenwerte lassen sich jetzt in der App ändern (F-004).
+
+### Was Sie sehen
+
+- Neu — **Betrieb → Wochenplan → „Werte bearbeiten":** eine Woche im Bild,
+  mit ‹ › oder Wischen weiterblättern. EC, pH, Wasser Tag/Nacht, RH max,
+  Luft, VPD, CO₂ und PPFD sind direkt editierbar. Weicht ein Wert vom Plan
+  ab, wird die Zelle gelb und zeigt den Planwert mit „zurück". Die
+  Punktreihe darunter zeigt die laufende Woche, Wochen mit eigenen Werten
+  und ungespeicherte Änderungen. Der Balken unten sammelt alle Änderungen
+  und speichert sie zusammen.
+- Nach dem Speichern gehen die Werte der laufenden Woche sofort an Home
+  Assistant, ohne auf 06:00 zu warten.
+- Tippfehler, Werte außerhalb des Bereichs und „von" über „bis" sperren
+  das Speichern; die Meldung nennt Woche und Feld.
+
+### Technik
+
+- Eigene Werte liegen als Abweichung in der neuen Tabelle
+  `ForkWochenwerte` (Programm, Spalte, Feld, Wert). Die ausgelieferte
+  Programmdatei bleibt unberührt, Programm-Updates kommen weiter an.
+- `WochenwertUeberlagerung` legt sie nach jedem Laden auf die Programme
+  (`KnowledgeBaseLoader.NachDemLaden`) — Mischplan, Zielband, Alarme, CO₂
+  und Wochenplan-Sync sehen sie ohne eigene Änderung.
+- Neue Endpunkte `GET`/`POST /api/wochenplan/werte/{growId}`; Speichern
+  prüft alle Änderungen gemeinsam und speichert alles oder nichts. Ein
+  Wert gleich dem Plan löscht die Abweichung.
+- Die Werte gelten für das Programm, also für jeden Grow, der es benutzt;
+  die Seite sagt das dazu, wenn es weitere gibt.
+
+## 2.0.0-forkai.111
+
+**Fork AI.** Beschriftungen (nachgetragen aus den Commits).
+
+- Geändert — **Steuerung:** heißt die Canopy-Temperatur nicht mehr
+  „Blatttemperatur"; die Rolle ist mit dem Luftfühler vorbelegt.
+  Schaltverhalten unverändert.
+- Geändert — **Zielwerte:** nennt beim VPD, ob Blatt- oder Luft-VPD gemeint ist.
+
+## 2.0.0-forkai.110
+
+**Fork AI.** Nachbesserung zu forkai.109 (nachgetragen aus den Commits).
+
+- Behoben — der Server klemmte den Blattoffset noch auf 0…10; ein negativer
+  Wert wurde still zu 0, und das Zelt rechnete wieder Luft-VPD.
+
+## 2.0.0-forkai.109
+
+**Fork AI.** Blattoffset mit Vorzeichen (nachgetragen aus den Commits).
+
+- Geändert — **VPD-Blattoffset** ist jetzt die Differenz Blatt minus Luft,
+  wie beim AC-Infinity-Controller: kühleres Blatt = negativ (Standard −2,
+  Eingabebereich −10…0). Der gespeicherte Wert der Installation wurde nach
+  dem Update einmalig neu gesetzt.
+
 ## 2.0.0-forkai.108
 
 **Fork AI.** Die Leiste gehorcht wieder, und der Flush bekommt seine

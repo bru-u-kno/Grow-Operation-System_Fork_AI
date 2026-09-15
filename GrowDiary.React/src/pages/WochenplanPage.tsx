@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
-import { V1Alert, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Button, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { WochenwerteBearbeiten } from '../features/wochenplan/WochenwerteBearbeiten'
 import '../features/wochenplan/wochenplan.css'
 
 /**
@@ -73,6 +74,8 @@ function WochenplanPage() {
   const [plaene, setPlaene] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // F-004: welcher Grow gerade im Bearbeiten-Modus ist (einer zur Zeit).
+  const [bearbeiten, setBearbeiten] = useState<number | null>(null)
 
   useEffect(() => {
     async function laden() {
@@ -97,6 +100,16 @@ function WochenplanPage() {
     void growId
   }
 
+  async function bearbeitenBeenden(gespeichert: boolean) {
+    setBearbeiten(null)
+    if (!gespeichert) return
+    try {
+      setPlaene(await apiFetch<Plan[]>('/api/wochenplan'))
+    } catch {
+      setError('Der Wochenplan konnte nicht neu geladen werden.')
+    }
+  }
+
   if (loading) return <V1Skeleton rows={6} label="Lade Wochenplan" />
 
   return (
@@ -118,7 +131,16 @@ function WochenplanPage() {
         const jetzt = plan.wochen.find((w) => w.istJetzt)
         return (
           <div key={plan.growId} data-audit={`wochenplan-${plan.growId}`}>
-            <V1Section title={`${plan.programmName} · ${plan.growName}`}>
+            <V1Section
+              title={`${plan.programmName} · ${plan.growName}`}
+              action={
+                bearbeiten === null ? (
+                  <V1Button variant="secondary" onClick={() => setBearbeiten(plan.growId)} audit="wochenwerte-bearbeiten-oeffnen">
+                    Werte bearbeiten
+                  </V1Button>
+                ) : undefined
+              }
+            >
               {/* Ohne den Haken am Addback gilt der Plan nur fürs Anmischen.
                   Das gehört an den Anfang: sonst liest man hier Zahlen und
                   wundert sich, dass die Kacheln andere zeigen. */}
@@ -129,6 +151,9 @@ function WochenplanPage() {
                 />
               )}
 
+              {bearbeiten === plan.growId ? (
+                <WochenwerteBearbeiten growId={plan.growId} onFertig={(g) => void bearbeitenBeenden(g)} />
+              ) : (
               <section className={classNames('wp-jetzt', !jetzt && 'ist-leer')}>
                 <div className="wp-kopf">Diese Woche</div>
                 <p className="wp-titel">
@@ -169,8 +194,10 @@ function WochenplanPage() {
                 )}
                 {jetzt?.dosierung && <p className="wp-dosis">Anmischen: {jetzt.dosierung}</p>}
               </section>
+              )}
             </V1Section>
 
+            {bearbeiten !== plan.growId && (
             <V1Section title="Verlauf">
               <div className="wp-liste">
                 {plan.wochen.map((woche) => (
@@ -188,6 +215,7 @@ function WochenplanPage() {
                 ))}
               </div>
             </V1Section>
+            )}
 
             {plan.uebergabe.length > 0 && (
               <V1Section title="Übergabe an Home Assistant">
@@ -216,6 +244,7 @@ function WochenplanPage() {
           </div>
         )
       })}
+      {bearbeiten !== null && <div className="wp-balken-platz" aria-hidden="true" />}
     </V1Page>
   )
 }

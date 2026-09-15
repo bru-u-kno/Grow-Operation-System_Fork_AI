@@ -66,3 +66,74 @@
     font: 400 var(--fs-klein)/1.2 var(--font-mono); cursor: pointer;
   }
 }
+
+/* Fork AI (F-004): Bearbeiten-Modus, Mockup-Variante F — eine Woche im Bild,
+   Punktreihe darunter, Speicherbalken fest am unteren Rand. Nur Tokens. */
+@layer features {
+  .wp-bearbeiten { display: grid; gap: var(--s-3); }
+  /* Platz am Seitenende, damit der feste Speicherbalken nichts verdeckt. */
+  .wp-balken-platz { height: calc(var(--h-lg) + var(--s-5) + var(--safe-bottom)); }
+
+  .wp-blatt {
+    position: relative; touch-action: pan-y;
+    /* Ohne das zieht ein zweites Wischen markierten Text weg (pointercancel). */
+    user-select: none;
+    border: 1px solid var(--hair-2); border-radius: var(--r);
+    background: var(--panel); padding: var(--s-3);
+  }
+  .wp-blatt-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+  .wp-blatt-titel {
+    display: flex; align-items: center; gap: var(--s-2); min-width: 0;
+    font: 400 1rem/1.4 var(--font-mono);
+  }
+  .wp-blatt-titel b { color: var(--accent-text); font-weight: 600; }
+  .wp-pfeil {
+    min-width: var(--h-md); min-height: var(--h-md);
+    border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--sunk);
+    color: var(--ink); font: 400 1.25rem/1 var(--font-mono); cursor: pointer;
+  }
+  .wp-pfeil:disabled { color: var(--faint); cursor: default; }
+
+  .wp-gitter-edit { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+  .wp-gitter-edit .wp-zelle { min-width: 0; padding: var(--s-2); }
+  /* Einheiten nicht in Versalien: aus µmol/m²s würde sonst ΜMOL/M²S. */
+  .wp-zelle-n .wp-einheit { text-transform: none; letter-spacing: 0; color: var(--faint); }
+  .wp-zelle.ist-eigen { border-color: var(--warn); background: var(--warn-wash); }
+  .wp-eingaben { display: flex; align-items: center; gap: var(--s-1); margin-top: var(--s-1); }
+  .wp-eingabe-paar { display: flex; align-items: center; gap: var(--s-1); min-width: 0; flex: 1; }
+  .wp-eingabe {
+    width: 100%; min-width: 0; min-height: var(--h-sm);
+    border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel);
+    color: var(--ink); padding: 0 var(--s-1); text-align: center;
+    font: 400 var(--fs-text)/1.2 var(--font-mono);
+  }
+  .wp-eingabe { user-select: text; }
+  .wp-eingabe::placeholder { color: var(--faint); }
+  .wp-plan { margin-top: var(--s-1); font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--warn-text); }
+  .wp-plan-zurueck {
+    border: 0; background: transparent; padding: 0; cursor: pointer;
+    color: var(--warn-text); font: inherit; text-decoration: underline;
+  }
+
+  .wp-punkte { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-2); }
+  .wp-punkt {
+    width: var(--s-3); height: var(--s-3); padding: 0; cursor: pointer;
+    border: 1px solid var(--hair-2); border-radius: var(--r-pill); background: var(--sunk);
+  }
+  .wp-punkt.ist-jetzt { border-color: var(--accent); }
+  .wp-punkt.ist-eigen { background: var(--warn); border-color: var(--warn); }
+  .wp-punkt.ist-offen { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--warn); }
+  .wp-punkt.ist-aktiv { transform: scale(1.35); background: var(--accent); border-color: var(--accent); }
+  .wp-punkt.ist-aktiv.ist-eigen { background: var(--warn); }
+
+  .wp-speicherbalken {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) var(--s-3) calc(var(--s-2) + var(--safe-bottom));
+    border-top: 1px solid var(--hair-2); background: var(--panel);
+  }
+  .wp-speicherbalken-zahl {
+    flex: 1; min-width: 0;
+    font: 400 var(--fs-klein)/1.3 var(--font-mono); color: var(--muted);
+  }
+}

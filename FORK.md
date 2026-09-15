@@ -26,7 +26,8 @@ dauerhaft zu melden.
 Wassertemperatur Tag/Nacht, VPD, CO₂, PPFD, RH-Obergrenze und Lufttemperatur. Eine
 Wochenplan-Seite zeigt die laufende Woche mit allen Plan-Werten, den Ankern
 (Vegi-Start, Flip, Erntefenster) und dem Hinweis, wenn eine gestreckte Phase die
-letzte Spalte hält.
+letzte Spalte hält. Die Wochenwerte lassen sich dort auch bearbeiten — gespeichert
+wird nur die Abweichung vom Plan, die Programmdatei bleibt unberührt.
 
 **Übergabe an Home Assistant.** Die Wochenwerte gehen beim Wochenwechsel und
 täglich um 06:00 in HA-Helfer, nach denen dort die Automationen regeln. Von Hand
@@ -96,7 +97,8 @@ Eigene Funktionen liegen möglichst in eigenen Dateien und Tabellen (`Fork*`).
 Angefasst ist der Bestandscode dort, wo es nicht anders ging: Alarmauswertung und
 Zielband, Kachel-Modell und Live-Payload, Wissens-Schema und Mischplan (Klimawerte
 je Woche), Trendwächter und Grow-Workflow (Sollwerte über das Zielband),
-Navigation und App-Shell, Zelt-Einstellungen (Blatt-Offset an den
+Navigation und App-Shell, Wissens-Loader (ein Haken nach dem Laden für
+eigene Wochenwerte), Zelt-Einstellungen (Blatt-Offset an den
 Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback. Welche
 Datei zu welcher Änderung gehört, steht in
 [docs/fork-historie.md](docs/fork-historie.md).
