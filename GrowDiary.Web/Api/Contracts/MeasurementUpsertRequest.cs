@@ -1,12 +1,18 @@
-using System.ComponentModel.DataAnnotations;
 using GrowDiary.Web.Models;
 
 namespace GrowDiary.Web.Api.Contracts;
 
 public sealed class MeasurementUpsertRequest
 {
-    [Required]
-    public string TakenAtLocal { get; set; } = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+    /// <summary>Zeitpunkt der Messung in Ortszeit (<c>yyyy-MM-ddTHH:mm</c>).</summary>
+    /// <remarks>
+    /// Darf fehlen. Beim Anlegen gilt dann die Gegenwart, beim Ändern bleibt der
+    /// gespeicherte Zeitpunkt stehen. Früher stand hier ein Standardwert
+    /// <c>DateTime.Now</c> — ein PUT ohne Zeitangabe schob die Messung damit
+    /// still auf den Moment des Speicherns (15.09.2026,
+    /// <c>MessungBehaeltZeitpunktBeimAendernTests</c>).
+    /// </remarks>
+    public string? TakenAtLocal { get; set; }
 
     public GrowStage Stage { get; set; } = GrowStage.Veg;
     public ValueOrigin Source { get; set; } = ValueOrigin.Manual;

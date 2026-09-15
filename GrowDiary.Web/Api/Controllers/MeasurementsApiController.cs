@@ -12,6 +12,9 @@ namespace GrowDiary.Web.Api.Controllers;
 [Produces("application/json")]
 public sealed class MeasurementsApiController : ApiControllerBase
 {
+    /// <summary>Format von <see cref="MeasurementUpsertRequest.TakenAtLocal"/>.</summary>
+    private const string ZeitFormat = "yyyy-MM-ddTHH:mm";
+
     private readonly GrowRepository _repository;
     private readonly AuditRepository _auditRepository;
     private readonly MeasurementSanityService _measurementSanityService;
@@ -134,6 +137,12 @@ public sealed class MeasurementsApiController : ApiControllerBase
             return ValidationError();
         }
 
+        // Ohne Zeitangabe gilt beim Anlegen die Gegenwart.
+        if (string.IsNullOrWhiteSpace(request.TakenAtLocal))
+        {
+            request.TakenAtLocal = DateTime.Now.ToString(ZeitFormat);
+        }
+
         Measurement measurement;
         try
         {
@@ -232,6 +241,13 @@ public sealed class MeasurementsApiController : ApiControllerBase
         if (!ModelState.IsValid)
         {
             return ValidationError();
+        }
+
+        // Ohne Zeitangabe bleibt der gespeicherte Zeitpunkt stehen — ein
+        // Nachtrag verschiebt die Messung nicht in die Gegenwart.
+        if (string.IsNullOrWhiteSpace(request.TakenAtLocal))
+        {
+            request.TakenAtLocal = existingMeasurement.TakenAt.ToString(ZeitFormat);
         }
 
         Measurement measurement;

@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.113
+
+**Fork AI.** Eine geänderte Messung behält ihren Zeitpunkt.
+
+- Behoben — **Messung ändern ohne Zeitangabe:** Wer eine Messung über die
+  Schnittstelle nachträglich ändert (etwa eine Notiz ergänzt) und dabei kein
+  `takenAtLocal` mitschickt, hat sie bisher still auf den Moment des
+  Speicherns verschoben. Eine Messung von 21:02 stand nach einem Nachtrag um
+  21:06 auf 21:06 — bei einer Korrektur am nächsten Morgen wäre sie im
+  Verlauf an der falschen Stelle gelandet. Ursache: Der Vertrag setzte für
+  ein fehlendes Zeitfeld die aktuelle Uhrzeit ein. Jetzt bleibt beim Ändern
+  der gespeicherte Zeitpunkt stehen, solange keiner mitgeschickt wird; ein
+  leeres Zeitfeld zählt wie ein fehlendes.
+- Unverändert — Wer beim Ändern einen Zeitpunkt mitschickt, setzt ihn wie
+  bisher. Beim Anlegen ohne Zeitangabe gilt weiter die Gegenwart. Das
+  Messformular der App schickt den Zeitpunkt ohnehin immer mit.
+
+### Technik
+
+- `MeasurementUpsertRequest.TakenAtLocal` ist jetzt optional (kein
+  Standardwert mehr); `MeasurementsApiController` füllt es beim Anlegen mit
+  der Gegenwart und beim Ändern mit dem gespeicherten Zeitpunkt.
+- Gehalten von `MessungBehaeltZeitpunktBeimAendernTests` (über HTTP, weil der
+  Fehler im Model-Binding entsteht): zweimal hintereinander ändern, leeres
+  Zeitfeld, explizite Zeit, Anlegen ohne Zeit. Ohne die Korrektur sind zwei
+  der vier Fälle rot.
+
 ## 2.0.0-forkai.112
 
 **Fork AI.** Wochenwerte lassen sich jetzt in der App ändern (F-004).
