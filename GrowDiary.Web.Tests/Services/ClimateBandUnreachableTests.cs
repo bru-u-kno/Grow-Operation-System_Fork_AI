@@ -17,7 +17,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </remarks>
 public sealed class ClimateBandUnreachableTests
 {
-    private const double LeafOffset = 2.0;
+    private const double LeafOffset = -2.0;
 
     [Fact]
     public void AtVeryDryAir_NoTemperatureReachesALowVpdTarget()
