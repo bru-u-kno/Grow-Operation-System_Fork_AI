@@ -36,6 +36,16 @@ public sealed class KnowledgeBaseLoader
     public IReadOnlyList<WearTemplateDefinition> WearTemplates => _wearTemplates;
     public IReadOnlyList<GuidanceDefinition> Guidance => _guidance;
 
+    /// <summary>
+    /// Fork AI (F-004, forkai.112): läuft nach jedem Laden und darf die
+    /// Düngeprogramme überlagern (vom Nutzer gesetzte Wochenwerte).
+    /// </summary>
+    /// <remarks>
+    /// Ein Haken statt einer Abhängigkeit im Konstruktor: der Loader wird in
+    /// vielen Tests von Hand gebaut, und das Original bleibt so unberührt.
+    /// </remarks>
+    public Action<IReadOnlyList<NutrientProgramDefinition>>? NachDemLaden { get; set; }
+
     public KnowledgeBaseLoader(AppPaths paths, ILogger<KnowledgeBaseLoader> logger)
     {
         _paths = paths;
@@ -58,6 +68,7 @@ public sealed class KnowledgeBaseLoader
         _symptoms = LoadCategory<SymptomDefinition>("symptoms");
         _wearTemplates = LoadCategory<WearTemplateDefinition>("wear");
         _guidance = LoadCategory<GuidanceDefinition>("guidance");
+        NachDemLaden?.Invoke(_nutrientPrograms); // Fork AI (F-004)
 
         _logger.LogInformation(
             "Knowledge-Base geladen: {TC} Treatments, {SC} SOPs, {NC} Programme, {SetC} Setpoints, {PC} Pathogens, {SymC} Symptoms, {WC} Wear-Templates, {GC} Regeln",

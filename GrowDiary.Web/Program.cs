@@ -112,6 +112,8 @@ builder.Services.AddScoped<KostenSeiteService>();
 builder.Services.AddScoped<ZaehlerstandImportService>();
 // Fork AI (forkai.20): Steuerung — CO₂-Leitstand
 builder.Services.AddSingleton<SteuerungRepository>();
+builder.Services.AddSingleton<WochenwertRepository>(); // Fork AI (F-004)
+builder.Services.AddSingleton<WochenwertUeberlagerung>(); // Fork AI (F-004)
 builder.Services.AddScoped<SteuerungGeraeteService>();
 // Fork AI (forkai.22): Geraetesicht ueber die bestehenden Entity-Quellen.
 builder.Services.AddSingleton<GeraeteRepository>();
@@ -171,7 +173,10 @@ if (!string.IsNullOrWhiteSpace(defaultUrls))
 var app = builder.Build();
 
 app.Services.GetRequiredService<DatabaseInitializer>().Initialize();
-app.Services.GetRequiredService<KnowledgeBaseLoader>().Initialize();
+// Fork AI (F-004): eigene Wochenwerte liegen nach jedem Laden auf dem Plan.
+var wissensbasis = app.Services.GetRequiredService<KnowledgeBaseLoader>();
+wissensbasis.NachDemLaden = app.Services.GetRequiredService<WochenwertUeberlagerung>().Anwenden;
+wissensbasis.Initialize();
 
 HaConfigLoader.Apply(
     app.Services.GetRequiredService<AppPaths>(),

@@ -44,6 +44,38 @@ public sealed record WochenplanDto(
     List<WochenplanUebergabeDto> Uebergabe,
     string? LetzteUebergabe);
 
+/// <summary>Ein bearbeitbares Feld einer Woche (F-004).</summary>
+public sealed record WochenwertFeldDto(
+    string Feld,
+    string Bezeichnung,
+    string Einheit,
+    double Min,
+    double Max,
+    double Schritt,
+    double? Wert,
+    double? Plan,
+    bool Geaendert);
+
+/// <summary>Eine Woche im Bearbeiten-Modus (F-004).</summary>
+public sealed record WochenwertSpalteDto(
+    string Id,
+    string Label,
+    string Stage,
+    int? Woche,
+    bool IstJetzt,
+    List<WochenwertFeldDto> Felder);
+
+/// <summary>Alle bearbeitbaren Wochen eines Grows (F-004).</summary>
+public sealed record WochenwerteDto(
+    int GrowId,
+    string ProgrammId,
+    string ProgrammName,
+    int AndereGrows,
+    List<WochenwertSpalteDto> Spalten);
+
+/// <summary>Antwort auf das Speichern (F-004).</summary>
+public sealed record WochenwerteGespeichertDto(WochenwerteDto Werte, int Uebergeben, string? Hinweis);
+
 /// <summary>
 /// Fork AI: die Seite „Wochenplan" — was der Plan für diesen Durchgang vorgibt.
 /// </summary>
@@ -79,12 +111,167 @@ public sealed class WochenplanApiController : ApiControllerBase
     private readonly GrowRepository _grows;
     private readonly KnowledgeBaseLoader _wissen;
     private readonly WochenplanSyncService _sync;
+    private readonly WochenwertRepository _wochenwerte;
+    private readonly WochenwertUeberlagerung _ueberlagerung;
 
-    public WochenplanApiController(GrowRepository grows, KnowledgeBaseLoader wissen, WochenplanSyncService sync)
+    public WochenplanApiController(
+        GrowRepository grows,
+        KnowledgeBaseLoader wissen,
+        WochenplanSyncService sync,
+        WochenwertRepository wochenwerte,
+        WochenwertUeberlagerung ueberlagerung)
     {
         _grows = grows;
         _wissen = wissen;
         _sync = sync;
+        _wochenwerte = wochenwerte;
+        _ueberlagerung = ueberlagerung;
+    }
+
+    /// <summary>F-004: alle Wochen des Programms eines Grows, mit Planwert und eigenem Wert.</summary>
+    [HttpGet("werte/{growId:int}")]
+    [ProducesResponseType(typeof(WochenwerteDto), StatusCodes.Status200OK)]
+    public ActionResult<WochenwerteDto> Werte(int growId)
+    {
+        if (Programm(growId) is not { } gefunden) return KeinProgramm();
+        return Ok(WerteDto(gefunden.Grow, gefunden.Programm));
+    }
+
+    /// <summary>
+    /// F-004: Änderungen aus dem Bearbeiten-Modus speichern und gleich an Home Assistant übergeben.
+    /// </summary>
+    /// <remarks>
+    /// <para>Alle Änderungen werden zuerst gemeinsam geprüft; ist eine
+    /// ungültig, wird keine gespeichert. Ein halb gespeicherter Plan wäre
+    /// schlimmer als ein abgelehnter — der Speicherbalken sammelt ja gerade,
+    /// damit die Werte zusammenpassen (etwa „VPD von" nicht über „VPD bis").</para>
+    ///
+    /// <para>Die Werte gelten für das <b>Programm</b>, also für jeden Grow, der
+    /// es benutzt. Die Seite sagt das dazu (<c>AndereGrows</c>).</para>
+    ///
+    /// <para>Dass die Übergabe an HA fehlschlägt, macht das Speichern nicht
+    /// ungültig: gespeichert ist gespeichert, der tägliche Lauf um 06:00 holt
+    /// es nach. Die Antwort sagt dann, was los ist.</para>
+    /// </remarks>
+    [HttpPost("werte/{growId:int}")]
+    [ProducesResponseType(typeof(WochenwerteGespeichertDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<WochenwerteGespeichertDto>> WerteSpeichern(
+        int growId, [FromBody] WochenwerteSpeichernRequest anfrage, CancellationToken ct)
+    {
+        if (Programm(growId) is not { } gefunden) return KeinProgramm();
+        var (grow, programm) = gefunden;
+        var spalten = programm.FeedChart!.Columns;
+
+        if (anfrage.Aenderungen.Count == 0) return ValidationError("Es gibt nichts zu speichern.");
+
+        var geprueft = new List<(string SpalteId, string Feld, double? Wert)>();
+        // Was nach dem Speichern in jeder betroffenen Spalte stünde — für die Paar-Prüfung.
+        var danach = new Dictionary<(string Spalte, string Feld), double?>();
+
+        foreach (var aenderung in anfrage.Aenderungen)
+        {
+            var spalte = spalten.FirstOrDefault(s => string.Equals(s.Id, aenderung.SpalteId, StringComparison.OrdinalIgnoreCase));
+            if (spalte is null)
+                return ValidationError($"Die Woche „{aenderung.SpalteId}“ gibt es im Programm {programm.Name} nicht.");
+
+            if (Wochenwertfelder.Finden(aenderung.Feld) is not { } feld)
+                return ValidationError($"„{aenderung.Feld}“ lässt sich nicht bearbeiten.");
+
+            if (aenderung.Wert is { } wert)
+            {
+                if (double.IsNaN(wert) || double.IsInfinity(wert) || wert < feld.Min || wert > feld.Max)
+                    return ValidationError(
+                        $"{spalte.Label}: {feld.Bezeichnung} muss zwischen {Zahl(feld.Min)} und {Zahl(feld.Max)} liegen.");
+            }
+
+            var neu = aenderung.Wert ?? _ueberlagerung.Planwert(spalte, feld);
+            danach[(spalte.Id, feld.Name)] = neu;
+            geprueft.Add((spalte.Id, feld.Name, aenderung.Wert));
+        }
+
+        foreach (var spalte in spalten)
+        {
+            foreach (var feld in Wochenwertfelder.Alle.Where(f => f.Paar is not null))
+            {
+                var partner = Wochenwertfelder.Finden(feld.Paar!)!;
+                var von = danach.TryGetValue((spalte.Id, feld.Name), out var a) ? a : feld.Lesen(spalte);
+                var bis = danach.TryGetValue((spalte.Id, partner.Name), out var b) ? b : partner.Lesen(spalte);
+                if (von is { } v && bis is { } z && v > z + 1e-9)
+                    return ValidationError(
+                        $"{spalte.Label}: {feld.Bezeichnung} ({Zahl(v)}) liegt über {partner.Bezeichnung} ({Zahl(z)}).");
+            }
+        }
+
+        // Ein Wert, der dem Plan entspricht, ist keine Abweichung — dann wird
+        // die Zeile gelöscht statt eine Kopie des Planwerts abzulegen.
+        var zuSchreiben = geprueft
+            .Select(g =>
+            {
+                var spalte = spalten.First(s => s.Id == g.SpalteId);
+                var plan = _ueberlagerung.Planwert(spalte, Wochenwertfelder.Finden(g.Feld)!);
+                return g.Wert is { } w && plan is { } p && Math.Abs(w - p) < 1e-9 ? (g.SpalteId, g.Feld, (double?)null) : g;
+            })
+            .ToList();
+
+        _wochenwerte.Speichern(programm.Id, zuSchreiben);
+        _ueberlagerung.Auffrischen();
+
+        var uebergeben = 0;
+        string? hinweis = null;
+        try
+        {
+            uebergeben = await _sync.UebergebenAsync(ct);
+        }
+        catch (Exception)
+        {
+            hinweis = "Gespeichert. Home Assistant war gerade nicht erreichbar — die Übergabe holt der nächste Lauf nach.";
+        }
+
+        return Ok(new WochenwerteGespeichertDto(WerteDto(grow, programm), uebergeben, hinweis));
+    }
+
+    private (GrowRun Grow, NutrientProgramDefinition Programm)? Programm(int growId)
+    {
+        if (_grows.GetGrow(growId) is not { } grow) return null;
+        var programm = _wissen.NutrientPrograms
+            .FirstOrDefault(p => string.Equals(p.Id, grow.FeedProgramId, StringComparison.OrdinalIgnoreCase));
+        return programm?.FeedChart is { Columns.Count: > 0 } ? (grow, programm) : null;
+    }
+
+    private ActionResult KeinProgramm()
+        => NotFoundError("wochenplan_ohne_programm", "Dieser Grow hat kein Düngeprogramm mit Wochenplan.");
+
+    private WochenwerteDto WerteDto(GrowRun grow, NutrientProgramDefinition programm)
+    {
+        var aktiveId = MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms)?.Spalte.Id;
+        var andere = _grows.GetActiveGrows().Count(g =>
+            g.Id != grow.Id && string.Equals(g.FeedProgramId, programm.Id, StringComparison.OrdinalIgnoreCase));
+
+        return new WochenwerteDto(
+            grow.Id,
+            programm.Id,
+            programm.Name,
+            andere,
+            programm.FeedChart!.Columns
+                .Select(spalte => new WochenwertSpalteDto(
+                    spalte.Id,
+                    spalte.Label,
+                    spalte.Stage,
+                    spalte.Week,
+                    spalte.Id == aktiveId,
+                    Wochenwertfelder.Alle
+                        .Select(feld => new WochenwertFeldDto(
+                            feld.Name,
+                            feld.Bezeichnung,
+                            feld.Einheit,
+                            feld.Min,
+                            feld.Max,
+                            feld.Schritt,
+                            feld.Lesen(spalte),
+                            _ueberlagerung.Planwert(spalte, feld),
+                            _ueberlagerung.IstGeaendert(programm.Id, spalte.Id, feld.Name)))
+                        .ToList()))
+                .ToList());
     }
 
     /// <summary>Jetzt übergeben, ohne auf 06:00 oder den Wochenwechsel zu warten.</summary>
