@@ -58,8 +58,14 @@ public static class SteuerungGeraeteRollen
     {
         new("co2", "co2_sensor", "CO₂-Sensor", GruppeMessen,
             "sensor.big_co2_light_sensor_co2", new[] { "sensor" }, Einheit: "ppm"),
+        // Fork AI: heisst bewusst nicht "Blatttemperatur". Vorbelegt ist der
+        // Luftfuehler der Sonde, und das ist fuer die CO2-Schwellen auch die
+        // richtige Groesse -- die Quelle nennt 26-30 Grad Lufttemperatur. Wer
+        // einen IR-Sensor hat, mappt hier die echte Blatttemperatur; die
+        // Beschriftung muss deshalb fuer beides stimmen.
         new("co2", "canopy", "Canopy-Temperatur", GruppeMessen,
-            "sensor.big_probe_sensor_sonden_temperatur", new[] { "sensor" }, Einheit: "°C"),
+            "sensor.big_probe_sensor_sonden_temperatur", new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Vorbelegt mit dem Luftfuehler im Bestand. Ein IR-Sensor misst hier die echte Blatttemperatur — dann verschieben sich die Schwellen entsprechend."),
         new("co2", "rh", "Luftfeuchte", GruppeMessen,
             "sensor.big_probe_sensor_sonden_luftfeuchtigkeit", new[] { "sensor" }, Einheit: "%"),
         new("co2", "vpd", "VPD", GruppeMessen,
