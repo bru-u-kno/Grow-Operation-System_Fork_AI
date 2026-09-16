@@ -482,6 +482,87 @@ public sealed class GrowPlanService
     }
 
     /// <summary>
+    /// Hält den Endstand passend zum Status des Grows: abgeschlossen ⇒ einfrieren,
+    /// wieder geöffnet ⇒ Einfrieren aufheben. Beides steht im Änderungsbuch.
+    /// </summary>
+    /// <remarks>
+    /// Aufgerufen von allen Wegen, die den Status setzen (Formular, Archivieren,
+    /// Ernte) und beim Start für alle Pläne — so bleibt kein Abschluss ohne
+    /// eingefrorenen Plan, auch wenn ein neuer Weg dazukommt.
+    /// </remarks>
+    /// <returns>Was passiert ist: <c>eingefroren</c>, <c>wiedergeoeffnet</c> oder null.</returns>
+    public string? Abgleichen(GrowRun grow, DateTime? jetztUtc = null)
+    {
+        lock (_lock)
+        {
+            if (_repo.Laden(grow.Id, GrowPlanStaende.Arbeit) is not { } arbeit) return null;
+            var ende = _repo.Laden(grow.Id, GrowPlanStaende.Ende);
+            var zeit = jetztUtc ?? DateTime.UtcNow;
+
+            if (grow.IsArchived && ende is null)
+            {
+                var status = grow.Status == GrowStatus.Aborted ? "abgebrochen" : "abgeschlossen";
+                _repo.Speichern(
+                    [new GrowPlanStand(grow.Id, GrowPlanStaende.Ende, GrowPlanBauer.Kopie(arbeit.Inhalt), status, zeit, zeit)],
+                    [new GrowPlanEintrag(0, grow.Id, zeit, GrowPlanArten.Eingefroren, null, null, null, status, null, null)]);
+                _logger.LogInformation("Grow-Plan {Grow} eingefroren ({Status}).", grow.Id, status);
+                return GrowPlanArten.Eingefroren;
+            }
+
+            if (!grow.IsArchived && ende is not null)
+            {
+                _repo.StandEntfernen(grow.Id, GrowPlanStaende.Ende,
+                    new GrowPlanEintrag(0, grow.Id, zeit, GrowPlanArten.Wiedergeoeffnet, null, null, null, null, null, null));
+                _logger.LogInformation("Grow-Plan {Grow} wieder geöffnet.", grow.Id);
+                return GrowPlanArten.Wiedergeoeffnet;
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>Alle Pläne mit ihrem Grow abgleichen (beim Start).</summary>
+    public int AlleAbgleichen(Func<int, GrowRun?> growLaden)
+    {
+        var geaendert = 0;
+        foreach (var stand in _repo.AlleStaende(GrowPlanStaende.Arbeit))
+        {
+            if (growLaden(stand.GrowId) is { } grow && Abgleichen(grow) is not null) geaendert++;
+        }
+        return geaendert;
+    }
+
+    /// <summary>
+    /// Legt aus dem Endstand (sonst dem Arbeitsstand) ein eigenes Programm an —
+    /// die Vorlage für den nächsten Grow.
+    /// </summary>
+    public NutrientProgramDefinition AlsProgrammSpeichern(int growId, string name, DateTime? jetztUtc = null)
+    {
+        if (_eigene is null) throw new InvalidOperationException("Eigene Programme sind hier nicht verfügbar.");
+        var stand = _repo.Laden(growId, GrowPlanStaende.Ende) ?? _repo.Laden(growId, GrowPlanStaende.Arbeit)
+            ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
+        var bibliothek = _eigene.Finden(stand.Inhalt.ProgrammId);
+        var vorlage = new NutrientProgramDefinition
+        {
+            SchemaVersion = bibliothek?.SchemaVersion ?? "1",
+            Id = stand.Inhalt.ProgrammId,
+            Name = stand.Inhalt.ProgrammName,
+            Manufacturer = bibliothek?.Manufacturer ?? string.Empty,
+            Category = bibliothek?.Category ?? string.Empty,
+            Summary = $"Endstand eines abgeschlossenen Grows.",
+            BestFor = bibliothek?.BestFor ?? string.Empty,
+            WaterGuidance = bibliothek?.WaterGuidance ?? string.Empty,
+            PhGuidance = bibliothek?.PhGuidance ?? string.Empty,
+            EcGuidance = bibliothek?.EcGuidance ?? string.Empty,
+            FeedChart = GrowPlanBauer.Kopie(stand.Inhalt.Chart),
+        };
+        var programm = _eigene.Anlegen(vorlage, name);
+        var zeit = jetztUtc ?? DateTime.UtcNow;
+        _repo.Speichern([], [new GrowPlanEintrag(0, growId, zeit, GrowPlanArten.AlsProgramm, null, null, null, programm.Name, $"programm:{programm.Id}", null)]);
+        return programm;
+    }
+
+    /// <summary>
     /// Trägt in bestehende Pläne nach, was spätere Versionen neu im Plan führen
     /// (das EC-Band). Kein Eintrag im Änderungsbuch: das ist Technik, keine Änderung
     /// am Ziel — das Band entspricht dem, was bisher aus dem Standard kam.

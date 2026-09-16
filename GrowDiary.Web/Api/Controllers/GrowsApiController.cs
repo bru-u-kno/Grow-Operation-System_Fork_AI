@@ -292,11 +292,15 @@ public sealed class GrowsApiController : ApiControllerBase
 
         _repository.UpdateGrow(grow);
 
-        // Fork AI (Grow-Plan): wird einem Grow erstmals ein Programm gegeben, bekommt er seinen Plan.
-        if (_plaene is not null && !grow.IsArchived && !Services.GrowPlan.GrowPlanService.HatPlan(id)
-            && _repository.GetGrow(id) is { } gespeichert)
+        // Fork AI (Grow-Plan): wird einem Grow erstmals ein Programm gegeben, bekommt er seinen Plan;
+        // wird er abgeschlossen oder wieder geöffnet, folgt der Endstand.
+        if (_plaene is not null && _repository.GetGrow(id) is { } gespeichert)
         {
-            _plaene.Anlegen(gespeichert);
+            if (!gespeichert.IsArchived && !Services.GrowPlan.GrowPlanService.HatPlan(id))
+            {
+                _plaene.Anlegen(gespeichert);
+            }
+            _plaene.Abgleichen(gespeichert);
         }
 
         _auditRepository.Add(new AuditEntry
@@ -387,6 +391,7 @@ public sealed class GrowsApiController : ApiControllerBase
             existing.Status = GrowStatus.Completed;
             existing.EndDate ??= DateTime.Today;
             _repository.UpdateGrow(existing);
+            _plaene?.Abgleichen(existing); // Fork AI (Grow-Plan): Plan einfrieren
             _auditRepository.Add(new AuditEntry
             {
                 GrowId = id,

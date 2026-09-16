@@ -70,6 +70,49 @@ public sealed class GrowPlanSpeichernTests
         Assert.Contains("dosierung", arten);
     }
 
+    [Fact]
+    public async Task ErnteFriertDenPlanEinUndDieAuswertungZeigtIhn()
+    {
+        int id;
+        using (var bereich = _app.Services.CreateScope())
+        {
+            var grows = bereich.ServiceProvider.GetRequiredService<GrowRepository>();
+            var vorlage = grows.GetActiveGrows().First();
+            // Sehr altes Startdatum: steht in der Liste laufender Grows ganz hinten.
+            id = grows.CreateGrow(new GrowRun
+            {
+                Name = "Ernte-Test " + Guid.NewGuid().ToString("N")[..6],
+                TentId = vorlage.TentId,
+                HydroStyle = HydroStyle.RDWC,
+                FeedProgramId = "skx-canna-aqua",
+                Status = GrowStatus.Running,
+                StartDate = new DateTime(2001, 1, 1),
+                FlipDate = new DateTime(2001, 2, 1),
+            });
+            _app.Services.GetRequiredService<GrowPlanService>().Anlegen(grows.GetGrow(id)!);
+        }
+        var client = _app.IngressClient();
+
+        var ernte = await client.PutAsJsonAsync($"/api/grows/{id}/harvest", new { harvestedAtLocal = "2001-04-01" });
+        Assert.Equal(HttpStatusCode.OK, ernte.StatusCode);
+
+        var ende = await client.GetAsync($"/api/grows/{id}/plan?stand=ende");
+        Assert.Equal(HttpStatusCode.OK, ende.StatusCode);
+
+        var auswertung = await client.GetFromJsonAsync<JsonElement>($"/api/grows/{id}/plan/auswertung");
+        Assert.True(auswertung.GetProperty("eingefroren").GetBoolean());
+        Assert.Equal(14, auswertung.GetProperty("wochen").GetArrayLength());
+        Assert.Contains(auswertung.GetProperty("buch").EnumerateArray(), e => e.GetProperty("art").GetString() == "eingefroren");
+
+        // Nach dem Einfrieren lässt sich nichts mehr speichern.
+        var speichern = await client.PostAsJsonAsync($"/api/grows/{id}/plan",
+            new { spalteId = "flower-w5", werte = new[] { new { feld = "ecTarget", wert = (double?)1.4 } } });
+        Assert.Equal(HttpStatusCode.BadRequest, speichern.StatusCode);
+
+        var programm = await client.PostAsJsonAsync($"/api/grows/{id}/plan/als-programm", new { name = "Ernte-Test-Programm " + id });
+        Assert.Equal(HttpStatusCode.OK, programm.StatusCode);
+    }
+
     [Theory]
     [InlineData("""{"spalteId":"gibt-es-nicht","werte":[]}""")]
     [InlineData("""{"spalteId":"flower-w5","werte":[{"feld":"quatsch","wert":1}]}""")]

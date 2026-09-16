@@ -54,6 +54,8 @@ public static class GrowPlanArten
     public const string Dosierung = "dosierung";
     public const string Programmwechsel = "programmwechsel";
     public const string Eingefroren = "eingefroren";
+    public const string Wiedergeoeffnet = "wiedergeoeffnet";
+    public const string AlsProgramm = "alsprogramm";
 }
 
 /// <summary>Der gespeicherte Inhalt eines Planstands.</summary>

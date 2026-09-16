@@ -29,6 +29,24 @@ public sealed class ProgrammwechselRequest
     public bool AenderungenBehalten { get; set; }
 }
 
+public sealed record PlanAuswertungDto(
+    int GrowId,
+    string GrowName,
+    string ProgrammName,
+    string? StartProgrammName,
+    bool Eingefroren,
+    DateTime? EingefrorenUtc,
+    string? StartVermerk,
+    IReadOnlyList<PlanAuswertungWoche> Wochen,
+    IReadOnlyList<GrowPlanEintragDto> Buch);
+
+public sealed class AlsProgrammRequest
+{
+    public string? Name { get; set; }
+}
+
+public sealed record AlsProgrammDto(string ProgrammId, string ProgrammName);
+
 public sealed record ProgrammwechselDto(
     string ProgrammId,
     string ProgrammName,
@@ -262,6 +280,51 @@ public sealed class GrowPlanApiController : ApiControllerBase
         return Ok(new PlanGespeichertDto(
             ergebnis.Aenderungen, ergebnis.ProgrammId, ergebnis.ProgrammName, uebergeben, hinweis,
             Dto(_plaene.Stand(growId, GrowPlanStaende.Arbeit)!)));
+    }
+
+    /// <summary>
+    /// Die Auswertung je Woche: Startstand, Endstand (sonst Arbeitsstand),
+    /// gemessene Mittelwerte — und das Änderungsbuch dazu.
+    /// </summary>
+    [HttpGet("auswertung")]
+    [ProducesResponseType(typeof(PlanAuswertungDto), StatusCodes.Status200OK)]
+    public ActionResult<PlanAuswertungDto> Auswertung(int growId)
+    {
+        if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        var ende = _plaene.Stand(growId, GrowPlanStaende.Ende);
+        var arbeit = ende ?? _plaene.Stand(growId, GrowPlanStaende.Arbeit);
+        if (arbeit is null) return NotFoundError("plan_nicht_gefunden", "Für diesen Grow ist kein Plan gespeichert.");
+        var start = _plaene.Stand(growId, GrowPlanStaende.Start);
+
+        var wochen = PlanAuswertung.Bauen(grow, start?.Inhalt, arbeit.Inhalt, _grows.GetMeasurementsForGrow(growId), DateTime.Today);
+        return Ok(new PlanAuswertungDto(
+            growId,
+            string.IsNullOrWhiteSpace(grow.Name) ? $"Grow {growId}" : grow.Name,
+            arbeit.Inhalt.ProgrammName,
+            start?.Inhalt.ProgrammName,
+            ende is not null,
+            ende?.AngelegtUtc,
+            start?.Vermerk,
+            wochen,
+            _plaene.Buch(growId)
+                .Select(e => new GrowPlanEintragDto(e.Id, e.ZeitUtc, e.Art, e.SpalteId, e.Feld, e.Alt, e.Neu, e.Ziel, e.Grund))
+                .ToList()));
+    }
+
+    /// <summary>Endstand (sonst Arbeitsstand) als eigenes Programm für den nächsten Grow.</summary>
+    [HttpPost("als-programm")]
+    [ProducesResponseType(typeof(AlsProgrammDto), StatusCodes.Status200OK)]
+    public ActionResult<AlsProgrammDto> AlsProgramm(int growId, [FromBody] AlsProgrammRequest anfrage)
+    {
+        if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Arbeit) is null)
+            return NotFoundError("plan_nicht_gefunden", "Für diesen Grow ist kein Plan gespeichert.");
+        var name = anfrage.Name?.Trim() ?? string.Empty;
+        if (name.Length == 0) return ValidationError("Bitte einen Namen für das Programm angeben.");
+        if (name.Length > 80) return ValidationError("Der Name darf höchstens 80 Zeichen lang sein.");
+
+        var programm = _plaene.AlsProgrammSpeichern(growId, name);
+        return Ok(new AlsProgrammDto(programm.Id, programm.Name));
     }
 
     private static string Zahl(double wert) => wert.ToString("0.##", AppCulture.German);

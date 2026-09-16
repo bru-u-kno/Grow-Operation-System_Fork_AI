@@ -191,6 +191,11 @@ try
     var laufende = app.Services.GetRequiredService<GrowRepository>().GetActiveGrows();
     var uebernommen = growPlaene.FehlendePlaeneAnlegen(laufende);
     var nachgetragen = growPlaene.FehlendeFelderNachtragen(laufende);
+    var abgeglichen = growPlaene.AlleAbgleichen(app.Services.GetRequiredService<GrowRepository>().GetGrow);
+    if (abgeglichen > 0)
+    {
+        app.Logger.LogInformation("Grow-Plan: {Anzahl} Pläne mit dem Grow-Status abgeglichen.", abgeglichen);
+    }
     if (nachgetragen > 0)
     {
         app.Logger.LogInformation("Grow-Plan: {Anzahl} Planstände um das EC-Band ergänzt.", nachgetragen);

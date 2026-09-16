@@ -162,6 +162,23 @@ public sealed class GrowPlanRepository : RepositoryBase
         command.ExecuteNonQuery();
     }
 
+    /// <summary>Entfernt einen Stand — nur für den Endstand beim Wiederöffnen gedacht.</summary>
+    public void StandEntfernen(int growId, string stand, GrowPlanEintrag eintrag)
+    {
+        using var connection = Open();
+        using var tx = connection.BeginTransaction();
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = tx;
+            command.CommandText = "DELETE FROM ForkGrowPlan WHERE GrowId = $g AND Stand = $s;";
+            command.Parameters.AddWithValue("$g", growId);
+            command.Parameters.AddWithValue("$s", stand);
+            command.ExecuteNonQuery();
+        }
+        tx.Commit();
+        Speichern([], [eintrag]);
+    }
+
     public IReadOnlyList<GrowPlanEintrag> Buch(int growId)
     {
         using var connection = Open();

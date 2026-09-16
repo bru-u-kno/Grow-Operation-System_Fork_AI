@@ -442,6 +442,126 @@ public sealed class GrowPlanTests : IDisposable
         Assert.Throws<InvalidOperationException>(() => _dienst.ProgrammWechseln(grow, "athena", false));
     }
 
+    [Fact]
+    public void AbschlussFriertEinUndWiederoeffnenHebtEsAuf()
+    {
+        var grow = Grow(40, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.3)]);
+        Assert.Null(_dienst.Abgleichen(grow));   // läuft noch
+
+        grow.Status = GrowStatus.Completed;
+        Assert.Equal(GrowPlanArten.Eingefroren, _dienst.Abgleichen(grow));
+        var ende = _repo.Laden(grow.Id, GrowPlanStaende.Ende)!;
+        Assert.Equal(1.3, Woche(ende, "flower-w5").C.EcTarget);
+        Assert.Equal("abgeschlossen", ende.Vermerk);
+        Assert.Null(_dienst.Abgleichen(grow));   // zweites Mal: nichts
+        Assert.Throws<InvalidOperationException>(() => _dienst.Speichern(grow.Id,
+            new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.2)], null, false, null, null)));
+
+        grow.Status = GrowStatus.Running;
+        Assert.Equal(GrowPlanArten.Wiedergeoeffnet, _dienst.Abgleichen(grow));
+        Assert.Null(_repo.Laden(grow.Id, GrowPlanStaende.Ende));
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.2)], null, false, null, null));
+
+        var arten = _repo.Buch(grow.Id).Select(e => e.Art).ToList();
+        Assert.Contains(GrowPlanArten.Eingefroren, arten);
+        Assert.Contains(GrowPlanArten.Wiedergeoeffnet, arten);
+    }
+
+    [Fact]
+    public void AbbruchWirdAlsSolcherVermerkt()
+    {
+        var grow = Grow(41, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        grow.Status = GrowStatus.Aborted;
+        _dienst.Abgleichen(grow);
+        Assert.Equal("abgebrochen", _repo.Laden(grow.Id, GrowPlanStaende.Ende)!.Vermerk);
+    }
+
+    [Fact]
+    public void BeimStartWerdenAlleAbgeglichen()
+    {
+        var offen = Grow(42, "skx-canna-aqua");
+        var fertig = Grow(43, "skx-canna-aqua");
+        _dienst.Anlegen(offen);
+        _dienst.Anlegen(fertig);
+        fertig.Status = GrowStatus.Completed;
+        var grows = new Dictionary<int, GrowRun> { [offen.Id] = offen, [fertig.Id] = fertig };
+
+        Assert.Equal(1, _dienst.AlleAbgleichen(id => grows.GetValueOrDefault(id)));
+        Assert.NotNull(_repo.Laden(fertig.Id, GrowPlanStaende.Ende));
+        Assert.Null(_repo.Laden(offen.Id, GrowPlanStaende.Ende));
+    }
+
+    [Fact]
+    public void EndstandWirdZumEigenenProgramm()
+    {
+        var grow = Grow(44, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.WerteSetzen(grow.Id, [("flower-w6", "ecTarget", 1.45)]);
+        grow.Status = GrowStatus.Completed;
+        _dienst.Abgleichen(grow);
+
+        var programm = _dienst.AlsProgrammSpeichern(grow.Id, "Mimosa RDWC 2026");
+
+        Assert.Equal("eigen-mimosa-rdwc-2026", programm.Id);
+        Assert.Equal(1.45, _wissen.NutrientPrograms.Single(p => p.Id == programm.Id)
+            .FeedChart!.Columns.Single(c => c.Id == "flower-w6").EcTarget);
+        Assert.Equal(GrowPlanArten.AlsProgramm, _repo.Buch(grow.Id)[0].Art);
+        Assert.Equal("Canna · Schema: SKX-RDWC", programm.Manufacturer);
+    }
+
+    [Fact]
+    public void AuswertungOrdnetMessungenDenWochenZu()
+    {
+        var grow = Grow(45, "skx-canna-aqua");
+        grow.StartDate = new DateTime(2026, 6, 26);
+        grow.VegStartedAt = new DateTime(2026, 7, 3);
+        grow.FlipDate = new DateTime(2026, 8, 23);
+        grow.EndDate = new DateTime(2026, 10, 30);
+        var plan = _dienst.Anlegen(grow)!;
+        _dienst.WerteSetzen(grow.Id, [("flower-w4", "ecTarget", 1.3)]);
+        var start = _repo.Laden(grow.Id, GrowPlanStaende.Start)!;
+        var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
+
+        var messungen = new List<Measurement>
+        {
+            new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 13, 8, 0, 0), ReservoirEc = 1.6, ReservoirPh = 6.0 },
+            new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 19, 20, 0, 0), ReservoirEc = 1.4 },
+            new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 20, 0, 0, 0), ReservoirEc = 9.9 },   // schon Woche 5
+        };
+
+        var wochen = PlanAuswertung.Bauen(grow, start.Inhalt, arbeit.Inhalt, messungen, new DateTime(2026, 10, 1));
+        var w4 = wochen.Single(w => w.Id == "flower-w4");
+
+        Assert.Equal(new DateTime(2026, 9, 13), w4.Von);
+        Assert.Equal(new DateTime(2026, 9, 20), w4.Bis);
+        Assert.Equal(2, w4.Messungen);
+        Assert.Equal(1.5, w4.Gemessen["ec"]);
+        Assert.Equal(6.0, w4.Gemessen["ph"]);
+        Assert.Null(w4.Gemessen["orp"]);
+        Assert.Equal(1.4, w4.Start["ecTarget"]);
+        Assert.Equal(1.3, w4.Ende["ecTarget"]);
+
+        var vegi1 = wochen.Single(w => w.Id == "veg-w1");
+        Assert.Equal(new DateTime(2026, 7, 3), vegi1.Von);
+        var flush = wochen.Single(w => w.Id == "flush");
+        Assert.Equal(new DateTime(2026, 10, 18), flush.Von);   // nach Blüte 8
+        Assert.Equal(new DateTime(2026, 10, 31), flush.Bis);
+    }
+
+    [Fact]
+    public void OhneFlipHabenBluetewochenKeinenZeitraum()
+    {
+        var grow = Grow(46, "skx-canna-aqua");
+        grow.FlipDate = null;
+        var plan = _dienst.Anlegen(grow)!;
+        var zeit = PlanAuswertung.Zeitraeume(grow, plan.Inhalt.Chart.Columns, DateTime.Today);
+        Assert.Equal((null, null), zeit["flower-w1"]);
+        Assert.Equal((null, null), zeit["flush"]);
+    }
+
     [Theory]
     [InlineData("SKX Canna Aqua (eigen)", "skx-canna-aqua-eigen")]
     [InlineData("Blüte ÄÖÜ ß 2026!", "bluete-aeoeue-ss-2026")]

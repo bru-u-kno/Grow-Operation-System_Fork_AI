@@ -28,8 +28,10 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         TargetValueService targetValueService,
         Services.Knowledge.KnowledgeBaseLoader wissen,
         WasserwechselStandService wasserwechselStand,
-        WaterProfileStore? waterProfile = null)
+        WaterProfileStore? waterProfile = null,
+        Services.GrowPlan.GrowPlanService? plaene = null)
     {
+        _plaene = plaene;
         _repository = repository;
         _harvestRepository = harvestRepository;
         _journalRepository = journalRepository;
@@ -43,6 +45,9 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
     private readonly WasserwechselStandService _wasserwechselStand;
 
     private readonly WaterProfileStore? _waterProfile;
+
+    // Fork AI (Grow-Plan): die Ernte schließt den Grow ab — dann wird sein Plan eingefroren.
+    private readonly Services.GrowPlan.GrowPlanService? _plaene;
 
     /// <summary>
     /// Womit der Nutzer angesetzt hat — angegeben, sonst aus dem Grow und dem
@@ -451,6 +456,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
                 grow.Status = GrowStatus.Completed;
                 grow.EndDate = entry.HarvestedAt.Date;
                 _repository.UpdateGrow(grow);
+                _plaene?.Abgleichen(grow);
             }
 
             _auditRepository.LogHarvestCreated(id, request.HarvestedAtLocal);

@@ -1,0 +1,112 @@
+using GrowDiary.Web.Models;
+using GrowDiary.Web.Services.Knowledge.Schema;
+
+namespace GrowDiary.Web.Services.GrowPlan;
+
+/// <summary>Eine Woche der Auswertung: Startstand, Endstand, gemessen.</summary>
+public sealed record PlanAuswertungWoche(
+    string Id,
+    string Label,
+    string Stage,
+    int? Week,
+    DateTime? Von,
+    DateTime? Bis,
+    Dictionary<string, double?> Start,
+    Dictionary<string, double?> Ende,
+    Dictionary<string, double?> Gemessen,
+    int Messungen,
+    IReadOnlyList<FeedChartItem> DosierungStart,
+    IReadOnlyList<FeedChartItem> DosierungEnde);
+
+/// <summary>
+/// Fork AI (Grow-Plan, Schritt 6): die Auswertung eines Grows je Woche —
+/// was geplant war (Start), was am Ende galt, was gemessen wurde.
+/// </summary>
+/// <remarks>
+/// <para><b>Zeiträume.</b> Bewurzelung vom Start bis zum Vegi-Beginn, Vegi-Wochen
+/// ab Vegi-Beginn (sonst Bewurzelung, sonst Start), Blütewochen ab Flip, Flush
+/// nach der letzten Blütewoche bis zum Ende. Ohne Flip haben Blütewochen keinen
+/// Zeitraum — dann steht dort nichts Gemessenes.</para>
+/// <para><b>Gemessen</b> sind die Mittelwerte der gespeicherten Messungen
+/// (Hand und Auto). CO₂ und VPD stehen dort nicht — sie fehlen bewusst.</para>
+/// </remarks>
+public static class PlanAuswertung
+{
+    /// <summary>Messgröße → Leser aus einer Messung.</summary>
+    public static readonly IReadOnlyDictionary<string, Func<Measurement, double?>> Messgroessen =
+        new Dictionary<string, Func<Measurement, double?>>
+        {
+            ["ec"] = m => m.ReservoirEc,
+            ["ph"] = m => m.ReservoirPh,
+            ["wasser"] = m => m.ReservoirWaterTempC,
+            ["rh"] = m => m.HumidityPercent,
+            ["luft"] = m => m.AirTemperatureC,
+            ["orp"] = m => m.OrpMv,
+        };
+
+    public static List<PlanAuswertungWoche> Bauen(
+        GrowRun grow,
+        GrowPlanInhalt? start,
+        GrowPlanInhalt ende,
+        IReadOnlyList<Measurement> messungen,
+        DateTime heute)
+    {
+        var spalten = ende.Chart.Columns;
+        var zeitraeume = Zeitraeume(grow, spalten, heute);
+        return spalten.Select(spalte =>
+        {
+            var anfang = start?.Chart.Columns.FirstOrDefault(c => string.Equals(c.Id, spalte.Id, StringComparison.OrdinalIgnoreCase));
+            var (von, bis) = zeitraeume[spalte.Id];
+            var inWoche = von is { } a && bis is { } b
+                ? messungen.Where(m => m.TakenAt >= a && m.TakenAt < b).ToList()
+                : [];
+            var gemessen = Messgroessen.ToDictionary(
+                g => g.Key,
+                g => inWoche.Select(g.Value).OfType<double>().ToList() is { Count: > 0 } werte
+                    ? Math.Round(werte.Average(), 2)
+                    : (double?)null);
+            return new PlanAuswertungWoche(
+                spalte.Id, spalte.Label, spalte.Stage, spalte.Week, von, bis,
+                Werte(anfang), Werte(spalte), gemessen, inWoche.Count,
+                anfang?.Items ?? [], spalte.Items);
+        }).ToList();
+    }
+
+    private static Dictionary<string, double?> Werte(FeedChartColumn? spalte)
+        => Wochenwertfelder.Alle.ToDictionary(f => f.Name, f => spalte is null ? null : f.Lesen(spalte));
+
+    /// <summary>Von (einschließlich) und bis (ausschließlich) je Woche.</summary>
+    public static Dictionary<string, (DateTime? Von, DateTime? Bis)> Zeitraeume(
+        GrowRun grow, IReadOnlyList<FeedChartColumn> spalten, DateTime heute)
+    {
+        var ergebnis = new Dictionary<string, (DateTime?, DateTime?)>(StringComparer.OrdinalIgnoreCase);
+        var start = grow.StartDate.Date;
+        var vegiBeginn = (grow.VegStartedAt ?? grow.RootedAt)?.Date ?? start;
+        var ende = (grow.EndDate?.Date ?? heute.Date).AddDays(1);
+        DateTime? letzteBluete = null;
+
+        foreach (var s in spalten)
+        {
+            (DateTime?, DateTime?) zeitraum = s.Stage.ToLowerInvariant() switch
+            {
+                "clone" or "seedling" => (start, vegiBeginn > start ? vegiBeginn : start.AddDays(7)),
+                "veg" when s.Week is { } w => (vegiBeginn.AddDays(7 * (w - 1)), vegiBeginn.AddDays(7 * w)),
+                "flower" or "transition" when s.Week is { } w && grow.FlipDate is { } flip
+                    => (flip.Date.AddDays(7 * (w - 1)), flip.Date.AddDays(7 * w)),
+                _ => (null, null),
+            };
+            if (s.Stage.Equals("Flower", StringComparison.OrdinalIgnoreCase) && zeitraum.Item2 is { } bis)
+            {
+                letzteBluete = letzteBluete is { } l && l > bis ? l : bis;
+            }
+            ergebnis[s.Id] = zeitraum;
+        }
+
+        foreach (var s in spalten.Where(s => s.Stage.Equals("Finish", StringComparison.OrdinalIgnoreCase)))
+        {
+            ergebnis[s.Id] = letzteBluete is { } l && ende > l ? (l, ende) : (null, null);
+        }
+
+        return ergebnis;
+    }
+}
