@@ -20,6 +20,12 @@ hätte finden müssen.
   90 Sekunden auf ein Feld, das es nicht mehr gab, und scheiterte dann an
   einer Zeitüberschreitung. Jetzt ändert er die Sorte dort, wo man sie
   tatsächlich ändert: im Grow-Formular unter „Töpfe & Sorten“.
+- Behoben — **Vier weitere Fälle derselben Datei liefen seit forkai.105 gar
+  nicht.** Die Datei läuft der Reihe nach; nach dem ersten Fehler wurden die
+  übrigen übersprungen. Zwei davon benutzten ebenfalls Knöpfe, die es auf
+  der Karte nicht mehr gibt („Pflanze hinzufügen“, „entfernen“). Sie legen
+  an und leeren jetzt im Formular, wie ein Nutzer es tut, und prüfen dabei
+  auch die Rückfrage beim Leeren eines belegten Topfs.
 
 ### Technik
 
@@ -32,6 +38,10 @@ hätte finden müssen.
   Sekunden Frist. Fehlt eines, nennt die Meldung das Feld, statt nach
   90 Sekunden das Aufräumen mitzureißen. Die Topf-Zeile auf der Karte wird
   über ihren gewählten Topf gefunden, nicht mehr über die Position.
+- Gemessen gegen die laufende App mit Demobestand: die alte Fassung scheitert
+  nach 1,5 Minuten und lässt vier Fälle ungelaufen, die neue besteht alle
+  fünf — zweimal hintereinander ohne Neustart, der Bestand steht danach wie
+  vorher.
 
 ## 2.0.0-forkai.113
 

@@ -1,4 +1,4 @@
-import { test, expect, type Locator } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { darfUeberspringen } from './pflicht'
 import { nimmSchloss, gibSchloss } from './schloss'
 
@@ -24,6 +24,22 @@ test.describe.configure({ mode: 'serial' })
  */
 async function vorhanden(ort: Locator, meldung: string) {
   await expect(ort.first(), meldung).toBeVisible({ timeout: 10_000 })
+}
+
+/**
+ * Das Grow-Formular speichern und auf die Grow-Seite zurückkehren.
+ *
+ * Seit forkai.105 werden Töpfe im Formular belegt — wirksam erst beim
+ * Speichern (`GrowPflanzen.SortenSetzen`). Nur „— leer —“ wirkt sofort.
+ */
+async function formularSpeichern(page: Page, growId: number) {
+  const speichern = page.locator('[data-audit="grow-wizard-actions"]')
+    .getByRole('button', { name: 'Speichern', exact: true })
+  await vorhanden(speichern, 'Der Speichern-Knopf des Grow-Formulars fehlt.')
+  await expect(speichern, 'Das Formular sperrt das Speichern — die Planprüfung meldet einen Befund.')
+    .toBeEnabled({ timeout: 5_000 })
+  await speichern.click()
+  await page.waitForURL(new RegExp(`/grows/${growId}$`), { timeout: 15_000 })
 }
 
 /* <b>Mehr Zeit als die 30 Sekunden der Vorgabe.</b> Die Faelle hier schreiben
@@ -147,13 +163,7 @@ test('je Pflanze Sorte UND Topf — beides überlebt die Änderung des anderen',
     await vorhanden(sortenwahl, `Im Formular fehlt das Auswahlfeld „Sorte in Topf ${zweite.siteIndex}“.`)
     await sortenwahl.selectOption(String(andereSorte.strainId))
 
-    const speichern = page.locator('[data-audit="grow-wizard-actions"]')
-      .getByRole('button', { name: 'Speichern', exact: true })
-    await vorhanden(speichern, 'Der Speichern-Knopf des Grow-Formulars fehlt.')
-    await expect(speichern, 'Das Formular sperrt das Speichern — die Planprüfung meldet einen Befund.')
-      .toBeEnabled({ timeout: 5_000 })
-    await speichern.click()
-    await page.waitForURL(/\/grows\/1$/, { timeout: 15_000 })
+    await formularSpeichern(page, 1)
 
     const nachSorte = (await stand()).find((p: { id: number }) => p.id === zweite.id)
     expect(nachSorte.strainId, 'Die Sorte wurde nicht übernommen.').toBe(andereSorte.strainId)
@@ -259,11 +269,16 @@ test('sind alle Töpfe belegt, sagt die Karte es — und das Entfernen macht wie
   const karte = page.locator('[data-audit="grow-plants"]')
   await karte.scrollIntoViewIfNeeded()
 
-  // 1. Voll heisst voll — und der Grund steht daneben.
+  /* 1. Voll heisst voll — und der Grund steht daneben.
+
+     Bis forkai.105 stand hier ein Knopf „Pflanze hinzufügen“, der bei vollen
+     Töpfen gesperrt war. Seitdem führt `.gp-neu` als Link ins Formular (dort
+     lassen sich auch Sorten wechseln, er bleibt also offen); die Auskunft
+     „alle belegt“ steht weiter daneben. */
   await expect(karte.locator('.gp-bilanz')).toContainText(`${toepfe} von ${toepfe}`)
-  await expect(karte.locator('.gp-neu button')).toBeDisabled()
+  await vorhanden(karte.locator('.gp-neu a'), 'Der Weg ins Formular „Töpfe & Sorten bearbeiten“ fehlt.')
   await expect(karte.locator('.gp-voll'),
-    'Der Knopf ist gesperrt, aber niemand sagt warum.').toBeVisible()
+    'Alle Töpfe sind belegt, aber die Karte sagt es nicht.').toBeVisible()
 
   /* 2. Ein belegter Topf ist SICHTBAR belegt — man muss ihn nicht erst
         auswählen, um es zu erfahren.
@@ -292,51 +307,46 @@ test('sind alle Töpfe belegt, sagt die Karte es — und das Entfernen macht wie
     })
     await page.reload({ waitUntil: 'networkidle' })
     await karte.scrollIntoViewIfNeeded()
-    await expect(karte.locator('.gp-neu button'),
-      'Ein Topf mehr, und der Knopf lädt trotzdem nicht ein.').toBeEnabled()
+    await expect(karte.locator('.gp-voll'),
+      'Ein Topf mehr, und die Karte meldet trotzdem „alle belegt“.').toHaveCount(0)
 
-    await karte.locator('.gp-neu button').click()
+    /* Anlegen — seit forkai.105 im Formular: den freien Topf mit einer Sorte
+       belegen und speichern. Vorher war das der Knopf `.gp-neu button`. */
+    const neuerTopf = toepfe + 1
+    const sorte = vorher.find((p: { strainId: number | null }) => p.strainId != null)?.strainId
+    expect(sorte, 'Keine Pflanze im Bestand trägt eine Sorte.').toBeTruthy()
+    await page.goto('/grows/1/setup', { waitUntil: 'networkidle' })
+    const wahl = page.getByLabel(`Sorte in Topf ${neuerTopf}`, { exact: true })
+    await vorhanden(wahl, `Im Formular fehlt der neue Topf ${neuerTopf}.`)
+    await wahl.selectOption(String(sorte))
+    await formularSpeichern(page, 1)
+
     await expect.poll(async () => (await stand()).length).toBe(toepfe + 1)
     angelegt = (await stand()).find(
-      (p: { id: number }) => !vorher.some((v: { id: number }) => v.id === p.id))?.id ?? null
-    expect(angelegt, 'Die neue Pflanze ist nicht auffindbar.').toBeTruthy()
+      (p: { id: number; siteIndex: number | null }) =>
+        p.siteIndex === neuerTopf && !vorher.some((v: { id: number }) => v.id === p.id))?.id ?? null
+    expect(angelegt, `Die neue Pflanze in Topf ${neuerTopf} ist nicht auffindbar.`).toBeTruthy()
 
-    // Wieder voll, wieder gesperrt.
-    await expect(karte.locator('.gp-neu button')).toBeDisabled()
+    // Wieder voll — und die Karte sagt es wieder.
+    await expect(karte.locator('.gp-voll'),
+      'Alle Töpfe sind wieder belegt, aber die Karte sagt es nicht.').toBeVisible()
 
-    /* Und jetzt weg damit — über den Knopf, mit Rückfrage.
+    /* Und jetzt weg damit — im Formular „— leer —“, mit Rückfrage. Das wirkt
+       SOFORT, nicht erst beim Speichern (forkai.105).
 
-       GEZIELT die eben angelegte, nicht „die letzte in der Liste". Die
-       Reihenfolge hängt an der Sortierung, und die kann sich ändern; getroffen
-       wurde dann eine der ursprünglichen, und das Aufräumen meldete danach
-       „3 Pflanzen statt 4". Am 28.08.2026 in jedem zweiten vollen Lauf. */
-    /* Auf die LISTE warten, nicht nur auf die API.
-
-       Die Zusicherung darueber pollt `/api/plants` — dort steht die neue
-       Pflanze sofort. Die Karte rendert aber erst danach neu, und die Schleife
-       unten liest den DOM. In etwa jedem dritten vollen Lauf kam sie eine Zeile
-       zu frueh und meldete „die eben angelegte Pflanze war in der Liste nicht
-       zu finden": ein Test, dessen Ausgang vom Zeitpunkt abhaengt, hat nichts
-       geprueft. Gefunden am 01.09.2026 in vier Laeufen hintereinander. */
-    await expect(karte.locator('.gp-liste li'),
-      'Die Karte zeigt die neue Pflanze nicht — entweder rendert sie nicht neu, '
-      + 'oder das Anlegen ist gar nicht angekommen.').toHaveCount(toepfe + 1)
-
-    const zeilen = await karte.locator('.gp-liste li').count()
-    let getroffen = false
-    for (let i = 0; i < zeilen; i += 1) {
-      const zeile = karte.locator('.gp-liste li').nth(i)
-      const topf = await zeile.locator('.gp-topf select').inputValue()
-      const dazu = (await stand()).find((p: { id: number }) => p.id === angelegt)
-      if (topf !== String(dazu?.siteIndex ?? '')) continue
-      page.once('dialog', (dialog) => void dialog.accept())
-      await zeile.locator('.gp-weg').click()
-      getroffen = true
-      break
-    }
-    expect(getroffen, 'Die eben angelegte Pflanze war in der Liste nicht zu finden.')
-      .toBe(true)
-    await expect.poll(async () => (await stand()).length).toBe(toepfe)
+       GEZIELT der eben angelegte Topf, nicht „die letzte Zeile“: die
+       Reihenfolge hängt an der Sortierung, und getroffen wurde dann eine der
+       ursprünglichen Pflanzen (28.08.2026, in jedem zweiten vollen Lauf). */
+    await page.goto('/grows/1/setup', { waitUntil: 'networkidle' })
+    const leeren = page.getByLabel(`Sorte in Topf ${neuerTopf}`, { exact: true })
+    await vorhanden(leeren, `Im Formular fehlt Topf ${neuerTopf}.`)
+    let rueckfrage = ''
+    page.once('dialog', (dialog) => { rueckfrage = dialog.message(); void dialog.accept() })
+    await leeren.selectOption('')
+    await expect.poll(async () => (await stand()).length,
+      'Nach „— leer —“ ist die Pflanze noch da.').toBe(toepfe)
+    expect(rueckfrage, 'Das Leeren eines belegten Topfs kam ohne Rückfrage.').toContain(`Topf ${neuerTopf}`)
+    angelegt = null
   } finally {
     if (angelegt != null) await request.delete(`/api/plants/${angelegt}`)
     await request.put(`/api/hydro-setups/${grow.systemId}`, { data: system })
@@ -426,19 +436,29 @@ test('entfernen und neu anlegen gibt keiner Pflanze den Namen einer anderen', as
     expect(vorher.length, 'Der neue Grow hat keine Pflanzen bekommen — dann prüft '
       + 'dieser Fall nichts.').toBeGreaterThanOrEqual(3)
 
-    await page.goto(`/grows/${growId}`, { waitUntil: 'networkidle' })
-    const karte = page.locator('[data-audit="grow-plants"]')
-    await karte.scrollIntoViewIfNeeded()
-
     /* Die MITTLERE entfernen, nicht die letzte: nur dann entsteht eine Lücke,
        und nur dann laufen Anzahl und Topfnummer auseinander. Hätte der Fall
-       die letzte genommen, wäre er zufällig grün geblieben. */
-    const mitte = Math.floor(vorher.length / 2)
+       die letzte genommen, wäre er zufällig grün geblieben.
+
+       Seit forkai.105 beides im Formular: „— leer —“ entfernt sofort (mit
+       Rückfrage), eine Sorte auf einem leeren Topf legt beim Speichern an. */
+    const toepfeBelegt = vorher.map((p) => p.siteIndex).filter((n): n is number => n != null).sort((x, y) => x - y)
+    const mittlererTopf = toepfeBelegt[Math.floor(toepfeBelegt.length / 2)]
+
+    await page.goto(`/grows/${growId}/setup`, { waitUntil: 'networkidle' })
+    const wahl = page.getByLabel(`Sorte in Topf ${mittlererTopf}`, { exact: true })
+    await vorhanden(wahl, `Im Formular fehlt Topf ${mittlererTopf}.`)
+    const sorte = (await wahl.inputValue())
+      || (await wahl.locator('option').evaluateAll((os) =>
+        os.map((o) => (o as HTMLOptionElement).value).filter(Boolean)))[0]
+    expect(sorte, 'Die Sortenauswahl bietet keine Sorte an.').toBeTruthy()
+
     page.once('dialog', (dialog) => void dialog.accept())
-    await karte.locator('.gp-weg').nth(mitte).click()
+    await wahl.selectOption('')
     await expect.poll(async () => (await stand()).length).toBe(vorher.length - 1)
 
-    await karte.locator('.gp-neu button').click()
+    await wahl.selectOption(sorte)
+    await formularSpeichern(page, growId)
     await expect.poll(async () => (await stand()).length).toBe(vorher.length)
 
     const nachher = await stand()
