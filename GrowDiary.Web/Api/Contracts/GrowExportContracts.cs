@@ -138,7 +138,23 @@ public sealed record BackupManifestDto(
     bool ExcludesDataProtectionKeys,
     bool ExcludesUploads,
     bool RestoreSupported,
+    string DownloadUrl,
+    IReadOnlyList<string>? RemovedOldBackups = null);
+
+/// <summary>Eine Sicherung im Backup-Ordner.</summary>
+/// <param name="Kind"><c>sicherung</c> (von Hand oder vor einer Wiederherstellung) oder <c>import</c> (vor einem Grow-Import).</param>
+public sealed record BackupListItemDto(
+    string FileName,
+    string Kind,
+    long SizeBytes,
+    DateTime ModifiedAtUtc,
     string DownloadUrl);
+
+/// <summary>Inhalt des Backup-Ordners.</summary>
+public sealed record BackupListDto(
+    int KeptPerKind,
+    long TotalBytes,
+    IReadOnlyList<BackupListItemDto> Backups);
 
 public sealed record BackendReleaseReadinessDto(
     string Status,

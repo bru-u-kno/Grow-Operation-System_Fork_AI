@@ -1,5 +1,6 @@
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,11 +55,51 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
     /// wird also nicht der Waechter umgangen, sondern der echte Weg
     /// nachgestellt.
     /// </remarks>
-    public HttpClient IngressClient()
+    /// <remarks>
+    /// <b>Seit 16.09.2026 auch der Absender.</b> Der Kopf zählt nur noch, wenn
+    /// die Anfrage von Home Assistant selbst kommt (Fehlerregister F-011).
+    /// Der Testserver hat keine Absenderadresse; <see cref="AbsenderHeader"/>
+    /// setzt sie auf <c>172.30.32.1</c> — die Adresse, unter der Ingress-Anfragen
+    /// auf Brus Installation ankommen.
+    /// </remarks>
+    public HttpClient IngressClient() => ClientVon("172.30.32.1", mitIngressKopf: true);
+
+    /// <summary>Nur im Test: welche Absenderadresse der Server sehen soll.</summary>
+    public const string AbsenderHeader = "X-Test-Absender";
+
+    /// <summary>Ein Client mit frei gewählter Absenderadresse — für die Gegenproben.</summary>
+    public HttpClient ClientVon(string absender, bool mitIngressKopf)
     {
         var client = CreateClient();
-        client.DefaultRequestHeaders.Add(AdminAccessPolicy.IngressPathHeaderName, "/api/hassio_ingress/test");
+        client.DefaultRequestHeaders.Add(AbsenderHeader, absender);
+        if (mitIngressKopf)
+        {
+            client.DefaultRequestHeaders.Add(AdminAccessPolicy.IngressPathHeaderName, "/api/hassio_ingress/test");
+        }
         return client;
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureServices(dienste => dienste.AddTransient<IStartupFilter, AbsenderFilter>());
+    }
+
+    /// <summary>Setzt die Absenderadresse ganz vorn in der Kette — vor dem Wächter.</summary>
+    private sealed class AbsenderFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> weiter) => app =>
+        {
+            app.Use(async (context, naechster) =>
+            {
+                if (context.Request.Headers.TryGetValue(AbsenderHeader, out var wert)
+                    && System.Net.IPAddress.TryParse(wert.ToString(), out var adresse))
+                {
+                    context.Connection.RemoteIpAddress = adresse;
+                }
+                await naechster();
+            });
+            weiter(app);
+        };
     }
 
     protected override IHost CreateHost(IHostBuilder builder)

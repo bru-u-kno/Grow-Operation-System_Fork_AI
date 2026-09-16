@@ -553,4 +553,78 @@ public sealed class SystemApiControllerTests : IDisposable
         Assert.Equal(created.FileName, file.FileDownloadName);
         Assert.True(File.Exists(file.FileName));
     }
+
+    // ── Aufbewahrung und Liste (Fehlerregister F-012, 16.09.2026) ──
+
+    private string BackupOrdner => Path.Combine(_tempRoot, "App_Data", "backups");
+
+    /// <summary>Legt eine unechte Sicherung mit festem Alter an.</summary>
+    private string AlteSicherung(string datei, int tageAlt)
+    {
+        Directory.CreateDirectory(BackupOrdner);
+        var pfad = Path.Combine(BackupOrdner, datei);
+        File.WriteAllText(pfad, "alt");
+        File.SetLastWriteTimeUtc(pfad, DateTime.UtcNow.AddDays(-tageAlt));
+        return datei;
+    }
+
+    [Fact]
+    public void CreateBackup_BehaeltJeArtNurDieNeuestenFuenf()
+    {
+        for (var i = 1; i <= 7; i++) AlteSicherung($"grow-os-backup-2026010{i}-120000-0000000.zip", tageAlt: 20 - i);
+        for (var i = 1; i <= 6; i++) AlteSicherung($"grow-os-backup-import-safety-2026010{i}-120000-0000000.zip", tageAlt: 20 - i);
+        var fremd = AlteSicherung("eigene-notiz.zip", tageAlt: 99);
+        Assert.Equal(14, Directory.GetFiles(BackupOrdner).Length); // Mengenwächter
+
+        var created = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+
+        var normale = BackupAufbewahrung.Auflisten(BackupOrdner).Where(e => e.Art == "sicherung").Select(e => e.Datei).ToList();
+        Assert.Equal(BackupAufbewahrung.JeArt, normale.Count);
+        Assert.Contains(created.FileName, normale);
+        // Die neue plus die vier jüngsten alten (7, 6, 5, 4) bleiben.
+        Assert.Contains("grow-os-backup-20260104-120000-0000000.zip", normale);
+        Assert.DoesNotContain("grow-os-backup-20260103-120000-0000000.zip", normale);
+        // Drei normale (1, 2, 3) und eine Import-Sicherung (die älteste) gehen.
+        Assert.Equal(4, created.RemovedOldBackups!.Count);
+        // Import-Sicherungen zählen getrennt: sechs vorhanden, eine davon ist zu viel.
+        Assert.Equal(5, BackupAufbewahrung.Auflisten(BackupOrdner).Count(e => e.Art == "import"));
+        // Was nicht zum Schema gehört, bleibt unberührt.
+        Assert.True(File.Exists(Path.Combine(BackupOrdner, fremd)));
+
+        var events = _auditRepository.GetRecent(limit: 20, eventType: "backup");
+        Assert.Contains(events, e => e.Action == "backup-retention" && e.Success);
+    }
+
+    [Fact]
+    public void RestoreBackup_DasEinzuspielendeBackupUeberstehtDasAufraeumen()
+    {
+        var created = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+        // Das einzuspielende Backup ist das älteste — genau das würde das Aufräumen als Erstes löschen.
+        File.SetLastWriteTimeUtc(Path.Combine(BackupOrdner, created.FileName), DateTime.UtcNow.AddDays(-30));
+        for (var i = 1; i <= 5; i++) AlteSicherung($"grow-os-backup-2026020{i}-120000-0000000.zip", tageAlt: 10 - i);
+
+        var result = _controller.RestoreBackup(created.FileName);
+
+        var dto = Assert.IsType<BackupRestoreResultDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.True(dto.Success);
+        Assert.True(File.Exists(Path.Combine(BackupOrdner, created.FileName)));
+        Assert.True(File.Exists(Path.Combine(BackupOrdner, dto.SafetyBackupFileName)));
+    }
+
+    [Fact]
+    public void ListBackups_ZeigtNeuesteZuerstMitGroesseUndArt()
+    {
+        AlteSicherung("grow-os-backup-20260101-120000-0000000.zip", tageAlt: 5);
+        AlteSicherung("grow-os-backup-import-safety-20260102-120000-0000000.zip", tageAlt: 3);
+        AlteSicherung("fremd.zip", tageAlt: 1);
+
+        var dto = Assert.IsType<BackupListDto>(Assert.IsType<OkObjectResult>(_controller.ListBackups().Result).Value);
+
+        Assert.Equal(2, dto.Backups.Count);
+        Assert.Equal("import", dto.Backups[0].Kind);
+        Assert.Equal("sicherung", dto.Backups[1].Kind);
+        Assert.Equal(BackupAufbewahrung.JeArt, dto.KeptPerKind);
+        Assert.Equal(6, dto.TotalBytes);
+        Assert.StartsWith("/api/system/backup/", dto.Backups[0].DownloadUrl);
+    }
 }

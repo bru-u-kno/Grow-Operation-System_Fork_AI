@@ -213,6 +213,15 @@ public sealed partial class SystemApiController
     [HttpPost("backup")]
     [ProducesResponseType(typeof(BackupManifestDto), StatusCodes.Status201Created)]
     public ActionResult<BackupManifestDto> CreateBackup()
+        => CreateBackupCore(geschuetzt: null);
+
+    /// <summary>Legt eine Sicherung an und räumt danach nach <see cref="BackupAufbewahrung"/> auf.</summary>
+    /// <param name="geschuetzt">
+    /// Eine Datei, die das Aufräumen nicht anfassen darf — beim Wiederherstellen
+    /// das Backup, das gleich eingespielt wird. Ohne diesen Schutz könnte die
+    /// Sicherheitskopie genau die Datei verdrängen, die gerade gelesen werden soll.
+    /// </param>
+    private ActionResult<BackupManifestDto> CreateBackupCore(string? geschuetzt)
     {
         var backupRoot = _paths.BackupsPath;
         Directory.CreateDirectory(backupRoot);
@@ -243,6 +252,14 @@ public sealed partial class SystemApiController
 
         var info = new FileInfo(backupPath);
         var downloadUrl = $"/api/system/backup/{Uri.EscapeDataString(fileName)}";
+
+        var entfernt = BackupAufbewahrung.Aufraeumen(backupRoot, new[] { fileName, geschuetzt ?? string.Empty });
+        if (entfernt.Count > 0)
+        {
+            LogSystemAudit("backup", "backup-retention",
+                $"{entfernt.Count} ältere Sicherung(en) entfernt (behalten werden {BackupAufbewahrung.JeArt} je Art): {string.Join(", ", entfernt)}.",
+                true);
+        }
         var manifest = new BackupManifestDto(
             BackupSchema: "grow-os.backup.v1",
             CreatedAtUtc: DateTime.UtcNow,
@@ -256,7 +273,8 @@ public sealed partial class SystemApiController
             ExcludesDataProtectionKeys: true,
             ExcludesUploads: true,
             RestoreSupported: true,
-            DownloadUrl: downloadUrl);
+            DownloadUrl: downloadUrl,
+            RemovedOldBackups: entfernt);
 
         LogSystemAudit("backup", "backup-created", $"Backup {fileName} erstellt.", true, relatedFileName: fileName);
         return Created(downloadUrl, manifest);
@@ -302,7 +320,7 @@ public sealed partial class SystemApiController
         }
 
         BackupManifestDto safetyBackup;
-        var safetyBackupResult = CreateBackup();
+        var safetyBackupResult = CreateBackupCore(geschuetzt: fileName);
         if (safetyBackupResult.Result is CreatedResult created && created.Value is BackupManifestDto manifest)
         {
             safetyBackup = manifest;
@@ -405,6 +423,26 @@ public sealed partial class SystemApiController
     }
 
 
+
+    /// <summary>Alle Sicherungen im Ordner, neueste zuerst.</summary>
+    [HttpGet("backup")]
+    [ProducesResponseType(typeof(BackupListDto), StatusCodes.Status200OK)]
+    public ActionResult<BackupListDto> ListBackups()
+    {
+        var eintraege = BackupAufbewahrung.Auflisten(_paths.BackupsPath)
+            .Select(e => new BackupListItemDto(
+                FileName: e.Datei,
+                Kind: e.Art,
+                SizeBytes: e.Bytes,
+                ModifiedAtUtc: e.GeaendertUtc,
+                DownloadUrl: $"/api/system/backup/{Uri.EscapeDataString(e.Datei)}"))
+            .ToList();
+
+        return Ok(new BackupListDto(
+            KeptPerKind: BackupAufbewahrung.JeArt,
+            TotalBytes: eintraege.Sum(e => e.SizeBytes),
+            Backups: eintraege));
+    }
 
     [HttpGet("backup/{fileName}")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]

@@ -359,6 +359,7 @@ public sealed partial class GrowExportsApiController
                 AddBackupEntryIfExists(archive, _paths.DatabasePath + "-shm", "App_Data/grow-diary.db-shm");
             }
 
+            BackupAufbewahrung.Aufraeumen(backupRoot, new[] { fileName });
             return new ImportSafetyBackup(fileName, $"/api/system/backup/{Uri.EscapeDataString(fileName)}");
         }
         catch

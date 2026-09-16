@@ -123,10 +123,61 @@ public static class AdminAccessPolicy
         => IsLocalRequest(context) || IsIngressRequest(context) || IsInternalAddonRead(context);
 
     /// <summary>Eine lesende Anfrage eines anderen Add-ons im internen Netz.</summary>
+    /// <summary>
+    /// Lesender Zugriff aus dem Add-on-Netz — Verwaltungswege nur aus der Infrastruktur.
+    /// </summary>
+    /// <remarks>
+    /// <para>Produktdaten (Grows, Messungen, Kamera …) darf jedes Nachbar-Add-on
+    /// lesen; davon lebt Grow MCP.</para>
+    /// <para><b>Verwaltungswege</b> (Backups, Einstellungen, Exporte, Audit —
+    /// siehe <see cref="IsAdministrativePath"/>) nur von den
+    /// <see cref="InfrastrukturAdressen"/>. Bis 16.09.2026 konnte jedes Add-on
+    /// im Netz per GET das komplette Datenbank-Backup herunterladen
+    /// (Fehlerregister F-011). Grow MCP ruft keinen dieser Wege auf.</para>
+    /// </remarks>
     public static bool IsInternalAddonRead(HttpContext context)
-        => HttpMethods.IsGet(context.Request.Method)
-           && context.Connection.RemoteIpAddress is { } ip
-           && AddonNetworks.Any(bereich => IsInSubnet(ip, bereich.Netz, bereich.Bits));
+    {
+        if (!HttpMethods.IsGet(context.Request.Method)) return false;
+        if (context.Connection.RemoteIpAddress is not { } ip) return false;
+        if (!AddonNetworks.Any(bereich => IsInSubnet(ip, bereich.Netz, bereich.Bits))) return false;
+
+        return !IsAdministrativePath(context.Request.Path) || IsInfrastructureAddress(ip);
+    }
+
+    /// <summary>Gehört der Pfad zu den Verwaltungswegen (nicht zu den Produkt-APIs)?</summary>
+    public static bool IsAdministrativePath(PathString path)
+        => ProtectedPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Die Adressen, von denen Home Assistant selbst kommt.
+    /// </summary>
+    /// <remarks>
+    /// <para><c>172.30.32.1</c> ist das Tor der Supervisor-Brücke. Home Assistant
+    /// Core läuft im Host-Netz und reicht Ingress-Anfragen von dort weiter —
+    /// belegt am 16.09.2026 im Audit-Protokoll einer Supervised-Installation:
+    /// jede Ingress-Anfrage (auch vom Handy) kam als <c>172.30.32.1</c> an.</para>
+    /// <para><c>172.30.32.2</c> ist der Supervisor; über ihn laufen
+    /// Ingress-Anfragen laut Home-Assistant-Doku auf Home Assistant OS.</para>
+    /// <para><b>Grenze:</b> Add-ons mit Host-Netz (z. B. Node-RED) erscheinen
+    /// ebenfalls als <c>172.30.32.1</c> und sind davon nicht zu unterscheiden —
+    /// sie haben aber ohnehin Zugriff auf den Host. Add-ons in der Brücke
+    /// (<c>172.30.33.x</c>) sind ausgeschlossen. Ein gemeinsamer Schlüssel
+    /// wurde bewusst nicht eingeführt.</para>
+    /// </remarks>
+    private static readonly IPAddress[] InfrastrukturAdressen =
+    [
+        IPAddress.Parse("172.30.32.1"),
+        IPAddress.Parse("172.30.32.2"),
+        IPAddress.Parse("fd0c:ac1e:2100::1"),
+        IPAddress.Parse("fd0c:ac1e:2100::2"),
+    ];
+
+    /// <summary>Ist die Adresse Home Assistant selbst (Brücken-Tor oder Supervisor)?</summary>
+    public static bool IsInfrastructureAddress(IPAddress adresse)
+    {
+        if (adresse.IsIPv4MappedToIPv6) adresse = adresse.MapToIPv4();
+        return InfrastrukturAdressen.Any(a => a.Equals(adresse));
+    }
 
     /// <summary>Liegt die Adresse im angegebenen Netz?</summary>
     private static bool IsInSubnet(IPAddress adresse, IPAddress netz, int bits)
@@ -149,9 +200,21 @@ public static class AdminAccessPolicy
         return true;
     }
 
-    /// <summary>True when the request is proxied through the Home Assistant ingress.</summary>
+    /// <summary>
+    /// Kam die Anfrage wirklich über den Home-Assistant-Ingress?
+    /// </summary>
+    /// <remarks>
+    /// Der Kopf <see cref="IngressPathHeaderName"/> allein beweist nichts — jedes
+    /// Programm, das den Container erreicht, kann ihn setzen. Bis 16.09.2026
+    /// genügte er trotzdem (Fehlerregister F-011): ein Nachbar-Add-on hätte
+    /// damit Einstellungen ändern oder ein Backup zurückspielen können. Gezählt
+    /// wird er deshalb nur, wenn die Anfrage von Home Assistant selbst kommt
+    /// (<see cref="InfrastrukturAdressen"/>) oder von dieser Maschine.
+    /// </remarks>
     public static bool IsIngressRequest(HttpContext context)
-        => context.Request.Headers.ContainsKey(IngressPathHeaderName);
+        => context.Request.Headers.ContainsKey(IngressPathHeaderName)
+           && context.Connection.RemoteIpAddress is { } ip
+           && (IsInfrastructureAddress(ip) || IsLocalRequest(context));
 
     public static bool IsLocalRequest(HttpContext context)
     {

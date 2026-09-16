@@ -48,7 +48,9 @@ public sealed class CrudVollstaendigTests
         ["SystemApiController"] =
             "201 steht an der Sicherung (Backup). Eine Sicherung wird nicht ueber die "
             + "API geloescht — sie liegt als Datei im Add-on-Ordner, und ein "
-            + "Loeschweg ueber HTTP waere ein Weg, sich seine eigene Rettung zu nehmen.",
+            + "Loeschweg ueber HTTP waere ein Weg, sich seine eigene Rettung zu nehmen. "
+            + "Seit 16.09.2026 (F-012) raeumt stattdessen die App selbst auf: "
+            + "BackupAufbewahrung behaelt je Art die fuenf neuesten.",
     };
 
     private static IReadOnlyList<Type> Controller()
