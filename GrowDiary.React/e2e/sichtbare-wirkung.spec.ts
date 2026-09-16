@@ -213,6 +213,10 @@ test.describe('Sichtbare Wirkung', () => {
    * Bei zwei Einträgen sieht man beides, bei sieben nicht mehr.
    */
   //
+  // Fork AI (forkai.124): der Fall „Profil bearbeiten auf /sollwerte“ ist
+  // entfallen — die Profile stehen seit forkai.121 in keinem Menü mehr, und
+  // /sollwerte leitet auf den Plan des Grows um.
+  //
   // NACHGEWIESEN beisst davon bisher nur der erste Fall: nimmt man den
   // scrollIntoView auf /sensoren wieder heraus, wird er rot. Beim Profil-Panel
   // auf /sollwerte bleibt er auch ohne Fix gruen — dort ist die Reparatur also
@@ -229,19 +233,6 @@ test.describe('Sichtbare Wirkung', () => {
         return true
       },
       ziel: '[data-audit="pflege-formular"]',
-    },
-    {
-      name: 'Profil bearbeiten auf /sollwerte',
-      pfad: '/sollwerte',
-      oeffnen: async (page: Page) => {
-        // „Ansehen" bei mitgelieferten Profilen, „Bearbeiten" bei eigenen —
-        // beide oeffnen dasselbe Panel unter der Liste.
-        const knopf = page.getByRole('button', { name: /Ansehen|Bearbeiten/ })
-        if (await knopf.count() === 0) return false
-        await knopf.last().click()
-        return true
-      },
-      ziel: '[data-audit="profil-panel"]',
     },
   ]
 

@@ -13,6 +13,7 @@ public sealed class HaWaechterTests
         ("automation.eg_kammer_trockner_fertig", "EG Kammer Trockner fertig", "on"),
         ("sensor.wachter_temperatur", "Wächter Temperatur", "21"),
         ("automation.water_chiller_regelung", "Water Chiller Regelung", "on"),
+        ("automation.grow_uv_c_verbindungs_wachter", "Grow UV-C – Verbindungs-Wächter", "on"),
     ];
 
     [Fact]

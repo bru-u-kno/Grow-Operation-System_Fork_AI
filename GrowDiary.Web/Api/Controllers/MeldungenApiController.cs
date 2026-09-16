@@ -35,6 +35,16 @@ public sealed class MeldungenApiController : ApiControllerBase
             "CO₂-Ventil länger als erlaubt offen → wird zwangsweise geschlossen und gemeldet",
     };
 
+    /// <summary>
+    /// Automationen mit „Wächter“ im Namen, die nichts melden — sie gehören nicht in
+    /// eine Liste der Absender. Nachgesehen in Brus HA am 16.09.2026.
+    /// </summary>
+    private static readonly HashSet<string> KeineAbsender = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Lädt nur die Eheim-Integration neu, wenn die Verbindung hängt; sendet nichts.
+        "automation.grow_uv_c_verbindungs_wachter",
+    };
+
     private readonly HomeAssistantService _ha;
     private readonly GrowRepository _grows;
 
@@ -57,6 +67,7 @@ public sealed class MeldungenApiController : ApiControllerBase
     public static List<HaWaechterDto> Auswahl(IEnumerable<(string EntityId, string? Name, string? State)> entitaeten)
         => entitaeten
             .Where(e => e.EntityId.StartsWith("automation.", StringComparison.OrdinalIgnoreCase))
+            .Where(e => !KeineAbsender.Contains(e.EntityId))
             .Where(e => Bekannte.ContainsKey(e.EntityId) || IstWaechter(e.Name) || IstWaechter(e.EntityId))
             .Select(e => new HaWaechterDto(
                 e.EntityId,

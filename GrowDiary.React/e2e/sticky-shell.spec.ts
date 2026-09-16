@@ -15,7 +15,9 @@ import { darfUeberspringen } from './pflicht'
  * dem Scrollen ans Seitenende steht die Leiste immer noch oben und reicht bis
  * zum unteren Rand.
  */
-const LANGE_SEITEN = ['/messung', '/regeln', '/wissen']
+// Fork AI (forkai.124): /regeln trägt nur noch die Auto-Messungen und ist zu kurz;
+// die lange Sammelseite ist jetzt /zielwerte („Ziele & Meldungen“).
+const LANGE_SEITEN = ['/messung', '/zielwerte', '/wissen']
 
 for (const route of LANGE_SEITEN) {
   test(`Seitenleiste bleibt stehen auf ${route}`, async ({ page }) => {

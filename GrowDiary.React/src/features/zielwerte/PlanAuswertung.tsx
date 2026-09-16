@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch, ApiRequestError, formatApiError } from '../../api'
+import { apiFetch, formatApiError } from '../../api'
 import { V1Sheet } from '../../components/V1Sheet'
 import { V1Alert, V1Badge, V1Button, V1Field, V1Section } from '../../components/v1'
 import { classNames } from '../../utils'
@@ -26,10 +26,12 @@ export function PlanAuswertung({ growId }: { growId: number }) {
   useEffect(() => {
     async function laden() {
       try {
-        setDaten(await apiFetch<Auswertung>(`/api/grows/${growId}/plan/auswertung`))
+        // 204 (kein Plan gespeichert) kommt als leere Antwort an.
+        const antwort = await apiFetch<Auswertung | undefined>(`/api/grows/${growId}/plan/auswertung`)
+        if (antwort) setDaten(antwort)
+        else setKeinPlan(true)
       } catch (caught) {
-        if (caught instanceof ApiRequestError && caught.status === 404) setKeinPlan(true)
-        else setMeldung({ ton: 'critical', text: formatApiError(caught, 'Die Auswertung konnte nicht geladen werden.') })
+        setMeldung({ ton: 'critical', text: formatApiError(caught, 'Die Auswertung konnte nicht geladen werden.') })
       }
     }
     void laden()

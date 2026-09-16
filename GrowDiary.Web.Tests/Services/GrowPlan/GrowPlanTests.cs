@@ -572,6 +572,22 @@ public sealed class GrowPlanTests : IDisposable
     }
 
     [Fact]
+    public void BewurzelterStecklingHatKeineBewurzelungswoche()
+    {
+        // Wie 2026-01: RootedAt = Starttag.
+        var grow = Grow(48, "skx-canna-aqua");
+        grow.StartDate = new DateTime(2026, 6, 26);
+        grow.RootedAt = new DateTime(2026, 6, 26);
+        grow.FlipDate = new DateTime(2026, 8, 23);
+        var plan = _dienst.Anlegen(grow)!;
+
+        var zeit = PlanAuswertung.Zeitraeume(grow, plan.Inhalt.Chart.Columns, new DateTime(2026, 9, 16));
+
+        Assert.Equal((null, null), zeit["root"]);
+        Assert.Equal((new DateTime(2026, 6, 26), new DateTime(2026, 7, 3)), zeit["veg-w1"]);
+    }
+
+    [Fact]
     public void OhneFlipHabenBluetewochenKeinenZeitraum()
     {
         var grow = Grow(46, "skx-canna-aqua");

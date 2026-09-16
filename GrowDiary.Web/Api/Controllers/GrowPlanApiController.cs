@@ -288,12 +288,16 @@ public sealed class GrowPlanApiController : ApiControllerBase
     /// </summary>
     [HttpGet("auswertung")]
     [ProducesResponseType(typeof(PlanAuswertungDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public ActionResult<PlanAuswertungDto> Auswertung(int growId)
     {
         if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
         var ende = _plaene.Stand(growId, GrowPlanStaende.Ende);
         var arbeit = ende ?? _plaene.Stand(growId, GrowPlanStaende.Arbeit);
-        if (arbeit is null) return NotFoundError("plan_nicht_gefunden", "Für diesen Grow ist kein Plan gespeichert.");
+        // Kein Plan ist hier ein normaler Zustand (Grows von vor forkai.116), kein
+        // Fehler: 204 statt 404 — sonst meldet der Browser auf jeder solchen
+        // Grow-Seite einen Konsolenfehler (strenger E2E-Lauf, F-018).
+        if (arbeit is null) return NoContent();
         var start = _plaene.Stand(growId, GrowPlanStaende.Start);
 
         var wochen = PlanAuswertung.Bauen(grow, start?.Inhalt, arbeit.Inhalt, _grows.GetMeasurementsForGrow(growId), DateTime.Today);

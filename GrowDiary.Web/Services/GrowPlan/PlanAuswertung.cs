@@ -102,7 +102,8 @@ public static class PlanAuswertung
         {
             (DateTime?, DateTime?) zeitraum = s.Stage.ToLowerInvariant() switch
             {
-                "clone" or "seedling" => (start, vegiBeginn > start ? vegiBeginn : start.AddDays(7)),
+                // F-019: begann die Vegi am Starttag (bewurzelter Steckling), gab es keine Bewurzelung.
+                "clone" or "seedling" => vegiBeginn > start ? (start, vegiBeginn) : (null, null),
                 "veg" when s.Week is { } w => (vegiBeginn.AddDays(7 * (w - 1)),
                     w == letzteVegiWoche && grow.FlipDate is { } flipVegi && flipVegi.Date > vegiBeginn.AddDays(7 * w)
                         ? flipVegi.Date
