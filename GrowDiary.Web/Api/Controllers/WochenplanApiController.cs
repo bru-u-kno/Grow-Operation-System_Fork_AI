@@ -1,6 +1,7 @@
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
+using GrowDiary.Web.Services.GrowPlan;
 using GrowDiary.Web.Services.Knowledge;
 using GrowDiary.Web.Services.Knowledge.Schema;
 using Microsoft.AspNetCore.Mvc;
@@ -113,14 +114,17 @@ public sealed class WochenplanApiController : ApiControllerBase
     private readonly WochenplanSyncService _sync;
     private readonly WochenwertRepository _wochenwerte;
     private readonly WochenwertUeberlagerung _ueberlagerung;
+    private readonly GrowPlanService _plaene;
 
     public WochenplanApiController(
         GrowRepository grows,
         KnowledgeBaseLoader wissen,
         WochenplanSyncService sync,
         WochenwertRepository wochenwerte,
-        WochenwertUeberlagerung ueberlagerung)
+        WochenwertUeberlagerung ueberlagerung,
+        GrowPlanService plaene)
     {
+        _plaene = plaene;
         _grows = grows;
         _wissen = wissen;
         _sync = sync;
@@ -184,7 +188,7 @@ public sealed class WochenplanApiController : ApiControllerBase
                         $"{spalte.Label}: {feld.Bezeichnung} muss zwischen {Zahl(feld.Min)} und {Zahl(feld.Max)} liegen.");
             }
 
-            var neu = aenderung.Wert ?? _ueberlagerung.Planwert(spalte, feld);
+            var neu = aenderung.Wert ?? Planwert(grow, programm, spalte, feld);
             danach[(spalte.Id, feld.Name)] = neu;
             geprueft.Add((spalte.Id, feld.Name, aenderung.Wert));
         }
@@ -208,13 +212,22 @@ public sealed class WochenplanApiController : ApiControllerBase
             .Select(g =>
             {
                 var spalte = spalten.First(s => s.Id == g.SpalteId);
-                var plan = _ueberlagerung.Planwert(spalte, Wochenwertfelder.Finden(g.Feld)!);
+                var plan = Planwert(grow, programm, spalte, Wochenwertfelder.Finden(g.Feld)!);
                 return g.Wert is { } w && plan is { } p && Math.Abs(w - p) < 1e-9 ? (g.SpalteId, g.Feld, (double?)null) : g;
             })
             .ToList();
 
-        _wochenwerte.Speichern(programm.Id, zuSchreiben);
-        _ueberlagerung.Auffrischen();
+        // Fork AI (Grow-Plan): hat der Grow einen Plan, gehört die Änderung in
+        // den Plan — nicht ins Programm, das andere Grows mitbenutzen.
+        if (GrowPlanService.HatPlan(grow.Id))
+        {
+            _plaene.WerteSetzen(grow.Id, zuSchreiben);
+        }
+        else
+        {
+            _wochenwerte.Speichern(programm.Id, zuSchreiben);
+            _ueberlagerung.Auffrischen();
+        }
 
         var uebergeben = 0;
         string? hinweis = null;
@@ -233,9 +246,22 @@ public sealed class WochenplanApiController : ApiControllerBase
     private (GrowRun Grow, NutrientProgramDefinition Programm)? Programm(int growId)
     {
         if (_grows.GetGrow(growId) is not { } grow) return null;
-        var programm = _wissen.NutrientPrograms
-            .FirstOrDefault(p => string.Equals(p.Id, grow.FeedProgramId, StringComparison.OrdinalIgnoreCase));
+        var programm = MischplanService.ProgrammFuerGrow(grow, _wissen.NutrientPrograms);
         return programm?.FeedChart is { Columns.Count: > 0 } ? (grow, programm) : null;
+    }
+
+    /// <summary>Der Vergleichswert: Startstand des Grow-Plans, sonst der Dateiwert des Programms.</summary>
+    private double? Planwert(GrowRun grow, NutrientProgramDefinition programm, FeedChartColumn spalte, Wochenwertfelder.Feld feld)
+        => GrowPlanService.HatPlan(grow.Id)
+            ? _plaene.Startwert(grow.Id, spalte.Id, feld)
+            : _ueberlagerung.Planwert(spalte, feld);
+
+    private bool IstGeaendert(GrowRun grow, NutrientProgramDefinition programm, FeedChartColumn spalte, Wochenwertfelder.Feld feld)
+    {
+        if (!GrowPlanService.HatPlan(grow.Id)) return _ueberlagerung.IstGeaendert(programm.Id, spalte.Id, feld.Name);
+        var start = _plaene.Startwert(grow.Id, spalte.Id, feld);
+        var jetzt = feld.Lesen(spalte);
+        return start is null ? jetzt is not null : jetzt is null || Math.Abs(start.Value - jetzt.Value) > 1e-9;
     }
 
     private ActionResult KeinProgramm()
@@ -244,8 +270,10 @@ public sealed class WochenplanApiController : ApiControllerBase
     private WochenwerteDto WerteDto(GrowRun grow, NutrientProgramDefinition programm)
     {
         var aktiveId = MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms)?.Spalte.Id;
-        var andere = _grows.GetActiveGrows().Count(g =>
-            g.Id != grow.Id && string.Equals(g.FeedProgramId, programm.Id, StringComparison.OrdinalIgnoreCase));
+        // Mit eigenem Plan betrifft eine Änderung nur diesen Grow.
+        var andere = GrowPlanService.HatPlan(grow.Id) ? 0 : _grows.GetActiveGrows().Count(g =>
+            g.Id != grow.Id && !GrowPlanService.HatPlan(g.Id)
+            && string.Equals(g.FeedProgramId, programm.Id, StringComparison.OrdinalIgnoreCase));
 
         return new WochenwerteDto(
             grow.Id,
@@ -268,8 +296,8 @@ public sealed class WochenplanApiController : ApiControllerBase
                             feld.Max,
                             feld.Schritt,
                             feld.Lesen(spalte),
-                            _ueberlagerung.Planwert(spalte, feld),
-                            _ueberlagerung.IstGeaendert(programm.Id, spalte.Id, feld.Name)))
+                            Planwert(grow, programm, spalte, feld),
+                            IstGeaendert(grow, programm, spalte, feld)))
                         .ToList()))
                 .ToList());
     }
@@ -295,8 +323,7 @@ public sealed class WochenplanApiController : ApiControllerBase
 
         foreach (var grow in _grows.GetActiveGrows())
         {
-            var programm = _wissen.NutrientPrograms
-                .FirstOrDefault(p => string.Equals(p.Id, grow.FeedProgramId, StringComparison.OrdinalIgnoreCase));
+            var programm = MischplanService.ProgrammFuerGrow(grow, _wissen.NutrientPrograms);
 
             if (programm?.FeedChart is not { } chart || chart.Columns.Count == 0) continue;
 
@@ -315,7 +342,7 @@ public sealed class WochenplanApiController : ApiControllerBase
                 // Ohne den Haken am Addback gilt der Plan nur fürs Anmischen,
                 // nicht für Kacheln und Alarme. Das muss auf der Seite stehen,
                 // sonst liest man Zahlen, die nirgends wirken.
-                grow.UseFeedChartTargets,
+                MischplanService.NutztWochenziele(grow),
                 Datum(grow.VegStartedAt),
                 Datum(grow.FlipDate),
                 Erntefenster(grow),

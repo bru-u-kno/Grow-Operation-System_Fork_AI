@@ -92,6 +92,12 @@ public sealed class JedeRouteHatEinenAufruferTests
             + "App diese Zeilen SCHREIB-ONLY — vier Controller schrieben hinein, niemand kam "
             + "heran. Man liest sie nicht taeglich, sondern wenn etwas passiert ist; ob und wie "
             + "sie auf einer Seite erscheint, ist eine Gestaltungsfrage.",
+        // Fork AI (Grow-Plan, Schritt 1b): die Oberflaeche dafuer kommt mit den
+        // Reitern „Werte"/„Plan" (Schritt 2/3) — dann diese beiden Zeilen streichen.
+        ["GET /api/grows/{growId:int}/plan"] =
+            "Grow-Plan lesen; Aufrufer folgt mit dem Plan-Reiter, bis dahin Pruefung per HA-Proxy.",
+        ["GET /api/grows/{growId:int}/plan/buch"] =
+            "Aenderungsbuch lesen; Aufrufer folgt mit dem Plan-Reiter, bis dahin Pruefung per HA-Proxy.",
         ["GET /api/system/audit-events"] =
             "Das Protokoll kritischer Backend-Vorgaenge (SystemAuditEvents): Lichtflanken, "
             + "Nachtabsenkung, Sicherungen. Zum Nachsehen, wenn etwas passiert ist — dafuer "

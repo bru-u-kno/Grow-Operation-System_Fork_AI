@@ -5,6 +5,40 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.116
+
+**Fork AI.** Jeder Grow hat jetzt seinen eigenen Plan. Erster Schritt des Umbaus
+„Ziele & Meldungen“.
+
+- Neu — **Der Plan gehört dem Grow.** Beim Anlegen bekommt ein Grow eine eigene
+  Kopie seines Düngeprogramms, samt Startstand, der sich nie mehr ändert.
+  Alarme, Live-Kacheln, CO₂, Mischplan und die Übergabe an Home Assistant lesen
+  ab jetzt diesen Plan und nicht mehr das Programm in der Bibliothek. Ein
+  geändertes Programm verändert damit keinen laufenden und keinen
+  abgeschlossenen Grow mehr.
+- Neu — **Lücken werden einmal gefüllt.** Nennt ein Programm einen Wert nicht,
+  kommt er beim Anlegen aus dem mitgelieferten RDWC- bzw. DWC-Standard und ist
+  als solcher vermerkt. Luftfeuchte und Lufttemperatur kennt kein Standard —
+  die bleiben leer. Programme ohne Wochen (Canna Aqua, VBX) bekommen ein
+  Wochenraster aus der geplanten Vegi-Dauer und den Blütewochen der Sorte.
+- Neu — **Laufende Grows werden übernommen.** Beim ersten Start legt der Fork
+  für jeden laufenden Grow mit Programm den Plan an, vermerkt als „nachträglich
+  angelegt“. Abgeschlossene Grows bleiben unverändert.
+- Geändert — **„Werte bearbeiten“ im Wochenplan ändert den Plan des Grows**,
+  nicht mehr das Programm. Jede Änderung steht in einem Änderungsbuch.
+- Neu — **ORP im Wochenplan.** Das SKX-Programm nennt ORP je Phase (Vega 300,
+  Blüte 400–450, Flush 300 mV); das Feld ist im Wochenplan bearbeitbar.
+
+### Technik
+
+- Tabellen `ForkGrowPlan` (Start-/Arbeits-/Endstand) und `ForkGrowPlanBuch`,
+  `GrowPlanService`, `GrowPlanBauer`, `GrowPlanRegister`.
+- Eine Weiche für alle Leser: `MischplanService.ProgrammFuerGrow` und
+  `NutztWochenziele`. Ein Grow mit Plan nutzt die Wochenziele immer.
+- Lesewege `GET /api/grows/{id}/plan` (`?stand=start|arbeit|ende`) und
+  `GET /api/grows/{id}/plan/buch`.
+- `FeedChartColumn.OrpMin/OrpMax`.
+
 ## 2.0.0-forkai.115
 
 **Fork AI.** Jeder Helfer in Home Assistant hat nur noch eine Stelle im Fork,

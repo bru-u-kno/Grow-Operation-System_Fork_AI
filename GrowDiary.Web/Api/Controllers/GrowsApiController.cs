@@ -23,6 +23,7 @@ public sealed class GrowsApiController : ApiControllerBase
     private readonly HydroSetupRepository _hydro;
     private readonly DeviationAnalyzerService _deviationAnalyzer;
     private readonly TreatmentRecommender _treatmentRecommender;
+    private readonly Services.GrowPlan.GrowPlanService? _plaene; // Fork AI (Grow-Plan)
 
     public GrowsApiController(
         GrowRepository repository,
@@ -31,8 +32,10 @@ public sealed class GrowsApiController : ApiControllerBase
         DeviationAnalyzerService deviationAnalyzer,
         TreatmentRecommender treatmentRecommender,
         SetupRepository setups,
-        HydroSetupRepository hydro)
+        HydroSetupRepository hydro,
+        Services.GrowPlan.GrowPlanService? plaene = null)
     {
+        _plaene = plaene;
         _repository = repository;
         _auditRepository = auditRepository;
         _weekCounter = weekCounter;
@@ -148,6 +151,9 @@ public sealed class GrowsApiController : ApiControllerBase
             savedGrow.Status = GrowStatus.Running;
             _repository.UpdateGrow(savedGrow);
         }
+
+        // Fork AI (Grow-Plan): das gewählte Programm wird als eigener Plan mit dem Grow gespeichert.
+        _plaene?.Anlegen(savedGrow);
 
         /* Die Pflanzen gleich mit — eine je Topf, mit der Sorte des Grows.
            Gemeldet am 28.08.2026: „der User kann unter grow nur eine Sorte
@@ -285,6 +291,14 @@ public sealed class GrowsApiController : ApiControllerBase
         }
 
         _repository.UpdateGrow(grow);
+
+        // Fork AI (Grow-Plan): wird einem Grow erstmals ein Programm gegeben, bekommt er seinen Plan.
+        if (_plaene is not null && !grow.IsArchived && !Services.GrowPlan.GrowPlanService.HatPlan(id)
+            && _repository.GetGrow(id) is { } gespeichert)
+        {
+            _plaene.Anlegen(gespeichert);
+        }
+
         _auditRepository.Add(new AuditEntry
         {
             GrowId = id,

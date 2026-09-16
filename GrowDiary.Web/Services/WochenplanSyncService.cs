@@ -452,7 +452,7 @@ public sealed class WochenplanSyncService
     /// </remarks>
     private (GrowRun Grow, FeedChartColumn Spalte)? Spalte()
     {
-        var grows = _grows.GetActiveGrows().Where(g => g.UseFeedChartTargets).ToList();
+        var grows = _grows.GetActiveGrows().Where(MischplanService.NutztWochenziele).ToList();
         if (grows.Count != 1) return null;
 
         if (MischplanService.ZielSpalteFuerGrow(grows[0], _wissen.NutrientPrograms)?.Spalte is not { } spalte)

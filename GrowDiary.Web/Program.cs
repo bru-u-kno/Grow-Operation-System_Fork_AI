@@ -180,6 +180,24 @@ var wissensbasis = app.Services.GetRequiredService<KnowledgeBaseLoader>();
 wissensbasis.NachDemLaden = app.Services.GetRequiredService<WochenwertUeberlagerung>().Anwenden;
 wissensbasis.Initialize();
 
+// Fork AI (Grow-Plan): Pläne ins Register; laufende Grows ohne Plan einmalig übernehmen.
+// Muss nach dem Laden der Wissensbasis laufen — der Plan kopiert die Programme samt
+// ihrer bisherigen Wochenwert-Abweichungen.
+try
+{
+    var growPlaene = app.Services.GetRequiredService<GrowDiary.Web.Services.GrowPlan.GrowPlanService>();
+    growPlaene.RegisterLaden();
+    var uebernommen = growPlaene.FehlendePlaeneAnlegen(app.Services.GetRequiredService<GrowRepository>().GetActiveGrows());
+    if (uebernommen > 0)
+    {
+        app.Logger.LogInformation("Grow-Plan: {Anzahl} laufende Grows übernommen.", uebernommen);
+    }
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Grow-Plan: Laden oder Übernahme beim Start fehlgeschlagen.");
+}
+
 HaConfigLoader.Apply(
     app.Services.GetRequiredService<AppPaths>(),
     app.Services.GetRequiredService<GrowRepository>());

@@ -155,7 +155,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
            nennt das Chart eine Zahl und der Bildschirm daneben eine andere. Die
            eigenen Grenzen bleiben hier weg — die sind Stufe 4 und sollen die
            Herkunft nicht schon verdecken. */
-        var spalte = grow.UseFeedChartTargets
+        var spalte = MischplanService.NutztWochenziele(grow)
             ? MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms)?.Spalte
             : null;
         var wochenBand = Zielband.FuerGrow(

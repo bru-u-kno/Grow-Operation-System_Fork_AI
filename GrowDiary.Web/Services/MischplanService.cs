@@ -145,28 +145,54 @@ public sealed class MischplanService
     public static (FeedChartColumn Spalte, string Herkunft)? ZielSpalteFuerGrow(
         GrowRun grow, IEnumerable<NutrientProgramDefinition> programme)
     {
-        if (!grow.UseFeedChartTargets || string.IsNullOrWhiteSpace(grow.FeedProgramId)) return null;
+        if (!NutztWochenziele(grow)) return null;
 
-        var programm = programme.FirstOrDefault(
-            p => string.Equals(p.Id, grow.FeedProgramId, StringComparison.OrdinalIgnoreCase));
+        var programm = ProgrammFuerGrow(grow, programme);
         if (programm?.FeedChart is not { Columns.Count: > 0 } chart) return null;
 
         var spalte = SpalteFuer(chart, grow);
         return spalte is null ? null : (spalte, $"{programm.Name} · {spalte.Label}");
     }
 
+    /// <summary>
+    /// Fork AI (Grow-Plan): das Programm, nach dem dieser Grow läuft.
+    /// </summary>
+    /// <remarks>
+    /// Hat der Grow einen eigenen Plan, ist <b>der</b> das Programm — nicht die
+    /// Bibliothek. Alle Leser der Wochenwerte gehen über diese eine Stelle, damit
+    /// ein geändertes Bibliotheksprogramm keinen laufenden oder abgeschlossenen
+    /// Grow mehr verändert.
+    /// </remarks>
+    public static NutrientProgramDefinition? ProgrammFuerGrow(
+        GrowRun grow, IEnumerable<NutrientProgramDefinition> programme)
+    {
+        if (GrowPlan.GrowPlanRegister.Programm(grow.Id) is { } plan) return plan;
+        if (string.IsNullOrWhiteSpace(grow.FeedProgramId)) return null;
+        return programme.FirstOrDefault(
+            p => string.Equals(p.Id, grow.FeedProgramId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Fork AI (Grow-Plan): gelten die Wochenziele für Kacheln und Alarme?
+    /// </summary>
+    /// <remarks>
+    /// Ein Grow mit eigenem Plan nutzt ihn immer — der Schalter am Addback ist
+    /// dann bedeutungslos. Ohne Plan bleibt es beim Schalter des Originals.
+    /// </remarks>
+    public static bool NutztWochenziele(GrowRun grow)
+        => grow.UseFeedChartTargets || GrowPlan.GrowPlanRegister.Programm(grow.Id) is not null;
+
     public Mischplan? FuerGrow(int growId)
     {
         var grow = _grows.GetGrow(growId);
         if (grow is null) return null;
 
-        if (string.IsNullOrWhiteSpace(grow.FeedProgramId))
+        var programm = ProgrammFuerGrow(grow, _wissen.NutrientPrograms);
+        if (programm is null && string.IsNullOrWhiteSpace(grow.FeedProgramId))
         {
             return Leer("Kein Düngerprogramm gewählt — am Grow unter Bearbeiten festlegen.");
         }
 
-        var programm = _wissen.NutrientPrograms.FirstOrDefault(
-            p => string.Equals(p.Id, grow.FeedProgramId, StringComparison.OrdinalIgnoreCase));
         if (programm is null)
         {
             return Leer($"Das Programm „{grow.FeedProgramId}“ gibt es im Wissen nicht mehr.");
@@ -216,7 +242,7 @@ public sealed class MischplanService
             spalte.PhMax,
             herkunft,
             volumen is null ? "Kein Volumen an der Anlage hinterlegt — die Spalten zeigen deshalb nur ml je Liter." : null,
-            grow.UseFeedChartTargets);
+            NutztWochenziele(grow));
     }
 
     private static Mischplan Leer(string luecke, string? programmName = null)

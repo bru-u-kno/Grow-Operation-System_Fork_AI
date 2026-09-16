@@ -17,6 +17,15 @@ Band und woher es kommt — Sollwertprofil, Feed-Chart-Woche oder feste Regel �
 samt dem Ort, an dem man es ändert. Dahinter liegt eine gemeinsame Lesart, damit
 Kachel, Score und Alarm dieselbe Zahl nennen.
 
+**Jeder Grow hat seinen eigenen Plan.** Beim Anlegen wird das gewählte
+Düngeprogramm als Kopie mit dem Grow gespeichert (Startstand unveränderlich,
+Arbeitsstand bearbeitbar, Änderungsbuch). Alle Leser der Wochenziele nehmen diesen
+Plan statt des Bibliotheksprogramms — ein geändertes Programm schreibt damit keine
+laufenden oder abgeschlossenen Grows mehr um. Lücken eines Programms werden beim
+Anlegen einmalig aus dem mitgelieferten Standard gefüllt; Programme ohne Wochen
+bekommen ein Raster. (Umbau „Ziele & Meldungen“, seit forkai.116, weitere Schritte
+folgen.)
+
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden
 Woche ± Toleranz. Damit wandern pH und EC mit der Blütewoche mit, statt ab Woche 4
@@ -102,7 +111,8 @@ Zielband, Kachel-Modell und Live-Payload, Wissens-Schema und Mischplan (Klimawer
 je Woche), Trendwächter und Grow-Workflow (Sollwerte über das Zielband),
 Navigation und App-Shell, Wissens-Loader (ein Haken nach dem Laden für
 eigene Wochenwerte), Zelt-Einstellungen (Blatt-Offset an den
-Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback. Welche
+Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback, Grow-Controller
+(Plan beim Anlegen) sowie `Program.cs` (Plan-Übernahme beim Start). Welche
 Datei zu welcher Änderung gehört, steht in
 [docs/fork-historie.md](docs/fork-historie.md).
 ## Geplant
