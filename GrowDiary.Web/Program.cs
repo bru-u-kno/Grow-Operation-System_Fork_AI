@@ -114,6 +114,8 @@ builder.Services.AddScoped<ZaehlerstandImportService>();
 builder.Services.AddSingleton<SteuerungRepository>();
 builder.Services.AddSingleton<WochenwertRepository>(); // Fork AI (F-004)
 builder.Services.AddSingleton<WochenwertUeberlagerung>(); // Fork AI (F-004)
+builder.Services.AddSingleton<GrowPlanRepository>(); // Fork AI (Grow-Plan)
+builder.Services.AddSingleton<GrowDiary.Web.Services.GrowPlan.GrowPlanService>(); // Fork AI (Grow-Plan)
 builder.Services.AddScoped<SteuerungGeraeteService>();
 // Fork AI (forkai.22): Geraetesicht ueber die bestehenden Entity-Quellen.
 builder.Services.AddSingleton<GeraeteRepository>();

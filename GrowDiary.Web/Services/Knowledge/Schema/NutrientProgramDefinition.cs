@@ -134,6 +134,19 @@ public sealed class FeedChartColumn
     [JsonPropertyName("ppfdMax")]
     public double? PpfdMax { get; set; }
 
+    /// <summary>Redoxpotenzial von (mV).</summary>
+    /// <remarks>
+    /// Fork AI (Grow-Plan, 16.09.2026): damit ein Programm alle Zielwerte selbst
+    /// tragen kann und kein Sollwertprofil mehr die Lücke füllen muss. Der
+    /// SKX-Plan nennt ORP je Phase (Vega 300, Blüte 400–450, Flush 300 mV).
+    /// </remarks>
+    [JsonPropertyName("orpMin")]
+    public double? OrpMin { get; set; }
+
+    /// <summary>Redoxpotenzial bis (mV).</summary>
+    [JsonPropertyName("orpMax")]
+    public double? OrpMax { get; set; }
+
     /// <summary>Obergrenze der Luftfeuchte in Prozent.</summary>
     /// <remarks>
     /// Steht bewusst NICHT im Zielband: <c>HydroTargetValues</c> kennt weder RH

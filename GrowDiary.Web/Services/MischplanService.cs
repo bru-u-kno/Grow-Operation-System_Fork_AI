@@ -115,6 +115,12 @@ public sealed class MischplanService
             ergebnis = ergebnis with { Co2Min = co2Min, Co2Max = co2Max };
         }
 
+        // Fork AI (Grow-Plan): ORP wie die übrigen Spannen — ersetzt, nicht zentriert.
+        if (spalte.OrpMin is { } orpMin && spalte.OrpMax is { } orpMax)
+        {
+            ergebnis = ergebnis with { OrpMin = orpMin, OrpMax = orpMax };
+        }
+
         if (spalte.PpfdMin is { } ppfdMin && spalte.PpfdMax is { } ppfdMax)
         {
             ergebnis = ergebnis with { PpfdMin = ppfdMin, PpfdMax = ppfdMax };

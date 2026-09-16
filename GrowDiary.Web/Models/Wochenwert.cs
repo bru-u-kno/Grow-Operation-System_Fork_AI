@@ -59,6 +59,8 @@ public static class Wochenwertfelder
         new("phMax", "pH bis", "", 3, 9, 0.1, null, s => s.PhMax, (s, v) => s.PhMax = v),
         new("waterTempDayC", "Wasser Tag", "°C", 10, 30, 0.5, null, s => s.WaterTempDayC, (s, v) => s.WaterTempDayC = v),
         new("waterTempNightC", "Wasser Nacht", "°C", 10, 30, 0.5, null, s => s.WaterTempNightC, (s, v) => s.WaterTempNightC = v),
+        new("orpMin", "ORP von", "mV", 0, 800, 10, "orpMax", s => s.OrpMin, (s, v) => s.OrpMin = v),
+        new("orpMax", "ORP bis", "mV", 0, 800, 10, null, s => s.OrpMax, (s, v) => s.OrpMax = v),
         new("rhMax", "RH max", "%", 20, 95, 1, null, s => s.RhMax, (s, v) => s.RhMax = v),
         new("airTempC", "Luft", "°C", 10, 40, 0.5, null, s => s.AirTempC, (s, v) => s.AirTempC = v),
         new("vpdMin", "VPD von", "kPa", 0, 3, 0.05, "vpdMax", s => s.VpdMin, (s, v) => s.VpdMin = v),
