@@ -411,3 +411,21 @@
      aufgeraeumt. Textton, nicht Flaechenton. */
   .gw-toepfe-hinweis.is-warn { color: var(--warn-text, var(--warn)); }
 }
+
+/* Fork AI (Grow-Plan, Schritt 5b): Deckung der Programmkarte, Gruppen, Wechsel-Blatt. Nur Tokens. */
+.program-deckung {
+  display: block; margin-top: var(--s-2); padding-left: var(--s-2);
+  border-left: 3px solid var(--hair-2);
+  font: 500 var(--fs-etikett)/1.35 var(--font-mono); color: var(--muted);
+}
+.program-deckung.ist-voll { border-left-color: var(--accent); }
+.program-deckung.ist-teil { border-left-color: var(--warn); }
+.program-gruppe {
+  margin: var(--s-4) 0 var(--s-2); font: 500 var(--fs-etikett)/1 var(--font-mono);
+  letter-spacing: .2em; text-transform: uppercase; color: var(--faint);
+}
+.program-hinweis { margin: var(--s-2) 0; font-size: var(--fs-klein); color: var(--muted); }
+.wechsel-text { padding: var(--s-2) var(--s-4); display: grid; gap: var(--s-2); font-size: var(--fs-text); color: var(--muted); }
+.wechsel-text p { margin: 0; }
+.wechsel-text b { color: var(--ink); }
+.wechsel-knoepfe { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-top: 1px solid var(--hair-2); }

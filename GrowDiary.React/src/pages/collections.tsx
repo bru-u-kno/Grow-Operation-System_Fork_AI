@@ -1,8 +1,5 @@
 import AutomationPage from './AutomationPage'
-import SetpointProfilesPage from './SetpointProfilesPage'
 import ZielwertePage from './ZielwertePage'
-import AlertsPage from './AlertsPage'
-import NotificationsPage from './NotificationsPage'
 import { TabbedCollectionPage } from './TabbedCollectionPage'
 import { PlanReiter } from '../features/zielwerte/PlanReiter'
 import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
@@ -20,15 +17,15 @@ import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
  * Bibliothek + Pheno-Hunt bzw. Ertragstabelle + Vergleich auf je eine Seite.
  */
 export function RulesCollectionPage() {
+  // Fork AI (forkai.121): Grenzwerte und Benachrichtigungen sind nach
+  // „Ziele & Meldungen“ gezogen — hier bleiben die Auto-Messungen.
   return (
     <TabbedCollectionPage
-      eyebrow="Betrieb / Regeln"
-      title="Regeln & Automatik"
-      subtitle="Grenzwerte, Auto-Messungen und Benachrichtigungen an einem Ort. Zwei Automatiken sitzen dort, wo sie wirken: die Dosierung bei den Pumpen und die Wassertemperatur unter Crop Steering."
+      eyebrow="Betrieb / Auto-Messungen"
+      title="Auto-Messungen"
+      subtitle="Wann Grow OS von selbst misst. Grenzwerte und Benachrichtigungen findest du unter Ziele & Meldungen."
       tabs={[
-        { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
         { key: 'automatik', label: 'Auto-Messungen', render: () => <AutomationPage /> },
-        { key: 'push', label: 'Benachrichtigungen', render: () => <NotificationsPage /> },
       ]}
     />
   )
@@ -48,14 +45,12 @@ export function ZielwerteCollectionPage() {
   return (
     <TabbedCollectionPage
       eyebrow="Betrieb"
-      title="Zielwerte"
-      subtitle="Was gerade gilt, woher es kommt und wo man es ändert. Vier Quellen stehen hintereinander — jede spätere sticht die früheren."
+      title="Ziele & Meldungen"
+      subtitle="Was gerade gilt, der Plan deines Grows und wer dir Bescheid gibt — an einer Stelle."
       tabs={[
         { key: 'jetzt', label: 'Werte', render: () => <ZielwertePage /> },
         { key: 'plan', label: 'Plan', render: () => <PlanReiter /> },
         { key: 'meldungen', label: 'Meldungen', render: () => <MeldungenReiter /> },
-        { key: 'profile', label: 'Profile', render: () => <SetpointProfilesPage /> },
-        { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
       ]}
     />
   )

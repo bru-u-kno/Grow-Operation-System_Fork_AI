@@ -8,7 +8,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
 import type { CreateHydroSetupRequest, HydroSetupDto, ReservoirPosition, SelectableHydroStyle } from '../../types'
 import { V1Alert, V1Button, V1Field } from '../../components/v1'
-import { ProfileSelect } from '../setpoints/ProfileSelect'
 import { SystemPlan } from './SystemPlan'
 import { buildSystemPlan, layoutTypeFromRows, rowsFromLayoutType } from './system-plan-model'
 import { useHydroSetups } from './useHydroSetups'
@@ -180,14 +179,6 @@ export default function HydroEditorPage() {
                   {tents.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
               </V1Field>
-              {/* Der Standard fuer jeden Grow in diesem System — DWC oder RDWC
-                  ist eine Eigenschaft der Hardware, also einmal hier. */}
-              <ProfileSelect
-                value={draft.setpointProfileId}
-                onChange={(value) => patch({ setpointProfileId: value })}
-                inheritedLabel={`${draft.hydroStyle}-Standard`}
-                hint="Gilt fuer jeden Grow in diesem System. Einzelne Laeufe duerfen abweichen."
-              />
             </div>
           </section>
 

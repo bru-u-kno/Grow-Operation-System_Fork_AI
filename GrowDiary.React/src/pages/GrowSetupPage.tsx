@@ -7,7 +7,8 @@ import { V1Alert, V1Badge, V1Button, V1Card, V1Empty, V1Field, V1LinkButton, V1P
 import { formatLiters, toNullableInt } from '../components/v1-utils'
 import { classNames } from '../utils'
 import { aufstellungName, einstiegName, materialName, samenName, statusName, zeltZweckName } from '../deutsche-woerter'
-import { ProfileSelect } from '../features/setpoints/ProfileSelect'
+import { V1Sheet } from '../components/V1Sheet'
+import { deckung, istEigenesProgramm, wechselNoetig } from '../features/grows/programm-deckung'
 import { GrowPlanPanel } from '../features/grows/GrowPlanPanel'
 import { buildTimeline, canCreate, checkPlan } from '../features/grows/grow-plan-model'
 import '../features/grows/grows.css'
@@ -42,6 +43,9 @@ function GrowSetupPage() {
   // Namensvergleich — und ein fehlgeschlagener Wissens-Abruf haette es beim
   // Speichern still auf null gesetzt.
   const [feedProgramId, setFeedProgramId] = useState<string | null>(null)
+  // Fork AI (Grow-Plan): das Programm beim Öffnen — ein Wechsel fragt nach den eigenen Änderungen.
+  const [programmVorher, setProgrammVorher] = useState<string | null>(null)
+  const [wechsel, setWechsel] = useState<{ anzahl: number; name: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -93,6 +97,7 @@ function GrowSetupPage() {
         setStrains(strainData)
         if (grow) {
           setFeedProgramId(grow.feedProgramId ?? null)
+          setProgrammVorher(grow.feedProgramId ?? null)
           // Ein Programm, das keiner Karte entspricht, ist ein eigenes — es
           // gehoert beim Bearbeiten sichtbar ins Freitextfeld, nicht ins Leere.
           const kartenTreffer = (knowledge.programs ?? []).some((program) => program.name === grow.nutrients || program.key === grow.nutrients)
@@ -167,7 +172,7 @@ function GrowSetupPage() {
     })
   }
 
-  async function saveGrow() {
+  async function saveGrow(aenderungenBehalten?: boolean) {
     // Der Validator lief frueher pro Wizard-Schritt. Auf einer Seite gilt er
     // einmal fuer alles — und meldet den ersten Einwand, statt zu einem Schritt
     // zu springen, den es nicht mehr gibt.
@@ -178,6 +183,26 @@ function GrowSetupPage() {
     setSaving(true)
     setError(null)
     try {
+      // Fork AI (Grow-Plan): Programmwechsel am laufenden Grow. Erst den Plan
+      // umstellen (der setzt auch das Programm am Grow), dann das Formular
+      // speichern — dann ist das Programm dort schon gleich.
+      const neuesProgramm = selectedProgram?.key ?? null
+      if (isEditing && growId && neuesProgramm && wechselNoetig(programmVorher, neuesProgramm, true)) {
+        const plan = await apiFetch<{ eigeneAenderungen: number }>(`/api/grows/${growId}/plan`).catch(() => null)
+        if (plan) {
+          if (aenderungenBehalten === undefined && plan.eigeneAenderungen > 0) {
+            setWechsel({ anzahl: plan.eigeneAenderungen, name: selectedProgram?.name ?? neuesProgramm })
+            setSaving(false)
+            return
+          }
+          await apiFetch(`/api/grows/${growId}/plan/programm`, {
+            method: 'POST',
+            body: JSON.stringify({ programmId: neuesProgramm, aenderungenBehalten: aenderungenBehalten ?? false }),
+          })
+          setProgrammVorher(neuesProgramm)
+        }
+      }
+      setWechsel(null)
       // Die Programmkarte waehlte bisher nur einen NAMEN — jetzt traegt sie auch
       // die Id ins Wissen, und erst die macht den Mischplan moeglich.
       // Faellt der Wissens-Abruf aus, haelt die gespeicherte Id das Programm —
@@ -293,6 +318,31 @@ function GrowSetupPage() {
         </V1Button>
       </div>
       </div>
+
+      {/* Fork AI (Grow-Plan): Programmwechsel mit eigenen Änderungen — fragen, nicht raten. */}
+      <V1Sheet
+        open={wechsel !== null}
+        onClose={() => !saving && setWechsel(null)}
+        title="Programm wechseln"
+        subtitle={wechsel ? `auf ${wechsel.name}` : undefined}
+        footer={(
+          <div className="wechsel-knoepfe">
+            <V1Button variant="ghost" onClick={() => setWechsel(null)} disabled={saving}>Abbrechen</V1Button>
+            <V1Button variant="secondary" onClick={() => void saveGrow(false)} disabled={saving} audit="programmwechsel-verwerfen">Änderungen verwerfen</V1Button>
+            <V1Button variant="primary" onClick={() => void saveGrow(true)} disabled={saving} audit="programmwechsel-behalten">Änderungen übernehmen</V1Button>
+          </div>
+        )}
+      >
+        <div className="wechsel-text">
+          <p>
+            Im Plan dieses Grows stecken {wechsel?.anzahl === 1 ? 'eine eigene Änderung' : `${wechsel?.anzahl} eigene Änderungen`}.
+            Was soll damit passieren?
+          </p>
+          <p><b>Übernehmen:</b> geänderte Werte und Dosierungen gehen in die gleichnamigen Wochen des neuen Programms. Wochen, die es dort nicht gibt, entfallen.</p>
+          <p><b>Verwerfen:</b> der Plan wird frisch aus dem neuen Programm aufgebaut.</p>
+          <p>Der Startstand bleibt für die Auswertung erhalten, und der Wechsel steht im Änderungsbuch.</p>
+        </div>
+      </V1Sheet>
     </V1Page>
   )
 }
@@ -621,15 +671,7 @@ function TimeStep({ form, patch }: { form: GrowUpsertPayload; patch: (value: Par
         onChange={(event) => patch({ plannedVegDays: toNullableInt(event.target.value) })}
       />
     </V1Field>
-  )}{form.seedType !== 'Autoflower' && <V1Field label="Flipdatum" hint="Erst ausfüllen, wenn wirklich geflippt wurde."><input type="date" value={form.flipDate ?? ''} onChange={(event) => patch({ flipDate: event.target.value })} /></V1Field>}<V1Field label="Status"><select value={form.status} onChange={(event) => patch({ status: event.target.value as GrowStatus })}>{statuses.map((value) => <option key={value} value={value}>{statusName(value)}</option>)}</select></V1Field>
-    {/* Sollwerte sind, wie man DIESEN Lauf faehrt. Steht hier nichts, gilt das
-        Profil des Hydro-Systems — das sagt der Hinweis auch. */}
-    <ProfileSelect
-      value={form.setpointProfileId ?? null}
-      onChange={(value) => patch({ setpointProfileId: value })}
-      inheritedLabel="Profil des Hydro-Systems"
-      hint="Nur setzen, wenn dieser Lauf anders laufen soll als der Rest im selben System."
-    /></div></V1Section>
+  )}{form.seedType !== 'Autoflower' && <V1Field label="Flipdatum" hint="Erst ausfüllen, wenn wirklich geflippt wurde."><input type="date" value={form.flipDate ?? ''} onChange={(event) => patch({ flipDate: event.target.value })} /></V1Field>}<V1Field label="Status"><select value={form.status} onChange={(event) => patch({ status: event.target.value as GrowStatus })}>{statuses.map((value) => <option key={value} value={value}>{statusName(value)}</option>)}</select></V1Field></div></V1Section>
 }
 
 /**
@@ -650,7 +692,33 @@ function vegHinweis(form: GrowUpsertPayload): string {
 }
 
 function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void }) {
-  return <V1Section title="Programm"><div className="program-grid">{programs.map((program) => <button key={program.key} type="button" className={classNames('program-card', (selected === program.name || selected === program.key) && 'active')} onClick={() => { setCustom(''); selectProgram(program.key); patch({ nutrients: program.name }) }}><span className="grow-card-topline"><strong>{program.name}</strong><V1Badge tone="accent">{program.manufacturer}</V1Badge></span><span className="program-summary">{program.summary}</span></button>)}</div><div className="grow-custom-program"><V1Field label="Eigenes Programm"><input value={custom} onChange={(event) => { setCustom(event.target.value); selectProgram(null); patch({ nutrients: event.target.value || null }) }} placeholder="Eigene Mischung" /></V1Field></div></V1Section>
+  // Fork AI (Grow-Plan): Karten sagen, wie viel das Programm mitbringt;
+  // eigene Programme stehen für sich.
+  const karte = (program: NutrientProgramDto) => {
+    const d = deckung(program)
+    return (
+      <button key={program.key} type="button" className={classNames('program-card', (selected === program.name || selected === program.key) && 'active')} onClick={() => { setCustom(''); selectProgram(program.key); patch({ nutrients: program.name }) }}>
+        <span className="grow-card-topline"><strong>{program.name}</strong><V1Badge tone="accent">{program.manufacturer}</V1Badge></span>
+        <span className="program-summary">{program.summary}</span>
+        <span className={classNames('program-deckung', `ist-${d.stufe}`)} data-audit="programm-deckung">{d.text}</span>
+      </button>
+    )
+  }
+  const mitgeliefert = programs.filter((p) => !istEigenesProgramm(p.key))
+  const eigene = programs.filter((p) => istEigenesProgramm(p.key))
+  return (
+    <V1Section title="Programm">
+      <div className="program-grid">{mitgeliefert.map(karte)}</div>
+      <h3 className="program-gruppe">Eigene Programme</h3>
+      {eigene.length > 0
+        ? <div className="program-grid">{eigene.map(karte)}</div>
+        : <p className="program-hinweis">Noch keine. Sie entstehen, wenn du im Plan „Auch ins Programm“ wählst.</p>}
+      <p className="program-hinweis">
+        Der Grow bekommt eine eigene Kopie des Programms als Plan — spätere Änderungen am Programm ändern diesen Grow nicht.
+      </p>
+      <div className="grow-custom-program"><V1Field label="Anderes Programm (nur Name, ohne Werte)"><input value={custom} onChange={(event) => { setCustom(event.target.value); selectProgram(null); patch({ nutrients: event.target.value || null }) }} placeholder="Eigene Mischung" /></V1Field></div>
+    </V1Section>
+  )
 }
 
 function Summary({ form, tent, hydro, program, custom }: { form: GrowUpsertPayload; tent: TentDto | null; hydro: HydroSetupDto | null; program: NutrientProgramDto | null; custom: string }) {

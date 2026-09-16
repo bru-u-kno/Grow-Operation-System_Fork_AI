@@ -35,7 +35,9 @@ public sealed record FeedChartColumnDto(
     IReadOnlyList<FeedChartItemDto> Items,
     double? EcTarget,
     double? PhMin,
-    double? PhMax
+    double? PhMax,
+    // Fork AI (Grow-Plan): nennt die Woche auch Klimawerte? Für die Deckung der Programmkarte.
+    bool KlimaJeWoche = false
 );
 
 public sealed record FeedChartItemDto(

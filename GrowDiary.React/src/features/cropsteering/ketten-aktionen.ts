@@ -35,7 +35,8 @@ export const KETTEN_AKTIONEN: Record<string, KettenAktion> = {
 
   'plan-untergrenze-zu-hoch': { art: 'anker', ziel: 'untergrenze', label: 'Zur Untergrenze' },
   // Fork AI (forkai.67): die Profile sind der Reiter „Profile" der Zielwerte.
-  'plan-ohne-profil': { art: 'weg', ziel: '/zielwerte?tab=profile', label: 'Zu den Sollwert-Profilen' },
+  // Fork AI (forkai.121): die Ziele stehen im Plan des Grows.
+  'plan-ohne-profil': { art: 'weg', ziel: '/zielwerte?tab=plan', label: 'Zum Plan des Grows' },
   'plan-vor-dem-flip': { art: 'weg', ziel: '/grows/{growId}', label: 'Flip eintragen' },
   'plan-abgeschaltet': { art: 'anker', ziel: 'night-ramp', label: 'Zum Schalter' },
 

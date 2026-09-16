@@ -28,7 +28,8 @@ public static class KnowledgeMapping
                 chart.Columns.Select(c => new FeedChartColumnDto(
                     c.Id, c.Label, c.Stage, c.Week,
                     c.Items.Select(i => new FeedChartItemDto(i.Component, i.MinMlPerLiter, i.MaxMlPerLiter)).ToList(),
-                    c.EcTarget, c.PhMin, c.PhMax)).ToList())
+                    c.EcTarget, c.PhMin, c.PhMax,
+                    c.VpdMin is not null || c.Co2Min is not null || c.WaterTempDayC is not null || c.RhMax is not null)).ToList())
             : null
     );
 

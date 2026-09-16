@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.121
+
+**Fork AI.** Umbau „Ziele & Meldungen“, Schritt 5: aufgeräumt und
+Programmwechsel.
+
+- Geändert — **Menü:** „Zielwerte“ heißt jetzt **„Ziele & Meldungen“** (Reiter
+  Werte · Plan · Meldungen), „Regeln & Automatik“ heißt **„Auto-Messungen“**.
+  Die Reiter „Profile“ und „Grenzwerte“ sind weg — Grenzen stellt man an der
+  Werte-Karte ein, Ziele im Plan. Alte Adressen leiten weiter.
+- Neu — **Programm am laufenden Grow wechseln.** Hat der Plan eigene
+  Änderungen, fragt das Formular: „Änderungen übernehmen“ (in die gleichnamigen
+  Wochen des neuen Programms) oder „Änderungen verwerfen“. Der Startstand bleibt,
+  der Wechsel steht im Änderungsbuch.
+- Neu — **Programmkarten zeigen, was sie mitbringen** (alle Werte je Woche /
+  nur EC und pH / keine Wochenwerte). Eigene Programme stehen in einer eigenen
+  Gruppe.
+- Entfernt — Das Feld „Sollwertprofil“ im Grow-Formular und im Hydro-Editor
+  sowie der Schalter „Wochen-Ziele verwenden“ am Addback. Grows mit eigenem Plan
+  nutzen ihre Wochenziele immer.
+- Geändert — Wochenplan: „Werte bearbeiten“ führt jetzt in den Plan des Grows.
+
+### Technik
+
+- `POST /api/grows/{id}/plan/programm`, Planstand „basis“ als Vergleichswert
+  nach einem Wechsel, `eigeneAenderungen` im Plan-Stand.
+- Wissens-API: `klimaJeWoche` je Feed-Chart-Spalte.
+- Neu: `features/grows/programm-deckung.ts(+.test.ts)`.
+
 ## 2.0.0-forkai.120
 
 **Fork AI.** Umbau „Ziele & Meldungen“, Schritt 4: der Reiter „Meldungen“.

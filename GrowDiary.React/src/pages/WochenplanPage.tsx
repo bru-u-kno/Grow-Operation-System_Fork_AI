@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
-import { V1Alert, V1Button, V1Page, V1Section, V1Skeleton } from '../components/v1'
-import { WochenwerteBearbeiten } from '../features/wochenplan/WochenwerteBearbeiten'
+import { V1Alert, V1LinkButton, V1Page, V1Section, V1Skeleton } from '../components/v1'
 import '../features/wochenplan/wochenplan.css'
 import { istHandgesetzt } from '../features/wochenplan/uebergabe-zustand'
 
@@ -75,8 +74,6 @@ function WochenplanPage() {
   const [plaene, setPlaene] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  // F-004: welcher Grow gerade im Bearbeiten-Modus ist (einer zur Zeit).
-  const [bearbeiten, setBearbeiten] = useState<number | null>(null)
 
   useEffect(() => {
     async function laden() {
@@ -101,15 +98,7 @@ function WochenplanPage() {
     void growId
   }
 
-  async function bearbeitenBeenden(gespeichert: boolean) {
-    setBearbeiten(null)
-    if (!gespeichert) return
-    try {
-      setPlaene(await apiFetch<Plan[]>('/api/wochenplan'))
-    } catch {
-      setError('Der Wochenplan konnte nicht neu geladen werden.')
-    }
-  }
+
 
   if (loading) return <V1Skeleton rows={6} label="Lade Wochenplan" />
 
@@ -135,11 +124,9 @@ function WochenplanPage() {
             <V1Section
               title={`${plan.programmName} · ${plan.growName}`}
               action={
-                bearbeiten === null ? (
-                  <V1Button variant="secondary" onClick={() => setBearbeiten(plan.growId)} audit="wochenwerte-bearbeiten-oeffnen">
-                    Werte bearbeiten
-                  </V1Button>
-                ) : undefined
+                // Fork AI (forkai.121): bearbeitet wird im Plan des Grows —
+                // dort gibt es auch Dosierung, Speichern-Frage und Änderungsbuch.
+                <V1LinkButton to="/zielwerte?tab=plan">Im Plan bearbeiten</V1LinkButton>
               }
             >
               {/* Ohne den Haken am Addback gilt der Plan nur fürs Anmischen.
@@ -147,14 +134,11 @@ function WochenplanPage() {
                   wundert sich, dass die Kacheln andere zeigen. */}
               {!plan.wochenZieleAktiv && (
                 <V1Alert
-                  message="Dieser Grow benutzt die Wochen-Ziele nicht. Die Werte unten gelten fürs Anmischen, nicht für Kacheln und Alarme — umstellen kannst du das auf der Addback-Seite."
+                  message="Dieser Grow hat noch keinen eigenen Plan. Die Werte unten gelten fürs Anmischen, nicht für Kacheln und Alarme — wähle am Grow ein Düngeprogramm, dann entsteht der Plan."
                   tone="neutral"
                 />
               )}
 
-              {bearbeiten === plan.growId ? (
-                <WochenwerteBearbeiten growId={plan.growId} onFertig={(g) => void bearbeitenBeenden(g)} />
-              ) : (
               <section className={classNames('wp-jetzt', !jetzt && 'ist-leer')}>
                 <div className="wp-kopf">Diese Woche</div>
                 <p className="wp-titel">
@@ -195,10 +179,8 @@ function WochenplanPage() {
                 )}
                 {jetzt?.dosierung && <p className="wp-dosis">Anmischen: {jetzt.dosierung}</p>}
               </section>
-              )}
             </V1Section>
 
-            {bearbeiten !== plan.growId && (
             <V1Section title="Verlauf">
               <div className="wp-liste">
                 {plan.wochen.map((woche) => (
@@ -216,7 +198,6 @@ function WochenplanPage() {
                 ))}
               </div>
             </V1Section>
-            )}
 
             {plan.uebergabe.length > 0 && (
               <V1Section title="Übergabe an Home Assistant">
@@ -247,7 +228,6 @@ function WochenplanPage() {
           </div>
         )
       })}
-      {bearbeiten !== null && <div className="wp-balken-platz" aria-hidden="true" />}
     </V1Page>
   )
 }

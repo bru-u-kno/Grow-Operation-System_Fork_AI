@@ -13,6 +13,8 @@
 
    Zusammengelegt (bleibt so):
      Automatik + Grenzwerte + Benachrichtigungen  -> /regeln (Tabs)
+     Fork AI (forkai.121): Grenzwerte + Benachrichtigungen -> /zielwerte
+     („Ziele & Meldungen“), unter /regeln bleiben die Auto-Messungen.
      Sorten + Pheno-Hunt                          -> /sorten (Tabs)
      Ernte + Archiv                               -> /archiv (Tabs)
      Sensoren + Wartung + Kalibrierung            -> /sensoren (eine Tabelle)
@@ -127,7 +129,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: '/dosierung', label: 'Dosierung', end: false, icon: '⚗', short: 'Dosierung', keywords: 'pumpe peristaltik ph minus plus säure nährstoff dosieren kalibrieren' },
       { to: '/geraete', label: 'Geräte & Entitäten', end: true, icon: '⧉', short: 'Geräte', keywords: 'entität entity home assistant zuordnung controller port sensor steckdose gerät hardware ha mapping' },
-      { to: '/regeln', label: 'Regeln & Automatik', end: true, icon: '≡', short: 'Regeln', keywords: 'grenzwerte schwellen alarm push zeitplan automation' },
+      { to: '/regeln', label: 'Auto-Messungen', end: true, icon: '≡', short: 'Auto', keywords: 'automatik automation auto messung messungen zeitplan intervall snapshot regeln' },
       // Fork AI (forkai.47): steht direkt hinter den Profilen, weil es die
       // Ebene darueber ist — das Profil gilt je Phase, der Plan je Woche.
       { to: '/wochenplan', label: 'Wochenplan', end: true, icon: '▦', short: 'Wochenplan', keywords: 'woche wochen plan duengeplan feed chart skx flip vegi bluete ernte klima zielwerte verlauf' },
@@ -135,7 +137,7 @@ export const navGroups: NavGroup[] = [
       // keiner steht — welche Regel greift gerade, und wo aendere ich sie.
       // Fork AI (forkai.67): Auskunft und die beiden Editoren dahinter unter
       // einem Menuepunkt — „Sollwert-Profile" ist der Reiter „Profile".
-      { to: '/zielwerte', label: 'Zielwerte', end: true, icon: '◈', short: 'Zielwerte', keywords: 'ziel sollwert sollwerte profil profile setpoint band grenzwert schwelle alarm herkunft quelle fest plan feedchart woche rdwc dwc phasen wo einstellen' },
+      { to: '/zielwerte', label: 'Ziele & Meldungen', end: true, icon: '◈', short: 'Ziele', keywords: 'ziel zielwerte sollwert sollwerte setpoint band grenzwert grenzwerte schwelle alarm herkunft quelle fest plan programm dosierung düngeplan woche wochen änderungsbuch meldung meldungen benachrichtigung benachrichtigungen push handy ruhezeit tagesbericht wächter wo einstellen' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, versteckt: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
@@ -242,9 +244,11 @@ export const defaultBarRoutes: string[] = ['/', '/messungen', '/wissen', '/koste
 export const legacyRedirects: Record<string, string> = {
   '/automatik': '/regeln?tab=automatik',
   // Fork AI (forkai.67): die Profile sind ein Reiter der Zielwerte geworden.
-  '/sollwerte': '/zielwerte?tab=profile',
-  '/alarme': '/regeln?tab=grenzwerte',
-  '/benachrichtigungen': '/regeln?tab=push',
+  // Fork AI (forkai.121): Profile, Grenzwerte und Benachrichtigungen wohnen
+  // jetzt unter „Ziele & Meldungen“.
+  '/sollwerte': '/zielwerte?tab=plan',
+  '/alarme': '/zielwerte?tab=jetzt',
+  '/benachrichtigungen': '/zielwerte?tab=meldungen',
   // Die KI wurde entfernt; das Lesezeichen darf trotzdem nicht ins Leere laufen.
   '/assistent': '/regeln',
   '/phenohunt': '/sorten',

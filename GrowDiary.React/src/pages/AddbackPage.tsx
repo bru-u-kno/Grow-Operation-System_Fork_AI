@@ -100,17 +100,6 @@ function AddbackPage() {
    * Der Schalter schreibt am Grow und bekommt den frischen Plan zurück — so
    * steht nie ein Haken, den der Server nicht bestätigt hat.
    */
-  async function zieleUmschalten(use: boolean) {
-    try {
-      setMischplan(await apiFetch<MischplanDto>(`/api/grows/${growId}/mixing-plan/use-targets`, {
-        method: 'PUT',
-        body: JSON.stringify({ use }),
-      }))
-    } catch {
-      /* Der Haken bleibt, wo er war. */
-    }
-  }
-
 
   useEffect(() => {
     if (!growId) return
@@ -456,22 +445,6 @@ function AddbackPage() {
                                 </div>
                               )}
                             </div>
-                            {(mischplan.ecZiel != null || mischplan.phMin != null) && (
-                              <label className="ab-mischplan-adopt" data-audit="mixing-plan-adopt">
-                                <input
-                                  type="checkbox"
-                                  checked={mischplan.zieleAktiv}
-                                  onChange={(event) => void zieleUmschalten(event.target.checked)}
-                                />
-                                <span>
-                                  Diese Wochen-Ziele auch auf dem Bildschirm verwenden
-                                  <em>
-                                    Sonst gilt weiter das Ziel deines Phasenprofils. Übernommen werden
-                                    nur EC und pH — Temperatur, ORP und Licht kennt das Chart nicht.
-                                  </em>
-                                </span>
-                              </label>
-                            )}
                             {mischplan.herkunft && <p className="ab-mischplan-source">{mischplan.herkunft}</p>}
                           </>
                         )}

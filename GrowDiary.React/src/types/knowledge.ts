@@ -35,6 +35,8 @@ export interface FeedChartColumnDto {
   ecTarget: number | null
   phMin: number | null
   phMax: number | null
+  /** Fork AI: nennt die Woche auch Klimawerte? */
+  klimaJeWoche?: boolean
 }
 
 export interface FeedChartDto {
