@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.117
+
+**Fork AI.** Umbau „Ziele & Meldungen“, Schritt 2: Die Werte-Karten lassen sich
+bearbeiten.
+
+- Neu — **Karte antippen, alles zu diesem Wert in einem Blatt.** Unter
+  Betrieb → Zielwerte (Reiter „Werte“, bisher „Jetzt gültig“) öffnet jede Karte
+  ein Blatt mit dem Ziel der laufenden Woche, der Alarmgrenze (feste Zahlen
+  oder „folgt dem Plan“ mit Toleranz), der Pause zwischen zwei Meldungen, dem
+  Schalter „Alarm scharf“, den Werten, die nach Home Assistant gehen, und der
+  Herkunft. Ein Speichern für alles. Das Wochenziel landet im Plan des Grows
+  und im Änderungsbuch.
+- Neu — **Die Glocke auf der Karte** zeigt, ob der Alarm scharf ist oder der
+  Wert gerade außerhalb liegt. Oben steht, welche Werte gerade melden.
+- Behoben — **Die Herkunft nannte bei „folgt dem Plan“ immer die
+  Standard-Toleranz** statt der eingestellten (F-015).
+- Behoben — **Speichern unter Grenzwerte löschte das Nachtband der
+  Lufttemperatur** (F-016). Die Seite kannte die Nachtgrenzen nicht und schickte
+  sie nicht mit; der Server ersetzt aber immer den ganzen Satz.
+- Geändert — ORP gilt jetzt auch als Wert, den der Wochenplan nennt.
+
+### Technik
+
+- `/api/zielwerte` liefert zusätzlich `zeltId`, `spalteId`, `eigenerPlan` und je
+  Wert `regel`, `alarmVon`/`alarmBis`, `meldet`, `planFelder`.
+- Neu: `features/zielwerte/WertBlatt.tsx`, `wert-blatt.ts(+.test.ts)`,
+  `GrowDiary.Web.Tests/Api/ZielwerteBlattTests.cs`.
+
 ## 2.0.0-forkai.116
 
 **Fork AI.** Jeder Grow hat jetzt seinen eigenen Plan. Erster Schritt des Umbaus

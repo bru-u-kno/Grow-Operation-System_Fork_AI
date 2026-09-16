@@ -9,6 +9,9 @@ export type AlertRuleDto = {
   quelle: 'Fest' | 'Plan'
   /** Nur bei 'Plan': wie weit der Wert über das Zielband hinausdarf. */
   toleranz: number | null
+  /** Fork AI: Nachtband einer festen Regel (Dunkelphase). Fehlt es beim Speichern, ist es weg (F-016). */
+  nightMinValue?: number | null
+  nightMaxValue?: number | null
 }
 
 export type TentAlertRulesDto = {

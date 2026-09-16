@@ -32,6 +32,14 @@ describe('speicherbareRegeln', () => {
     expect(speicherbareRegeln(['reservoir-ph'], { 'reservoir-ph': zeile() })).toHaveLength(0)
   })
 
+  it('F-016: das Nachtband einer festen Regel geht beim Speichern mit', () => {
+    const [regel] = speicherbareRegeln(['temperature'], {
+      temperature: zeile({ min: '22', max: '28', enabled: true, nachtMin: 18, nachtMax: 24 }),
+    })
+    expect(regel.nightMinValue).toBe(18)
+    expect(regel.nightMaxValue).toBe(24)
+  })
+
   it('eine Grenze genuegt', () => {
     expect(speicherbareRegeln(['x'], { x: zeile({ max: '30' }) })).toHaveLength(1)
     expect(speicherbareRegeln(['x'], { x: zeile({ min: '18' }) })).toHaveLength(1)

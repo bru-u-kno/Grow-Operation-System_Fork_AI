@@ -23,8 +23,9 @@ Arbeitsstand bearbeitbar, Änderungsbuch). Alle Leser der Wochenziele nehmen die
 Plan statt des Bibliotheksprogramms — ein geändertes Programm schreibt damit keine
 laufenden oder abgeschlossenen Grows mehr um. Lücken eines Programms werden beim
 Anlegen einmalig aus dem mitgelieferten Standard gefüllt; Programme ohne Wochen
-bekommen ein Raster. (Umbau „Ziele & Meldungen“, seit forkai.116, weitere Schritte
-folgen.)
+bekommen ein Raster. Auf der Zielwerte-Seite öffnet jede Karte ein Blatt, in dem
+Wochenziel, Alarmgrenze, Meldepause und Scharf-Schalter zusammen bearbeitet werden
+(Umbau „Ziele & Meldungen“, seit forkai.116/117, weitere Schritte folgen.)
 
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden

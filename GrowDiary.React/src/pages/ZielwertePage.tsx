@@ -4,6 +4,8 @@ import { apiFetch } from '../api'
 import { classNames } from '../utils'
 import { istHandgesetzt } from '../features/wochenplan/uebergabe-zustand'
 import { V1Alert, V1Section, V1Skeleton } from '../components/v1'
+import { WertBlatt } from '../features/zielwerte/WertBlatt'
+import type { AlarmRegel, PlanFeld } from '../features/zielwerte/wert-blatt'
 import '../features/zielwerte/zielwerte.css'
 
 /**
@@ -45,6 +47,12 @@ type Wert = {
   lage: string
   alarm: string | null
   kette: Stufe[]
+  // Fork AI (Grow-Plan, Schritt 2)
+  regel: AlarmRegel | null
+  alarmVon: number | null
+  alarmBis: number | null
+  meldet: boolean
+  planFelder: PlanFeld[] | null
 }
 
 type Gruppe = {
@@ -68,6 +76,9 @@ type Zielwerte = {
   gruppen: Gruppe[]
   uebergabe: Uebergabe[]
   letzteUebergabe: string | null
+  zeltId: number | null
+  spalteId: string | null
+  eigenerPlan: boolean
 }
 
 /**
@@ -105,25 +116,11 @@ function QuellePill({ wert }: { wert: Wert }) {
   )
 }
 
-/** Das Herkunftsblatt — klappt unter der Karte auf. */
-function Kette({ wert }: { wert: Wert }) {
-  return (
-    <div className="zw-kette">
-      {wert.kette.map((stufe, i) => (
-        <div
-          key={stufe.name + i}
-          className={classNames('zw-stufe', stufe.gilt && 'ist-gilt', stufe.weg && 'ist-weg')}
-        >
-          <span className="zw-stufe-n">{i + 1}</span>
-          <span className="zw-stufe-t">
-            {stufe.name}
-            {stufe.hinweis && <em>{stufe.hinweis}</em>}
-          </span>
-          <span className="zw-stufe-w">{stufe.wert ?? '–'}</span>
-        </div>
-      ))}
-    </div>
-  )
+/** Was die Glocke unten auf der Karte sagt. */
+function Glocke({ wert }: { wert: Wert }) {
+  if (wert.meldet) return <span className="zw-glocke ist-meldet">● meldet</span>
+  if (wert.regel?.aktiv) return <span className="zw-glocke ist-scharf">● scharf</span>
+  return <span className="zw-glocke">○ kein Alarm</span>
 }
 
 function ZielwertePage() {
@@ -131,11 +128,14 @@ function ZielwertePage() {
   const [offen, setOffen] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [meldung, setMeldung] = useState<string | null>(null)
+  const [runde, setRunde] = useState(0)
 
   useEffect(() => {
     async function laden() {
       try {
         setDaten(await apiFetch<Zielwerte>('/api/zielwerte'))
+        setError(null)
       } catch {
         setError('Die Zielwerte konnten nicht geladen werden.')
       } finally {
@@ -143,13 +143,16 @@ function ZielwertePage() {
       }
     }
     void laden()
-  }, [])
+  }, [runde])
 
   if (loading) return <V1Skeleton rows={6} label="Lade Zielwerte" />
 
   const kopf = daten?.growName
     ? [daten.growName, daten.phase, daten.woche].filter(Boolean).join(' · ')
     : null
+
+  const melden = daten?.werte.filter((w) => w.meldet) ?? []
+  const offenerWert = daten?.werte.find((w) => w.key === offen) ?? null
 
   return (
     <>
@@ -166,6 +169,19 @@ function ZielwertePage() {
         <>
           {/* Zuerst die Stellen, an denen etwas den Plan aussticht. Wer sie
               kennt, liest die Karten darunter richtig. */}
+          {meldung && <V1Alert message={meldung} tone="neutral" />}
+
+          {/* Fork AI (Schritt 2): was gerade außerhalb der Alarmgrenzen liegt —
+              die Frage, mit der man die Seite meist öffnet. */}
+          {melden.length > 0 && (
+            <V1Alert
+              tone="critical"
+              message={`${melden.length === 1 ? '1 Wert meldet' : `${melden.length} Werte melden`} gerade: ${melden
+                .map((w) => `${w.name} ${w.ist}${w.einheit ? ` ${w.einheit}` : ''}`)
+                .join(' · ')}`}
+            />
+          )}
+
           {daten.hinweise.map((hinweis) => (
             <V1Alert key={hinweis} message={hinweis} tone="warn" />
           ))}
@@ -173,12 +189,13 @@ function ZielwertePage() {
           <V1Section title={kopf ?? 'Werte'}>
             <div className="zw-karten" data-audit="zielwerte-karten">
               {daten.werte.map((wert) => (
-                <article key={wert.key} className="zw-karte">
+                <article key={wert.key} className={classNames('zw-karte', wert.meldet && 'ist-meldet')}>
                   <button
                     type="button"
                     className="zw-kopf"
-                    onClick={() => setOffen(offen === wert.key ? null : wert.key)}
-                    aria-expanded={offen === wert.key}
+                    onClick={() => { setMeldung(null); setOffen(wert.key) }}
+                    aria-haspopup="dialog"
+                    data-audit="zielwert-karte"
                   >
                     <span className="zw-name">{wert.name}</span>
                     <span className={classNames('zw-ist', `ist-${wert.lage.replace('ü', 'ue')}`)}>
@@ -203,15 +220,28 @@ function ZielwertePage() {
                       eigenen Seite: Ziel und Meldeschwelle sind zwei Zahlen zu
                       einer Sache, und sie auseinanderzuziehen war der Anfang
                       der Verwirrung. */}
-                  <div className="zw-alarm">
-                    {wert.alarm ? `Alarm ${wert.alarm}` : 'kein Alarm hinterlegt'}
+                  <div className="zw-alarm zw-fuss">
+                    <span>{wert.alarm ? `Alarm ${wert.alarm}` : 'kein Alarm hinterlegt'}</span>
+                    <Glocke wert={wert} />
                   </div>
-
-                  {offen === wert.key && <Kette wert={wert} />}
                 </article>
               ))}
             </div>
           </V1Section>
+
+          {offenerWert && daten.growId != null && daten.zeltId != null && (
+            <WertBlatt
+              key={offenerWert.key}
+              wert={offenerWert}
+              growId={daten.growId}
+              zeltId={daten.zeltId}
+              spalteId={daten.spalteId}
+              woche={daten.woche}
+              uebergabe={daten.uebergabe}
+              onClose={() => setOffen(null)}
+              onGespeichert={(text) => { setOffen(null); setMeldung(text); setRunde((r) => r + 1) }}
+            />
+          )}
 
           <V1Section title="Wo stelle ich das ein">
             {daten.gruppen.map((gruppe) => (

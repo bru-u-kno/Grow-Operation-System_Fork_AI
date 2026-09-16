@@ -24,6 +24,9 @@ export type Grenzwertzeile = {
   quelle: Grenzwertquelle
   /** Nur bei 'Plan' gefüllt: Abstand zum Zielband. */
   toleranz: string
+  /** Fork AI (F-016): das Nachtband wird hier nicht bearbeitet, muss aber beim Speichern mit. */
+  nachtMin?: number | null
+  nachtMax?: number | null
 }
 
 /** 'Fest' = eingetragene Zahlen, 'Plan' = Zielband der laufenden Woche. */
@@ -54,6 +57,8 @@ export type Grenzwertregel = {
   cooldownMinutes: number
   quelle: Grenzwertquelle
   toleranz: number | null
+  nightMinValue?: number | null
+  nightMaxValue?: number | null
 }
 
 /**
@@ -86,6 +91,10 @@ export function speicherbareRegeln(
       cooldownMinutes: Math.max(1, zahlOderNull(zeile.cooldown) ?? 30),
       quelle: zeile.quelle,
       toleranz: zeile.quelle === 'Plan' ? zahlOderNull(zeile.toleranz) : null,
+      // F-016: der Server ersetzt den ganzen Satz — ohne diese beiden Felder
+      // war das Nachtband der Lufttemperatur nach jedem Speichern gelöscht.
+      nightMinValue: zeile.quelle === 'Plan' ? null : zeile.nachtMin ?? null,
+      nightMaxValue: zeile.quelle === 'Plan' ? null : zeile.nachtMax ?? null,
     }))
 }
 

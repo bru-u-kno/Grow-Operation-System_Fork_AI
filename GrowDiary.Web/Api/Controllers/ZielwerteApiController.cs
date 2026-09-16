@@ -1,6 +1,7 @@
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
+using GrowDiary.Web.Services.GrowPlan;
 using GrowDiary.Web.Services.Knowledge;
 using GrowDiary.Web.Services.Knowledge.Schema;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,31 @@ namespace GrowDiary.Web.Api.Controllers;
 
 /// <summary>Eine Stufe der Herkunftskette eines Ziels.</summary>
 public sealed record ZielStufeDto(string Name, string? Hinweis, string? Wert, bool Gilt, bool Weg);
+
+/// <summary>Fork AI (Grow-Plan, Schritt 2): die Alarmregel einer Messgröße, zum Bearbeiten.</summary>
+public sealed record ZielAlarmRegelDto(
+    string Quelle,
+    double? Min,
+    double? Max,
+    double? NachtMin,
+    double? NachtMax,
+    double? Toleranz,
+    double StandardToleranz,
+    int KarenzMinuten,
+    bool Aktiv,
+    bool PlanMoeglich);
+
+/// <summary>Fork AI (Grow-Plan, Schritt 2): ein Zielwert der laufenden Woche, zum Bearbeiten.</summary>
+public sealed record ZielPlanFeldDto(
+    string Feld,
+    string Bezeichnung,
+    string Einheit,
+    double Min,
+    double Max,
+    double Schritt,
+    double? Wert,
+    double? Startwert,
+    string Herkunft);
 
 /// <summary>Ein Wert mit Ist, Band, Herkunft und Kette.</summary>
 public sealed record ZielwertDto(
@@ -24,7 +50,12 @@ public sealed record ZielwertDto(
     string? QuelleZusatz,
     string Lage,
     string? Alarm,
-    IReadOnlyList<ZielStufeDto> Kette);
+    IReadOnlyList<ZielStufeDto> Kette,
+    ZielAlarmRegelDto? Regel = null,
+    double? AlarmVon = null,
+    double? AlarmBis = null,
+    bool Meldet = false,
+    IReadOnlyList<ZielPlanFeldDto>? PlanFelder = null);
 
 /// <summary>Eine Gruppe der Ansicht „wo stelle ich das ein“.</summary>
 public sealed record ZielGruppeDto(string Titel, string Route, string RouteText, IReadOnlyList<ZielZeileDto> Zeilen, string Hinweis);
@@ -41,7 +72,10 @@ public sealed record ZielwerteDto(
     IReadOnlyList<ZielwertDto> Werte,
     IReadOnlyList<ZielGruppeDto> Gruppen,
     IReadOnlyList<WochenplanUebergabeDto> Uebergabe,
-    string? LetzteUebergabe);
+    string? LetzteUebergabe,
+    int? ZeltId = null,
+    string? SpalteId = null,
+    bool EigenerPlan = false);
 
 /// <summary>
 /// Fork AI: die Seite „Zielwerte“ — was gilt, woher es kommt, wo man es ändert.
@@ -94,6 +128,20 @@ public sealed class ZielwerteApiController : ApiControllerBase
         "reservoir-ph", "reservoir-ec", "orp", "reservoir-temp",
     ];
 
+    /// <summary>Fork AI (Grow-Plan): welche Wochenfelder zu welcher Messgröße gehören.</summary>
+    private static readonly Dictionary<string, string[]> PlanFelderJeMetrik = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["temperature"] = ["airTempC"],
+        ["humidity"] = ["rhMax"],
+        ["vpd"] = ["vpdMin", "vpdMax"],
+        ["co2"] = ["co2Min", "co2Max"],
+        ["ppfd"] = ["ppfdMin", "ppfdMax"],
+        ["reservoir-ph"] = ["phMin", "phMax"],
+        ["reservoir-ec"] = ["ecTarget"],
+        ["orp"] = ["orpMin", "orpMax"],
+        ["reservoir-temp"] = ["waterTempDayC", "waterTempNightC"],
+    };
+
     private readonly GrowRepository _grows;
     private readonly HomeAssistantService _ha;
     private readonly GrowDashboardComposer _composer;
@@ -103,6 +151,8 @@ public sealed class ZielwerteApiController : ApiControllerBase
     private readonly SetpointProfileRepository _profile;
     private readonly HydroSetupRepository _hydro;
     private readonly WochenplanSyncService _sync;
+    private readonly GrowPlanService? _plaene;
+    private readonly WochenwertUeberlagerung? _ueberlagerung;
 
     public ZielwerteApiController(
         GrowRepository grows,
@@ -113,8 +163,12 @@ public sealed class ZielwerteApiController : ApiControllerBase
         AlertRuleRepository regeln,
         SetpointProfileRepository profile,
         HydroSetupRepository hydro,
-        WochenplanSyncService sync)
+        WochenplanSyncService sync,
+        GrowPlanService? plaene = null,
+        WochenwertUeberlagerung? ueberlagerung = null)
     {
+        _plaene = plaene;
+        _ueberlagerung = ueberlagerung;
         _grows = grows;
         _ha = ha;
         _composer = composer;
@@ -193,6 +247,11 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 r.Enabled && r.Quelle == Grenzwertquelle.Plan
                 && string.Equals(r.MetricKey, key, StringComparison.OrdinalIgnoreCase));
 
+            // Fork AI (Grow-Plan): die Grenzen, bei denen gerade gemeldet würde.
+            var aktiveRegel = regeln.FirstOrDefault(r =>
+                r.Enabled && string.Equals(r.MetricKey, key, StringComparison.OrdinalIgnoreCase));
+            var wirksam = aktiveRegel is null ? null : Planzielgrenzen.Wirksam(aktiveRegel, wochenBand, null);
+
             var kette = new List<ZielStufeDto>();
 
             kette.Add(new ZielStufeDto(
@@ -203,7 +262,9 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 Weg: Leise(ausProfil) is not null && (eigene is not null || Leise(ausWoche) is not null)));
 
             kette.Add(new ZielStufeDto(
-                spalte is null ? "Feed-Chart" : $"Feed-Chart · {spalte.Label}",
+                // Fork AI (Grow-Plan): mit eigenem Plan ist die Wochenspalte die des Grows.
+                (GrowPlanService.HatPlan(grow.Id) ? "Plan des Grows" : "Feed-Chart")
+                    + (spalte is null ? "" : $" · {spalte.Label}"),
                 spalte is null
                     ? "am Grow nicht eingeschaltet"
                     : Leise(ausWoche) is null ? "erreicht das Zielband nicht" : null,
@@ -216,7 +277,8 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 eigene is not null
                     ? Gesetzt(zeltId, key)
                     : planRegel is not null
-                        ? $"folgt dem Plan · Toleranz ±{Zahl(Planzielgrenzen.StandardToleranz(key))}"
+                        // F-015: die Toleranz der Regel, nicht die Werkseinstellung.
+                        ? $"folgt dem Plan · Toleranz ±{Zahl(planRegel.Toleranz is { } tol && tol > 0 ? tol : Planzielgrenzen.StandardToleranz(key))}"
                         : "keine Regel — meldet nie",
                 eigene is { } e ? Band(e.Min, e.Max) : null,
                 Gilt: eigene is not null,
@@ -271,7 +333,12 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 zusatz,
                 Lage(karte),
                 Alarmtext(regeln, key),
-                kette));
+                kette,
+                RegelDto(regeln, key),
+                wirksam?.MinValue,
+                wirksam?.MaxValue,
+                Meldet(wirksam, karte.NumericValue),
+                spalte is null ? null : PlanFelder(grow, spalte, key)));
         }
 
         return Ok(new ZielwerteDto(
@@ -285,7 +352,55 @@ public sealed class ZielwerteApiController : ApiControllerBase
             Gruppen(werte, spalte?.Label, profilName),
             _sync.Sollwerte().Select(u => new WochenplanUebergabeDto(
                 u.Rolle, Rollenname(u.Rolle), u.EntityId, Zahl(u.Wert), u.Zustand)).ToList(),
-            _sync.Stand.LetzterLauf));
+            _sync.Stand.LetzterLauf,
+            zeltId,
+            spalte?.Id,
+            GrowPlanService.HatPlan(grow.Id)));
+    }
+
+    private static ZielAlarmRegelDto? RegelDto(IReadOnlyList<TentAlertRule> regeln, string key)
+    {
+        var regel = regeln.FirstOrDefault(r => string.Equals(r.MetricKey, key, StringComparison.OrdinalIgnoreCase));
+        if (regel is null) return null;
+        return new ZielAlarmRegelDto(
+            regel.Quelle.ToString(),
+            regel.MinValue,
+            regel.MaxValue,
+            regel.NightMinValue,
+            regel.NightMaxValue,
+            regel.Toleranz,
+            Planzielgrenzen.StandardToleranz(key),
+            regel.CooldownMinutes,
+            regel.Enabled,
+            Planzielgrenzen.KenntPlanziel(key));
+    }
+
+    /// <summary>Liegt der Ist-Wert gerade außerhalb der wirksamen Alarmgrenzen?</summary>
+    /// <remarks>Nur eine Anzeige — ob wirklich eine Nachricht rausgeht, entscheidet die Alarmauswertung (Karenz, Tag/Nacht).</remarks>
+    private static bool Meldet(TentAlertRule? wirksam, double? ist)
+        => wirksam is not null && ist is { } wert
+           && ((wirksam.MinValue is { } min && wert < min) || (wirksam.MaxValue is { } max && wert > max));
+
+    private List<ZielPlanFeldDto>? PlanFelder(GrowRun grow, FeedChartColumn spalte, string key)
+    {
+        if (!PlanFelderJeMetrik.TryGetValue(key, out var namen)) return null;
+        var hatPlan = GrowPlanService.HatPlan(grow.Id);
+        var plan = hatPlan ? _plaene?.Stand(grow.Id, GrowPlanStaende.Arbeit) : null;
+
+        return namen
+            .Select(Wochenwertfelder.Finden)
+            .OfType<Wochenwertfelder.Feld>()
+            .Select(feld => new ZielPlanFeldDto(
+                feld.Name,
+                feld.Bezeichnung,
+                feld.Einheit,
+                feld.Min,
+                feld.Max,
+                feld.Schritt,
+                feld.Lesen(spalte),
+                hatPlan ? _plaene?.Startwert(grow.Id, spalte.Id, feld) : _ueberlagerung?.Planwert(spalte, feld),
+                plan?.Inhalt.HerkunftVon(spalte.Id, feld.Name) ?? GrowPlanHerkunft.Programm))
+            .ToList();
     }
 
     /// <summary>Die Ansicht „wo stelle ich das ein“ — nach Quelle statt nach Messgröße.</summary>
@@ -340,6 +455,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
         "vpd" => spalte.VpdMin is not null || spalte.VpdMax is not null,
         "co2" => spalte.Co2Min is not null || spalte.Co2Max is not null,
         "ppfd" => spalte.PpfdMin is not null || spalte.PpfdMax is not null,
+        "orp" => spalte.OrpMin is not null || spalte.OrpMax is not null,
         _ => false,
     };
 

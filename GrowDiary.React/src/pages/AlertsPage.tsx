@@ -30,7 +30,7 @@ const ALERT_METRICS: MetricDef[] = [
   { key: 'co2', label: 'CO₂', unit: 'ppm', min: '', max: '1500' },
 ]
 
-type Row = { min: string; max: string; cooldown: string; enabled: boolean; quelle: Grenzwertquelle; toleranz: string }
+type Row = { min: string; max: string; cooldown: string; enabled: boolean; quelle: Grenzwertquelle; toleranz: string; nachtMin?: number | null; nachtMax?: number | null }
 type Rows = Record<string, Row>
 
 function emptyRows(): Rows {
@@ -125,6 +125,8 @@ function AlertsPage() {
               toleranz: numberToInput(rule.toleranz),
               cooldown: String(rule.cooldownMinutes),
               enabled: rule.enabled,
+              nachtMin: rule.nightMinValue ?? null,
+              nachtMax: rule.nightMaxValue ?? null,
             }
           }
         }

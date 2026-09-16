@@ -49,7 +49,7 @@ export function ZielwerteCollectionPage() {
       title="Zielwerte"
       subtitle="Was gerade gilt, woher es kommt und wo man es ändert. Vier Quellen stehen hintereinander — jede spätere sticht die früheren."
       tabs={[
-        { key: 'jetzt', label: 'Jetzt gültig', render: () => <ZielwertePage /> },
+        { key: 'jetzt', label: 'Werte', render: () => <ZielwertePage /> },
         { key: 'profile', label: 'Profile', render: () => <SetpointProfilesPage /> },
         { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
       ]}

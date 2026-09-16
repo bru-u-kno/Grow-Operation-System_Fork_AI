@@ -118,3 +118,32 @@
     font: 400 var(--fs-klein)/1.5 var(--font-mono); color: var(--faint);
   }
 }
+
+/* Fork AI (Grow-Plan, Schritt 2): Bearbeiten-Blatt und Glocke. Nur Tokens. */
+@layer features {
+  .zw-glocke { font: 400 var(--fs-klein)/1.2 var(--font-mono); color: var(--faint); white-space: nowrap; }
+  .zw-glocke.ist-scharf { color: var(--accent-text); }
+  .zw-glocke.ist-meldet { color: var(--danger-text); }
+  .zw-karte.ist-meldet { border-color: var(--danger); }
+
+  .wb-block { padding: var(--s-3) var(--s-4); border-top: 1px solid var(--hair); display: grid; gap: var(--s-2); }
+  .wb-block h3 {
+    margin: 0; font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .2em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .wb-felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: var(--s-3); }
+  .wb-felder input.wb-geaendert { border-color: var(--accent); }
+  .wb-hinweis { margin: 0; font: 400 var(--fs-klein)/1.45 var(--font-sans); color: var(--muted); }
+  .wb-zeile {
+    display: flex; justify-content: space-between; gap: var(--s-3);
+    font: 400 var(--fs-klein)/1.45 var(--font-mono); color: var(--muted);
+  }
+  .wb-zeile > span:last-child { color: var(--faint); text-align: right; font-variant-numeric: tabular-nums; }
+  .wb-zeile.ist-gilt > span { color: var(--accent-text); }
+  .wb-zeile.ist-weg > span { text-decoration: line-through; opacity: .5; }
+  .wb-fuss {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-3) var(--s-4); border-top: 1px solid var(--hair-2);
+  }
+  .wb-fuss > span { flex: 1; font: 500 var(--fs-klein)/1.3 var(--font-mono); color: var(--muted); }
+}
