@@ -115,6 +115,7 @@ builder.Services.AddSingleton<SteuerungRepository>();
 builder.Services.AddSingleton<WochenwertRepository>(); // Fork AI (F-004)
 builder.Services.AddSingleton<WochenwertUeberlagerung>(); // Fork AI (F-004)
 builder.Services.AddSingleton<GrowPlanRepository>(); // Fork AI (Grow-Plan)
+builder.Services.AddSingleton<GrowDiary.Web.Services.GrowPlan.EigeneProgramme>(); // Fork AI (Grow-Plan)
 builder.Services.AddSingleton<GrowDiary.Web.Services.GrowPlan.GrowPlanService>(); // Fork AI (Grow-Plan)
 builder.Services.AddScoped<SteuerungGeraeteService>();
 // Fork AI (forkai.22): Geraetesicht ueber die bestehenden Entity-Quellen.
@@ -187,7 +188,13 @@ try
 {
     var growPlaene = app.Services.GetRequiredService<GrowDiary.Web.Services.GrowPlan.GrowPlanService>();
     growPlaene.RegisterLaden();
-    var uebernommen = growPlaene.FehlendePlaeneAnlegen(app.Services.GetRequiredService<GrowRepository>().GetActiveGrows());
+    var laufende = app.Services.GetRequiredService<GrowRepository>().GetActiveGrows();
+    var uebernommen = growPlaene.FehlendePlaeneAnlegen(laufende);
+    var nachgetragen = growPlaene.FehlendeFelderNachtragen(laufende);
+    if (nachgetragen > 0)
+    {
+        app.Logger.LogInformation("Grow-Plan: {Anzahl} Planstände um das EC-Band ergänzt.", nachgetragen);
+    }
     if (uebernommen > 0)
     {
         app.Logger.LogInformation("Grow-Plan: {Anzahl} laufende Grows übernommen.", uebernommen);

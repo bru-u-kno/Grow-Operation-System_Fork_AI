@@ -147,6 +147,21 @@ public sealed class GrowPlanRepository : RepositoryBase
         tx.Commit();
     }
 
+    /// <summary>
+    /// Schreibt einen Stand ohne die Start-Sperre — nur für technische Nachträge
+    /// (neue Felder, die frühere Versionen noch nicht führten).
+    /// </summary>
+    public void Nachtragen(GrowPlanStand stand)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE ForkGrowPlan SET InhaltJson = $i WHERE GrowId = $g AND Stand = $s;";
+        command.Parameters.AddWithValue("$i", JsonSerializer.Serialize(stand.Inhalt, Json));
+        command.Parameters.AddWithValue("$g", stand.GrowId);
+        command.Parameters.AddWithValue("$s", stand.Stand);
+        command.ExecuteNonQuery();
+    }
+
     public IReadOnlyList<GrowPlanEintrag> Buch(int growId)
     {
         using var connection = Open();

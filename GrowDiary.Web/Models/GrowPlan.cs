@@ -58,6 +58,12 @@ public sealed class GrowPlanInhalt
     /// <summary>Name des Programms zum Zeitpunkt des Anlegens.</summary>
     public string ProgrammName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Das eigene Programm, in das „auch ins Programm“ schreibt. Leer, bis zum
+    /// ersten Mal übernommen wird — ein mitgeliefertes Programm wird nie geändert.
+    /// </summary>
+    public string? EigenesProgrammId { get; set; }
+
     /// <summary>Die Wochen samt Zielen und Dosierung — Schema wie im Programm.</summary>
     public FeedChartDefinition Chart { get; set; } = new();
 

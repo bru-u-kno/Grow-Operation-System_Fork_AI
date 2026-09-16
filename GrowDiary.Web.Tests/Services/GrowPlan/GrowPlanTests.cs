@@ -21,6 +21,7 @@ public sealed class GrowPlanTests : IDisposable
     private readonly KnowledgeBaseLoader _wissen;
     private readonly GrowPlanRepository _repo;
     private readonly GrowPlanService _dienst;
+    private readonly EigeneProgramme _eigene;
 
     public GrowPlanTests()
     {
@@ -31,7 +32,8 @@ public sealed class GrowPlanTests : IDisposable
         _wissen = new KnowledgeBaseLoader(_pfade, NullLogger<KnowledgeBaseLoader>.Instance);
         _wissen.Initialize();
         _repo = new GrowPlanRepository(_pfade);
-        _dienst = new GrowPlanService(_repo, _wissen, new TargetValueService(_wissen), NullLogger<GrowPlanService>.Instance);
+        _eigene = new EigeneProgramme(_pfade, _wissen, NullLogger<EigeneProgramme>.Instance);
+        _dienst = new GrowPlanService(_repo, _wissen, new TargetValueService(_wissen), NullLogger<GrowPlanService>.Instance, _eigene);
     }
 
     // Hohe Ids: das Register ist prozessweit und wird von den Integrationstests mitbenutzt.
@@ -243,6 +245,134 @@ public sealed class GrowPlanTests : IDisposable
         // Zweiter Start: nichts Neues.
         Assert.Equal(0, _dienst.FehlendePlaeneAnlegen([laeuft, fertig, ohne]));
     }
+
+    private static FeedChartColumnView Woche(GrowPlanStand stand, string id)
+        => new(stand.Inhalt.Chart.Columns.Single(c => c.Id == id));
+
+    private sealed record FeedChartColumnView(GrowDiary.Web.Services.Knowledge.Schema.FeedChartColumn C);
+
+    [Fact]
+    public void DasEcBandLiegtUmDasZielMitDerBreiteDesStandards()
+    {
+        var grow = Grow(20, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        var w4 = Woche(plan, "flower-w4").C;
+        var standard = new TargetValueService(_wissen).GetTargets(TargetValueService.ProfileIdFor(HydroStyle.RDWC), GrowStage.Flower)!;
+
+        Assert.Equal(1.4, (w4.EcMin!.Value + w4.EcMax!.Value) / 2, 3);
+        Assert.Equal(standard.EcMax - standard.EcMin, w4.EcMax.Value - w4.EcMin.Value, 3);
+        Assert.Equal(GrowPlanHerkunft.Standard, plan.Inhalt.HerkunftVon("flower-w4", "ecMin"));
+    }
+
+    [Fact]
+    public void WandertDasEcZielWandertDasBandMit()
+    {
+        var grow = Grow(21, "skx-canna-aqua");
+        var vorher = Woche(_dienst.Anlegen(grow)!, "flower-w5").C;
+        var breite = vorher.EcMax!.Value - vorher.EcMin!.Value;
+
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.3)]);
+        var nachher = Woche(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5").C;
+
+        Assert.Equal(1.3, (nachher.EcMin!.Value + nachher.EcMax!.Value) / 2, 3);
+        Assert.Equal(breite, nachher.EcMax.Value - nachher.EcMin.Value, 3);
+    }
+
+    [Fact]
+    public void DosierungErsetzenSchreibtJeUnterschiedEinenEintrag()
+    {
+        var grow = Grow(22, "skx-canna-aqua");
+        var vorher = Woche(_dienst.Anlegen(grow)!, "flower-w5").C;
+        var ohneBoost = vorher.Items.Where(i => i.Component != "Cannaboost")
+            .Select(i => new PlanDosis(i.Component, i.MinMlPerLiter)).ToList();
+        ohneBoost.Add(new PlanDosis("Pro-Silicate", 0.6));
+
+        var ergebnis = _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [], ohneBoost, AuchInsProgramm: false, ProgrammName: null, Grund: "Organik raus"));
+
+        Assert.Equal(2, ergebnis.Aenderungen);
+        Assert.Null(ergebnis.ProgrammId);
+        var items = Woche(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5").C.Items;
+        Assert.DoesNotContain(items, i => i.Component == "Cannaboost");
+        Assert.Contains(items, i => i.Component == "Pro-Silicate" && i.MinMlPerLiter == 0.6);
+
+        var buch = _repo.Buch(grow.Id).Where(e => e.Art == GrowPlanArten.Dosierung).ToList();
+        Assert.Contains(buch, e => e.Feld == "Cannaboost" && e.Neu == null && e.Grund == "Organik raus");
+        Assert.Contains(buch, e => e.Feld == "Pro-Silicate" && e.Alt == null && e.Neu == "0.6");
+
+        var bibliothek = _wissen.NutrientPrograms.Single(p => p.Id == "skx-canna-aqua");
+        Assert.Contains(bibliothek.FeedChart!.Columns.Single(c => c.Id == "flower-w5").Items, i => i.Component == "Cannaboost");
+    }
+
+    [Fact]
+    public void AuchInsProgrammLegtEinEigenesProgrammAnUndNutztEsDanachWeiter()
+    {
+        var grow = Grow(23, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+
+        var erstes = _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: "Mimosa RDWC", Grund: null));
+
+        Assert.Equal("eigen-mimosa-rdwc", erstes.ProgrammId);
+        var eigenes = _wissen.NutrientPrograms.Single(p => p.Id == "eigen-mimosa-rdwc");
+        Assert.Equal("Mimosa RDWC", eigenes.Name);
+        Assert.Equal(1.45, eigenes.FeedChart!.Columns.Single(c => c.Id == "flower-w5").EcTarget);
+        // Nur diese Änderung — die anderen Wochen bleiben wie im Programm.
+        Assert.Equal(1.4, eigenes.FeedChart.Columns.Single(c => c.Id == "flower-w4").EcTarget);
+        Assert.Equal(1.5, _wissen.NutrientPrograms.Single(p => p.Id == "skx-canna-aqua")
+            .FeedChart!.Columns.Single(c => c.Id == "flower-w5").EcTarget);
+        Assert.Equal("eigen-mimosa-rdwc", _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt.EigenesProgrammId);
+        Assert.StartsWith("programm:eigen-mimosa-rdwc", _repo.Buch(grow.Id)[0].Ziel);
+
+        // Zweites Mal: dasselbe Programm, keine neue Datei.
+        var zweites = _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w6", [("ecTarget", 1.55)], null, AuchInsProgramm: true, ProgrammName: "anderer Name", Grund: null));
+        Assert.Equal("eigen-mimosa-rdwc", zweites.ProgrammId);
+        Assert.Single(_wissen.NutrientPrograms, p => EigeneProgramme.IstEigen(p.Id));
+        Assert.Equal(1.55, _wissen.NutrientPrograms.Single(p => p.Id == "eigen-mimosa-rdwc")
+            .FeedChart!.Columns.Single(c => c.Id == "flower-w6").EcTarget);
+
+        // Ein neuer Grow kann das eigene Programm wählen.
+        var naechster = Grow(24, "eigen-mimosa-rdwc");
+        Assert.Equal("Mimosa RDWC", _dienst.Anlegen(naechster)!.Inhalt.ProgrammName);
+    }
+
+    [Fact]
+    public void EinEingefrorenerPlanLaesstSichNichtSpeichern()
+    {
+        var grow = Grow(25, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        _repo.Speichern([plan with { Stand = GrowPlanStaende.Ende }], []);
+
+        Assert.Throws<InvalidOperationException>(() => _dienst.Speichern(grow.Id,
+            new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.2)], null, false, null, null)));
+    }
+
+    [Fact]
+    public void AlteplaeneBekommenDasEcBandNachgetragen()
+    {
+        var grow = Grow(26, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        foreach (var name in new[] { GrowPlanStaende.Start, GrowPlanStaende.Arbeit })
+        {
+            var stand = _repo.Laden(grow.Id, name)!;
+            foreach (var spalte in stand.Inhalt.Chart.Columns) { spalte.EcMin = null; spalte.EcMax = null; }
+            _repo.Nachtragen(stand);
+        }
+
+        Assert.Equal(2, _dienst.FehlendeFelderNachtragen([grow]));
+        Assert.NotNull(Woche(_repo.Laden(grow.Id, GrowPlanStaende.Start)!, "flower-w4").C.EcMin);
+        Assert.NotNull(Woche(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w4").C.EcMax);
+        Assert.Equal(0, _dienst.FehlendeFelderNachtragen([grow]));
+        Assert.Single(_repo.Buch(grow.Id)); // Nachtrag ist keine Änderung am Ziel.
+    }
+
+    [Theory]
+    [InlineData("SKX Canna Aqua (eigen)", "skx-canna-aqua-eigen")]
+    [InlineData("Blüte ÄÖÜ ß 2026!", "bluete-aeoeue-ss-2026")]
+    [InlineData("!!!", "programm")]
+    public void SlugIstLesbar(string name, string erwartet)
+        => Assert.Equal(erwartet, EigeneProgramme.Slug(name));
 
     private void KopiereWissen()
     {

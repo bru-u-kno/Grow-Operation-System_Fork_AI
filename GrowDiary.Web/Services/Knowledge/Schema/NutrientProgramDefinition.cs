@@ -134,6 +134,19 @@ public sealed class FeedChartColumn
     [JsonPropertyName("ppfdMax")]
     public double? PpfdMax { get; set; }
 
+    /// <summary>EC-Band von (mS/cm).</summary>
+    /// <remarks>
+    /// Fork AI (Grow-Plan, Schritt 3): das Band um <see cref="EcTarget"/>. Fehlt
+    /// es, rechnet der Mischplan wie bisher mit der Breite des Profils — mit
+    /// Band braucht der Grow das Profil für den EC nicht mehr.
+    /// </remarks>
+    [JsonPropertyName("ecMin")]
+    public double? EcMin { get; set; }
+
+    /// <summary>EC-Band bis (mS/cm).</summary>
+    [JsonPropertyName("ecMax")]
+    public double? EcMax { get; set; }
+
     /// <summary>Redoxpotenzial von (mV).</summary>
     /// <remarks>
     /// Fork AI (Grow-Plan, 16.09.2026): damit ein Programm alle Zielwerte selbst

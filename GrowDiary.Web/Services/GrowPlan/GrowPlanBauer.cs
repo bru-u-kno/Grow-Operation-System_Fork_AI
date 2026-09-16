@@ -92,8 +92,25 @@ public static class GrowPlanBauer
         return chart;
     }
 
+    /// <summary>
+    /// Das EC-Band um das Wochenziel — mit der halben Breite des Standards. Nur,
+    /// wenn das Programm kein Band nennt. Gibt zurück, ob etwas eingetragen wurde.
+    /// </summary>
+    public static bool EcBandFuellen(GrowPlanInhalt inhalt, FeedChartColumn spalte, HydroTargetValues? t)
+    {
+        if (spalte.EcMin is not null || spalte.EcMax is not null) return false;
+        if (spalte.EcTarget is not { } ziel || t is null) return false;
+        var halbeBreite = (t.EcMax - t.EcMin) / 2;
+        spalte.EcMin = Math.Round(ziel - halbeBreite, 3);
+        spalte.EcMax = Math.Round(ziel + halbeBreite, 3);
+        inhalt.HerkunftSetzen(spalte.Id, "ecMin", GrowPlanHerkunft.Standard);
+        inhalt.HerkunftSetzen(spalte.Id, "ecMax", GrowPlanHerkunft.Standard);
+        return true;
+    }
+
     private static void LueckenFuellen(GrowPlanInhalt inhalt, FeedChartColumn spalte, HydroTargetValues? t)
     {
+        EcBandFuellen(inhalt, spalte, t);
         foreach (var feld in Wochenwertfelder.Alle)
         {
             if (feld.Lesen(spalte) is not null) continue;
@@ -114,6 +131,9 @@ public static class GrowPlanBauer
     private static double? AusStandard(string feld, HydroTargetValues t) => feld switch
     {
         "ecTarget" => Math.Round((t.EcMin + t.EcMax) / 2, 2),
+        // Band ohne Ziel: das Standardband selbst (mit Ziel legt EcBandFuellen es um das Ziel).
+        "ecMin" => t.EcMin,
+        "ecMax" => t.EcMax,
         "phMin" => t.PhMin,
         "phMax" => t.PhMax,
         "orpMin" => t.OrpMin,

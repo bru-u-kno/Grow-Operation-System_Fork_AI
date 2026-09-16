@@ -79,7 +79,12 @@ public sealed class MischplanService
     {
         var ergebnis = basis;
 
-        if (spalte.EcTarget is { } ec)
+        if (spalte.EcMin is { } ecVon && spalte.EcMax is { } ecBis)
+        {
+            // Fork AI (Grow-Plan): das Band steht im Plan — kein Profil nötig.
+            ergebnis = ergebnis with { EcMin = ecVon, EcMax = ecBis };
+        }
+        else if (spalte.EcTarget is { } ec)
         {
             var halbeBreite = (basis.EcMax - basis.EcMin) / 2;
             ergebnis = ergebnis with { EcMin = ec - halbeBreite, EcMax = ec + halbeBreite };

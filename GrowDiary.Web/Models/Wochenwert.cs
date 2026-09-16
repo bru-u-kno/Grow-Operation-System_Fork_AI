@@ -55,6 +55,8 @@ public static class Wochenwertfelder
     public static readonly IReadOnlyList<Feld> Alle =
     [
         new("ecTarget", "EC", "mS/cm", 0, 5, 0.1, null, s => s.EcTarget, (s, v) => s.EcTarget = v),
+        new("ecMin", "EC von", "mS/cm", 0, 5, 0.05, "ecMax", s => s.EcMin, (s, v) => s.EcMin = v),
+        new("ecMax", "EC bis", "mS/cm", 0, 5, 0.05, null, s => s.EcMax, (s, v) => s.EcMax = v),
         new("phMin", "pH von", "", 3, 9, 0.1, "phMax", s => s.PhMin, (s, v) => s.PhMin = v),
         new("phMax", "pH bis", "", 3, 9, 0.1, null, s => s.PhMax, (s, v) => s.PhMax = v),
         new("waterTempDayC", "Wasser Tag", "°C", 10, 30, 0.5, null, s => s.WaterTempDayC, (s, v) => s.WaterTempDayC = v),

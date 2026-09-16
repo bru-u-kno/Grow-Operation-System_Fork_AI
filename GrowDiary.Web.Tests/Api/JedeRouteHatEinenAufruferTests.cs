@@ -96,6 +96,8 @@ public sealed class JedeRouteHatEinenAufruferTests
         // Reitern „Werte"/„Plan" (Schritt 2/3) — dann diese beiden Zeilen streichen.
         ["GET /api/grows/{growId:int}/plan"] =
             "Grow-Plan lesen; Aufrufer folgt mit dem Plan-Reiter, bis dahin Pruefung per HA-Proxy.",
+        ["POST /api/grows/{growId:int}/plan"] =
+            "Planwoche speichern; Aufrufer folgt mit dem Plan-Reiter (Schritt 3b).",
         ["GET /api/grows/{growId:int}/plan/buch"] =
             "Aenderungsbuch lesen; Aufrufer folgt mit dem Plan-Reiter, bis dahin Pruefung per HA-Proxy.",
         ["GET /api/system/audit-events"] =
