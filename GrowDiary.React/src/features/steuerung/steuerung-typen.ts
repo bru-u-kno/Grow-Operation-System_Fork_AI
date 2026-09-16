@@ -75,6 +75,10 @@ export type Co2Live = {
   tiefAktiv: boolean | null
   tiefBisTempC: number | null
   tiefBisRhProzent: number | null
+  /** Die Feuchte-Obergrenze, die in HA gerade gilt. */
+  rhObergrenzeProzent: number | null
+  /** Gesetzt, wenn der Wochenplan die Obergrenze führt (forkai.115) — dann schreibt die CO₂-Seite sie nicht. */
+  rhObergrenzeAusPlan: number | null
   canopyC: number | null
   rhProzent: number | null
   vpd: number | null

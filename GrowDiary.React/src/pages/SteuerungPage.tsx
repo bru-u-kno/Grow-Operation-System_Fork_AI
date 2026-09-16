@@ -514,7 +514,20 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             <p className="st-hinweis">{tiefGrund}</p>
           </V1Card>
           <V1Card>
-            <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird nicht dosiert — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
+            {live.rhObergrenzeAusPlan != null ? (
+              /* forkai.115 (F-013): Der Wochenplan führt die Obergrenze. Ein
+                 Eingabefeld hier würde beim Speichern nichts bewirken — gepflegt
+                 wird sie unter Betrieb → Wochenplan. */
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Feuchte-Obergrenze
+                  <small>Darüber wird nicht dosiert. Kommt aus dem Wochenplan, ändern unter Betrieb → Wochenplan.</small>
+                </span>
+                <span className="st-nurlesen">{formatNumber(live.rhObergrenzeProzent ?? live.rhObergrenzeAusPlan, 0)} %</span>
+              </div>
+            ) : (
+              <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird nicht dosiert — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
+            )}
             <Zahl label="Wieder frei ab" hinweis="Abstand unter der Obergrenze, damit es nicht flattert." einheit="%" schritt={0.5} wert={entwurf.klimaHystereseProzent} onChange={(v) => setz('klimaHystereseProzent', v)} fehler={feldFehler.KlimaHystereseProzent} />
             <Zahl label="Canopy-Obergrenze" einheit="°C" schritt={0.5} wert={entwurf.canopyObergrenzeC} onChange={(v) => setz('canopyObergrenzeC', v)} fehler={feldFehler.CanopyObergrenzeC} />
             <V1Switch label="Abluft beim Dosieren drosseln" checked={entwurf.abluftDrosseln} onChange={(v) => setz('abluftDrosseln', v)} hint="Ohne Drosselung bläst der T6 das CO₂ hinaus, während dosiert wird." />

@@ -195,6 +195,55 @@ public sealed class WochenplanSyncService
         return Standardhelfer.GetValueOrDefault(rolle);
     }
 
+    /// <summary>Zustand einer Rolle, die nicht der Sync, sondern die CO₂-Steuerung schreibt.</summary>
+    public const string ZustandCo2Steuerung = "über CO₂-Steuerung";
+
+    /// <summary>
+    /// Fork AI (forkai.115, F-013): Gibt der Sync diese Rolle an die CO₂-Steuerung ab?
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Nur eine schreibende Stelle je Helfer.</b> Ist die CO₂-Steuerung
+    /// einmal gespeichert, schreibt ihr Worker stündlich die drei Zielstufen —
+    /// und die folgen mit Ziel-Quelle „Plan" ohnehin schon der Woche, nur als
+    /// Prozentstaffel je Canopy-Bereich. Schriebe der Sync zusätzlich den
+    /// rohen Planwert (1200) in die Warm-Stufe, setzte der Worker ihn binnen
+    /// einer Stunde auf seine Staffel (960) zurück, und der Sync hielte das
+    /// für eine Handänderung. Vor der gespeicherten CO₂-Seite bleibt es beim
+    /// alten Weg: dann ist der Sync der einzige, der das Ziel nachzieht.</para>
+    /// </remarks>
+    public static bool RolleBeiCo2Steuerung(string rolle, bool co2Gespeichert)
+        => co2Gespeichert && string.Equals(rolle, Rollen.Co2Ziel, StringComparison.OrdinalIgnoreCase);
+
+    private bool Co2Gespeichert() => _repo.GetEinstellungen<Co2Einstellungen>(Co2SteuerungService.Modul) is not null;
+
+    /// <summary>
+    /// Fork AI (forkai.115, F-013): Die HA-Helfer, die der Wochenplan gerade führt,
+    /// mit dem Wert der laufenden Woche.
+    /// </summary>
+    /// <remarks>
+    /// Andere Module (CO₂, Kühler) fragen hier nach, bevor sie schreiben, und
+    /// lassen diese Helfer aus. Auch ein von Hand verstellter Helfer bleibt
+    /// „geführt": der Plan schreibt ihn dann nicht, aber ein anderes Modul
+    /// darf die Handänderung ebenso wenig zurücknehmen. Gepflegt wird der Wert
+    /// an einer Stelle — im Wochenplan (Festlegung vom 15.09.2026).
+    /// Leer, solange kein einzelner Durchgang mit Wochen-Zielen läuft.
+    /// </remarks>
+    public IReadOnlyDictionary<string, double> GefuehrteHelfer()
+    {
+        var liste = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        if (Spalte() is not { } jetzt) return liste;
+
+        var co2Gespeichert = Co2Gespeichert();
+        foreach (var (rolle, wert) in Werte(jetzt.Spalte))
+        {
+            if (Zeltregeln.ContainsKey(rolle)) continue;
+            if (RolleBeiCo2Steuerung(rolle, co2Gespeichert)) continue;
+            if (HelferFuer(rolle) is { } entity) liste[entity] = wert;
+        }
+
+        return liste;
+    }
+
     /// <summary>Gibt einen von Hand verstellten Helfer wieder für den Plan frei.</summary>
     public void Freigeben(string rolle)
     {
@@ -213,13 +262,16 @@ public sealed class WochenplanSyncService
         var liste = new List<WochenplanUebergabe>();
         if (Spalte() is not { } jetzt) return liste;
 
+        var co2Gespeichert = Co2Gespeichert();
         foreach (var (rolle, wert) in Werte(jetzt.Spalte))
         {
             if (ZielFuer(rolle) is not { } entity) continue;
 
-            var zustand = stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)
-                ? "von dir gesetzt"
-                : "folgt dem Plan";
+            var zustand = RolleBeiCo2Steuerung(rolle, co2Gespeichert)
+                ? ZustandCo2Steuerung
+                : stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)
+                    ? "von dir gesetzt"
+                    : "folgt dem Plan";
 
             liste.Add(new WochenplanUebergabe(rolle, entity, wert, zustand));
         }
@@ -237,10 +289,12 @@ public sealed class WochenplanSyncService
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         var ersterLauf = stand.LetzterLauf is null;
         var geschrieben = 0;
+        var co2Gespeichert = Co2Gespeichert();
 
         foreach (var (rolle, wert) in Werte(spalte))
         {
             if (Zeltregeln.ContainsKey(rolle)) continue; // eigener Durchgang unten
+            if (RolleBeiCo2Steuerung(rolle, co2Gespeichert)) continue; // schreibt die CO₂-Steuerung
             if (HelferFuer(rolle) is not { } entity) continue;
             if (stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)) continue;
 

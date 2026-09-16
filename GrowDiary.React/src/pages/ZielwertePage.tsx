@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
+import { istHandgesetzt } from '../features/wochenplan/uebergabe-zustand'
 import { V1Alert, V1Section, V1Skeleton } from '../components/v1'
 import '../features/zielwerte/zielwerte.css'
 
@@ -242,7 +243,7 @@ function ZielwertePage() {
                     <span>{u.name}</span>
                     <span className="zw-zeile-r">
                       {u.wert}
-                      <span className={classNames('zw-zustand', u.zustand !== 'folgt dem Plan' && 'ist-hand')}>
+                      <span className={classNames('zw-zustand', istHandgesetzt(u.zustand) && 'ist-hand')}>
                         {u.zustand}
                       </span>
                     </span>

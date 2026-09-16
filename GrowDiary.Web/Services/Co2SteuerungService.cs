@@ -97,6 +97,7 @@ public sealed class Co2SteuerungService
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly SteuerungGeraeteService _geraete;
+    private readonly WochenplanSyncService _wochenplan;
     private readonly ILogger<Co2SteuerungService> _logger;
 
     public Co2SteuerungService(
@@ -110,6 +111,7 @@ public sealed class Co2SteuerungService
         HomeAssistantService ha,
         HomeAssistantSettingsRepository haSettings,
         SteuerungGeraeteService geraete,
+        WochenplanSyncService wochenplan,
         ILogger<Co2SteuerungService> logger)
     {
         _repo = repo;
@@ -122,6 +124,7 @@ public sealed class Co2SteuerungService
         _ha = ha;
         _haSettings = haSettings;
         _geraete = geraete;
+        _wochenplan = wochenplan;
         _logger = logger;
     }
 
@@ -295,20 +298,7 @@ public sealed class Co2SteuerungService
         if (!settings.IsConfigured) return false;
 
         var (warm, mittel, kuehl) = WirksameZiele(e, PlanZielPpm());
-        var zahlen = new (string Entity, double Wert)[]
-        {
-            (Entitaeten.ZielWarm, warm), (Entitaeten.ZielMittel, mittel), (Entitaeten.ZielKuehl, kuehl),
-            (Entitaeten.Hysterese, e.HysteresePpm),
-            (Entitaeten.ImpulsMin, e.ImpulsMinSekunden), (Entitaeten.ImpulsMax, e.ImpulsMaxSekunden),
-            (Entitaeten.Wartezeit, e.WartezeitSekunden), (Entitaeten.MaxImpulse, e.MaxImpulseJeZyklus),
-            (Entitaeten.Zeltvolumen, e.ZeltvolumenM3),
-            (Entitaeten.RhObergrenze, e.RhObergrenzeProzent), (Entitaeten.KlimaHysterese, e.KlimaHystereseProzent),
-            (Entitaeten.CanopyObergrenze, e.CanopyObergrenzeC),
-            (Entitaeten.T6Normal, e.T6StufeNormal), (Entitaeten.T6Dosierung, e.T6StufeDosierung), (Entitaeten.T6Tief, e.T6StufeTief),
-            (Entitaeten.T6TiefMaxTemp, e.T6TiefMaxTempC),
-            (Entitaeten.StartNachLichtAn, e.StartNachLichtAnMinuten),
-            (Entitaeten.EndeVorLichtAus, e.EndeVorLichtAusMinuten),
-        };
+        var zahlen = Schreibliste(e, warm, mittel, kuehl, _wochenplan.GefuehrteHelfer().Keys);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -325,6 +315,37 @@ public sealed class Co2SteuerungService
 
         Task<bool> Schalter(string entity, bool an)
             => _ha.CallEntityServiceAsync(settings, "input_boolean", an ? "turn_on" : "turn_off", entity, ct);
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.115, F-013): Welche Zahlen-Helfer die CO₂-Steuerung schreibt.
+    /// </summary>
+    /// <remarks>
+    /// Helfer, die der Wochenplan führt (heute: die Feuchte-Obergrenze), fallen
+    /// heraus. Vorher schrieb der stündliche Worker seinen gespeicherten Wert
+    /// zurück, der Wochenplan hielt das für eine Handänderung und gab den Helfer
+    /// auf — die Obergrenze blieb dann wochenlang auf einem alten Stand.
+    /// </remarks>
+    public static IReadOnlyList<(string Entity, double Wert)> Schreibliste(
+        Co2Einstellungen e, int warm, int mittel, int kuehl, IEnumerable<string> vomWochenplanGefuehrt)
+    {
+        var gefuehrt = new HashSet<string>(vomWochenplanGefuehrt, StringComparer.OrdinalIgnoreCase);
+        var zahlen = new (string Entity, double Wert)[]
+        {
+            (Entitaeten.ZielWarm, warm), (Entitaeten.ZielMittel, mittel), (Entitaeten.ZielKuehl, kuehl),
+            (Entitaeten.Hysterese, e.HysteresePpm),
+            (Entitaeten.ImpulsMin, e.ImpulsMinSekunden), (Entitaeten.ImpulsMax, e.ImpulsMaxSekunden),
+            (Entitaeten.Wartezeit, e.WartezeitSekunden), (Entitaeten.MaxImpulse, e.MaxImpulseJeZyklus),
+            (Entitaeten.Zeltvolumen, e.ZeltvolumenM3),
+            (Entitaeten.RhObergrenze, e.RhObergrenzeProzent), (Entitaeten.KlimaHysterese, e.KlimaHystereseProzent),
+            (Entitaeten.CanopyObergrenze, e.CanopyObergrenzeC),
+            (Entitaeten.T6Normal, e.T6StufeNormal), (Entitaeten.T6Dosierung, e.T6StufeDosierung), (Entitaeten.T6Tief, e.T6StufeTief),
+            (Entitaeten.T6TiefMaxTemp, e.T6TiefMaxTempC),
+            (Entitaeten.StartNachLichtAn, e.StartNachLichtAnMinuten),
+            (Entitaeten.EndeVorLichtAus, e.EndeVorLichtAusMinuten),
+        };
+
+        return zahlen.Where(z => !gefuehrt.Contains(z.Entity)).ToList();
     }
 
     // --------------------------------------------------------------- Livebild
@@ -349,6 +370,11 @@ public sealed class Co2SteuerungService
         double? ZahlRolle(string rolle) => geraete.TryGetValue(rolle, out var id) && id is not null ? Zahl(id) : null;
         bool? AnRolle(string rolle) => geraete.TryGetValue(rolle, out var id) && id is not null ? An(id) : null;
 
+        // Fork AI (forkai.115): Führt der Wochenplan die Feuchte-Obergrenze, gilt
+        // dessen Wert — der gespeicherte der CO₂-Seite wird dann nicht geschrieben.
+        double? rhAusPlan = _wochenplan.GefuehrteHelfer().TryGetValue(Entitaeten.RhObergrenze, out var rhPlan) ? rhPlan : null;
+        var rhWirksam = Zahl(Entitaeten.RhObergrenze) ?? rhAusPlan ?? e.RhObergrenzeProzent;
+
         var co2 = ZahlRolle("co2_sensor");
         var ziel = Zahl(Entitaeten.ZielEffektiv);
         return new Co2Live(
@@ -369,7 +395,7 @@ public sealed class Co2SteuerungService
             T6Stufe: ZahlRolle("abluft_stufe") is { } t6 ? (int)t6 : null,
             TiefAktiv: An(Entitaeten.StufeTiefSinnvoll),
             TiefBisTempC: e.T6TiefMaxTempC - 0.5,
-            TiefBisRhProzent: e.RhObergrenzeProzent - e.KlimaHystereseProzent - 1,
+            TiefBisRhProzent: rhWirksam - e.KlimaHystereseProzent - 1,
             CanopyC: ZahlRolle("canopy"),
             RhProzent: ZahlRolle("rh"),
             Vpd: ZahlRolle("vpd"),
@@ -378,7 +404,9 @@ public sealed class Co2SteuerungService
             LetzteMessungGps: Zahl(Entitaeten.LetzteMessung),
             FlascheRestKg: Zahl(Entitaeten.FlascheRest),
             ImpulsBedarfSekunden: Zahl(Entitaeten.ImpulsBedarf) is { } ib ? (int)ib : null,
-            LetzterImpuls: Text(Entitaeten.LetzterImpuls));
+            LetzterImpuls: Text(Entitaeten.LetzterImpuls),
+            RhObergrenzeProzent: rhWirksam,
+            RhObergrenzeAusPlan: rhAusPlan);
     }
 
     // -------------------------------------------------------------- Tageslauf
@@ -577,4 +605,6 @@ public sealed record Co2Live(
     double? LetzteMessungGps,
     double? FlascheRestKg,
     int? ImpulsBedarfSekunden,
-    string? LetzterImpuls);
+    string? LetzterImpuls,
+    double? RhObergrenzeProzent = null,
+    double? RhObergrenzeAusPlan = null);

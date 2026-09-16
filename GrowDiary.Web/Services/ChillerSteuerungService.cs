@@ -54,6 +54,7 @@ public sealed class ChillerSteuerungService
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly SteuerungGeraeteService _geraete;
     private readonly GrowRepository _grows;
+    private readonly WochenplanSyncService _wochenplan;
     private readonly ILogger<ChillerSteuerungService> _logger;
 
     public ChillerSteuerungService(
@@ -62,6 +63,7 @@ public sealed class ChillerSteuerungService
         HomeAssistantSettingsRepository haSettings,
         SteuerungGeraeteService geraete,
         GrowRepository grows,
+        WochenplanSyncService wochenplan,
         ILogger<ChillerSteuerungService> logger)
     {
         _repo = repo;
@@ -69,6 +71,7 @@ public sealed class ChillerSteuerungService
         _haSettings = haSettings;
         _geraete = geraete;
         _grows = grows;
+        _wochenplan = wochenplan;
         _logger = logger;
     }
 
@@ -151,13 +154,7 @@ public sealed class ChillerSteuerungService
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return false;
 
-        var zahlen = new (string Entity, double Wert)[]
-        {
-            (Entitaeten.ZielTag, e.ZielTagC),
-            (Entitaeten.ZielNacht, e.ZielNachtC),
-            (Entitaeten.Mindestlaufzeit, e.MindestlaufzeitMin),
-            (Entitaeten.Mindestpause, e.MindestpauseMin),
-        };
+        var zahlen = Schreibliste(e, _wochenplan.GefuehrteHelfer().Keys);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -219,7 +216,7 @@ public sealed class ChillerSteuerungService
             LeistungW: ZahlRolle(Rollen.Leistung),
             AutomatikAn: An(Entitaeten.Automatik),
             WaechterAn: An(Entitaeten.Waechter),
-            ZielQuelle: ZielQuelle(Gespeichert is not null),
+            ZielQuelle: ZielQuelle(Gespeichert is not null, PlanFuehrtZiel()),
             SperreRestMin: rest,
             LetzterWechsel: gewechselt,
             DoppelSteuerungEntity: doppelt,
@@ -228,12 +225,43 @@ public sealed class ChillerSteuerungService
     }
 
     /// <summary>
+    /// Fork AI (forkai.115, F-013): Welche Zahlen-Helfer der Kühler schreibt —
+    /// ohne die, die der Wochenplan führt.
+    /// </summary>
+    /// <remarks>
+    /// Speichern auf der Kühler-Seite schrieb bisher auch das Zielpaar. Der
+    /// Wochenplan hielt das beim nächsten Lauf für eine Handänderung und zog
+    /// die Wassertemperatur danach nicht mehr nach.
+    /// </remarks>
+    public static IReadOnlyList<(string Entity, double Wert)> Schreibliste(
+        ChillerEinstellungen e, IEnumerable<string> vomWochenplanGefuehrt)
+    {
+        var gefuehrt = new HashSet<string>(vomWochenplanGefuehrt, StringComparer.OrdinalIgnoreCase);
+        var zahlen = new (string Entity, double Wert)[]
+        {
+            (Entitaeten.ZielTag, e.ZielTagC),
+            (Entitaeten.ZielNacht, e.ZielNachtC),
+            (Entitaeten.Mindestlaufzeit, e.MindestlaufzeitMin),
+            (Entitaeten.Mindestpause, e.MindestpauseMin),
+        };
+
+        return zahlen.Where(z => !gefuehrt.Contains(z.Entity)).ToList();
+    }
+
+    /// <summary>
     /// Woher das Zielpaar kommt. Noch ohne Crop-Steering-Fall: die Absenkung des
     /// Entwicklers schreibt an ihr eigenes Zielgerät, und ob das dieselben Helfer
     /// sind, entscheidet der Nutzer dort. Sobald die Zuordnung ausgelesen wird,
     /// gehört sie hierher und nicht in die Oberfläche.
     /// </summary>
-    private static string ZielQuelle(bool gespeichert) => gespeichert ? "hand" : "plan";
+    private static string ZielQuelle(bool gespeichert, bool planFuehrt = false)
+        => planFuehrt || !gespeichert ? "plan" : "hand";
+
+    private bool PlanFuehrtZiel()
+    {
+        var gefuehrt = _wochenplan.GefuehrteHelfer();
+        return gefuehrt.ContainsKey(Entitaeten.ZielTag) || gefuehrt.ContainsKey(Entitaeten.ZielNacht);
+    }
 
     /// <summary>
     /// Schaltet die Steckdosen-Funktion der Crop-Steering-Seite dieselbe

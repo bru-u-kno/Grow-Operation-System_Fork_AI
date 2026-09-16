@@ -4,6 +4,7 @@ import { classNames } from '../utils'
 import { V1Alert, V1Button, V1Page, V1Section, V1Skeleton } from '../components/v1'
 import { WochenwerteBearbeiten } from '../features/wochenplan/WochenwerteBearbeiten'
 import '../features/wochenplan/wochenplan.css'
+import { istHandgesetzt } from '../features/wochenplan/uebergabe-zustand'
 
 /**
  * Fork AI: der Wochenplan eines laufenden Durchgangs.
@@ -226,8 +227,10 @@ function WochenplanPage() {
                         {wert.name}
                         <span className="wp-leise"> · {wert.wert}</span>
                       </span>
-                      {wert.zustand === 'folgt dem Plan' ? (
-                        <span className="wp-zeile-w">folgt dem Plan</span>
+                      {!istHandgesetzt(wert.zustand) ? (
+                        /* forkai.115: Das CO₂-Ziel schreibt die CO₂-Steuerung als
+                           Staffel aus diesem Wert — freigeben gibt es dort nicht. */
+                        <span className="wp-zeile-w">{wert.zustand}</span>
                       ) : (
                         /* Von Hand verstellt: der Plan lässt den Helfer in Ruhe,
                            bis er hier freigegeben wird. Ohne diesen Knopf bliebe
