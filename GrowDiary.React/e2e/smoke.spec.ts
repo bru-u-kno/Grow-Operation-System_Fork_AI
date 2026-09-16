@@ -16,9 +16,10 @@ const ROUTES: { path: string; name: string }[] = [
   { path: '/sorten?tab=pheno', name: 'Pheno Hunt (Tab)' },
   { path: '/archiv', name: 'Ernte & Archiv' },
   { path: '/archiv?tab=vergleich', name: 'Vergleich (Tab)' },
-  { path: '/regeln', name: 'Regeln & Automatik' },
-  { path: '/regeln?tab=grenzwerte', name: 'Grenzwerte (Tab)' },
-  { path: '/regeln?tab=push', name: 'Benachrichtigungen (Tab)' },
+  { path: '/regeln', name: 'Auto-Messungen' },
+  { path: '/zielwerte', name: 'Ziele & Meldungen' },
+  { path: '/zielwerte?tab=plan', name: 'Plan (Tab)' },
+  { path: '/zielwerte?tab=meldungen', name: 'Meldungen (Tab)' },
   { path: '/sensoren', name: 'Sensoren & Wartung' },
   { path: '/automatik', name: 'Automatik' },
   { path: '/messungen', name: 'Messungen-Verlauf' },
@@ -83,8 +84,11 @@ for (const route of ROUTES) {
 // der Test die Tabelle gegen sich selbst.
 const REDIRECTS: [from: string, to: string][] = [
   ['/automatik', '/regeln?tab=automatik'],
-  ['/alarme', '/regeln?tab=grenzwerte'],
-  ['/benachrichtigungen', '/regeln?tab=push'],
+  // Fork AI (forkai.121): Grenzwerte, Benachrichtigungen und Profile wohnen
+  // unter „Ziele & Meldungen“ (/zielwerte).
+  ['/alarme', '/zielwerte?tab=jetzt'],
+  ['/benachrichtigungen', '/zielwerte?tab=meldungen'],
+  ['/sollwerte', '/zielwerte?tab=plan'],
   ['/assistent', '/regeln'],
   ['/phenohunt', '/sorten'],
   ['/analyse', '/archiv'],
@@ -113,7 +117,8 @@ test('nimmt die Suchparameter mit über die Weiterleitung', async ({ page }) => 
 test('lässt das Tab-Ziel der Weiterleitung gewinnen', async ({ page }) => {
   await page.goto('/alarme?growId=3', { waitUntil: 'networkidle' })
   const url = new URL(page.url())
-  expect(url.searchParams.get('tab')).toBe('grenzwerte')
+  expect(url.pathname).toBe('/zielwerte')
+  expect(url.searchParams.get('tab')).toBe('jetzt')
   expect(url.searchParams.get('growId')).toBe('3')
 })
 

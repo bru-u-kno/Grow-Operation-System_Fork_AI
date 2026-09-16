@@ -21,7 +21,8 @@ const ROUTEN = [
   '/grows', '/grows/1', '/grows/new', '/diagnose', '/journal', '/sorten', '/archiv',
   '/zelte', '/zelte/1', '/hydro', '/sensoren', '/regeln', '/home-assistant',
   '/wissen', '/settings', '/start', '/release',
-  '/regeln?tab=automatik', '/regeln?tab=push', '/regeln?tab=ki',
+  '/regeln?tab=automatik', '/regeln?tab=ki',
+  '/zielwerte', '/zielwerte?tab=plan', '/zielwerte?tab=meldungen',
 ]
 
 // Die Liste muss etwas hergeben. Ohne diese Zeile laeuft die Schleife
