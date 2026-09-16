@@ -530,6 +530,7 @@ public sealed class GrowPlanTests : IDisposable
             new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 13, 8, 0, 0), ReservoirEc = 1.6, ReservoirPh = 6.0 },
             new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 19, 20, 0, 0), ReservoirEc = 1.4 },
             new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 20, 0, 0, 0), ReservoirEc = 9.9 },   // schon Woche 5
+            new() { GrowId = grow.Id, TakenAt = new DateTime(2026, 9, 15, 0, 0, 0), ReservoirEc = 99999 }, // Sondenaussetzer
         };
 
         var wochen = PlanAuswertung.Bauen(grow, start.Inhalt, arbeit.Inhalt, messungen, new DateTime(2026, 10, 1));
@@ -537,7 +538,7 @@ public sealed class GrowPlanTests : IDisposable
 
         Assert.Equal(new DateTime(2026, 9, 13), w4.Von);
         Assert.Equal(new DateTime(2026, 9, 20), w4.Bis);
-        Assert.Equal(2, w4.Messungen);
+        Assert.Equal(3, w4.Messungen);
         Assert.Equal(1.5, w4.Gemessen["ec"]);
         Assert.Equal(6.0, w4.Gemessen["ph"]);
         Assert.Null(w4.Gemessen["orp"]);

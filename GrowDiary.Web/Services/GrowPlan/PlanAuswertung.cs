@@ -33,15 +33,15 @@ public sealed record PlanAuswertungWoche(
 public static class PlanAuswertung
 {
     /// <summary>Messgröße → Leser aus einer Messung.</summary>
-    public static readonly IReadOnlyDictionary<string, Func<Measurement, double?>> Messgroessen =
-        new Dictionary<string, Func<Measurement, double?>>
+    public static readonly IReadOnlyDictionary<string, (Func<Measurement, double?> Lesen, string Physik)> Messgroessen =
+        new Dictionary<string, (Func<Measurement, double?>, string)>
         {
-            ["ec"] = m => m.ReservoirEc,
-            ["ph"] = m => m.ReservoirPh,
-            ["wasser"] = m => m.ReservoirWaterTempC,
-            ["rh"] = m => m.HumidityPercent,
-            ["luft"] = m => m.AirTemperatureC,
-            ["orp"] = m => m.OrpMv,
+            ["ec"] = (m => m.ReservoirEc, "ec"),
+            ["ph"] = (m => m.ReservoirPh, "ph"),
+            ["wasser"] = (m => m.ReservoirWaterTempC, "water-temp"),
+            ["rh"] = (m => m.HumidityPercent, "humidity"),
+            ["luft"] = (m => m.AirTemperatureC, "air-temp"),
+            ["orp"] = (m => m.OrpMv, "orp"),
         };
 
     public static List<PlanAuswertungWoche> Bauen(
@@ -60,9 +60,12 @@ public static class PlanAuswertung
             var inWoche = von is { } a && bis is { } b
                 ? messungen.Where(m => m.TakenAt >= a && m.TakenAt < b).ToList()
                 : [];
+            // Sondenaussetzer (EC 99999 …) zählen nicht — dieselbe Grenze wie beim Erfassen.
             var gemessen = Messgroessen.ToDictionary(
                 g => g.Key,
-                g => inWoche.Select(g.Value).OfType<double>().ToList() is { Count: > 0 } werte
+                g => inWoche.Select(g.Value.Lesen).OfType<double>()
+                        .Where(w => MeasurementSanityService.IstPhysikalischMoeglich(g.Value.Physik, w))
+                        .ToList() is { Count: > 0 } werte
                     ? Math.Round(werte.Average(), 2)
                     : (double?)null);
             return new PlanAuswertungWoche(

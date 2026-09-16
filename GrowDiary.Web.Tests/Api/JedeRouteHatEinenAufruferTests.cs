@@ -97,11 +97,6 @@ public sealed class JedeRouteHatEinenAufruferTests
         // immer. Der Weg bleibt für das Original und für Grows ohne Plan.
         ["PUT /api/grows/{growId:int}/mixing-plan/use-targets"] =
             "Wochen-Ziele an/aus fuer Grows ohne eigenen Plan; seit forkai.121 ohne Schalter im Fork.",
-        // Fork AI (Grow-Plan, Schritt 6a): Aufrufer kommen mit dem Archiv-Reiter (6b) — dann streichen.
-        ["GET /api/grows/{growId:int}/plan/auswertung"] =
-            "Auswertung des Grow-Plans; Aufrufer folgt mit dem Archiv-Reiter (Schritt 6b).",
-        ["POST /api/grows/{growId:int}/plan/als-programm"] =
-            "Endstand als Programm speichern; Aufrufer folgt mit dem Abschließen-Blatt (Schritt 6b).",
         ["GET /api/system/audit-events"] =
             "Das Protokoll kritischer Backend-Vorgaenge (SystemAuditEvents): Lichtflanken, "
             + "Nachtabsenkung, Sicherungen. Zum Nachsehen, wenn etwas passiert ist — dafuer "

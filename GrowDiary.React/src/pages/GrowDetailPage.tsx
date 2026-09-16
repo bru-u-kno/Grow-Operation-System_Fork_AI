@@ -10,6 +10,7 @@ import { V1Alert, V1Badge, V1Button, V1Empty, V1LinkButton, V1Page, V1Section, V
 import { balkenText, buildPhaseTimeline, flipLabel } from '../features/grows/phase-timeline'
 import { NightRampCard } from '../features/grows/NightRampCard'
 import { CuringSection } from '../features/curing/CuringSection'
+import { PlanAuswertung } from '../features/zielwerte/PlanAuswertung'
 import { GrowPlantsCard } from '../features/grow-detail/GrowPlantsCard'
 import { samenName } from '../deutsche-woerter'
 import type { GrowDeviationDto } from '../types'
@@ -310,6 +311,9 @@ function GrowDetailPage() {
             am Lauf, nicht dessen Abwicklung. Der Abschnitt bleibt weg, solange
             nichts geerntet ist — ein Einglas-Formular an einem bluehenden Grow
             waere nur Rauschen. */}
+        {/* Fork AI (Grow-Plan): Plan, Stand und Gemessenes je Woche. */}
+        <PlanAuswertung growId={grow.id} />
+
         <CuringSection growId={grow.id} harvested={grow.status === 'Completed' || Boolean(grow.endDate)} />
 
         {/* Verwaltung unten — Beenden und Löschen gehören nicht neben die

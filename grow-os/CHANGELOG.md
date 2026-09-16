@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.122
+
+**Fork AI.** Umbau „Ziele & Meldungen“, Schritt 6: Abschluss und Auswertung.
+
+- Neu — **Der Plan wird mit dem Grow eingefroren.** Ernte eintragen,
+  „Archivieren“ oder Status auf Geerntet/Abgebrochen — der Plan wird als
+  Endstand gespeichert und lässt sich danach nicht mehr ändern. Wird der Grow
+  wieder geöffnet, ist auch der Plan wieder bearbeitbar. Beides steht im
+  Änderungsbuch; beim Start gleicht der Fork alle Pläne mit dem Status ab.
+- Neu — **„Plan · Auswertung“ auf der Grow-Seite.** Je Messgröße (EC, pH,
+  Wasser, Feuchte, Luft, ORP) und für die Dosierung: Start, Ende bzw. aktueller
+  Stand und der gemessene Mittelwert je Woche; geänderte Wochen und Werte
+  außerhalb des Ziels sind markiert. Darunter die Zeitleiste aller Änderungen,
+  Programmwechsel und des Einfrierens. Sondenaussetzer zählen nicht mit.
+  Grows, die vor den Plänen abgeschlossen wurden, sagen das.
+- Neu — **Endstand als Programm speichern** — beim Eintragen der Ernte als
+  Schalter mit Namen oder später auf der Grow-Seite. Das Programm steht beim
+  nächsten Grow unter „Eigene Programme“.
+
+### Technik
+
+- `GET /api/grows/{id}/plan/auswertung`, `POST /api/grows/{id}/plan/als-programm`;
+  `GrowPlanService.Abgleichen/AlleAbgleichen/AlsProgrammSpeichern`,
+  `PlanAuswertung` (Zeiträume je Woche, Plausibilitätsfilter aus
+  `MeasurementSanityService`).
+- Neu: `features/zielwerte/PlanAuswertung.tsx`, `plan-auswertung.ts(+.test.ts)`.
+
 ## 2.0.0-forkai.121
 
 **Fork AI.** Umbau „Ziele & Meldungen“, Schritt 5: aufgeräumt und

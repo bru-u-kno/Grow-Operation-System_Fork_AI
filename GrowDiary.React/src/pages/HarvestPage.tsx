@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import type { GrowDetail, HarvestDto } from '../types'
-import { V1Alert, V1Badge, V1Button, V1Field, V1LinkButton, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Badge, V1Button, V1Field, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch } from '../components/v1'
 import { summariseYield } from '../features/harvest/harvest-yield'
 import { parsePlantWeights, progressLabel, serialisePlantWeights, totals, type PlantWeight } from '../features/harvest/plant-weights-model'
 import { zahlOderNull, feldText } from '../zahlenfeld'
@@ -29,6 +29,9 @@ function HarvestPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<'save' | 'complete' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Fork AI (Grow-Plan): den eingefrorenen Endstand gleich als Programm ablegen.
+  const [alsProgramm, setAlsProgramm] = useState(false)
+  const [programmName, setProgrammName] = useState('')
   // Einzelgewichte je Pflanze. Am Trockenregal wiegt man Pflanze fuer Pflanze;
   // die Summe wandert in die Grow-Felder, damit Auswertungen unveraendert
   // weiterrechnen.
@@ -107,6 +110,15 @@ function HarvestPage() {
       // archive (idempotent server-side — only Planning/Running grows change).
       if (complete) {
         await apiFetch(`/api/grows/${growId}/archive`, { method: 'POST' })
+      }
+      // Fork AI (Grow-Plan): erst nach dem Abschluss — dann ist der Plan eingefroren.
+      if (alsProgramm && programmName.trim() !== '') {
+        await apiFetch(`/api/grows/${growId}/plan/als-programm`, {
+          method: 'POST',
+          body: JSON.stringify({ name: programmName.trim() }),
+        })
+      }
+      if (complete) {
         navigate('/archiv')
       } else {
         navigate(`/grows/${growId}`)
@@ -250,6 +262,27 @@ function HarvestPage() {
               <V1Field label="Effekt / High" wide>
                 <textarea rows={3} value={form.effectNotes} onChange={(event) => setForm((current) => current ? { ...current, effectNotes: event.target.value } : current)} />
               </V1Field>
+            </div>
+          </V1Section>
+
+          {/* Fork AI (Grow-Plan): was mit dem Plan passiert. */}
+          <V1Section title="Plan dieses Grows">
+            <div className="harvest-plan" data-audit="ernte-plan">
+              <p>Mit der ersten Ernte wird der Grow abgeschlossen und sein Plan eingefroren — die Auswertung steht danach auf der Grow-Seite.</p>
+              <V1Switch
+                label="Endstand als Programm speichern"
+                hint="Wird unter „Eigene Programme“ für den nächsten Grow angeboten."
+                checked={alsProgramm}
+                onChange={(an) => {
+                  setAlsProgramm(an)
+                  if (an && programmName === '') setProgrammName(`${harvest?.growName ?? 'Grow'} · Endstand`)
+                }}
+              />
+              {alsProgramm && (
+                <V1Field label="Name des Programms">
+                  <input value={programmName} maxLength={80} onChange={(e) => setProgrammName(e.target.value)} />
+                </V1Field>
+              )}
             </div>
           </V1Section>
 

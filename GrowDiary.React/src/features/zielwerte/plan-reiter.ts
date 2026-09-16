@@ -172,7 +172,13 @@ export function buchText(e: BuchEintrag, feldName: (feld: string) => string): st
       if (e.neu == null) return `${e.feld} ${zahl(e.alt)} → entfernt`
       return `${e.feld} ${zahl(e.alt)} → ${zahl(e.neu)} ml/l`
     case 'eingefroren':
-      return 'Plan eingefroren'
+      return `Plan eingefroren${e.neu ? ` · ${e.neu}` : ''}`
+    case 'wiedergeoeffnet':
+      return 'Grow wieder geöffnet — Plan wieder bearbeitbar'
+    case 'programmwechsel':
+      return `Programmwechsel ${e.alt ?? ''} → ${e.neu ?? ''}`
+    case 'alsprogramm':
+      return `Als Programm gespeichert · ${e.neu ?? ''}`
     default:
       return e.art
   }

@@ -175,3 +175,26 @@
   .pr-eintrag span, .pr-eintrag em { font: 400 var(--fs-klein)/1.4 var(--font-sans); color: var(--muted); }
   .pr-pills { display: flex; gap: var(--s-1); flex-wrap: wrap; }
 }
+
+/* Fork AI (Grow-Plan, Schritt 6b): Auswertung auf der Grow-Seite. Nur Tokens. */
+@layer features {
+  .pa { padding: var(--s-3) var(--s-4); display: grid; gap: var(--s-3); }
+  .pa-leer { margin: 0; padding: var(--s-2) var(--s-4); font-size: var(--fs-klein); color: var(--muted); }
+  .pa-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+  .pa-chip {
+    min-height: var(--h-sm); padding: 0 var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-pill);
+    background: transparent; color: var(--muted); font: 600 var(--fs-etikett)/1 var(--font-mono); cursor: pointer;
+  }
+  .pa-chip.ist-an { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .pa-tabelle { width: 100%; border-collapse: collapse; font: 400 var(--fs-klein)/1.35 var(--font-mono); }
+  .pa-tabelle th { text-align: left; padding: var(--s-1) var(--s-2); color: var(--faint); font-weight: 500; border-bottom: 1px solid var(--hair); }
+  .pa-tabelle td { padding: var(--s-2); border-top: 1px solid var(--hair); font-variant-numeric: tabular-nums; vertical-align: top; }
+  .pa-tabelle td:first-child { color: var(--muted); }
+  .pa-tabelle .ist-geaendert, .pa-legende .ist-geaendert { color: var(--info-text); font-weight: 600; }
+  .pa-tabelle .ist-ab, .pa-legende .ist-ab { color: var(--warn-text); font-weight: 600; }
+  .pa-legende { margin: 0; font-size: var(--fs-klein); color: var(--muted); }
+  .pa-zeit { display: grid; gap: var(--s-2); }
+  .pa-zeit > div { display: flex; gap: var(--s-3); font-size: var(--fs-klein); }
+  .pa-zeit b { flex: 0 0 76px; font: 600 var(--fs-etikett)/1.4 var(--font-mono); color: var(--info-text); }
+  .pa-zeit span { color: var(--muted); }
+}
