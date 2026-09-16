@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.114
+
+**Fork AI.** Ein toter Knopf auf der Pflanzenkarte, und die Prüfung, die ihn
+hätte finden müssen.
+
+- Behoben — **„Töpfe & Sorten bearbeiten“** auf der Grow-Seite führte seit
+  forkai.105 auf eine leere Seite. Der Knopf zeigte auf
+  `/grows/…/bearbeiten`, das Formular liegt aber unter `/grows/…/setup`.
+  Jetzt öffnet er das Formular, wie der Eintrag im „⋯“-Menü.
+- Behoben — **Die Oberflächenprüfung war seit forkai.105 rot.** Der Fall
+  „je Pflanze Sorte und Topf“ suchte die Sortenwahl noch auf der
+  Pflanzenkarte, wo sie seit forkai.105 nur noch angezeigt wird. Er wartete
+  90 Sekunden auf ein Feld, das es nicht mehr gab, und scheiterte dann an
+  einer Zeitüberschreitung. Jetzt ändert er die Sorte dort, wo man sie
+  tatsächlich ändert: im Grow-Formular unter „Töpfe & Sorten“.
+
+### Technik
+
+- Neue Prüfung `link-ziele-haben-routen.node.test.ts`: Jedes Link-Ziel im
+  Frontend (`to=`, `to:`, `navigate(`) muss auf eine Route oder eine
+  Weiterleitung passen. Bisher gab es nur die Gegenrichtung
+  (`routes-reachable`: hat jede Route einen Link?). Die neue Prüfung fand
+  genau den einen toten Link und enthält ihn als Bissprobe.
+- `pflanze-je-topf.spec.ts` prüft jedes Bedienelement vorab mit zehn
+  Sekunden Frist. Fehlt eines, nennt die Meldung das Feld, statt nach
+  90 Sekunden das Aufräumen mitzureißen. Die Topf-Zeile auf der Karte wird
+  über ihren gewählten Topf gefunden, nicht mehr über die Position.
+
 ## 2.0.0-forkai.113
 
 **Fork AI.** Eine geänderte Messung behält ihren Zeitpunkt.

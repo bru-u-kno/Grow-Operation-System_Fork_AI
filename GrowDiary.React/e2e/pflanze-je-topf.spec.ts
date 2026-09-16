@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Locator } from '@playwright/test'
 import { darfUeberspringen } from './pflicht'
 import { nimmSchloss, gibSchloss } from './schloss'
 
@@ -12,6 +12,19 @@ import { nimmSchloss, gibSchloss } from './schloss'
  * Zeitpunkt abhaengt, hat nichts geprueft.
  */
 test.describe.configure({ mode: 'serial' })
+
+/**
+ * Scheitert nach Sekunden mit Klartext, wenn ein Bedienelement fehlt.
+ *
+ * Ohne diese Vorprüfung wartet `selectOption` oder `click` bis zum Zeitablauf
+ * des ganzen Falls (90 s) — und danach läuft das Aufräumen im `finally` ins
+ * Leere, weil Playwright die Seite schon geschlossen hat. Genau so ist dieser
+ * Fall von forkai.105 bis .113 gescheitert: die Meldung nannte eine
+ * Zeitüberschreitung, nicht das fehlende Feld.
+ */
+async function vorhanden(ort: Locator, meldung: string) {
+  await expect(ort.first(), meldung).toBeVisible({ timeout: 10_000 })
+}
 
 /* <b>Mehr Zeit als die 30 Sekunden der Vorgabe.</b> Die Faelle hier schreiben
    ueber die Oberflaeche und lesen nach jedem Schritt zurueck; dazu kommt das
@@ -110,11 +123,6 @@ test('je Pflanze Sorte UND Topf — beides überlebt die Änderung des anderen',
   expect(vorher.every((p: { siteIndex: number | null }) => p.siteIndex != null),
     'Nicht jede Pflanze hat einen Topf.').toBe(true)
 
-  await page.goto('/grows/1', { waitUntil: 'networkidle' })
-  const karte = page.locator('[data-audit="grow-plants"]')
-  await expect(karte).toBeVisible()
-  await karte.scrollIntoViewIfNeeded()
-
   const zweite = vorher[1]
   const andereSorte = vorher.find(
     (p: { strainId: number | null }) => p.strainId !== zweite.strainId)
@@ -127,11 +135,25 @@ test('je Pflanze Sorte UND Topf — beides überlebt die Änderung des anderen',
 
   try {
     // --- Schritt 1: die SORTE ändern. Der Topf muss stehen bleiben.
-    /* `.gp-sorte`, nicht `select`-nach-Position: seit dem 28.08.2026 ist auch
-       der Topf ein Auswahlfeld, und `nth(1)` traf danach den Topf der ersten
-       Zeile statt der Sorte der zweiten. */
-    await karte.locator('.gp-sorte').nth(1).selectOption(String(andereSorte.strainId))
-    await page.waitForTimeout(900)
+    /* <b>Im Grow-Formular, nicht auf der Karte.</b> Seit forkai.105 zeigt die
+       Pflanzenkarte die Sorte nur noch an; gewählt wird sie unter „Töpfe &
+       Sorten“ im Formular und beim Speichern übernommen
+       (`GrowPflanzen.SortenSetzen`). Diese Datei suchte danach weiter das
+       Auswahlfeld `.gp-sorte` auf der Karte — `selectOption` wartete 90
+       Sekunden auf ein Element, das es nicht mehr gab, und riss das Aufräumen
+       mit. Neun Versionen lang rot (forkai.105 bis .113). */
+    await page.goto('/grows/1/setup', { waitUntil: 'networkidle' })
+    const sortenwahl = page.getByLabel(`Sorte in Topf ${zweite.siteIndex}`, { exact: true })
+    await vorhanden(sortenwahl, `Im Formular fehlt das Auswahlfeld „Sorte in Topf ${zweite.siteIndex}“.`)
+    await sortenwahl.selectOption(String(andereSorte.strainId))
+
+    const speichern = page.locator('[data-audit="grow-wizard-actions"]')
+      .getByRole('button', { name: 'Speichern', exact: true })
+    await vorhanden(speichern, 'Der Speichern-Knopf des Grow-Formulars fehlt.')
+    await expect(speichern, 'Das Formular sperrt das Speichern — die Planprüfung meldet einen Befund.')
+      .toBeEnabled({ timeout: 5_000 })
+    await speichern.click()
+    await page.waitForURL(/\/grows\/1$/, { timeout: 15_000 })
 
     const nachSorte = (await stand()).find((p: { id: number }) => p.id === zweite.id)
     expect(nachSorte.strainId, 'Die Sorte wurde nicht übernommen.').toBe(andereSorte.strainId)
@@ -148,12 +170,21 @@ test('je Pflanze Sorte UND Topf — beides überlebt die Änderung des anderen',
     expect(dritte, 'Keine zweite Pflanze mit Topf gefunden.').toBeTruthy()
     await request.put(`/api/plants/${dritte.id}`, { data: { ...dritte, siteIndex: null } })
 
+    // Die Karte neu laden, damit sie den frei gewordenen Topf kennt.
+    await page.goto('/grows/1', { waitUntil: 'networkidle' })
+    const karte = page.locator('[data-audit="grow-plants"]')
+    await expect(karte).toBeVisible()
+    await karte.scrollIntoViewIfNeeded()
+
     const neuerTopf = dritte.siteIndex
-    /* `selectOption`, nicht `fill`: der Topf ist seit dem 28.08.2026 ein
-       Auswahlfeld. Ein `fill` auf ein Element, das es nicht mehr gibt, wartet
-       bis zum Zeitablauf — der Fall lief 90 Sekunden und riss dann sein
-       eigenes Aufräumen mit. */
-    await karte.locator('.gp-topf select').nth(1).selectOption(String(neuerTopf))
+    /* Die Zeile über ihre eigene Pflanze finden, nicht über die Position: nach
+       dem Freimachen steht die dritte Pflanze ohne Topf in der Liste, und die
+       Reihenfolge ist nicht mehr die von vorher. `selectOption`, nicht `fill`:
+       der Topf ist seit dem 28.08.2026 ein Auswahlfeld. */
+    const topfwahl = karte.locator('.gp-topf select')
+      .filter({ has: page.locator(`option[value="${zweite.siteIndex}"]:checked`) })
+    await vorhanden(topfwahl, `Auf der Karte fehlt das Topf-Auswahlfeld der Pflanze in Topf ${zweite.siteIndex}.`)
+    await topfwahl.first().selectOption(String(neuerTopf))
     await page.waitForTimeout(900)
 
     const nachTopf = (await stand()).find((p: { id: number }) => p.id === zweite.id)

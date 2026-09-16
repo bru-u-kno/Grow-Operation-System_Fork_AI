@@ -274,7 +274,7 @@ export function GrowPlantsCard({ growId, growPlantCount, systemId, onSorten, onA
           )}
 
           <div className="gp-neu">
-            <V1LinkButton to={`/grows/${growId}/bearbeiten`}>Töpfe & Sorten bearbeiten</V1LinkButton>
+            <V1LinkButton to={`/grows/${growId}/setup`}>Töpfe & Sorten bearbeiten</V1LinkButton>
           </div>
           {/* Ein gesperrter Knopf ohne Grund ist ein kaputter Knopf. */}
           {freiePlaetze === 0 && (
