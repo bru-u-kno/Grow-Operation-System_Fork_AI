@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.118
+
+**Fork AI.** Nachbesserung zu 117.
+
+- Behoben — **Die Glocke auf den Werte-Karten meldete nachts zu viel** (F-017).
+  Sie rechnete immer mit den Taggrenzen. Jetzt gilt dieselbe Lichtlogik wie bei
+  den echten Alarmen: bei Licht aus schweigen VPD, CO₂ und PPFD, und feste
+  Grenzen nehmen ihr Nachtband.
+
 ## 2.0.0-forkai.117
 
 **Fork AI.** Umbau „Ziele & Meldungen“, Schritt 2: Die Werte-Karten lassen sich

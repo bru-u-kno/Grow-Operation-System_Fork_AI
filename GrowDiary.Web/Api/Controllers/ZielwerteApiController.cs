@@ -153,6 +153,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
     private readonly WochenplanSyncService _sync;
     private readonly GrowPlanService? _plaene;
     private readonly WochenwertUeberlagerung? _ueberlagerung;
+    private readonly LightRepository? _lichter;
 
     public ZielwerteApiController(
         GrowRepository grows,
@@ -165,8 +166,10 @@ public sealed class ZielwerteApiController : ApiControllerBase
         HydroSetupRepository hydro,
         WochenplanSyncService sync,
         GrowPlanService? plaene = null,
-        WochenwertUeberlagerung? ueberlagerung = null)
+        WochenwertUeberlagerung? ueberlagerung = null,
+        LightRepository? lichter = null)
     {
+        _lichter = lichter;
         _plaene = plaene;
         _ueberlagerung = ueberlagerung;
         _grows = grows;
@@ -196,6 +199,11 @@ public sealed class ZielwerteApiController : ApiControllerBase
 
         var phase = GrowStageResolver.Resolve(grow, DateTime.Today);
         var regeln = _regeln.GetForTent(zeltId);
+
+        // F-017: dieselbe Lichtphase wie die Alarmauswertung — nachts schweigen
+        // VPD, CO₂ und PPFD, feste Grenzen nehmen ihr Nachtband.
+        zustaende.TryGetValue("light-status", out var lichtJetzt);
+        var lichtphase = LightClock.Resolve(lichtJetzt, _lichter?.GetActiveLightScheduleForTent(zeltId), DateTime.UtcNow);
 
         // Stufe 2: das Profil allein — ohne Wochenspalte, ohne eigene Grenzen.
         var profilId = SetpointProfileResolver.Resolve(
@@ -251,6 +259,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
             var aktiveRegel = regeln.FirstOrDefault(r =>
                 r.Enabled && string.Equals(r.MetricKey, key, StringComparison.OrdinalIgnoreCase));
             var wirksam = aktiveRegel is null ? null : Planzielgrenzen.Wirksam(aktiveRegel, wochenBand, null);
+            var (alarmVon, alarmBis) = AlarmgrenzenJetzt(wirksam, key, lichtphase);
 
             var kette = new List<ZielStufeDto>();
 
@@ -335,9 +344,9 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 Alarmtext(regeln, key),
                 kette,
                 RegelDto(regeln, key),
-                wirksam?.MinValue,
-                wirksam?.MaxValue,
-                Meldet(wirksam, karte.NumericValue),
+                alarmVon,
+                alarmBis,
+                Meldet(alarmVon, alarmBis, karte.NumericValue),
                 spalte is null ? null : PlanFelder(grow, spalte, key)));
         }
 
@@ -375,11 +384,20 @@ public sealed class ZielwerteApiController : ApiControllerBase
             Planzielgrenzen.KenntPlanziel(key));
     }
 
+    /// <summary>
+    /// F-017: die Grenzen, gegen die die Alarmauswertung in dieser Lichtphase misst —
+    /// nachts keine für VPD/CO₂/PPFD, bei festen Regeln das Nachtband.
+    /// </summary>
+    public static (double? Von, double? Bis) AlarmgrenzenJetzt(TentAlertRule? wirksam, string key, LightsNow lichtphase)
+        => wirksam is null || (lichtphase == LightsNow.Off && LightClock.IsDaytimeOnly(key))
+            ? (null, null)
+            : wirksam.GrenzenFuer(lichtphase);
+
     /// <summary>Liegt der Ist-Wert gerade außerhalb der wirksamen Alarmgrenzen?</summary>
     /// <remarks>Nur eine Anzeige — ob wirklich eine Nachricht rausgeht, entscheidet die Alarmauswertung (Karenz, Tag/Nacht).</remarks>
-    private static bool Meldet(TentAlertRule? wirksam, double? ist)
-        => wirksam is not null && ist is { } wert
-           && ((wirksam.MinValue is { } min && wert < min) || (wirksam.MaxValue is { } max && wert > max));
+    private static bool Meldet(double? von, double? bis, double? ist)
+        => ist is { } wert
+           && ((von is { } min && wert < min) || (bis is { } max && wert > max));
 
     private List<ZielPlanFeldDto>? PlanFelder(GrowRun grow, FeedChartColumn spalte, string key)
     {
