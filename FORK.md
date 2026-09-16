@@ -32,7 +32,10 @@ wird nur die Abweichung vom Plan, die Programmdatei bleibt unberührt.
 **Übergabe an Home Assistant.** Die Wochenwerte gehen beim Wochenwechsel und
 täglich um 06:00 in HA-Helfer, nach denen dort die Automationen regeln. Von Hand
 verstellte Helfer erkennt der Abgleich, überschreibt sie nicht und bietet sie zum
-Freigeben an. Leitgedanke: Grow OS plant, Home Assistant regelt.
+Freigeben an. Jeder Helfer hat dabei genau eine schreibende Stelle im Fork: was
+der Wochenplan führt, lassen CO₂- und Kühler-Seite aus; das CO₂-Ziel schreibt
+allein die CO₂-Steuerung als Staffel aus dem Wochenwert. Leitgedanke: Grow OS
+plant, Home Assistant regelt.
 
 **Tag/Nacht-Zielwerte.** Die Zelt-Grenzwerte tragen ein zweites Band für die
 Dunkelphase, das überall gleich gilt; die Kachel zeigt beide nebeneinander, das

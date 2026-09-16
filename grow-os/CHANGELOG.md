@@ -5,6 +5,43 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.115
+
+**Fork AI.** Jeder Helfer in Home Assistant hat nur noch eine Stelle im Fork,
+die ihn schreibt.
+
+- Behoben — **Die Feuchte-Obergrenze sprang ohne Zutun zurück.** Der
+  Wochenplan setzte sie auf den Wert der Woche, die CO₂-Steuerung schrieb
+  spätestens eine Stunde später ihren eigenen gespeicherten Wert darüber. Der
+  Wochenplan hielt das für eine Änderung von Hand, meldete „von dir gesetzt“
+  und zog die Obergrenze danach nicht mehr nach. Jetzt lässt die
+  CO₂-Steuerung die Obergrenze in Ruhe, solange der Wochenplan sie führt. Auf
+  der CO₂-Seite (Reiter Klima) steht sie dann nur zum Lesen, mit Verweis auf
+  Betrieb → Wochenplan.
+- Behoben — **Das CO₂-Ziel stand dauerhaft auf „von dir gesetzt“.** Der
+  Wochenplan schrieb den rohen Planwert in die warme Zielstufe, die
+  CO₂-Steuerung ihre Prozentstaffel aus demselben Planwert. Das CO₂-Ziel
+  schreibt jetzt allein die CO₂-Steuerung, sobald sie einmal gespeichert
+  wurde; die Übergabe-Zeile im Wochenplan sagt „über CO₂-Steuerung“.
+- Behoben — **Speichern auf der Kühler-Seite nahm dem Wochenplan die
+  Wassertemperatur ab.** Das Zielpaar Tag/Nacht wird dort nicht mehr
+  geschrieben, solange der Wochenplan es führt.
+
+### Technik
+
+- `WochenplanSyncService.GefuehrteHelfer()` nennt die Helfer, die der Plan
+  gerade führt — auch von Hand verstellte, denn deren Handwert soll ebenso
+  kein anderes Modul zurücknehmen. `Co2SteuerungService.Schreibliste` und
+  `ChillerSteuerungService.Schreibliste` lassen sie aus.
+- `WochenplanSyncService.RolleBeiCo2Steuerung`: Rolle `co2-ziel` gehört der
+  CO₂-Steuerung, sobald deren Einstellungen gespeichert sind.
+- `Co2Live` trägt die wirksame Obergrenze (`rhObergrenzeProzent`, aus HA) und
+  `rhObergrenzeAusPlan`; „tief nur bis“ rechnet mit dem wirksamen Wert statt
+  mit dem gespeicherten.
+- Neue Tests `EineQuelleJeHelferTests` (5) und
+  `features/wochenplan/uebergabe-zustand.test.ts`. Gegenprobe: ohne den
+  Filter in der CO₂-Schreibliste wird der Test rot.
+
 ## 2.0.0-forkai.114
 
 **Fork AI.** Ein toter Knopf auf der Pflanzenkarte, und die Prüfung, die ihn
