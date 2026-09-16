@@ -53,6 +53,8 @@ public sealed record PlanSpeichernAnfrage(
 
 public sealed record PlanSpeichernErgebnis(int Aenderungen, string? ProgrammId, string? ProgrammName);
 
+public sealed record ProgrammwechselErgebnis(string ProgrammId, string ProgrammName, int Uebernommen, int Entfallen);
+
 /// <summary>
 /// Fork AI (Grow-Plan, 16.09.2026): legt Pläne an und hält das Register aktuell.
 /// </summary>
@@ -91,6 +93,11 @@ public sealed class GrowPlanService
                 GrowPlanRegister.Setzen(stand.GrowId, stand.Inhalt);
             }
             foreach (var stand in _repo.AlleStaende(GrowPlanStaende.Start))
+            {
+                _startstaende[stand.GrowId] = stand.Inhalt;
+            }
+            // Nach einem Programmwechsel ist die Basis der Vergleichswert.
+            foreach (var stand in _repo.AlleStaende(GrowPlanStaende.Basis))
             {
                 _startstaende[stand.GrowId] = stand.Inhalt;
             }
@@ -360,6 +367,118 @@ public sealed class GrowPlanService
 
         _eigene.Speichern(programm);
         return _eigene.Finden(programm.Id) ?? programm;
+    }
+
+    /// <summary>Wie viele eigene Änderungen der Arbeitsstand gegenüber seiner Basis trägt.</summary>
+    /// <remarks>Zählt geänderte Felder und Wochen mit geänderter Dosierung — für die Frage beim Programmwechsel.</remarks>
+    public int EigeneAenderungen(int growId)
+    {
+        if (_repo.Laden(growId, GrowPlanStaende.Arbeit) is not { } arbeit) return 0;
+        var felder = arbeit.Inhalt.Herkunft.Values.Sum(f => f.Values.Count(h => h == GrowPlanHerkunft.Eigen));
+        return felder + DosierungGeaendert(growId, arbeit.Inhalt).Count;
+    }
+
+    private List<string> DosierungGeaendert(int growId, GrowPlanInhalt arbeit)
+    {
+        if (!_startstaende.TryGetValue(growId, out var basis)) return [];
+        return arbeit.Chart.Columns
+            .Where(spalte => basis.Chart.Columns.FirstOrDefault(b => b.Id == spalte.Id) is not { } alt
+                             || !GleicheDosierung(alt.Items, spalte.Items))
+            .Select(s => s.Id)
+            .ToList();
+    }
+
+    private static bool GleicheDosierung(IReadOnlyList<FeedChartItem> a, IReadOnlyList<FeedChartItem> b)
+        => a.Count == b.Count && a.Zip(b).All(p =>
+            string.Equals(p.First.Component, p.Second.Component, StringComparison.OrdinalIgnoreCase)
+            && Gleich(p.First.MinMlPerLiter, p.Second.MinMlPerLiter)
+            && Gleich(p.First.MaxMlPerLiter, p.Second.MaxMlPerLiter));
+
+    /// <summary>
+    /// Wechselt das Programm eines laufenden Grows. Der Arbeitsstand wird aus dem
+    /// neuen Programm aufgebaut; mit <paramref name="aenderungenBehalten"/> gehen
+    /// eigene Werte und geänderte Dosierungen in die gleichnamigen Wochen mit.
+    /// </summary>
+    /// <remarks>
+    /// Der Startstand bleibt unberührt (Auswertung), die neue Programmkopie wird
+    /// als <see cref="GrowPlanStaende.Basis"/> abgelegt und ist ab dann der
+    /// Vergleichswert. Wochen, die das neue Programm nicht kennt, entfallen samt
+    /// ihrer Änderungen — die Zahl steht im Ergebnis.
+    /// </remarks>
+    public ProgrammwechselErgebnis ProgrammWechseln(
+        GrowRun grow, string neuesProgrammId, bool aenderungenBehalten, DateTime? jetztUtc = null)
+    {
+        lock (_lock)
+        {
+            if (_repo.Laden(grow.Id, GrowPlanStaende.Ende) is not null)
+                throw new InvalidOperationException("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+            var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)
+                ?? throw new InvalidOperationException($"Grow {grow.Id} hat keinen Plan.");
+            var programm = _wissen.NutrientPrograms.FirstOrDefault(
+                    p => string.Equals(p.Id, neuesProgrammId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new ArgumentException($"Das Programm „{neuesProgrammId}“ gibt es nicht.");
+
+            var profilId = TargetValueService.ProfileIdFor(grow.HydroStyle);
+            var basis = GrowPlanBauer.AusProgramm(
+                programm, stage => _ziele.GetTargets(profilId, stage), VegiWochen(grow), Bluetewochen(grow));
+            var neu = GrowPlanBauer.Kopie(basis);
+            neu.EigenesProgrammId = EigeneProgramme.IstEigen(programm.Id) ? programm.Id : null;
+
+            var uebernommen = 0;
+            var entfallen = 0;
+            if (aenderungenBehalten)
+            {
+                foreach (var alt in arbeit.Inhalt.Chart.Columns)
+                {
+                    var eigeneFelder = arbeit.Inhalt.Herkunft.TryGetValue(alt.Id, out var h)
+                        ? h.Where(x => x.Value == GrowPlanHerkunft.Eigen).Select(x => x.Key).ToList()
+                        : [];
+                    var dosisGeaendert = DosierungGeaendert(grow.Id, arbeit.Inhalt).Contains(alt.Id);
+                    if (eigeneFelder.Count == 0 && !dosisGeaendert) continue;
+
+                    var ziel = neu.Chart.Columns.FirstOrDefault(c => string.Equals(c.Id, alt.Id, StringComparison.OrdinalIgnoreCase));
+                    if (ziel is null)
+                    {
+                        entfallen += eigeneFelder.Count + (dosisGeaendert ? 1 : 0);
+                        continue;
+                    }
+
+                    foreach (var name in eigeneFelder)
+                    {
+                        if (Wochenwertfelder.Finden(name) is not { } feld) continue;
+                        feld.Schreiben(ziel, feld.Lesen(alt));
+                        neu.HerkunftSetzen(ziel.Id, name, GrowPlanHerkunft.Eigen);
+                        uebernommen++;
+                    }
+                    if (dosisGeaendert)
+                    {
+                        ziel.Items = alt.Items
+                            .Select(i => new FeedChartItem { Component = i.Component, MinMlPerLiter = i.MinMlPerLiter, MaxMlPerLiter = i.MaxMlPerLiter })
+                            .ToList();
+                        uebernommen++;
+                    }
+                }
+            }
+
+            var zeit = jetztUtc ?? DateTime.UtcNow;
+            var eintrag = new GrowPlanEintrag(0, grow.Id, zeit, GrowPlanArten.Programmwechsel, null, null,
+                arbeit.Inhalt.ProgrammName, programm.Name, "grow",
+                aenderungenBehalten
+                    ? $"Änderungen übernommen ({uebernommen}{(entfallen > 0 ? $", {entfallen} entfallen" : "")})"
+                    : "Änderungen verworfen");
+
+            _repo.Speichern(
+                [
+                    new GrowPlanStand(grow.Id, GrowPlanStaende.Basis, basis, null, zeit, zeit),
+                    arbeit with { Inhalt = neu, GeaendertUtc = zeit },
+                ],
+                [eintrag]);
+            _startstaende[grow.Id] = basis;
+            GrowPlanRegister.Setzen(grow.Id, neu);
+            _logger.LogInformation("Grow-Plan {Grow}: Programmwechsel {Alt} → {Neu} ({Wahl}).",
+                grow.Id, arbeit.Inhalt.ProgrammId, programm.Id, aenderungenBehalten ? "behalten" : "verworfen");
+            return new ProgrammwechselErgebnis(programm.Id, programm.Name, uebernommen, entfallen);
+        }
     }
 
     /// <summary>

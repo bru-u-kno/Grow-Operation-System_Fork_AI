@@ -21,6 +21,13 @@ public static class GrowPlanStaende
     public const string Start = "start";
     public const string Arbeit = "arbeit";
     public const string Ende = "ende";
+
+    /// <summary>
+    /// Die frische Programmkopie nach einem Programmwechsel — Vergleichswert
+    /// „Start“ für den Arbeitsstand. Der eigentliche Startstand bleibt für die
+    /// Auswertung erhalten.
+    /// </summary>
+    public const string Basis = "basis";
 }
 
 /// <summary>Woher ein Wert im Plan stammt.</summary>

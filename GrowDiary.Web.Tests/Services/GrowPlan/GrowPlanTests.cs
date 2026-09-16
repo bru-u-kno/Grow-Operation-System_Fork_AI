@@ -367,6 +367,81 @@ public sealed class GrowPlanTests : IDisposable
         Assert.Single(_repo.Buch(grow.Id)); // Nachtrag ist keine Änderung am Ziel.
     }
 
+    [Fact]
+    public void ProgrammwechselVerwirftAufWunschUndBehaeltDenStartstand()
+    {
+        var grow = Grow(30, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.3)]);
+        Assert.Equal(1, _dienst.EigeneAenderungen(grow.Id));
+
+        var ergebnis = _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: false);
+
+        Assert.Equal("athena", ergebnis.ProgrammId);
+        Assert.Equal(0, ergebnis.Uebernommen);
+        var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
+        Assert.Equal("athena", arbeit.Inhalt.ProgrammId);
+        Assert.Equal(0, _dienst.EigeneAenderungen(grow.Id));
+        Assert.Equal("skx-canna-aqua", _repo.Laden(grow.Id, GrowPlanStaende.Start)!.Inhalt.ProgrammId);
+        Assert.Equal("athena", _repo.Laden(grow.Id, GrowPlanStaende.Basis)!.Inhalt.ProgrammId);
+        Assert.Equal("athena", GrowPlanRegister.Programm(grow.Id)!.Id);
+
+        var eintrag = _repo.Buch(grow.Id)[0];
+        Assert.Equal(GrowPlanArten.Programmwechsel, eintrag.Art);
+        Assert.Equal(("SKX Canna Aqua", "Athena Blended", "Änderungen verworfen"), (eintrag.Alt, eintrag.Neu, eintrag.Grund));
+    }
+
+    [Fact]
+    public void ProgrammwechselUebernimmtEigeneWerteUndDosierungInGleicheWochen()
+    {
+        var grow = Grow(31, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        var dosis = Woche(plan, "flower-w5").C.Items.Where(i => i.Component != "Cannaboost")
+            .Select(i => new PlanDosis(i.Component, i.MinMlPerLiter)).ToList();
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.3)], dosis, false, null, null));
+        _dienst.WerteSetzen(grow.Id, [("root", "ecTarget", 0.5)]);   // Woche, die Athena nicht kennt
+        Assert.Equal(3, _dienst.EigeneAenderungen(grow.Id));
+
+        var ergebnis = _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: true);
+
+        Assert.Equal(2, ergebnis.Uebernommen);   // EC + Dosierung in flower-w5
+        Assert.Equal(1, ergebnis.Entfallen);     // root gibt es bei Athena nicht
+        var w5 = Woche(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5").C;
+        Assert.Equal(1.3, w5.EcTarget);
+        Assert.DoesNotContain(w5.Items, i => i.Component == "Cannaboost");
+        Assert.Contains(w5.Items, i => i.Component == "Aqua Flores A");
+        Assert.Equal(GrowPlanHerkunft.Eigen, _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt.HerkunftVon("flower-w5", "ecTarget"));
+        Assert.Contains("übernommen (2, 1 entfallen)", _repo.Buch(grow.Id)[0].Grund);
+
+        // Vergleichswert ist jetzt Athena, nicht mehr SKX.
+        var athena = _wissen.NutrientPrograms.Single(p => p.Id == "athena").FeedChart!.Columns.Single(c => c.Id == "flower-w5");
+        Assert.Equal(athena.EcTarget, _dienst.Startwert(grow.Id, "flower-w5", Wochenwertfelder.Finden("ecTarget")!));
+    }
+
+    [Fact]
+    public void NachEinemNeustartIstDieBasisDerVergleichswert()
+    {
+        var grow = Grow(32, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: false);
+
+        var neu = new GrowPlanService(_repo, _wissen, new TargetValueService(_wissen), NullLogger<GrowPlanService>.Instance, _eigene);
+        neu.RegisterLaden();
+
+        var athena = _wissen.NutrientPrograms.Single(p => p.Id == "athena").FeedChart!.Columns.Single(c => c.Id == "flower-w5");
+        Assert.Equal(athena.EcTarget, neu.Startwert(grow.Id, "flower-w5", Wochenwertfelder.Finden("ecTarget")!));
+    }
+
+    [Fact]
+    public void UnbekanntesProgrammOderEingefrorenWirdAbgelehnt()
+    {
+        var grow = Grow(33, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        Assert.Throws<ArgumentException>(() => _dienst.ProgrammWechseln(grow, "gibt-es-nicht", false));
+        _repo.Speichern([plan with { Stand = GrowPlanStaende.Ende }], []);
+        Assert.Throws<InvalidOperationException>(() => _dienst.ProgrammWechseln(grow, "athena", false));
+    }
+
     [Theory]
     [InlineData("SKX Canna Aqua (eigen)", "skx-canna-aqua-eigen")]
     [InlineData("Blüte ÄÖÜ ß 2026!", "bluete-aeoeue-ss-2026")]

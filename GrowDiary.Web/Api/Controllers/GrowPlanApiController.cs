@@ -19,7 +19,22 @@ public sealed record GrowPlanStandDto(
     FeedChartDefinition Chart,
     Dictionary<string, Dictionary<string, string>> Herkunft,
     string? EigenesProgrammId = null,
-    string? EigenesProgrammName = null);
+    string? EigenesProgrammName = null,
+    int EigeneAenderungen = 0);
+
+/// <summary>Programm eines laufenden Grows wechseln.</summary>
+public sealed class ProgrammwechselRequest
+{
+    public string ProgrammId { get; set; } = string.Empty;
+    public bool AenderungenBehalten { get; set; }
+}
+
+public sealed record ProgrammwechselDto(
+    string ProgrammId,
+    string ProgrammName,
+    int Uebernommen,
+    int Entfallen,
+    GrowPlanStandDto Plan);
 
 /// <summary>Ein Eintrag im Änderungsbuch.</summary>
 public sealed record GrowPlanEintragDto(
@@ -93,8 +108,8 @@ public sealed class GrowPlanApiController : ApiControllerBase
     public ActionResult<GrowPlanStandDto> Get(int growId, [FromQuery] string stand = GrowPlanStaende.Arbeit)
     {
         if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
-        if (stand is not (GrowPlanStaende.Start or GrowPlanStaende.Arbeit or GrowPlanStaende.Ende))
-            return ValidationError("Stand muss start, arbeit oder ende sein.");
+        if (stand is not (GrowPlanStaende.Start or GrowPlanStaende.Arbeit or GrowPlanStaende.Ende or GrowPlanStaende.Basis))
+            return ValidationError("Stand muss start, basis, arbeit oder ende sein.");
 
         if (_plaene.Stand(growId, stand) is not { } gefunden)
             return NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan in diesem Stand.");
@@ -113,7 +128,57 @@ public sealed class GrowPlanApiController : ApiControllerBase
         stand.Inhalt.Chart,
         stand.Inhalt.Herkunft,
         stand.Inhalt.EigenesProgrammId,
-        stand.Inhalt.EigenesProgrammId is { } eigen ? _eigene?.Finden(eigen)?.Name : null);
+        stand.Inhalt.EigenesProgrammId is { } eigen ? _eigene?.Finden(eigen)?.Name : null,
+        stand.Stand == GrowPlanStaende.Arbeit ? _plaene.EigeneAenderungen(stand.GrowId) : 0);
+
+    /// <summary>
+    /// Wechselt das Programm eines laufenden Grows — am Grow und im Plan in einem Zug.
+    /// </summary>
+    /// <remarks>
+    /// Die Oberfläche fragt vorher, ob eigene Änderungen mitgehen sollen
+    /// (<see cref="GrowPlanStandDto.EigeneAenderungen"/>). Danach Übergabe an HA,
+    /// weil sich Zielwerte geändert haben können.
+    /// </remarks>
+    [HttpPost("programm")]
+    [ProducesResponseType(typeof(ProgrammwechselDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ProgrammwechselDto>> ProgrammWechseln(
+        int growId, [FromBody] ProgrammwechselRequest anfrage, CancellationToken ct)
+    {
+        if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Ende) is not null)
+            return ValidationError("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Arbeit) is null)
+            return NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan.");
+        if (string.IsNullOrWhiteSpace(anfrage.ProgrammId))
+            return ValidationError("Bitte ein Programm wählen.");
+
+        ProgrammwechselErgebnis ergebnis;
+        try
+        {
+            ergebnis = _plaene.ProgrammWechseln(grow, anfrage.ProgrammId.Trim(), anfrage.AenderungenBehalten);
+        }
+        catch (ArgumentException ex)
+        {
+            return ValidationError(ex.Message);
+        }
+
+        grow.FeedProgramId = ergebnis.ProgrammId;
+        grow.Nutrients = ergebnis.ProgrammName;
+        _grows.UpdateGrow(grow);
+
+        try
+        {
+            await _sync.UebergebenAsync(ct);
+        }
+        catch (Exception)
+        {
+            // Die Übergabe holt der nächste Lauf nach; der Wechsel selbst ist gespeichert.
+        }
+
+        return Ok(new ProgrammwechselDto(
+            ergebnis.ProgrammId, ergebnis.ProgrammName, ergebnis.Uebernommen, ergebnis.Entfallen,
+            Dto(_plaene.Stand(growId, GrowPlanStaende.Arbeit)!)));
+    }
 
     /// <summary>
     /// Eine Woche speichern: Zielwerte, optional die ganze Dosierung, optional
