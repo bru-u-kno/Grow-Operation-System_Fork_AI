@@ -84,7 +84,17 @@ public static class PlanAuswertung
     {
         var ergebnis = new Dictionary<string, (DateTime?, DateTime?)>(StringComparer.OrdinalIgnoreCase);
         var start = grow.StartDate.Date;
-        var vegiBeginn = (grow.VegStartedAt ?? grow.RootedAt)?.Date ?? start;
+        // F-019: ohne eingetragenen Vegi-Beginn folgt die Vegi auf die Bewurzelungswoche —
+        // sonst lägen beide auf demselben Zeitraum.
+        var hatBewurzelung = spalten.Any(c => c.Stage.Equals("Clone", StringComparison.OrdinalIgnoreCase)
+                                              || c.Stage.Equals("Seedling", StringComparison.OrdinalIgnoreCase));
+        var vegiBeginn = (grow.VegStartedAt ?? grow.RootedAt)?.Date ?? (hatBewurzelung ? start.AddDays(7) : start);
+        // F-019: die letzte Vegi-Woche gilt bis zum Flip — wie im Mischplan wird sie gehalten.
+        var letzteVegiWoche = spalten
+            .Where(c => c.Stage.Equals("Veg", StringComparison.OrdinalIgnoreCase) && c.Week is not null)
+            .Select(c => c.Week!.Value)
+            .DefaultIfEmpty(0)
+            .Max();
         var ende = (grow.EndDate?.Date ?? heute.Date).AddDays(1);
         DateTime? letzteBluete = null;
 
@@ -93,7 +103,10 @@ public static class PlanAuswertung
             (DateTime?, DateTime?) zeitraum = s.Stage.ToLowerInvariant() switch
             {
                 "clone" or "seedling" => (start, vegiBeginn > start ? vegiBeginn : start.AddDays(7)),
-                "veg" when s.Week is { } w => (vegiBeginn.AddDays(7 * (w - 1)), vegiBeginn.AddDays(7 * w)),
+                "veg" when s.Week is { } w => (vegiBeginn.AddDays(7 * (w - 1)),
+                    w == letzteVegiWoche && grow.FlipDate is { } flipVegi && flipVegi.Date > vegiBeginn.AddDays(7 * w)
+                        ? flipVegi.Date
+                        : vegiBeginn.AddDays(7 * w)),
                 "flower" or "transition" when s.Week is { } w && grow.FlipDate is { } flip
                     => (flip.Date.AddDays(7 * (w - 1)), flip.Date.AddDays(7 * w)),
                 _ => (null, null),

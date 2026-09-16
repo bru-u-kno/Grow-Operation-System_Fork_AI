@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.123
+
+**Fork AI.** Nachbesserung zur Auswertung aus 122.
+
+- Behoben — **Wochen der Auswertung lagen falsch** (F-019). Ohne eingetragenen
+  Vegi-Beginn lagen Bewurzelung und Vegi-Woche 1 auf demselben Zeitraum; jetzt
+  folgt die Vegi der Bewurzelungswoche. Eine verlängerte Vegi zählt bis zum Flip
+  zur letzten Vegi-Woche — so wie Mischplan und Wochenplan diese Woche halten.
+  Vorher fielen die Messungen dazwischen aus der Auswertung.
+- Technik — E2E-Rauchtests auf die neuen Adressen von „Ziele & Meldungen“
+  nachgezogen (F-018, CI war seit 121 rot).
+
 ## 2.0.0-forkai.122
 
 **Fork AI.** Umbau „Ziele & Meldungen“, Schritt 6: Abschluss und Auswertung.
