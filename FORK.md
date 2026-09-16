@@ -28,8 +28,9 @@ Wochenziel, Alarmgrenze, Meldepause und Scharf-Schalter zusammen bearbeitet werd
 Im Reiter „Plan“ lassen sich alle Wochen samt Dosierung bearbeiten; beim Speichern
 wählt man „nur dieser Grow“ oder „auch ins Programm“ — mitgelieferte Programme
 bleiben unverändert, es entsteht ein eigenes Programm als Datei im Wissensordner.
-Jede Änderung steht im Änderungsbuch. (Umbau „Ziele & Meldungen“, seit
-forkai.116–119, weitere Schritte folgen.)
+Jede Änderung steht im Änderungsbuch. Der Reiter „Meldungen“ zeigt alle Absender an einer Stelle — auch die
+Wächter, die Home Assistant selbst schickt. (Umbau „Ziele & Meldungen“, seit
+forkai.116–120, weitere Schritte folgen.)
 
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden
@@ -116,7 +117,7 @@ Zielband, Kachel-Modell und Live-Payload, Wissens-Schema und Mischplan (Klimawer
 je Woche), Trendwächter und Grow-Workflow (Sollwerte über das Zielband),
 Navigation und App-Shell, Wissens-Loader (ein Haken nach dem Laden für
 eigene Wochenwerte), Zelt-Einstellungen (Blatt-Offset an den
-Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback, Grow-Controller
+Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback, Benachrichtigungen, Grow-Controller
 (Plan beim Anlegen) sowie `Program.cs` (Plan-Übernahme beim Start). Welche
 Datei zu welcher Änderung gehört, steht in
 [docs/fork-historie.md](docs/fork-historie.md).

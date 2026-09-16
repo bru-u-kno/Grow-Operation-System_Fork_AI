@@ -256,7 +256,8 @@ function NotificationsPage() {
         <div style={{ display: 'grid', gap: 12 }}>
           <V1Card>
             <V1Switch label="Grenzwerte" hint="Wenn ein Messwert über oder unter deine Grenze läuft (pH, EC …)." checked={settings.thresholds} onChange={(checked) => patch({ thresholds: checked })} />
-            <p style={{ margin: '8px 0 0' }}><Link to="/alarme">Grenzwerte pro Sensor einstellen →</Link></p>
+            {/* Fork AI (Schritt 4): Grenzen stellt man jetzt an der Werte-Karte ein. */}
+            <p style={{ margin: '8px 0 0' }}><Link to="/zielwerte?tab=jetzt">Grenzen je Wert unter Zielwerte → Werte einstellen →</Link></p>
           </V1Card>
           <V1Card>
             <V1Switch label="Kalibrierung fällig" hint="Erinnerung, wenn eine Sensor-Kalibrierung ansteht." checked={settings.calibration} onChange={(checked) => patch({ calibration: checked })} />
@@ -268,7 +269,7 @@ function NotificationsPage() {
             </div>
           </V1Card>
           <V1Card tone={watchdog?.isProblem ? 'warn' : 'neutral'}>
-            <V1Switch label="Systemüberwachung" hint="Meldet, wenn die Überwachung selbst schweigt — keine neuen Messwerte, Home Assistant nicht erreichbar oder Grow OS steht." checked={settings.systemWatch} onChange={(checked) => patch({ systemWatch: checked })} />
+            <V1Switch label="Systemüberwachung" hint="Meldet, wenn die Überwachung selbst schweigt — keine neuen Messwerte, Home Assistant nicht erreichbar oder Grow OS steht. Dazu gehört auch der Pumpen-Wächter (Pumpe steht oder sollte geprüft werden, samt Entwarnung)." checked={settings.systemWatch} onChange={(checked) => patch({ systemWatch: checked })} />
             {watchdog && (
               <p className="rc2-measurement-note" style={{ margin: '10px 0 0' }}>
                 <strong style={{ color: watchdog.isProblem ? 'var(--v1-text)' : 'var(--v1-green)' }}>{watchdog.headline}</strong> — {watchdog.detail}
@@ -295,6 +296,19 @@ function NotificationsPage() {
           </V1Card>
           <V1Card>
             <V1Switch label="Sensor ausgefallen" hint="Wenn ein gemappter Sensor keine Werte mehr liefert." checked={settings.sensorOffline} onChange={(checked) => patch({ sensorOffline: checked })} />
+          </V1Card>
+          {/* Fork AI (F-014): diese Kategorie sendete immer — ohne Schalter und ohne
+              dass die Seite sie nannte. Zwei Absender teilen sie sich. */}
+          <V1Card>
+            <V1Switch
+              label="Trends & Risiken"
+              hint="Wenn ein Wert über Tage wegdriftet, obwohl er noch im Band liegt (Trendwächter), und wenn in der Dunkelphase Licht ins Zelt fällt (Licht-Wächter)."
+              checked={settings.risks}
+              onChange={(checked) => patch({ risks: checked })}
+            />
+            <p className="rc2-measurement-note" style={{ margin: '8px 0 0' }}>
+              Licht in der Dunkelphase kommt auch während der Ruhezeit — nachts kann die Meldung die Blüte noch retten.
+            </p>
           </V1Card>
         </div>
       </V1Section>

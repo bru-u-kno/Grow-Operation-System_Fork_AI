@@ -5,6 +5,7 @@ import AlertsPage from './AlertsPage'
 import NotificationsPage from './NotificationsPage'
 import { TabbedCollectionPage } from './TabbedCollectionPage'
 import { PlanReiter } from '../features/zielwerte/PlanReiter'
+import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
 
 /**
  * Regeln & Automatik: EINE Seite mit den vier Bereichen als Tabs, in der
@@ -52,6 +53,7 @@ export function ZielwerteCollectionPage() {
       tabs={[
         { key: 'jetzt', label: 'Werte', render: () => <ZielwertePage /> },
         { key: 'plan', label: 'Plan', render: () => <PlanReiter /> },
+        { key: 'meldungen', label: 'Meldungen', render: () => <MeldungenReiter /> },
         { key: 'profile', label: 'Profile', render: () => <SetpointProfilesPage /> },
         { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
       ]}

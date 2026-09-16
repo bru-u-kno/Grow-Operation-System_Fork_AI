@@ -5,6 +5,30 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.120
+
+**Fork AI.** Umbau „Ziele & Meldungen“, Schritt 4: der Reiter „Meldungen“.
+
+- Neu — **Reiter „Meldungen“ unter Zielwerte.** Oben, wie viele Grenzwerte
+  scharf sind und welche gerade melden; darunter Handy, Ruhezeit, Täglicher
+  Überblick und alle Arten von Meldungen; unten die **Wächter aus Home
+  Assistant** (z. B. Water Chiller Wächter, CO₂ Wächter) mit Zustand und Zweck —
+  nur zur Ansicht, weil sie gerade dann melden sollen, wenn Grow OS steht.
+- Behoben — **„Trends & Risiken“ ließ sich nicht abschalten** (F-014). Trend-
+  und Licht-Wächter sendeten immer, ohne dass die Seite sie nannte. Jetzt gibt es
+  einen Schalter, und der Hinweis sagt, dass Licht in der Dunkelphase auch in der
+  Ruhezeit kommt.
+- Geändert — Die Systemüberwachung nennt jetzt ausdrücklich den Pumpen-Wächter,
+  der an ihr hängt. Der Link „Grenzwerte einstellen“ führt zu den Werte-Karten.
+
+### Technik
+
+- `GET /api/meldungen/ha-waechter`: HA-Automationen mit „Wächter“ im Namen,
+  bekannte mit Zweck (`MeldungenApiController`).
+- Neu: `features/meldungen/MeldungenReiter.tsx`, `HaWaechterTests`.
+- Die Kategorie „Wartung“ hat weiterhin keinen Absender und daher keinen
+  Schalter.
+
 ## 2.0.0-forkai.119
 
 **Fork AI.** Umbau „Ziele & Meldungen“, Schritt 3: der Reiter „Plan“ und
