@@ -25,7 +25,11 @@ laufenden oder abgeschlossenen Grows mehr um. Lücken eines Programms werden bei
 Anlegen einmalig aus dem mitgelieferten Standard gefüllt; Programme ohne Wochen
 bekommen ein Raster. Auf der Zielwerte-Seite öffnet jede Karte ein Blatt, in dem
 Wochenziel, Alarmgrenze, Meldepause und Scharf-Schalter zusammen bearbeitet werden
-(Umbau „Ziele & Meldungen“, seit forkai.116/117, weitere Schritte folgen.)
+Im Reiter „Plan“ lassen sich alle Wochen samt Dosierung bearbeiten; beim Speichern
+wählt man „nur dieser Grow“ oder „auch ins Programm“ — mitgelieferte Programme
+bleiben unverändert, es entsteht ein eigenes Programm als Datei im Wissensordner.
+Jede Änderung steht im Änderungsbuch. (Umbau „Ziele & Meldungen“, seit
+forkai.116–119, weitere Schritte folgen.)
 
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden

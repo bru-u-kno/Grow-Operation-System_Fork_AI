@@ -17,7 +17,9 @@ public sealed record GrowPlanStandDto(
     DateTime AngelegtUtc,
     DateTime GeaendertUtc,
     FeedChartDefinition Chart,
-    Dictionary<string, Dictionary<string, string>> Herkunft);
+    Dictionary<string, Dictionary<string, string>> Herkunft,
+    string? EigenesProgrammId = null,
+    string? EigenesProgrammName = null);
 
 /// <summary>Ein Eintrag im Änderungsbuch.</summary>
 public sealed record GrowPlanEintragDto(
@@ -75,8 +77,11 @@ public sealed class GrowPlanApiController : ApiControllerBase
     private readonly GrowPlanService _plaene;
     private readonly WochenplanSyncService _sync;
 
-    public GrowPlanApiController(GrowRepository grows, GrowPlanService plaene, WochenplanSyncService sync)
+    private readonly EigeneProgramme? _eigene;
+
+    public GrowPlanApiController(GrowRepository grows, GrowPlanService plaene, WochenplanSyncService sync, EigeneProgramme? eigene = null)
     {
+        _eigene = eigene;
         _grows = grows;
         _plaene = plaene;
         _sync = sync;
@@ -97,7 +102,7 @@ public sealed class GrowPlanApiController : ApiControllerBase
         return Ok(Dto(gefunden));
     }
 
-    private static GrowPlanStandDto Dto(GrowPlanStand stand) => new(
+    private GrowPlanStandDto Dto(GrowPlanStand stand) => new(
         stand.GrowId,
         stand.Stand,
         stand.Inhalt.ProgrammId,
@@ -106,7 +111,9 @@ public sealed class GrowPlanApiController : ApiControllerBase
         stand.AngelegtUtc,
         stand.GeaendertUtc,
         stand.Inhalt.Chart,
-        stand.Inhalt.Herkunft);
+        stand.Inhalt.Herkunft,
+        stand.Inhalt.EigenesProgrammId,
+        stand.Inhalt.EigenesProgrammId is { } eigen ? _eigene?.Finden(eigen)?.Name : null);
 
     /// <summary>
     /// Eine Woche speichern: Zielwerte, optional die ganze Dosierung, optional

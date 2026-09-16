@@ -5,6 +5,40 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.119
+
+**Fork AI.** Umbau „Ziele & Meldungen“, Schritt 3: der Reiter „Plan“ und
+eigene Programme.
+
+- Neu — **Reiter „Plan“ unter Zielwerte.** Alle Wochen des Plans deines Grows,
+  immer eine im Bild (‹ ›, Wischen, Punktreihe). Zielwerte mit Startwert
+  darunter, dazu die **Dosierung**: Mengen ändern, Zutaten entfernen und
+  wiederherstellen, neue Zutaten hinzufügen, Mengen auf das Anlagenvolumen
+  gerechnet.
+- Neu — **Speichern mit Wahl.** Das Blatt listet jede Änderung und fragt:
+  „Nur für diesen Grow“ oder „Auch ins Programm“. Mitgelieferte Programme bleiben
+  unverändert — beim ersten Mal entsteht ein eigenes Programm (Name wählbar), das
+  künftige Grows auswählen können; danach landen Übernahmen immer dort. Ein
+  freiwilliger Grund wird mitgeschrieben.
+- Neu — **Änderungsbuch** unten im Reiter: jede geänderte Zahl und Zutat mit
+  Zeitpunkt, Woche, alt → neu, Grund und „auch im Programm“.
+- Neu — **EC-Band im Plan.** EC von/bis stehen jetzt je Woche im Plan; das
+  Sollwertprofil wird dafür nicht mehr gebraucht. Beim ersten Start trägt der
+  Fork das Band in bestehende Pläne nach (Ziel ± halbe Breite des mitgelieferten
+  Standards). Wer das EC-Ziel ändert, verschiebt das Band mit. ORP und EC-Band
+  sind auch unter Wochenplan → „Werte bearbeiten“ und im Werte-Blatt editierbar.
+
+### Technik
+
+- `POST /api/grows/{id}/plan` (Werte, ganze Dosierung, `auchInsProgramm`,
+  `programmName`, `grund`) mit Prüfung und Übergabe an HA.
+- Eigene Programme als Datei `/data/knowledge/nutrient-programs/eigen-*.json`
+  (`EigeneProgramme`); in jeder Fork-Sicherung enthalten.
+- `FeedChartColumn.EcMin/EcMax`; `GrowPlanService.Speichern`,
+  `FehlendeFelderNachtragen`; Plan-Stand liefert `eigenesProgrammId/-Name`.
+- Neu: `features/zielwerte/PlanReiter.tsx`, `plan-reiter.ts(+.test.ts)`,
+  `GrowPlanSpeichernTests`.
+
 ## 2.0.0-forkai.118
 
 **Fork AI.** Nachbesserung zu 117.

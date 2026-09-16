@@ -4,6 +4,7 @@ import ZielwertePage from './ZielwertePage'
 import AlertsPage from './AlertsPage'
 import NotificationsPage from './NotificationsPage'
 import { TabbedCollectionPage } from './TabbedCollectionPage'
+import { PlanReiter } from '../features/zielwerte/PlanReiter'
 
 /**
  * Regeln & Automatik: EINE Seite mit den vier Bereichen als Tabs, in der
@@ -50,6 +51,7 @@ export function ZielwerteCollectionPage() {
       subtitle="Was gerade gilt, woher es kommt und wo man es ändert. Vier Quellen stehen hintereinander — jede spätere sticht die früheren."
       tabs={[
         { key: 'jetzt', label: 'Werte', render: () => <ZielwertePage /> },
+        { key: 'plan', label: 'Plan', render: () => <PlanReiter /> },
         { key: 'profile', label: 'Profile', render: () => <SetpointProfilesPage /> },
         { key: 'grenzwerte', label: 'Grenzwerte', render: () => <AlertsPage /> },
       ]}

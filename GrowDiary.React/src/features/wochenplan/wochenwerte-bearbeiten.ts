@@ -50,6 +50,7 @@ export const schluessel = (spalteId: string, feld: string) => `${spalteId}|${fel
  */
 export const GRUPPEN: ReadonlyArray<{ titel: string; felder: readonly string[] }> = [
   { titel: 'EC', felder: ['ecTarget'] },
+  { titel: 'EC-Band', felder: ['ecMin', 'ecMax'] },
   { titel: 'pH', felder: ['phMin', 'phMax'] },
   { titel: 'Wasser Tag', felder: ['waterTempDayC'] },
   { titel: 'Wasser Nacht', felder: ['waterTempNightC'] },
@@ -58,10 +59,13 @@ export const GRUPPEN: ReadonlyArray<{ titel: string; felder: readonly string[] }
   { titel: 'VPD', felder: ['vpdMin', 'vpdMax'] },
   { titel: 'CO₂', felder: ['co2Min', 'co2Max'] },
   { titel: 'PPFD', felder: ['ppfdMin', 'ppfdMax'] },
+  { titel: 'ORP', felder: ['orpMin', 'orpMax'] },
 ]
 
 /** Spannen, deren „von" nicht über dem „bis" liegen darf. */
 const PAARE: ReadonlyArray<readonly [string, string]> = [
+  ['ecMin', 'ecMax'],
+  ['orpMin', 'orpMax'],
   ['phMin', 'phMax'],
   ['vpdMin', 'vpdMax'],
   ['co2Min', 'co2Max'],

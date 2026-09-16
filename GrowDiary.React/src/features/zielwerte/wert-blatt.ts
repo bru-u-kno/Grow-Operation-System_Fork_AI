@@ -56,7 +56,7 @@ export const UEBERGABE_JE_METRIK: Record<string, readonly string[]> = {
 
 /** Paare, bei denen „von“ nicht über „bis“ liegen darf. */
 const PAARE: ReadonlyArray<readonly [string, string]> = [
-  ['phMin', 'phMax'], ['vpdMin', 'vpdMax'], ['co2Min', 'co2Max'],
+  ['ecMin', 'ecMax'], ['phMin', 'phMax'], ['vpdMin', 'vpdMax'], ['co2Min', 'co2Max'],
   ['ppfdMin', 'ppfdMax'], ['orpMin', 'orpMax'],
 ]
 

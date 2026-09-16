@@ -137,7 +137,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
         ["co2"] = ["co2Min", "co2Max"],
         ["ppfd"] = ["ppfdMin", "ppfdMax"],
         ["reservoir-ph"] = ["phMin", "phMax"],
-        ["reservoir-ec"] = ["ecTarget"],
+        ["reservoir-ec"] = ["ecTarget", "ecMin", "ecMax"],
         ["orp"] = ["orpMin", "orpMax"],
         ["reservoir-temp"] = ["waterTempDayC", "waterTempNightC"],
     };
