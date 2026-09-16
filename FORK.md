@@ -33,7 +33,7 @@ Wächter, die Home Assistant selbst schickt. Das Programm eines laufenden Grows 
 werden auf Wunsch übernommen. Sollwertprofile tauchen in der Oberfläche nicht
 mehr auf. Beim Abschluss wird der Plan mit dem Grow eingefroren; die Grow-Seite wertet je
 Woche Plan und Messung aus, und der Endstand lässt sich als Programm für den
-nächsten Grow speichern. (Umbau „Ziele & Meldungen“, forkai.116–122.)
+nächsten Grow speichern. (Umbau „Ziele & Meldungen“, forkai.116–124, abgeschlossen.)
 
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden

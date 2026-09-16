@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.124
+
+**Fork AI.** Abschluss des Umbaus „Ziele & Meldungen“.
+
+- Behoben — **Grow-Seiten ohne Plan meldeten einen Konsolenfehler.** Die
+  Auswertung antwortet dort jetzt „kein Plan gespeichert“, ohne Fehler.
+- Behoben — **Bewurzelter Steckling:** Beginnt die Vegi am Starttag, hat die
+  Bewurzelung in der Auswertung keinen Zeitraum mehr (F-019).
+- Geändert — Der **„Grow UV-C – Verbindungs-Wächter“** steht nicht mehr unter
+  „Meldungen“: er lädt nur die Eheim-Integration neu und schickt nichts.
+- Entfernt — Der alte Wochenwert-Editor im Wochenplan (seit 121 ungenutzt).
+- Technik — Die strengen E2E-Tests sind wieder grün (F-018): der Fall
+  „Profil bearbeiten“ entfällt, die Sticky-Prüfung nutzt „Ziele & Meldungen“.
+
 ## 2.0.0-forkai.123
 
 **Fork AI.** Nachbesserung zur Auswertung aus 122.
