@@ -5,6 +5,28 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.125
+
+**Fork AI.** Der Wochenplan ist in „Ziele & Meldungen“ aufgegangen.
+
+- Entfernt — Der Menüpunkt **„Wochenplan“**. Alte Links und Lesezeichen auf
+  `/wochenplan` landen im Reiter „Plan“.
+- Neu — Über den Reitern von „Ziele & Meldungen“ steht die **laufende Woche**
+  mit Sorte und den Ankern (Vegi-Start, Flip, Erntefenster). Ein Tipp darauf
+  öffnet das **Wochen-Blatt** mit allen Wochen; eine Woche darin öffnet den
+  Reiter „Plan“ genau dort.
+- Geändert — **„von dir gesetzt — freigeben“** steht jetzt in der Übergabe an
+  Home Assistant im Reiter „Werte“, wo die Übergabe ohnehin schon stand.
+- Geändert — Wo in der Oberfläche „Wochenplan“ stand, steht jetzt „Plan“ —
+  auch der Verweis auf der CO₂-Steuerung, der sonst ins Leere gezeigt hätte.
+
+### Technik
+
+- Neu: `features/zielwerte/WochenZeile.tsx`, `wochen-zeile.ts(+.test.ts)`;
+  `TabbedCollectionPage` bekommt einen optionalen Kopf über den Reitern;
+  `PlanReiter` übernimmt `?woche=` und nimmt den Wunsch danach aus der Adresse.
+- Entfernt: `pages/WochenplanPage.tsx` und die damit ungenutzten Stile.
+
 ## 2.0.0-forkai.124
 
 **Fork AI.** Abschluss des Umbaus „Ziele & Meldungen“.

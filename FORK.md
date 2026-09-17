@@ -33,7 +33,8 @@ Wächter, die Home Assistant selbst schickt. Das Programm eines laufenden Grows 
 werden auf Wunsch übernommen. Sollwertprofile tauchen in der Oberfläche nicht
 mehr auf. Beim Abschluss wird der Plan mit dem Grow eingefroren; die Grow-Seite wertet je
 Woche Plan und Messung aus, und der Endstand lässt sich als Programm für den
-nächsten Grow speichern. (Umbau „Ziele & Meldungen“, forkai.116–124, abgeschlossen.)
+nächsten Grow speichern. Die laufende Woche steht als Zeile über den Reitern; ein Tipp darauf öffnet
+alle Wochen. (Umbau „Ziele & Meldungen“, forkai.116–125, abgeschlossen.)
 
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden
@@ -42,16 +43,17 @@ dauerhaft zu melden.
 
 **Klimawerte je Woche statt nur je Phase.** Die Feed-Chart-Spalte trägt zusätzlich
 Wassertemperatur Tag/Nacht, VPD, CO₂, PPFD, RH-Obergrenze und Lufttemperatur. Eine
-Wochenplan-Seite zeigt die laufende Woche mit allen Plan-Werten, den Ankern
-(Vegi-Start, Flip, Erntefenster) und dem Hinweis, wenn eine gestreckte Phase die
-letzte Spalte hält. Die Wochenwerte lassen sich dort auch bearbeiten — gespeichert
-wird nur die Abweichung vom Plan, die Programmdatei bleibt unberührt.
+Zeile über den Reitern von „Ziele & Meldungen“ zeigt die laufende Woche mit den
+Ankern (Vegi-Start, Flip, Erntefenster) und dem Hinweis, wenn eine gestreckte
+Phase die letzte Spalte hält; das Wochen-Blatt dahinter führt zu jeder Woche im
+Reiter „Plan“. Bearbeitet wird im Plan des Grows — gespeichert wird nur die
+Abweichung, die Programmdatei bleibt unberührt.
 
 **Übergabe an Home Assistant.** Die Wochenwerte gehen beim Wochenwechsel und
 täglich um 06:00 in HA-Helfer, nach denen dort die Automationen regeln. Von Hand
 verstellte Helfer erkennt der Abgleich, überschreibt sie nicht und bietet sie zum
-Freigeben an. Jeder Helfer hat dabei genau eine schreibende Stelle im Fork: was
-der Wochenplan führt, lassen CO₂- und Kühler-Seite aus; das CO₂-Ziel schreibt
+Freigeben an (im Reiter „Werte“). Jeder Helfer hat dabei genau eine schreibende
+Stelle im Fork: was der Plan führt, lassen CO₂- und Kühler-Seite aus; das CO₂-Ziel schreibt
 allein die CO₂-Steuerung als Staffel aus dem Wochenwert. Leitgedanke: Grow OS
 plant, Home Assistant regelt.
 
@@ -120,7 +122,7 @@ Zielband, Kachel-Modell und Live-Payload, Wissens-Schema und Mischplan (Klimawer
 je Woche), Trendwächter und Grow-Workflow (Sollwerte über das Zielband),
 Navigation und App-Shell, Wissens-Loader (ein Haken nach dem Laden für
 eigene Wochenwerte), Zelt-Einstellungen (Blatt-Offset an den
-Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback, Benachrichtigungen, Hydro-Editor, Wochenplan, Wissens-Vertrag, Grow-Seite, Ernte, Workflow-Controller, Grow-Controller
+Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback, Benachrichtigungen, Hydro-Editor, Wochenplan, Sammelseite mit Reitern, Wissens-Vertrag, Grow-Seite, Ernte, Workflow-Controller, Grow-Controller
 (Plan beim Anlegen) sowie `Program.cs` (Plan-Übernahme beim Start). Welche
 Datei zu welcher Änderung gehört, steht in
 [docs/fork-historie.md](docs/fork-historie.md).
