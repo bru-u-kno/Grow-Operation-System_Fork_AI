@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Sheet } from '../../components/V1Sheet'
 import { V1Alert, V1Badge, V1Button, V1Field, V1Section, V1Skeleton, V1Tabs } from '../../components/v1'
@@ -12,6 +13,7 @@ import {
   aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, zeilenAus,
   type BuchEintrag, type DosisEntwurf, type DosisZeile, type PlanStand,
 } from './plan-reiter'
+import { wochenIndex } from './wochen-zeile'
 
 const WISCH_SCHWELLE = 50
 
@@ -45,6 +47,8 @@ export function PlanReiter() {
   const [speichert, setSpeichert] = useState(false)
   const [meldung, setMeldung] = useState<{ text: string; ton: 'ok' | 'critical' | 'neutral' } | null>(null)
   const wischStart = useRef<{ x: number; y: number } | null>(null)
+  const [params, setParams] = useSearchParams()
+  const gewuenschteWoche = params.get('woche')
 
   const neuLaden = useCallback(async (ersterAufruf: boolean) => {
     const ziel = await apiFetch<{ growId: number | null; growName: string | null; eigenerPlan?: boolean }>('/api/zielwerte')
@@ -80,6 +84,25 @@ export function PlanReiter() {
     }
     void laden()
   }, [neuLaden])
+
+  // Fork AI (forkai.125): Das Wochen-Blatt über den Reitern öffnet den Plan an
+  // einer bestimmten Woche (?woche=…). Übernommen wird der Wunsch beim Rendern
+  // (kein setState im Effekt); der Effekt nimmt ihn danach nur aus der
+  // Adresszeile. Ohne das hätte ein zweiter Tipp auf dieselbe Woche keine
+  // Wirkung mehr, nachdem man inzwischen weitergeblättert hat.
+  const [uebernommen, setUebernommen] = useState<string | null>(null)
+  if (!gewuenschteWoche && uebernommen !== null) setUebernommen(null)
+  if (daten && gewuenschteWoche && gewuenschteWoche !== uebernommen) {
+    setUebernommen(gewuenschteWoche)
+    const ziel = wochenIndex(daten.werte.spalten, gewuenschteWoche)
+    if (ziel !== null) setIndex(ziel)
+  }
+  useEffect(() => {
+    if (!daten || !gewuenschteWoche) return
+    const next = new URLSearchParams(params)
+    next.delete('woche')
+    setParams(next, { replace: true })
+  }, [daten, gewuenschteWoche, params, setParams])
 
   const offeneWerte = useMemo(() => (daten ? aenderungen(daten.werte, entwurf) : []), [daten, entwurf])
   const spalten = daten?.arbeit.chart.columns ?? []

@@ -174,7 +174,7 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
         )}
         {entwurf.quelle === 'Fest' && (wert.regel?.nachtMin != null || wert.regel?.nachtMax != null) && (
           <p className="wb-hinweis">
-            Nachts gilt {zahlText(wert.regel?.nachtMin)}–{zahlText(wert.regel?.nachtMax)} — das zieht der Wochenplan nach.
+            Nachts gilt {zahlText(wert.regel?.nachtMin)}–{zahlText(wert.regel?.nachtMax)} — das zieht der Plan nach.
           </p>
         )}
         {(wert.alarmVon != null || wert.alarmBis != null) && (

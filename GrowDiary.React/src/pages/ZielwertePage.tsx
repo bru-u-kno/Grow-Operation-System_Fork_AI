@@ -7,6 +7,7 @@ import { V1Alert, V1Section, V1Skeleton } from '../components/v1'
 import { WertBlatt } from '../features/zielwerte/WertBlatt'
 import type { AlarmRegel, PlanFeld } from '../features/zielwerte/wert-blatt'
 import '../features/zielwerte/zielwerte.css'
+import '../features/wochenplan/wochenplan.css'
 
 /**
  * Fork AI: die Seite „Zielwerte" — was gilt, woher es kommt, wo man es ändert.
@@ -145,6 +146,16 @@ function ZielwertePage() {
     void laden()
   }, [runde])
 
+  async function freigeben(rolle: string) {
+    try {
+      await apiFetch(`/api/wochenplan/freigeben/${encodeURIComponent(rolle)}`, { method: 'POST' })
+      setMeldung('Freigegeben — der Plan führt den Wert wieder.')
+    } catch {
+      setMeldung('Der Helfer konnte nicht freigegeben werden.')
+    }
+    setRunde((r) => r + 1)
+  }
+
   if (loading) return <V1Skeleton rows={6} label="Lade Zielwerte" />
 
   const kopf = daten?.growName
@@ -273,9 +284,18 @@ function ZielwertePage() {
                     <span>{u.name}</span>
                     <span className="zw-zeile-r">
                       {u.wert}
-                      <span className={classNames('zw-zustand', istHandgesetzt(u.zustand) && 'ist-hand')}>
-                        {u.zustand}
-                      </span>
+                      {istHandgesetzt(u.zustand) ? (
+                        /* Fork AI (forkai.125): kam aus dem früheren Wochenplan.
+                           Von Hand verstellt lässt der Plan den Helfer in Ruhe,
+                           bis er hier freigegeben wird. */
+                        <span className="zw-zustand">
+                          <button type="button" className="wp-frei" data-audit="uebergabe-freigeben" onClick={() => void freigeben(u.rolle)}>
+                            von dir gesetzt — freigeben
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="zw-zustand">{u.zustand}</span>
+                      )}
                     </span>
                   </div>
                 ))}

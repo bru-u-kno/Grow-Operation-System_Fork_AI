@@ -498,7 +498,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
         var vonHand = stand.VonDir.Any(k => k.StartsWith($"zelt:{zeltId}/{key}/", StringComparison.OrdinalIgnoreCase));
 
         if (vonHand) return "von dir gesetzt — der Plan lässt sie in Ruhe";
-        return vonPlan ? "vom Wochenplan nachgezogen" : "von dir eingetragen";
+        return vonPlan ? "vom Plan nachgezogen" : "von dir eingetragen";
     }
 
     private static string? Alarmtext(IReadOnlyList<TentAlertRule> regeln, string key)

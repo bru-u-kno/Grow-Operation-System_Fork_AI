@@ -7,9 +7,8 @@
 
 | Was | Wo |
 |---|---|
-| Sollwert-Profile | Betrieb → Zielwerte, Reiter „Profile" (`/zielwerte?tab=profile`; `/sollwerte` leitet dorthin um) |
-| Wochenplan (Fork AI) | Betrieb → Wochenplan, `/wochenplan` |
-| Zielwerte (Fork AI) | Betrieb → Zielwerte, `/zielwerte` — Reiter „Jetzt gültig", „Profile", „Grenzwerte" |
+| Ziele & Meldungen (Fork AI) | Betrieb → Ziele & Meldungen, `/zielwerte` — Reiter „Werte", „Plan", „Meldungen" |
+| Woche des Grows, alle Wochen (Fork AI) | Zeile über den Reitern von `/zielwerte`, ein Tipp öffnet das Wochen-Blatt; `/wochenplan` und `/sollwerte` leiten auf den Reiter „Plan" um |
 | SOPs & Bibliothek | Wissen → SOPs & Bibliothek, `/wissen` |
 | Einkaufsliste | Wissen → Einkaufsliste, `/einkaufsliste` |
 | Profil als Vorgabe wählen | Hydro-System bearbeiten, `/hydro/new` bzw. `/hydro/:id/edit` |
@@ -80,8 +79,11 @@ Blütewochen ab dem Flip, Vegi-Wochen ab dem Vegi-Start. Läuft eine Phase über
 letzte Spalte hinaus — der Normalfall, wenn die Vegi gestreckt wird —, bleibt der
 Plan auf dieser Spalte stehen und sagt es (`gehalten seit Woche N`).
 
-Die Seite `/wochenplan` zeigt das am Stück: die laufende Woche mit allen Werten,
-die Anker darüber und den ganzen Verlauf darunter.
+Seit forkai.125 gibt es dafür keine eigene Seite mehr: Über den Reitern von
+`/zielwerte` steht die laufende Woche mit den Ankern; ein Tipp darauf öffnet das
+Wochen-Blatt mit allen Wochen, und eine Woche darin öffnet den Reiter „Plan"
+genau dort (`?tab=plan&woche=…`). Die Übergabe an Home Assistant samt
+„freigeben" steht im Reiter „Werte".
 
 ## Welche Regel greift gerade (Fork AI)
 
@@ -89,7 +91,7 @@ Vier Quellen hintereinander — Anbaustil, Sollwertprofil, Feed-Chart-Woche,
 Zelt-Grenzwert — beantworten die Frage „was gilt" erst zusammen, und auf der
 Kachel steht davon nur das Ergebnis. `/zielwerte` klappt die ganze Kette je
 Messgröße auf: welche Stufe gilt, welche überstimmt wurde, und bei einer festen
-Grenze WER sie gesetzt hat — der Wochenplan oder ein Mensch. Darunter dieselben
+Grenze WER sie gesetzt hat — der Plan oder ein Mensch. Darunter dieselben
 Werte nach Änderungsort gruppiert, jeweils mit Sprung dorthin.
 
 Zwei Stellen kappen die Kette still und stehen deshalb oben als Hinweis: eine
@@ -137,8 +139,8 @@ Alarme — sonst stünden auf zwei Bildschirmen zwei Antworten.
 | `GET /api/knowledge/…` (SOPs, Symptome, Setpoints, …) | `GrowDiary.Web/Api/Controllers/KnowledgeApiController.cs` |
 | Einkaufsliste zusammenführen, gruppieren, sortieren | `GrowDiary.Web/Services/EinkaufslisteService.cs` |
 | Zelt-Grenzwert über das Profil legen | `GrowDiary.Web/Services/UserTargets.cs` |
-| Reiter „Profile" (ohne eigenen Seitenkopf) | `GrowDiary.React/src/pages/SetpointProfilesPage.tsx`, eingehängt in `pages/collections.tsx` |
-| `GET /api/wochenplan`, Seite `/wochenplan` | `GrowDiary.Web/Api/Controllers/WochenplanApiController.cs`, `GrowDiary.React/src/pages/WochenplanPage.tsx` |
+| Früherer Reiter „Profile" (seit forkai.121 nicht mehr in der Oberfläche) | `GrowDiary.React/src/pages/SetpointProfilesPage.tsx`, eingehängt in `pages/collections.tsx` |
+| `GET /api/wochenplan`, Wochenzeile und Wochen-Blatt | `GrowDiary.Web/Api/Controllers/WochenplanApiController.cs`, `GrowDiary.React/src/features/zielwerte/WochenZeile.tsx` |
 | `GET /api/zielwerte`, Seite `/zielwerte` (Herkunftskette) | `GrowDiary.Web/Api/Controllers/ZielwerteApiController.cs`, `GrowDiary.React/src/pages/ZielwertePage.tsx` |
 | Klima je Woche über das Phasenprofil legen | `GrowDiary.Web/Services/MischplanService.cs` (`MitFeedchart`) |
 | Profil-Auswahl an Grow und Hydro-System | `GrowDiary.React/src/features/setpoints/ProfileSelect.tsx` |

@@ -20,12 +20,14 @@ export type CollectionTab = {
  * aus einem Home-Assistant-Dashboard wieder dort landet, wo er hinzeigt. Die
  * alten Pfade leiten auf den jeweiligen Tab um, statt ins Leere zu laufen.
  */
-export function TabbedCollectionPage({ tabs, eyebrow, title, subtitle, paramName = 'tab' }: {
+export function TabbedCollectionPage({ tabs, eyebrow, title, subtitle, paramName = 'tab', kopf }: {
   tabs: CollectionTab[]
   eyebrow?: string
   title: string
   subtitle?: string
   paramName?: string
+  /** Fork AI (forkai.125): Zeile zwischen Seitenkopf und Reitern, gilt für alle Reiter. */
+  kopf?: React.ReactNode
 }) {
   const [params, setParams] = useSearchParams()
   const requested = params.get(paramName)
@@ -36,6 +38,7 @@ export function TabbedCollectionPage({ tabs, eyebrow, title, subtitle, paramName
 
   return (
     <V1Page eyebrow={eyebrow} title={title} subtitle={subtitle}>
+      {kopf}
       <V1Tabs
         items={tabs.map((tab) => ({ value: tab.key, label: tab.label, audit: `collection-tab-${tab.key}` }))}
         active={active.key}

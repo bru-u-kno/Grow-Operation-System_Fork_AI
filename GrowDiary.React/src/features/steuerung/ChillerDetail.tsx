@@ -187,8 +187,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
               {live.zielQuelle === 'cropsteering'
                 ? 'Die Absenkung führt das Ziel über den Tag.'
                 : live.zielQuelle === 'hand'
-                  ? 'Von dir gesetzt — der Wochenplan überschreibt es nicht.'
-                  : 'Aus dem Wochenplan, nach Phase und Woche.'}
+                  ? 'Von dir gesetzt — der Plan überschreibt es nicht.'
+                  : 'Aus dem Plan des Grows, nach Phase und Woche.'}
             </small>
           </span>
           <V1LinkButton to="/steuerung/cropsteering" variant="ghost">Crop Steering ›</V1LinkButton>

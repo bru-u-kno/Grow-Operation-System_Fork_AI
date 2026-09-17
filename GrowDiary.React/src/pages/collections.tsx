@@ -3,6 +3,7 @@ import ZielwertePage from './ZielwertePage'
 import { TabbedCollectionPage } from './TabbedCollectionPage'
 import { PlanReiter } from '../features/zielwerte/PlanReiter'
 import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
+import { WochenZeile } from '../features/zielwerte/WochenZeile'
 
 /**
  * Regeln & Automatik: EINE Seite mit den vier Bereichen als Tabs, in der
@@ -47,6 +48,7 @@ export function ZielwerteCollectionPage() {
       eyebrow="Betrieb"
       title="Ziele & Meldungen"
       subtitle="Was gerade gilt, der Plan deines Grows und wer dir Bescheid gibt — an einer Stelle."
+      kopf={<WochenZeile />}
       tabs={[
         { key: 'jetzt', label: 'Werte', render: () => <ZielwertePage /> },
         { key: 'plan', label: 'Plan', render: () => <PlanReiter /> },

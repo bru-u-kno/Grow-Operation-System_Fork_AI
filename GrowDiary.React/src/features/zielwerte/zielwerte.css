@@ -198,3 +198,24 @@
   .pa-zeit b { flex: 0 0 76px; font: 600 var(--fs-etikett)/1.4 var(--font-mono); color: var(--info-text); }
   .pa-zeit span { color: var(--muted); }
 }
+
+/* Fork AI (forkai.125): Wochenzeile über den Reitern + Wochen-Blatt. Nur Tokens. */
+@layer features {
+  .zw-woche { margin: 0 0 var(--s-3); }
+  .zw-woche-kopf {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+    width: 100%; min-height: var(--h-md); padding: 0; border: 0; background: transparent;
+    color: var(--ink); text-align: left; cursor: pointer;
+  }
+  .zw-woche-titel { min-width: 0; font: 400 var(--fs-text)/1.4 var(--font-mono); }
+  .zw-woche-titel b { color: var(--accent-text); font-weight: 600; }
+  .zw-woche-alle {
+    flex: none; padding: var(--s-1) var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-pill);
+    font: 500 var(--fs-klein)/1.2 var(--font-mono); color: var(--muted);
+  }
+  .zw-woche .wp-anker { margin-top: var(--s-1); }
+  .zw-woche-zeile {
+    width: 100%; border-left: 0; border-right: 0; border-top: 0; background: transparent;
+    text-align: left; cursor: pointer;
+  }
+}

@@ -128,7 +128,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                 Status: absenkungAn ? "an" : "aus",
                 Kurz: absenkungAn
                     ? "Absenkung führt die Wassertemperatur über den Tag"
-                    : "Absenkung aus · das Ziel führt der Wochenplan",
+                    : "Absenkung aus · das Ziel führt der Plan",
                 Wert: F(chiller.ZielAktivC, " °C", "0.0"),
                 Unterzeile: zielgeraet is { } ziel ? $"schreibt {ziel}" : "kein Zielgerät zugeordnet",
                 HatDetail: true),
