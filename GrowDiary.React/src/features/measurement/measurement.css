@@ -217,3 +217,22 @@
       backdrop-filter: none;
     }
 }
+
+/* Fork AI (forkai.126): eine Zugabe-Zeile im Block „Zugaben“ der Messseite.
+   Läuft über die volle Breite des Rasters. Breit: Produkt | Menge | ✕.
+   Am Handy: Produkt über die ganze Zeile, darunter Menge und ✕. */
+.ms-zugabe-zeile {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 8rem) auto;
+  gap: var(--s-2);
+  align-items: end;
+}
+.ms-zugabe-zeile .v1-field { min-width: 0; }
+.ms-zugabe-zeile select,
+.ms-zugabe-zeile input { width: 100%; min-width: 0; }
+.ms-zugabe-weg { white-space: nowrap; }
+@media (max-width: 760px) {
+  .ms-zugabe-zeile { grid-template-columns: minmax(0, 1fr) auto; }
+  .ms-zugabe-zeile > .v1-field:first-child { grid-column: 1 / -1; }
+}

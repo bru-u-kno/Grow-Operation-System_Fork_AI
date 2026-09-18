@@ -80,7 +80,7 @@ der drei Läufe hält, nicht den Lauf verzerrt, in dem er gekauft wurde.
 **Bedienung am Telefon.** Eigene Titelzeile, Icon-Leiste mit anpassbarer
 Reihenfolge, ein Erfassen-Blatt für Messung, Addback, Wasserwechsel, Notiz und
 Kosten, dazu Auswahllisten als Blatt und Blätter, die sich nach unten wegziehen
-lassen. Gaben lassen sich direkt beim Messen mitbuchen statt als Freitext in der
+lassen. Zugaben lassen sich direkt beim Messen mitbuchen statt als Freitext in der
 Notiz zu landen.
 
 **Düngeprogramm SKX Canna Aqua.** R/DWC-Growplan mit 14 Wochenspalten (Root,

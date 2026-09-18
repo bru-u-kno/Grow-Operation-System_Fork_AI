@@ -5,6 +5,26 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.126
+
+**Fork AI.** Messseite: „Zugaben“ statt „Gaben“, und die Zeile passt aufs Handy.
+
+- Behoben — Am Handy saß eine Zugabe-Zeile in nur einer Spalte des Rasters:
+  das Produkt-Feld schrumpfte auf ein leeres Kästchen, „Artikel“ brach um und
+  „Entfernen“ lief Buchstabe für Buchstabe untereinander. Jetzt nimmt die Zeile
+  die volle Breite — am Handy das Produkt oben, darunter Menge und ✕.
+- Geändert — Der Abschnitt heißt **„Zugaben“**, der Knopf **„+ Zugabe“**, das
+  Feld **„Produkt“**. Die Einheit steht im Feldnamen („Menge (ml)“) statt unter
+  dem Feld, entfernt wird über **✕**.
+- Behoben — Die Kamera-Auswahl beim Snapshot zeigt den Namen aus Home Assistant
+  statt der Entitäts-Id („Rdwc overview standardauflosung“).
+
+### Technik
+
+- `pages/ManualMeasurementPage.tsx`: Zeile als `.ms-zugabe-zeile`; Kameranamen
+  aus `/api/home-assistant/entities`. Stile in `features/measurement/measurement.css`
+  (nur Tokens). Buchung und `data-audit`-Namen unverändert.
+
 ## 2.0.0-forkai.125
 
 **Fork AI.** Der Wochenplan ist in „Ziele & Meldungen“ aufgegangen.

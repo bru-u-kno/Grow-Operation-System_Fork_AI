@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiFetch, ApiRequestError, formatApiError } from '../api'
 import { resolveUrl } from '../base'
 import type { GrowStage, GrowSummary, HydroStyle, MeasurementDto, MeasurementUpsertPayload, MetricPayload, PhotoTag, TentDto, TentLivePayload, ValueOrigin } from '../types'
+import type { HomeAssistantEntity } from '../types/hardware'
 import FileInput from '../components/FileInput'
 import { V1Alert, V1Badge, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Switch } from '../components/v1'
 import { LiveCheckPanel } from '../features/measurement/LiveCheckPanel'
@@ -158,6 +159,9 @@ function ManualMeasurementPage() {
   const [prefilled, setPrefilled] = useState(false)
   const [livePulling, setLivePulling] = useState(false)
   const [cameras, setCameras] = useState<string[]>([])
+  // forkai.126: Anzeigenamen der Kameras aus HA. Ohne sie stand im Auswahlfeld
+  // die Entitäts-Id („Rdwc overview standardauflosung“).
+  const [kameraNamen, setKameraNamen] = useState<Record<string, string>>({})
   const [snapshotCam, setSnapshotCam] = useState('')
   const [snapshotting, setSnapshotting] = useState(false)
   const [growActionSaving, setGrowActionSaving] = useState<string | null>(null)
@@ -277,6 +281,17 @@ function ManualMeasurementPage() {
         setCameras(list)
         setSnapshotCam(list[0] ?? '')
         setLeafOffset(tent.leafTempOffsetC ?? 0)
+        if (list.length > 0) {
+          try {
+            const entities = await apiFetch<HomeAssistantEntity[]>('/api/home-assistant/entities', { signal: controller.signal })
+            if (controller.signal.aborted) return
+            const namen: Record<string, string> = {}
+            for (const entity of entities) {
+              if (list.includes(entity.entityId) && entity.friendlyName) namen[entity.entityId] = entity.friendlyName
+            }
+            setKameraNamen(namen)
+          } catch { /* HA offline — dann bleibt die Id als Name */ }
+        }
       } catch { /* ignore */ }
     })()
     return () => controller.abort()
@@ -391,7 +406,7 @@ function ManualMeasurementPage() {
       // Dosierpumpe schon einmal hatte.
       const unlesbar = gaben.find((g) => istUnlesbar(g.menge))
       if (unlesbar) {
-        setError('Eine Menge im Abschnitt Gaben ist nicht lesbar. Bitte korrigieren oder die Zeile entfernen.')
+        setError('Eine Menge im Abschnitt Zugaben ist nicht lesbar. Bitte korrigieren oder die Zeile entfernen.')
         setSaving(false)
         return
       }
@@ -411,9 +426,9 @@ function ManualMeasurementPage() {
               zeilen: zuBuchen,
             }),
           })
-          gabenHinweis = ` ${zuBuchen.length} ${zuBuchen.length === 1 ? 'Gabe' : 'Gaben'} gebucht.`
+          gabenHinweis = ` ${zuBuchen.length} ${zuBuchen.length === 1 ? 'Zugabe' : 'Zugaben'} gebucht.`
         } catch (caught) {
-          setError(formatApiError(caught, 'Die Messung ist gespeichert, die Gaben konnten nicht gebucht werden.'))
+          setError(formatApiError(caught, 'Die Messung ist gespeichert, die Zugaben konnten nicht gebucht werden.'))
           setSaving(false)
           return
         }
@@ -560,37 +575,41 @@ function ManualMeasurementPage() {
             </div>
 
             <div data-audit="measurement-section-photo">
-              <V1Section title="Gaben" action={
+              <V1Section title="Zugaben" action={
                 <V1Button
                   onClick={() => setGaben((v) => [...v, { schluessel: Date.now(), artikelId: null, menge: '' }])}
                   audit="messung-gabe-hinzufuegen"
                 >
-                  Gabe hinzufügen
+                  + Zugabe
                 </V1Button>
               }>
                 <div className="rc2-measurement-extra">
                   {artikel.length === 0 ? (
-                    <V1Empty title="Keine Artikel" text="Unter Kosten → Artikel anlegen, dann erscheinen sie hier." />
+                    <V1Empty title="Keine Produkte" text="Unter Kosten → Artikel anlegen, dann erscheinen sie hier." />
                   ) : gaben.length === 0 ? (
-                    <V1Empty title="Nichts dosiert" text="Was du bei dieser Messung gegeben hast — Nährstoffe, Purolyt, pH-Minus. Wird als Verbrauch gebucht und an diese Messung gehängt." />
+                    <V1Empty title="Nichts zugegeben" text="Was du bei dieser Messung zugegeben hast — Nährstoffe, Purolyt, pH-Minus. Wird als Verbrauch gebucht und an diese Messung gehängt." />
                   ) : (
-                    gaben.map((zeile, index) => {
+                    gaben.map((zeile) => {
                       const gewaehlt = artikel.find((a) => a.id === zeile.artikelId)
+                      // forkai.126: eigene Zeile über die volle Breite. Vorher saß die
+                      // Flex-Zeile in EINER Spalte des Zwei-Spalten-Rasters — am Handy
+                      // schrumpfte das leere Auswahlfeld auf nichts und „Entfernen“
+                      // brach Buchstabe für Buchstabe um.
                       return (
-                        <div key={zeile.schluessel} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-                          <V1Field label={index === 0 ? 'Artikel' : ''}>
+                        <div key={zeile.schluessel} className="ms-zugabe-zeile">
+                          <V1Field label="Produkt">
                             <select
                               value={zeile.artikelId ?? ''}
                               onChange={(e) => setGaben((v) => v.map((z) => z.schluessel === zeile.schluessel
                                 ? { ...z, artikelId: e.target.value === '' ? null : Number(e.target.value) }
                                 : z))}
-                              aria-label="Artikel wählen"
+                              aria-label="Produkt wählen"
                             >
-                              <option value="">– wählen –</option>
+                              <option value="">Produkt wählen…</option>
                               {artikel.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
                           </V1Field>
-                          <V1Field label={index === 0 ? 'Menge' : ''} hint={gewaehlt ? gewaehlt.einheit : undefined}>
+                          <V1Field label={gewaehlt?.einheit ? `Menge (${gewaehlt.einheit})` : 'Menge'}>
                             <input
                               type="text"
                               inputMode="decimal"
@@ -602,12 +621,16 @@ function ManualMeasurementPage() {
                               aria-label="Menge"
                             />
                           </V1Field>
-                          <V1Button
+                          <button
+                            type="button"
+                            className="v1-button is-ghost ms-zugabe-weg"
+                            data-audit="messung-gabe-entfernen"
                             onClick={() => setGaben((v) => v.filter((z) => z.schluessel !== zeile.schluessel))}
-                            audit="messung-gabe-entfernen"
+                            aria-label="Zugabe entfernen"
+                            title="Zugabe entfernen"
                           >
-                            Entfernen
-                          </V1Button>
+                            ✕
+                          </button>
                         </div>
                       )
                     })
@@ -621,10 +644,10 @@ function ManualMeasurementPage() {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                       {cameras.length > 1 ? (
                         <select value={snapshotCam} onChange={(event) => setSnapshotCam(event.target.value)} aria-label="Kamera wählen" style={{ minWidth: 180 }}>
-                          {cameras.map((camera, index) => <option key={camera} value={camera}>{cameraLabel(camera, index)}</option>)}
+                          {cameras.map((camera, index) => <option key={camera} value={camera}>{kameraNamen[camera] ?? cameraLabel(camera, index)}</option>)}
                         </select>
                       ) : (
-                        <span className="rc2-measurement-note">Kamera: {cameraLabel(cameras[0], 0)}</span>
+                        <span className="rc2-measurement-note">Kamera: {kameraNamen[cameras[0]] ?? cameraLabel(cameras[0], 0)}</span>
                       )}
                       <V1Button variant="secondary" onClick={() => void captureSnapshot()} disabled={snapshotting}>
                         {snapshotting ? 'Nimmt auf…' : 'Snapshot aufnehmen'}
