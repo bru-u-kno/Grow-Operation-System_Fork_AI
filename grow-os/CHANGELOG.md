@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.127
+
+**Fork AI.** Messseite: Zugaben-Block einspaltig.
+
+- Behoben — Ohne Zugabe stand der Hinweis „Nichts zugegeben“ am Handy in einer
+  halben Spalte und wurde zum schmalen, langen Turm. Der Block ist jetzt immer
+  einspaltig, der Hinweistext kürzer.
+
 ## 2.0.0-forkai.126
 
 **Fork AI.** Messseite: „Zugaben“ statt „Gaben“, und die Zeile passt aufs Handy.

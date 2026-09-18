@@ -583,11 +583,11 @@ function ManualMeasurementPage() {
                   + Zugabe
                 </V1Button>
               }>
-                <div className="rc2-measurement-extra">
+                <div className="rc2-measurement-extra ms-zugaben">
                   {artikel.length === 0 ? (
                     <V1Empty title="Keine Produkte" text="Unter Kosten → Artikel anlegen, dann erscheinen sie hier." />
                   ) : gaben.length === 0 ? (
-                    <V1Empty title="Nichts zugegeben" text="Was du bei dieser Messung zugegeben hast — Nährstoffe, Purolyt, pH-Minus. Wird als Verbrauch gebucht und an diese Messung gehängt." />
+                    <V1Empty title="Nichts zugegeben" text="Nährstoffe, Purolyt, pH-Minus — wird als Verbrauch gebucht und an diese Messung gehängt." />
                   ) : (
                     gaben.map((zeile) => {
                       const gewaehlt = artikel.find((a) => a.id === zeile.artikelId)

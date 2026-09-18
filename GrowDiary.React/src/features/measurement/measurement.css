@@ -236,3 +236,6 @@
   .ms-zugabe-zeile { grid-template-columns: minmax(0, 1fr) auto; }
   .ms-zugabe-zeile > .v1-field:first-child { grid-column: 1 / -1; }
 }
+/* forkai.127: der Zugaben-Block ist immer einspaltig — sonst stand auch der
+   Leer-Hinweis in einer halben Spalte und wurde zum schmalen Turm. */
+.rc2-measurement-extra.ms-zugaben { grid-template-columns: minmax(0, 1fr); }
