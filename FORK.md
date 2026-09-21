@@ -61,8 +61,8 @@ plant, Home Assistant regelt.
 Dunkelphase, das überall gleich gilt; die Kachel zeigt beide nebeneinander, das
 geltende hell. Ohne Nachtwerte verhält sich alles wie bisher.
 
-**Steuerung.** Ein Leitstand mit Detailseiten für CO₂-Begasung, Licht, Zuluft und
-Water Chiller: Sollwerte und Betriebsarten liegen im Fork, geregelt wird weiter in
+**Steuerung.** Ein Leitstand mit Detailseiten für CO₂-Begasung, Licht, Zuluft,
+Entfeuchter und Water Chiller: Sollwerte und Betriebsarten liegen im Fork, geregelt wird weiter in
 Home Assistant, und die passenden Automationen liegen als Vorlagen bei. Nur die
 Licht-Seite schreibt direkt am AC-Infinity-Port — nur Abweichendes, mit Abstand,
 Prüfung und Wiederholung, weil die Cloud parallele Schreibvorgänge verwirft.

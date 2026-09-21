@@ -5,6 +5,39 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.129
+
+**Fork AI.** Neue Detailseite **Steuerung › Entfeuchter**.
+
+- Neu — Oben ein **Schwellen-Band**: Feuchte jetzt, AUS, EIN und die Plan-Feuchte auf
+  einer Skala. Es zeigt nur den Ausschnitt, auf den es ankommt, damit dicht
+  beieinanderliegende Werte getrennt bleiben.
+- Neu — Reiter **Regel**: VPD-Band, Luftfeuchte max. und Blatt-Offset kommen aus dem Plan
+  bzw. vom Zelt und stehen hier nur zum Lesen („Ziele & Meldungen ›"). Einstellbar sind
+  „Nach VPD regeln" und **„Wie ruhig soll er schalten?"** (knapp 2 % · normal 4 % · ruhig
+  6 % · eigener Wert) mit der Folge in Klartext. Die festen Tag/Nacht-Schwellen bleiben
+  als eingeklappte Rückfallebene.
+- Neu — Reiter **Schutz**: **Temperatur max.** je Tag und Nacht wahlweise **„Plan +"
+  Abstand** (wandert mit der Planwoche, z. B. 24 + 5 = 29 °C) oder **„Fest"**; Hinweis,
+  wenn der Wert über der CO₂-Grenze liegt. Dazu Mindestlaufzeit und Tagbetrieb.
+- Neu — Reiter **Betrieb**: Automatik, **Einschaltverzögerung** und **„Außenluft
+  zuerst"** als einstellbare Wartezeiten (vorher fest 10/25 min in der Automation) —
+  mit Anzeige, welche gerade gilt.
+- Neu — Der Plan übergibt das **VPD-Band der Woche** und den **Blatt-Offset** des Zelts an
+  den Entfeuchter in Home Assistant. Ab Blüte W7 zieht das Band also von selbst auf
+  1,4–1,6 nach. Handverstellungen werden wie gewohnt als „von dir gesetzt" erkannt.
+
+### Technik
+- Modul `entfeuchter`: `EntfeuchterEinstellungen`, `EntfeuchterSteuerungService`,
+  `GET/PUT /api/steuerung/entfeuchter`, 7 Rollen, 13 Bauteile. Temperatur max. „Plan +"
+  zieht der Wochenplan-Worker nach (Wochenwechsel, täglich 06:00), ohne Plan gilt der
+  feste Wert.
+- Wochenplan-Sync: neue Rollen `vpd-unten`, `vpd-oben`, `blatt-offset`;
+  `WochenplanSyncService.PlanLuft()`.
+- Solange nichts gespeichert ist, zeigt die Seite die Werte aus Home Assistant.
+- Noch ohne Vorlagen, mit denen ein anderes System die Entfeuchter-Regelung neu anlegen
+  kann (Rechenwerte, Automation) — folgt.
+
 ## 2.0.0-forkai.128
 
 **Fork AI.** Zuluft: Pause, wenn das Zelt zu kalt wird.
