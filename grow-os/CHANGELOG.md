@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.130
+
+**Fork AI.** Tag- und Nachtgrenzen selbst einstellen, „Nachts gelten die Tageswerte".
+
+- Neu — **Ziele & Meldungen › Luft (und Luftfeuchte):** Alarm mit eigenen Zeilen **Tag** und
+  **Nacht** („melden unter / über"); die gerade gültige ist markiert. Je Zeile „✓ folgt dem
+  Plan" oder „● eigener Wert" mit **„Zurück zum Plan"**, dazu kurz „Planwert 24 °C ± 3 K" bzw.
+  „Plan wäre 17–23". Eigene Werte bleiben jederzeit möglich.
+- Neu — Feld **„Erlaubte Abweichung"**: so weit darf die Luft vom Planwert abweichen, bevor
+  gemeldet wird (vorher fest ± 3 K im Code).
+- Neu — Reiter **Plan:** **„Luft Nacht"** als eigener Planwert je Woche (einmalig mit Tag − 4 K
+  vorbefüllt, danach frei) und optional **„RH max Nacht"** (leer = wie tags). Schalter
+  **„Nachts gelten die Tageswerte"** als Standard für alle Wochen, je Woche abweichend
+  einstellbar; abweichende Wochen haben im Punktband einen blauen Ring.
+- Neu — Rückfrage vor dem Speichern, wenn ein Band kaum Abweichung zulässt (z. B. 20–21 °C).
+- Behoben — **„Freigeben" bzw. „Zurück zum Plan" wirkt sofort**, nicht erst beim Plan-Lauf um
+  06:00.
+- Geändert — Im Werte-Blatt heißt die Woche „Blütewoche 5" statt „Flores · Woche 5".
+
+### Technik
+- `FeedChartColumn.RhMaxNight`, Planfelder `airTempNightC`/`rhMaxNight` (`Feld.Optional`),
+  `GrowPlanInhalt.NachtWieTag`/`NachtWieTagJeWoche`/`NachtWerte()`, `POST /api/grows/{id}/plan/nacht`.
+- Wochenplan-Sync: Tag/Nacht aus dem Grow-Plan ± Toleranz der festen Zelt-Regel; neue Rolle
+  `feuchte-nacht-oben` (ohne Nachtfeuchte = Tageswert, nie lockerer).
+- Feste Zelt-Regeln speichern `toleranz` jetzt mit (Erlaubte Abweichung).
+- Bestehende Grows ändern sich nicht: Standard „nachts wie tags" ist aus, Nacht-Luft wird mit
+  Tag − 4 K vorbefüllt, Abweichung 3 K.
+
 ## 2.0.0-forkai.129
 
 **Fork AI.** Neue Detailseite **Steuerung › Entfeuchter**.
