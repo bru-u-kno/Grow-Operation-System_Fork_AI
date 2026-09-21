@@ -259,3 +259,21 @@
   }
   .tn-klein { margin: var(--s-1) 0 0; font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* Fork AI (forkai.133): Kette Plan · Grenzwerte · Handy und Sprünge an Ort und Stelle. Nur Token. */
+@layer components {
+  .pk-kette { display: flex; align-items: center; gap: var(--s-1); margin: 0 0 var(--s-3); }
+  .pk-glied-wrap { display: contents; }
+  .pk-glied {
+    flex: 1 1 0; min-width: 0; padding: var(--s-2) var(--s-1); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border: 1px solid var(--hair-2); border-radius: 999px; font-size: var(--fs-etikett); color: var(--muted); text-decoration: none;
+  }
+  .pk-glied.ist-aktiv { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .pk-pfeil { flex: 0 0 auto; color: var(--faint); font-size: var(--fs-etikett); }
+  .pk-kontext {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin: var(--s-3) 0;
+    padding: var(--s-2) var(--s-3); border: 1px dashed var(--hair-2); border-radius: var(--r-sm); font-size: var(--fs-klein); color: var(--muted);
+  }
+  .pk-kontext.ist-warn { border-color: var(--warn); color: var(--warn-text); }
+  .pk-link { flex: 0 0 auto; color: var(--accent-text); font-weight: 600; text-decoration: none; white-space: nowrap; }
+}

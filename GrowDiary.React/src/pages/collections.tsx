@@ -6,6 +6,7 @@ import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
 import { WochenZeile } from '../features/zielwerte/WochenZeile'
 import { AppEinrichten } from './MobilePage'
 import { V1Page } from '../components/v1'
+import { KontextSprung, PlanKette, PushStand } from '../features/zielwerte/PlanKette'
 
 /**
  * Regeln & Automatik: EINE Seite mit den vier Bereichen als Tabs, in der
@@ -45,6 +46,7 @@ export function RulesCollectionPage() {
 export function PlanSeite() {
   return (
     <V1Page eyebrow="Pflanzen" title="Plan" subtitle="Die Ziele deines Grows, Woche für Woche.">
+      <PlanKette aktiv="plan" />
       <WochenZeile />
       <PlanReiter />
     </V1Page>
@@ -54,8 +56,11 @@ export function PlanSeite() {
 export function GrenzwerteSeite() {
   return (
     <V1Page eyebrow="Betrieb" title="Grenzwerte" subtitle="Ab wann ein Wert kritisch ist — je Messgröße, tags und nachts.">
+      <PlanKette aktiv="grenzwerte" />
+      <PushStand />
       <WochenZeile />
       <ZielwertePage />
+      <KontextSprung text="Ziele dieser Woche ändern" to="/plan" label="Plan" audit="grenzwerte-zum-plan" />
     </V1Page>
   )
 }
@@ -66,6 +71,7 @@ export function HandySeite() {
       eyebrow="Einrichtung"
       title="Handy"
       subtitle="Was aufs Handy kommt — und wie Grow OS aufs Handy kommt."
+      kopf={<PlanKette aktiv="handy" />}
       tabs={[
         { key: 'push', label: 'Push', render: () => <MeldungenReiter /> },
         { key: 'app', label: 'App einrichten', render: () => <AppEinrichten /> },

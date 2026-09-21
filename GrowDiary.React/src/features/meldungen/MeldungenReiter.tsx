@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../../api'
 import { V1Badge, V1Card, V1Section } from '../../components/v1'
 import NotificationsPage from '../../pages/NotificationsPage'
@@ -39,11 +40,15 @@ export function MeldungenReiter() {
       {ziele && (
         <V1Section title="Grenzwerte gerade">
           <V1Card tone={melden.length > 0 ? 'warn' : 'neutral'}>
-            <p style={{ margin: 0 }}>
-              <strong>{scharf} Werte scharf</strong>
-              {melden.length > 0
-                ? ` · melden gerade: ${melden.map((w) => w.name).join(', ')}`
-                : ' · keiner liegt gerade außerhalb'}
+            <p style={{ margin: 0, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+              <span>
+                <strong>{scharf} Werte überwacht</strong>
+                {melden.length > 0
+                  ? ` · gerade außerhalb: ${melden.map((w) => w.name).join(', ')}`
+                  : ' · keiner liegt gerade außerhalb'}
+              </span>
+              {/* Fork AI (forkai.133): Sprung zurück — ab wann gemeldet wird, steht dort. */}
+              <Link to="/grenzwerte" className="pk-link" data-audit="push-zu-grenzwerten">Grenzwerte ›</Link>
             </p>
           </V1Card>
         </V1Section>

@@ -14,6 +14,7 @@ import {
   type BuchEintrag, type DosisEntwurf, type DosisZeile, type PlanStand,
 } from './plan-reiter'
 import { wochenIndex } from './wochen-zeile'
+import { KontextSprung } from './PlanKette'
 
 const WISCH_SCHWELLE = 50
 
@@ -333,6 +334,8 @@ export function PlanReiter() {
           })}
         </div>
       </div>
+
+      <KontextSprung text="Ab wann wird diese Woche gemeldet?" to="/grenzwerte" label="Grenzwerte" audit="plan-zu-grenzwerten" />
 
       <div className="wp-punkte" role="tablist" aria-label="Wochen">
         {daten.werte.spalten.map((s, i) => {
