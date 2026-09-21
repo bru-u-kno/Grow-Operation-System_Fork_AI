@@ -26,6 +26,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly LichtSteuerungService _licht;
     private readonly ZuluftSteuerungService _zuluft;
     private readonly ChillerSteuerungService _chiller;
+    private readonly EntfeuchterSteuerungService _entfeuchter;
     private readonly GrowRepository _grows;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
@@ -37,12 +38,13 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungAutomationService _automationen;
     private readonly SteuerungProbeService _probe;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, EntfeuchterSteuerungService entfeuchter, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
     {
         _co2 = co2;
         _licht = licht;
         _zuluft = zuluft;
         _chiller = chiller;
+        _entfeuchter = entfeuchter;
         _grows = grows;
         _ha = ha;
         _haSettings = haSettings;
@@ -65,6 +67,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         var licht = await _licht.LiveAsync(ct);
         var zuluft = await _zuluft.LiveAsync(ct);
         var chiller = await _chiller.LiveAsync(ct);
+        var entfeuchter = await _entfeuchter.LiveAsync(ct);
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
@@ -97,13 +100,11 @@ public sealed class SteuerungApiController : ApiControllerBase
             new(
                 Kennung: "entfeuchter",
                 Titel: "Entfeuchter",
-                Status: Text("select.rdwc_dehumi_aktiver_modus") is "On" ? "an" : "aus",
-                Kurz: Text("input_boolean.trotec_vpd_regelung") == "on"
-                    ? $"VPD-Modus · ein ab {F(Zahl("sensor.trotec_feuchte_ein_aktiv"), " %", "0.0")}"
-                    : $"Fest · ein ab {F(Zahl("sensor.trotec_feuchte_ein_aktiv"), " %", "0.0")}",
-                Wert: F(live.RhProzent, " %", "0.0"),
-                Unterzeile: $"{(Text("select.rdwc_dehumi_aktiver_modus") is "On" ? "läuft" : "bereit")} · VPD {F(live.Vpd, "", "0.00")}",
-                HatDetail: false),
+                Status: entfeuchter.AutomatikAn == false ? "aus" : entfeuchter.PortAn == true ? "an" : "aus",
+                Kurz: $"{(Text(EntfeuchterSteuerungService.Entitaeten.VpdRegelung) == "on" ? "VPD-Modus" : "Fest")} · ein ab {F(entfeuchter.EinAktivProzent, " %", "0.0")} · aus unter {F(entfeuchter.AusAktivProzent, " %", "0.0")}",
+                Wert: F(entfeuchter.FeuchteProzent, " %", "0.0"),
+                Unterzeile: $"{(entfeuchter.PortAn == true ? "entfeuchtet" : "bereit")} · VPD {F(entfeuchter.Vpd, "", "0.00")}",
+                HatDetail: true),
             new(
                 Kennung: "chiller",
                 Titel: "Water Chiller",
@@ -247,6 +248,42 @@ public sealed class SteuerungApiController : ApiControllerBase
 
         var seite = await Zuluft(ct);
         if (seite.Result is OkObjectResult ok && ok.Value is ZuluftSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
+        return seite;
+    }
+
+    // ---------------------------------------------------------- Entfeuchter
+
+    /// <summary>
+    /// Fork AI (forkai.129, F-023): Die Entfeuchter-Seite — Geräteverhalten und
+    /// Livebild. Pflanzenziele werden nur gelesen; geregelt wird in Home Assistant.
+    /// </summary>
+    [HttpGet("entfeuchter")]
+    [ProducesResponseType(typeof(EntfeuchterSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EntfeuchterSeiteDto>> Entfeuchter(CancellationToken ct)
+    {
+        var geraete = _geraete.EntitiesFuerModul(EntfeuchterSteuerungService.Modul);
+        return Ok(new EntfeuchterSeiteDto(await _entfeuchter.EinstellungenAsync(ct), await _entfeuchter.LiveAsync(ct))
+        {
+            AusHomeAssistantUebernommen = _entfeuchter.Gespeichert is null,
+            GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
+            GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(EntfeuchterSteuerungService.Modul).Count,
+        });
+    }
+
+    [HttpPut("entfeuchter")]
+    [ProducesResponseType(typeof(EntfeuchterSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EntfeuchterSeiteDto>> EntfeuchterSpeichern([FromBody] EntfeuchterEinstellungen request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("entfeuchter_invalid", "Es wurde nichts übergeben.");
+        var (gespeichert, fehler, erreicht) = await _entfeuchter.SpeichernAsync(request, ct);
+        if (gespeichert is null)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+
+        var seite = await Entfeuchter(ct);
+        if (seite.Result is OkObjectResult ok && ok.Value is EntfeuchterSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
         return seite;
     }
 
@@ -574,6 +611,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         "licht" => "Licht · LED Top",
         "zuluft" => "Zuluft · Keller",
         "chiller" => "Water Chiller",
+        "entfeuchter" => "Entfeuchter",
         "cropsteering" => "Crop Steering",
         _ => modul,
     };
@@ -610,6 +648,18 @@ public sealed record Co2SeiteDto(
 }
 
 public sealed record ZuluftSeiteDto(ZuluftEinstellungen Einstellungen, ZuluftLive Live)
+{
+    /// <summary>Nach dem Speichern: ob Home Assistant alle Sollwerte angenommen hat (null beim Lesen).</summary>
+    public bool? HaAngenommen { get; init; }
+
+    /// <summary>True, solange die Werte aus den vorhandenen Helfern kommen und nicht aus der Datenbank.</summary>
+    public bool AusHomeAssistantUebernommen { get; init; }
+
+    public int GeraeteZugeordnet { get; init; }
+    public int GeraeteGesamt { get; init; }
+}
+
+public sealed record EntfeuchterSeiteDto(EntfeuchterEinstellungen Einstellungen, EntfeuchterLive Live)
 {
     /// <summary>Nach dem Speichern: ob Home Assistant alle Sollwerte angenommen hat (null beim Lesen).</summary>
     public bool? HaAngenommen { get; init; }

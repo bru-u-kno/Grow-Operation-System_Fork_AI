@@ -128,6 +128,7 @@ public static class SteuerungBauteile
     private const string Co2 = "co2";
     private const string Zuluft = "zuluft";
     private const string Chiller = "chiller";
+    private const string Entfeuchter = "entfeuchter";
 
     // Rollen, an denen Bauteile hängen — Schreibweise wie in SteuerungGeraeteRollen.
     private static readonly string[] BrauchtAbluft = { "abluft_stufe" };
@@ -365,6 +366,39 @@ public static class SteuerungBauteile
             Pflicht: false,
             OhneDas: "Ohne Wächter läuft der Kühler weiter, wenn der Fühler stumm wird."),
 
+
+        // ====================================================================
+        // Entfeuchter — Fork AI (forkai.129). Geräteverhalten; die Pflanzenziele
+        // (VPD-Band, Feuchte max., Blatt-Offset) gehören dem Plan und stehen
+        // nicht hier. Die Rechenwerte (EIN/AUS/Temp max. aktiv) und die
+        // Automation haben noch keine Vorlage für Neuanlagen — offen in F-023.
+        // ====================================================================
+        new(Entfeuchter, "input_boolean.trotec_vpd_regelung", "Trotec VPD Regelung", BauteilArt.Schalter,
+            "An: Schwellen wandern mit Temperatur und VPD-Band. Aus: feste Schwellen."),
+        new(Entfeuchter, "input_number.trotec_hysterese", "Trotec Hysterese", BauteilArt.Zahl,
+            "Wie weit die Feuchte unter EIN fallen muss, bevor er ausgeht.", Min: 1, Max: 10, Schritt: 0.5, Einheit: "%"),
+        new(Entfeuchter, "input_number.trotec_mindestlaufzeit", "Trotec Mindestlaufzeit", BauteilArt.Zahl,
+            "Vorher schaltet ihn erreichte Feuchte nicht ab.", Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
+        new(Entfeuchter, "input_number.trotec_einschaltverzoegerung", "Trotec Einschaltverzoegerung", BauteilArt.Zahl,
+            "So lange muss die Feuchte über EIN liegen, bevor er anspringt.", Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
+        new(Entfeuchter, "input_number.trotec_wartezeit_aussenluft", "Trotec Wartezeit Aussenluft", BauteilArt.Zahl,
+            "Wartezeit, solange die Zuluft trocknet.", Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
+        new(Entfeuchter, "input_boolean.trotec_tagbetrieb_erlauben", "Trotec Tagbetrieb erlauben", BauteilArt.Schalter,
+            "Aus: nur in der Dunkelphase."),
+        new(Entfeuchter, "input_number.trotec_temp_max_tag", "Trotec Temp max Tag", BauteilArt.Zahl,
+            "Darüber geht er tagsüber aus.", Min: 15, Max: 35, Schritt: 0.5, Einheit: "°C"),
+        new(Entfeuchter, "input_number.trotec_temp_max", "Trotec Temp max", BauteilArt.Zahl,
+            "Darüber geht er nachts aus.", Min: 15, Max: 35, Schritt: 0.5, Einheit: "°C"),
+        new(Entfeuchter, "input_number.trotec_feuchte_ein_tag", "Trotec Feuchte EIN Tag", BauteilArt.Zahl,
+            "Rückfallebene ohne VPD-Regelung.", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
+        new(Entfeuchter, "input_number.trotec_feuchte_aus_tag", "Trotec Feuchte AUS Tag", BauteilArt.Zahl,
+            "Rückfallebene ohne VPD-Regelung.", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
+        new(Entfeuchter, "input_number.trotec_feuchte_ein", "Trotec Feuchte EIN", BauteilArt.Zahl,
+            "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
+        new(Entfeuchter, "input_number.trotec_feuchte_aus", "Trotec Feuchte AUS", BauteilArt.Zahl,
+            "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
+        new(Entfeuchter, "automation.rdwc_trotec_nachtregelung_port_7_dehumi", "RDWC Trotec Regelung", BauteilArt.Automation,
+            "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft."),
     };
 
     /// <summary>

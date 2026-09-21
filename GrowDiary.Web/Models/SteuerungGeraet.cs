@@ -157,6 +157,28 @@ public static class SteuerungGeraeteRollen
         new("chiller", "licht_zustand", "Lampe · Zustand", GruppeUmfeld,
             "binary_sensor.klein_abluft_zustand", new[] { "binary_sensor", "switch", "light" },
             Hinweis: "Entscheidet zwischen Tag- und Nachtziel."),
+
+        // Fork AI (forkai.129): Entfeuchter — Zeltfühler, der Port und das Licht.
+        // Das Licht entscheidet Tag/Nacht, wie beim Kühler: nicht die Uhr.
+        new("entfeuchter", "zelt_rh", "Zeltfühler · Feuchte", GruppeMessen,
+            "sensor.big_probe_sensor_sonden_luftfeuchtigkeit", new[] { "sensor" }, Einheit: "%",
+            Hinweis: "Die Feuchte, nach der geschaltet wird."),
+        new("entfeuchter", "zelt_temp", "Zeltfühler · Temperatur", GruppeMessen,
+            "sensor.big_probe_sensor_sonden_temperatur", new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Darüber schaltet der Entfeuchter ab — er gibt selbst Wärme ab."),
+        new("entfeuchter", "zelt_vpd", "Zeltfühler · VPD", GruppeMessen,
+            "sensor.big_probe_sensor_sonden_vpd", new[] { "sensor" }, Pflicht: false, Einheit: "kPa"),
+        new("entfeuchter", "port_schalter", "Entfeuchter · schalten", GruppeSchalten,
+            "select.rdwc_dehumi_aktiver_modus", new[] { "select", "switch", "input_boolean" },
+            Hinweis: "Was das Gerät wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
+        new("entfeuchter", "port_zustand", "Entfeuchter · Zustand", GruppeMessen,
+            "binary_sensor.big_port_7_zustand", new[] { "binary_sensor", "switch" },
+            Hinweis: "Läuft er wirklich — nicht nur „Port online“."),
+        new("entfeuchter", "port_status", "Entfeuchter · Port online", GruppeMessen,
+            "binary_sensor.big_port_7_status", new[] { "binary_sensor" }, Pflicht: false),
+        new("entfeuchter", "licht_zustand", "Lampe · Zustand", GruppeUmfeld,
+            "binary_sensor.klein_abluft_zustand", new[] { "binary_sensor", "switch", "light" },
+            Hinweis: "Entscheidet zwischen Tag- und Nachtschwellen."),
     };
 
 

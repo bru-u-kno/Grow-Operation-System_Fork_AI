@@ -68,6 +68,10 @@ public sealed class WochenplanSyncWorker : BackgroundService
         if (!tageslaufFaellig && !wochenwechsel) return;
 
         var geschrieben = await dienst.UebergebenAsync(ct);
+
+        // Fork AI (forkai.129): Temperatur max. des Entfeuchters folgt, wo so
+        // eingestellt, der Plan-Luft — zum selben Takt wie die übrigen Sollwerte.
+        geschrieben += await scope.ServiceProvider.GetRequiredService<EntfeuchterSteuerungService>().PlanNachziehenAsync(ct);
         if (tageslaufFaellig) _letzterTageslauf = jetzt;
 
         if (geschrieben > 0)

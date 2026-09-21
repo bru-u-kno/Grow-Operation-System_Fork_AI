@@ -438,6 +438,22 @@ public sealed class WochenplanSyncService
         return geschrieben;
     }
 
+    /// <summary>
+    /// Fork AI (forkai.129): Lufttemperatur der laufenden Plan-Woche, für Module,
+    /// die daraus einen eigenen Wert ableiten (Entfeuchter: Temperatur max. = Plan + Abstand).
+    /// </summary>
+    /// <remarks>
+    /// Nacht wie bei den Zelt-Regeln: der Nachtwert des Plans, sonst Tag minus
+    /// <see cref="Nachtabsenkung"/>. null, solange kein einzelner Durchgang mit
+    /// Wochen-Zielen läuft oder der Plan keine Lufttemperatur nennt.
+    /// </remarks>
+    public (string Woche, double LuftTagC, double LuftNachtC)? PlanLuft()
+    {
+        if (Spalte() is not { } jetzt || jetzt.Spalte.AirTempC is not { } tag) return null;
+        var woche = string.IsNullOrWhiteSpace(jetzt.Spalte.Label) ? jetzt.Spalte.Id : jetzt.Spalte.Label;
+        return (woche, tag, jetzt.Spalte.AirTempNightC ?? tag - Nachtabsenkung);
+    }
+
     /// <summary>Hat die Woche gewechselt, seit zuletzt übergeben wurde?</summary>
     public bool Wochenwechsel()
         => Spalte() is { } jetzt && !string.Equals(jetzt.Spalte.Id, Stand.LetzteSpalte, StringComparison.OrdinalIgnoreCase);

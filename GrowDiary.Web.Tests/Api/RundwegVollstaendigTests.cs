@@ -294,6 +294,12 @@ public sealed class RundwegVollstaendigTests
             + "Stufe min = 3 wird mit 400 abgelehnt. Dass kein Feld beim Speichern "
             + "verlorengeht, faehrt ZuluftEinstellungenTests — dort auch die Grenzen und "
             + "die Uebernahme vorhandener Helfer.",
+        // Fork AI (forkai.129)
+        ["EntfeuchterEinstellungen"] =
+            "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Das kollidiert mit den "
+            + "Pruefungen: AUS muss unter EIN liegen, die Temperatur max. zwischen 15 und 35 Grad, "
+            + "der Modus ist \"plan\" oder \"fest\" - das PUT lehnt ab. Dass kein Feld beim "
+            + "Speichern verlorengeht, faehrt EntfeuchterEinstellungenTests.",
         // Fork AI
         ["ChillerEinstellungen"] =
             "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Bei den Zieltemperaturen "
