@@ -5,6 +5,22 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.132
+
+**Fork AI.** Einheitliche Wochennamen.
+
+- Geändert — Im Plan des Grows und überall, wo die laufende Woche steht (Live, Ziele &
+  Meldungen, Plan, Entfeuchter, Mischplan, Meldungen), heißen die Wochen jetzt
+  **„Bewurzelung", „Vegiwoche 1–4", „Blütewoche 1–8", „Flush"** — egal, wie das Düngeprogramm
+  sie nennt (SKX: „Vega/Flores · Woche N", Athena: „Veg/Blüte · Woche N").
+- Unverändert — Die Herstellertabelle unter Wissen behält die Begriffe des Düngers.
+  Schritte ohne Wochennummer (Athena „Klon · Vorweichen/Anfüttern") bleiben unterscheidbar.
+  Frühere Einträge im Änderungsbuch behalten ihren Text.
+
+### Technik
+- `GrowPlanBauer.Wochenname()` beim Anlegen eines Plans (auch Programmwechsel);
+  `WochennamenAngleichen()` im Nachtrag laufender Grows beim Start.
+
 ## 2.0.0-forkai.131
 
 **Fork AI.** Klarere Beschriftung der Nachtwerte je Woche (Reiter Plan).
