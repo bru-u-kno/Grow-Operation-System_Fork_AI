@@ -82,4 +82,35 @@ public class WochenplanZielwerteTests
 
         Assert.Equal(1200, werte[WochenplanSyncService.Rollen.Co2Ziel]);
     }
+
+    // ------------------------------------------------ Fork AI (forkai.129)
+
+    [Fact]
+    public void DasVpdBandGehtAnDenEntfeuchter()
+    {
+        // SKX Blüte W5: 1,2–1,4 kPa → EIN unter 1,2, entfeuchten bis 1,4.
+        var werte = Werte(new FeedChartColumn { VpdMin = 1.2, VpdMax = 1.4 });
+
+        Assert.Equal(1.2, werte[WochenplanSyncService.Rollen.VpdUnten]);
+        Assert.Equal(1.4, werte[WochenplanSyncService.Rollen.VpdOben]);
+    }
+
+    [Fact]
+    public void OhneVpdImPlanBleibenDieEntfeuchterSchwellenUnberuehrt()
+    {
+        var werte = Werte(new FeedChartColumn { RhMax = 55 });
+
+        Assert.False(werte.ContainsKey(WochenplanSyncService.Rollen.VpdUnten));
+        Assert.False(werte.ContainsKey(WochenplanSyncService.Rollen.VpdOben));
+    }
+
+    [Fact]
+    public void DerBlattOffsetKommtNichtAusDerWoche()
+    {
+        // Er hängt am Zelt, nicht an der Plan-Spalte — sonst würde er jede Woche
+        // auf einen Wert gesetzt, den niemand dort gepflegt hat.
+        var werte = Werte(new FeedChartColumn { VpdMin = 1.2, VpdMax = 1.4, AirTempC = 24 });
+
+        Assert.False(werte.ContainsKey(WochenplanSyncService.Rollen.BlattOffset));
+    }
 }

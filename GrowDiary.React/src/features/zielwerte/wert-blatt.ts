@@ -52,6 +52,8 @@ export const UEBERGABE_JE_METRIK: Record<string, readonly string[]> = {
   humidity: ['rh-obergrenze', 'feuchte-oben'],
   co2: ['co2-ziel'],
   'reservoir-temp': ['wasser-tag', 'wasser-nacht'],
+  // Fork AI (forkai.129): VPD-Band und Blatt-Offset gehen an den Entfeuchter.
+  vpd: ['vpd-unten', 'vpd-oben', 'blatt-offset'],
 }
 
 /** Paare, bei denen „von“ nicht über „bis“ liegen darf. */

@@ -61,6 +61,19 @@ public sealed class WochenplanSyncService
         public const string RhObergrenze = "rh-obergrenze";
         public const string Co2Ziel = "co2-ziel";
 
+        /// <summary>Fork AI (forkai.129): Untergrenze des VPD-Bands → Entfeuchter EIN darunter.</summary>
+        public const string VpdUnten = "vpd-unten";
+
+        /// <summary>Fork AI (forkai.129): Obergrenze des VPD-Bands → Entfeuchter entfeuchtet bis hierhin.</summary>
+        public const string VpdOben = "vpd-oben";
+
+        /// <summary>
+        /// Fork AI (forkai.129): Blatt-Offset des Zelts. Kommt nicht aus der Woche,
+        /// sondern vom Zelt — gepflegt an EINER Stelle im Fork, der Entfeuchter in HA
+        /// rechnet mit derselben Zahl.
+        /// </summary>
+        public const string BlattOffset = "blatt-offset";
+
         /// <summary>Untere Alarmgrenze der Zelt-Regel „Lufttemperatur".</summary>
         public const string LuftUnten = "luft-unten";
 
@@ -124,6 +137,9 @@ public sealed class WochenplanSyncService
         [Rollen.WasserNacht] = "input_number.chiller_zieltemperatur_nacht",
         [Rollen.RhObergrenze] = "input_number.co2_rh_obergrenze",
         [Rollen.Co2Ziel] = "input_number.co2_zielwert",
+        [Rollen.VpdUnten] = "input_number.vpd_ziel_unten",
+        [Rollen.VpdOben] = "input_number.vpd_ziel_abschaltung",
+        [Rollen.BlattOffset] = "input_number.vpd_blatt_offset",
     };
 
     private readonly GrowRepository _grows;
@@ -234,7 +250,7 @@ public sealed class WochenplanSyncService
         if (Spalte() is not { } jetzt) return liste;
 
         var co2Gespeichert = Co2Gespeichert();
-        foreach (var (rolle, wert) in Werte(jetzt.Spalte))
+        foreach (var (rolle, wert) in WerteMitZelt(jetzt.Grow, jetzt.Spalte))
         {
             if (Zeltregeln.ContainsKey(rolle)) continue;
             if (RolleBeiCo2Steuerung(rolle, co2Gespeichert)) continue;
@@ -263,7 +279,7 @@ public sealed class WochenplanSyncService
         if (Spalte() is not { } jetzt) return liste;
 
         var co2Gespeichert = Co2Gespeichert();
-        foreach (var (rolle, wert) in Werte(jetzt.Spalte))
+        foreach (var (rolle, wert) in WerteMitZelt(jetzt.Grow, jetzt.Spalte))
         {
             if (ZielFuer(rolle) is not { } entity) continue;
 
@@ -291,7 +307,7 @@ public sealed class WochenplanSyncService
         var geschrieben = 0;
         var co2Gespeichert = Co2Gespeichert();
 
-        foreach (var (rolle, wert) in Werte(spalte))
+        foreach (var (rolle, wert) in WerteMitZelt(grow, spalte))
         {
             if (Zeltregeln.ContainsKey(rolle)) continue; // eigener Durchgang unten
             if (RolleBeiCo2Steuerung(rolle, co2Gespeichert)) continue; // schreibt die CO₂-Steuerung
@@ -489,6 +505,13 @@ public sealed class WochenplanSyncService
         if (spalte.WaterTempNightC is { } nacht) yield return (Rollen.WasserNacht, nacht);
         if (spalte.RhMax is { } rh) yield return (Rollen.RhObergrenze, rh);
 
+        // Fork AI (forkai.129): Das VPD-Band der Woche geht an den Entfeuchter —
+        // EIN unter der Untergrenze, entfeuchten bis zur Obergrenze. Vorher standen
+        // beide fest in HA und liefen der Woche hinterher (ab Blüte W7 will der
+        // Plan 1,4–1,6, der Trotec blieb bei 1,2–1,4).
+        if (spalte.VpdMin is { } vpdUnten) yield return (Rollen.VpdUnten, vpdUnten);
+        if (spalte.VpdMax is { } vpdOben) yield return (Rollen.VpdOben, vpdOben);
+
         // Beim CO₂ nennt der Plan eine Spanne; geregelt wird auf einen Wert.
         // Die Untergrenze ist die sichere Wahl: sie ist das, was der Plan
         // mindestens sehen will, und überfordert die Anlage an warmen Tagen nicht.
@@ -513,6 +536,21 @@ public sealed class WochenplanSyncService
         }
 
         if (spalte.RhMax is { } rhMax) yield return (Rollen.FeuchteOben, rhMax);
+    }
+
+    /// <summary>
+    /// Die Wochenwerte plus, was am Zelt hängt (Blatt-Offset). Eigene Methode,
+    /// weil <see cref="Werte"/> ohne Datenbank prüfbar bleiben soll.
+    /// </summary>
+    private IEnumerable<(string Rolle, double Wert)> WerteMitZelt(GrowRun grow, FeedChartColumn spalte)
+    {
+        foreach (var w in Werte(spalte)) yield return w;
+
+        // Gleiches Vorzeichen wie in HA: Blatt minus Luft, ein kühleres Blatt ist negativ.
+        if (grow.TentId is { } zeltId && _grows.GetTent(zeltId) is { } zelt)
+        {
+            yield return (Rollen.BlattOffset, zelt.LeafTempOffsetC);
+        }
     }
 
     private static double? Zahl(string? zustand)

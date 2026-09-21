@@ -544,6 +544,10 @@ public sealed class ZielwerteApiController : ApiControllerBase
         WochenplanSyncService.Rollen.LuftNachtOben => "Alarmgrenze Luft oben (Nacht)",
         WochenplanSyncService.Rollen.LuftOben => "Alarmgrenze Luft oben",
         WochenplanSyncService.Rollen.FeuchteOben => "Alarmgrenze Luftfeuchte",
+        // Fork AI (forkai.129)
+        WochenplanSyncService.Rollen.VpdUnten => "Entfeuchter EIN unter VPD",
+        WochenplanSyncService.Rollen.VpdOben => "Entfeuchter bis VPD",
+        WochenplanSyncService.Rollen.BlattOffset => "Blatt-Offset",
         _ => rolle,
     };
 
