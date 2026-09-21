@@ -73,6 +73,39 @@ public sealed class GrowPlanInhalt
     /// </summary>
     public string? EigenesProgrammId { get; set; }
 
+    /// <summary>
+    /// Fork AI (forkai.130): Standard für alle Wochen dieses Grows — nachts gelten
+    /// die Tageswerte (Luft, Luftfeuchte). Aus: Nachtwerte kommen aus dem Plan.
+    /// </summary>
+    /// <remarks>
+    /// Vorgabe aus, damit bestehende Grows sich nicht verändern: dort gilt nachts
+    /// heute schon ein eigenes Band.
+    /// </remarks>
+    public bool NachtWieTag { get; set; }
+
+    /// <summary>
+    /// Fork AI (forkai.130): Wochen, die vom Standard abweichen (Spalten-Id → nachts
+    /// wie tags ja/nein). Fehlt eine Woche, gilt <see cref="NachtWieTag"/>.
+    /// </summary>
+    public Dictionary<string, bool> NachtWieTagJeWoche { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Gelten in dieser Woche nachts die Tageswerte?</summary>
+    public bool NachtWieTagFuer(string spalteId)
+        => NachtWieTagJeWoche.TryGetValue(spalteId, out var eigen) ? eigen : NachtWieTag;
+
+    /// <summary>
+    /// Die Nachtwerte einer Woche, wie sie gelten: bei „nachts wie tags" die
+    /// Tageswerte, sonst die Nachtfelder — Luft ersatzweise Tag − Nachtabsenkung
+    /// (nur bis zum Nachtrag), Feuchte ersatzweise wie tags.
+    /// </summary>
+    public (double? LuftC, double? RhMax) NachtWerte(FeedChartColumn spalte)
+    {
+        if (NachtWieTagFuer(spalte.Id)) return (spalte.AirTempC, spalte.RhMax);
+        var luft = spalte.AirTempNightC
+            ?? (spalte.AirTempC is { } tag ? tag - Services.WochenplanSyncService.Nachtabsenkung : null);
+        return (luft, spalte.RhMaxNight ?? spalte.RhMax);
+    }
+
     /// <summary>Die Wochen samt Zielen und Dosierung — Schema wie im Programm.</summary>
     public FeedChartDefinition Chart { get; set; } = new();
 

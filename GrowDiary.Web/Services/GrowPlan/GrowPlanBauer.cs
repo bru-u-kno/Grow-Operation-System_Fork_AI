@@ -108,11 +108,27 @@ public static class GrowPlanBauer
         return true;
     }
 
+    /// <summary>
+    /// Fork AI (forkai.130): „Luft Nacht" einmalig aus dem Tagwert vorbefüllen —
+    /// Tag minus <see cref="WochenplanSyncService.Nachtabsenkung"/>. Danach ist es ein
+    /// gewöhnlicher Planwert, den der Nutzer frei ändert; eine feste Regel im
+    /// Hintergrund gibt es nicht mehr.
+    /// </summary>
+    public static bool NachtLuftFuellen(GrowPlanInhalt inhalt, FeedChartColumn spalte)
+    {
+        if (spalte.AirTempNightC is not null || spalte.AirTempC is not { } tag) return false;
+        spalte.AirTempNightC = Math.Round(tag - WochenplanSyncService.Nachtabsenkung, 1);
+        inhalt.HerkunftSetzen(spalte.Id, "airTempNightC", GrowPlanHerkunft.Standard);
+        return true;
+    }
+
     private static void LueckenFuellen(GrowPlanInhalt inhalt, FeedChartColumn spalte, HydroTargetValues? t)
     {
         EcBandFuellen(inhalt, spalte, t);
+        NachtLuftFuellen(inhalt, spalte);
         foreach (var feld in Wochenwertfelder.Alle)
         {
+            if (feld.Optional) continue;
             if (feld.Lesen(spalte) is not null) continue;
 
             var wert = t is null ? null : AusStandard(feld.Name, t);

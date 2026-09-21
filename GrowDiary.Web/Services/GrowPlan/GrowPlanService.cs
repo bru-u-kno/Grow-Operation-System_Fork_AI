@@ -564,7 +564,7 @@ public sealed class GrowPlanService
 
     /// <summary>
     /// Trägt in bestehende Pläne nach, was spätere Versionen neu im Plan führen
-    /// (das EC-Band). Kein Eintrag im Änderungsbuch: das ist Technik, keine Änderung
+    /// (das EC-Band, seit forkai.130 „Luft Nacht"). Kein Eintrag im Änderungsbuch: das ist Technik, keine Änderung
     /// am Ziel — das Band entspricht dem, was bisher aus dem Standard kam.
     /// </summary>
     public int FehlendeFelderNachtragen(IEnumerable<GrowRun> grows)
@@ -583,6 +583,8 @@ public sealed class GrowPlanService
                     {
                         geaendert |= GrowPlanBauer.EcBandFuellen(
                             stand.Inhalt, spalte, _ziele.GetTargets(profilId, GrowPlanBauer.Phase(spalte.Stage)));
+                        // Fork AI (forkai.130): Luft Nacht als Planwert nachtragen.
+                        geaendert |= GrowPlanBauer.NachtLuftFuellen(stand.Inhalt, spalte);
                     }
                     if (!geaendert) continue;
 

@@ -50,7 +50,8 @@ public static class Wochenwertfelder
         double Schritt,
         string? Paar,
         Func<FeedChartColumn, double?> Lesen,
-        Action<FeedChartColumn, double?> Schreiben);
+        Action<FeedChartColumn, double?> Schreiben,
+        bool Optional = false);
 
     public static readonly IReadOnlyList<Feld> Alle =
     [
@@ -65,6 +66,11 @@ public static class Wochenwertfelder
         new("orpMax", "ORP bis", "mV", 0, 800, 10, null, s => s.OrpMax, (s, v) => s.OrpMax = v),
         new("rhMax", "RH max", "%", 20, 95, 1, null, s => s.RhMax, (s, v) => s.RhMax = v),
         new("airTempC", "Luft", "°C", 10, 40, 0.5, null, s => s.AirTempC, (s, v) => s.AirTempC = v),
+        // Fork AI (forkai.130): Nachtwerte als eigene Planwerte statt fester Regel.
+        // „Luft Nacht" wird einmalig mit Tag − 4 K vorbefüllt; die Feuchte nachts
+        // ist optional — leer heißt „wie tags" und wird nie als „fehlt" gemeldet.
+        new("airTempNightC", "Luft Nacht", "°C", 10, 40, 0.5, null, s => s.AirTempNightC, (s, v) => s.AirTempNightC = v),
+        new("rhMaxNight", "RH max Nacht", "%", 20, 95, 1, null, s => s.RhMaxNight, (s, v) => s.RhMaxNight = v, Optional: true),
         new("vpdMin", "VPD von", "kPa", 0, 3, 0.05, "vpdMax", s => s.VpdMin, (s, v) => s.VpdMin = v),
         new("vpdMax", "VPD bis", "kPa", 0, 3, 0.05, null, s => s.VpdMax, (s, v) => s.VpdMax = v),
         new("co2Min", "CO₂ von", "ppm", 300, 2000, 10, "co2Max", s => s.Co2Min, (s, v) => s.Co2Min = v),

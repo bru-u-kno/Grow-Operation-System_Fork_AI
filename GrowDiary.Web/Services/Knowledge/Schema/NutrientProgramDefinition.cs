@@ -184,6 +184,19 @@ public sealed class FeedChartColumn
     /// </remarks>
     [JsonPropertyName("airTempNightC")]
     public double? AirTempNightC { get; set; }
+
+    /// <summary>
+    /// Fork AI (forkai.130): Luftfeuchte max. der Dunkelphase in %.
+    /// </summary>
+    /// <remarks>
+    /// Optional und bewusst ohne Vorbefüllung: leer heißt „nachts wie tags".
+    /// Nachts steigt die Feuchte von selbst, und eine lockerere Nachtgrenze wäre
+    /// eine leisere Meldung bei Schimmelgefahr (Festlegung 13.09.2026). Eine eigene
+    /// Nachtgrenze gibt es deshalb nur, wenn eine Woche sie ausdrücklich bekommt
+    /// (Bru, 21.09.2026).
+    /// </remarks>
+    [JsonPropertyName("rhMaxNight")]
+    public double? RhMaxNight { get; set; }
 }
 
 /// <summary>Eine Komponente in einer Spalte — als Spanne, wo das Chart eine nennt.</summary>
