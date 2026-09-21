@@ -522,11 +522,11 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             {live.rhObergrenzeAusPlan != null ? (
               /* forkai.115 (F-013): Der Wochenplan führt die Obergrenze. Ein
                  Eingabefeld hier würde beim Speichern nichts bewirken — gepflegt
-                 wird sie im Plan des Grows (Ziele & Meldungen → Plan). */
+                 wird sie im Plan des Grows (Menü Plan). */
               <div className="st-feldzeile">
                 <span className="st-etikett">
                   Feuchte-Obergrenze
-                  <small>Darüber wird nicht dosiert. Kommt aus dem Plan des Grows, ändern unter Ziele &amp; Meldungen → Plan.</small>
+                  <small>Darüber wird nicht dosiert. Kommt aus dem Plan des Grows, ändern unter Plan.</small>
                 </span>
                 <span className="st-nurlesen">{formatNumber(live.rhObergrenzeProzent ?? live.rhObergrenzeAusPlan, 0)} %</span>
               </div>

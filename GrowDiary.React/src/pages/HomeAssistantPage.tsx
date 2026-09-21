@@ -292,7 +292,7 @@ function HomeAssistantPage() {
                 )}
               </section>
 
-              {/* Der QR-Code wohnt jetzt unter „Aufs Handy holen". Hier stand
+              {/* Der QR-Code wohnt jetzt unter „Handy › App einrichten". Hier stand
                   eine zweite Fassung, die auf die Ingress-Adresse mit Token
                   zeigte — die stirbt beim naechsten Aufruf. */}
               <section className="ls-panel">
@@ -300,7 +300,7 @@ function HomeAssistantPage() {
                 <p className="ha-pair-text" style={{ margin: '0 0 10px' }}>
                   Grow OS als Kachel auf den Startbildschirm des Handys — mit QR-Code und Anleitung.
                 </p>
-                <Link to="/handy" className="ls-btn is-small">Aufs Handy holen</Link>
+                <Link to="/handy?tab=app" className="ls-btn is-small">Handy › App einrichten</Link>
               </section>
             </div>
           )}

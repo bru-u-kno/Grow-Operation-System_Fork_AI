@@ -257,7 +257,7 @@ function NotificationsPage() {
           <V1Card>
             <V1Switch label="Grenzwerte" hint="Wenn ein Messwert über oder unter deine Grenze läuft (pH, EC …)." checked={settings.thresholds} onChange={(checked) => patch({ thresholds: checked })} />
             {/* Fork AI (Schritt 4): Grenzen stellt man jetzt an der Werte-Karte ein. */}
-            <p style={{ margin: '8px 0 0' }}><Link to="/zielwerte?tab=jetzt">Grenzen je Wert unter Zielwerte → Werte einstellen →</Link></p>
+            <p style={{ margin: '8px 0 0' }}><Link to="/grenzwerte">Ab wann gemeldet wird: Grenzwerte ›</Link></p>
           </V1Card>
           <V1Card>
             <V1Switch label="Kalibrierung fällig" hint="Erinnerung, wenn eine Sensor-Kalibrierung ansteht." checked={settings.calibration} onChange={(checked) => patch({ calibration: checked })} />

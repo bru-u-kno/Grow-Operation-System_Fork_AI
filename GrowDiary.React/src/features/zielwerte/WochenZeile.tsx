@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../../api'
 import { V1Sheet } from '../../components/V1Sheet'
 import { V1Alert } from '../../components/v1'
@@ -19,6 +19,8 @@ export function WochenZeile() {
   const [plan, setPlan] = useState<WochenPlan | null>(null)
   const [offen, setOffen] = useState(false)
   const [params, setParams] = useSearchParams()
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     let aktiv = true
@@ -41,10 +43,15 @@ export function WochenZeile() {
 
   function zurWoche(id: string) {
     setOffen(false)
-    const next = new URLSearchParams(params)
-    next.set('tab', 'plan')
-    next.set('woche', id)
-    setParams(next, { replace: true })
+    // Fork AI (forkai.133): der Plan ist eine eigene Seite. Auf ihr selbst nur
+    // die Woche setzen, von anderswo (Grenzwerte) dorthin springen.
+    if (pathname === '/plan') {
+      const next = new URLSearchParams(params)
+      next.set('woche', id)
+      setParams(next, { replace: true })
+    } else {
+      navigate(`/plan?woche=${encodeURIComponent(id)}`)
+    }
   }
 
   const punkte = anker(plan)

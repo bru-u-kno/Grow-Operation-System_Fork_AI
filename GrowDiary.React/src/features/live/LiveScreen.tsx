@@ -299,7 +299,7 @@ export function LiveScreen({
           womöglich alte Zahlen — das muss ÜBER den Messwerten stehen, nicht
           in einer Benachrichtigung, die erst abends jemand liest. */}
       {systemWarning && (
-        <Link className="ls-syswarn" to="/zielwerte?tab=meldungen" data-audit="live-system-warning">
+        <Link className="ls-syswarn" to="/handy?tab=push" data-audit="live-system-warning">
           <span className="ls-label">Systemüberwachung</span>
           <span className="ls-syswarn-text"><strong>{systemWarning.headline}</strong> — {systemWarning.detail}</span>
         </Link>

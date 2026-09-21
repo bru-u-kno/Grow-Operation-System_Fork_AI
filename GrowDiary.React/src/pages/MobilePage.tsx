@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '../api'
-import { V1Alert, V1Button, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { V1Alert, V1Button, V1Field, V1Section, V1Skeleton } from '../components/v1'
 import { buildPanelUrl, judgeHost } from '../features/mobile/mobile-link'
 import { QrCode } from '../features/mobile/QrCode'
 import '../features/mobile/mobile.css'
@@ -16,6 +16,9 @@ import '../features/mobile/mobile.css'
  * Was diese Seite ehrlicherweise NICHT liefert: eine App ohne Home-Assistant-
  * Rahmen. Grow OS läuft ausschliesslich hinter dem Ingress, und dort gehört die
  * äussere Seite Home Assistant. Das steht unten auch so da.
+ *
+ * Fork AI (forkai.133): kein eigener Menüpunkt mehr, sondern der Reiter
+ * „App einrichten" der Seite „Handy" (Plan · Grenzwerte · Handy).
  */
 
 type MobileAccess = {
@@ -25,7 +28,7 @@ type MobileAccess = {
   reason: string | null
 }
 
-function MobilePage() {
+export function AppEinrichten() {
   const [access, setAccess] = useState<MobileAccess | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,7 +72,7 @@ function MobilePage() {
   }
 
   return (
-    <V1Page eyebrow="Einrichtung / Mobil" title="Aufs Handy holen">
+    <>
       {error && <V1Alert message={error} tone="warn" />}
 
       {loading ? <V1Skeleton rows={3} label="Lade Panel-Pfad" /> : !access?.available ? (
@@ -141,8 +144,8 @@ function MobilePage() {
           </V1Section>
         </>
       )}
-    </V1Page>
+    </>
   )
 }
 
-export default MobilePage
+export default AppEinrichten

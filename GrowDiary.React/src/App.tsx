@@ -6,7 +6,6 @@ import GettingStartedPage from './pages/GettingStartedPage'
 import DosingPage from './pages/DosingPage'
 import { CropSteeringPage } from './pages/CropSteeringPage'
 import { AcTestPage } from './pages/AcTestPage'
-import MobilePage from './pages/MobilePage'
 import DosingPumpSetupPage from './pages/DosingPumpSetupPage'
 import GrowDetailPage from './pages/GrowDetailPage'
 import GrowsPage from './pages/GrowsPage'
@@ -52,7 +51,8 @@ import './styles/forkai-shell.css'
 import { AppShell } from './AppShell'
 import { legacyRedirects } from './navigation'
 import { useNavCounts } from './useNavCounts'
-import { RulesCollectionPage, ZielwerteCollectionPage } from './pages/collections'
+import { GrenzwerteSeite, HandySeite, PlanSeite, RulesCollectionPage } from './pages/collections'
+import { zielwerteZiel } from './navigation'
 import AdvisorPage from './pages/AdvisorPage'
 import WaterProfilePage from './pages/WaterProfilePage'
 import StrainsPage from './pages/StrainsPage'
@@ -67,6 +67,16 @@ import ArchivePage from './pages/ArchivePage'
  * Fehler aus. Das Ziel bringt sein eigenes `?tab=` mit, deshalb werden beide
  * Parametersätze zusammengeführt statt einer überschrieben.
  */
+/**
+ * Fork AI (forkai.133): „Ziele & Meldungen" gibt es nicht mehr — die Reiter sind
+ * eigene Seiten. Lesezeichen und Links landen je nach Reiter an der richtigen
+ * Stelle; `woche=` geht mit in den Plan.
+ */
+function ZielwerteWeiterleitung() {
+  const { search } = useLocation()
+  return <Navigate to={zielwerteZiel(search)} replace />
+}
+
 function LegacyRedirect({ to }: { to: string }) {
   const { search } = useLocation()
   const [path, targetQuery] = to.split('?')
@@ -108,7 +118,7 @@ function App() {
           <Route path="/hydro/:id/edit" element={<HydroEditorPage />} />
           <Route path="/hydro/:setupId" element={<HydroDetailPage />} />
           <Route path="/home-assistant" element={<HomeAssistantPage />} />
-          <Route path="/handy" element={<MobilePage />} />
+          <Route path="/handy" element={<HandySeite />} />
           <Route path="/messungen" element={<GrowScopedSectionPage title="Messungen" section="measurements" />} />
           <Route path="/diagnose" element={<GrowScopedSectionPage title="Diagnose" section="diagnosis" />} />
           <Route path="/journal" element={<GrowScopedSectionPage title="Journal & Fotos" section="journal" />} />
@@ -124,7 +134,9 @@ function App() {
           <Route path="/sensoren" element={<HardwarePage />} />
 
           
-          <Route path="/zielwerte" element={<ZielwerteCollectionPage />} />
+          <Route path="/plan" element={<PlanSeite />} />
+          <Route path="/grenzwerte" element={<GrenzwerteSeite />} />
+          <Route path="/zielwerte" element={<ZielwerteWeiterleitung />} />
           <Route path="/cropsteering" element={<CropSteeringPage />} />
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />

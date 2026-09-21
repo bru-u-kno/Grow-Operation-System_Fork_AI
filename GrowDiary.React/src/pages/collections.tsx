@@ -4,6 +4,8 @@ import { TabbedCollectionPage } from './TabbedCollectionPage'
 import { PlanReiter } from '../features/zielwerte/PlanReiter'
 import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
 import { WochenZeile } from '../features/zielwerte/WochenZeile'
+import { AppEinrichten } from './MobilePage'
+import { V1Page } from '../components/v1'
 
 /**
  * Regeln & Automatik: EINE Seite mit den vier Bereichen als Tabs, in der
@@ -24,7 +26,7 @@ export function RulesCollectionPage() {
     <TabbedCollectionPage
       eyebrow="Betrieb / Auto-Messungen"
       title="Auto-Messungen"
-      subtitle="Wann Grow OS von selbst misst. Grenzwerte und Benachrichtigungen findest du unter Ziele & Meldungen."
+      subtitle="Wann Grow OS von selbst misst. Grenzwerte und Push aufs Handy haben eigene Menüpunkte."
       tabs={[
         { key: 'automatik', label: 'Auto-Messungen', render: () => <AutomationPage /> },
       ]}
@@ -33,26 +35,40 @@ export function RulesCollectionPage() {
 }
 
 /**
- * Fork AI (forkai.67): Zielwerte — Auskunft und die beiden Editoren dahinter.
- *
- * Die Frage „was gilt gerade" und die Frage „wo ändere ich das" gehören
- * zusammen: der erste Reiter beantwortet die eine und verweist für die andere
- * auf Profile und Grenzwerte — die nun einen Reiter weiter liegen statt zwei
- * Menüpunkte entfernt. Der Feed-Chart fehlt hier bewusst: er wohnt in der
- * Wissensdatenbank und ist mehr als Zielwerte (Dosiermengen, Spülen), das
- * Herausbrechen wäre der grössere Eingriff als der Nutzen.
+ * Fork AI (forkai.133): „Ziele & Meldungen" ist in drei Menüpunkte zerlegt —
+ * Plan (Pflanzen), Grenzwerte (Betrieb), Handy (Einrichtung). Eine Seite mit drei
+ * Reitern brauchte einen Oberbegriff, und keiner passte; „Alarm" und „Meldung"
+ * waren obendrein verwechselbar (Bru, 22.09.2026). Die drei Seiten sind über die
+ * Kette „1 · Plan › 2 · Grenzwerte › 3 · Handy" und Sprünge an Ort und Stelle
+ * verbunden.
  */
-export function ZielwerteCollectionPage() {
+export function PlanSeite() {
+  return (
+    <V1Page eyebrow="Pflanzen" title="Plan" subtitle="Die Ziele deines Grows, Woche für Woche.">
+      <WochenZeile />
+      <PlanReiter />
+    </V1Page>
+  )
+}
+
+export function GrenzwerteSeite() {
+  return (
+    <V1Page eyebrow="Betrieb" title="Grenzwerte" subtitle="Ab wann ein Wert kritisch ist — je Messgröße, tags und nachts.">
+      <WochenZeile />
+      <ZielwertePage />
+    </V1Page>
+  )
+}
+
+export function HandySeite() {
   return (
     <TabbedCollectionPage
-      eyebrow="Betrieb"
-      title="Ziele & Meldungen"
-      subtitle="Was gerade gilt, der Plan deines Grows und wer dir Bescheid gibt — an einer Stelle."
-      kopf={<WochenZeile />}
+      eyebrow="Einrichtung"
+      title="Handy"
+      subtitle="Was aufs Handy kommt — und wie Grow OS aufs Handy kommt."
       tabs={[
-        { key: 'jetzt', label: 'Werte', render: () => <ZielwertePage /> },
-        { key: 'plan', label: 'Plan', render: () => <PlanReiter /> },
-        { key: 'meldungen', label: 'Meldungen', render: () => <MeldungenReiter /> },
+        { key: 'push', label: 'Push', render: () => <MeldungenReiter /> },
+        { key: 'app', label: 'App einrichten', render: () => <AppEinrichten /> },
       ]}
     />
   )

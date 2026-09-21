@@ -98,6 +98,7 @@ export const navGroups: NavGroup[] = [
     label: 'Pflanzen',
     items: [
       { to: '/grows', label: 'Grows', end: false, icon: '✿', short: 'Grows', keywords: 'lauf run pflanzen anbau' },
+      { to: '/plan', label: 'Plan', end: true, icon: '▦', short: 'Plan', keywords: 'plan grow-plan wochenplan woche wochen ziel ziele zielwerte sollwert sollwerte setpoint programm düngeplan duengeplan feed chart skx flip vegi vegiwoche blüte blütewoche bluete ernte klima luft nacht nachts wie tags änderungsbuch dosierung' },
       { to: '/diagnose', label: 'Diagnose', end: true, icon: '⊕', short: 'Diagnose', keywords: 'problem mangel abweichung risiko krankheit sop' },
       // Das Messprotokoll. Stand bis beta.50 in KEINER Gruppe — und weil die
       // Suche ihre Eintraege aus diesen Gruppen baut, war die Seite damit auch
@@ -137,7 +138,8 @@ export const navGroups: NavGroup[] = [
       // keiner steht — welche Regel greift gerade, und wo aendere ich sie.
       // Fork AI (forkai.67): Auskunft und die beiden Editoren dahinter unter
       // einem Menuepunkt — „Sollwert-Profile" ist der Reiter „Profile".
-      { to: '/zielwerte', label: 'Ziele & Meldungen', end: true, icon: '◈', short: 'Ziele', keywords: 'ziel zielwerte sollwert sollwerte setpoint band grenzwert grenzwerte schwelle alarm herkunft quelle fest plan programm dosierung düngeplan duengeplan wochenplan woche wochen feed chart skx flip vegi bluete ernte klima verlauf änderungsbuch meldung meldungen benachrichtigung benachrichtigungen push handy ruhezeit tagesbericht wächter wo einstellen' },
+      // Fork AI (forkai.133): aus „Ziele & Meldungen" — Plan (Pflanzen), Grenzwerte, Handy (Einrichtung).
+      { to: '/grenzwerte', label: 'Grenzwerte', end: true, icon: '◈', short: 'Grenzen', keywords: 'grenzwert grenzwerte schwelle alarm alarme meldet melden überwachen tag nacht nachtgrenze abweichung toleranz ziele zielwerte ziele & meldungen wächter' },
       { to: '/cropsteering', label: 'Crop Steering', end: true, versteckt: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
@@ -177,7 +179,7 @@ export const navGroups: NavGroup[] = [
       // etwa für die HA-Verbindung selbst oder zum Erfassen einer Wartung.
       { to: '/home-assistant', label: 'Home Assistant (Verbindung)', end: true, keywords: 'ha entitäten verbindung integration mapping kamera token url' },
       { to: '/sensoren', label: 'Sensoren & Wartung (erfassen)', end: true, keywords: 'hardware geräte kalibrierung inventar wechseln lebensdauer wartung erfassen' },
-      { to: '/handy', label: 'Aufs Handy holen', end: true, keywords: 'mobil smartphone qr code startbildschirm lesezeichen app icon telefon' },
+      { to: '/handy', label: 'Handy', end: true, icon: '▯', short: 'Handy', keywords: 'handy push benachrichtigung benachrichtigungen meldung meldungen ruhezeit tagesbericht wächter smartphone mobil qr code startbildschirm lesezeichen app icon telefon aufs handy holen' },
     ],
   },
   {
@@ -246,11 +248,11 @@ export const legacyRedirects: Record<string, string> = {
   // Fork AI (forkai.67): die Profile sind ein Reiter der Zielwerte geworden.
   // Fork AI (forkai.121): Profile, Grenzwerte und Benachrichtigungen wohnen
   // jetzt unter „Ziele & Meldungen“.
-  '/sollwerte': '/zielwerte?tab=plan',
-  // Fork AI (forkai.125): der Wochenplan ist Teil von „Ziele & Meldungen“.
-  '/wochenplan': '/zielwerte?tab=plan',
-  '/alarme': '/zielwerte?tab=jetzt',
-  '/benachrichtigungen': '/zielwerte?tab=meldungen',
+  // Fork AI (forkai.133): „Ziele & Meldungen" ist in Plan, Grenzwerte und Handy zerlegt.
+  '/sollwerte': '/plan',
+  '/wochenplan': '/plan',
+  '/alarme': '/grenzwerte',
+  '/benachrichtigungen': '/handy?tab=push',
   // Die KI wurde entfernt; das Lesezeichen darf trotzdem nicht ins Leere laufen.
   '/assistent': '/regeln',
   '/phenohunt': '/sorten',
@@ -269,3 +271,18 @@ export const searchablePages = navGroups.flatMap((group) =>
 export function isNavLeafActive(item: NavLeaf, pathname: string): boolean {
   return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
+
+/**
+ * Fork AI (forkai.133): wohin eine alte Adresse `/zielwerte?tab=…` jetzt führt.
+ * `woche=` und andere Parameter gehen mit; der Push-Reiter heißt jetzt „push".
+ */
+export function zielwerteZiel(search: string): string {
+  const params = new URLSearchParams(search)
+  const tab = params.get('tab')
+  params.delete('tab')
+  const ziel = tab === 'plan' ? '/plan' : tab === 'meldungen' ? '/handy' : '/grenzwerte'
+  if (ziel === '/handy') params.set('tab', 'push')
+  const query = params.toString()
+  return query ? `${ziel}?${query}` : ziel
+}
+

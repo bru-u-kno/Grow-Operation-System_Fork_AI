@@ -7,8 +7,10 @@
 
 | Was | Wo |
 |---|---|
-| Ziele & Meldungen (Fork AI) | Betrieb → Ziele & Meldungen, `/zielwerte` — Reiter „Werte", „Plan", „Meldungen" |
-| Woche des Grows, alle Wochen (Fork AI) | Zeile über den Reitern von `/zielwerte`, ein Tipp öffnet das Wochen-Blatt; `/wochenplan` und `/sollwerte` leiten auf den Reiter „Plan" um |
+| Plan (Fork AI) | Pflanzen → Plan, `/plan` — Ziele des Grows je Woche |
+| Grenzwerte (Fork AI) | Betrieb → Grenzwerte, `/grenzwerte` — ab wann je Messgröße gemeldet wird (tags/nachts) |
+| Push aufs Handy (Fork AI) | Einrichtung → Handy, `/handy` — Reiter „Push" und „App einrichten" |
+| Woche des Grows, alle Wochen (Fork AI) | Zeile oben auf `/plan` und `/grenzwerte`, ein Tipp öffnet das Wochen-Blatt; `/zielwerte`, `/wochenplan` und `/sollwerte` leiten um (seit forkai.133) |
 | SOPs & Bibliothek | Wissen → SOPs & Bibliothek, `/wissen` |
 | Einkaufsliste | Wissen → Einkaufsliste, `/einkaufsliste` |
 | Profil als Vorgabe wählen | Hydro-System bearbeiten, `/hydro/new` bzw. `/hydro/:id/edit` |
@@ -79,17 +81,19 @@ Blütewochen ab dem Flip, Vegi-Wochen ab dem Vegi-Start. Läuft eine Phase über
 letzte Spalte hinaus — der Normalfall, wenn die Vegi gestreckt wird —, bleibt der
 Plan auf dieser Spalte stehen und sagt es (`gehalten seit Woche N`).
 
-Seit forkai.125 gibt es dafür keine eigene Seite mehr: Über den Reitern von
-`/zielwerte` steht die laufende Woche mit den Ankern; ein Tipp darauf öffnet das
-Wochen-Blatt mit allen Wochen, und eine Woche darin öffnet den Reiter „Plan"
-genau dort (`?tab=plan&woche=…`). Die Übergabe an Home Assistant samt
-„freigeben" steht im Reiter „Werte".
+Seit forkai.133 ist „Ziele & Meldungen" in drei Menüpunkte zerlegt: **Plan**
+(`/plan`), **Grenzwerte** (`/grenzwerte`) und **Handy** (`/handy`), verbunden
+über die Kette „1 · Plan › 2 · Grenzwerte › 3 · Handy". Oben auf Plan und
+Grenzwerte steht die laufende Woche mit den Ankern; ein Tipp darauf öffnet das
+Wochen-Blatt mit allen Wochen, und eine Woche darin öffnet den Plan genau dort
+(`/plan?woche=…`). Die Übergabe an Home Assistant samt „freigeben" steht unter
+Grenzwerte.
 
 ## Welche Regel greift gerade (Fork AI)
 
 Vier Quellen hintereinander — Anbaustil, Sollwertprofil, Feed-Chart-Woche,
 Zelt-Grenzwert — beantworten die Frage „was gilt" erst zusammen, und auf der
-Kachel steht davon nur das Ergebnis. `/zielwerte` klappt die ganze Kette je
+Kachel steht davon nur das Ergebnis. `/grenzwerte` klappt die ganze Kette je
 Messgröße auf: welche Stufe gilt, welche überstimmt wurde, und bei einer festen
 Grenze WER sie gesetzt hat — der Plan oder ein Mensch. Darunter dieselben
 Werte nach Änderungsort gruppiert, jeweils mit Sprung dorthin.

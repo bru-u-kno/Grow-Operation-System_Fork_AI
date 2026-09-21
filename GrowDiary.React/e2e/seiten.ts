@@ -103,7 +103,6 @@ export const ALLE_SEITEN: string[] = [...new Set([...ausDemMenue(), ...DETAILSEI
  * Kein Freibrief: hier steht nur, was gar keinen eigenen Inhalt hat.
  */
 export const OHNE_TEXTPRUEFUNG: Record<string, string> = {
-  '/handy': 'Zeigt einen QR-Code und vier Sätze Anleitung; der Code ist ein Bild.',
   '/release': 'Export/Import-Werkzeuge — Dateinamen und Versionen sind bewusst technisch.',
 }
 

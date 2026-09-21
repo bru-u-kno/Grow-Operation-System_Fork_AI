@@ -211,7 +211,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
               <Lesen label="Blatt-Offset" herkunft="vom Zelt" wert={live.blattOffsetC == null ? '–' : `${zahl(live.blattOffsetC)} °C`} />
               <div className="st-feldzeile">
                 <span className="st-etikett">Ändern im Plan</span>
-                <V1LinkButton to="/zielwerte" variant="ghost">Ziele &amp; Meldungen ›</V1LinkButton>
+                <V1LinkButton to="/plan" variant="ghost">Plan ›</V1LinkButton>
               </div>
             </V1Card>
           </V1Section>

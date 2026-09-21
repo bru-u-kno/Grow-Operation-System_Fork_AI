@@ -31,6 +31,7 @@ const OHNE_EIGENE_SEITE: Record<string, string> = {
     'Braucht eine bestehende Messung; die Id wechselt mit dem Bestand. '
     + 'Der Rundweg dafür läuft in formular-rundweg.spec.ts über die Liste.',
   '/hydro/:id/edit': 'Deckungsgleich mit /hydro/:setupId, nur im Bearbeiten-Modus.',
+  '/zielwerte': 'Alte Adresse (bis forkai.132) — leitet je nach Reiter auf /plan, /grenzwerte oder /handy um.',
 }
 
 function routenAusApp(): string[] {
