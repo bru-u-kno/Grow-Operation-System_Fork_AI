@@ -44,12 +44,15 @@ export type Entwurf = {
   toleranz: string
   karenz: string
   aktiv: boolean
+  /** Fork AI (forkai.130): Nachtband einer festen Regel. undefined = unverändert lassen. */
+  nachtMin?: string
+  nachtMax?: string
 }
 
 /** Welche Übergabe-Zeilen zu welcher Messgröße gehören. */
 export const UEBERGABE_JE_METRIK: Record<string, readonly string[]> = {
   temperature: ['luft-unten', 'luft-oben', 'luft-nacht-unten', 'luft-nacht-oben'],
-  humidity: ['rh-obergrenze', 'feuchte-oben'],
+  humidity: ['rh-obergrenze', 'feuchte-oben', 'feuchte-nacht-oben'],
   co2: ['co2-ziel'],
   'reservoir-temp': ['wasser-tag', 'wasser-nacht'],
   // Fork AI (forkai.129): VPD-Band und Blatt-Offset gehen an den Entfeuchter.
@@ -77,6 +80,8 @@ export function entwurfAus(felder: readonly PlanFeld[], regel: AlarmRegel | null
     toleranz: zahlText(regel?.toleranz),
     karenz: String(regel?.karenzMinuten ?? 30),
     aktiv: regel?.aktiv ?? false,
+    nachtMin: zahlText(regel?.nachtMin),
+    nachtMax: zahlText(regel?.nachtMax),
   }
 }
 
@@ -114,7 +119,10 @@ export function alarmGeaendert(regel: AlarmRegel | null, entwurf: Entwurf): bool
     || vorher.aktiv !== entwurf.aktiv
     || !gleich(zahlOderNull(vorher.karenz), zahlOderNull(entwurf.karenz))
     || (entwurf.quelle === 'Fest' && (!gleich(regel.min, zahlOderNull(entwurf.min)) || !gleich(regel.max, zahlOderNull(entwurf.max))))
-    || (entwurf.quelle === 'Plan' && !gleich(regel.toleranz, zahlOderNull(entwurf.toleranz)))
+    || (entwurf.quelle === 'Fest' && entwurf.nachtMin !== undefined && !gleich(regel.nachtMin, zahlOderNull(entwurf.nachtMin)))
+    || (entwurf.quelle === 'Fest' && entwurf.nachtMax !== undefined && !gleich(regel.nachtMax, zahlOderNull(entwurf.nachtMax)))
+    // Fork AI (forkai.130): bei festen Regeln ist die Toleranz die „Erlaubte Abweichung".
+    || !gleich(regel.toleranz, zahlOderNull(entwurf.toleranz))
 }
 
 /** Prüft den Entwurf; gibt den ersten Fehler als Satz zurück oder null. */
@@ -142,6 +150,14 @@ export function pruefen(felder: readonly PlanFeld[], entwurf: Entwurf): string |
     if (entwurf.min.trim() !== '' && min == null) return `„${entwurf.min}“ ist keine Zahl.`
     if (entwurf.max.trim() !== '' && max == null) return `„${entwurf.max}“ ist keine Zahl.`
     if (min != null && max != null && min > max) return 'Die untere Alarmgrenze liegt über der oberen.'
+    const nMin = zahlOderNull(entwurf.nachtMin ?? '')
+    const nMax = zahlOderNull(entwurf.nachtMax ?? '')
+    if ((entwurf.nachtMin ?? '').trim() !== '' && nMin == null) return `„${entwurf.nachtMin}“ ist keine Zahl.`
+    if ((entwurf.nachtMax ?? '').trim() !== '' && nMax == null) return `„${entwurf.nachtMax}“ ist keine Zahl.`
+    if (nMin != null && nMax != null && nMin > nMax) return 'Nachts liegt die untere Alarmgrenze über der oberen.'
+    if (entwurf.toleranz.trim() !== '' && ((zahlOderNull(entwurf.toleranz) ?? -1) <= 0 || (zahlOderNull(entwurf.toleranz) ?? 0) > 15)) {
+      return 'Die erlaubte Abweichung muss zwischen 0 und 15 liegen.'
+    }
     if (entwurf.aktiv && min == null && max == null) return 'Für einen festen Alarm braucht es mindestens eine Grenze.'
   } else if (entwurf.toleranz.trim() !== '' && (zahlOderNull(entwurf.toleranz) ?? -1) <= 0) {
     return 'Die Toleranz muss größer als null sein.'
@@ -170,9 +186,10 @@ export function regelnMitAenderung(
     enabled: entwurf.aktiv,
     cooldownMinutes: Math.max(1, Math.round(zahlOderNull(entwurf.karenz) ?? 30)),
     quelle: entwurf.quelle,
-    toleranz: plan ? zahlOderNull(entwurf.toleranz) : null,
-    nightMinValue: plan ? null : alt?.nightMinValue ?? null,
-    nightMaxValue: plan ? null : alt?.nightMaxValue ?? null,
+    // Fork AI (forkai.130): auch bei festen Regeln — dort die „Erlaubte Abweichung".
+    toleranz: zahlOderNull(entwurf.toleranz),
+    nightMinValue: plan ? null : entwurf.nachtMin !== undefined ? zahlOderNull(entwurf.nachtMin) : alt?.nightMinValue ?? null,
+    nightMaxValue: plan ? null : entwurf.nachtMax !== undefined ? zahlOderNull(entwurf.nachtMax) : alt?.nightMaxValue ?? null,
   }
   return alt
     ? alle.map((r) => (r.metricKey === metricKey ? neu : r))

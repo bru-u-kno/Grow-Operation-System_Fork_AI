@@ -235,3 +235,23 @@
   /* Blau statt Gelb: Gelb heißt im Punktband schon „geändert" bzw. „offen". */
   .wp-punkt.hat-nacht-abweichung { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--info); }
 }
+
+/* Fork AI (forkai.130): Tag- und Nachtzeilen im Alarm-Blatt (Mockup Stand 4). Nur Token. */
+@layer components {
+  .tn-block { display: grid; gap: var(--s-2); }
+  .tn-plan { margin: 0; font-size: var(--fs-klein); color: var(--muted); }
+  .tn-plan b { color: var(--ink); font-weight: 600; }
+  .tn-zeile { padding: var(--s-3) 0; border-top: 1px solid var(--hair); }
+  .tn-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-bottom: var(--s-2); }
+  .tn-kopf b { font-size: var(--fs-text); }
+  .tn-jetzt { font-size: var(--fs-etikett); color: var(--accent-text); border: 1px solid var(--accent-text); border-radius: 999px; padding: 1px var(--s-2); }
+  .tn-zeile.ist-jetzt input { border-color: var(--accent); }
+  .tn-status { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-top: var(--s-2); }
+  .tn-ok { font-size: var(--fs-klein); color: var(--accent-text); }
+  .tn-eigen { font-size: var(--fs-klein); color: var(--warn-text); }
+  .tn-zurueck {
+    flex: 0 0 auto; padding: var(--s-1) var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+    background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-klein); white-space: nowrap; cursor: pointer;
+  }
+  .tn-klein { margin: var(--s-1) 0 0; font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}

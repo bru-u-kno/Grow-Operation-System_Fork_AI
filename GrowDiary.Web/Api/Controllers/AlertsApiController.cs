@@ -81,7 +81,9 @@ public sealed class AlertsApiController : ApiControllerBase
                 Enabled = dto.Enabled,
                 CooldownMinutes = dto.CooldownMinutes <= 0 ? 30 : dto.CooldownMinutes,
                 Quelle = IstPlan(dto) ? Grenzwertquelle.Plan : Grenzwertquelle.Fest,
-                Toleranz = IstPlan(dto) && dto.Toleranz is { } t && t > 0 ? t : null,
+                // Fork AI (forkai.130): auch bei festen Regeln — dort ist es die „Erlaubte
+                // Abweichung", mit der der Plan die Grenzen um seinen Wert legt.
+                Toleranz = dto.Toleranz is { } t && t > 0 && (IstPlan(dto) || t <= 15) ? t : null,
                 // Wie bei Min/Max: eine Plan-Regel traegt keine eigenen Zahlen.
                 NightMinValue = IstPlan(dto) ? null : dto.NightMinValue,
                 NightMaxValue = IstPlan(dto) ? null : dto.NightMaxValue,
