@@ -634,6 +634,8 @@ public sealed class GrowPlanService
                         // Fork AI (forkai.130): Luft Nacht als Planwert nachtragen.
                         geaendert |= GrowPlanBauer.NachtLuftFuellen(stand.Inhalt, spalte);
                     }
+                    // Fork AI (forkai.132): Wochennamen einheitlich (Blütewoche 5 statt Flores · Woche 5).
+                    geaendert |= GrowPlanBauer.WochennamenAngleichen(stand.Inhalt);
                     if (!geaendert) continue;
 
                     _repo.Nachtragen(stand);

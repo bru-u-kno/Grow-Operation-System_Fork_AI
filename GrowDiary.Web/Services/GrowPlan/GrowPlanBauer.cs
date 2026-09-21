@@ -44,9 +44,54 @@ public static class GrowPlanBauer
         foreach (var spalte in inhalt.Chart.Columns)
         {
             LueckenFuellen(inhalt, spalte, standard(Phase(spalte.Stage)));
+            spalte.Label = Wochenname(spalte);
         }
 
         return inhalt;
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.132): Der Name einer Woche im Plan des Grows — einheitlich,
+    /// egal wie der Hersteller sie nennt: „Bewurzelung", „Vegiwoche 2",
+    /// „Blütewoche 5", „Flush".
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Nur im Plan des Grows.</b> Die Herstellertabelle im Programm (Wissen)
+    /// behält ihre Begriffe — „Vega", „Flores" sind die Namen des Düngers, und die
+    /// bleiben unangetastet (Bru, 21.09.2026). Der Grow-Plan ist eine Kopie; nur
+    /// dort wird umbenannt.</para>
+    /// <para><b>Mehrere Schritte einer Phase</b> ohne Wochennummer (Athena: „Klon ·
+    /// Vorweichen" / „Klon · Anfüttern") behalten ihren Namen — sie wären sonst nicht
+    /// mehr zu unterscheiden.</para>
+    /// </remarks>
+    public static string Wochenname(FeedChartColumn spalte)
+    {
+        var label = spalte.Label ?? string.Empty;
+        return Phase(spalte.Stage) switch
+        {
+            GrowStage.Veg when spalte.Week is { } w => $"Vegiwoche {w}",
+            GrowStage.Flower when spalte.Week is { } w => $"Blütewoche {w}",
+            GrowStage.Clone or GrowStage.Seedling when label.Contains("Root", StringComparison.OrdinalIgnoreCase)
+                || label.Contains("Bewurzel", StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrWhiteSpace(label) => "Bewurzelung",
+            GrowStage.Finish when label.Contains("Flush", StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrWhiteSpace(label) => "Flush",
+            _ => string.IsNullOrWhiteSpace(label) ? spalte.Id : label,
+        };
+    }
+
+    /// <summary>Fork AI (forkai.132): Wochennamen eines bestehenden Plans angleichen; true, wenn sich etwas geändert hat.</summary>
+    public static bool WochennamenAngleichen(GrowPlanInhalt inhalt)
+    {
+        var geaendert = false;
+        foreach (var spalte in inhalt.Chart.Columns)
+        {
+            var neu = Wochenname(spalte);
+            if (string.Equals(neu, spalte.Label, StringComparison.Ordinal)) continue;
+            spalte.Label = neu;
+            geaendert = true;
+        }
+        return geaendert;
     }
 
     /// <summary>Tiefe Kopie über JSON — der Plan darf das geladene Programm nie mitändern.</summary>
@@ -82,11 +127,11 @@ public static class GrowPlanBauer
         chart.Columns.Add(new FeedChartColumn { Id = "root", Label = "Bewurzelung", Stage = "Clone" });
         for (var w = 1; w <= Math.Max(1, vegiWochen); w++)
         {
-            chart.Columns.Add(new FeedChartColumn { Id = $"veg-w{w}", Label = $"Vegi · Woche {w}", Stage = "Veg", Week = w });
+            chart.Columns.Add(new FeedChartColumn { Id = $"veg-w{w}", Label = $"Vegiwoche {w}", Stage = "Veg", Week = w });
         }
         for (var w = 1; w <= Math.Max(1, bluetewochen); w++)
         {
-            chart.Columns.Add(new FeedChartColumn { Id = $"flower-w{w}", Label = $"Blüte · Woche {w}", Stage = "Flower", Week = w });
+            chart.Columns.Add(new FeedChartColumn { Id = $"flower-w{w}", Label = $"Blütewoche {w}", Stage = "Flower", Week = w });
         }
         chart.Columns.Add(new FeedChartColumn { Id = "flush", Label = "Flush", Stage = "Finish" });
         return chart;
