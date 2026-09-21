@@ -222,7 +222,7 @@ export function PlanReiter() {
           label="Nachts gelten die Tageswerte"
           checked={Boolean(daten.arbeit.nachtWieTag)}
           onChange={(an) => void nachtSetzen({ standard: an })}
-          hint="Standard für alle Wochen dieses Grows (Luft und Luftfeuchte). Einzelne Wochen kannst du abweichend einstellen."
+          hint="Für den ganzen Plan (Luft und Luftfeuchte) · einzelne Wochen können abweichen."
         />
       </div>
 
@@ -236,15 +236,39 @@ export function PlanReiter() {
           <button type="button" className="wp-pfeil" aria-label="Nächste Woche" disabled={index === letzte} onClick={() => blaettern(1)}>›</button>
         </div>
 
-        <div className="pr-nacht-wahl" role="radiogroup" aria-label={`Nachtwerte ${woche.label}`} data-audit="plan-nacht-woche">
-          <button type="button" role="radio" aria-checked={!weichtAbVomStandard} className={classNames('pr-nacht-knopf', !weichtAbVomStandard && 'ist-aktiv')}
-            onClick={() => void nachtSetzen({ spalteId: woche.id, woche: null })}>
-            Nacht wie Standard
-          </button>
-          <button type="button" role="radio" aria-checked={weichtAbVomStandard} className={classNames('pr-nacht-knopf', weichtAbVomStandard && 'ist-aktiv')}
-            onClick={() => void nachtSetzen({ spalteId: woche.id, woche: !daten.arbeit.nachtWieTag })}>
-            {daten.arbeit.nachtWieTag ? 'eigene Nachtwerte' : 'nachts wie tags'}
-          </button>
+        {/* Fork AI (forkai.131): die Knöpfe sagen, was nachts gilt — darunter, ob die
+            Woche dem ganzen Plan folgt (Mockup Stand 7, Bru 21.09.2026). */}
+        <div className="pr-nacht" data-audit="plan-nacht-woche">
+          <div className="pr-nacht-wahl" role="radiogroup" aria-label={`Nachtwerte ${woche.label}`}>
+            {([false, true] as const).map((wahl) => (
+              <button
+                key={String(wahl)}
+                type="button"
+                role="radio"
+                aria-checked={wieTag === wahl}
+                className={classNames('pr-nacht-knopf', wieTag === wahl && 'ist-aktiv')}
+                onClick={() => {
+                  if (wieTag === wahl) return
+                  // Wie der ganze Plan → Abweichung weg; sonst nur diese Woche.
+                  void nachtSetzen({ spalteId: woche.id, woche: wahl === Boolean(daten.arbeit.nachtWieTag) ? null : wahl })
+                }}
+              >
+                {wahl ? 'Nachts wie tags' : 'Nachts eigene Werte'}
+              </button>
+            ))}
+          </div>
+          <div className={classNames('pr-nacht-unter', weichtAbVomStandard && 'ist-abweichend')}>
+            {weichtAbVomStandard ? (
+              <>
+                <span>nur diese Woche</span>
+                <button type="button" className="pr-nacht-zurueck" onClick={() => void nachtSetzen({ spalteId: woche.id, woche: null })}>
+                  zurück zum Plan
+                </button>
+              </>
+            ) : (
+              <span>wie im ganzen Plan</span>
+            )}
+          </div>
         </div>
 
         <div className="wp-gitter wp-gitter-edit">
@@ -292,7 +316,9 @@ export function PlanReiter() {
                 <div className="wp-plan">
                   {gruppe.nacht && felder.every((f) => f.plan == null)
                     ? 'leer = wie tags'
-                    : <>Start {felder.map((f) => alsText(f.plan) || '–').join('–')}</>}
+                    : gruppe.nacht && felder.every((f) => daten.arbeit.herkunft?.[woche.id]?.[f.feld] === 'standard')
+                      ? 'aus Tag − 4 K'
+                      : <>Start {felder.map((f) => alsText(f.plan) || '–').join('–')}</>}
                   {eigen && (
                     <>
                       {' · '}

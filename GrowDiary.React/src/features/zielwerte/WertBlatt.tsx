@@ -172,7 +172,8 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
               <V1Field
                 key={f.feld}
                 label={`${f.bezeichnung}${f.einheit ? ` (${f.einheit})` : ''}`}
-                hint={`Start ${f.startwert == null ? '–' : zahlText(f.startwert)} · ${HERKUNFT[f.herkunft] ?? f.herkunft}`}
+                hint={`Start ${f.startwert == null ? '–' : zahlText(f.startwert)} · ${
+                  f.feld === 'airTempNightC' && f.herkunft === 'standard' ? 'vorbefüllt: Tag − 4 K' : HERKUNFT[f.herkunft] ?? f.herkunft}`}
               >
                 <input
                   inputMode="decimal"

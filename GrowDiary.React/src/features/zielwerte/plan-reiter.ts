@@ -25,6 +25,8 @@ export type PlanStand = {
   nachtWieTag?: boolean
   /** Wochen, die vom Standard abweichen (Spalten-Id → nachts wie tags ja/nein). */
   nachtWieTagJeWoche?: Record<string, boolean> | null
+  /** Spalten-Id → Feld → Herkunft (programm, standard, eigen, fehlt). */
+  herkunft?: Record<string, Record<string, string>>
 }
 
 /** Fork AI (forkai.130): Gelten in dieser Woche nachts die Tageswerte? */

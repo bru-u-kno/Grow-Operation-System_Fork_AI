@@ -223,13 +223,17 @@
 /* Fork AI (forkai.130): „Nachts gelten die Tageswerte" im Plan-Reiter. Nur Token. */
 @layer components {
   .pr-nacht-schalter { margin: 0 0 var(--s-3); }
-  .pr-nacht-wahl { display: flex; margin: 0 0 var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-sm); overflow: hidden; }
+  .pr-nacht { margin: 0 0 var(--s-3); }
+  .pr-nacht-wahl { display: flex; border: 1px solid var(--hair-2); border-radius: var(--r-sm); overflow: hidden; }
   .pr-nacht-knopf {
     flex: 1 1 0; min-height: var(--h-sm, 36px); padding: var(--s-2); border: 0; background: transparent;
     color: var(--muted); font: inherit; font-size: var(--fs-klein); cursor: pointer; text-align: center;
   }
   .pr-nacht-knopf + .pr-nacht-knopf { border-left: 1px solid var(--hair-2); }
   .pr-nacht-knopf.ist-aktiv { background: var(--accent-wash); color: var(--accent-text); font-weight: 600; }
+  .pr-nacht-unter { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-top: var(--s-1); font-size: var(--fs-etikett); color: var(--faint); }
+  .pr-nacht-unter.ist-abweichend { color: var(--info-text); }
+  .pr-nacht-zurueck { border: 0; background: transparent; padding: var(--s-1) 0; color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .pr-wie-tag { opacity: .6; }
   .pr-wie-tag-wert { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--muted); font-size: var(--fs-text); }
   /* Blau statt Gelb: Gelb heißt im Punktband schon „geändert" bzw. „offen". */
