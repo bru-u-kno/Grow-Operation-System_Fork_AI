@@ -5,6 +5,34 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.128
+
+**Fork AI.** Zuluft: Pause, wenn das Zelt zu kalt wird.
+
+- Neu — Reiter **Regel** hat das Feld **„Zelttemperatur min.“** (Helfer
+  `input_number.zuluft_zelttemperatur_min`). Fällt das Zelt darunter, pausiert
+  die Zuluft; sie läuft wieder ab diesem Wert + 1 °C. Oben erscheint dann
+  „Pausiert — Zelt zu kalt“, die Übersicht zeigt „pausiert · Zelt zu kalt“, und
+  der Rechenweg hat ein Glied „Zelt“.
+- Geändert — Die Außentemperatur ist nur noch **Frostschutz** (Vorgabe 0 statt
+  5 °C). Vor dem Auskühlen schützt die Zelttemperatur; die Außentemperatur
+  sperrte die Zuluft gerade in kalten Nächten, in denen die Außenluft am
+  trockensten ist.
+- Behoben — Ein gespeicherter Stand von vor dieser Version gilt wie „nie
+  gespeichert“: die Seite zeigt wieder die Werte aus Home Assistant. Sonst hätte
+  das nächste Speichern Werte zurückgeschrieben, die inzwischen in Home Assistant
+  geändert wurden.
+
+### Technik
+- Neue Geräte-Rolle `zelt_temp` („Zeltfühler · Temperatur“, Vorgabe
+  `sensor.big_probe_sensor_sonden_temperatur`), neues Bauteil
+  `input_number.zuluft_zelttemperatur_min`; die Bedarf-Vorlage prüft die
+  Zelttemperatur (fehlt der Wert kurz, zählt er nicht). Vorhandene Helfer werden
+  wie immer nicht überschrieben.
+- `ZuluftEinstellungen.ZeltTemperaturMinC` (null = Stand vor forkai.128),
+  `ZuluftLive.ZeltTempC` / `PauseZeltKalt`; das Livebild nimmt die geglättete
+  Differenz, wenn es sie gibt.
+
 ## 2.0.0-forkai.127
 
 **Fork AI.** Messseite: Zugaben-Block einspaltig.
