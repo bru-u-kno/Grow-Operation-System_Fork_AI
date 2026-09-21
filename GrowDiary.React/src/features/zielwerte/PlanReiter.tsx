@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } 
 import { useSearchParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Sheet } from '../../components/V1Sheet'
-import { V1Alert, V1Badge, V1Button, V1Field, V1Section, V1Skeleton, V1Tabs } from '../../components/v1'
+import { V1Alert, V1Badge, V1Button, V1Field, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
 import { classNames } from '../../utils'
 import {
   GRUPPEN, aenderungen, alsText, aufPlan, feldText, fehler, punkt, schluessel, startIndex, weichtAb,
@@ -10,7 +10,7 @@ import {
 } from '../wochenplan/wochenwerte-bearbeiten'
 import '../wochenplan/wochenplan.css'
 import {
-  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, zeilenAus,
+  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, nachtAbweichend, nachtWieTagFuer, zeilenAus,
   type BuchEintrag, type DosisEntwurf, type DosisZeile, type PlanStand,
 } from './plan-reiter'
 import { wochenIndex } from './wochen-zeile'
@@ -128,6 +128,20 @@ export function PlanReiter() {
 
   const blaettern = (richtung: -1 | 1) => setIndex((i) => Math.min(letzte, Math.max(0, i + richtung)))
 
+  // Fork AI (forkai.130): „Nachts gelten die Tageswerte" — Standard und je Woche.
+  const wieTag = nachtWieTagFuer(daten.arbeit, woche.id)
+  const weichtAbVomStandard = nachtAbweichend(daten.arbeit, woche.id)
+  async function nachtSetzen(body: { standard?: boolean; spalteId?: string; woche?: boolean | null }) {
+    if (!daten) return
+    try {
+      const neu = await apiFetch<PlanStand>(`/api/grows/${daten.growId}/plan/nacht`, { method: 'POST', body: JSON.stringify(body) })
+      setDaten({ ...daten, arbeit: neu })
+      setMeldung(null)
+    } catch (caught) {
+      setMeldung({ text: formatApiError(caught, 'Die Nacht-Einstellung konnte nicht gespeichert werden.'), ton: 'critical' })
+    }
+  }
+
   function setzZeilen(neu: DosisZeile[]) {
     setDosis((alt) => ({ ...alt, [woche.id]: neu }))
     setMeldung(null)
@@ -203,6 +217,15 @@ export function PlanReiter() {
         {daten.start?.vermerk && <V1Badge tone="warn">{daten.start.vermerk}</V1Badge>}
       </p>
 
+      <div className="pr-nacht-schalter" data-audit="plan-nacht-standard">
+        <V1Switch
+          label="Nachts gelten die Tageswerte"
+          checked={Boolean(daten.arbeit.nachtWieTag)}
+          onChange={(an) => void nachtSetzen({ standard: an })}
+          hint="Standard für alle Wochen dieses Grows (Luft und Luftfeuchte). Einzelne Wochen kannst du abweichend einstellen."
+        />
+      </div>
+
       <div className="wp-blatt" onPointerDown={wischBeginn} onPointerUp={wischEnde} onPointerCancel={() => (wischStart.current = null)}>
         <div className="wp-blatt-kopf">
           <button type="button" className="wp-pfeil" aria-label="Vorige Woche" disabled={index === 0} onClick={() => blaettern(-1)}>‹</button>
@@ -213,12 +236,35 @@ export function PlanReiter() {
           <button type="button" className="wp-pfeil" aria-label="Nächste Woche" disabled={index === letzte} onClick={() => blaettern(1)}>›</button>
         </div>
 
+        <div className="pr-nacht-wahl" role="radiogroup" aria-label={`Nachtwerte ${woche.label}`} data-audit="plan-nacht-woche">
+          <button type="button" role="radio" aria-checked={!weichtAbVomStandard} className={classNames('pr-nacht-knopf', !weichtAbVomStandard && 'ist-aktiv')}
+            onClick={() => void nachtSetzen({ spalteId: woche.id, woche: null })}>
+            Nacht wie Standard
+          </button>
+          <button type="button" role="radio" aria-checked={weichtAbVomStandard} className={classNames('pr-nacht-knopf', weichtAbVomStandard && 'ist-aktiv')}
+            onClick={() => void nachtSetzen({ spalteId: woche.id, woche: !daten.arbeit.nachtWieTag })}>
+            {daten.arbeit.nachtWieTag ? 'eigene Nachtwerte' : 'nachts wie tags'}
+          </button>
+        </div>
+
         <div className="wp-gitter wp-gitter-edit">
           {GRUPPEN.map((gruppe) => {
             const felder = gruppe.felder
               .map((name) => woche.felder.find((f) => f.feld === name))
               .filter((f) => f !== undefined)
             if (felder.length === 0) return null
+            if (gruppe.nacht && wieTag) {
+              // Ruht: nachts gilt der Tageswert — zeigen, welcher, statt ein Feld anzubieten.
+              const tagFeld = woche.felder.find((f) => f.feld === gruppe.nacht?.tag)
+              const tagText = tagFeld ? (feldText(entwurf, woche.id, tagFeld) || alsText(tagFeld.plan)) : ''
+              return (
+                <div key={gruppe.titel} className="wp-zelle pr-wie-tag" data-audit={`plan-${felder[0].feld}-wie-tag`}>
+                  <div className="wp-zelle-n">{gruppe.titel}</div>
+                  <div className="pr-wie-tag-wert">= {tagText || '–'}{felder[0].einheit ? ` ${felder[0].einheit}` : ''}</div>
+                  <div className="wp-plan">wie tags</div>
+                </div>
+              )
+            }
             const eigen = felder.some((f) => weichtAb(entwurf, woche.id, f))
             return (
               <div key={gruppe.titel} className={classNames('wp-zelle', eigen && 'ist-eigen')}>
@@ -237,14 +283,16 @@ export function PlanReiter() {
                         aria-label={`${woche.label}: ${f.bezeichnung}`}
                         data-audit={`plan-${f.feld}`}
                         value={feldText(entwurf, woche.id, f)}
-                        placeholder={alsText(f.plan) || 'eintragen'}
+                        placeholder={alsText(f.plan) || (gruppe.nacht ? 'wie tags' : 'eintragen')}
                         onChange={(e) => { setEntwurf((alt) => ({ ...alt, [schluessel(woche.id, f.feld)]: e.target.value })); setMeldung(null) }}
                       />
                     </span>
                   ))}
                 </div>
                 <div className="wp-plan">
-                  Start {felder.map((f) => alsText(f.plan) || '–').join('–')}
+                  {gruppe.nacht && felder.every((f) => f.plan == null)
+                    ? 'leer = wie tags'
+                    : <>Start {felder.map((f) => alsText(f.plan) || '–').join('–')}</>}
                   {eigen && (
                     <>
                       {' · '}
@@ -276,6 +324,7 @@ export function PlanReiter() {
                 i === index && 'ist-aktiv',
                 s.istJetzt && 'ist-jetzt',
                 zustand.eigen && 'ist-eigen',
+                nachtAbweichend(daten.arbeit, s.id) && 'hat-nacht-abweichung',
                 (zustand.offen || offeneDosis.includes(s.id)) && 'ist-offen',
               )}
               onClick={() => setIndex(i)}

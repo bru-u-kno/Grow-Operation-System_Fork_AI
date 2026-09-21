@@ -51,10 +51,6 @@ public sealed class JedeRouteHatEinenAufruferTests
     /// </remarks>
     private static readonly Dictionary<string, string> OHNE_AUFRUFER = new(StringComparer.OrdinalIgnoreCase)
     {
-        // VORLÄUFIG (Branch tag-nacht, Phase 2): der Plan-Reiter ruft diesen Endpunkt
-        // in Phase 3. Vor der Auslieferung von forkai.130 wieder entfernen.
-        ["POST /api/grows/{growId:int}/plan/nacht"] =
-            "Aufrufer folgt in Phase 3 (Plan-Reiter, Schalter „Nachts gelten die Tageswerte\"). Vor Auslieferung entfernen.",
 
         // --- Betriebszugang: fuer den Entwickler, per curl, ohne Knopf -------
         //

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, zeilenAus,
-  type PlanSpalte,
+  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, nachtAbweichend, nachtWieTagFuer, zeilenAus,
+  type PlanSpalte, type PlanStand,
 } from './plan-reiter'
 import type { WochenwertSpalte } from '../wochenplan/wochenwerte-bearbeiten'
 
@@ -82,5 +82,28 @@ describe('Anfragen und Texte', () => {
     const basis = { id: 1, zeitUtc: '', spalteId: 'flower-w5', ziel: 'grow', grund: null }
     expect(buchText({ ...basis, art: 'dosierung', feld: 'Cannaboost', alt: '1', neu: null }, (f) => f)).toBe('Cannaboost 1 → entfernt')
     expect(buchText({ ...basis, art: 'wert', feld: 'ecTarget', alt: '1.5', neu: '1.4' }, () => 'EC')).toBe('EC 1,5 → 1,4')
+  })
+})
+
+// ------------------------------------------------ Fork AI (forkai.130)
+
+describe('nachtWieTagFuer', () => {
+  const stand = (standard: boolean, je: Record<string, boolean> = {}) =>
+    ({ nachtWieTag: standard, nachtWieTagJeWoche: je } as unknown as PlanStand)
+
+  it('folgt dem Standard, solange die Woche nicht abweicht', () => {
+    expect(nachtWieTagFuer(stand(true), 'flower-w5')).toBe(true)
+    expect(nachtWieTagFuer(stand(false), 'flower-w5')).toBe(false)
+    expect(nachtAbweichend(stand(true), 'flower-w5')).toBe(false)
+  })
+
+  it('eine abweichende Woche gewinnt — auch bei anderer Schreibweise der Id', () => {
+    const s = stand(true, { 'Flower-W7': false })
+    expect(nachtWieTagFuer(s, 'flower-w7')).toBe(false)
+    expect(nachtAbweichend(s, 'flower-w7')).toBe(true)
+  })
+
+  it('ohne Angaben (ältere Stände) gilt „nicht wie tags“', () => {
+    expect(nachtWieTagFuer({} as PlanStand, 'w')).toBe(false)
   })
 })

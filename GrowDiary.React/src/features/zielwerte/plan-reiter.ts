@@ -21,6 +21,22 @@ export type PlanStand = {
   vermerk: string | null
   angelegtUtc: string
   chart: { columns: PlanSpalte[] }
+  /** Fork AI (forkai.130): Standard für alle Wochen — nachts gelten die Tageswerte. */
+  nachtWieTag?: boolean
+  /** Wochen, die vom Standard abweichen (Spalten-Id → nachts wie tags ja/nein). */
+  nachtWieTagJeWoche?: Record<string, boolean> | null
+}
+
+/** Fork AI (forkai.130): Gelten in dieser Woche nachts die Tageswerte? */
+export function nachtWieTagFuer(stand: PlanStand, spalteId: string): boolean {
+  const je = stand.nachtWieTagJeWoche ?? {}
+  const treffer = Object.keys(je).find((k) => k.toLowerCase() === spalteId.toLowerCase())
+  return treffer !== undefined ? je[treffer] : Boolean(stand.nachtWieTag)
+}
+
+/** Weicht diese Woche vom Standard ab? */
+export function nachtAbweichend(stand: PlanStand, spalteId: string): boolean {
+  return Object.keys(stand.nachtWieTagJeWoche ?? {}).some((k) => k.toLowerCase() === spalteId.toLowerCase())
 }
 
 export type BuchEintrag = {

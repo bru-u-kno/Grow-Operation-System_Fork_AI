@@ -47,15 +47,20 @@ export const schluessel = (spalteId: string, feld: string) => `${spalteId}|${fel
 /**
  * Wie die Felder auf dem Display zusammenstehen. Spannen (von/bis) teilen sich
  * eine Zelle — so bleiben es neun Werte, wie im freigegebenen Mockup.
+ *
+ * Fork AI (forkai.130): `nacht` markiert Gruppen, die bei „Nachts gelten die
+ * Tageswerte" ruhen — sie zeigen dann nur den Tageswert (`tag`).
  */
-export const GRUPPEN: ReadonlyArray<{ titel: string; felder: readonly string[] }> = [
+export const GRUPPEN: ReadonlyArray<{ titel: string; felder: readonly string[]; nacht?: { tag: string } }> = [
   { titel: 'EC', felder: ['ecTarget'] },
   { titel: 'EC-Band', felder: ['ecMin', 'ecMax'] },
   { titel: 'pH', felder: ['phMin', 'phMax'] },
   { titel: 'Wasser Tag', felder: ['waterTempDayC'] },
   { titel: 'Wasser Nacht', felder: ['waterTempNightC'] },
   { titel: 'RH max', felder: ['rhMax'] },
+  { titel: 'RH max Nacht', felder: ['rhMaxNight'], nacht: { tag: 'rhMax' } },
   { titel: 'Luft', felder: ['airTempC'] },
+  { titel: 'Luft Nacht', felder: ['airTempNightC'], nacht: { tag: 'airTempC' } },
   { titel: 'VPD', felder: ['vpdMin', 'vpdMax'] },
   { titel: 'CO₂', felder: ['co2Min', 'co2Max'] },
   { titel: 'PPFD', felder: ['ppfdMin', 'ppfdMax'] },
