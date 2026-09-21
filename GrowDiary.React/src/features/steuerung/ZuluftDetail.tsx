@@ -106,7 +106,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
   const live = seite.live
   const setz = <K extends keyof ZuluftEinstellungen>(feld: K, wert: ZuluftEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
 
-  const zustand = live.portAn === true ? 'saugt' : live.bedarf === true ? 'wartet' : 'bereit'
+  const zustand = live.portAn === true ? 'saugt' : live.bedarf === true ? 'wartet' : live.pauseZeltKalt === true ? 'pausiert' : 'bereit'
 
   return (
     <V1Page
@@ -141,6 +141,13 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           tone="warn"
           title="Automatik aus"
           message="Die Regelung ist angehalten. Der Lüfter bleibt, wie er gerade steht — er wird weder ein- noch ausgeschaltet."
+        />
+      )}
+      {live.pauseZeltKalt === true && (
+        <V1Alert
+          tone="warn"
+          title="Pausiert — Zelt zu kalt"
+          message={`Die Außenluft würde trocknen, aber das Zelt hat ${Zeig(live.zeltTempC, ' °C', 1)}. Die Zuluft läuft wieder ab ${Zeig(entwurf.zeltTemperaturMinC == null ? null : entwurf.zeltTemperaturMinC + 1, ' °C', 1)}; bis dahin entfeuchtet der Trotec allein.`}
         />
       )}
       {seite.ausHomeAssistantUebernommen && (
@@ -192,8 +199,19 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
               fehler={feldFehler.MindestDifferenzGm3}
             />
             <Zahl
-              label="Außentemperatur min."
-              hinweis="Darunter bleibt der Lüfter aus, egal wie trocken es draußen ist."
+              label="Zelttemperatur min."
+              hinweis="Fällt das Zelt darunter, pausiert die Zuluft — sie läuft wieder ab diesem Wert + 1 °C. Schützt vor Auskühlen in kalten Nächten."
+              einheit="°C"
+              wert={entwurf.zeltTemperaturMinC ?? 21}
+              min={10}
+              max={30}
+              schritt={0.5}
+              onChange={(v) => setz('zeltTemperaturMinC', v)}
+              fehler={feldFehler.ZeltTemperaturMinC}
+            />
+            <Zahl
+              label="Außentemperatur min. (Frostschutz)"
+              hinweis="Darunter bleibt der Lüfter aus, egal wie trocken es draußen ist. Vor dem Auskühlen schützt die Zelttemperatur."
               einheit="°C"
               wert={entwurf.aussentemperaturMinC}
               min={-10}
@@ -311,7 +329,12 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
             wert={`${Zeig(live.differenzGm3, ' g/m³', 2)} · Schwelle ${entwurf.mindestDifferenzGm3.toLocaleString('de-DE')}`}
           />
           <p className="zl-pfeil" aria-hidden="true">↓</p>
-          <Glied ziel marke="Zielstufe" wert={live.zielstufe == null ? '–' : `${live.zielstufe} von ${entwurf.stufeMax}`} />
+          <Glied
+            marke="Zelt"
+            wert={`${Zeig(live.zeltTempC, ' °C', 1)} · Minimum ${Zeig(entwurf.zeltTemperaturMinC, ' °C', 1)}${live.pauseZeltKalt === true ? ' · Pause' : ''}`}
+          />
+          <p className="zl-pfeil" aria-hidden="true">↓</p>
+                    <Glied ziel marke="Zielstufe" wert={live.zielstufe == null ? '–' : `${live.zielstufe} von ${entwurf.stufeMax}`} />
         </div>
         <p className="st-hinweis">
           Gerechnet wird mit absoluter Feuchte nach Magnus. Relative Prozente allein sagen nichts darüber,

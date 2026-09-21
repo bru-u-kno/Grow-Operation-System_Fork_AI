@@ -24,6 +24,9 @@ public sealed class ZuluftSteuerungService
 {
     public const string Modul = "zuluft";
 
+    /// <summary>Fork AI (forkai.128): Vorgabe für die Kälte-Pause, wenn der Helfer fehlt.</summary>
+    public const double ZeltTemperaturMinVorgabe = 21;
+
     /// <summary>Die Rollen dieses Moduls — aufgelöst über die Geräteseite.</summary>
     public static class Rollen
     {
@@ -34,6 +37,9 @@ public sealed class ZuluftSteuerungService
         public const string PortZustand = "port_zustand";
         public const string PortStatus = "port_status";
         public const string PortIstStufe = "port_ist_stufe";
+
+        /// <summary>Fork AI (forkai.128): Zelttemperatur für die Kälte-Pause.</summary>
+        public const string ZeltTemp = "zelt_temp";
     }
 
     /// <summary>Die Objekte der Steuerung selbst — sie gehören keinem Gerät.</summary>
@@ -45,10 +51,17 @@ public sealed class ZuluftSteuerungService
         public const string StufeMax = "input_number.zuluft_stufe_max";
         public const string Mindestlaufzeit = "input_number.zuluft_mindestlaufzeit";
         public const string Mindestpause = "input_number.zuluft_mindestpause";
+        public const string ZeltTemperaturMin = "input_number.zuluft_zelttemperatur_min";
         public const string LetzterSchaltvorgang = "input_datetime.zuluft_letzter_schaltvorgang";
         public const string AbsolutDraussen = "sensor.absolute_feuchte_draussen";
         public const string AbsolutKeller = "sensor.absolute_feuchte_keller";
         public const string Differenz = "sensor.zuluft_differenz";
+
+        /// <summary>
+        /// Optional: geglättete Differenz (Statistik-Helfer, 10 min). Gibt es sie,
+        /// rechnet der Bedarf damit — die rohe Differenz springt um 0,5 g/m³ in einer Minute.
+        /// </summary>
+        public const string DifferenzGeglaettet = "sensor.zuluft_differenz_geglattet";
         public const string Zielstufe = "sensor.zuluft_zielstufe";
         public const string Bedarf = "binary_sensor.zuluft_bedarf";
         public const string Automatik = "automation.zuluft_keller_regelung";
@@ -76,8 +89,19 @@ public sealed class ZuluftSteuerungService
 
     // ----------------------------------------------------------- Einstellungen
 
-    /// <summary>Der gespeicherte Stand — null, solange nie gespeichert wurde.</summary>
-    public ZuluftEinstellungen? Gespeichert => _repo.GetEinstellungen<ZuluftEinstellungen>(Modul);
+    /// <summary>
+    /// Der gespeicherte Stand — null, solange nie gespeichert wurde oder der Stand
+    /// von vor forkai.128 stammt (ohne Zelttemperatur, siehe F-022).
+    /// </summary>
+    public ZuluftEinstellungen? Gespeichert => GueltigGespeichert(_repo.GetEinstellungen<ZuluftEinstellungen>(Modul));
+
+    /// <summary>
+    /// Ein Stand ohne Zelttemperatur stammt von vor forkai.128. Er gilt wie „nie
+    /// gespeichert": die Werte in Home Assistant sind seitdem womöglich geändert
+    /// worden, und das nächste Speichern würde sie sonst zurückdrehen.
+    /// </summary>
+    public static ZuluftEinstellungen? GueltigGespeichert(ZuluftEinstellungen? gelesen)
+        => gelesen?.ZeltTemperaturMinC is null ? null : gelesen;
 
     /// <summary>
     /// Die Einstellungen, wie die Seite sie zeigen soll: gespeichert, sonst aus
@@ -114,6 +138,7 @@ public sealed class ZuluftSteuerungService
         if (Zahl(Entitaeten.StufeMax) is { } smax) e.StufeMax = (int)Math.Round(smax);
         if (Zahl(Entitaeten.Mindestlaufzeit) is { } lz) e.MindestlaufzeitMin = (int)Math.Round(lz);
         if (Zahl(Entitaeten.Mindestpause) is { } pa) e.MindestpauseMin = (int)Math.Round(pa);
+        e.ZeltTemperaturMinC = Zahl(Entitaeten.ZeltTemperaturMin) ?? ZeltTemperaturMinVorgabe;
         if (zustaende.TryGetValue(Entitaeten.Automatik, out var automatik) && automatik is not null)
         {
             e.AutomatikAktiv = automatik is "on" or "On";
@@ -134,6 +159,11 @@ public sealed class ZuluftSteuerungService
         if (e.AussentemperaturMinC is < -10 or > 25)
         {
             f[nameof(e.AussentemperaturMinC)] = "Außentemperatur-Minimum muss zwischen -10 und 25 °C liegen.";
+        }
+
+        if (e.ZeltTemperaturMinC is < 10 or > 30)
+        {
+            f[nameof(e.ZeltTemperaturMinC)] = "Zelttemperatur-Minimum muss zwischen 10 und 30 °C liegen.";
         }
 
         if (e.StufeMin is < 1 or > 10) f[nameof(e.StufeMin)] = "Stufe muss zwischen 1 und 10 liegen.";
@@ -166,7 +196,7 @@ public sealed class ZuluftSteuerungService
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return false;
 
-        var zahlen = new (string Entity, double Wert)[]
+        var zahlen = new List<(string Entity, double Wert)>
         {
             (Entitaeten.MindestDifferenz, e.MindestDifferenzGm3),
             (Entitaeten.AussentemperaturMin, e.AussentemperaturMinC),
@@ -175,6 +205,7 @@ public sealed class ZuluftSteuerungService
             (Entitaeten.Mindestlaufzeit, e.MindestlaufzeitMin),
             (Entitaeten.Mindestpause, e.MindestpauseMin),
         };
+        if (e.ZeltTemperaturMinC is { } zelt) zahlen.Add((Entitaeten.ZeltTemperaturMin, zelt));
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -215,6 +246,14 @@ public sealed class ZuluftSteuerungService
         var (rest, gewechselt) = Sperre(Text(Entitaeten.LetzterSchaltvorgang),
             e.MindestlaufzeitMin, e.MindestpauseMin, AnRolle(Rollen.PortZustand) == true, DateTime.Now);
 
+        var zeltTemp = ZahlRolle(Rollen.ZeltTemp);
+        var pause = PauseWegenZeltkaelte(
+            An(Entitaeten.Bedarf),
+            Zahl(Entitaeten.DifferenzGeglaettet) ?? Zahl(Entitaeten.Differenz),
+            e.MindestDifferenzGm3,
+            zeltTemp,
+            e.ZeltTemperaturMinC ?? Zahl(Entitaeten.ZeltTemperaturMin));
+
         return new ZuluftLive(
             HaErreichbar: entities.Count > 0,
             DifferenzGm3: Zahl(Entitaeten.Differenz),
@@ -231,7 +270,25 @@ public sealed class ZuluftSteuerungService
             PortOnline: AnRolle(Rollen.PortStatus),
             AutomatikAn: An(Entitaeten.Automatik),
             SperreRestMin: rest,
-            LetzterWechsel: gewechselt);
+            LetzterWechsel: gewechselt,
+            ZeltTempC: zeltTemp,
+            PauseZeltKalt: pause);
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.128): Pausiert die Zuluft gerade nur, weil das Zelt zu kalt ist?
+    /// </summary>
+    /// <remarks>
+    /// Ja, wenn die Außenluft trocknen würde (Differenz über der Schwelle), der
+    /// Bedarf aber aus ist und das Zelt unter Minimum + 1 °C liegt — das ist das
+    /// Band, in dem der Bedarf wegen der Kälte aus bleibt. null, wenn einer der
+    /// Werte fehlt: dann lässt sich der Grund nicht sagen.
+    /// </remarks>
+    public static bool? PauseWegenZeltkaelte(
+        bool? bedarf, double? differenz, double schwelle, double? zeltTemp, double? zeltMin)
+    {
+        if (bedarf is null || differenz is null || zeltTemp is null || zeltMin is null) return null;
+        return bedarf == false && differenz >= schwelle && zeltTemp < zeltMin + 1;
     }
 
     /// <summary>

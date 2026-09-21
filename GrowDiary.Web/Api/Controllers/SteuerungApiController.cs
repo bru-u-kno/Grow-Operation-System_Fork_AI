@@ -148,7 +148,8 @@ public sealed class SteuerungApiController : ApiControllerBase
                 Wert: F(zuluft.DifferenzGm3, " g/m³", "0.00"),
                 Unterzeile: zuluft.PortAn == true
                     ? $"saugt · Stufe {zuluft.IstStufe?.ToString(de) ?? "–"}"
-                    : zuluft.Bedarf == true ? "wartet auf Schaltsperre" : "bereit",
+                    : zuluft.Bedarf == true ? "wartet auf Schaltsperre"
+                    : zuluft.PauseZeltKalt == true ? "pausiert · Zelt zu kalt" : "bereit",
                 HatDetail: true),
             new(
                 Kennung: "licht",

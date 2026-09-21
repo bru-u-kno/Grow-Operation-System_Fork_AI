@@ -23,8 +23,28 @@ public sealed class ZuluftEinstellungen
     /// <summary>Ab wie viel g/m³ Unterschied angesaugt wird.</summary>
     public double MindestDifferenzGm3 { get; set; } = 1.0;
 
-    /// <summary>Darunter bleibt der Lüfter aus, egal wie trocken es draußen ist.</summary>
-    public double AussentemperaturMinC { get; set; } = 5;
+    /// <summary>
+    /// Frostschutz: darunter bleibt der Lüfter aus, egal wie trocken es draußen ist.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (forkai.128): Vorgabe 0 statt 5 °C. Vor dem Auskühlen schützt jetzt
+    /// <see cref="ZeltTemperaturMinC"/> — die Außentemperatur war dafür nur ein
+    /// Umweg, und sie sperrte die Zuluft gerade in kalten Nächten, in denen die
+    /// Außenluft am trockensten ist.
+    /// </remarks>
+    public double AussentemperaturMinC { get; set; } = 0;
+
+    /// <summary>
+    /// Fork AI (forkai.128): Fällt das Zelt unter diese Temperatur, pausiert die
+    /// Zuluft; sie läuft wieder ab diesem Wert + 1 °C.
+    /// </summary>
+    /// <remarks>
+    /// <b>null heißt: gespeichert vor forkai.128.</b> Ein solcher Stand gilt wie
+    /// „nie gespeichert" — die Seite zeigt wieder die Werte aus Home Assistant.
+    /// Sonst schriebe das nächste Speichern die alten Werte zurück, die inzwischen
+    /// in Home Assistant geändert wurden (Fehlerregister F-022).
+    /// </remarks>
+    public double? ZeltTemperaturMinC { get; set; }
 
     /// <summary>Stufe bei knapper Differenz.</summary>
     public int StufeMin { get; set; } = 3;
@@ -43,6 +63,10 @@ public sealed class ZuluftEinstellungen
 }
 
 /// <summary>Was die Zuluft-Seite an Livewerten zeigt.</summary>
+/// <param name="PauseZeltKalt">
+/// Fork AI (forkai.128): true, wenn die Außenluft trocknen würde, die Zuluft aber
+/// pausiert, weil das Zelt zu kalt ist.
+/// </param>
 /// <param name="SperreRestMin">
 /// Wie lange die Schaltsperre noch läuft. 0 heißt frei; null, wenn noch nie
 /// geschaltet wurde oder der Zeitstempel fehlt.
@@ -63,4 +87,6 @@ public sealed record ZuluftLive(
     bool? PortOnline,
     bool? AutomatikAn,
     int? SperreRestMin,
-    DateTime? LetzterWechsel);
+    DateTime? LetzterWechsel,
+    double? ZeltTempC = null,
+    bool? PauseZeltKalt = null);

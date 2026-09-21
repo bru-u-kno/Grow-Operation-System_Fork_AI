@@ -213,6 +213,8 @@ export type ZuluftEinstellungen = {
   mindestlaufzeitMin: number
   mindestpauseMin: number
   automatikAktiv: boolean
+  /** Fork AI (forkai.128): darunter pausiert die Zuluft, wieder an ab + 1 °C. */
+  zeltTemperaturMinC: number | null
 }
 
 export type ZuluftLive = {
@@ -233,6 +235,10 @@ export type ZuluftLive = {
   /** Restliche Sperrzeit in Minuten; 0 = frei, null = noch nie geschaltet. */
   sperreRestMin: number | null
   letzterWechsel: string | null
+  /** Fork AI (forkai.128) */
+  zeltTempC: number | null
+  /** True, wenn die Außenluft trocknen würde, das Zelt aber zu kalt ist. */
+  pauseZeltKalt: boolean | null
 }
 
 export type ZuluftSeite = {

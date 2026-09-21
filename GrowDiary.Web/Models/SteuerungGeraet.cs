@@ -133,6 +133,11 @@ public static class SteuerungGeraeteRollen
             "sensor.air_zuluft_aktuelle_leistung", new[] { "sensor", "number" }, Pflicht: false),
         new("zuluft", "port_status", "Zuluft-Lüfter · Port online", GruppeMessen,
             "binary_sensor.air_zuluft_status", new[] { "binary_sensor" }, Pflicht: false),
+        // Fork AI (forkai.128): Das Zelt zieht seine Luft aus dem Keller. Wird es
+        // zu kalt, pausiert die Zuluft — Frostschutz draußen reicht dafür nicht.
+        new("zuluft", "zelt_temp", "Zeltfühler · Temperatur", GruppeMessen,
+            "sensor.big_probe_sensor_sonden_temperatur", new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Fällt das Zelt unter das Minimum, pausiert die Zuluft."),
 
         // Kühler: ein Fühler im Wasser, eine Steckdose und der Lichtzustand.
         // Die Lampe steht hier, weil Tag und Nacht am Licht hängen und nicht an

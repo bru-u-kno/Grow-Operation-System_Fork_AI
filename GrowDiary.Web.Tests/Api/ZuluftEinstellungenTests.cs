@@ -49,6 +49,7 @@ public sealed class ZuluftEinstellungenTests : IDisposable
             MindestlaufzeitMin = 15,
             MindestpauseMin = 20,
             AutomatikAktiv = false,
+            ZeltTemperaturMinC = 19.5,
         };
 
         _repo.SetEinstellungen(ZuluftSteuerungService.Modul, gesendet);
@@ -62,6 +63,76 @@ public sealed class ZuluftEinstellungenTests : IDisposable
         Assert.Equal(15, gelesen.MindestlaufzeitMin);
         Assert.Equal(20, gelesen.MindestpauseMin);
         Assert.False(gelesen.AutomatikAktiv);
+        Assert.Equal(19.5, gelesen.ZeltTemperaturMinC);
+    }
+
+    // ------------------------------------------------ Fork AI (forkai.128)
+
+    [Fact]
+    public void EinStandVonVorDerZeltpauseGiltWieNieGespeichert()
+    {
+        // F-022: gespeichert am 13.09., danach in HA geaendert. Gaelte der alte
+        // Stand weiter, schriebe das naechste Speichern die alten Werte zurueck
+        // (Aussentemperatur 10 statt 0 °C) - ohne dass jemand etwas verstellt hat.
+        var alt = new ZuluftEinstellungen { MindestDifferenzGm3 = 1.5, AussentemperaturMinC = 10 };
+        _repo.SetEinstellungen(ZuluftSteuerungService.Modul, alt);
+
+        var gelesen = _repo.GetEinstellungen<ZuluftEinstellungen>(ZuluftSteuerungService.Modul);
+        Assert.Null(gelesen!.ZeltTemperaturMinC);
+        Assert.Null(ZuluftSteuerungService.GueltigGespeichert(gelesen));
+
+        gelesen.ZeltTemperaturMinC = 21;
+        Assert.Same(gelesen, ZuluftSteuerungService.GueltigGespeichert(gelesen));
+    }
+
+    [Fact]
+    public void DieZelttemperaturKommtAusDemHelferSonstVorgabe()
+    {
+        var mit = ZuluftSteuerungService.AusHomeAssistant(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ZuluftSteuerungService.Entitaeten.ZeltTemperaturMin] = "20.5",
+            [ZuluftSteuerungService.Entitaeten.AussentemperaturMin] = "0.0",
+        });
+        Assert.Equal(20.5, mit.ZeltTemperaturMinC);
+        Assert.Equal(0, mit.AussentemperaturMinC);
+
+        // Helfer noch nicht angelegt: nicht null, sonst gaelte schon der erste
+        // gespeicherte Stand wieder als alt.
+        var ohne = ZuluftSteuerungService.AusHomeAssistant(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase));
+        Assert.Equal(ZuluftSteuerungService.ZeltTemperaturMinVorgabe, ohne.ZeltTemperaturMinC);
+    }
+
+    [Theory]
+    [InlineData(9.5, true)]
+    [InlineData(10, false)]
+    [InlineData(30, false)]
+    [InlineData(30.5, true)]
+    public void DieZelttemperaturHatGrenzen(double wert, bool abgelehnt)
+    {
+        var fehler = ZuluftSteuerungService.Pruefen(new ZuluftEinstellungen { ZeltTemperaturMinC = wert });
+        Assert.Equal(abgelehnt, fehler.ContainsKey(nameof(ZuluftEinstellungen.ZeltTemperaturMinC)));
+    }
+
+    [Theory]
+    // Aussenluft trocknet, Bedarf aus, Zelt unter Minimum → Pause wegen Kaelte.
+    [InlineData(false, 2.9, 20.5, true)]
+    // Im Band zwischen Minimum und Minimum + 1 bleibt der Bedarf aus → noch Pause.
+    [InlineData(false, 2.9, 21.6, true)]
+    // Zelt warm genug, Bedarf aus → der Grund ist nicht die Kaelte.
+    [InlineData(false, 2.9, 23.5, false)]
+    // Aussenluft bringt nichts → keine Kaelte-Pause, sondern kein Nutzen.
+    [InlineData(false, 0.4, 20.0, false)]
+    // Bedarf an → keine Pause.
+    [InlineData(true, 2.9, 20.0, false)]
+    public void DieKaeltePauseWirdErkannt(bool bedarf, double differenz, double zelt, bool pause)
+    {
+        Assert.Equal(pause, ZuluftSteuerungService.PauseWegenZeltkaelte(bedarf, differenz, 1.0, zelt, 21));
+    }
+
+    [Fact]
+    public void OhneZeltwertLaesstSichDerGrundNichtSagen()
+    {
+        Assert.Null(ZuluftSteuerungService.PauseWegenZeltkaelte(false, 2.9, 1.0, null, 21));
     }
 
     [Fact]

@@ -263,8 +263,12 @@ public static class SteuerungBauteile
         new(Zuluft, "input_number.zuluft_mindest_differenz", "Zuluft Mindest-Differenz", BauteilArt.Zahl,
             "Ab wie viel Unterschied das Ansaugen lohnt.", Min: 0.2, Max: 10, Schritt: 0.1, Einheit: "g/m³"),
         new(Zuluft, "input_number.zuluft_aussentemperatur_min", "Zuluft Aussentemperatur min", BauteilArt.Zahl,
-            "Darunter bleibt der Lüfter aus, egal wie trocken es draußen ist.",
+            "Frostschutz: darunter bleibt der Lüfter aus, egal wie trocken es draußen ist.",
             Min: -10, Max: 25, Schritt: 0.5, Einheit: "°C"),
+        // Fork AI (forkai.128)
+        new(Zuluft, "input_number.zuluft_zelttemperatur_min", "Zuluft Zelttemperatur min", BauteilArt.Zahl,
+            "Fällt das Zelt darunter, pausiert die Zuluft; wieder an ab + 1 °C.",
+            Min: 10, Max: 30, Schritt: 0.5, Einheit: "°C"),
 
         // --- Lüfter ---------------------------------------------------------
         new(Zuluft, "input_number.zuluft_stufe_min", "Zuluft Stufe min", BauteilArt.Zahl,
@@ -308,8 +312,8 @@ public static class SteuerungBauteile
             Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set lo = states('input_number.zuluft_stufe_min') | float %}{% set hi = states('input_number.zuluft_stufe_max') | float %}{% set f = [([(d - s) / 3.0, 0] | max), 1] | min %}{{ (lo + (hi - lo) * f) | round(0) | int }}",
             Verfuegbarkeit: "{{ has_value('sensor.zuluft_differenz') }}"),
         new(Zuluft, "binary_sensor.zuluft_bedarf", "Zuluft Bedarf", BauteilArt.RechenSchalter,
-            "An, solange Ansaugen lohnt. Mit Hysterese, damit er an der Schwelle nicht flattert.",
-            Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set t = states('[[aussen_temp]]') | float %}{% set tm = states('input_number.zuluft_aussentemperatur_min') | float %}{% set prev = (this.state == 'on') if this is defined else false %}{% if d >= s and t >= tm %}on{% elif d < s - 0.5 or t < tm - 1 %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
+            "An, solange Ansaugen lohnt und das Zelt warm genug ist. Mit Hysterese, damit er an der Schwelle nicht flattert. Fehlt der Zeltwert kurz, zählt er nicht (float(99)).",
+            Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set t = states('[[aussen_temp]]') | float %}{% set tm = states('input_number.zuluft_aussentemperatur_min') | float %}{% set tz = states('[[zelt_temp]]') | float(99) %}{% set tzm = states('input_number.zuluft_zelttemperatur_min') | float(21) %}{% set prev = (this.state == 'on') if this is defined else false %}{% if d >= s and t >= tm and tz >= tzm + 1 %}on{% elif d < s - 0.5 or t < tm - 1 or tz < tzm %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
             Verfuegbarkeit: "{{ has_value('sensor.zuluft_differenz') and has_value('[[aussen_temp]]') }}"),
 
         // --- Automation -----------------------------------------------------
