@@ -277,3 +277,8 @@
   .pk-kontext.ist-warn { border-color: var(--warn); color: var(--warn-text); }
   .pk-link { flex: 0 0 auto; color: var(--accent-text); font-weight: 600; text-decoration: none; white-space: nowrap; }
 }
+
+/* Fork AI (forkai.133): Ziel im Grenzwert-Blatt nur lesen. */
+@layer components {
+  .wb-ziel small.wb-herkunft { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
+}

@@ -119,9 +119,10 @@ function QuellePill({ wert }: { wert: Wert }) {
 
 /** Was die Glocke unten auf der Karte sagt. */
 function Glocke({ wert }: { wert: Wert }) {
-  if (wert.meldet) return <span className="zw-glocke ist-meldet">● meldet</span>
-  if (wert.regel?.aktiv) return <span className="zw-glocke ist-scharf">● scharf</span>
-  return <span className="zw-glocke">○ kein Alarm</span>
+  // Fork AI (forkai.133): „außerhalb/überwacht" statt „meldet/scharf" — Grenzwerte, nicht Alarm.
+  if (wert.meldet) return <span className="zw-glocke ist-meldet">● außerhalb</span>
+  if (wert.regel?.aktiv) return <span className="zw-glocke ist-scharf">● überwacht</span>
+  return <span className="zw-glocke">○ nicht überwacht</span>
 }
 
 function ZielwertePage() {
@@ -187,7 +188,7 @@ function ZielwertePage() {
           {melden.length > 0 && (
             <V1Alert
               tone="critical"
-              message={`${melden.length === 1 ? '1 Wert meldet' : `${melden.length} Werte melden`} gerade: ${melden
+              message={`${melden.length === 1 ? '1 Wert' : `${melden.length} Werte`} gerade außerhalb: ${melden
                 .map((w) => `${w.name} ${w.ist}${w.einheit ? ` ${w.einheit}` : ''}`)
                 .join(' · ')}`}
             />
@@ -232,7 +233,7 @@ function ZielwertePage() {
                       einer Sache, und sie auseinanderzuziehen war der Anfang
                       der Verwirrung. */}
                   <div className="zw-alarm zw-fuss">
-                    <span>{wert.alarm ? `Alarm ${wert.alarm}` : 'kein Alarm hinterlegt'}</span>
+                    <span>{wert.alarm ? `Grenzwerte ${wert.alarm}` : 'keine Grenzwerte'}</span>
                     <Glocke wert={wert} />
                   </div>
                 </article>

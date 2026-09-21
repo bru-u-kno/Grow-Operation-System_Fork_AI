@@ -5,11 +5,12 @@ import { V1Alert, V1Button, V1Field, V1Switch, V1Tabs } from '../../components/v
 import { classNames } from '../../utils'
 import type { TentAlertRulesDto } from '../../types/alert'
 import {
-  UEBERGABE_JE_METRIK, alarmGeaendert, entwurfAus, planAenderungen, pruefen,
+  UEBERGABE_JE_METRIK, alarmGeaendert, entwurfAus, pruefen,
   regelnMitAenderung, zahlText, type AlarmRegel, type Entwurf, type PlanFeld,
 } from './wert-blatt'
 import { TAG_NACHT_ROLLEN, deutscheWoche, engesBand, planKurz, planWaereText, planwertText, weichtVomPlanAb, zeilenStand } from './tag-nacht'
 import { nachtWieTagFuer, type PlanStand } from './plan-reiter'
+import { KontextSprung } from './PlanKette'
 
 export type BlattWert = {
   key: string
@@ -36,7 +37,7 @@ const HERKUNFT: Record<string, string> = {
 
 /**
  * Fork AI (Grow-Plan, Schritt 2): alles zu EINER Messgröße in einem Blatt —
- * Ziel der laufenden Woche, Alarm, Pause zwischen Meldungen, was nach Home
+ * Ziel der laufenden Woche (seit forkai.133 nur lesen), Grenzwerte, Pause zwischen Meldungen, was nach Home
  * Assistant geht und woher der Wert kommt.
  */
 export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, onClose, onGespeichert }: {
@@ -54,9 +55,8 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
   const [fehler, setFehler] = useState<string | null>(null)
   const [speichert, setSpeichert] = useState(false)
 
-  const aenderungen = spalteId ? planAenderungen(felder, entwurf, spalteId) : []
   const alarmNeu = alarmGeaendert(wert.regel, entwurf)
-  const anzahl = aenderungen.length + (alarmNeu ? 1 : 0)
+  const anzahl = alarmNeu ? 1 : 0
   const planMoeglich = wert.regel?.planMoeglich ?? false
   const hierhin = UEBERGABE_JE_METRIK[wert.key] ?? []
   const zeilen = uebergabe.filter((u) => hierhin.includes(u.rolle))
@@ -92,8 +92,6 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
   }
 
   const setz = (teil: Partial<Entwurf>) => setEntwurf((alt) => ({ ...alt, ...teil }))
-  const setzPlan = (feld: string, text: string) =>
-    setEntwurf((alt) => ({ ...alt, plan: { ...alt.plan, [feld]: text } }))
 
   async function speichern() {
     const problem = pruefen(felder, entwurf)
@@ -114,12 +112,6 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
     setSpeichert(true)
     setFehler(null)
     try {
-      if (aenderungen.length > 0) {
-        await apiFetch(`/api/wochenplan/werte/${growId}`, {
-          method: 'POST',
-          body: JSON.stringify({ aenderungen }),
-        })
-      }
       if (alarmNeu) {
         // Frisch holen: der Server ersetzt den ganzen Satz, und der Wochenplan
         // kann ihn seit dem Laden der Seite nachgezogen haben.
@@ -164,38 +156,32 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
         <h3>{woche ? `Ziel · ${deutscheWoche(woche)}` : 'Ziel'}</h3>
         {felder.length === 0 || !spalteId ? (
           <p className="wb-hinweis">
-            Für diesen Wert nennt der Plan kein Ziel. Die feste Alarmgrenze unten ist hier zugleich das Ziel.
+            Für diesen Wert nennt der Plan kein Ziel. Der feste Grenzwert unten ist hier zugleich das Ziel.
           </p>
         ) : (
-          <div className="wb-felder">
+          <>
+            {/* Fork AI (forkai.133): Zielwerte ändert man nur noch im Plan — hier nur lesen. */}
             {felder.map((f) => (
-              <V1Field
-                key={f.feld}
-                label={`${f.bezeichnung}${f.einheit ? ` (${f.einheit})` : ''}`}
-                hint={`Start ${f.startwert == null ? '–' : zahlText(f.startwert)} · ${
-                  f.feld === 'airTempNightC' && f.herkunft === 'standard' ? 'vorbefüllt: Tag − 4 K' : HERKUNFT[f.herkunft] ?? f.herkunft}`}
-              >
-                <input
-                  inputMode="decimal"
-                  value={entwurf.plan[f.feld] ?? ''}
-                  placeholder={f.herkunft === 'fehlt' ? 'eintragen' : ''}
-                  className={classNames(aenderungen.some((a) => a.feld === f.feld) && 'wb-geaendert')}
-                  onChange={(e) => setzPlan(f.feld, e.target.value)}
-                />
-              </V1Field>
+              <div key={f.feld} className="wb-zeile wb-ziel" data-audit={`ziel-${f.feld}`}>
+                <span>
+                  {f.bezeichnung}
+                  <small className="wb-herkunft">
+                    {f.feld === 'airTempNightC' && f.herkunft === 'standard' ? 'vorbefüllt: Tag − 4 K' : HERKUNFT[f.herkunft] ?? f.herkunft}
+                  </small>
+                </span>
+                <span>{f.wert == null ? '–' : `${zahlText(f.wert)}${f.einheit ? ` ${f.einheit}` : ''}`}</span>
+              </div>
             ))}
-          </div>
-        )}
-        {felder.length > 0 && spalteId && (
-          <p className="wb-hinweis">Gilt nur für diesen Grow und diese Woche.</p>
+            <KontextSprung text="Zielwerte änderst du im Plan." to={`/plan?woche=${encodeURIComponent(spalteId)}`} label="im Plan ändern" audit="blatt-zum-plan" />
+          </>
         )}
       </section>
 
       <section className="wb-block">
-        <h3>Alarm</h3>
+        <h3>Grenzwerte</h3>
         {planMoeglich && (
           <V1Tabs
-            label="Alarmgrenze"
+            label="Grenzwerte"
             items={[{ value: 'Fest', label: 'Feste Zahlen' }, { value: 'Plan', label: 'Folgt dem Plan' }]}
             active={entwurf.quelle}
             onChange={(quelle) => setz({ quelle })}
@@ -268,16 +254,17 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
         )}
         {!tagNacht && (wert.alarmVon != null || wert.alarmBis != null) && (
           <p className="wb-hinweis">
-            Zurzeit meldet er unter {zahlText(wert.alarmVon) || '–'} und über {zahlText(wert.alarmBis) || '–'}
+            Zurzeit gemeldet unter {zahlText(wert.alarmVon) || '–'} und über {zahlText(wert.alarmBis) || '–'}
             {wert.meldet ? ' — und der Wert liegt gerade draußen.' : '.'}
           </p>
         )}
         <div className="wb-felder">
-          <V1Field label="höchstens alle … Minuten melden">
+          <V1Field label="höchstens alle … Minuten erinnern">
             <input inputMode="numeric" value={entwurf.karenz} onChange={(e) => setz({ karenz: e.target.value })} />
           </V1Field>
         </div>
-        <V1Switch label="Alarm scharf" checked={entwurf.aktiv} onChange={(aktiv) => setz({ aktiv })} />
+        <V1Switch label="Überwachen" checked={entwurf.aktiv} onChange={(aktiv) => setz({ aktiv })} />
+        <KontextSprung text="Ob das aufs Handy kommt:" to="/handy?tab=push" label="Handy" audit="blatt-zum-handy" />
       </section>
 
       {zeilen.length > 0 && (

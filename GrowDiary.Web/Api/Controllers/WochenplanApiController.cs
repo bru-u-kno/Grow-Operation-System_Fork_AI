@@ -102,11 +102,11 @@ public sealed class WochenplanApiController : ApiControllerBase
         [WochenplanSyncService.Rollen.WasserNacht] = "Chiller Nacht",
         [WochenplanSyncService.Rollen.RhObergrenze] = "RH-Obergrenze",
         [WochenplanSyncService.Rollen.Co2Ziel] = "CO₂-Ziel",
-        [WochenplanSyncService.Rollen.LuftUnten] = "Alarmgrenze Luft unten",
-        [WochenplanSyncService.Rollen.LuftNachtUnten] = "Alarmgrenze Luft unten (Nacht)",
-        [WochenplanSyncService.Rollen.LuftNachtOben] = "Alarmgrenze Luft oben (Nacht)",
-        [WochenplanSyncService.Rollen.LuftOben] = "Alarmgrenze Luft oben",
-        [WochenplanSyncService.Rollen.FeuchteOben] = "Alarmgrenze Luftfeuchte",
+        [WochenplanSyncService.Rollen.LuftUnten] = "Grenzwert Luft unten",
+        [WochenplanSyncService.Rollen.LuftNachtUnten] = "Grenzwert Luft unten (Nacht)",
+        [WochenplanSyncService.Rollen.LuftNachtOben] = "Grenzwert Luft oben (Nacht)",
+        [WochenplanSyncService.Rollen.LuftOben] = "Grenzwert Luft oben",
+        [WochenplanSyncService.Rollen.FeuchteOben] = "Grenzwert Luftfeuchte",
     };
 
     private readonly GrowRepository _grows;
