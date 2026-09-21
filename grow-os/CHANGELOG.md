@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.131
+
+**Fork AI.** Klarere Beschriftung der Nachtwerte je Woche (Reiter Plan).
+
+- Geändert — Statt „Nacht wie Standard | eigene Nachtwerte" sagen die Knöpfe jetzt, was nachts
+  gilt: **„Nachts eigene Werte | Nachts wie tags"**. Darunter klein **„wie im ganzen Plan"**
+  oder **„nur diese Woche · zurück zum Plan"**.
+- Geändert — Schalter-Hinweis: „Für den ganzen Plan (Luft und Luftfeuchte) · einzelne Wochen
+  können abweichen."
+- Geändert — Herkunft von „Luft Nacht" heißt „aus Tag − 4 K" (Plan) bzw. „vorbefüllt: Tag − 4 K"
+  (Werte-Blatt) statt „aus dem Standard".
+
 ## 2.0.0-forkai.130
 
 **Fork AI.** Tag- und Nachtgrenzen selbst einstellen, „Nachts gelten die Tageswerte".
