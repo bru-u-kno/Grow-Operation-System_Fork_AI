@@ -309,9 +309,10 @@ public sealed class WochenplanApiController : ApiControllerBase
 
     /// <summary>Einen von Hand verstellten Helfer wieder dem Plan überlassen.</summary>
     [HttpPost("freigeben/{rolle}")]
-    public ActionResult Freigeben(string rolle)
+    public async Task<ActionResult> Freigeben(string rolle, CancellationToken ct)
     {
-        _sync.Freigeben(rolle);
+        // Fork AI (forkai.130): sofort übergeben, nicht erst beim Tageslauf um 06:00.
+        await _sync.FreigebenUndUebergebenAsync(rolle, ct);
         return NoContent();
     }
 

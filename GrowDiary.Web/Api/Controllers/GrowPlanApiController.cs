@@ -20,7 +20,20 @@ public sealed record GrowPlanStandDto(
     Dictionary<string, Dictionary<string, string>> Herkunft,
     string? EigenesProgrammId = null,
     string? EigenesProgrammName = null,
-    int EigeneAenderungen = 0);
+    int EigeneAenderungen = 0,
+    bool NachtWieTag = false,
+    IReadOnlyDictionary<string, bool>? NachtWieTagJeWoche = null);
+
+/// <summary>
+/// Fork AI (forkai.130): „Nachts gelten die Tageswerte" setzen — Standard und/oder
+/// eine Woche. <c>Woche = null</c> mit <c>SpalteId</c> heißt: Woche folgt wieder dem Standard.
+/// </summary>
+public sealed class NachtEinstellenRequest
+{
+    public bool? Standard { get; set; }
+    public string? SpalteId { get; set; }
+    public bool? Woche { get; set; }
+}
 
 /// <summary>Programm eines laufenden Grows wechseln.</summary>
 public sealed class ProgrammwechselRequest
@@ -147,7 +160,39 @@ public sealed class GrowPlanApiController : ApiControllerBase
         stand.Inhalt.Herkunft,
         stand.Inhalt.EigenesProgrammId,
         stand.Inhalt.EigenesProgrammId is { } eigen ? _eigene?.Finden(eigen)?.Name : null,
-        stand.Stand == GrowPlanStaende.Arbeit ? _plaene.EigeneAenderungen(stand.GrowId) : 0);
+        stand.Stand == GrowPlanStaende.Arbeit ? _plaene.EigeneAenderungen(stand.GrowId) : 0,
+        stand.Inhalt.NachtWieTag,
+        stand.Inhalt.NachtWieTagJeWoche);
+
+    /// <summary>
+    /// Fork AI (forkai.130): Nachts wie tags — Standard für alle Wochen oder eine
+    /// einzelne Woche abweichend. Danach sofort Übergabe, damit die Nachtgrenzen gelten.
+    /// </summary>
+    [HttpPost("nacht")]
+    [ProducesResponseType(typeof(GrowPlanStandDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GrowPlanStandDto>> NachtEinstellen(
+        int growId, [FromBody] NachtEinstellenRequest anfrage, CancellationToken ct)
+    {
+        if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Ende) is not null)
+            return ValidationError("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Arbeit) is null)
+            return NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan.");
+        if (anfrage.Standard is null && string.IsNullOrWhiteSpace(anfrage.SpalteId))
+            return ValidationError("Es wurde nichts übergeben.");
+
+        try
+        {
+            _plaene.NachtEinstellen(growId, anfrage.Standard, anfrage.SpalteId, anfrage.Woche);
+        }
+        catch (ArgumentException ex)
+        {
+            return ValidationError(ex.Message);
+        }
+
+        await _sync.UebergebenAsync(ct);
+        return Ok(Dto(_plaene.Stand(growId, GrowPlanStaende.Arbeit)!));
+    }
 
     /// <summary>
     /// Wechselt das Programm eines laufenden Grows — am Grow und im Plan in einem Zug.

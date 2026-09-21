@@ -19,24 +19,38 @@ public static class GrowPlanRegister
 {
     private static readonly ConcurrentDictionary<int, NutrientProgramDefinition> Plaene = new();
 
+    /// <summary>Fork AI (forkai.130): der ganze Arbeitsstand — für Einstellungen neben dem Chart (Nacht wie Tag).</summary>
+    private static readonly ConcurrentDictionary<int, GrowPlanInhalt> Inhalte = new();
+
+    /// <summary>Der Arbeitsstand des Grows — oder null, wenn der Grow keinen Plan hat.</summary>
+    public static GrowPlanInhalt? Inhalt(int growId)
+        => Inhalte.TryGetValue(growId, out var inhalt) ? inhalt : null;
+
     /// <summary>Der Plan des Grows als Programm — oder null, wenn der Grow keinen hat.</summary>
     public static NutrientProgramDefinition? Programm(int growId)
         => Plaene.TryGetValue(growId, out var programm) ? programm : null;
 
     internal static void Setzen(int growId, GrowPlanInhalt inhalt)
-        => Plaene[growId] = new NutrientProgramDefinition
+    {
+        Plaene[growId] = new NutrientProgramDefinition
         {
             Id = inhalt.ProgrammId,
             Name = inhalt.ProgrammName,
             FeedChart = inhalt.Chart,
         };
+        Inhalte[growId] = inhalt;
+    }
 
     /// <summary>Nimmt einen Grow aus dem Register (Tests).</summary>
     /// <remarks>
     /// Bewusst kein „alles leeren": das Register ist prozessweit, und parallel
     /// laufende Tests teilen es sich.
     /// </remarks>
-    public static void Entfernen(int growId) => Plaene.TryRemove(growId, out _);
+    public static void Entfernen(int growId)
+    {
+        Plaene.TryRemove(growId, out _);
+        Inhalte.TryRemove(growId, out _);
+    }
 }
 
 /// <summary>Eine Zutat der Dosierung einer Woche.</summary>
@@ -323,6 +337,40 @@ public sealed class GrowPlanService
             }
 
             return new PlanSpeichernErgebnis(eintraege.Count, programmId, programmName);
+        }
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.130): „Nachts gelten die Tageswerte" — als Standard für alle
+    /// Wochen und/oder für eine einzelne Woche.
+    /// </summary>
+    /// <param name="standard">Neuer Standard; null lässt ihn, wie er ist.</param>
+    /// <param name="spalteId">Woche, die abweichen soll; null = nur Standard.</param>
+    /// <param name="woche">true/false = diese Woche abweichend; null = Woche folgt wieder dem Standard.</param>
+    public bool NachtEinstellen(int growId, bool? standard, string? spalteId, bool? woche, DateTime? jetztUtc = null)
+    {
+        lock (_lock)
+        {
+            if (_repo.Laden(growId, GrowPlanStaende.Ende) is not null)
+                throw new InvalidOperationException("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+            var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
+                ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
+            var inhalt = arbeit.Inhalt;
+
+            if (standard is { } neu) inhalt.NachtWieTag = neu;
+            if (!string.IsNullOrWhiteSpace(spalteId))
+            {
+                if (!inhalt.Chart.Columns.Any(c => string.Equals(c.Id, spalteId, StringComparison.OrdinalIgnoreCase)))
+                    throw new ArgumentException($"Unbekannte Woche {spalteId}.");
+                // Gleich wie der Standard heißt: keine Abweichung — dann soll die Woche
+                // einem späteren Umschalten des Standards folgen.
+                if (woche is { } eigen && eigen != inhalt.NachtWieTag) inhalt.NachtWieTagJeWoche[spalteId] = eigen;
+                else inhalt.NachtWieTagJeWoche.Remove(spalteId);
+            }
+
+            _repo.Speichern([arbeit with { GeaendertUtc = jetztUtc ?? DateTime.UtcNow }], []);
+            GrowPlanRegister.Setzen(growId, inhalt);
+            return true;
         }
     }
 

@@ -1,3 +1,4 @@
+using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.Knowledge.Schema;
 
@@ -112,5 +113,50 @@ public class WochenplanZielwerteTests
         var werte = Werte(new FeedChartColumn { VpdMin = 1.2, VpdMax = 1.4, AirTempC = 24 });
 
         Assert.False(werte.ContainsKey(WochenplanSyncService.Rollen.BlattOffset));
+    }
+
+    // ------------------------------------------------ Fork AI (forkai.130)
+
+    private static Dictionary<string, double> Werte(FeedChartColumn spalte, GrowPlanInhalt inhalt, double abweichung)
+        => WochenplanSyncService.Werte(spalte, inhalt, abweichung).ToDictionary(x => x.Rolle, x => x.Wert);
+
+    [Fact]
+    public void DieErlaubteAbweichungErsetztDieFestenDreiKelvin()
+    {
+        var w = Werte(new FeedChartColumn { Id = "w5", AirTempC = 24, AirTempNightC = 20 }, new GrowPlanInhalt(), 2);
+        Assert.Equal(22, w[WochenplanSyncService.Rollen.LuftUnten]);
+        Assert.Equal(26, w[WochenplanSyncService.Rollen.LuftOben]);
+        Assert.Equal(18, w[WochenplanSyncService.Rollen.LuftNachtUnten]);
+        Assert.Equal(22, w[WochenplanSyncService.Rollen.LuftNachtOben]);
+    }
+
+    [Fact]
+    public void NachtsWieTagsGibtNachtsDasTagband()
+    {
+        var w = Werte(new FeedChartColumn { Id = "w5", AirTempC = 24, AirTempNightC = 20, RhMax = 55 },
+            new GrowPlanInhalt { NachtWieTag = true }, 3);
+        Assert.Equal(21, w[WochenplanSyncService.Rollen.LuftNachtUnten]);
+        Assert.Equal(27, w[WochenplanSyncService.Rollen.LuftNachtOben]);
+        Assert.Equal(55, w[WochenplanSyncService.Rollen.FeuchteNachtOben]);
+    }
+
+    [Fact]
+    public void FeuchteNachtsNieUnbemerktLockerer()
+    {
+        // Ohne eigene Nachtfeuchte gilt nachts der Tageswert — nicht „keine Grenze".
+        var ohne = Werte(new FeedChartColumn { Id = "w5", AirTempC = 24, RhMax = 55 }, new GrowPlanInhalt(), 3);
+        Assert.Equal(55, ohne[WochenplanSyncService.Rollen.FeuchteNachtOben]);
+
+        var mit = Werte(new FeedChartColumn { Id = "w5", AirTempC = 24, RhMax = 55, RhMaxNight = 60 }, new GrowPlanInhalt(), 3);
+        Assert.Equal(60, mit[WochenplanSyncService.Rollen.FeuchteNachtOben]);
+    }
+
+    [Fact]
+    public void OhnePlanInhaltBleibtAllesWieVorher()
+    {
+        // Ältere Wege ohne Grow-Plan: keine Nachtfeuchte-Grenze, ± 3 K, Nacht = Tag − 4 K.
+        var werte = Werte(new FeedChartColumn { AirTempC = 25, RhMax = 60 });
+        Assert.False(werte.ContainsKey(WochenplanSyncService.Rollen.FeuchteNachtOben));
+        Assert.Equal(18, werte[WochenplanSyncService.Rollen.LuftNachtUnten]);
     }
 }

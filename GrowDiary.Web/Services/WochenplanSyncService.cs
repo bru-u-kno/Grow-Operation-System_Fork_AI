@@ -1,6 +1,7 @@
 using System.Globalization;
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
+using GrowDiary.Web.Services.GrowPlan;
 using GrowDiary.Web.Services.Knowledge;
 using GrowDiary.Web.Services.Knowledge.Schema;
 
@@ -88,6 +89,13 @@ public sealed class WochenplanSyncService
 
         /// <summary>Obere Alarmgrenze der Zelt-Regel „Luftfeuchte".</summary>
         public const string FeuchteOben = "feuchte-oben";
+
+        /// <summary>
+        /// Fork AI (forkai.130): Obere Alarmgrenze der Luftfeuchte in der Dunkelphase.
+        /// Ohne eigene Nachtfeuchte im Plan = Tageswert — die Grenze wird nachts nie
+        /// unbemerkt lockerer (Festlegung 13.09., bestätigt 21.09.2026).
+        /// </summary>
+        public const string FeuchteNachtOben = "feuchte-nacht-oben";
     }
 
     /// <summary>
@@ -129,6 +137,7 @@ public sealed class WochenplanSyncService
         // Eine nachts gelockerte Grenze wäre eine leisere Anzeige, kein
         // besserer Grow.
         [Rollen.FeuchteOben] = "humidity",
+        [Rollen.FeuchteNachtOben] = "humidity",
     };
 
     private static readonly Dictionary<string, string> Standardhelfer = new(StringComparer.OrdinalIgnoreCase)
@@ -200,6 +209,7 @@ public sealed class WochenplanSyncService
         Rollen.LuftUnten => "min",
         Rollen.LuftNachtUnten => "nacht-min",
         Rollen.LuftNachtOben => "nacht-max",
+        Rollen.FeuchteNachtOben => "nacht-max",
         _ => "max",
     };
 
@@ -375,7 +385,7 @@ public sealed class WochenplanSyncService
     {
         if (grow.TentId is not { } zeltId) return 0;
 
-        var ziele = Werte(spalte)
+        var ziele = WerteMitZelt(grow, spalte)
             .Where(x => Zeltregeln.ContainsKey(x.Rolle))
             .ToDictionary(x => x.Rolle, x => x.Wert, StringComparer.OrdinalIgnoreCase);
         if (ziele.Count == 0) return 0;
@@ -467,7 +477,9 @@ public sealed class WochenplanSyncService
     {
         if (Spalte() is not { } jetzt || jetzt.Spalte.AirTempC is not { } tag) return null;
         var woche = string.IsNullOrWhiteSpace(jetzt.Spalte.Label) ? jetzt.Spalte.Id : jetzt.Spalte.Label;
-        return (woche, tag, jetzt.Spalte.AirTempNightC ?? tag - Nachtabsenkung);
+        var nacht = GrowPlanRegister.Inhalt(jetzt.Grow.Id)?.NachtWerte(jetzt.Spalte).LuftC
+            ?? jetzt.Spalte.AirTempNightC ?? tag - Nachtabsenkung;
+        return (woche, tag, nacht);
     }
 
     /// <summary>Hat die Woche gewechselt, seit zuletzt übergeben wurde?</summary>
@@ -500,6 +512,15 @@ public sealed class WochenplanSyncService
     /// Datenbank und ohne Home Assistant geprüft werden kann.
     /// </summary>
     public static IEnumerable<(string Rolle, double Wert)> Werte(FeedChartColumn spalte)
+        => Werte(spalte, null, LufttemperaturSpanne);
+
+    /// <summary>
+    /// Fork AI (forkai.130): wie <see cref="Werte(FeedChartColumn)"/>, aber mit dem
+    /// Grow-Plan (Nachts wie Tag, Nachtwerte) und der „Erlaubten Abweichung" der
+    /// Zelt-Regel statt fester ± <see cref="LufttemperaturSpanne"/>.
+    /// </summary>
+    /// <remarks>Ohne Plan-Inhalt verhält sich alles wie vor forkai.130.</remarks>
+    public static IEnumerable<(string Rolle, double Wert)> Werte(FeedChartColumn spalte, GrowPlanInhalt? inhalt, double abweichungK)
     {
         if (spalte.WaterTempDayC is { } tag) yield return (Rollen.WasserTag, tag);
         if (spalte.WaterTempNightC is { } nacht) yield return (Rollen.WasserNacht, nacht);
@@ -524,18 +545,26 @@ public sealed class WochenplanSyncService
         // bleiben „Fest", nur ihre Zahlen wandern mit.
         if (spalte.AirTempC is { } luft)
         {
-            yield return (Rollen.LuftUnten, luft - LufttemperaturSpanne);
-            yield return (Rollen.LuftOben, luft + LufttemperaturSpanne);
+            yield return (Rollen.LuftUnten, luft - abweichungK);
+            yield return (Rollen.LuftOben, luft + abweichungK);
 
-            // Nennt der Plan keine Nachttemperatur, gilt der Tagwert minus der
-            // üblichen Absenkung — mit derselben Spanne, damit Tag und Nacht
-            // gleich streng sind und nur der Mittelpunkt wandert.
-            var nachtLuft = spalte.AirTempNightC ?? luft - Nachtabsenkung;
-            yield return (Rollen.LuftNachtUnten, nachtLuft - LufttemperaturSpanne);
-            yield return (Rollen.LuftNachtOben, nachtLuft + LufttemperaturSpanne);
+            // Nachts: mit Grow-Plan dessen Nachtwert (oder der Tageswert bei
+            // „nachts wie tags"); ohne Plan wie bisher der Nachtwert der Spalte
+            // bzw. Tag minus der üblichen Absenkung. Dieselbe Abweichung wie am
+            // Tag, damit Tag und Nacht gleich streng sind.
+            var nachtLuft = inhalt?.NachtWerte(spalte).LuftC ?? spalte.AirTempNightC ?? luft - Nachtabsenkung;
+            yield return (Rollen.LuftNachtUnten, nachtLuft - abweichungK);
+            yield return (Rollen.LuftNachtOben, nachtLuft + abweichungK);
         }
 
-        if (spalte.RhMax is { } rhMax) yield return (Rollen.FeuchteOben, rhMax);
+        if (spalte.RhMax is { } rhMax)
+        {
+            yield return (Rollen.FeuchteOben, rhMax);
+
+            // Fork AI (forkai.130): nur mit Grow-Plan — sonst bleibt die Feuchte wie
+            // vor 130 ohne Nachtgrenze (dann gilt nachts ohnehin der Tageswert).
+            if (inhalt?.NachtWerte(spalte).RhMax is { } rhNacht) yield return (Rollen.FeuchteNachtOben, rhNacht);
+        }
     }
 
     /// <summary>
@@ -544,13 +573,35 @@ public sealed class WochenplanSyncService
     /// </summary>
     private IEnumerable<(string Rolle, double Wert)> WerteMitZelt(GrowRun grow, FeedChartColumn spalte)
     {
-        foreach (var w in Werte(spalte)) yield return w;
+        foreach (var w in Werte(spalte, GrowPlanRegister.Inhalt(grow.Id), ErlaubteAbweichung(grow))) yield return w;
 
         // Gleiches Vorzeichen wie in HA: Blatt minus Luft, ein kühleres Blatt ist negativ.
         if (grow.TentId is { } zeltId && _grows.GetTent(zeltId) is { } zelt)
         {
             yield return (Rollen.BlattOffset, zelt.LeafTempOffsetC);
         }
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.130): „Erlaubte Abweichung" der Lufttemperatur — das Feld
+    /// <c>Toleranz</c> der festen Zelt-Regel, sonst ± <see cref="LufttemperaturSpanne"/>.
+    /// </summary>
+    public double ErlaubteAbweichung(GrowRun grow)
+    {
+        if (grow.TentId is not { } zeltId) return LufttemperaturSpanne;
+        var regel = _regeln.GetForTent(zeltId)
+            .FirstOrDefault(r => string.Equals(r.MetricKey, "temperature", StringComparison.OrdinalIgnoreCase));
+        return regel?.Toleranz is { } t and > 0 and <= 15 ? t : LufttemperaturSpanne;
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.130): Gibt eine Rolle frei und übergibt sofort — vorher wirkte
+    /// „freigeben" erst beim nächsten Tageslauf um 06:00, das Licht geht aber früher an.
+    /// </summary>
+    public async Task<int> FreigebenUndUebergebenAsync(string rolle, CancellationToken ct)
+    {
+        Freigeben(rolle);
+        return await UebergebenAsync(ct);
     }
 
     private static double? Zahl(string? zustand)
