@@ -150,3 +150,53 @@
   .zl-glied.ziel .r { color: var(--accent-text); font-weight: 700; }
   .zl-pfeil { margin: calc(-1 * var(--s-1)) 0; text-align: center; color: var(--hint); font-size: 11px; line-height: 1; }
 }
+
+/* Fork AI (forkai.129, F-023): Entfeuchter — Schwellen-Band und Reiter.
+   Nur Token; Größen aus --s-*, damit helles und dunkles Schema mitziehen. */
+@layer components {
+  .ef-band { display: grid; gap: var(--s-2); }
+  .ef-kopf { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-3); }
+  .ef-gross { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 2.25rem; line-height: 1; font-weight: 700; color: var(--accent-text); }
+  .ef-gross small { font-size: var(--fs-text); font-weight: 400; color: var(--faint); }
+  .ef-zustand { text-align: right; font-size: var(--fs-klein); color: var(--muted); }
+  .ef-zustand b { display: block; font-size: var(--fs-text); color: var(--ink); }
+  .ef-zustand b.is-an { color: var(--accent-text); }
+
+  /* Band: gleiche Höhe wie im Mockup, breitere Spreizung kommt vom Ausschnitt. */
+  .ef-skala { position: relative; height: calc(var(--s-6) + var(--s-3)); margin: var(--s-4) var(--s-3) 0; }
+  .ef-bahn { position: absolute; left: 0; right: 0; top: var(--s-4); height: var(--s-2); border-radius: var(--s-1); background: var(--sunk); border: 1px solid var(--hair); }
+  .ef-zone { position: absolute; right: 0; top: var(--s-4); height: var(--s-2); background: var(--accent-wash); border-top: 1px solid var(--accent-dim); border-bottom: 1px solid var(--accent-dim); }
+  .ef-strich { position: absolute; top: var(--s-2); width: 2px; height: calc(var(--s-5) + var(--s-1)); background: var(--muted); }
+  .ef-strich.is-deckel { background: var(--warn); }
+  .ef-ist {
+    position: absolute; top: calc(var(--s-2) + 2px); width: calc(var(--s-5)); height: calc(var(--s-5));
+    margin-left: calc(var(--s-5) / -2); border-radius: 50%; background: var(--accent); border: 3px solid var(--bg);
+  }
+  .ef-ist em {
+    position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%);
+    font-style: normal; font-family: var(--font-mono); font-size: var(--fs-klein); color: var(--accent-text); white-space: nowrap;
+  }
+  .ef-marken { position: relative; height: var(--s-6); margin: 0 var(--s-3); font-size: var(--fs-klein); color: var(--faint); }
+  .ef-marken span { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; font-family: var(--font-mono); }
+  .ef-marken span b { display: block; font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-etikett); }
+  .ef-marken span.is-deckel { color: var(--warn-text); }
+  .ef-rand { display: flex; justify-content: space-between; margin: 0 var(--s-3); font-size: var(--fs-etikett); color: var(--faint); }
+
+  .ef-stufen { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-2); }
+  .st-feldzeile .ef-stufen { margin-top: 0; justify-content: flex-end; }
+  .st-feldzeile.is-gestapelt .ef-stufen { justify-content: flex-start; margin-top: var(--s-2); }
+  .ef-unterfeld { margin-top: var(--s-2); }
+  .ef-herkunft { color: var(--accent-text) !important; }
+
+  .ef-klapp {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+    padding: var(--s-3) 0; border: 0; border-top: 1px solid var(--hair); background: transparent;
+    color: var(--muted); font: inherit; font-size: var(--fs-text); text-align: left; cursor: pointer;
+  }
+  .ef-klapp b { color: var(--ink); font-weight: 600; }
+  .ef-klapp-zeichen { flex: 0 0 auto; color: var(--accent-text); font-size: var(--fs-klein); }
+
+  .ef-tempmax + .ef-tempmax { border-top: 1px solid var(--hair); }
+  .ef-formel { margin: 0 0 var(--s-3); font-family: var(--font-mono); font-size: var(--fs-klein); color: var(--muted); }
+  .ef-formel b { color: var(--ink); }
+}

@@ -259,6 +259,76 @@ export const ZULUFT_REITER: Array<{ value: ZuluftReiter; label: string }> = [
   { value: 'betrieb', label: 'Betrieb' },
 ]
 
+// ------------------------------------------------------------- Entfeuchter
+
+/** Fork AI (forkai.129): Temperatur max. aus dem Plan (+ Abstand) oder fest. */
+export type TempMaxModus = 'plan' | 'fest'
+
+export type EntfeuchterEinstellungen = {
+  vpdRegelung: boolean
+  hystereseProzent: number
+  mindestlaufzeitMin: number
+  einschaltverzoegerungMin: number
+  wartezeitAussenluftMin: number
+  tagbetriebErlauben: boolean
+  automatikAktiv: boolean
+  tempMaxTagModus: TempMaxModus
+  tempMaxTagAbstandK: number
+  tempMaxTagFestC: number
+  tempMaxNachtModus: TempMaxModus
+  tempMaxNachtAbstandK: number
+  tempMaxNachtFestC: number
+  feuchteEinTag: number
+  feuchteAusTag: number
+  feuchteEinNacht: number
+  feuchteAusNacht: number
+}
+
+export type EntfeuchterLive = {
+  haErreichbar: boolean
+  feuchteProzent: number | null
+  tempC: number | null
+  vpd: number | null
+  tagPhase: boolean | null
+  einAktivProzent: number | null
+  ausAktivProzent: number | null
+  tempMaxAktivC: number | null
+  rhObergrenzeProzent: number | null
+  /** Höchste mögliche EIN-Schwelle: Plan-Feuchte max. − Klima-Hysterese. */
+  deckelProzent: number | null
+  vpdUnten: number | null
+  vpdOben: number | null
+  blattOffsetC: number | null
+  planWoche: string | null
+  planLuftTagC: number | null
+  planLuftNachtC: number | null
+  tempMaxTagC: number | null
+  tempMaxNachtC: number | null
+  co2CanopyGrenzeC: number | null
+  portAn: boolean | null
+  portOnline: boolean | null
+  automatikAn: boolean | null
+  /** Läuft die Zuluft UND trocknet die Außenluft? Dann gilt die lange Wartezeit. */
+  zuluftVorrang: boolean | null
+}
+
+export type EntfeuchterSeite = {
+  einstellungen: EntfeuchterEinstellungen
+  live: EntfeuchterLive
+  haAngenommen: boolean | null
+  ausHomeAssistantUebernommen: boolean
+  geraeteZugeordnet: number
+  geraeteGesamt: number
+}
+
+export type EntfeuchterReiter = 'regel' | 'schutz' | 'betrieb'
+
+export const ENTFEUCHTER_REITER: Array<{ value: EntfeuchterReiter; label: string }> = [
+  { value: 'regel', label: 'Regel' },
+  { value: 'schutz', label: 'Schutz' },
+  { value: 'betrieb', label: 'Betrieb' },
+]
+
 // ----------------------------------------------------------------- Chiller
 
 export type ChillerEinstellungen = {
