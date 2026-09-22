@@ -23,7 +23,6 @@ import CuringPage from './pages/CuringPage'
 import KostenPage from './pages/KostenPage'
 import SteuerungPage from './pages/SteuerungPage'
 import GeraetePage from './pages/GeraetePage'
-import SteuerungGeraetePage from './pages/SteuerungGeraetePage'
 import LiveDashboardPage from './pages/LiveDashboardPage'
 import ManualMeasurementPage from './pages/ManualMeasurementPage'
 import MeasurementEditPage from './pages/MeasurementEditPage'
@@ -57,6 +56,7 @@ import AdvisorPage from './pages/AdvisorPage'
 import WaterProfilePage from './pages/WaterProfilePage'
 import StrainsPage from './pages/StrainsPage'
 import ArchivePage from './pages/ArchivePage'
+import { rollenPfad } from './features/geraete/rollenPfad'
 
 /**
  * Weiterleitung, die die Adresszeile nicht halbiert.
@@ -75,6 +75,17 @@ import ArchivePage from './pages/ArchivePage'
 function ZielwerteWeiterleitung() {
   const { search } = useLocation()
   return <Navigate to={zielwerteZiel(search)} replace />
+}
+
+/**
+ * Fork AI (forkai.134): Die Rollen der Steuerungen sind ein Reiter der
+ * Geräteseite geworden (F-028). Alte Links und Lesezeichen landen dort; ein
+ * `modul=` geht mit.
+ */
+function SteuerungGeraeteWeiterleitung() {
+  const { search } = useLocation()
+  const modul = new URLSearchParams(search).get('modul')
+  return <Navigate to={rollenPfad(modul)} replace />
 }
 
 function LegacyRedirect({ to }: { to: string }) {
@@ -140,7 +151,7 @@ function App() {
           <Route path="/cropsteering" element={<CropSteeringPage />} />
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />
-          <Route path="/steuerung/geraete" element={<SteuerungGeraetePage />} />
+          <Route path="/steuerung/geraete" element={<SteuerungGeraeteWeiterleitung />} />
           {/* Fork AI: Crop Steering wohnt thematisch unter der Steuerung, bleibt
               aber DIESELBE Seite des Entwicklers — eine zweite Route statt einer
               Kopie, damit seine Datei unberührt bleibt und Updates ankommen. */}

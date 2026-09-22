@@ -10,6 +10,7 @@ import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuer
 import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
+import { rollenPfad } from '../features/geraete/rollenPfad'
 
 /** Was der Vorschau-Lauf über die Automationen meldet. */
 type AutoBilanz = {
@@ -377,7 +378,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
           </b>{' '}
           zugeordnet
         </span>
-        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
+        <V1LinkButton to={rollenPfad()} variant="ghost">Rollen bearbeiten ›</V1LinkButton>
       </div>
 
       {fehler && <V1Alert tone="critical" message={fehler} />}

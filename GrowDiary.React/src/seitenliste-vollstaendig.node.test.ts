@@ -32,6 +32,7 @@ const OHNE_EIGENE_SEITE: Record<string, string> = {
     + 'Der Rundweg dafür läuft in formular-rundweg.spec.ts über die Liste.',
   '/hydro/:id/edit': 'Deckungsgleich mit /hydro/:setupId, nur im Bearbeiten-Modus.',
   '/zielwerte': 'Alte Adresse (bis forkai.132) — leitet je nach Reiter auf /plan, /grenzwerte oder /handy um.',
+  '/steuerung/geraete': 'Alte Adresse (bis forkai.133) — leitet auf den Reiter Rollen der Geräteseite um.',
 }
 
 function routenAusApp(): string[] {

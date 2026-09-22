@@ -82,10 +82,10 @@ const DETAILSEITEN = [
   // geprüft.
   '/steuerung/1',
 
-  // Fork AI (forkai.21): die Geräte-Zuordnung aller Steuerungen. Sie trägt
-  // Suchfelder mit Vorschlägen und rechts Livewerte — also Zahlen, schmale
-  // Zeilen und Kollisionsgefahr auf dem Handy.
-  '/steuerung/geraete',
+  // Fork AI (forkai.21/134): die Rollen aller Steuerungen, seit forkai.134 ein
+  // Reiter der Geräteseite. Sie tragen Suchfelder mit Vorschlägen und rechts
+  // Livewerte — also Zahlen, schmale Zeilen und Kollisionsgefahr auf dem Handy.
+  '/geraete?reiter=rollen',
 
   // Fork AI: Crop Steering unter der Steuerung. DIESELBE Seite wie
   // `/cropsteering` — eine zweite Route statt einer Kopie, damit die Seite des

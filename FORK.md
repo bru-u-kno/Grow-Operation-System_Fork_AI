@@ -71,9 +71,11 @@ Licht-Seite schreibt direkt am AC-Infinity-Port — nur Abweichendes, mit Abstan
 Prüfung und Wiederholung, weil die Cloud parallele Schreibvorgänge verwirft.
 
 **Geräte und Rollen statt Entity-IDs.** Die Steuerungen sprechen Rollen an, die
-über eine Seite mit Suchfeld, HA-Vorschlägen und Livewert zugeordnet werden — kein
-Gerätename steht mehr im Code. Dazu eine Übersicht aller benutzten Entitäten nach
-Gerät, gelesen aus dem HA-Geräteregister und von Hand korrigierbar.
+mit Suchfeld, HA-Vorschlägen und Livewert zugeordnet werden — kein Gerätename
+steht mehr im Code. Alles an einer Stelle, *Geräte & Entitäten*: Reiter Geräte
+(alle benutzten Entitäten nach Gerät, aus dem HA-Geräteregister, von Hand
+korrigierbar), Rollen (seit forkai.134, vorher eine eigene Seite unter
+Steuerung), Messgrößen und Wartung.
 
 **Kosten.** Strom aus HA-Zählerständen je Grow und Phase, Verbrauchsartikel mit
 Füllungen und Gaben, Anschaffungen, Kosten je Tag und Pflanze, Laufzeit- und

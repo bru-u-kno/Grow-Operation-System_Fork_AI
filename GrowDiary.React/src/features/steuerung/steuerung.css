@@ -199,4 +199,7 @@
   .ef-tempmax + .ef-tempmax { border-top: 1px solid var(--hair); }
   .ef-formel { margin: 0 0 var(--s-3); font-family: var(--font-mono); font-size: var(--fs-klein); color: var(--muted); }
   .ef-formel b { color: var(--ink); }
+  /* Fork AI (forkai.134, F-029): Im Reiter Rollen klebte das nächste Feld am
+     Hinweistext des vorigen. */
+  .st-rollen .v1-section-body > .v1-field + .v1-field { margin-top: var(--s-4); }
 }

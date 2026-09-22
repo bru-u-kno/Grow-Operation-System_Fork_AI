@@ -8,6 +8,8 @@
 .gr-zahlen span {
   display: block; margin-top: var(--s-1); font-size: var(--fs-micro, .625rem);
   letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+  /* Fork AI (forkai.134, F-029): „korrigiert" brach am Handy mitten im Wort um. */
+  white-space: nowrap; overflow-wrap: normal;
 }
 
 .gr-zeile + .gr-zeile { border-top: 1px solid var(--hair); }
@@ -185,3 +187,7 @@
 .gr-verwendung-zeile > span { flex: 1; min-width: 0; }
 .gr-verwendung-zeile b { display: block; font-size: var(--fs-text); font-weight: 600; }
 .gr-verwendung-zeile small { display: block; margin-top: 2px; font-size: var(--fs-micro, .625rem); color: var(--muted); overflow-wrap: anywhere; }
+
+/* Fork AI (forkai.134): Marken einer Steuerungsrolle führen in den Reiter Rollen. */
+.gr-marke-link { text-decoration: none; }
+.gr-marke-link:focus-visible em { outline: 2px solid var(--accent); outline-offset: 1px; }

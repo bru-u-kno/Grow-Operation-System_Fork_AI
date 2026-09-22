@@ -5,6 +5,7 @@ import { V1Sheet } from '../../components/V1Sheet'
 import { ZULUFT_REITER } from './steuerung-typen'
 import type { SteuerungModul, ZuluftEinstellungen, ZuluftReiter, ZuluftSeite } from './steuerung-typen'
 import './steuerung.css'
+import { rollenPfad } from '../geraete/rollenPfad'
 
 /**
  * Fork AI (forkai.76): Steuerung › Zuluft — die Kellerzuluft, die bisher als
@@ -309,7 +310,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           </b>{' '}
           zugeordnet
         </span>
-        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
+        <V1LinkButton to={rollenPfad('zuluft')} variant="ghost">Rollen bearbeiten ›</V1LinkButton>
       </div>
 
       <V1Sheet open={rechenweg} onClose={() => setRechenweg(false)} title="Rechenweg" subtitle="Wie aus vier Messwerten eine Stufe wird">

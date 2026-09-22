@@ -4,6 +4,7 @@ import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton,
 import { LICHT_MODI, LICHT_REITER } from './steuerung-typen'
 import type { LichtEinstellungen, LichtReiter, LichtSeite, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
+import { rollenPfad } from '../geraete/rollenPfad'
 
 /**
  * Fork AI: Steuerung › Licht — die Bedienung der LED, die bisher als eigene
@@ -159,7 +160,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
           </b>{' '}
           zugeordnet
         </span>
-        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
+        <V1LinkButton to={rollenPfad('licht')} variant="ghost">Rollen bearbeiten ›</V1LinkButton>
       </div>
 
       {fehler && <V1Alert tone="critical" message={fehler} />}

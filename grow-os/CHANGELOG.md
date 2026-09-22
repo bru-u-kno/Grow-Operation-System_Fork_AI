@@ -5,6 +5,23 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.134
+
+**Fork AI.** „Geräte & Entitäten" gibt es nur noch einmal.
+
+- Geändert — Die Rollen der Steuerungen (welcher Fühler, welche Steckdose zu welcher Regelung gehört)
+  stehen jetzt als Reiter **Rollen** auf der Seite *Geräte & Entitäten* — neben Geräte, Messgrößen
+  und Wartung. Bisher lagen sie auf einer zweiten Seite gleichen Namens unter *Steuerung*. Die
+  Zuordnungen selbst bleiben, wie sie sind.
+- Geändert — In jeder Steuerung heißt der Weg dorthin **„Rollen bearbeiten ›"** und öffnet gleich die
+  richtige Regelung. Die alte Adresse `/steuerung/geraete` leitet auf den neuen Reiter.
+- Neu — Unter einem Gerät führen die Marken einer Rolle („Steuerung CHILLER · Kühler · schalten ›")
+  und „Öffnen" im Block „Wo dieses Gerät vorkommt" direkt zur passenden Regelung.
+- Behoben — „Geräte & Entitäten ›" aus Water Chiller, Licht, Zuluft oder Entfeuchter öffnete immer
+  die CO₂-Begasung.
+- Behoben — In der Zählerleiste der Geräteseite brach „korrigiert" am Handy mitten im Wort um; im
+  Reiter Rollen klebte das nächste Feld am Hinweis des vorigen.
+
 ## 2.0.0-forkai.133
 
 **Fork AI.** „Ziele & Meldungen" ist in drei Menüpunkte zerlegt: **Plan**, **Grenzwerte**, **Handy**.

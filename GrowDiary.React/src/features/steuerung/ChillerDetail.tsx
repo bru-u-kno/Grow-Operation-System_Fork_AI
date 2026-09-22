@@ -4,6 +4,7 @@ import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton,
 import { CHILLER_REITER } from './steuerung-typen'
 import type { ChillerEinstellungen, ChillerReiter, ChillerSeite, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
+import { rollenPfad } from '../geraete/rollenPfad'
 
 /**
  * Fork AI: Steuerung › Water Chiller — der Wasserkühler, der bisher als Kachel
@@ -297,7 +298,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           </b>{' '}
           zugeordnet
         </span>
-        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
+        <V1LinkButton to={rollenPfad('chiller')} variant="ghost">Rollen bearbeiten ›</V1LinkButton>
       </div>
     </V1Page>
   )

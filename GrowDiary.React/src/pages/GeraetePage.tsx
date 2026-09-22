@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Skeleton } from '../components/v1'
@@ -8,6 +9,8 @@ import type { V1Option } from '../components/V1Select'
 import { V1Sheet } from '../components/V1Sheet'
 import { V1Tabs } from '../components/v1'
 import { MessgroessenReiter } from '../features/geraete/MessgroessenReiter'
+import { RollenReiter } from '../features/geraete/RollenReiter'
+import { rollenPfad } from '../features/geraete/rollenPfad'
 import { WartungReiter } from '../features/geraete/WartungReiter'
 import type { HomeAssistantEntity } from '../types'
 import './geraete.css'
@@ -72,7 +75,7 @@ const QUELLEN_ZIEL: Record<string, string> = {
   zelt: '/zelte',
   inventar: '/sensoren',
   dosierung: '/dosierung',
-  steuerung: '/steuerung/geraete',
+  steuerung: '/geraete?reiter=rollen',
   strom: '/kosten',
 }
 
@@ -84,6 +87,20 @@ const QUELLEN: Record<string, string> = {
   steuerung: 'Steuerung',
   strom: 'Strom',
 }
+
+/**
+ * Fork AI (forkai.134): Welche Steuerung eine Verwendung meint. Der Zweck lautet
+ * „Steuerung CHILLER · Kühler · schalten" (GeraeteUebersichtService); der
+ * Modulschlüssel steht dort in Großbuchstaben.
+ */
+function steuerungsModul(verwendung: Verwendung): string | null {
+  if (verwendung.quelle !== 'steuerung') return null
+  const treffer = /^Steuerung ([A-Z0-9_]+) · /.exec(verwendung.zweck)
+  return treffer ? treffer[1].toLowerCase() : null
+}
+
+type Reiter = 'geraete' | 'rollen' | 'messgroessen' | 'wartung'
+const REITER: Reiter[] = ['geraete', 'rollen', 'messgroessen', 'wartung']
 
 type SpeichernRequest = {
   name: string
@@ -107,7 +124,14 @@ export default function GeraetePage() {
   // unten. Zugeklappt bleibt eine ZEILE MIT TEXT stehen — eine blosse Zahl
   // hatte niemand als Schalter erkannt.
   const [korrekturenOffen, setKorrekturenOffen] = useState(false)
-  const [reiter, setReiter] = useState<'geraete' | 'messgroessen' | 'wartung'>('geraete')
+  // Fork AI (forkai.134): Der Reiter steht in der Adresse — so führen Links aus
+  // der Steuerung direkt in „Rollen" und dort zur passenden Regelung.
+  const [params, setParams] = useSearchParams()
+  const reiterParam = params.get('reiter')
+  const reiter: Reiter = REITER.includes(reiterParam as Reiter) ? (reiterParam as Reiter) : 'geraete'
+  const modulParam = params.get('modul')
+  const setReiter = (neu: Reiter) => setParams(neu === 'geraete' ? {} : { reiter: neu }, { replace: true })
+  const setModul = (modul: string) => setParams({ reiter: 'rollen', modul }, { replace: true })
   const [entities, setEntities] = useState<HomeAssistantEntity[]>([])
   // Was zuletzt geschah, samt Rueckweg. Die Auswahl unter einer Entitaet
   // schreibt sofort; ohne diese Zeile merkt man einen Fehlgriff erst Tage
@@ -371,7 +395,7 @@ export default function GeraetePage() {
     <V1Page
       eyebrow="Betrieb"
       title="Geräte & Entitäten"
-      subtitle="Alles, was der Fork an Home Assistant benutzt — nach Gerät sortiert."
+      subtitle="Alles, was der Fork an Home Assistant benutzt — an einer Stelle."
     >
       <V1Tabs
         label="Bereich"
@@ -379,6 +403,7 @@ export default function GeraetePage() {
         onChange={setReiter}
         items={[
           { value: 'geraete', label: 'Geräte' },
+          { value: 'rollen', label: 'Rollen' },
           { value: 'messgroessen', label: 'Messgrößen' },
           { value: 'wartung', label: 'Wartung' },
         ]}
@@ -390,7 +415,8 @@ export default function GeraetePage() {
         <V1Alert key={hinweis} tone="warn" message={hinweis} />
       ))}
 
-      {reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} />
+      {reiter === 'rollen' ? <RollenReiter modulVorwahl={modulParam} onModul={setModul} />
+        : reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} />
         : reiter === 'wartung' ? <WartungReiter geraeteNamen={geraeteNamen} /> : <>
 
       {letzte && (
@@ -666,11 +692,18 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
                   </p>
                 )}
                 <span className="gr-marken">
-                    {entitaet.verwendungen.map((verwendung) => (
-                    <em key={`${verwendung.quelle}-${verwendung.zweck}`} title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>
-                      {verwendung.zweck}
-                    </em>
-                  ))}
+                    {entitaet.verwendungen.map((verwendung) => {
+                    const modul = steuerungsModul(verwendung)
+                    const marke = (
+                      <em title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>
+                        {verwendung.zweck}{modul ? ' ›' : ''}
+                      </em>
+                    )
+                    // Fork AI (forkai.134): Eine Rolle führt dorthin, wo sie gepflegt wird.
+                    return modul
+                      ? <Link key={`${verwendung.quelle}-${verwendung.zweck}`} to={rollenPfad(modul)} className="gr-marke-link">{marke}</Link>
+                      : <span key={`${verwendung.quelle}-${verwendung.zweck}`}>{marke}</span>
+                  })}
                 </span>
               </li>
               ))}
@@ -695,6 +728,10 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
 function VerwendungBlock({ geraet }: { geraet: Geraet }) {
   const verwendungen = geraet.entitaeten.flatMap((entitaet) => entitaet.verwendungen)
   if (verwendungen.length === 0) return null
+  // Fork AI (forkai.134): Hängt das Gerät an genau einer Steuerung, öffnet
+  // „Öffnen" gleich deren Rollen.
+  const module = [...new Set(verwendungen.map(steuerungsModul).filter((m): m is string => m !== null))]
+  const einzigesModul = module.length === 1 ? module[0] : null
 
   // Je Quelle eine Zeile, die Zwecke gesammelt: „Steuerung · CO₂-Sensor, Licht-Status".
   const nachQuelle = new Map<string, string[]>()
@@ -715,7 +752,7 @@ function VerwendungBlock({ geraet }: { geraet: Geraet }) {
             <small>{zwecke.join(', ')}</small>
           </span>
           {QUELLEN_ZIEL[quelle] && (
-            <V1LinkButton to={QUELLEN_ZIEL[quelle]} variant="ghost">Öffnen</V1LinkButton>
+            <V1LinkButton to={quelle === 'steuerung' ? rollenPfad(einzigesModul) : QUELLEN_ZIEL[quelle]} variant="ghost">Öffnen</V1LinkButton>
           )}
         </div>
       ))}

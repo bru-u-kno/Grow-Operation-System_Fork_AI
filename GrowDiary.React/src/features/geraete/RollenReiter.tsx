@@ -1,18 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiRequestError, apiFetch, formatApiError } from '../api'
-import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
-import { V1Select } from '../components/V1Select'
-import type { V1Option } from '../components/V1Select'
-import type { HomeAssistantEntity } from '../types'
-import type { GeraeteSeite, GeraetZeile } from '../features/steuerung/steuerung-typen'
-import { haWert } from '../utils'
-import '../features/steuerung/steuerung.css'
+import { ApiRequestError, apiFetch, formatApiError } from '../../api'
+import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Section, V1Skeleton } from '../../components/v1'
+import { V1Select } from '../../components/V1Select'
+import type { V1Option } from '../../components/V1Select'
+import type { HomeAssistantEntity } from '../../types'
+import type { GeraeteSeite, GeraetZeile } from '../steuerung/steuerung-typen'
+import { haWert } from '../../utils'
+import '../steuerung/steuerung.css'
 
 /**
- * Fork AI (forkai.21): Geräte & Entitäten der Steuerungen.
+ * Fork AI (forkai.21): Rollen der Steuerungen — welche Entität füllt welche
+ * Aufgabe einer Regelung.
  *
- * <b>Warum eine eigene Seite.</b> Licht-Status, Canopy-Fühler und Abluft nutzen
+ * <b>Wo sie steht (forkai.134).</b> Bis forkai.133 eine eigene Seite unter
+ * Steuerung mit demselben Titel wie die Geräteseite — zwei „Geräte &
+ * Entitäten" für eine Sache. Jetzt ein Reiter der Geräteseite; die alte
+ * Adresse leitet hierher, `modul` wählt die Steuerung vor.
+ *
+ * <b>Warum eine eigene Zuordnung.</b> Licht-Status, Canopy-Fühler und Abluft nutzen
  * mehrere Regelungen. Stünde die Zuordnung je Steuerung, trüge man dieselbe
  * Entität mehrfach ein und bei einem Gerätetausch an drei Stellen nach. Hier
  * hängt jedes Gerät an einer Zeile; die Steuerungen verweisen darauf.
@@ -28,11 +34,11 @@ const GRUPPEN: Array<{ key: string; label: string }> = [
   { key: 'umfeld', label: 'Umfeld' },
 ]
 
-export default function SteuerungGeraetePage() {
+export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string | null; onModul?: (modul: string) => void }) {
   const navigate = useNavigate()
   const [seite, setSeite] = useState<GeraeteSeite | null>(null)
   const [entities, setEntities] = useState<HomeAssistantEntity[]>([])
-  const [aktiv, setAktiv] = useState<string | null>(null)
+  const [aktiv, setAktiv] = useState<string | null>(modulVorwahl ?? null)
   // Nur die Abweichungen je Steuerung, nicht der ganze Entwurf: so folgt das
   // Formular dem Serverstand von selbst und braucht keinen Effekt, der beim
   // Wechsel der Steuerung Zustand nachzieht.
@@ -112,22 +118,15 @@ export default function SteuerungGeraetePage() {
     }
   }
 
-  if (laedt) return <V1Page eyebrow="Steuerung" title="Geräte & Entitäten"><V1Skeleton /></V1Page>
+  if (laedt) return <V1Skeleton label="Rollen werden geladen" />
 
   if (!seite || seite.module.length === 0) {
-    return (
-      <V1Page eyebrow="Steuerung" title="Geräte & Entitäten">
-        <V1Empty title="Keine Steuerung mit Geräten" text="Sobald eine Regelung Geräte braucht, stehen sie hier." />
-      </V1Page>
-    )
+    return <V1Empty title="Keine Steuerung mit Geräten" text="Sobald eine Regelung Geräte braucht, stehen sie hier." />
   }
 
   return (
-    <V1Page
-      eyebrow="Steuerung"
-      title="Geräte & Entitäten"
-      subtitle="Einmal zuordnen — alle Steuerungen greifen darauf zu."
-    >
+    <div className="st-rollen">
+      <p className="st-hinweis">Einmal zuordnen — alle Steuerungen greifen darauf zu.</p>
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {hinweis && <V1Alert tone="ok" message={hinweis} />}
       {!seite.haErreichbar && (
@@ -147,7 +146,7 @@ export default function SteuerungGeraetePage() {
               role="tab"
               className="st-chip"
               aria-current={eintrag.modul === modul?.modul}
-              onClick={() => setAktiv(eintrag.modul)}
+              onClick={() => { setAktiv(eintrag.modul); onModul?.(eintrag.modul) }}
             >
               <i className={luecken > 0 ? 'is-warn' : 'is-an'} />
               {eintrag.titel}
@@ -211,7 +210,7 @@ export default function SteuerungGeraetePage() {
         </p>
         <V1Button onClick={() => navigate('/steuerung/co2')}>Zur CO₂-Steuerung</V1Button>
       </V1Card>
-    </V1Page>
+    </div>
   )
 }
 

@@ -5,6 +5,7 @@ import { ENTFEUCHTER_REITER } from './steuerung-typen'
 import type { EntfeuchterEinstellungen, EntfeuchterReiter, EntfeuchterSeite, SteuerungModul, TempMaxModus } from './steuerung-typen'
 import { HYSTERESE_STUFEN, bandBerechnen, hystereseStufe, tempMax, zahl } from './entfeuchter-band'
 import './steuerung.css'
+import { rollenPfad } from '../geraete/rollenPfad'
 
 /**
  * Fork AI (forkai.129, F-023): Steuerung › Entfeuchter — Mockup Stand 3,
@@ -379,7 +380,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
           </b>{' '}
           zugeordnet
         </span>
-        <V1LinkButton to="/steuerung/geraete" variant="ghost">Geräte &amp; Entitäten ›</V1LinkButton>
+        <V1LinkButton to={rollenPfad('entfeuchter')} variant="ghost">Rollen bearbeiten ›</V1LinkButton>
       </div>
     </V1Page>
   )
