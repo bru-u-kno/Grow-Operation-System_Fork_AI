@@ -272,7 +272,7 @@ function NotificationsPage() {
             <V1Switch label="Systemüberwachung" hint="Meldet, wenn die Überwachung selbst schweigt — keine neuen Messwerte, Home Assistant nicht erreichbar oder Grow OS steht. Dazu gehört auch der Pumpen-Wächter (Pumpe steht oder sollte geprüft werden, samt Entwarnung)." checked={settings.systemWatch} onChange={(checked) => patch({ systemWatch: checked })} />
             {watchdog && (
               <p className="rc2-measurement-note" style={{ margin: '10px 0 0' }}>
-                <strong style={{ color: watchdog.isProblem ? 'var(--v1-text)' : 'var(--v1-green)' }}>{watchdog.headline}</strong> — {watchdog.detail}
+                <strong style={{ color: watchdog.isProblem ? 'var(--v1-text)' : 'var(--accent-text)' }}>{watchdog.headline}</strong> — {watchdog.detail}
               </p>
             )}
             {watchdog?.tents && watchdog.tents.length > 0 && (
@@ -283,7 +283,7 @@ function NotificationsPage() {
                   <span key={tent.name}>
                     {index > 0 && ' · '}
                     {tent.name}:{' '}
-                    <strong style={{ color: tent.stale ? 'var(--v1-warn)' : 'var(--v1-green)' }}>{pulseLabel(tent.minutesSinceData)}</strong>
+                    <strong style={{ color: tent.stale ? 'var(--warn-text)' : 'var(--accent-text)' }}>{pulseLabel(tent.minutesSinceData)}</strong>
                   </span>
                 ))}
               </p>

@@ -5,6 +5,29 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.133
+
+**Fork AI.** „Ziele & Meldungen" ist in drei Menüpunkte zerlegt: **Plan**, **Grenzwerte**, **Handy**.
+
+- Neu — **Plan** (Menü *Pflanzen*, nach Grows): die Ziele deines Grows Woche für Woche — die einzige
+  Stelle, an der Zielwerte geändert werden. Unter der Woche: „Ab wann wird diese Woche gemeldet? ·
+  Grenzwerte ›".
+- Neu — **Grenzwerte** (Menü *Betrieb*, statt „Ziele & Meldungen"): ab wann je Messgröße gemeldet wird,
+  tags und nachts. Oben der Push-Stand („Push für Grenzwerte ist an · Gerät · Handy ›"), unten
+  „Ziele dieser Woche ändern · Plan ›". Im Blatt je Messgröße steht der Planwert nur noch zum Lesen mit
+  „im Plan ändern ›" (springt zur Woche); „Grenzwerte" statt „Alarm", **„Überwachen"** statt
+  „Alarm scharf", „höchstens alle … Minuten erinnern", „Ob das aufs Handy kommt: Handy ›".
+  Karten: „● außerhalb" / „● überwacht".
+- Neu — **Handy** (Menü *Einrichtung*, statt „Aufs Handy holen"): Reiter **Push** (was aufs Handy kommt)
+  und **App einrichten** (QR-Code). Bei „Grenzwerte gerade" ein Sprung zurück zu den Grenzwerten.
+- Neu — Oben auf allen drei Seiten die Kette **„1 · Plan › 2 · Grenzwerte › 3 · Handy"**.
+- Geändert — Alte Adressen und Lesezeichen leiten weiter (`/zielwerte` je nach Reiter, `/wochenplan`,
+  `/sollwerte`, `/alarme`, `/benachrichtigungen`). Übergabe-Namen „Grenzwert Luft unten …" statt
+  „Alarmgrenze …".
+- Behoben — Auswertungs-Chips auf der Grow-Seite (EC, pH, Luft …) hatten nur 32 px Tippfläche, jetzt 44 px.
+- Behoben — Handy › Push: „Alles wach" / „gerade eben" im hellen Schema zu blass (Kontrast 3,6), jetzt Text-Farben.
+- Testdaten-App: der laufende Demo-Grow bekommt ein Düngeprogramm und sofort seinen Plan (sonst war die Seite „Plan" leer).
+
 ## 2.0.0-forkai.132
 
 **Fork AI.** Einheitliche Wochennamen.

@@ -182,7 +182,9 @@
   .pa-leer { margin: 0; padding: var(--s-2) var(--s-4); font-size: var(--fs-klein); color: var(--muted); }
   .pa-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); }
   .pa-chip {
-    min-height: var(--h-sm); padding: 0 var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-pill);
+    /* Fork AI (forkai.133): 44 px Tippfläche — fiel auf, sobald der Testbestand einen Plan hat. */
+    min-height: calc(var(--h-sm) + var(--s-3)); min-width: calc(var(--h-sm) + var(--s-3));
+    padding: 0 var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-pill);
     background: transparent; color: var(--muted); font: 600 var(--fs-etikett)/1 var(--font-mono); cursor: pointer;
   }
   .pa-chip.ist-an { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }

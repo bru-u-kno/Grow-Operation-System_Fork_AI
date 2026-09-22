@@ -16,8 +16,8 @@ import { darfUeberspringen } from './pflicht'
  * zum unteren Rand.
  */
 // Fork AI (forkai.124): /regeln trägt nur noch die Auto-Messungen und ist zu kurz;
-// die lange Sammelseite ist jetzt /zielwerte („Ziele & Meldungen“).
-const LANGE_SEITEN = ['/messung', '/zielwerte', '/wissen']
+// die lange Sammelseite ist jetzt /grenzwerte (bis forkai.132 /zielwerte).
+const LANGE_SEITEN = ['/messung', '/grenzwerte', '/wissen']
 
 for (const route of LANGE_SEITEN) {
   test(`Seitenleiste bleibt stehen auf ${route}`, async ({ page }) => {

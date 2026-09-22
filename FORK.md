@@ -34,7 +34,10 @@ werden auf Wunsch übernommen. Sollwertprofile tauchen in der Oberfläche nicht
 mehr auf. Beim Abschluss wird der Plan mit dem Grow eingefroren; die Grow-Seite wertet je
 Woche Plan und Messung aus, und der Endstand lässt sich als Programm für den
 nächsten Grow speichern. Die laufende Woche steht als Zeile über den Reitern; ein Tipp darauf öffnet
-alle Wochen. (Umbau „Ziele & Meldungen“, forkai.116–125, abgeschlossen.)
+alle Wochen. (Umbau „Ziele & Meldungen“, forkai.116–125, abgeschlossen.) Seit forkai.133 sind es drei
+Menüpunkte — **Plan** (Pflanzen), **Grenzwerte** (Betrieb) und **Handy** (Einrichtung, Push und App
+einrichten) —, verbunden über die Kette „1 · Plan › 2 · Grenzwerte › 3 · Handy“; Zielwerte ändert man nur
+noch im Plan.
 
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden
@@ -43,10 +46,10 @@ dauerhaft zu melden.
 
 **Klimawerte je Woche statt nur je Phase.** Die Feed-Chart-Spalte trägt zusätzlich
 Wassertemperatur Tag/Nacht, VPD, CO₂, PPFD, RH-Obergrenze und Lufttemperatur. Eine
-Zeile über den Reitern von „Ziele & Meldungen“ zeigt die laufende Woche mit den
+Zeile oben auf Plan und Grenzwerte zeigt die laufende Woche mit den
 Ankern (Vegi-Start, Flip, Erntefenster) und dem Hinweis, wenn eine gestreckte
 Phase die letzte Spalte hält; das Wochen-Blatt dahinter führt zu jeder Woche im
-Reiter „Plan“. Bearbeitet wird im Plan des Grows — gespeichert wird nur die
+Plan. Bearbeitet wird im Plan des Grows — gespeichert wird nur die
 Abweichung, die Programmdatei bleibt unberührt.
 
 **Übergabe an Home Assistant.** Die Wochenwerte gehen beim Wochenwechsel und

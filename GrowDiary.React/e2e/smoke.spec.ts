@@ -17,9 +17,10 @@ const ROUTES: { path: string; name: string }[] = [
   { path: '/archiv', name: 'Ernte & Archiv' },
   { path: '/archiv?tab=vergleich', name: 'Vergleich (Tab)' },
   { path: '/regeln', name: 'Auto-Messungen' },
-  { path: '/zielwerte', name: 'Ziele & Meldungen' },
-  { path: '/zielwerte?tab=plan', name: 'Plan (Tab)' },
-  { path: '/zielwerte?tab=meldungen', name: 'Meldungen (Tab)' },
+  // Fork AI (forkai.133): „Ziele & Meldungen" ist in drei Seiten zerlegt.
+  { path: '/plan', name: 'Plan' },
+  { path: '/grenzwerte', name: 'Grenzwerte' },
+  { path: '/handy?tab=push', name: 'Handy · Push' },
   { path: '/sensoren', name: 'Sensoren & Wartung' },
   { path: '/automatik', name: 'Automatik' },
   { path: '/messungen', name: 'Messungen-Verlauf' },
@@ -34,7 +35,7 @@ const ROUTES: { path: string; name: string }[] = [
   { path: '/hydro/1', name: 'Hydro-Detail' },
   { path: '/hardware', name: 'Sensoren' },
   { path: '/home-assistant', name: 'Home Assistant' },
-  { path: '/handy', name: 'Aufs Handy holen' },
+  { path: '/handy?tab=app', name: 'Handy · App einrichten' },
   { path: '/wissen', name: 'Wissen' },
   { path: '/start', name: 'Erste Schritte' },
   { path: '/settings', name: 'Einstellungen' },
@@ -84,11 +85,16 @@ for (const route of ROUTES) {
 // der Test die Tabelle gegen sich selbst.
 const REDIRECTS: [from: string, to: string][] = [
   ['/automatik', '/regeln?tab=automatik'],
-  // Fork AI (forkai.121): Grenzwerte, Benachrichtigungen und Profile wohnen
-  // unter „Ziele & Meldungen“ (/zielwerte).
-  ['/alarme', '/zielwerte?tab=jetzt'],
-  ['/benachrichtigungen', '/zielwerte?tab=meldungen'],
-  ['/sollwerte', '/zielwerte?tab=plan'],
+  // Fork AI (forkai.133): „Ziele & Meldungen" ist in Plan, Grenzwerte und Handy zerlegt.
+  ['/alarme', '/grenzwerte'],
+  ['/benachrichtigungen', '/handy?tab=push'],
+  ['/sollwerte', '/plan'],
+  ['/wochenplan', '/plan'],
+  ['/zielwerte', '/grenzwerte'],
+  // woche= geht mit (Vitest zielwerte-weiterleitung) — der Plan nimmt ihn nach
+  // dem Sprung aus der Adresse, deshalb hier ohne.
+  ['/zielwerte?tab=plan', '/plan'],
+  ['/zielwerte?tab=meldungen', '/handy?tab=push'],
   ['/assistent', '/regeln'],
   ['/phenohunt', '/sorten'],
   ['/analyse', '/archiv'],
@@ -115,10 +121,10 @@ test('nimmt die Suchparameter mit über die Weiterleitung', async ({ page }) => 
 })
 
 test('lässt das Tab-Ziel der Weiterleitung gewinnen', async ({ page }) => {
-  await page.goto('/alarme?growId=3', { waitUntil: 'networkidle' })
+  await page.goto('/benachrichtigungen?growId=3', { waitUntil: 'networkidle' })
   const url = new URL(page.url())
-  expect(url.pathname).toBe('/zielwerte')
-  expect(url.searchParams.get('tab')).toBe('jetzt')
+  expect(url.pathname).toBe('/handy')
+  expect(url.searchParams.get('tab')).toBe('push')
   expect(url.searchParams.get('growId')).toBe('3')
 })
 
