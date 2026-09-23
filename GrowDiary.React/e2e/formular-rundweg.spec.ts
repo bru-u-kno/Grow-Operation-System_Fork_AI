@@ -89,6 +89,8 @@ function formularDateien(): string[] {
  * Ausnahme wirkungslos machen, dagegen prüft der Test darunter.
  */
 const OHNE_RUNDWEG: Record<string, string> = {
+  'pages/CropSteeringPage.tsx':
+    'Seit forkai.136 stillgelegt: keine Route führt mehr hin (/cropsteering leitet auf Steuerung → Chiller um). Die Datei liegt nur noch im Quelltext; ihre Rundwege sind mit ihr außer Dienst gegangen.',
   'pages/GrowSetupPage.tsx':
     'Ein Assistent über mehrere Schritte mit Karten-Knöpfen statt Auswahlfeldern; ein Rundweg dafür braucht erst ein Zelt UND einen Hydro-Aufbau, die er selbst anlegen müsste. Eigenes Stück, noch nicht gebaut.',
   'features/hydro/HydroEditorPage.tsx':
