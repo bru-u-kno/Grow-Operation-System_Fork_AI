@@ -21,6 +21,11 @@ public sealed class SteuerungGeraeteTests
     {
         foreach (var rolle in SteuerungGeraeteRollen.Alle)
         {
+            // Fork AI (Chiller-Ansteuerung): Eine optionale Rolle darf ohne
+            // Vorgabe kommen — ein Kühler mit eigenem Sollwert ist die Ausnahme,
+            // nicht der Normalfall.
+            if (!rolle.Pflicht && string.IsNullOrEmpty(rolle.Vorgabe)) continue;
+
             var domain = SteuerungGeraeteService.Domain(rolle.Vorgabe);
             Assert.True(domain is not null, $"Vorgabe von {rolle.Modul}/{rolle.Schluessel} ist keine Entity-ID: {rolle.Vorgabe}");
             Assert.True(rolle.Domains.Contains(domain!, StringComparer.OrdinalIgnoreCase),

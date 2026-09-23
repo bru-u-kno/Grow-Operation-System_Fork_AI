@@ -69,6 +69,13 @@ Entfeuchter und Water Chiller: Sollwerte und Betriebsarten liegen im Fork, gereg
 Home Assistant, und die passenden Automationen liegen als Vorlagen bei. Nur die
 Licht-Seite schreibt direkt am AC-Infinity-Port — nur Abweichendes, mit Abstand,
 Prüfung und Wiederholung, weil die Cloud parallele Schreibvorgänge verwirft.
+Der Water Chiller kennt seit forkai.135 zwei Ansteuerungen, die sich aus den
+Rollen ergeben: Steckdose (HA schaltet mit einstellbarer Hysterese) oder ein
+Kühler mit eigenem Thermostat (climate/number — HA schreibt nur das Tag- oder
+Nachtziel ins Gerät); mit beiden ist die Steckdose Not-Aus. Berührt:
+`Vorlagen/chiller/*`, `SteuerungAutomationService` (neu: `wennNicht`),
+`SteuerungGeraeteService` (optionale Rolle bewusst leer), `HomeAssistantState`/
+`HomeAssistantService` (Attribut `temperature`).
 
 **Geräte und Rollen statt Entity-IDs.** Die Steuerungen sprechen Rollen an, die
 mit Suchfeld, HA-Vorschlägen und Livewert zugeordnet werden — kein Gerätename

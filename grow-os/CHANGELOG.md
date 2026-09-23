@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.135
+
+**Fork AI.** Water Chiller: auch Kühler mit eigenem Thermostat, Hysterese wirklich einstellbar.
+
+- Neu — Rolle **„Kühler · Sollwert"** unter *Geräte & Entitäten → Rollen → Water Chiller* für Kühler
+  mit eigenem Thermostat (climate- oder number-Gerät, z. B. per WLAN). Home Assistant schreibt dann
+  das Tag- oder Nachtziel aus dem Plan direkt ins Gerät; die Vorlage „Water Chiller Sollwert" liegt
+  bei. Wie der Kühler angesteuert wird, ergibt sich aus den Rollen: nur Steckdose, nur Sollwert-Gerät
+  oder beides — dann ist die Steckdose nur noch Not-Aus für den Wächter.
+- Geändert — „Kühler · schalten" ist keine Pflicht-Rolle mehr. Eine optionale Rolle lässt sich jetzt
+  bewusst leeren; bisher fiel sie still auf die Werksvorgabe zurück.
+- Geändert — Der Wächter schaltet bei stummem Wasserfühler ab, was zugeordnet ist: Steckdose,
+  Kühler oder beides.
+- Behoben — Das Feld „Totband" im Reiter Schutz wirkte nicht: Home Assistant schaltete mit einem
+  fest eingebauten Abstand, und die angezeigten Schaltpunkte stimmten nicht. Es heißt jetzt
+  **„Einschalten ab Ziel +"** und schreibt in den neuen Helfer `input_number.chiller_hysterese`;
+  ausgeschaltet wird beim Ziel. Ein älterer gespeicherter Wert wird nicht übernommen — es gilt, was
+  in Home Assistant steht.
+
 ## 2.0.0-forkai.134
 
 **Fork AI.** „Geräte & Entitäten" gibt es nur noch einmal.
