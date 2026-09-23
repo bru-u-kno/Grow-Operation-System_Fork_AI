@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.144
+
+**Fork AI.** Grenzwert-Karten wie im freigegebenen Mockup.
+
+- Behoben — Die Spur des Balkens ist grau hinterlegt, damit das Band als Band erkennbar ist
+  (war fast schwarz).
+- Behoben — Der Zeiger war auch im Ziel gelb statt grün.
+
 ## 2.0.0-forkai.143
 
 **Fork AI.** Grenzwerte: die Wert-Karten sind klarer.

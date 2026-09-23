@@ -110,7 +110,8 @@ function Balken({ wert }: { wert: Wert }) {
 
   const gleich = gv === min && gb === max
   const zielDicht = pos(max) - pos(min) < 16
-  const lage = wert.meldet ? 'ist-meldet' : wert.lage === 'im' ? 'ist-im' : 'ist-rand'
+  // lage kommt als „im Ziel" / „darunter" / „darüber".
+  const lage = wert.meldet ? 'ist-meldet' : wert.lage.startsWith('im') ? 'ist-im' : 'ist-rand'
 
   return (
     <div className="zw-band" aria-hidden="true">

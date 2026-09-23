@@ -36,7 +36,9 @@
   /* Fork AI (forkai.143, F-039): schmaler Balken mit Zahlen, Zeiger in der Farbe der Lage. */
   .zw-band { margin: 14px 12px 0; }
   .zw-balken { position: relative; height: 12px; }
-  .zw-spur { position: absolute; left: 0; right: 0; top: 4px; height: 4px; border-radius: 2px; background: var(--sunk); }
+  /* Grau hinterlegt wie im Mockup — sonst verschwindet die Spur im dunklen Hintergrund
+     und das Band ist nicht als Band zu erkennen. */
+  .zw-spur { position: absolute; left: 0; right: 0; top: 4px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 13%, transparent); }
   .zw-zone { position: absolute; top: 4px; height: 4px; border-radius: 2px; background: var(--accent); opacity: .85; }
   .zw-grenze { position: absolute; top: 1px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: var(--warn); }
   .zw-nadel {
