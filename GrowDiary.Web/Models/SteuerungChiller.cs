@@ -16,8 +16,7 @@ namespace GrowDiary.Web.Models;
 ///
 /// <para><b>Das Ziel gehört nicht dieser Seite.</b> Anders als bei der Zuluft
 /// gibt es eine Plan-Quelle: der Wochenplan schreibt Tag und Nacht aus dem
-/// Sollwertprofil, und die Crop-Steering-Seite kann dasselbe Paar über den Tag
-/// führen. Deshalb steht hier, WOHER der Wert kommt — und das Ändern bleibt an
+/// Grow-Plan. Deshalb steht hier, WOHER der Wert kommt — und das Ändern bleibt an
 /// der Quelle. Zwei Seiten, die denselben Helfer schreiben, wären genau der
 /// Zustand, den der Wochenplan-Abgleich seit forkai.61 verhindert.</para>
 /// </remarks>
@@ -29,8 +28,19 @@ public sealed class ChillerEinstellungen
     /// <summary>Ziel in der Dunkelphase.</summary>
     public double ZielNachtC { get; set; } = 18.0;
 
-    /// <summary>Totband um das Ziel — darunter schaltet nichts.</summary>
-    public double HystereseK { get; set; } = 0.3;
+    /// <summary>
+    /// Fork AI (F-030): Abstand über dem Ziel, ab dem die Steckdose einschaltet;
+    /// ausgeschaltet wird beim Ziel. Liegt in <c>input_number.chiller_hysterese</c>.
+    /// Gilt nur für die Ansteuerung über eine Steckdose.
+    /// </summary>
+    public double HystereseK { get; set; } = 0.6;
+
+    /// <summary>
+    /// Fork AI (F-030): True, sobald die Hysterese über den Fork gespeichert wurde.
+    /// Ältere gespeicherte Stände tragen noch 0,3 aus der Zeit, als das Feld
+    /// nichts bewirkte — bei ihnen gilt der Wert aus Home Assistant.
+    /// </summary>
+    public bool HystereseGefuehrt { get; set; }
 
     public int MindestlaufzeitMin { get; set; } = 5;
     public int MindestpauseMin { get; set; } = 5;
@@ -74,4 +84,38 @@ public sealed record ChillerLive(
     /// </summary>
     string? DoppelSteuerungEntity,
     double? EinschaltenAbC,
-    double? AusschaltenUnterC);
+    /// <summary>Fork AI (F-030): Ausgeschaltet wird beim Ziel, nicht darunter.</summary>
+    double? AusschaltenBeiC,
+    /// <summary>
+    /// Fork AI (Chiller-Ansteuerung): <c>steckdose</c>, <c>regelbar</c>,
+    /// <c>beides</c> oder <c>keine</c> — ergibt sich aus den Rollen.
+    /// </summary>
+    string Ansteuerung = ChillerAnsteuerung.Steckdose,
+    /// <summary>Das Sollwert-Gerät, wenn eines zugeordnet ist.</summary>
+    string? KuehlerEntity = null,
+    /// <summary>Welchen Sollwert das Gerät gerade meldet.</summary>
+    double? KuehlerSollC = null,
+    /// <summary>Zustand des Sollwert-Geräts (climate: <c>cool</c>, <c>off</c> …).</summary>
+    string? KuehlerZustand = null);
+
+/// <summary>Fork AI (Chiller-Ansteuerung): Wie der Kühler seine Befehle bekommt.</summary>
+public static class ChillerAnsteuerung
+{
+    /// <summary>Steckdose: HA schaltet ein und aus, mit Hysterese und Sperren.</summary>
+    public const string Steckdose = "steckdose";
+    /// <summary>Kühler mit eigenem Thermostat: HA schreibt nur das Ziel.</summary>
+    public const string Regelbar = "regelbar";
+    /// <summary>Sollwert ins Gerät, die Steckdose ist Not-Aus für den Wächter.</summary>
+    public const string Beides = "beides";
+    /// <summary>Weder Steckdose noch Sollwert-Gerät zugeordnet.</summary>
+    public const string Keine = "keine";
+
+    public static string Aus(string? steckdose, string? sollwertGeraet)
+        => (string.IsNullOrWhiteSpace(steckdose), string.IsNullOrWhiteSpace(sollwertGeraet)) switch
+        {
+            (false, true) => Steckdose,
+            (true, false) => Regelbar,
+            (false, false) => Beides,
+            _ => Keine,
+        };
+}

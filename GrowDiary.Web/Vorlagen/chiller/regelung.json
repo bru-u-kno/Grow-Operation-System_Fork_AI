@@ -1,6 +1,7 @@
 {
   "alias": "Water Chiller Regelung",
-  "description": "Schaltet den Wasserkuehler nach Kuehlbedarf (binary_sensor.chiller_kuhlbedarf, Totband um sensor.chiller_zieltemperatur_aktiv). Tag- und Nachtziel haengen am Lichtzustand, nicht an der Uhr. Mindestlaufzeit und -pause laufen gegen input_datetime.chiller_letzter_schaltvorgang statt gegen last_changed, weil eine Funksteckdose bei WLAN-Aussetzern kurz unavailable wird - beim Kompressor ist das kein Schoenheitsfehler, sondern seine Lebensdauer. Der Minutentakt holt Schaltungen nach, die an einer Sperre gescheitert sind. Automation ausschalten heisst: Regelung pausiert, die Steckdose bleibt, wie sie ist. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/regelung/1.",
+  "description": "Schaltet den Wasserkuehler nach Kuehlbedarf (binary_sensor.chiller_kuhlbedarf: ein ab Ziel plus input_number.chiller_hysterese, aus beim Ziel sensor.chiller_zieltemperatur_aktiv). Tag- und Nachtziel haengen am Lichtzustand, nicht an der Uhr. Mindestlaufzeit und -pause laufen gegen input_datetime.chiller_letzter_schaltvorgang statt gegen last_changed, weil eine Funksteckdose bei WLAN-Aussetzern kurz unavailable wird - beim Kompressor ist das kein Schoenheitsfehler, sondern seine Lebensdauer. Der Minutentakt holt Schaltungen nach, die an einer Sperre gescheitert sind. Automation ausschalten heisst: Regelung pausiert, die Steckdose bleibt, wie sie ist. Entfaellt, sobald ein Kuehler mit eigenem Sollwert zugeordnet ist - dann regelt das Geraet selbst und die Steckdose ist nur Not-Aus. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/regelung/2.",
+  "wennNicht": "kuehler_sollwert",
   "mode": "single",
   "max_exceeded": "silent",
   "variables": {
@@ -9,9 +10,22 @@
     "pause_frei": "{{ alter_s >= (states('input_number.chiller_mindestpause') | float(5) * 60) }}"
   },
   "triggers": [
-    { "trigger": "state", "entity_id": "binary_sensor.chiller_kuhlbedarf", "to": ["on", "off"] },
-    { "trigger": "time_pattern", "minutes": "/1" },
-    { "trigger": "homeassistant", "event": "start" }
+    {
+      "trigger": "state",
+      "entity_id": "binary_sensor.chiller_kuhlbedarf",
+      "to": [
+        "on",
+        "off"
+      ]
+    },
+    {
+      "trigger": "time_pattern",
+      "minutes": "/1"
+    },
+    {
+      "trigger": "homeassistant",
+      "event": "start"
+    }
   ],
   "actions": [
     {
@@ -19,38 +33,72 @@
         {
           "alias": "Einschalten",
           "conditions": [
-            { "condition": "state", "entity_id": "binary_sensor.chiller_kuhlbedarf", "state": "on" },
-            { "condition": "state", "entity_id": "[[steckdose]]", "state": "off" },
-            { "condition": "template", "value_template": "{{ pause_frei }}" }
+            {
+              "condition": "state",
+              "entity_id": "binary_sensor.chiller_kuhlbedarf",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[steckdose]]",
+              "state": "off"
+            },
+            {
+              "condition": "template",
+              "value_template": "{{ pause_frei }}"
+            }
           ],
           "sequence": [
             {
               "action": "homeassistant.turn_on",
-              "target": { "entity_id": "[[steckdose]]" }
+              "target": {
+                "entity_id": "[[steckdose]]"
+              }
             },
             {
               "action": "input_datetime.set_datetime",
-              "target": { "entity_id": "input_datetime.chiller_letzter_schaltvorgang" },
-              "data": { "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" }
+              "target": {
+                "entity_id": "input_datetime.chiller_letzter_schaltvorgang"
+              },
+              "data": {
+                "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+              }
             }
           ]
         },
         {
           "alias": "Ausschalten",
           "conditions": [
-            { "condition": "state", "entity_id": "binary_sensor.chiller_kuhlbedarf", "state": "off" },
-            { "condition": "state", "entity_id": "[[steckdose]]", "state": "on" },
-            { "condition": "template", "value_template": "{{ laufzeit_frei }}" }
+            {
+              "condition": "state",
+              "entity_id": "binary_sensor.chiller_kuhlbedarf",
+              "state": "off"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[steckdose]]",
+              "state": "on"
+            },
+            {
+              "condition": "template",
+              "value_template": "{{ laufzeit_frei }}"
+            }
           ],
           "sequence": [
             {
               "action": "homeassistant.turn_off",
-              "target": { "entity_id": "[[steckdose]]" }
+              "target": {
+                "entity_id": "[[steckdose]]"
+              }
             },
             {
               "action": "input_datetime.set_datetime",
-              "target": { "entity_id": "input_datetime.chiller_letzter_schaltvorgang" },
-              "data": { "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" }
+              "target": {
+                "entity_id": "input_datetime.chiller_letzter_schaltvorgang"
+              },
+              "data": {
+                "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+              }
             }
           ]
         }

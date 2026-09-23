@@ -50,6 +50,14 @@ public static class SteuerungGeraeteRollen
     /// </summary>
     public const char VerweisZeichen = '@';
 
+    /// <summary>
+    /// Fork AI (Chiller-Ansteuerung): Eine optionale Rolle mit Vorgabe, die der
+    /// Nutzer bewusst leer lässt. Ohne diese Marke fiele eine geleerte Rolle auf
+    /// die Vorgabe zurück — wer keine Steckdose hat, bekäme dann die Steckdose
+    /// einer fremden Anlage zugeordnet.
+    /// </summary>
+    public const string BewusstLeer = "-";
+
     public const string GruppeMessen = "messen";
     public const string GruppeSchalten = "schalten";
     public const string GruppeUmfeld = "umfeld";
@@ -145,9 +153,17 @@ public static class SteuerungGeraeteRollen
         new("chiller", "wasser_temp", "Wasserfühler", GruppeMessen,
             "sensor.bluelab_guardian_temperature", new[] { "sensor" }, Einheit: "°C",
             Hinweis: "Die Temperatur, die geregelt wird."),
+        // Fork AI (Chiller-Ansteuerung): Wie der Kühler seine Befehle bekommt,
+        // ergibt sich aus diesen beiden Rollen — Steckdose allein: HA schaltet
+        // mit Hysterese; Sollwert allein: der Kühler regelt selbst, HA schreibt
+        // nur das Ziel; beide: Sollwert ins Gerät, die Steckdose ist Not-Aus.
+        // Deshalb ist keine der beiden Pflicht.
         new("chiller", "steckdose", "Kühler · schalten", GruppeSchalten,
-            "switch.grow_shelly_plusplugs_slot_1", new[] { "switch", "input_boolean" },
-            Hinweis: "Was den Kompressor wirklich umlegt."),
+            "switch.grow_shelly_plusplugs_slot_1", new[] { "switch", "input_boolean" }, Pflicht: false,
+            Hinweis: "Für Kühler ohne eigenen Sollwert-Eingang: die Steckdose, die den Kompressor umlegt. Mit Sollwert-Gerät nur noch Not-Aus."),
+        new("chiller", "kuehler_sollwert", "Kühler · Sollwert", GruppeSchalten,
+            "", new[] { "climate", "number" }, Pflicht: false, Einheit: "°C",
+            Hinweis: "Für Kühler mit eigenem Thermostat (z. B. WLAN): Home Assistant schreibt das Tag- oder Nachtziel direkt ins Gerät."),
         new("chiller", "steckdose_zustand", "Kühler · Zustand", GruppeMessen,
             "switch.grow_shelly_plusplugs_slot_1", new[] { "binary_sensor", "switch" }, Pflicht: false,
             Hinweis: "Nur nötig, wenn Schalten und Rückmeldung getrennt sind — eine Funksteckdose ist beides."),

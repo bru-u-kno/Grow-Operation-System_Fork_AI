@@ -106,6 +106,16 @@ public sealed class SteuerungAutomationService
                 continue;
             }
 
+            // Fork AI (Chiller-Ansteuerung): Eine Vorlage kann entfallen, weil ein
+            // Gerät da IST — die Steckdosen-Regelung, sobald der Kühler einen
+            // eigenen Sollwert-Eingang hat. Das ist kein fehlendes Gerät.
+            if (UeberfluessigWegen(vorlage, zuordnung) is { } rolleDa)
+            {
+                einzeln.Add(new Ergebnis(kennung, name, Stand.OhneGeraet,
+                    $"Nicht nötig: die Rolle „{rolleDa}“ ist zugeordnet."));
+                continue;
+            }
+
             var fertig = Fuellen(vorlage, zuordnung);
             if (fertig is null)
             {
@@ -171,7 +181,23 @@ public sealed class SteuerungAutomationService
     }
 
     /// <summary>
-    /// Blöcke mit <c>"wenn": "rolle"</c> entfernen, wenn die Rolle frei ist.
+    /// Die Rolle, deretwegen die ganze Vorlage entfällt (<c>"wennNicht"</c> auf
+    /// oberster Ebene), oder null.
+    /// </summary>
+    public static string? UeberfluessigWegen(JsonObject vorlage, IReadOnlyDictionary<string, string> zuordnung)
+    {
+        if (!vorlage.TryGetPropertyValue("wennNicht", out var knoten)) return null;
+        var rolle = knoten?.GetValue<string>();
+        return rolle is not null
+            && zuordnung.TryGetValue(rolle, out var entity)
+            && !string.IsNullOrWhiteSpace(entity)
+            ? rolle
+            : null;
+    }
+
+    /// <summary>
+    /// Blöcke mit <c>"wenn": "rolle"</c> entfernen, wenn die Rolle frei ist —
+    /// und Blöcke mit <c>"wennNicht": "rolle"</c>, wenn sie belegt ist.
     /// </summary>
     /// <remarks>
     /// Ohne das scheitert die ganze Automation an einem Gerät, das sie nicht
@@ -191,7 +217,15 @@ public sealed class SteuerungAutomationService
                     return null;
                 }
 
+                if (o.TryGetPropertyValue("wennNicht", out var wennNicht)
+                    && wennNicht?.GetValue<string>() is { } belegt
+                    && belegteRollen.Contains(belegt))
+                {
+                    return null;
+                }
+
                 o.Remove("wenn");
+                o.Remove("wennNicht");
                 foreach (var schluessel in o.Select(p => p.Key).ToList())
                 {
                     var kind = Aussieben(o[schluessel], belegteRollen);

@@ -88,7 +88,7 @@ public sealed class SteuerungGeraeteService
             }
 
             var wert = roh?.Trim() ?? string.Empty;
-            if (wert.Length == 0)
+            if (wert.Length == 0 || wert == SteuerungGeraeteRollen.BewusstLeer)
             {
                 if (rolle.Pflicht) fehler[schluessel] = "Diese Rolle braucht ein Gerät.";
                 continue;
@@ -117,6 +117,15 @@ public sealed class SteuerungGeraeteService
         {
             var rolle = SteuerungGeraeteRollen.Finden(modul, schluessel)!;
             var wert = roh?.Trim() ?? string.Empty;
+            // Leer bei einer optionalen Rolle mit Vorgabe heißt „habe ich nicht"
+            // und nicht „wie ab Werk" — sonst käme die Vorgabe zurück.
+            if ((wert.Length == 0 || wert == SteuerungGeraeteRollen.BewusstLeer)
+                && !rolle.Pflicht && !string.IsNullOrWhiteSpace(rolle.Vorgabe))
+            {
+                _repo.SetGeraet(modul, schluessel, SteuerungGeraeteRollen.BewusstLeer);
+                continue;
+            }
+
             // Wer die Vorgabe einträgt, meint „wie ab Werk" — dann bleibt die
             // Zeile draußen und wandert bei einem Update weiter mit.
             _repo.SetGeraet(modul, schluessel,
@@ -168,6 +177,7 @@ public sealed class SteuerungGeraeteService
     {
         if (string.IsNullOrWhiteSpace(wert)) return null;
         wert = wert.Trim();
+        if (wert == SteuerungGeraeteRollen.BewusstLeer) return null;
         if (wert[0] != SteuerungGeraeteRollen.VerweisZeichen) return wert;
 
         var name = wert[1..].Trim();

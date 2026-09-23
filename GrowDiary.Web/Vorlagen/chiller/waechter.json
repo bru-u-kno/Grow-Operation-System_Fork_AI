@@ -1,6 +1,6 @@
 {
   "alias": "Water Chiller Wächter",
-  "description": "Sicherheitsnetz der Kuehler-Regelung. (1) Faellt der Wasserfuehler fuenf Minuten aus, weiss niemand mehr, wie warm das Wasser ist - dann wird die Steckdose zwangsweise ausgeschaltet, bewusst ohne Mindestlaufzeit-Gate: Sicherheit geht vor Kompressorschutz. (2) Steht das Wasser trotz laufender Regelung eine Viertelstunde ueber 24 Grad, kuehlt der Kuehler nicht mehr nach - das meldet der Waechter, ohne selbst einzugreifen. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/waechter/1.",
+  "description": "Sicherheitsnetz der Kuehler-Regelung. (1) Faellt der Wasserfuehler fuenf Minuten aus, weiss niemand mehr, wie warm das Wasser ist - dann werden Steckdose und Kuehler-Geraet zwangsweise ausgeschaltet (was zugeordnet ist), bewusst ohne Mindestlaufzeit-Gate: Sicherheit geht vor Kompressorschutz. (2) Steht das Wasser trotz laufender Regelung eine Viertelstunde ueber 24 Grad, kuehlt der Kuehler nicht mehr nach - das meldet der Waechter, ohne selbst einzugreifen. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/waechter/2.",
   "mode": "queued",
   "max": 5,
   "triggers": [
@@ -8,7 +8,10 @@
       "trigger": "state",
       "id": "fuehler_weg",
       "entity_id": "[[wasser_temp]]",
-      "to": ["unavailable", "unknown"],
+      "to": [
+        "unavailable",
+        "unknown"
+      ],
       "for": "00:05:00"
     },
     {
@@ -24,30 +27,55 @@
       "choose": [
         {
           "alias": "Fühler weg: Kühler sicherheitshalber aus",
-          "conditions": [{ "condition": "trigger", "id": "fuehler_weg" }],
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": "fuehler_weg"
+            }
+          ],
           "sequence": [
             {
               "action": "homeassistant.turn_off",
-              "target": { "entity_id": "[[steckdose]]" }
+              "target": {
+                "entity_id": "[[steckdose]]"
+              },
+              "wenn": "steckdose"
+            },
+            {
+              "wenn": "kuehler_sollwert",
+              "action": "homeassistant.turn_off",
+              "continue_on_error": true,
+              "target": {
+                "entity_id": "[[kuehler_sollwert]]"
+              }
             },
             {
               "action": "input_datetime.set_datetime",
-              "target": { "entity_id": "input_datetime.chiller_letzter_schaltvorgang" },
-              "data": { "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" }
+              "target": {
+                "entity_id": "input_datetime.chiller_letzter_schaltvorgang"
+              },
+              "data": {
+                "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+              }
             },
             {
               "action": "logbook.log",
               "data": {
                 "name": "Water Chiller Wächter",
                 "message": "Wasserfühler seit fünf Minuten stumm — Kühler ausgeschaltet, Regelung pausiert bis der Fühler zurück ist.",
-                "entity_id": "[[steckdose]]"
+                "entity_id": "[[wasser_temp]]"
               }
             }
           ]
         },
         {
           "alias": "Übertemperatur melden",
-          "conditions": [{ "condition": "trigger", "id": "zu_warm" }],
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": "zu_warm"
+            }
+          ],
           "sequence": [
             {
               "action": "logbook.log",

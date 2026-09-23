@@ -1,0 +1,53 @@
+{
+  "alias": "Water Chiller Sollwert",
+  "description": "Fuer Kuehler mit eigenem Thermostat (climate- oder number-Geraet): schreibt das aktive Ziel (sensor.chiller_zieltemperatur_aktiv, Tag oder Nacht je nach Licht) ins Geraet, sobald es sich aendert, beim Start von Home Assistant und alle 15 Minuten, falls das Geraet nach einem Neustart seinen eigenen Wert zurueckholt. Geschrieben wird nur, wenn das Geraet mehr als 0,05 K abweicht. Kommt der Wasserfuehler nach einem Ausfall zurueck, schaltet die Automation einen climate-Kuehler wieder ein, den der Waechter abgeschaltet hatte. Automation ausschalten heisst: das Geraet behaelt seinen letzten Sollwert. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/sollwert/1.",
+  "mode": "restart",
+  "triggers": [
+    { "trigger": "state", "id": "ziel", "entity_id": "sensor.chiller_zieltemperatur_aktiv" },
+    { "trigger": "state", "id": "geraet_zurueck", "entity_id": "[[kuehler_sollwert]]", "from": ["unavailable", "unknown"] },
+    { "trigger": "state", "id": "fuehler_zurueck", "entity_id": "[[wasser_temp]]", "from": ["unavailable", "unknown"], "for": "00:01:00" },
+    { "trigger": "homeassistant", "id": "start", "event": "start" },
+    { "trigger": "time_pattern", "id": "takt", "minutes": "/15" }
+  ],
+  "conditions": [
+    { "condition": "template", "value_template": "{{ has_value('sensor.chiller_zieltemperatur_aktiv') and has_value('[[kuehler_sollwert]]') }}" }
+  ],
+  "actions": [
+    { "variables": { "ziel": "{{ states('sensor.chiller_zieltemperatur_aktiv') | float }}" } },
+    {
+      "alias": "Nach Fühlerausfall: climate-Kühler wieder einschalten",
+      "if": [
+        { "condition": "trigger", "id": "fuehler_zurueck" },
+        { "condition": "template", "value_template": "{{ '[[kuehler_sollwert]]'.startswith('climate.') }}" },
+        { "condition": "state", "entity_id": "[[kuehler_sollwert]]", "state": "off" }
+      ],
+      "then": [
+        { "action": "homeassistant.turn_on", "continue_on_error": true, "target": { "entity_id": "[[kuehler_sollwert]]" } }
+      ]
+    },
+    {
+      "choose": [
+        {
+          "alias": "climate: Solltemperatur setzen",
+          "conditions": [
+            { "condition": "template", "value_template": "{{ '[[kuehler_sollwert]]'.startswith('climate.') }}" },
+            { "condition": "template", "value_template": "{{ (state_attr('[[kuehler_sollwert]]', 'temperature') | float(-99) - ziel) | abs > 0.05 }}" }
+          ],
+          "sequence": [
+            { "action": "climate.set_temperature", "target": { "entity_id": "[[kuehler_sollwert]]" }, "data": { "temperature": "{{ ziel }}" } }
+          ]
+        },
+        {
+          "alias": "number: Wert setzen",
+          "conditions": [
+            { "condition": "template", "value_template": "{{ '[[kuehler_sollwert]]'.startswith('number.') }}" },
+            { "condition": "template", "value_template": "{{ (states('[[kuehler_sollwert]]') | float(-99) - ziel) | abs > 0.05 }}" }
+          ],
+          "sequence": [
+            { "action": "number.set_value", "target": { "entity_id": "[[kuehler_sollwert]]" }, "data": { "value": "{{ ziel }}" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

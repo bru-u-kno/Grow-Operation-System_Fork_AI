@@ -225,10 +225,10 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
             <div className="st-feldzeile">
               <span className="st-etikett">
                 Schaltpunkte
-                <small>Ein über dem oberen Wert, aus unter dem unteren — dazwischen passiert nichts.</small>
+                <small>Ein ab dem oberen Wert, aus beim Ziel — dazwischen passiert nichts.</small>
               </span>
               <span className="st-nurlesen">
-                {live.einschaltenAbC == null ? '–' : `${live.einschaltenAbC.toLocaleString('de-DE')} / ${live.ausschaltenUnterC?.toLocaleString('de-DE')} °C`}
+                {live.einschaltenAbC == null ? '–' : `${live.einschaltenAbC.toLocaleString('de-DE')} / ${live.ausschaltenBeiC?.toLocaleString('de-DE')} °C`}
               </span>
             </div>
             <p className="st-hinweis">
@@ -243,8 +243,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
         <V1Section title="Schutz">
           <V1Card>
             <Zahl
-              label="Totband"
-              hinweis="Abstand zum Ziel, bevor überhaupt geschaltet wird. Zu eng, und der Kompressor taktet im Messrauschen."
+              label="Einschalten ab Ziel +"
+              hinweis="Um so viel muss das Wasser über dem Ziel liegen, bevor der Kühler startet. Aus geht er beim Ziel. Zu eng, und der Kompressor taktet im Messrauschen."
               einheit="K"
               wert={entwurf.hystereseK}
               min={0.1}
@@ -282,10 +282,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
               </span>
               <span className="st-nurlesen">{live.waechterAn === true ? 'AN' : live.waechterAn === false ? 'AUS' : '–'}</span>
             </div>
-            <p className="st-hinweis">
-              Das Totband wirkt erst, wenn der Rechenwert neu gebaut wird — es steckt in
-              <code> binary_sensor.chiller_kuhlbedarf</code>, nicht in der Automation.
-            </p>
+
           </V1Card>
         </V1Section>
       )}

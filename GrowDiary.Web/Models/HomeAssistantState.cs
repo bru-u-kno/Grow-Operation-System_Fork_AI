@@ -6,6 +6,12 @@ public sealed class HomeAssistantState
     public string State { get; set; } = string.Empty;
     public string? FriendlyName { get; set; }
     public string? UnitOfMeasurement { get; set; }
+
+    /// <summary>
+    /// Fork AI (Chiller-Ansteuerung): das Attribut <c>temperature</c> — bei einem
+    /// climate-Gerät der eingestellte Sollwert.
+    /// </summary>
+    public double? AttributTemperatur { get; set; }
     /// <summary>Wann sich der Zustands<b>text</b> zuletzt geändert hat.</summary>
     public DateTime? LastChanged { get; set; }
 

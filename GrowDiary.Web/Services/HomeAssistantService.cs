@@ -173,6 +173,10 @@ public sealed class HomeAssistantService
             {
                 if (attrs.TryGetProperty("friendly_name", out var friendly)) state.FriendlyName = friendly.GetString();
                 if (attrs.TryGetProperty("unit_of_measurement", out var unit)) state.UnitOfMeasurement = unit.GetString();
+                if (attrs.TryGetProperty("temperature", out var soll) && soll.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    state.AttributTemperatur = soll.GetDouble();
+                }
             }
 
             if (double.TryParse(state.State, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var numeric))

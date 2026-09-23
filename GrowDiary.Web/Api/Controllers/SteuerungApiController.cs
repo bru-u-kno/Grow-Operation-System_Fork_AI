@@ -112,12 +112,19 @@ public sealed class SteuerungApiController : ApiControllerBase
                 // Zeile meldete „kuehlt", waehrend die Steckdose an einer
                 // Schaltsperre haengen blieb — der Bedarf ist der Wunsch, nicht
                 // die Tat.
-                Status: chiller.AutomatikAn == false ? "aus" : chiller.SteckdoseAn == true ? "an" : "aus",
+                // Fork AI (Chiller-Ansteuerung): ein Sollwert-Gerät regelt
+                // selbst — dann zählt, ob es eingeschaltet ist, nicht die Steckdose.
+                Status: chiller.AutomatikAn == false ? "aus"
+                    : chiller.Ansteuerung is ChillerAnsteuerung.Regelbar or ChillerAnsteuerung.Beides
+                        ? (chiller.KuehlerZustand is null or "off" or "unavailable" or "unknown" ? "aus" : "an")
+                        : chiller.SteckdoseAn == true ? "an" : "aus",
                 Kurz: $"Tag {F(chiller.ZielTagC, " °C", "0.0")} · Nacht {F(chiller.ZielNachtC, " °C", "0.0")} · {(chiller.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
                 Wert: F(chiller.WasserC, " °C", "0.0"),
-                Unterzeile: chiller.SteckdoseAn == true
-                    ? "kühlt"
-                    : chiller.Kuehlbedarf == true ? "wartet auf Schaltsperre" : "bereit",
+                Unterzeile: chiller.Ansteuerung is ChillerAnsteuerung.Regelbar or ChillerAnsteuerung.Beides
+                    ? $"regelt selbst · Soll {F(chiller.KuehlerSollC, " °C", "0.0")}"
+                    : chiller.SteckdoseAn == true
+                        ? "kühlt"
+                        : chiller.Kuehlbedarf == true ? "wartet auf Schaltsperre" : "bereit",
                 HatDetail: true),
             // Fork AI: Crop Steering gehoert thematisch hierher — die Absenkung
             // fuehrt dasselbe Zielpaar, das der Kuehler abarbeitet. Die Zeile
@@ -550,6 +557,8 @@ public sealed class SteuerungApiController : ApiControllerBase
                 var roh = gespeichert.TryGetValue(rolle.Schluessel, out var eigen) && !string.IsNullOrWhiteSpace(eigen)
                     ? eigen
                     : rolle.Vorgabe;
+                // Bewusst leer gelassen: das Feld zeigt leer, nicht die Marke.
+                if (roh == SteuerungGeraeteRollen.BewusstLeer) roh = string.Empty;
                 var ziel = aufgeloest.TryGetValue(rolle.Schluessel, out var id) ? id : null;
                 return new SteuerungGeraetZeileDto(
                     rolle.Schluessel, rolle.Label, rolle.Gruppe, rolle.Einheit, rolle.Hinweis,

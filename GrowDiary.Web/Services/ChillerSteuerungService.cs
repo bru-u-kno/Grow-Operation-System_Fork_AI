@@ -33,6 +33,8 @@ public sealed class ChillerSteuerungService
         public const string SteckdoseZustand = "steckdose_zustand";
         public const string Leistung = "leistung";
         public const string LichtZustand = "licht_zustand";
+        /// <summary>Fork AI: Kühler mit eigenem Thermostat (climate/number).</summary>
+        public const string KuehlerSollwert = "kuehler_sollwert";
     }
 
     /// <summary>Die Objekte der Steuerung selbst — sie gehören keinem Gerät.</summary>
@@ -46,6 +48,10 @@ public sealed class ChillerSteuerungService
         public const string ZielAktiv = "sensor.chiller_zieltemperatur_aktiv";
         public const string Kuehlbedarf = "binary_sensor.chiller_kuhlbedarf";
         public const string Automatik = "automation.water_chiller_regelung";
+        /// <summary>Fork AI: schreibt das Ziel in ein Sollwert-Gerät.</summary>
+        public const string SollwertAutomatik = "automation.water_chiller_sollwert";
+        /// <summary>Fork AI (F-030): Einschalten ab Ziel plus diesem Abstand.</summary>
+        public const string Hysterese = "input_number.chiller_hysterese";
         public const string Waechter = "automation.water_chiller_wachter";
     }
 
@@ -86,21 +92,62 @@ public sealed class ChillerSteuerungService
     /// </summary>
     public async Task<ChillerEinstellungen> EinstellungenAsync(CancellationToken ct)
     {
-        if (Gespeichert is { } vorhanden) return vorhanden;
+        var vorhanden = Gespeichert;
+        if (vorhanden is { HystereseGefuehrt: true }) return vorhanden;
 
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        if (!settings.IsConfigured) return new ChillerEinstellungen();
+        if (!settings.IsConfigured) return vorhanden ?? new ChillerEinstellungen();
 
         var entities = await _ha.GetEntitiesAsync(settings, ct);
-        return AusHomeAssistant(entities.ToDictionary(
-            x => x.EntityId, x => (string?)x.State, StringComparer.OrdinalIgnoreCase));
+        var zustaende = entities.ToDictionary(
+            x => x.EntityId, x => (string?)x.State, StringComparer.OrdinalIgnoreCase);
+        var automatik = AutomatikFuer(AnsteuerungJetzt());
+        return vorhanden is null
+            ? AusHomeAssistant(zustaende, automatik)
+            : MitHystereseAusHomeAssistant(vorhanden, zustaende);
     }
+
+    /// <summary>
+    /// Fork AI (F-030): Ein gespeicherter Stand aus der Zeit vor dem
+    /// Hysterese-Helfer trägt 0,3 — ein Wert, der nie gewirkt hat. Dann gilt,
+    /// was in Home Assistant steht.
+    /// </summary>
+    public static ChillerEinstellungen MitHystereseAusHomeAssistant(
+        ChillerEinstellungen gespeichert, IReadOnlyDictionary<string, string?> zustaende)
+    {
+        if (gespeichert.HystereseGefuehrt) return gespeichert;
+        if (zustaende.TryGetValue(Entitaeten.Hysterese, out var s)
+            && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var h))
+        {
+            gespeichert.HystereseK = h;
+        }
+        return gespeichert;
+    }
+
+    /// <summary>Die Ansteuerung nach den aktuellen Rollen.</summary>
+    public string AnsteuerungJetzt()
+    {
+        var geraete = _geraete.EntitiesFuerModul(Modul);
+        geraete.TryGetValue(Rollen.Steckdose, out var steckdose);
+        geraete.TryGetValue(Rollen.KuehlerSollwert, out var sollwert);
+        return ChillerAnsteuerung.Aus(steckdose, sollwert);
+    }
+
+    /// <summary>
+    /// Welche Automation „Automatik aktiv" meint: bei einem Sollwert-Gerät die,
+    /// die das Ziel schreibt, sonst die Steckdosen-Regelung.
+    /// </summary>
+    public static string AutomatikFuer(string ansteuerung)
+        => ansteuerung is ChillerAnsteuerung.Regelbar or ChillerAnsteuerung.Beides
+            ? Entitaeten.SollwertAutomatik
+            : Entitaeten.Automatik;
 
     /// <summary>
     /// Aus den Zuständen der Helfer Einstellungen bauen. Was fehlt oder sich
     /// nicht lesen lässt, bleibt auf der Vorgabe.
     /// </summary>
-    public static ChillerEinstellungen AusHomeAssistant(IReadOnlyDictionary<string, string?> zustaende)
+    public static ChillerEinstellungen AusHomeAssistant(
+        IReadOnlyDictionary<string, string?> zustaende, string automatik = Entitaeten.Automatik)
     {
         var e = new ChillerEinstellungen();
 
@@ -111,9 +158,10 @@ public sealed class ChillerSteuerungService
         if (Zahl(Entitaeten.ZielNacht) is { } nacht) e.ZielNachtC = nacht;
         if (Zahl(Entitaeten.Mindestlaufzeit) is { } lz) e.MindestlaufzeitMin = (int)Math.Round(lz);
         if (Zahl(Entitaeten.Mindestpause) is { } pa) e.MindestpauseMin = (int)Math.Round(pa);
-        if (zustaende.TryGetValue(Entitaeten.Automatik, out var automatik) && automatik is not null)
+        if (Zahl(Entitaeten.Hysterese) is { } hy) e.HystereseK = hy;
+        if (zustaende.TryGetValue(automatik, out var an) && an is not null)
         {
-            e.AutomatikAktiv = automatik is "on" or "On";
+            e.AutomatikAktiv = an is "on" or "On";
         }
 
         return e;
@@ -144,6 +192,8 @@ public sealed class ChillerSteuerungService
         var fehler = Pruefen(e);
         if (fehler.Count > 0) return (null, fehler, false);
 
+        // Ab jetzt führt der Fork die Hysterese (F-030).
+        e.HystereseGefuehrt = true;
         _repo.SetEinstellungen(Modul, e);
         var erreicht = await NachHomeAssistantSchreibenAsync(e, ct);
         return (e, fehler, erreicht);
@@ -163,8 +213,17 @@ public sealed class ChillerSteuerungService
                 new Dictionary<string, object> { ["value"] = wert });
         }
 
+        var ansteuerung = AnsteuerungJetzt();
         alles &= await _ha.CallEntityServiceAsync(
-            settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik, ct);
+            settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", AutomatikFuer(ansteuerung), ct);
+
+        // Regelt das Gerät selbst, darf die Steckdosen-Regelung nicht mehr
+        // schalten — sonst greifen zwei Stellen nach demselben Kühler. Fehlt sie
+        // (neue Anlage mit Sollwert-Gerät), ist das kein Fehler.
+        if (ansteuerung is ChillerAnsteuerung.Regelbar or ChillerAnsteuerung.Beides)
+        {
+            await _ha.CallEntityServiceAsync(settings, "automation", "turn_off", Entitaeten.Automatik, ct);
+        }
 
         if (!alles) _logger.LogWarning("Kühler-Sollwerte: nicht alle Helfer in Home Assistant angenommen.");
         return alles;
@@ -187,8 +246,23 @@ public sealed class ChillerSteuerungService
         double? ZahlRolle(string rolle) => Rolle(rolle) is { } id ? Zahl(id) : null;
         bool? AnRolle(string rolle) => Rolle(rolle) is { } id ? An(id) : null;
 
-        var e = Gespeichert ?? AusHomeAssistant(
-            nachId.ToDictionary(x => x.Key, x => (string?)x.Value.State, StringComparer.OrdinalIgnoreCase));
+        var zustaende = nachId.ToDictionary(x => x.Key, x => (string?)x.Value.State, StringComparer.OrdinalIgnoreCase);
+        var ansteuerung = ChillerAnsteuerung.Aus(Rolle(Rollen.Steckdose), Rolle(Rollen.KuehlerSollwert));
+        var automatik = AutomatikFuer(ansteuerung);
+        var e = Gespeichert is { } g
+            ? MitHystereseAusHomeAssistant(g, zustaende)
+            : AusHomeAssistant(zustaende, automatik);
+
+        // Schaltpunkte aus dem, was in HA wirklich gilt — nicht aus dem Fork.
+        var hysterese = Zahl(Entitaeten.Hysterese) ?? e.HystereseK;
+        var kuehler = Rolle(Rollen.KuehlerSollwert);
+        double? kuehlerSoll = null;
+        if (kuehler is not null)
+        {
+            kuehlerSoll = kuehler.StartsWith("climate.", StringComparison.OrdinalIgnoreCase)
+                ? (await _ha.GetEntityStateAsync(settings, kuehler, ct))?.AttributTemperatur
+                : Zahl(kuehler);
+        }
 
         // Der Zustand der Steckdose: erst die eigene Rolle, sonst der Schalter
         // selbst. Bei einer Shelly ist beides dieselbe Entität — eine zweite
@@ -214,14 +288,18 @@ public sealed class ChillerSteuerungService
             Kuehlbedarf: An(Entitaeten.Kuehlbedarf),
             SteckdoseAn: steckdoseAn,
             LeistungW: ZahlRolle(Rollen.Leistung),
-            AutomatikAn: An(Entitaeten.Automatik),
+            AutomatikAn: An(automatik),
             WaechterAn: An(Entitaeten.Waechter),
             ZielQuelle: ZielQuelle(Gespeichert is not null, PlanFuehrtZiel()),
             SperreRestMin: rest,
             LetzterWechsel: gewechselt,
             DoppelSteuerungEntity: doppelt,
-            EinschaltenAbC: zielAktiv is { } z1 ? Math.Round(z1 + e.HystereseK, 2) : null,
-            AusschaltenUnterC: zielAktiv is { } z2 ? Math.Round(z2 - e.HystereseK, 2) : null);
+            EinschaltenAbC: zielAktiv is { } z1 ? Math.Round(z1 + hysterese, 2) : null,
+            AusschaltenBeiC: zielAktiv,
+            Ansteuerung: ansteuerung,
+            KuehlerEntity: kuehler,
+            KuehlerSollC: kuehlerSoll,
+            KuehlerZustand: kuehler is null ? null : Text(kuehler));
     }
 
     /// <summary>
@@ -243,6 +321,7 @@ public sealed class ChillerSteuerungService
             (Entitaeten.ZielNacht, e.ZielNachtC),
             (Entitaeten.Mindestlaufzeit, e.MindestlaufzeitMin),
             (Entitaeten.Mindestpause, e.MindestpauseMin),
+            (Entitaeten.Hysterese, e.HystereseK),
         };
 
         return zahlen.Where(z => !gefuehrt.Contains(z.Entity)).ToList();

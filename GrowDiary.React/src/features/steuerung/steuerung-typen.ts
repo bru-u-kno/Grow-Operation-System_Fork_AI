@@ -334,11 +334,14 @@ export const ENTFEUCHTER_REITER: Array<{ value: EntfeuchterReiter; label: string
 export type ChillerEinstellungen = {
   zielTagC: number
   zielNachtC: number
+  /** Einschalten ab Ziel plus diesem Abstand, ausschalten beim Ziel (F-030). */
   hystereseK: number
   mindestlaufzeitMin: number
   mindestpauseMin: number
   automatikAktiv: boolean
 }
+
+export type ChillerAnsteuerung = 'steckdose' | 'regelbar' | 'beides' | 'keine'
 
 export type ChillerLive = {
   haErreichbar: boolean
@@ -358,7 +361,13 @@ export type ChillerLive = {
   sperreRestMin: number | null
   letzterWechsel: string | null
   einschaltenAbC: number | null
-  ausschaltenUnterC: number | null
+  /** Ausgeschaltet wird beim Ziel, nicht darunter (F-030). */
+  ausschaltenBeiC: number | null
+  /** steckdose, regelbar, beides oder keine — ergibt sich aus den Rollen. */
+  ansteuerung: ChillerAnsteuerung
+  kuehlerEntity: string | null
+  kuehlerSollC: number | null
+  kuehlerZustand: string | null
   /** Gesetzt, wenn Crop Steering dieselbe Steckdose schaltet wie die Regelung. */
   doppelSteuerungEntity: string | null
 }

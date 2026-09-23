@@ -341,6 +341,13 @@ public static class SteuerungBauteile
         new(Chiller, "input_number.chiller_mindestpause", "Chiller Mindestpause", BauteilArt.Zahl,
             "Wie lange er mindestens aus bleibt. Zu kurze Pausen kosten ihn das Leben.",
             Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
+        // Fork AI (F-030): Der Abstand über dem Ziel, ab dem die Steckdose
+        // einschaltet. Ausgeschaltet wird beim Ziel selbst — so kühlt der
+        // Kompressor bis zum Ziel herunter und startet erst wieder, wenn das
+        // Wasser um diesen Abstand gestiegen ist. Stand vorher fest im Rechenwert.
+        new(Chiller, "input_number.chiller_hysterese", "Chiller Hysterese", BauteilArt.Zahl,
+            "Einschalten ab Ziel plus diesem Abstand, ausschalten beim Ziel. Zu klein, und der Kompressor taktet im Messrauschen.",
+            Min: 0.1, Max: 3, Schritt: 0.1, Einheit: "K"),
         new(Chiller, "input_datetime.chiller_letzter_schaltvorgang", "Chiller letzter Schaltvorgang", BauteilArt.Zeitpunkt,
             "Zeitstempel statt last_changed — eine Funksteckdose fällt bei WLAN-Aussetzern kurz aus."),
 
@@ -354,13 +361,22 @@ public static class SteuerungBauteile
             Vorlage: "{% set licht = states('[[licht_zustand]]') %}{% if licht == 'on' %}{{ states('input_number.chiller_zieltemperatur_tag') | float }}{% elif licht == 'off' %}{{ states('input_number.chiller_zieltemperatur_nacht') | float }}{% else %}{{ this.state | float(states('input_number.chiller_zieltemperatur_tag') | float) }}{% endif %}",
             Verfuegbarkeit: "{{ has_value('input_number.chiller_zieltemperatur_tag') and has_value('input_number.chiller_zieltemperatur_nacht') }}"),
         new(Chiller, "binary_sensor.chiller_kuhlbedarf", "Chiller Kuhlbedarf", BauteilArt.RechenSchalter,
-            "An, sobald das Wasser über dem Ziel steht. Mit Totband, damit der Kompressor nicht taktet.",
-            Vorlage: "{% set t = states('[[wasser_temp]]') | float %}{% set z = states('sensor.chiller_zieltemperatur_aktiv') | float %}{% set prev = (this.state == 'on') if this is defined else false %}{% if t >= z + 0.3 %}on{% elif t <= z - 0.3 %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
+            "An ab Ziel plus Hysterese, aus beim Ziel — dazwischen bleibt der letzte Zustand.",
+            Vorlage: "{% set t = states('[[wasser_temp]]') | float %}{% set z = states('sensor.chiller_zieltemperatur_aktiv') | float %}{% set h = states('input_number.chiller_hysterese') | float(0.6) %}{% set prev = (this.state == 'on') if this is defined else false %}{% if t >= z + h %}on{% elif t <= z %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
             Verfuegbarkeit: "{{ has_value('[[wasser_temp]]') and has_value('sensor.chiller_zieltemperatur_aktiv') }}"),
 
         // --- Automationen ---------------------------------------------------
+        // Welche der beiden Automationen gebraucht wird, hängt an den Rollen:
+        // die Regelung an der Steckdose, der Sollwert am Sollwert-Gerät. Keine
+        // ist für sich Pflicht — die Seite sagt, welche Ansteuerung gilt.
         new(Chiller, "automation.water_chiller_regelung", "Water Chiller Regelung", BauteilArt.Automation,
-            "Schaltet die Steckdose nach Kühlbedarf, gegen Mindestlaufzeit und -pause."),
+            "Schaltet die Steckdose nach Kühlbedarf, gegen Mindestlaufzeit und -pause.",
+            Pflicht: false, HaengtAn: new[] { "steckdose" },
+            OhneDas: "Nur nötig, wenn der Kühler über eine Steckdose geschaltet wird und kein Sollwert-Gerät hat."),
+        new(Chiller, "automation.water_chiller_sollwert", "Water Chiller Sollwert", BauteilArt.Automation,
+            "Schreibt das Tag- oder Nachtziel in einen Kühler mit eigenem Thermostat.",
+            Pflicht: false, HaengtAn: new[] { "kuehler_sollwert" },
+            OhneDas: "Nur nötig, wenn der Kühler einen eigenen Sollwert-Eingang hat."),
         new(Chiller, "automation.water_chiller_wachter", "Water Chiller Wachter", BauteilArt.Automation,
             "Schaltet ab, wenn der Wasserfühler ausfällt, und warnt bei zu warmem Wasser.",
             Pflicht: false,

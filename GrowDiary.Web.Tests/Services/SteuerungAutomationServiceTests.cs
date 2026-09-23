@@ -124,6 +124,12 @@ public class SteuerungAutomationServiceTests
                 .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
 
             var vorlage = (JsonObject)JsonNode.Parse(File.ReadAllText(datei))!;
+            // Eine Vorlage, die wegen eines vorhandenen Geräts entfällt
+            // ("wennNicht"), wird ohne dieses Gerät geprüft.
+            if (SteuerungAutomationService.UeberfluessigWegen(vorlage, zuordnung) is { } weg)
+            {
+                zuordnung.Remove(weg);
+            }
             var fertig = SteuerungAutomationService.Fuellen(vorlage, zuordnung);
 
             Assert.NotNull(fertig);
