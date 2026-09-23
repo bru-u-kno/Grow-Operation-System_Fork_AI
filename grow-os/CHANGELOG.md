@@ -5,6 +5,26 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.146
+
+**Fork AI.** Live-Kacheln zeigen das Ziel aus dem Plan, die Grenzwerte getrennt davon.
+
+- Geändert — Jede Kachel nennt unter „ZIEL" den Wert aus dem Plan. Luft und Luftfeuchte zeigen
+  Tag und Nacht in einer Zeile, der gerade gültige Wert ist hell. Vorher standen dort die
+  Meldegrenzen (z. B. „21–27"), und 26,8 °C galt als „im Ziel".
+- Geändert — Das Band unter dem Wert sieht aus wie auf der Seite „Grenzwerte": grün das Ziel,
+  gelbe Striche die Grenzwerte, der Zeiger in der Farbe des Status.
+- Neu — Nennt der Plan nur einen Wert (z. B. Luft 25 °C), zeigt die Kachel statt „daneben" die
+  Abweichung („+1,8 K"); auf dem Band steht eine grüne Zielmarke.
+- Geändert — Rot („Grenze") wird eine Kachel nur, wenn ein Grenzwert überschritten ist — also
+  genau dann, wenn auch eine Meldung aufs Handy kommt. Der Grow-Score zieht für „daneben, aber
+  innerhalb der Grenzen" nur halb so viel ab.
+- Geändert — Licht: „an 05:02 Uhr" und „aus 17:02 Uhr" untereinander, die nächste Schaltzeit hell,
+  darunter „wechselt in".
+- Behoben — Das Düngeprogramm „SKX Canna Aqua" entspricht wieder dem SKX-Growplan Rev.01 (VPD, PPFD,
+  Luft in Blütewoche 5, Wasser im Flush, kein CO₂ in der Bewurzelung). Laufende Grows behalten ihren Plan.
+- Behoben — Auf der Seite „Grenzwerte" steht ein Einzelwert-Ziel als eine Zahl statt „25–25".
+
 ## 2.0.0-forkai.145
 
 **Fork AI.** Grenzwerte: klare Warnung, alle Planwerte an einer Stelle.

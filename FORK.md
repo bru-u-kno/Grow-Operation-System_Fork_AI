@@ -39,6 +39,10 @@ Menüpunkte — **Plan** (Pflanzen), **Grenzwerte** (Betrieb) und **Handy** (Ein
 einrichten) —, verbunden über die Kette „1 · Plan › 2 · Grenzwerte › 3 · Handy“; Zielwerte ändert man nur
 noch im Plan.
 
+**Live-Kacheln: Ziel und Grenze getrennt** (forkai.146). Jede Kachel nennt unter „ZIEL" den Planwert
+(Luft/Luftfeuchte Tag und Nacht in einer Zeile); die Grenzwerte stehen als gelbe Striche auf dem Band.
+Nennt der Plan nur einen Wert, zeigt die Kachel die Abweichung. Rot nur jenseits der Grenzwerte — wie die Meldung.
+
 **Alarmgrenzen können dem Wochenplan folgen.** Je Regel umschaltbar zwischen
 festen Zahlen (Vorgabe, unverändertes Verhalten) und dem Zielband der laufenden
 Woche ± Toleranz. Damit wandern pH und EC mit der Blütewoche mit, statt ab Woche 4
