@@ -185,14 +185,12 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           <span className="st-etikett">
             Ziel Tag {live.zielTagC?.toLocaleString('de-DE') ?? '–'} °C · Nacht {live.zielNachtC?.toLocaleString('de-DE') ?? '–'} °C
             <small>
-              {live.zielQuelle === 'cropsteering'
-                ? 'Die Absenkung führt das Ziel über den Tag.'
-                : live.zielQuelle === 'hand'
-                  ? 'Von dir gesetzt — der Plan überschreibt es nicht.'
-                  : 'Aus dem Plan des Grows, nach Phase und Woche.'}
+              {live.zielQuelle === 'hand'
+                ? 'Von dir gesetzt — der Plan überschreibt es nicht.'
+                : 'Aus dem Plan des Grows, nach Phase und Woche.'}
             </small>
           </span>
-          <V1LinkButton to="/steuerung/cropsteering" variant="ghost">Crop Steering ›</V1LinkButton>
+          <V1LinkButton to="/plan" variant="ghost">Plan ›</V1LinkButton>
         </div>
         <p className="st-hinweis">
           Welches der beiden Ziele gilt, entscheidet der Lichtzustand und nicht die Uhr. Verschiebt sich die

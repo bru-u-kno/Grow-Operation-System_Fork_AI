@@ -170,3 +170,29 @@ public class ChillerAnsteuerungTests
         Assert.Equal(new[] { "climate", "number" }, sollwert.Domains);
     }
 }
+
+/// <summary>Fork AI (forkai.136): Einmalige Übernahme aus Crop Steering.</summary>
+public class CropSteeringUebernahmeTests
+{
+    [Fact]
+    public void SteckdoseUndSollwertGeraetWerdenZuRollen()
+    {
+        var r = ChillerSteuerungService.UebernahmeAus(false,
+            new[] { null, "switch.kuehler" }, new[] { "climate.kuehler" });
+        Assert.Equal("switch.kuehler", r["steckdose"]);
+        Assert.Equal("climate.kuehler", r["kuehler_sollwert"]);
+    }
+
+    [Fact]
+    public void EinHelferAlsZielgeraetWirdNichtUebernommen()
+    {
+        var r = ChillerSteuerungService.UebernahmeAus(false,
+            Array.Empty<string?>(), new[] { "input_number.chiller_zieltemperatur_nacht" });
+        Assert.Empty(r);
+    }
+
+    [Fact]
+    public void WerSchonZugeordnetHatBehaeltSeineRollen()
+        => Assert.Empty(ChillerSteuerungService.UebernahmeAus(true,
+            new[] { "switch.kuehler" }, new[] { "climate.kuehler" }));
+}

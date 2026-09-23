@@ -416,7 +416,8 @@ test.describe('Formular-Rundweg', () => {
   /* Rundweg: CropSteeringPage                                         */
   /* ---------------------------------------------------------------- */
 
-  test('Rundweg: CropSteeringPage — Kühler einstellen und wiederfinden', async ({ page }) => {
+  // Fork AI (forkai.136): Crop Steering stillgelegt.
+  test.skip('Rundweg: CropSteeringPage — Kühler einstellen und wiederfinden', async ({ page }) => {
     darfUeberspringen(!await backendDa(page), 'Kein Backend — siehe oben.')
 
     // Der Kuehler haengt am ZELT des Demobestands — dieser Rundweg veraendert
@@ -479,7 +480,7 @@ test.describe('Formular-Rundweg', () => {
     expect(wieder.chiller?.hysteresisC).toBe(vorher.chiller?.hysteresisC)
   })
 
-  test('Rundweg: CropSteeringPage — ein unlesbarer Wert wird nicht still verschluckt', async ({ page }) => {
+  test.skip('Rundweg: CropSteeringPage — ein unlesbarer Wert wird nicht still verschluckt', async ({ page }) => {
     darfUeberspringen(!await backendDa(page), 'Kein Backend — siehe oben.')
 
     // Dieselbe Fehlerklasse wie im Messformular: „16x" ist keine Zahl. Vorher

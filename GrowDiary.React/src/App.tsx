@@ -4,7 +4,6 @@ import AddbackPage from './pages/AddbackPage'
 import { GrowScopedSectionPage } from './pages/GrowScopedSectionPage'
 import GettingStartedPage from './pages/GettingStartedPage'
 import DosingPage from './pages/DosingPage'
-import { CropSteeringPage } from './pages/CropSteeringPage'
 import { AcTestPage } from './pages/AcTestPage'
 import DosingPumpSetupPage from './pages/DosingPumpSetupPage'
 import GrowDetailPage from './pages/GrowDetailPage'
@@ -148,14 +147,15 @@ function App() {
           <Route path="/plan" element={<PlanSeite />} />
           <Route path="/grenzwerte" element={<GrenzwerteSeite />} />
           <Route path="/zielwerte" element={<ZielwerteWeiterleitung />} />
-          <Route path="/cropsteering" element={<CropSteeringPage />} />
+          {/* Fork AI (forkai.136): Crop Steering stillgelegt — alte Adressen führen zum Chiller. */}
+          <Route path="/cropsteering" element={<Navigate to="/steuerung/chiller" replace />} />
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />
           <Route path="/steuerung/geraete" element={<SteuerungGeraeteWeiterleitung />} />
           {/* Fork AI: Crop Steering wohnt thematisch unter der Steuerung, bleibt
               aber DIESELBE Seite des Entwicklers — eine zweite Route statt einer
               Kopie, damit seine Datei unberührt bleibt und Updates ankommen. */}
-          <Route path="/steuerung/cropsteering" element={<CropSteeringPage />} />
+          <Route path="/steuerung/cropsteering" element={<Navigate to="/steuerung/chiller" replace />} />
           <Route path="/geraete" element={<GeraetePage />} />
           <Route path="/steuerung/:modul" element={<SteuerungPage />} />
           <Route path="/ac-test" element={<AcTestPage />} />

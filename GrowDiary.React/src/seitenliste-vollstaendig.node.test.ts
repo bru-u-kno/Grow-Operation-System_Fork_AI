@@ -33,6 +33,8 @@ const OHNE_EIGENE_SEITE: Record<string, string> = {
   '/hydro/:id/edit': 'Deckungsgleich mit /hydro/:setupId, nur im Bearbeiten-Modus.',
   '/zielwerte': 'Alte Adresse (bis forkai.132) — leitet je nach Reiter auf /plan, /grenzwerte oder /handy um.',
   '/steuerung/geraete': 'Alte Adresse (bis forkai.133) — leitet auf den Reiter Rollen der Geräteseite um.',
+  '/cropsteering': 'Crop Steering ist seit forkai.136 stillgelegt — leitet auf Steuerung → Chiller um.',
+  '/steuerung/cropsteering': 'Crop Steering ist seit forkai.136 stillgelegt — leitet auf Steuerung → Chiller um.',
 }
 
 function routenAusApp(): string[] {
