@@ -173,12 +173,6 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           message="Fällt der Wasserfühler aus, schaltet niemand mehr ab. Der Wächter gehört eingeschaltet."
         />
       )}
-      {seite.ausHomeAssistantUebernommen && (
-        <V1Alert
-          title="Werte aus Home Assistant übernommen"
-          message="Hier steht, was in den Helfern steht — noch nichts davon ist im Fork gespeichert. Mit dem ersten Speichern übernimmt der Fork die Führung."
-        />
-      )}
 
       <section className="v1-kpi-grid">
         <V1Stat

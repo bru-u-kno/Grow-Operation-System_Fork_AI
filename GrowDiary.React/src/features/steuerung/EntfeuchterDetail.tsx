@@ -147,12 +147,6 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
       {live.automatikAn === false && (
         <V1Alert tone="warn" title="Automatik aus" message="Die Regelung ist angehalten. Der Entfeuchter bleibt, wie er gerade steht." />
       )}
-      {seite.ausHomeAssistantUebernommen && (
-        <V1Alert
-          title="Werte aus Home Assistant übernommen"
-          message="Hier steht, was in den Helfern steht — noch nichts davon ist im Fork gespeichert. Mit dem ersten Speichern übernimmt der Fork die Führung."
-        />
-      )}
 
       {/* ---------------------------------------------------- Schwellen-Band */}
       <V1Card className="ef-band">

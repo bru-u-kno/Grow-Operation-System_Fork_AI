@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.139
+
+**Fork AI.** Chiller, Zuluft und Entfeuchter führen ab dem ersten Öffnen.
+
+- Geändert — Beim ersten Aufruf übernimmt der Fork die Werte aus den Home-Assistant-Helfern
+  sofort als eigenen Stand. Gespeichert wird nur im Fork, nach Home Assistant wird dabei
+  nichts geschrieben — die Anlage läuft unverändert weiter.
+- Entfernt — Der gelbe Hinweis „Werte aus Home Assistant übernommen" auf den drei Seiten.
+
 ## 2.0.0-forkai.138
 
 **Fork AI.** Rollen ohne fremde Werksvorgaben, Steuerungs-Zeilen brechen am Handy nicht mehr um.

@@ -151,12 +151,6 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           message={`Die Außenluft würde trocknen, aber das Zelt hat ${Zeig(live.zeltTempC, ' °C', 1)}. Die Zuluft läuft wieder ab ${Zeig(entwurf.zeltTemperaturMinC == null ? null : entwurf.zeltTemperaturMinC + 1, ' °C', 1)}; bis dahin entfeuchtet der Trotec allein.`}
         />
       )}
-      {seite.ausHomeAssistantUebernommen && (
-        <V1Alert
-          title="Werte aus Home Assistant übernommen"
-          message="Hier steht, was in den Helfern steht — noch nichts davon ist im Fork gespeichert. Mit dem ersten Speichern übernimmt der Fork die Führung."
-        />
-      )}
 
       <section className="v1-kpi-grid">
         <button type="button" className="zl-kachel" onClick={() => setRechenweg(true)}>
