@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.148
+
+**Fork AI.** Plan: Korrekturen an der Vorlage gelten als Startstand.
+
+- Neu — Werte, die an die Vorlage angeglichen wurden (z. B. an das Hersteller-PDF), können als
+  Startstand übernommen werden. Sie erscheinen dann nicht mehr gelb als „eigene Änderung", und
+  „zurück" führt auf den korrigierten Wert. Im Änderungsbuch steht „Startstand korrigiert".
+- Behoben — Im Plan lag der Speicherbalken unten über dem Hinweis „Ab wann wird diese Woche
+  gemeldet?"; jetzt ist darunter Platz.
+
 ## 2.0.0-forkai.147
 
 **Fork AI.** Wassertemperatur wie die Luft: Ziel und Meldegrenzen aus dem Plan.

@@ -407,6 +407,8 @@ export function PlanReiter() {
       {probleme.length > 0 && <V1Alert tone="critical" message={probleme.join(' ')} />}
       {meldung && <V1Alert tone={meldung.ton} message={meldung.text} />}
 
+      {/* Fork AI (F-044): Platz für den festen Speicherbalken — sonst liegt er über dem letzten Inhalt. */}
+      <div className="wp-balken-platz" aria-hidden="true" />
       <div className="wp-speicherbalken" data-audit="plan-speicherbalken">
         <span className="wp-speicherbalken-zahl">
           {anzahl === 0 ? 'Keine Änderungen' : `${anzahl} Änderung${anzahl === 1 ? '' : 'en'}`}

@@ -295,6 +295,63 @@ public sealed class GrowPlanService
     }
 
     /// <summary>
+    /// Fork AI (F-045): übernimmt Werte des Arbeitsstands in den Startstand (bzw. die
+    /// Basis nach einem Programmwechsel) — für Korrekturen der Vorlage selbst.
+    /// </summary>
+    /// <remarks>
+    /// Anlass 23.09.2026: der Startstand vom 16.09. enthielt Werte, die nicht dem
+    /// SKX-PDF entsprachen. Nach dem Angleichen stand jede Korrektur gelb als
+    /// „eigene Änderung" da, und „zurück" hätte die falschen Werte wiederhergestellt.
+    /// Die Korrektur landet im Änderungsbuch (Art <c>startkorrektur</c>), der
+    /// Arbeitsstand bekommt die Herkunft des Startstands zurück.
+    /// </remarks>
+    /// <returns>Anzahl der Felder, deren Startwert sich geändert hat.</returns>
+    public int StartstandKorrigieren(
+        int growId,
+        IEnumerable<(string SpalteId, string Feld)> felder,
+        string? grund,
+        DateTime? jetztUtc = null)
+    {
+        lock (_lock)
+        {
+            var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
+                ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
+            var vergleich = _repo.Laden(growId, GrowPlanStaende.Basis)
+                ?? _repo.Laden(growId, GrowPlanStaende.Start)
+                ?? throw new InvalidOperationException($"Grow {growId} hat keinen Startstand.");
+            var zeit = jetztUtc ?? DateTime.UtcNow;
+            var eintraege = new List<GrowPlanEintrag>();
+
+            foreach (var (spalteId, feldName) in felder)
+            {
+                var feld = Wochenwertfelder.Finden(feldName)
+                    ?? throw new ArgumentException($"Unbekanntes Feld {feldName}.");
+                var a = arbeit.Inhalt.Chart.Columns.FirstOrDefault(c => string.Equals(c.Id, spalteId, StringComparison.OrdinalIgnoreCase))
+                    ?? throw new ArgumentException($"Unbekannte Woche {spalteId}.");
+                var st = vergleich.Inhalt.Chart.Columns.FirstOrDefault(c => string.Equals(c.Id, spalteId, StringComparison.OrdinalIgnoreCase))
+                    ?? throw new ArgumentException($"Unbekannte Woche {spalteId} im Startstand.");
+
+                var neu = feld.Lesen(a);
+                var alt = feld.Lesen(st);
+                if (Gleich(alt, neu)) continue;
+
+                feld.Schreiben(st, neu);
+                arbeit.Inhalt.HerkunftSetzen(a.Id, feld.Name, vergleich.Inhalt.HerkunftVon(st.Id, feld.Name));
+                eintraege.Add(new GrowPlanEintrag(0, growId, zeit, GrowPlanArten.Startkorrektur, a.Id, feld.Name,
+                    Text(alt), Text(neu), "grow", grund));
+            }
+
+            if (eintraege.Count == 0) return 0;
+
+            _repo.Nachtragen(vergleich);
+            _repo.Speichern([arbeit with { GeaendertUtc = zeit }], eintraege);
+            _startstaende[growId] = vergleich.Inhalt;
+            GrowPlanRegister.Setzen(growId, arbeit.Inhalt);
+            return eintraege.Count;
+        }
+    }
+
+    /// <summary>
     /// Speichert eine Woche des Plans: Zielwerte und (optional) die ganze
     /// Dosierung. Mit <see cref="PlanSpeichernAnfrage.AuchInsProgramm"/> gehen
     /// genau diese Änderungen zusätzlich in ein eigenes Programm.

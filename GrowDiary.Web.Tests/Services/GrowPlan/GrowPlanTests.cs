@@ -231,6 +231,28 @@ public sealed class GrowPlanTests : IDisposable
     }
 
     [Fact]
+    public void StartstandKorrekturMachtDieKorrekturZumStartwert()
+    {
+        // Fork AI (F-045): angeglichene Werte sind keine „eigene Änderung" mehr.
+        var grow = Grow(13, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.4)], grund: "Abgleich PDF");
+
+        Assert.Equal(1, _dienst.StartstandKorrigieren(grow.Id, [("flower-w5", "ecTarget")], "Abgleich PDF"));
+
+        var start = _repo.Laden(grow.Id, GrowPlanStaende.Start)!;
+        Assert.Equal(1.4, start.Inhalt.Chart.Columns.Single(c => c.Id == "flower-w5").EcTarget);
+        var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
+        Assert.NotEqual(GrowPlanHerkunft.Eigen, arbeit.Inhalt.HerkunftVon("flower-w5", "ecTarget"));
+        Assert.Equal(GrowPlanArten.Startkorrektur, _repo.Buch(grow.Id)[0].Art);
+
+        // „Zurück" führt jetzt auf den korrigierten Wert.
+        Assert.Equal(0, _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", null)]));
+        // Nochmal korrigieren: nichts zu tun.
+        Assert.Equal(0, _dienst.StartstandKorrigieren(grow.Id, [("flower-w5", "ecTarget")], null));
+    }
+
+    [Fact]
     public void UebernahmeBeimStartUeberspringtAbgeschlosseneGrows()
     {
         var laeuft = Grow(13, "skx-canna-aqua");

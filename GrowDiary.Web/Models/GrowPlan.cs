@@ -56,6 +56,8 @@ public static class GrowPlanArten
     public const string Eingefroren = "eingefroren";
     public const string Wiedergeoeffnet = "wiedergeoeffnet";
     public const string AlsProgramm = "alsprogramm";
+    /// <summary>Fork AI (F-045): Startstand an eine Quelle angeglichen (z. B. Vorlagen-PDF) — keine eigene Änderung.</summary>
+    public const string Startkorrektur = "startkorrektur";
 }
 
 /// <summary>Der gespeicherte Inhalt eines Planstands.</summary>

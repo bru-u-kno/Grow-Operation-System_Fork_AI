@@ -103,6 +103,21 @@ public sealed class PlanSpeichernRequest
     public string? Grund { get; set; }
 }
 
+/// <summary>Fork AI (F-045): Felder, deren Arbeitswert zum Startwert werden soll.</summary>
+public sealed class StartstandKorrekturRequest
+{
+    public List<StartstandFeldDto> Felder { get; set; } = [];
+    public string? Grund { get; set; }
+}
+
+public sealed class StartstandFeldDto
+{
+    public string SpalteId { get; set; } = string.Empty;
+    public string Feld { get; set; } = string.Empty;
+}
+
+public sealed record StartstandKorrigiertDto(int Korrigiert);
+
 public sealed record PlanGespeichertDto(
     int Aenderungen,
     string? ProgrammId,
@@ -374,6 +389,33 @@ public sealed class GrowPlanApiController : ApiControllerBase
 
         var programm = _plaene.AlsProgrammSpeichern(growId, name);
         return Ok(new AlsProgrammDto(programm.Id, programm.Name));
+    }
+
+    /// <summary>
+    /// Fork AI (F-045): Werte des Arbeitsstands als Startstand übernehmen — für
+    /// Korrekturen der Vorlage (z. B. Abgleich mit dem Hersteller-PDF).
+    /// </summary>
+    [HttpPost("startstand")]
+    [ProducesResponseType(typeof(StartstandKorrigiertDto), StatusCodes.Status200OK)]
+    public ActionResult<StartstandKorrigiertDto> StartstandKorrigieren(int growId, [FromBody] StartstandKorrekturRequest anfrage)
+    {
+        if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Arbeit) is null)
+            return NotFoundError("plan_nicht_gefunden", "Für diesen Grow ist kein Plan gespeichert.");
+        if (anfrage.Felder is not { Count: > 0 }) return ValidationError("Bitte mindestens ein Feld angeben.");
+
+        try
+        {
+            var anzahl = _plaene.StartstandKorrigieren(
+                growId,
+                anfrage.Felder.Select(f => (f.SpalteId, f.Feld)),
+                string.IsNullOrWhiteSpace(anfrage.Grund) ? null : anfrage.Grund.Trim());
+            return Ok(new StartstandKorrigiertDto(anzahl));
+        }
+        catch (ArgumentException fehler)
+        {
+            return ValidationError(fehler.Message);
+        }
     }
 
     private static string Zahl(double wert) => wert.ToString("0.##", AppCulture.German);

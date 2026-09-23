@@ -195,6 +195,8 @@ export function buchText(e: BuchEintrag, feldName: (feld: string) => string): st
       return 'Grow wieder geöffnet — Plan wieder bearbeitbar'
     case 'programmwechsel':
       return `Programmwechsel ${e.alt ?? ''} → ${e.neu ?? ''}`
+    case 'startkorrektur':
+      return `Startstand korrigiert · ${feldName(e.feld ?? '')} ${zahl(e.alt) ?? '–'} → ${zahl(e.neu) ?? '–'}`
     case 'alsprogramm':
       return `Als Programm gespeichert · ${e.neu ?? ''}`
     default:

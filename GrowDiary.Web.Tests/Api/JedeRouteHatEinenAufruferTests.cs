@@ -60,6 +60,11 @@ public sealed class JedeRouteHatEinenAufruferTests
         // API-Verzeichnis, ueber das man sie findet. Ein Knopf dafuer waere
         // falsch — sie beantworten Fragen, die vor einem Release aufkommen,
         // nicht beim Anbauen.
+        // Fork AI (F-045): Korrektur des Startstands, wenn die Vorlage selbst falsch war
+        // (Abgleich mit dem Hersteller-PDF). Seltener Eingriff per Claude/API, kein Knopf.
+        ["POST /api/grows/{growId:int}/plan/startstand"] =
+            "Startstand an eine korrigierte Vorlage angleichen — selten, per API, bewusst ohne Knopf.",
+
         ["GET /api/system/api-manifest"] =
             "Das Verzeichnis, ueber das man die uebrigen Betriebs-Endpunkte findet. Wer es "
             + "aufruft, sucht sie gerade — ein Knopf in der Oberflaeche waere hier sinnlos.",
