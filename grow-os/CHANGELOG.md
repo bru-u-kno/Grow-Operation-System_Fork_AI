@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.140
+
+**Fork AI.** Water Chiller pendelt um das Ziel.
+
+- Geändert — Die Hysterese des Water Chillers wirkt jetzt nach beiden Seiten: ein ab Ziel plus
+  Abstand, aus ab Ziel minus Abstand. Das Feld heißt **„Abstand zum Ziel ±"**. Gleiche Bandbreite,
+  gleich viele Kompressorstarts — aber das Wasser liegt im Mittel auf dem Ziel statt darüber.
+- Behoben — „Schaltpunkte" brach am Handy mitten im Wort um; der Wert steht jetzt darunter.
+
 ## 2.0.0-forkai.139
 
 **Fork AI.** Chiller, Zuluft und Entfeuchter führen ab dem ersten Öffnen.

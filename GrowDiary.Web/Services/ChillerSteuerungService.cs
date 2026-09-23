@@ -391,7 +391,7 @@ public sealed class ChillerSteuerungService
             LetzterWechsel: gewechselt,
             DoppelSteuerungEntity: doppelt,
             EinschaltenAbC: zielAktiv is { } z1 ? Math.Round(z1 + hysterese, 2) : null,
-            AusschaltenBeiC: zielAktiv,
+            AusschaltenBeiC: zielAktiv is { } z2 ? Math.Round(z2 - hysterese, 2) : null,
             Ansteuerung: ansteuerung,
             KuehlerEntity: kuehler,
             KuehlerSollC: kuehlerSoll,
