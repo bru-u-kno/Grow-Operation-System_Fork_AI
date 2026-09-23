@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.137
+
+**Fork AI.** Water Chiller: die Seite zeigt, wie der Kühler angesteuert wird.
+
+- Neu — Im Reiter *Betrieb* steht die **Ansteuerung** (Steckdose, regelbarer Kühler oder beides),
+  wie sie sich aus den Rollen ergibt, mit Sprung zu *Rollen*. Die Seite blendet aus, was für die
+  Ansteuerung nicht gilt: bei einem Kühler mit eigenem Thermostat gibt es statt Schaltsperre,
+  Schaltpunkten und Mindestzeiten die Kachel **„Soll im Gerät"** und das zugeordnete Gerät.
+- Neu — Ist weder Steckdose noch Sollwert-Gerät zugeordnet, sagt die Seite das oben.
+- Neu — Unter *Geräte & Entitäten → Rollen* lässt sich eine optionale Rolle mit **„— keins —"**
+  ausdrücklich leeren. „Wie ab Werk" setzt die Vorgabe.
+- Behoben — Die Geräte-Zählung zeigte „5 / 6 zugeordnet", obwohl nichts fehlte: Steckdose und
+  Sollwert-Gerät sind Alternativen. Gezählt werden jetzt Pflichtrollen und belegte optionale Rollen.
+- Entfernt — Die Warnung „Zwei Stellen schalten dieselbe Steckdose" — sie betraf nur Crop Steering.
+
 ## 2.0.0-forkai.136
 
 **Fork AI.** Crop Steering ist stillgelegt — die Wassertemperatur hat nur noch eine Stelle.

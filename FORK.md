@@ -75,7 +75,10 @@ Kühler mit eigenem Thermostat (climate/number — HA schreibt nur das Tag- oder
 Nachtziel ins Gerät); mit beiden ist die Steckdose Not-Aus. Berührt:
 `Vorlagen/chiller/*`, `SteuerungAutomationService` (neu: `wennNicht`),
 `SteuerungGeraeteService` (optionale Rolle bewusst leer), `HomeAssistantState`/
-`HomeAssistantService` (Attribut `temperature`).
+`HomeAssistantService` (Attribut `temperature`). Seit forkai.137 zeigt die
+Chiller-Seite die Ansteuerung und blendet Nicht-Zutreffendes aus (Mockup-Variante B:
+keine eigene Wahl, die Rollen entscheiden); optionale Rollen lassen sich im
+Rollen-Reiter mit „keins" leeren (`RollenReiter.tsx`).
 
 **Crop Steering stillgelegt (seit forkai.136).** Die Seite des Entwicklers
 (Nachtabsenkung und Kühler-Regler im Add-on) ist im Fork abgeschaltet: Die

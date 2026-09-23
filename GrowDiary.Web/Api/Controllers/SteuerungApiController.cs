@@ -284,12 +284,13 @@ public sealed class SteuerungApiController : ApiControllerBase
     [ProducesResponseType(typeof(ChillerSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ChillerSeiteDto>> Chiller(CancellationToken ct)
     {
-        var geraete = _geraete.EntitiesFuerModul(ChillerSteuerungService.Modul);
+        var (zugeordnet, gesamt) = ChillerSteuerungService.GeraeteZaehlen(
+            _geraete.EntitiesFuerModul(ChillerSteuerungService.Modul));
         return Ok(new ChillerSeiteDto(await _chiller.EinstellungenAsync(ct), await _chiller.LiveAsync(ct))
         {
             AusHomeAssistantUebernommen = _chiller.Gespeichert is null,
-            GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
-            GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(ChillerSteuerungService.Modul).Count,
+            GeraeteZugeordnet = zugeordnet,
+            GeraeteGesamt = gesamt,
         });
     }
 

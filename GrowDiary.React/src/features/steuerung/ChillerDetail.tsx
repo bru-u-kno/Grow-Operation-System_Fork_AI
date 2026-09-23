@@ -15,10 +15,15 @@ import { rollenPfad } from '../geraete/rollenPfad'
  * Mindestpause hängt die Lebensdauer des Kompressors, und die darf nicht davon
  * abhängen, ob dieses Add-on gerade aktualisiert wird.
  *
- * <b>Warum das Ziel hier nur steht.</b> Tag- und Nachtziel gehören dem
- * Wochenplan oder der Crop-Steering-Absenkung. Diese Seite sagt, WOHER der Wert
- * kommt, und verlinkt dorthin — zwei Seiten, die denselben Helfer schreiben,
- * wären genau der Zustand, den der Wochenplan-Abgleich verhindern soll.
+ * <b>Warum das Ziel hier nur steht.</b> Tag- und Nachtziel gehören dem Plan.
+ * Diese Seite sagt, WOHER der Wert kommt, und verlinkt dorthin — zwei Seiten,
+ * die denselben Helfer schreiben, wären genau der Zustand, den der
+ * Wochenplan-Abgleich verhindern soll.
+ *
+ * <b>Ansteuerung (forkai.137, Mockup-Variante B).</b> Ob der Kühler über eine
+ * Steckdose geschaltet wird oder einen eigenen Thermostat hat, ergibt sich aus
+ * den Rollen — hier gibt es keinen eigenen Umschalter. Die Seite zeigt nur, was
+ * daraus folgt, und blendet aus, was für die Ansteuerung nicht gilt.
  */
 export default function ChillerDetail({ module, aktiv, onWechsel }: {
   module: SteuerungModul[]
@@ -100,7 +105,23 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
   const setz = <K extends keyof ChillerEinstellungen>(feld: K, wert: ChillerEinstellungen[K]) =>
     setEntwurf({ ...entwurf, [feld]: wert })
 
-  const zustand = live.steckdoseAn === true ? 'kühlt' : live.kuehlbedarf === true ? 'wartet' : 'bereit'
+  const ansteuerung = live.ansteuerung ?? 'steckdose'
+  const perSteckdose = ansteuerung === 'steckdose'
+  const mitGeraet = ansteuerung === 'regelbar' || ansteuerung === 'beides'
+  const kuehlerAus = live.kuehlerZustand == null || ['off', 'unavailable', 'unknown'].includes(live.kuehlerZustand)
+  const zustand = mitGeraet
+    ? (kuehlerAus ? 'aus' : 'bereit')
+    : live.steckdoseAn === true ? 'kühlt' : live.kuehlbedarf === true ? 'wartet' : 'bereit'
+  const sollStimmt = live.kuehlerSollC != null && live.zielAktivC != null
+    && Math.abs(live.kuehlerSollC - live.zielAktivC) <= 0.05
+  const ANSTEUERUNG_TEXT: Record<string, { titel: string; text: string }> = {
+    steckdose: { titel: 'Steckdose', text: 'Home Assistant schaltet den Kühler ein und aus.' },
+    regelbar: { titel: 'Regelbarer Kühler', text: 'Der Kühler regelt selbst — Home Assistant schreibt nur das Ziel ins Gerät.' },
+    beides: { titel: 'Regelbarer Kühler + Not-Aus', text: 'Das Ziel geht ins Gerät, die Steckdose schaltet nur der Wächter ab.' },
+    keine: { titel: 'Nicht eingerichtet', text: 'Weder Steckdose noch Sollwert-Gerät zugeordnet.' },
+  }
+  const art = ANSTEUERUNG_TEXT[ansteuerung] ?? ANSTEUERUNG_TEXT.steckdose
+  const zahl = (wert: number | null | undefined) => (wert == null ? '–' : wert.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
 
   return (
     <V1Page
@@ -136,11 +157,11 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           message="Die Regelung ist angehalten. Der Kühler bleibt, wie er gerade steht — er wird weder ein- noch ausgeschaltet."
         />
       )}
-      {live.doppelSteuerungEntity && (
+      {ansteuerung === 'keine' && (
         <V1Alert
-          tone="critical"
-          title="Zwei Stellen schalten dieselbe Steckdose"
-          message={`Die Steckdosen-Funktion auf der Crop-Steering-Seite schaltet ${live.doppelSteuerungEntity} — dieselbe Dose wie diese Regelung. Der Minutentakt holt jede Fremdschaltung binnen einer Minute zurück. Schalte dort „Kühler-Steuerung“ aus; das Zielgerät der Absenkung darf bleiben.`}
+          tone="warn"
+          title="Kein Kühler zugeordnet"
+          message="Ordne unter Rollen eine Steckdose oder ein Sollwert-Gerät (climate/number) zu — vorher kann nichts geregelt werden."
         />
       )}
       {live.waechterAn === false && (
@@ -170,14 +191,30 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           unit=" °C"
           hint={live.tagPhase == null ? null : live.tagPhase ? 'Tag' : 'Nacht'}
         />
-        <V1Stat label="Gerät" value={zustand} wortwert tone={live.steckdoseAn === true ? 'ok' : 'neutral'} />
         <V1Stat
-          label="Schaltsperre"
-          value={live.sperreRestMin == null ? '–' : live.sperreRestMin === 0 ? 'frei' : live.sperreRestMin}
-          unit={live.sperreRestMin ? ' min' : null}
-          wortwert={live.sperreRestMin === 0}
-          hint={live.letzterWechsel ? `zuletzt ${new Date(live.letzterWechsel).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}` : 'noch nie geschaltet'}
+          label="Gerät"
+          value={zustand}
+          wortwert
+          tone={(mitGeraet ? !kuehlerAus : live.steckdoseAn === true) ? 'ok' : 'neutral'}
+          hint={mitGeraet ? 'regelt selbst' : perSteckdose ? 'Steckdose' : null}
         />
+        {perSteckdose ? (
+          <V1Stat
+            label="Schaltsperre"
+            value={live.sperreRestMin == null ? '–' : live.sperreRestMin === 0 ? 'frei' : live.sperreRestMin}
+            unit={live.sperreRestMin ? ' min' : null}
+            wortwert={live.sperreRestMin === 0}
+            hint={live.letzterWechsel ? `zuletzt ${new Date(live.letzterWechsel).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}` : 'noch nie geschaltet'}
+          />
+        ) : (
+          <V1Stat
+            label="Soll im Gerät"
+            value={live.kuehlerSollC == null ? '–' : live.kuehlerSollC.toFixed(1)}
+            unit={live.kuehlerSollC == null ? null : ' °C'}
+            tone={live.kuehlerSollC == null ? 'neutral' : sollStimmt ? 'ok' : 'warn'}
+            hint={live.kuehlerSollC == null ? 'kein Wert vom Gerät' : sollStimmt ? 'stimmt mit dem Ziel' : 'weicht vom Ziel ab'}
+          />
+        )}
       </section>
 
       <V1Card>
@@ -211,27 +248,59 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
             />
             <div className="st-feldzeile">
               <span className="st-etikett">
-                Steckdose
-                <small>
-                  {live.steckdoseAn === true
-                    ? live.leistungW == null ? 'läuft' : `läuft · ${live.leistungW.toLocaleString('de-DE', { maximumFractionDigits: 0 })} W`
-                    : 'steht'}
-                </small>
+                Ansteuerung · {art.titel}
+                <small>{art.text} Ergibt sich aus den Rollen.</small>
               </span>
-              <span className="st-nurlesen">{live.steckdoseAn === true ? 'AN' : live.steckdoseAn === false ? 'AUS' : '–'}</span>
+              <V1LinkButton to={rollenPfad('chiller')} variant="ghost">Rollen ›</V1LinkButton>
             </div>
-            <div className="st-feldzeile">
-              <span className="st-etikett">
-                Schaltpunkte
-                <small>Ein ab dem oberen Wert, aus beim Ziel — dazwischen passiert nichts.</small>
-              </span>
-              <span className="st-nurlesen">
-                {live.einschaltenAbC == null ? '–' : `${live.einschaltenAbC.toLocaleString('de-DE')} / ${live.ausschaltenBeiC?.toLocaleString('de-DE')} °C`}
-              </span>
-            </div>
+            {(perSteckdose || ansteuerung === 'beides') && (
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Steckdose
+                  <small>
+                    {ansteuerung === 'beides'
+                      ? 'nur Not-Aus für den Wächter'
+                      : live.steckdoseAn === true
+                        ? live.leistungW == null ? 'läuft' : `läuft · ${live.leistungW.toLocaleString('de-DE', { maximumFractionDigits: 0 })} W`
+                        : 'steht'}
+                  </small>
+                </span>
+                <span className="st-nurlesen">{live.steckdoseAn === true ? 'AN' : live.steckdoseAn === false ? 'AUS' : '–'}</span>
+              </div>
+            )}
+            {perSteckdose && (
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Schaltpunkte
+                  <small>Ein ab dem oberen Wert, aus beim Ziel — dazwischen passiert nichts.</small>
+                </span>
+                <span className="st-nurlesen">
+                  {live.einschaltenAbC == null ? '–' : `${live.einschaltenAbC.toLocaleString('de-DE')} / ${live.ausschaltenBeiC?.toLocaleString('de-DE')} °C`}
+                </span>
+              </div>
+            )}
+            {mitGeraet && (
+              <>
+                <div className="st-feldzeile">
+                  <span className="st-etikett">
+                    Kühler
+                    <small>Gerät mit eigenem Thermostat · {live.kuehlerZustand ?? 'kein Zustand'}</small>
+                  </span>
+                  <span className="st-nurlesen">{live.kuehlerEntity ?? '–'}</span>
+                </div>
+                <div className="st-feldzeile">
+                  <span className="st-etikett">
+                    Soll im Gerät
+                    <small>{sollStimmt ? 'stimmt mit dem Ziel' : 'wird beim nächsten Abgleich nachgezogen'}</small>
+                  </span>
+                  <span className="st-nurlesen">{zahl(live.kuehlerSollC)} °C</span>
+                </div>
+              </>
+            )}
             <p className="st-hinweis">
-              Geschaltet wird in Home Assistant, nicht hier. Das ist Absicht: an der Mindestpause hängt die
-              Lebensdauer des Kompressors, und sie soll weiterlaufen, wenn dieses Add-on gerade neu startet.
+              {mitGeraet
+                ? 'Beim Wechsel Tag/Nacht, bei neuer Plan-Woche und alle 15 Minuten schreibt Home Assistant das Ziel ins Gerät. Den Rest regelt der Kühler selbst.'
+                : 'Geschaltet wird in Home Assistant, nicht hier. Das ist Absicht: an der Mindestpause hängt die Lebensdauer des Kompressors, und sie soll weiterlaufen, wenn dieses Add-on gerade neu startet.'}
             </p>
           </V1Card>
         </V1Section>
@@ -240,43 +309,61 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
       {reiter === 'schutz' && (
         <V1Section title="Schutz">
           <V1Card>
-            <Zahl
-              label="Einschalten ab Ziel +"
-              hinweis="Um so viel muss das Wasser über dem Ziel liegen, bevor der Kühler startet. Aus geht er beim Ziel. Zu eng, und der Kompressor taktet im Messrauschen."
-              einheit="K"
-              wert={entwurf.hystereseK}
-              min={0.1}
-              max={3}
-              schritt={0.1}
-              onChange={(v) => setz('hystereseK', v)}
-              fehler={feldFehler.HystereseK}
-            />
-            <Zahl
-              label="Mindestlaufzeit"
-              hinweis="Wie lange der Kühler mindestens läuft, bevor er wieder aus darf."
-              einheit="min"
-              wert={entwurf.mindestlaufzeitMin}
-              min={0}
-              max={120}
-              schritt={1}
-              onChange={(v) => setz('mindestlaufzeitMin', Math.round(v))}
-              fehler={feldFehler.MindestlaufzeitMin}
-            />
-            <Zahl
-              label="Mindestpause"
-              hinweis="Wie lange er mindestens aus bleibt. Zu kurze Pausen kosten den Kompressor das Leben."
-              einheit="min"
-              wert={entwurf.mindestpauseMin}
-              min={0}
-              max={120}
-              schritt={1}
-              onChange={(v) => setz('mindestpauseMin', Math.round(v))}
-              fehler={feldFehler.MindestpauseMin}
-            />
+            {perSteckdose ? (
+              <>
+              <Zahl
+                label="Einschalten ab Ziel +"
+                hinweis="Um so viel muss das Wasser über dem Ziel liegen, bevor der Kühler startet. Aus geht er beim Ziel. Zu eng, und der Kompressor taktet im Messrauschen."
+                einheit="K"
+                wert={entwurf.hystereseK}
+                min={0.1}
+                max={3}
+                schritt={0.1}
+                onChange={(v) => setz('hystereseK', v)}
+                fehler={feldFehler.HystereseK}
+              />
+              <Zahl
+                label="Mindestlaufzeit"
+                hinweis="Wie lange der Kühler mindestens läuft, bevor er wieder aus darf."
+                einheit="min"
+                wert={entwurf.mindestlaufzeitMin}
+                min={0}
+                max={120}
+                schritt={1}
+                onChange={(v) => setz('mindestlaufzeitMin', Math.round(v))}
+                fehler={feldFehler.MindestlaufzeitMin}
+              />
+              <Zahl
+                label="Mindestpause"
+                hinweis="Wie lange er mindestens aus bleibt. Zu kurze Pausen kosten den Kompressor das Leben."
+                einheit="min"
+                wert={entwurf.mindestpauseMin}
+                min={0}
+                max={120}
+                schritt={1}
+                onChange={(v) => setz('mindestpauseMin', Math.round(v))}
+                fehler={feldFehler.MindestpauseMin}
+              />
+              </>
+            ) : (
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Schaltabstand und Sperren
+                  <small>Regelt der Kühler selbst — hier gibt es nichts einzustellen.</small>
+                </span>
+                <span className="st-nurlesen">–</span>
+              </div>
+            )}
             <div className="st-feldzeile">
               <span className="st-etikett">
                 Wächter
-                <small>Schaltet ab, wenn der Wasserfühler fünf Minuten stumm bleibt, und warnt bei zu warmem Wasser.</small>
+                <small>
+                  {mitGeraet
+                    ? ansteuerung === 'beides'
+                      ? 'Bleibt der Wasserfühler fünf Minuten stumm, schaltet er Kühler und Steckdose ab. Warnt bei zu warmem Wasser.'
+                      : 'Bleibt der Wasserfühler fünf Minuten stumm, schaltet er den Kühler ab. Warnt bei zu warmem Wasser.'
+                    : 'Bleibt der Wasserfühler fünf Minuten stumm, schaltet er die Steckdose ab. Warnt bei zu warmem Wasser.'}
+                </small>
               </span>
               <span className="st-nurlesen">{live.waechterAn === true ? 'AN' : live.waechterAn === false ? 'AUS' : '–'}</span>
             </div>
