@@ -110,7 +110,8 @@ public sealed class AlertRuleRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE TentAlertRules
-               SET LastState = $lastState,
+               SET StateChangedUtc = CASE WHEN LastState IS $lastState THEN StateChangedUtc ELSE $now END,
+                   LastState = $lastState,
                    LastNotifiedUtc = $lastNotified,
                    UpdatedAtUtc = $now
              WHERE Id = $id;
@@ -144,5 +145,6 @@ public sealed class AlertRuleRepository : RepositoryBase
         NightMaxValue = HasColumn(reader, "NightMaxValue") ? NullableDouble(reader["NightMaxValue"]) : null,
         LastState = NullString(reader["LastState"]),
         LastNotifiedUtc = ParseStoredUtcDateTime(NullString(reader["LastNotifiedUtc"])),
+        StateChangedUtc = HasColumn(reader, "StateChangedUtc") ? ParseStoredUtcDateTime(NullString(reader["StateChangedUtc"])) : null,
     };
 }
