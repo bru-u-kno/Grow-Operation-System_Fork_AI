@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.142
+
+**Fork AI.** Grenzwerte: die Übergabe aus dem Plan ist aufgeräumt.
+
+- Geändert — Der Abschnitt heißt **„Übergabe aus dem Plan"** und ist nach Ziel gegliedert:
+  *An Home Assistant* (Helfer der Regelungen), *An die Grenzwerte* (Meldungen im Fork) und
+  *Ans Bluelab-Gerät*. Die bisherige Überschrift „Übergabe an Home Assistant" stimmte für die
+  Grenzwert-Zeilen nicht.
+- Geändert — Alle Werte mit Einheit; kurze Namen, Zusätze wie Tag/Nacht klein darunter. Der Zustand
+  („folgt dem Plan") steht immer in eigener Zeile und bricht nicht mehr um.
+- Geändert — CO₂-Ziel: „folgt dem Plan · gestaffelt" mit den drei Stufen je Canopy-Temperatur;
+  die gerade geltende ist hervorgehoben.
+- Geändert — Die Bluelab-Zeile unter der Seite ist in die Gruppe *Ans Bluelab-Gerät* gewandert
+  (pH, EC, Wasser mit Zustand). Die Fußzeilen sagen, wann übergeben wird.
+
 ## 2.0.0-forkai.141
 
 **Fork AI.** Die Grenzwerte gehen auch ans Bluelab-Gerät.

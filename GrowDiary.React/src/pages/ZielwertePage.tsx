@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
-import { istHandgesetzt } from '../features/wochenplan/uebergabe-zustand'
 import { V1Alert, V1Section, V1Skeleton } from '../components/v1'
 import { WertBlatt } from '../features/zielwerte/WertBlatt'
 import type { AlarmRegel, PlanFeld } from '../features/zielwerte/wert-blatt'
 import '../features/zielwerte/zielwerte.css'
+import { UebergabeAbschnitt } from '../features/zielwerte/UebergabeAbschnitt'
 import '../features/wochenplan/wochenplan.css'
 
 /**
@@ -64,7 +64,7 @@ type Gruppe = {
   hinweis: string
 }
 
-type Uebergabe = { rolle: string; name: string; wert: string; zustand: string }
+type Uebergabe = { rolle: string; name: string; entityId?: string | null; wert: string; zustand: string }
 
 type Zielwerte = {
   growId: number | null
@@ -277,37 +277,12 @@ function ZielwertePage() {
             ))}
           </V1Section>
 
-          {daten.uebergabe.length > 0 && (
-            <V1Section title="Übergabe an Home Assistant">
-              <div className="zw-gruppe">
-                {daten.uebergabe.map((u) => (
-                  <div key={u.rolle} className="zw-zeile">
-                    <span>{u.name}</span>
-                    <span className="zw-zeile-r">
-                      {u.wert}
-                      {istHandgesetzt(u.zustand) ? (
-                        /* Fork AI (forkai.125): kam aus dem früheren Wochenplan.
-                           Von Hand verstellt lässt der Plan den Helfer in Ruhe,
-                           bis er hier freigegeben wird. */
-                        <span className="zw-zustand">
-                          <button type="button" className="wp-frei" data-audit="uebergabe-freigeben" onClick={() => void freigeben(u.rolle)}>
-                            von dir gesetzt — freigeben
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="zw-zustand">{u.zustand}</span>
-                      )}
-                    </span>
-                  </div>
-                ))}
-                <p className="zw-gruppe-h">
-                  {daten.letzteUebergabe
-                    ? `Zuletzt übergeben: ${new Date(daten.letzteUebergabe).toLocaleString('de-DE')}`
-                    : 'Noch nichts übergeben — der erste Lauf merkt sich nur den Ist-Zustand.'}
-                </p>
-              </div>
-            </V1Section>
-          )}
+          {/* Fork AI (forkai.142, F-038): Übergabe aus dem Plan in drei Gruppen. */}
+          <UebergabeAbschnitt
+            uebergabe={daten.uebergabe}
+            letzteUebergabe={daten.letzteUebergabe}
+            onFreigeben={(rolle) => void freigeben(rolle)}
+          />
         </>
       )}
     </>
