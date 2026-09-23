@@ -265,7 +265,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
               </div>
             )}
             {perSteckdose && (
-              <div className="st-feldzeile">
+              <div className="st-feldzeile is-gestapelt">
                 <span className="st-etikett">
                   Schaltpunkte
                   <small>Dazwischen passiert nichts.</small>
@@ -308,8 +308,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
             {perSteckdose ? (
               <>
               <Zahl
-                label="Einschalten ab Ziel +"
-                hinweis="Um so viel muss das Wasser über dem Ziel liegen, bevor der Kühler startet. Aus geht er beim Ziel. Zu eng, und der Kompressor taktet im Messrauschen."
+                label="Abstand zum Ziel ±"
+                hinweis="Ein ab Ziel plus Abstand, aus ab Ziel minus Abstand — das Wasser pendelt um das Ziel. Zu eng, und der Kompressor taktet im Messrauschen."
                 einheit="K"
                 wert={entwurf.hystereseK}
                 min={0.1}

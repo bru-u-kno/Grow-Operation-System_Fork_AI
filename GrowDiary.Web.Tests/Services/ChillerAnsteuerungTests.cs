@@ -152,12 +152,12 @@ public class ChillerAnsteuerungTests
     }
 
     [Fact]
-    public void DerKuehlbedarfRechnetMitDemHelferUndSchaltetBeimZielAus()
+    public void DerKuehlbedarfRechnetSymmetrischMitDemHelfer()
     {
         var bauteil = SteuerungBauteile.Alle.Single(b => b.EntityId == ChillerSteuerungService.Entitaeten.Kuehlbedarf);
         Assert.Contains("input_number.chiller_hysterese", bauteil.Vorlage);
-        Assert.Contains("t <= z %", bauteil.Vorlage);
-        Assert.DoesNotContain("0.3", bauteil.Vorlage);
+        Assert.Contains("t <= z - h %", bauteil.Vorlage);
+        Assert.Contains("t >= z + h", bauteil.Vorlage);
         Assert.Contains(SteuerungBauteile.Alle, b => b.EntityId == ChillerSteuerungService.Entitaeten.Hysterese);
     }
 

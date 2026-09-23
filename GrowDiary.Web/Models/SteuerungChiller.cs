@@ -29,11 +29,11 @@ public sealed class ChillerEinstellungen
     public double ZielNachtC { get; set; } = 18.0;
 
     /// <summary>
-    /// Fork AI (F-030): Abstand über dem Ziel, ab dem die Steckdose einschaltet;
-    /// ausgeschaltet wird beim Ziel. Liegt in <c>input_number.chiller_hysterese</c>.
-    /// Gilt nur für die Ansteuerung über eine Steckdose.
+    /// Fork AI (F-030, symmetrisch seit forkai.140): Abstand zum Ziel nach
+    /// beiden Seiten — ein ab Ziel + Abstand, aus ab Ziel − Abstand. Liegt in
+    /// <c>input_number.chiller_hysterese</c>. Gilt nur für die Steckdose.
     /// </summary>
-    public double HystereseK { get; set; } = 0.6;
+    public double HystereseK { get; set; } = 0.3;
 
     /// <summary>
     /// Fork AI (F-030): True, sobald die Hysterese über den Fork gespeichert wurde.
@@ -84,7 +84,7 @@ public sealed record ChillerLive(
     /// </summary>
     string? DoppelSteuerungEntity,
     double? EinschaltenAbC,
-    /// <summary>Fork AI (F-030): Ausgeschaltet wird beim Ziel, nicht darunter.</summary>
+    /// <summary>Fork AI: Ausgeschaltet wird ab Ziel − Hysterese (symmetrisch seit forkai.140).</summary>
     double? AusschaltenBeiC,
     /// <summary>
     /// Fork AI (Chiller-Ansteuerung): <c>steckdose</c>, <c>regelbar</c>,
