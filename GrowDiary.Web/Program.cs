@@ -138,6 +138,7 @@ builder.Services.AddScoped<SteuerungBestandService>();
 builder.Services.AddScoped<SteuerungHelferService>();
 // Fork AI (forkai.69): legt die Rechenwerte ueber den Einrichtungsdialog an.
 builder.Services.AddScoped<SteuerungRechenwertService>();
+builder.Services.AddScoped<SteuerungMittelwertService>();
 // Fork AI (forkai.72): legt die Automationen an - nur auf ausdrueckliche Zustimmung.
 builder.Services.AddScoped<SteuerungAutomationService>();
 // Fork AI (forkai.73): schaltet das Ventil beim Einrichten kurz zur Probe.

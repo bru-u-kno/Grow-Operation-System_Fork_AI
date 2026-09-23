@@ -7,7 +7,7 @@ import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
 import EntfeuchterDetail from '../features/steuerung/EntfeuchterDetail'
 import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuerung-typen'
-import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
+import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 import { rollenPfad } from '../features/geraete/rollenPfad'
@@ -42,6 +42,7 @@ const ART_LESBAR: Record<string, string> = {
   Zaehler: 'Zähler',
   RechenSensor: 'Rechenwert',
   RechenSchalter: 'Rechenwert',
+  Mittelwert: 'Mittelwert',
   Automation: 'Automation',
 }
 
@@ -333,7 +334,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const tiefGrund = !entwurf.abluftDrosseln
     ? 'Die Drosselung ist ausgeschaltet — der T6 bleibt auf der normalen Stufe.'
     : live.klimaOk === false
-      ? 'Das Klima sperrt gerade — der T6 läuft auf der normalen Stufe, bis Feuchte und Canopy wieder unter den Obergrenzen sind.'
+      ? `Das Klima sperrt gerade — der T6 läuft auf Stufe ${entwurf.t6StufeKlima ?? '–'}, bis die Feuchte im Mittel und die Canopy wieder unter den Grenzen sind.`
       : live.tiefAktiv == null
       ? 'Der Helfer binary_sensor.co2_t6_stufe_tief_sinnvoll meldet sich nicht.'
       : live.tiefAktiv && tempOk === true && rhOk === true
@@ -342,6 +343,17 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
           ? 'Haltebereich: die tiefe Stufe bleibt vorerst, damit es nicht flattert — zurück geht es erst am oberen Rand.'
           : 'Zu warm oder zu feucht für die tiefe Stufe — der T6 läuft auf der Dosierstufe, solange das Klima passt.'
   const setz = <K extends keyof Co2Einstellungen>(feld: K, wert: Co2Einstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
+  // Fork AI (forkai.150): Was der Entwurf ergibt — nicht erst nach dem
+  // Speichern. Die Basis ist die Obergrenze, die in HA gerade gilt (aus dem
+  // Plan, wenn der Wochenplan sie führt), und die Plan-Luft der Woche.
+  const rhBasis = live.rhObergrenzeProzent ?? entwurf.rhObergrenzeProzent
+  const notbremseErgibt = entwurf.rhNotbremseModus === 'plan'
+    ? rhBasis + entwurf.rhNotbremseAbstandProzent
+    : entwurf.rhNotbremseFestProzent
+  const canopyErgibt = entwurf.canopyObergrenzeModus === 'plan' && live.planLuftTagC != null
+    ? live.planLuftTagC + entwurf.canopyObergrenzeAbstandK
+    : entwurf.canopyObergrenzeC
+  const freiAb = rhBasis - entwurf.klimaHystereseProzent
 
   return (
     <V1Page
@@ -517,9 +529,19 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                 {rhOk != null && <span className={`st-marke ${rhOk ? 'is-ok' : 'is-warn'}`}>{rhOk ? 'erfüllt' : 'zu feucht'}</span>}
               </span>
             </div>
+            {live.rhMittelVorhanden && (
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Feuchte im Mittel
+                  <small>entscheidet über die Freigabe · frei ab {live.freiAbProzent != null ? `${formatNumber(live.freiAbProzent, 1)} %` : '–'}</small>
+                </span>
+                <span className="st-nurlesen">{live.rhMittelProzent != null ? `${formatNumber(live.rhMittelProzent, 1)} %` : '–'}</span>
+              </div>
+            )}
             <p className="st-hinweis">{tiefGrund}</p>
           </V1Card>
           <V1Card>
+            <h3 className="st-gruppe">Sperre</h3>
             {live.rhObergrenzeAusPlan != null ? (
               /* forkai.115 (F-013): Der Wochenplan führt die Obergrenze. Ein
                  Eingabefeld hier würde beim Speichern nichts bewirken — gepflegt
@@ -527,18 +549,66 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               <div className="st-feldzeile">
                 <span className="st-etikett">
                   Feuchte-Obergrenze
-                  <small>Darüber wird nicht dosiert. Kommt aus dem Plan des Grows, ändern unter Plan.</small>
+                  <small>Kommt aus dem Plan des Grows, ändern unter Plan.</small>
                 </span>
                 <span className="st-nurlesen">{formatNumber(live.rhObergrenzeProzent ?? live.rhObergrenzeAusPlan, 0)} %</span>
               </div>
             ) : (
-              <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird nicht dosiert — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
+              <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird gesperrt — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
             )}
-            <Zahl label="Wieder frei ab" hinweis="Abstand unter der Obergrenze, damit es nicht flattert." einheit="%" schritt={0.5} wert={entwurf.klimaHystereseProzent} onChange={(v) => setz('klimaHystereseProzent', v)} fehler={feldFehler.KlimaHystereseProzent} />
-            <Zahl label="Canopy-Obergrenze" einheit="°C" schritt={0.5} wert={entwurf.canopyObergrenzeC} onChange={(v) => setz('canopyObergrenzeC', v)} fehler={feldFehler.CanopyObergrenzeC} />
+            <Zahl label="Sperrt nach" hinweis="So lange muss die Feuchte über der Grenze liegen. Überbrückt kurze Spitzen, etwa die Kompressorpause des Entfeuchters." einheit="min" wert={entwurf.klimaToleranzMinuten ?? Number.NaN} onChange={(v) => setz('klimaToleranzMinuten', v)} fehler={feldFehler.KlimaToleranzMinuten} />
+            <PlanGrenze
+              label="Notbremse Feuchte"
+              hinweis={entwurf.rhNotbremseModus === 'plan'
+                ? 'Darüber sperrt es sofort. Folgt der Feuchte-Obergrenze.'
+                : 'Darüber sperrt es sofort, ohne Wartezeit.'}
+              einheit="%"
+              modus={entwurf.rhNotbremseModus}
+              onModus={(m) => setz('rhNotbremseModus', m)}
+              abstand={entwurf.rhNotbremseAbstandProzent}
+              onAbstand={(v) => setz('rhNotbremseAbstandProzent', v)}
+              fest={entwurf.rhNotbremseFestProzent ?? Number.NaN}
+              onFest={(v) => setz('rhNotbremseFestProzent', v)}
+              schritt={0.5}
+              ergebnis={notbremseErgibt}
+              fehler={feldFehler.RhNotbremseAbstandProzent ?? feldFehler.RhNotbremseFestProzent}
+            />
+            <PlanGrenze
+              label="Canopy-Obergrenze"
+              hinweis={entwurf.canopyObergrenzeModus === 'plan'
+                ? (live.planLuftTagC != null
+                  ? `Darüber sperrt es. Folgt der Lufttemperatur aus dem Plan (${live.planWoche ?? 'diese Woche'}: ${formatNumber(live.planLuftTagC, 1)} °C).`
+                  : 'Der Plan nennt keine Lufttemperatur — es gilt der feste Wert.')
+                : 'Darüber sperrt es.'}
+              einheit="°C"
+              abstandEinheit="K"
+              modus={entwurf.canopyObergrenzeModus}
+              onModus={(m) => setz('canopyObergrenzeModus', m)}
+              abstand={entwurf.canopyObergrenzeAbstandK}
+              onAbstand={(v) => setz('canopyObergrenzeAbstandK', v)}
+              fest={entwurf.canopyObergrenzeC}
+              onFest={(v) => setz('canopyObergrenzeC', v)}
+              schritt={0.5}
+              ergebnis={canopyErgibt}
+              fehler={feldFehler.CanopyObergrenzeAbstandK ?? feldFehler.CanopyObergrenzeC}
+            />
+
+            <h3 className="st-gruppe">Freigabe</h3>
+            <Zahl label="Wieder frei ab" hinweis="Abstand unter der Obergrenze, gemessen am Mittelwert der Feuchte." einheit="%" schritt={0.5} wert={entwurf.klimaHystereseProzent} onChange={(v) => setz('klimaHystereseProzent', v)} fehler={feldFehler.KlimaHystereseProzent} />
+            <Zahl label="Mittelwert über" hinweis="Glättet das Rauschen der Sonde. Länger = ruhiger, aber spätere Freigabe." einheit="min" wert={entwurf.rhMittelMinuten ?? Number.NaN} onChange={(v) => setz('rhMittelMinuten', v)} fehler={feldFehler.RhMittelMinuten} />
+            {!live.rhMittelVorhanden && (
+              <p className="st-hinweis">Der Mittelwert-Helfer fehlt in Home Assistant — die Freigabe hängt am Momentanwert. Anlegen unten unter „Was in Home Assistant fehlt“.</p>
+            )}
+            <p className="st-regel">
+              sperrt: Feuchte über {fmtProzent(rhBasis)} für {entwurf.klimaToleranzMinuten ?? '–'} min · sofort über {fmtProzent(notbremseErgibt)}<br />
+              frei: Mittel ({entwurf.rhMittelMinuten ?? '–'} min) höchstens {fmtProzent(freiAb)}
+            </p>
+
+            <h3 className="st-gruppe">Abluft T6</h3>
             <V1Switch label="Abluft beim Dosieren drosseln" checked={entwurf.abluftDrosseln} onChange={(v) => setz('abluftDrosseln', v)} hint="Ohne Drosselung bläst der T6 das CO₂ hinaus, während dosiert wird." />
             <Zahl label="T6 normal" wert={entwurf.t6StufeNormal} onChange={(v) => setz('t6StufeNormal', v)} fehler={feldFehler.T6StufeNormal} />
             <Zahl label="T6 beim Dosieren" wert={entwurf.t6StufeDosierung} onChange={(v) => setz('t6StufeDosierung', v)} fehler={feldFehler.T6StufeDosierung} />
+            <Zahl label="T6 bei Klimasperre" hinweis="Zwischenstufe, solange das Klima sperrt — trocknet, ohne alles CO₂ hinauszublasen." wert={entwurf.t6StufeKlima ?? Number.NaN} onChange={(v) => setz('t6StufeKlima', v)} fehler={feldFehler.T6StufeKlima} />
             <Zahl label="T6 tief" hinweis="Nur bei kühler und trockener Luft — sonst staut sich Feuchte." wert={entwurf.t6StufeTief} onChange={(v) => setz('t6StufeTief', v)} fehler={feldFehler.T6StufeTief} />
             <Zahl label="Stufe tief nur bis" einheit="°C" schritt={0.5} wert={entwurf.t6TiefMaxTempC} onChange={(v) => setz('t6TiefMaxTempC', v)} fehler={feldFehler.T6TiefMaxTempC} />
           </V1Card>
@@ -696,6 +766,65 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 }
 
 /** Eine Zahlenzeile — Etikett links, Eingabe rechts, Fehler darunter. */
+function fmtProzent(wert: number | null | undefined): string {
+  return wert != null && Number.isFinite(wert) ? `${formatNumber(wert, wert % 1 === 0 ? 0 : 1)} %` : '–'
+}
+
+/**
+ * Fork AI (forkai.150): Eine Grenze, die fest steht oder der Plan-Woche folgt
+ * (Plan + Abstand) — wie „Temperatur max." beim Entfeuchter. Darunter steht,
+ * was gerade gilt, damit niemand die Summe im Kopf bilden muss.
+ */
+function PlanGrenze({ label, hinweis, einheit, abstandEinheit, modus, onModus, abstand, onAbstand, fest, onFest, schritt, ergebnis, fehler }: {
+  label: string
+  hinweis: string
+  einheit: string
+  abstandEinheit?: string
+  modus: GrenzModus
+  onModus: (modus: GrenzModus) => void
+  abstand: number
+  onAbstand: (wert: number) => void
+  fest: number
+  onFest: (wert: number) => void
+  schritt: number
+  ergebnis: number | null | undefined
+  fehler?: string
+}) {
+  const wert = modus === 'plan' ? abstand : fest
+  return (
+    <div className="st-feldzeile">
+      <span className="st-etikett">
+        {label}
+        <small>{hinweis}</small>
+        {fehler && <span className="st-fehler">{fehler}</span>}
+      </span>
+      <span className="st-plangrenze">
+        <span className="st-eingaben">
+          <V1Button variant={modus === 'fest' ? 'primary' : 'ghost'} onClick={() => onModus('fest')}>Fest</V1Button>
+          <V1Button variant={modus === 'plan' ? 'primary' : 'ghost'} onClick={() => onModus('plan')}>Plan +</V1Button>
+        </span>
+        <span className="st-eingaben">
+          <input
+            type="number"
+            inputMode="decimal"
+            step={schritt}
+            value={Number.isFinite(wert) ? wert : ''}
+            aria-label={modus === 'plan' ? `${label}, Abstand zum Plan` : label}
+            aria-invalid={fehler ? true : undefined}
+            onChange={(e) => {
+              const v = e.target.value === '' ? Number.NaN : Number(e.target.value)
+              if (modus === 'plan') onAbstand(v)
+              else onFest(v)
+            }}
+          />
+          <span className="st-einheit">{modus === 'plan' ? (abstandEinheit ?? einheit) : einheit}</span>
+        </span>
+        {ergebnis != null && Number.isFinite(ergebnis) && <small className="st-ergebnis">ergibt {formatNumber(ergebnis, ergebnis % 1 === 0 ? 0 : 1)} {einheit}</small>}
+      </span>
+    </div>
+  )
+}
+
 function Zahl({ label, hinweis, einheit, wert, onChange, fehler, schritt = 1 }: {
   label: string
   hinweis?: string

@@ -54,6 +54,13 @@ public sealed class Co2SteuerungService
         public const string T6Dosierung = "input_number.co2_t6_stufe_dosierung";
         public const string T6Tief = "input_number.co2_t6_stufe_tief";
         public const string T6TiefMaxTemp = "input_number.co2_t6_tief_max_temp";
+        // Fork AI (forkai.150): Sperre und Freigabe, vorher nur in Home Assistant einstellbar.
+        public const string KlimaToleranz = "input_number.co2_klima_toleranz";
+        public const string RhNotbremse = "input_number.co2_rh_notbremse";
+        public const string T6Klima = "input_number.co2_t6_stufe_klima";
+        /// <summary>Gleitender Mittelwert der Feuchte, an dem die Freigabe hängt (Filter-Helfer).</summary>
+        public const string RhMittel = "sensor.co2_sonden_rh_mittel";
+        public const string FeuchteUeberGrenze = "binary_sensor.co2_feuchte_uber_grenze";
 
         /// <summary>
         /// Fork AI: Der Template-Helfer in HA, der Temperatur und Feuchte samt Halteband
@@ -98,6 +105,7 @@ public sealed class Co2SteuerungService
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly SteuerungGeraeteService _geraete;
     private readonly WochenplanSyncService _wochenplan;
+    private readonly SteuerungMittelwertService _mittel;
     private readonly ILogger<Co2SteuerungService> _logger;
 
     public Co2SteuerungService(
@@ -112,6 +120,7 @@ public sealed class Co2SteuerungService
         HomeAssistantSettingsRepository haSettings,
         SteuerungGeraeteService geraete,
         WochenplanSyncService wochenplan,
+        SteuerungMittelwertService mittel,
         ILogger<Co2SteuerungService> logger)
     {
         _repo = repo;
@@ -125,6 +134,7 @@ public sealed class Co2SteuerungService
         _haSettings = haSettings;
         _geraete = geraete;
         _wochenplan = wochenplan;
+        _mittel = mittel;
         _logger = logger;
     }
 
@@ -138,9 +148,71 @@ public sealed class Co2SteuerungService
         var fehler = Pruefen(e);
         if (fehler.Count > 0) return (null, fehler, false);
 
+        var vorher = _repo.GetEinstellungen<Co2Einstellungen>(Modul);
         _repo.SetEinstellungen(Modul, e);
         var erreicht = await NachHomeAssistantSchreibenAsync(e, ct);
+
+        // Das Mittelungsfenster ist eine Option des Filter-Helfers, kein
+        // input_number. Jede Änderung lädt den Helfer neu und leert dabei seinen
+        // Mittelwert — deshalb nur beim Speichern und nur, wenn sich der Wert
+        // wirklich geändert hat, nie im stündlichen Lauf.
+        if (e.RhMittelMinuten is { } minuten && minuten != vorher?.RhMittelMinuten)
+        {
+            erreicht &= await _mittel.FensterSetzenAsync(Entitaeten.RhMittel, minuten, ct);
+        }
+
         return (e, fehler, erreicht);
+    }
+
+    // Wertebereiche der Helfer in Home Assistant. Ein Wert ausserhalb nimmt
+    // input_number.set_value nicht an — deshalb wird ein aus dem Plan
+    // abgeleiteter Wert auf diese Spanne begrenzt, statt still zu scheitern.
+    public const double CanopyMin = 15;
+    public const double CanopyMax = 34;
+    public const double NotbremseMin = 30;
+    public const double NotbremseMax = 90;
+
+    /// <summary>
+    /// Fork AI (forkai.150): Die Notbremse, wie sie gerade gilt. Im Modus
+    /// <c>plan</c> die wirksame Feuchte-Obergrenze plus Abstand — die Obergrenze
+    /// kommt aus der Plan-Woche, solange der Wochenplan sie führt, und wandert
+    /// damit von Woche zu Woche mit. null im Modus <c>fest</c> ohne gespeicherten Wert.
+    /// </summary>
+    public static double? WirksameNotbremse(Co2Einstellungen e, double rhObergrenzeWirksam)
+        => e.RhNotbremseModus == GrenzModus.Plan
+            ? Math.Clamp(rhObergrenzeWirksam + e.RhNotbremseAbstandProzent, NotbremseMin, NotbremseMax)
+            : e.RhNotbremseFestProzent;
+
+    /// <summary>
+    /// Fork AI (forkai.150): Die Canopy-Obergrenze, wie sie gerade gilt. Im
+    /// Modus <c>plan</c> die Lufttemperatur (Tag) der laufenden Plan-Woche plus
+    /// Abstand. Ohne Plan-Luft gilt der feste Wert — dasselbe Verhalten wie beim
+    /// Entfeuchter.
+    /// </summary>
+    public static double WirksameCanopyObergrenze(Co2Einstellungen e, double? planLuftTagC)
+        => e.CanopyObergrenzeModus == GrenzModus.Plan && planLuftTagC is { } luft
+            ? Math.Clamp(luft + e.CanopyObergrenzeAbstandK, CanopyMin, CanopyMax)
+            : e.CanopyObergrenzeC;
+
+    // Vorbelegung neuer Klima-Werte, wenn weder Fork noch Home Assistant einen kennen.
+    public const int StandardToleranzMinuten = 7;
+    public const double StandardNotbremseProzent = 65;
+    public const int StandardT6StufeKlima = 6;
+
+    /// <summary>
+    /// Fork AI (forkai.150): Was die Seite anzeigt. Klima-Werte, die im Fork
+    /// noch nie gespeichert wurden, kommen aus Home Assistant — so zeigt die
+    /// Seite, was die Regelung gerade tatsächlich benutzt, und das erste
+    /// Speichern übernimmt es. Gespeichert wird hier nichts.
+    /// </summary>
+    public static Co2Einstellungen MitWertenAusHomeAssistant(Co2Einstellungen e, Co2Live live)
+    {
+        var kopie = System.Text.Json.JsonSerializer.Deserialize<Co2Einstellungen>(System.Text.Json.JsonSerializer.Serialize(e))!;
+        kopie.KlimaToleranzMinuten ??= live.HaKlimaToleranzMinuten is { } tol ? (int)Math.Round(tol) : StandardToleranzMinuten;
+        kopie.RhNotbremseFestProzent ??= live.HaRhNotbremseProzent ?? StandardNotbremseProzent;
+        kopie.T6StufeKlima ??= live.HaT6StufeKlima is { } stufe ? (int)Math.Round(stufe) : StandardT6StufeKlima;
+        kopie.RhMittelMinuten ??= SteuerungRechenwertService.StandardMittelMinuten;
+        return kopie;
     }
 
     public static Dictionary<string, string> Pruefen(Co2Einstellungen e)
@@ -164,7 +236,23 @@ public sealed class Co2SteuerungService
         if (e.ZeltvolumenM3 is < 1 or > 20) f[nameof(e.ZeltvolumenM3)] = "Zeltvolumen muss zwischen 1 und 20 m³ liegen.";
         if (e.RhObergrenzeProzent is < 40 or > 90) f[nameof(e.RhObergrenzeProzent)] = "Feuchte-Obergrenze muss zwischen 40 und 90 % liegen.";
         if (e.KlimaHystereseProzent is < 0 or > 10) f[nameof(e.KlimaHystereseProzent)] = "Klima-Hysterese muss zwischen 0 und 10 % liegen.";
-        if (e.CanopyObergrenzeC is < 22 or > 34) f[nameof(e.CanopyObergrenzeC)] = "Canopy-Obergrenze muss zwischen 22 und 34 °C liegen.";
+        if (e.CanopyObergrenzeC is < CanopyMin or > CanopyMax) f[nameof(e.CanopyObergrenzeC)] = $"Canopy-Obergrenze muss zwischen {CanopyMin} und {CanopyMax} °C liegen.";
+        if (e.CanopyObergrenzeModus is not (GrenzModus.Fest or GrenzModus.Plan)) f[nameof(e.CanopyObergrenzeModus)] = "Canopy-Obergrenze: „fest“ oder „plan“.";
+        if (e.CanopyObergrenzeAbstandK is < 0 or > 15) f[nameof(e.CanopyObergrenzeAbstandK)] = "Abstand zur Plan-Luft muss zwischen 0 und 15 K liegen.";
+        if (e.KlimaToleranzMinuten is < 0 or > 30) f[nameof(e.KlimaToleranzMinuten)] = "Sperrt nach: 0 bis 30 Minuten.";
+        if (e.RhNotbremseModus is not (GrenzModus.Fest or GrenzModus.Plan)) f[nameof(e.RhNotbremseModus)] = "Notbremse: „fest“ oder „plan“.";
+        if (e.RhNotbremseFestProzent is < NotbremseMin or > NotbremseMax) f[nameof(e.RhNotbremseFestProzent)] = $"Notbremse muss zwischen {NotbremseMin} und {NotbremseMax} % liegen.";
+        if (e.RhNotbremseAbstandProzent is < 1 or > 30) f[nameof(e.RhNotbremseAbstandProzent)] = "Abstand der Notbremse: 1 bis 30 %.";
+        if (e.RhNotbremseModus == GrenzModus.Fest && e.RhNotbremseFestProzent is { } nb && nb <= e.RhObergrenzeProzent)
+        {
+            f[nameof(e.RhNotbremseFestProzent)] = "Die Notbremse muss über der Feuchte-Obergrenze liegen.";
+        }
+        if (e.RhMittelMinuten is < 1 or > 30) f[nameof(e.RhMittelMinuten)] = "Mittelwert über 1 bis 30 Minuten.";
+        if (e.T6StufeKlima is < 1 or > 10) f[nameof(e.T6StufeKlima)] = "Stufe muss zwischen 1 und 10 liegen.";
+        else if (e.T6StufeKlima is { } k && (k < e.T6StufeDosierung || k > e.T6StufeNormal))
+        {
+            f[nameof(e.T6StufeKlima)] = "Die Stufe bei Klimasperre liegt zwischen Dosierung und normal.";
+        }
         foreach (var (name, wert) in new[] { (nameof(e.T6StufeNormal), e.T6StufeNormal), (nameof(e.T6StufeDosierung), e.T6StufeDosierung), (nameof(e.T6StufeTief), e.T6StufeTief) })
         {
             if (wert is < 1 or > 10) f[name] = "Stufe muss zwischen 1 und 10 liegen.";
@@ -298,7 +386,9 @@ public sealed class Co2SteuerungService
         if (!settings.IsConfigured) return false;
 
         var (warm, mittel, kuehl) = WirksameZiele(e, PlanZielPpm());
-        var zahlen = Schreibliste(e, warm, mittel, kuehl, _wochenplan.GefuehrteHelfer().Keys);
+        var gefuehrt = _wochenplan.GefuehrteHelfer();
+        var rhWirksam = gefuehrt.TryGetValue(Entitaeten.RhObergrenze, out var rhPlan) ? rhPlan : e.RhObergrenzeProzent;
+        var zahlen = Schreibliste(e, warm, mittel, kuehl, gefuehrt.Keys, rhWirksam, _wochenplan.PlanLuft()?.LuftTagC);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -326,10 +416,21 @@ public sealed class Co2SteuerungService
     /// zurück, der Wochenplan hielt das für eine Handänderung und gab den Helfer
     /// auf — die Obergrenze blieb dann wochenlang auf einem alten Stand.
     /// </remarks>
+    /// <para>Fork AI (forkai.150): Notbremse und Canopy-Obergrenze können der
+    /// Plan-Woche folgen (<paramref name="rhObergrenzeWirksam"/>,
+    /// <paramref name="planLuftTagC"/>). Die Klima-Werte, die im Fork noch nie
+    /// gespeichert wurden (null), fehlen in der Liste — ihr Helfer behält, was
+    /// in Home Assistant steht.</para>
     public static IReadOnlyList<(string Entity, double Wert)> Schreibliste(
-        Co2Einstellungen e, int warm, int mittel, int kuehl, IEnumerable<string> vomWochenplanGefuehrt)
+        Co2Einstellungen e, int warm, int mittel, int kuehl, IEnumerable<string> vomWochenplanGefuehrt,
+        double? rhObergrenzeWirksam = null, double? planLuftTagC = null)
     {
         var gefuehrt = new HashSet<string>(vomWochenplanGefuehrt, StringComparer.OrdinalIgnoreCase);
+        var optional = new List<(string Entity, double Wert)>();
+        if (e.KlimaToleranzMinuten is { } tol) optional.Add((Entitaeten.KlimaToleranz, tol));
+        if (WirksameNotbremse(e, rhObergrenzeWirksam ?? e.RhObergrenzeProzent) is { } notbremse) optional.Add((Entitaeten.RhNotbremse, notbremse));
+        if (e.T6StufeKlima is { } klima) optional.Add((Entitaeten.T6Klima, klima));
+
         var zahlen = new (string Entity, double Wert)[]
         {
             (Entitaeten.ZielWarm, warm), (Entitaeten.ZielMittel, mittel), (Entitaeten.ZielKuehl, kuehl),
@@ -338,14 +439,14 @@ public sealed class Co2SteuerungService
             (Entitaeten.Wartezeit, e.WartezeitSekunden), (Entitaeten.MaxImpulse, e.MaxImpulseJeZyklus),
             (Entitaeten.Zeltvolumen, e.ZeltvolumenM3),
             (Entitaeten.RhObergrenze, e.RhObergrenzeProzent), (Entitaeten.KlimaHysterese, e.KlimaHystereseProzent),
-            (Entitaeten.CanopyObergrenze, e.CanopyObergrenzeC),
+            (Entitaeten.CanopyObergrenze, WirksameCanopyObergrenze(e, planLuftTagC)),
             (Entitaeten.T6Normal, e.T6StufeNormal), (Entitaeten.T6Dosierung, e.T6StufeDosierung), (Entitaeten.T6Tief, e.T6StufeTief),
             (Entitaeten.T6TiefMaxTemp, e.T6TiefMaxTempC),
             (Entitaeten.StartNachLichtAn, e.StartNachLichtAnMinuten),
             (Entitaeten.EndeVorLichtAus, e.EndeVorLichtAusMinuten),
         };
 
-        return zahlen.Where(z => !gefuehrt.Contains(z.Entity)).ToList();
+        return zahlen.Concat(optional).Where(z => !gefuehrt.Contains(z.Entity)).ToList();
     }
 
     // --------------------------------------------------------------- Livebild
@@ -375,6 +476,7 @@ public sealed class Co2SteuerungService
         double? rhAusPlan = _wochenplan.GefuehrteHelfer().TryGetValue(Entitaeten.RhObergrenze, out var rhPlan) ? rhPlan : null;
         var rhWirksam = Zahl(Entitaeten.RhObergrenze) ?? rhAusPlan ?? e.RhObergrenzeProzent;
 
+        var planLuft = _wochenplan.PlanLuft();
         var co2 = ZahlRolle("co2_sensor");
         var ziel = Zahl(Entitaeten.ZielEffektiv);
         return new Co2Live(
@@ -406,7 +508,19 @@ public sealed class Co2SteuerungService
             ImpulsBedarfSekunden: Zahl(Entitaeten.ImpulsBedarf) is { } ib ? (int)ib : null,
             LetzterImpuls: Text(Entitaeten.LetzterImpuls),
             RhObergrenzeProzent: rhWirksam,
-            RhObergrenzeAusPlan: rhAusPlan);
+            RhObergrenzeAusPlan: rhAusPlan)
+        {
+            RhMittelProzent = Zahl(Entitaeten.RhMittel),
+            FreiAbProzent = rhWirksam - e.KlimaHystereseProzent,
+            NotbremseProzent = WirksameNotbremse(e, rhWirksam) ?? Zahl(Entitaeten.RhNotbremse),
+            CanopyObergrenzeC = WirksameCanopyObergrenze(e, planLuft?.LuftTagC),
+            PlanLuftTagC = planLuft?.LuftTagC,
+            PlanWoche = planLuft?.Woche,
+            HaKlimaToleranzMinuten = Zahl(Entitaeten.KlimaToleranz),
+            HaRhNotbremseProzent = Zahl(Entitaeten.RhNotbremse),
+            HaT6StufeKlima = Zahl(Entitaeten.T6Klima),
+            RhMittelVorhanden = nachId.ContainsKey(Entitaeten.RhMittel),
+        };
     }
 
     // -------------------------------------------------------------- Tageslauf
@@ -607,4 +721,24 @@ public sealed record Co2Live(
     int? ImpulsBedarfSekunden,
     string? LetzterImpuls,
     double? RhObergrenzeProzent = null,
-    double? RhObergrenzeAusPlan = null);
+    double? RhObergrenzeAusPlan = null)
+{
+    // Fork AI (forkai.150): Sperre und Freigabe.
+    /// <summary>Gleitender Mittelwert der Feuchte, an dem die Freigabe hängt.</summary>
+    public double? RhMittelProzent { get; init; }
+    /// <summary>Ab diesem Mittelwert gibt das Klima wieder frei (Obergrenze − Hysterese).</summary>
+    public double? FreiAbProzent { get; init; }
+    /// <summary>Die Notbremse, wie sie gerade gilt (Plan + Abstand oder fest).</summary>
+    public double? NotbremseProzent { get; init; }
+    /// <summary>Die Canopy-Obergrenze, wie sie gerade gilt.</summary>
+    public double? CanopyObergrenzeC { get; init; }
+    /// <summary>Lufttemperatur (Tag) der laufenden Plan-Woche; null ohne Plan.</summary>
+    public double? PlanLuftTagC { get; init; }
+    public string? PlanWoche { get; init; }
+    /// <summary>Was in Home Assistant steht — die Seite zeigt es, solange der Fork den Wert noch nie gespeichert hat.</summary>
+    public double? HaKlimaToleranzMinuten { get; init; }
+    public double? HaRhNotbremseProzent { get; init; }
+    public double? HaT6StufeKlima { get; init; }
+    /// <summary>Ob der Mittelwert-Helfer in Home Assistant existiert.</summary>
+    public bool RhMittelVorhanden { get; init; }
+}

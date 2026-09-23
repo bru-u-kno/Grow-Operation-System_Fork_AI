@@ -46,12 +46,38 @@ public sealed class Co2Einstellungen
     // Klima hat Vorrang
     public double RhObergrenzeProzent { get; set; } = 65;
     public double KlimaHystereseProzent { get; set; } = 3;
+    /// <summary>Feste Canopy-Obergrenze (bei <see cref="CanopyObergrenzeModus"/> = fest).</summary>
     public double CanopyObergrenzeC { get; set; } = 30;
     public int T6StufeNormal { get; set; } = 7;
     public int T6StufeDosierung { get; set; } = 5;
     public int T6StufeTief { get; set; } = 4;
     public double T6TiefMaxTempC { get; set; } = 29.5;
     public bool AbluftDrosseln { get; set; } = true;
+
+    // Fork AI (forkai.150): Sperre und Freigabe vollständig im Fork. Vorher
+    // standen diese Werte nur als Helfer in Home Assistant. Die Zahlen sind
+    // nullbar: null heisst „noch nie im Fork gespeichert" — dann schreibt der
+    // Fork den Helfer nicht, und die Seite zeigt den Wert, der in Home
+    // Assistant steht. Sonst überschriebe das erste Update eine Einstellung,
+    // die jemand dort längst von Hand gesetzt hat.
+
+    /// <summary>So lange muss die Feuchte über der Obergrenze liegen, bis gesperrt wird.</summary>
+    public int? KlimaToleranzMinuten { get; set; }
+
+    /// <summary>Notbremse: <c>fest</c> = eigener Wert, <c>plan</c> = Feuchte-Obergrenze + Abstand.</summary>
+    public string RhNotbremseModus { get; set; } = GrenzModus.Fest;
+    public double? RhNotbremseFestProzent { get; set; }
+    public double RhNotbremseAbstandProzent { get; set; } = 10;
+
+    /// <summary>Canopy-Obergrenze: <c>fest</c> = <see cref="CanopyObergrenzeC"/>, <c>plan</c> = Plan-Luft (Tag) + Abstand.</summary>
+    public string CanopyObergrenzeModus { get; set; } = GrenzModus.Fest;
+    public double CanopyObergrenzeAbstandK { get; set; } = 5;
+
+    /// <summary>Über wie viele Minuten die Feuchte für die Freigabe gemittelt wird.</summary>
+    public int? RhMittelMinuten { get; set; }
+
+    /// <summary>T6-Stufe, solange das Klima sperrt — zwischen Dosierung und normal.</summary>
+    public int? T6StufeKlima { get; set; }
 
     // Zeiten (Minuten relativ zum Licht). Beide gehen als Helfer nach Home
     // Assistant; die Automation rechnet das Fenster daraus gegen die geplante
@@ -66,6 +92,13 @@ public sealed class Co2Einstellungen
     public bool JournalBuchen { get; set; } = true;
 
     public bool AutomatikAktiv { get; set; } = true;
+}
+
+/// <summary>Wie eine Klima-Grenze gebildet wird: fest oder aus dem Plan der laufenden Woche plus Abstand.</summary>
+public static class GrenzModus
+{
+    public const string Fest = "fest";
+    public const string Plan = "plan";
 }
 
 /// <summary>Ein Tag CO₂-Begasung, wie er nach Licht-aus abgeschlossen wird.</summary>

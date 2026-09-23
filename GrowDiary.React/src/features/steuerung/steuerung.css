@@ -210,4 +210,14 @@
   /* Fork AI (forkai.134, F-029): Im Reiter Rollen klebte das nächste Feld am
      Hinweistext des vorigen. */
   .st-rollen .v1-section-body > .v1-field + .v1-field { margin-top: var(--s-4); }
+
+  /* Fork AI (forkai.150): Reiter Klima in drei Gruppen — Sperre, Freigabe, Abluft T6. */
+  .st-gruppe { margin: var(--s-4) 0 var(--s-1); font-size: var(--fs-text); font-weight: 600; color: var(--muted); }
+  .st-gruppe:first-child { margin-top: var(--s-2); }
+  /* Grenze fest oder „Plan +": Umschalter, Eingabe und das Ergebnis rechts untereinander. */
+  .st-plangrenze { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: var(--s-2); }
+  .st-ergebnis { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-etikett); color: var(--muted); white-space: nowrap; }
+  /* Die Regel in zwei Zeilen, damit niemand Sperre und Freigabe zusammensuchen muss. */
+  .st-regel { margin: var(--s-2) 0 var(--s-1); padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: var(--accent-wash);
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-etikett); color: var(--muted); line-height: 1.7; }
 }

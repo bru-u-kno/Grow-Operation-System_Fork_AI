@@ -28,6 +28,9 @@ public sealed class SteuerungRechenwertService
 {
     private const string DialogPfad = "api/config/config_entries/flow";
 
+    /// <summary>Fenster eines neu angelegten Mittelwerts; einstellbar auf der CO₂-Seite.</summary>
+    public const int StandardMittelMinuten = 5;
+
     private readonly HomeAssistantService _ha;
     private readonly ILogger<SteuerungRechenwertService> _log;
 
@@ -70,7 +73,7 @@ public sealed class SteuerungRechenwertService
         }
 
         var rechenwerte = SteuerungBauteile.Anwendbar(modul, belegt)
-            .Where(b => b.Art is BauteilArt.RechenSensor or BauteilArt.RechenSchalter)
+            .Where(b => b.Art is BauteilArt.RechenSensor or BauteilArt.RechenSchalter or BauteilArt.Mittelwert)
             .ToList();
 
         var uebersprungen = rechenwerte.Count(b => vorhanden.Contains(b.EntityId));
@@ -98,7 +101,11 @@ public sealed class SteuerungRechenwertService
                 ? null
                 : SteuerungBauteile.VorlageFuellen(b.Verfuegbarkeit, zuordnung);
 
-            var (erfolg, fehler) = await AnlegenAsync(client, b, vorschrift, verfuegbarkeit, ct);
+            // Fork AI (forkai.150): Der Mittelwert ist ein Filter-Helfer mit eigenem
+            // Dialog. Seine „Vorschrift" ist der Fühler, über den gemittelt wird.
+            var (erfolg, fehler) = b.Art == BauteilArt.Mittelwert
+                ? await SteuerungMittelwertService.AnlegenAsync(client, b.Name, vorschrift, StandardMittelMinuten, ct)
+                : await AnlegenAsync(client, b, vorschrift, verfuegbarkeit, ct);
             einzeln.Add(new Ergebnis(b.EntityId, b.Name, erfolg, fehler));
 
             if (erfolg)

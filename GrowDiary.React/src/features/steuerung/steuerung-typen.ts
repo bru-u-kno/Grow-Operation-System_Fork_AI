@@ -24,6 +24,9 @@ export type SteuerungUebersicht = {
   standUtc: string
 }
 
+/** Fork AI (forkai.150): Grenze fest oder aus der Plan-Woche plus Abstand. */
+export type GrenzModus = 'fest' | 'plan'
+
 export type Co2Einstellungen = {
   zielQuelle: 'fest' | 'plan'
   zielWarmPpm: number
@@ -47,6 +50,16 @@ export type Co2Einstellungen = {
   t6StufeTief: number
   t6TiefMaxTempC: number
   abluftDrosseln: boolean
+  // Fork AI (forkai.150): Sperre und Freigabe. null = im Fork noch nie
+  // gespeichert — dann gilt, was in Home Assistant steht.
+  klimaToleranzMinuten: number | null
+  rhNotbremseModus: GrenzModus
+  rhNotbremseFestProzent: number | null
+  rhNotbremseAbstandProzent: number
+  canopyObergrenzeModus: GrenzModus
+  canopyObergrenzeAbstandK: number
+  rhMittelMinuten: number | null
+  t6StufeKlima: number | null
   startNachLichtAnMinuten: number
   endeVorLichtAusMinuten: number
   kostenArtikelId: number | null
@@ -88,6 +101,22 @@ export type Co2Live = {
   flascheRestKg: number | null
   impulsBedarfSekunden: number | null
   letzterImpuls: string | null
+  // Fork AI (forkai.150)
+  /** Gleitender Mittelwert der Feuchte, an dem die Freigabe hängt. */
+  rhMittelProzent?: number | null
+  /** Ab diesem Mittelwert gibt das Klima wieder frei. */
+  freiAbProzent?: number | null
+  /** Notbremse und Canopy-Obergrenze, wie sie gerade gelten. */
+  notbremseProzent?: number | null
+  canopyObergrenzeC?: number | null
+  /** Lufttemperatur (Tag) der laufenden Plan-Woche; null ohne Plan. */
+  planLuftTagC?: number | null
+  planWoche?: string | null
+  /** Werte in Home Assistant — Vorbelegung, solange der Fork sie nie gespeichert hat. */
+  haKlimaToleranzMinuten?: number | null
+  haRhNotbremseProzent?: number | null
+  haT6StufeKlima?: number | null
+  rhMittelVorhanden?: boolean
 }
 
 export type Co2Tag = {

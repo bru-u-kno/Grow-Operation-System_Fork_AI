@@ -38,6 +38,12 @@ public enum BauteilArt
     RechenSchalter,
     /// <summary>Eine Automation.</summary>
     Automation,
+    /// <summary>
+    /// Fork AI (forkai.150): Ein gleitender Mittelwert über einen Fühler
+    /// (Filter-Helfer). <see cref="Bauteil.Vorlage"/> nennt den Fühler als
+    /// <c>[[rolle]]</c>-Platzhalter.
+    /// </summary>
+    Mittelwert,
 }
 
 /// <summary>Ein einzelnes Objekt, das die Steuerung in Home Assistant braucht.</summary>
@@ -198,7 +204,18 @@ public static class SteuerungBauteile
             "Über dieser Canopy-Temperatur wird nicht dosiert.",
             Pflicht: false, HaengtAn: BrauchtCanopy,
             OhneDas: "Ohne Canopy-Fühler entfällt die Temperaturgrenze.",
-            Min: 22, Max: 34, Schritt: 0.5, Einheit: "°C"),
+            Min: 15, Max: 34, Schritt: 0.5, Einheit: "°C"),
+        // Fork AI (forkai.150): Sperre und Freigabe, wie sie in Brus Anlage laufen.
+        new(Co2, "input_number.co2_klima_toleranz", "CO2 Klima Toleranz", BauteilArt.Zahl,
+            "So lange muss die Feuchte über der Obergrenze liegen, bis gesperrt wird.",
+            Pflicht: false, HaengtAn: BrauchtRh,
+            OhneDas: "Ohne Feuchtefühler hat das Klima keinen Vorrang.",
+            Min: 0, Max: 30, Schritt: 1, Einheit: "min"),
+        new(Co2, "input_number.co2_rh_notbremse", "CO2 RH Notbremse", BauteilArt.Zahl,
+            "Über dieser Feuchte sperrt es sofort, ohne Wartezeit.",
+            Pflicht: false, HaengtAn: BrauchtRh,
+            OhneDas: "Ohne Feuchtefühler hat das Klima keinen Vorrang.",
+            Min: 30, Max: 90, Schritt: 0.5, Einheit: "%"),
 
         // --- Abluft -------------------------------------------------------
         new(Co2, "input_boolean.co2_abluft_drosseln", "CO2 Abluft drosseln", BauteilArt.Schalter,
@@ -219,6 +236,10 @@ public static class SteuerungBauteile
             "Bis zu dieser Canopy-Temperatur ist die tiefe Stufe erlaubt.",
             Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", Min: 24, Max: 32, Schritt: 0.1, Einheit: "°C"),
+        new(Co2, "input_number.co2_t6_stufe_klima", "CO2 T6 Stufe Klima", BauteilArt.Zahl,
+            "Zwischenstufe, solange das Klima sperrt — trocknet, ohne alles CO₂ hinauszublasen.",
+            Pflicht: false, HaengtAn: BrauchtAbluft,
+            OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", Min: 1, Max: 10, Schritt: 1),
 
         // --- Zeiten -------------------------------------------------------
         new(Co2, "input_number.co2_start_nach_licht_an", "CO2 Start nach Licht an", BauteilArt.Zahl,
@@ -236,10 +257,23 @@ public static class SteuerungBauteile
         new(Co2, "binary_sensor.co2_bedarf", "CO2 Bedarf", BauteilArt.RechenSchalter,
             "An, solange nachdosiert werden soll. Hält seinen Zustand, wenn der Sensor schweigt.",
             Vorlage: "{% set co2_s = states.[[co2_sensor]] %}{% set weg = co2_s is none or co2_s.state in ['unknown','unavailable'] %}{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% if weg or ziel <= 0 %}{% set seit = (as_timestamp(now()) - as_timestamp(co2_s.last_changed)) if co2_s is not none else 9999 %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% else %}{% set ist = co2_s.state | float(0) %}{% set h = states('input_number.co2_hysterese') | float(100) %}{% if ist <= 0 %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% elif ist < ziel - h %}true{% elif ist >= ziel %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% endif %}"),
+        new(Co2, "sensor.co2_sonden_rh_mittel", "CO2 Sonden RH Mittel", BauteilArt.Mittelwert,
+            "Gleitender Mittelwert der Feuchte. An ihm hängt die Freigabe — der Momentanwert rauscht zu stark.",
+            Pflicht: false, HaengtAn: BrauchtRh,
+            OhneDas: "Ohne Mittelwert gibt das Klima am Momentanwert frei.",
+            Einheit: "%", Vorlage: "[[rh]]"),
+        new(Co2, "binary_sensor.co2_feuchte_uber_grenze", "CO2 Feuchte uber Grenze", BauteilArt.RechenSchalter,
+            "An, solange die Feuchte über der Obergrenze liegt. Seit wann, entscheidet über die Sperre.",
+            Pflicht: false, HaengtAn: BrauchtRh,
+            OhneDas: "Ohne Feuchtefühler hat das Klima keinen Vorrang.",
+            Vorlage: "{% set rh_s = states.[[rh]] %}{% if rh_s is none or rh_s.state in ['unknown','unavailable'] %}{{ is_state('binary_sensor.co2_feuchte_uber_grenze', 'on') }}{% else %}{{ rh_s.state | float(0) > states('input_number.co2_rh_obergrenze') | float(60) }}{% endif %}"),
+        // Fork AI (forkai.150): Sperrt erst, wenn die Feuchte länger als die Toleranz
+        // über der Grenze liegt (sofort über der Notbremse); gibt frei am gleitenden
+        // Mittelwert. Fehlt der Mittelwert, gilt der Momentanwert — das alte Verhalten.
         new(Co2, "binary_sensor.co2_klima_ok", "CO2 Klima OK", BauteilArt.RechenSchalter,
             "Ob das Klima die Dosierung erlaubt.", Pflicht: false, HaengtAn: BrauchtRh,
             OhneDas: "Ohne Feuchtefühler ist die Freigabe immer erteilt.",
-            Vorlage: "{% set t_s = states.[[canopy]] %}{% set rh_s = states.[[rh]] %}{% set weg = t_s is none or rh_s is none or t_s.state in ['unknown','unavailable'] or rh_s.state in ['unknown','unavailable'] %}{% if weg %}{% set seit = [ (as_timestamp(now()) - as_timestamp(t_s.last_changed)) if t_s is not none else 9999, (as_timestamp(now()) - as_timestamp(rh_s.last_changed)) if rh_s is not none else 9999 ] | max %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_klima_ok', 'on') }}{% endif %}{% else %}{% set rh = rh_s.state | float(100) %}{% set t = t_s.state | float(100) %}{% set rh_ob = states('input_number.co2_rh_obergrenze') | float(65) %}{% set t_ob = states('input_number.co2_canopy_obergrenze') | float(29) %}{% set h = states('input_number.co2_klima_hysterese') | float(3) %}{% if rh > rh_ob or t > t_ob %}false{% elif rh <= rh_ob - h and t <= t_ob - 0.2 %}true{% else %}{{ is_state('binary_sensor.co2_klima_ok', 'on') }}{% endif %}{% endif %}"),
+            Vorlage: "{% set t_s = states.[[canopy]] %}{% set rh_s = states.[[rh]] %}{% set weg = t_s is none or rh_s is none or t_s.state in ['unknown','unavailable'] or rh_s.state in ['unknown','unavailable'] %}{% if weg %}{% set seit = [ (as_timestamp(now()) - as_timestamp(t_s.last_changed)) if t_s is not none else 9999, (as_timestamp(now()) - as_timestamp(rh_s.last_changed)) if rh_s is not none else 9999 ] | max %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_klima_ok', 'on') }}{% endif %}{% else %}{% set rh = rh_s.state | float(100) %}{% set t = t_s.state | float(100) %}{% set rh_m = states('sensor.co2_sonden_rh_mittel') | float(rh) %}{% set rh_ob = states('input_number.co2_rh_obergrenze') | float(65) %}{% set t_ob = states('input_number.co2_canopy_obergrenze') | float(29) %}{% set h = states('input_number.co2_klima_hysterese') | float(3) %}{% set rh_not = states('input_number.co2_rh_notbremse') | float(65) %}{% set tol = states('input_number.co2_klima_toleranz') | float(7) %}{% set ueb = states.binary_sensor.co2_feuchte_uber_grenze %}{% set ueber_lange = ueb is not none and ueb.state == 'on' and (now() - ueb.last_changed).total_seconds() >= tol * 60 %}{% if t > t_ob or rh > rh_not or (rh > rh_ob and ueber_lange) %}false{% elif rh_m <= rh_ob - h and t <= t_ob - 0.2 %}true{% else %}{{ is_state('binary_sensor.co2_klima_ok', 'on') }}{% endif %}{% endif %}"),
         new(Co2, "sensor.co2_impuls_bedarf", "CO2 Impuls Bedarf", BauteilArt.RechenSensor,
             "Wie lang der nächste Impuls sein muss — aus fehlenden ppm, Volumen und Durchfluss.",
             Einheit: "s", Zustandsklasse: "measurement",

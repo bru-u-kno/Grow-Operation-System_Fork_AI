@@ -166,7 +166,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         var (grow, stage) = _co2.LaufenderGrow();
         var geraete = _geraete.EntitiesFuerModul(Co2SteuerungService.Modul);
         return Ok(new Co2SeiteDto(
-            _co2.Einstellungen,
+            Co2SteuerungService.MitWertenAusHomeAssistant(_co2.Einstellungen, live),
             live,
             tage.Select(ToDto).ToList(),
             artikel,

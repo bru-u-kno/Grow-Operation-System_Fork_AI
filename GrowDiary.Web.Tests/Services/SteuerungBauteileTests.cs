@@ -50,6 +50,7 @@ public class SteuerungBauteileTests
             [BauteilArt.RechenSensor] = new[] { "sensor" },
             [BauteilArt.RechenSchalter] = new[] { "binary_sensor" },
             [BauteilArt.Automation] = new[] { "automation" },
+            [BauteilArt.Mittelwert] = new[] { "sensor" },
         };
 
         foreach (var b in SteuerungBauteile.Alle)
