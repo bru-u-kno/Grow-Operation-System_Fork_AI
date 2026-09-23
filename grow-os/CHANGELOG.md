@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.152
+
+**Fork AI.** Kosten: Erfassen-Knöpfe öffnen immer und springen genau zum Formular.
+
+- Behoben — **Nachfüllung erfassen**, **Artikel anlegen** und **Anschaffung erfassen** sprangen in der
+  Home-Assistant-App zu weit nach unten: Formulartitel und erstes Feld lagen unter der Kopfleiste. Das
+  Formular wird jetzt mit eigener Rechnung unter die Kopfleiste gerollt — wie die Reiter seit forkai.151 —
+  und die Höhe der Kopfleiste wird gemessen statt als feste Zahl angenommen (größere Schrift am Handy).
+- Geändert — Ein Tipp auf einen Erfassen-Knopf öffnet das Formular und springt hin, auch wenn es schon
+  offen ist. Vorher schloss derselbe Tipp ein offenes Formular, das weiter unten außer Sicht lag — man
+  musste zweimal tippen. Geschlossen wird über ▴ im Formularkopf oder „Abbrechen"; der Knopf zeigt ein
+  offenes Formular weiter grün, das ▴ am Knopf entfällt.
+
 ## 2.0.0-forkai.151
 
 **Fork AI.** Reiter am Handy: kein Sprung nach oben mehr, der gewählte Reiter rollt ins Bild.

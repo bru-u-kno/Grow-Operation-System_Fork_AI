@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
+import { spaeterInsBild } from '../components/reiter-ins-bild'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Stat, V1Tabs } from '../components/v1'
 import { LAGER, euro, growOptionen, tage } from '../features/kosten/kosten-typen'
 import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
@@ -44,6 +45,8 @@ function KostenPage() {
   // Mehrere Formulare dürfen gleichzeitig offen sein — jedes auf seinem Reiter.
   const [offen, setOffen] = useState<Set<Formular>>(() => new Set())
   const [nachfuellungArtikelId, setNachfuellungArtikelId] = useState<number | null>(null)
+  // Zählt je Formular die Öffnen-Tipps; jede Änderung rollt das Formular erneut ins Bild.
+  const [sprung, setSprung] = useState<Partial<Record<Formular, number>>>({})
 
   useEffect(() => {
     const controller = new AbortController()
@@ -74,16 +77,18 @@ function KostenPage() {
     setParams(next, { replace: true })
   }
 
-  /** Die drei Knöpfe oben: ein Tipp wechselt auf den Reiter und öffnet das Formular, ein zweiter schließt es. */
-  function formularUmschalten(f: Formular, artikelId?: number) {
+  /**
+   * Die drei Knöpfe oben (und „Erfassen“ an Karten und Tabellen): ein Tipp öffnet
+   * das Formular auf seinem Reiter und rollt es ins Bild — auch wenn es schon
+   * offen ist. Geschlossen wird nur über ▴ im Formularkopf oder „Abbrechen“.
+   * F-049: vorher schloss ein Tipp auf den Knopf ein offenes Formular, das weiter
+   * unten außer Sicht lag — Bru musste zweimal tippen.
+   */
+  function formularOeffnen(f: Formular, artikelId?: number) {
     const ziel = FORMULAR_REITER[f]
     if (artikelId != null) setNachfuellungArtikelId(artikelId)
-    setOffen((alt) => {
-      const neu = new Set(alt)
-      if (neu.has(f) && reiter === ziel && artikelId == null) neu.delete(f)
-      else neu.add(f)
-      return neu
-    })
+    setOffen((alt) => (alt.has(f) ? alt : new Set(alt).add(f)))
+    setSprung((alt) => ({ ...alt, [f]: (alt[f] ?? 0) + 1 }))
     if (reiter !== ziel) reiterWechseln(ziel)
   }
   function formularSchliessen(f: Formular) {
@@ -93,11 +98,11 @@ function KostenPage() {
   const knopf = (f: Formular, text: string, audit: string) => (
     <V1Button
       variant={offen.has(f) ? 'primary' : 'secondary'}
-      onClick={() => formularUmschalten(f)}
+      onClick={() => formularOeffnen(f)}
       disabled={!seite || (f === 'nachfuellung' && seite.artikel.length === 0)}
       audit={audit}
     >
-      {text}{offen.has(f) ? ' ▴' : ''}
+      {text}
     </V1Button>
   )
 
@@ -141,12 +146,12 @@ function KostenPage() {
           {reiter === 'verbrauch' && (
             <>
               {offen.has('artikel') && (
-                <FormularHuelle titel="Artikel anlegen" onClose={() => formularSchliessen('artikel')}>
+                <FormularHuelle titel="Artikel anlegen" sprung={sprung.artikel ?? 0} onClose={() => formularSchliessen('artikel')}>
                   <ArtikelForm seite={seite} onDone={(text) => { formularSchliessen('artikel'); neuLaden(text) }} onError={setError} />
                 </FormularHuelle>
               )}
               {offen.has('nachfuellung') && seite.artikel.length > 0 && (
-                <FormularHuelle titel="Nachfüllung erfassen" onClose={() => formularSchliessen('nachfuellung')}>
+                <FormularHuelle titel="Nachfüllung erfassen" sprung={sprung.nachfuellung ?? 0} onClose={() => formularSchliessen('nachfuellung')}>
                   <NachfuellungForm
                     seite={seite}
                     vorbelegtArtikelId={nachfuellungArtikelId ?? seite.artikel[0].id}
@@ -157,7 +162,7 @@ function KostenPage() {
                 </FormularHuelle>
               )}
 
-              <V1Section title="Verbrauchsartikel" action={<V1Button onClick={() => formularUmschalten('artikel')}>Artikel anlegen</V1Button>}>
+              <V1Section title="Verbrauchsartikel" action={<V1Button onClick={() => formularOeffnen('artikel')}>Artikel anlegen</V1Button>}>
                 {seite.artikel.length === 0 ? (
                   <V1Card>
                     <V1Empty
@@ -172,7 +177,7 @@ function KostenPage() {
                         key={artikel.id}
                         artikel={artikel}
                         seite={seite}
-                        onErfassen={() => formularUmschalten('nachfuellung', artikel.id)}
+                        onErfassen={() => formularOeffnen('nachfuellung', artikel.id)}
                         onChanged={neuLaden}
                         onError={setError}
                       />
@@ -188,11 +193,11 @@ function KostenPage() {
           {reiter === 'anschaffungen' && (
             <>
               {offen.has('anschaffung') && (
-                <FormularHuelle titel="Anschaffung erfassen" onClose={() => formularSchliessen('anschaffung')}>
+                <FormularHuelle titel="Anschaffung erfassen" sprung={sprung.anschaffung ?? 0} onClose={() => formularSchliessen('anschaffung')}>
                   <AnschaffungForm seite={seite} onDone={(text) => { formularSchliessen('anschaffung'); neuLaden(text) }} onCancel={() => formularSchliessen('anschaffung')} onError={setError} />
                 </FormularHuelle>
               )}
-              <AnschaffungenTabelle seite={seite} onErfassen={() => formularUmschalten('anschaffung')} onChanged={neuLaden} onError={setError} />
+              <AnschaffungenTabelle seite={seite} onErfassen={() => formularOeffnen('anschaffung')} onChanged={neuLaden} onError={setError} />
             </>
           )}
 
@@ -203,20 +208,14 @@ function KostenPage() {
   )
 }
 
-/** Ein offenes Formular: Kopfzeile mit Titel und ▴ zum Einklappen, rollt beim Öffnen ins Bild. */
-function FormularHuelle({ titel, onClose, children }: { titel: string; onClose: () => void; children: ReactNode }) {
+/** Ein offenes Formular: Kopfzeile mit Titel und ▴ zum Einklappen, rollt bei jedem Öffnen-Tipp ins Bild. */
+function FormularHuelle({ titel, sprung, onClose, children }: { titel: string; sprung: number; onClose: () => void; children: ReactNode }) {
   const huelle = useRef<HTMLDivElement>(null)
-  // Nicht sofort beim Mount: wenn der Klick gleichzeitig den Reiter wechselt,
-  // rendert der Router den neuen Reiter erst im nächsten Zug — ein sofortiger
-  // Sprung landet dann im Leeren (Bru, 09.09.: „erst der zweite Klick springt").
-  // Zwei Frames später steht die Seite, dann rollen wir.
-  useEffect(() => {
-    let raf2 = 0
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => huelle.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
-    })
-    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
-  }, [])
+  // Nicht sofort: wenn der Klick gleichzeitig den Reiter wechselt, rendert der
+  // Router den neuen Reiter erst im nächsten Zug — ein sofortiger Sprung landet
+  // dann im Leeren (Bru, 09.09.: „erst der zweite Klick springt"). Zwei Frames
+  // später steht die Seite. Gerollt wird mit eigener Rechnung (F-049).
+  useEffect(() => spaeterInsBild(() => huelle.current), [sprung])
   return (
     <section className="v1-section scroll-ziel" ref={huelle}>
       <header className="v1-section-head">

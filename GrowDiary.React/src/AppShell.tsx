@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import { AppSearch } from './components/AppSearch'
+import { auslaufZuruecksetzen } from './components/reiter-ins-bild'
 import { isNavLeafActive, navGroups, searchablePages, sichtbareGruppen } from './navigation'
 import { useTheme } from './useTheme'
 import { useHomeAssistantHealth } from './useHomeAssistantHealth'
@@ -75,6 +76,7 @@ export function AppShell({ children, counts }: Props) {
   useEffect(() => {
     if (gerolltBei.current === location.pathname) return
     gerolltBei.current = location.pathname
+    auslaufZuruecksetzen()
     if (wechselArt === 'POP') return
     window.scrollTo({ top: 0, left: 0 })
   }, [location.pathname, wechselArt])
