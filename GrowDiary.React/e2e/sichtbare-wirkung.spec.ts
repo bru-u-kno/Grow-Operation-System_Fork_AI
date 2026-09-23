@@ -159,52 +159,6 @@ test.describe('Sichtbare Wirkung', () => {
       .toBeGreaterThanOrEqual(lage.leistenUnten)
   })
 
-  // Fork AI (forkai.136): Crop Steering stillgelegt.
-  test.skip('Crop Steering sagt, ob es gerade aktiv ist', async ({ page }) => {
-    darfUeberspringen(!(await page.request.get('/api/grows')).ok(), 'Kein Backend — siehe oben.')
-
-    // Rückmeldung des Testers: „dort steht nicht, wann es aktiv ist." Der Plan
-    // sah im Betrieb genauso aus wie im ausgeschalteten Zustand.
-    await page.goto('/cropsteering', { waitUntil: 'networkidle' })
-
-    const ketten = page.locator('[data-audit^="kette-"]')
-    await expect(ketten).toHaveCount(2)
-
-    // Die Antwort muss OHNE Scrollen dastehen — sie ist der Grund der Seite.
-    const erste = ketten.first()
-    await expect(erste).toBeVisible()
-    const oben = await erste.evaluate((el) => Math.round(el.getBoundingClientRect().top))
-    expect(oben, `Die Kette steht bei y = ${oben} — ausserhalb des Fensters.`)
-      .toBeLessThan(FENSTER.height)
-
-    // Und sie sagt etwas Konkretes: entweder aktiv, oder WAS fehlt.
-    //
-    // Geprueft wird auf die AUSSAGE, nicht auf einen Wortlaut. Der erste Anlauf
-    // stand auf „Es fehlt:" mit Doppelpunkt und wurde rot, als der Satz von
-    // „Es fehlt: zielgerät zugeordnet." (kleingeschriebenes Hauptwort) auf
-    // „Es fehlt ein zugeordnetes Zielgerät." umgestellt wurde. Ein Test, der
-    // bei einer Verbesserung des Textes rot wird, prueft die Formulierung und
-    // nicht die Sache.
-    const text = await page.locator('.cs-kurzfassung').innerText()
-    const sagtAktiv = /^Aktiv\./.test(text)
-    const nenntGrund = /(fehlt|wird nicht)/.test(text) && text.trim().length > 25
-
-    expect(sagtAktiv || nenntGrund, `Die Kurzfassung sagt nichts Verwertbares: „${text}"`)
-      .toBe(true)
-
-    // Und jedes GERISSENE Glied traegt einen Knopf, der hinfuehrt. Die
-    // Rueckmeldung des Nutzers war nicht "ich sehe nicht, was fehlt", sondern
-    // "ich weiss nicht, WIE ich es anschalte" — sagen allein reicht nicht.
-    const offen = await page.locator('.cs-schritte li.is-offen').count()
-    const mitKnopf = await page.locator('.cs-schritte li.is-offen .cs-beheben').count()
-
-    // Mengenwaechter: im Demobestand ist mindestens die Verbindung offen
-    // (Testbetrieb). Waere nichts offen, pruefte der Vergleich nichts.
-    expect(offen, 'Kein offenes Glied — dann prueft dieser Fall nichts.').toBeGreaterThan(0)
-    expect(mitKnopf,
-      `${offen} Glieder sind gerissen, aber nur ${mitKnopf} tragen einen Beheben-Knopf.`)
-      .toBe(offen)
-  })
 
   /**
    * Dieselbe Bauform an drei weiteren Stellen — gefunden, indem die Seiten
