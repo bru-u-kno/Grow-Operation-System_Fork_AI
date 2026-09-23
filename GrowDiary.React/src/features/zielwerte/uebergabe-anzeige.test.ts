@@ -4,7 +4,7 @@ import { bluelabPaare, co2Stufen, gruppieren, wertText, zeileAus } from './ueber
 describe('Übergabe aus dem Plan (F-038)', () => {
   it('ordnet Grenzwert-Zeilen der Gruppe Grenzwerte zu und kürzt die Namen', () => {
     const z = zeileAus({ rolle: 'luft-nacht-unten', name: 'Grenzwert Luft unten (Nacht)', entityId: 'zelt:1/temperature/nacht-min', wert: '17', zustand: 'folgt dem Plan' })
-    expect(z).toMatchObject({ ziel: 'grenzwerte', name: 'Luft unten', zusatz: 'Nacht', einheit: '°C' })
+    expect(z).toMatchObject({ ziel: 'grenzwerte', name: 'Lufttemperatur unten', zusatz: 'Nacht', einheit: '°C' })
   })
 
   it('kennt unbekannte Rollen trotzdem', () => {

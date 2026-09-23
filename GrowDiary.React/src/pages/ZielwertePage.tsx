@@ -90,24 +90,54 @@ type Zielwerte = {
  * (CO₂ 595 gegen 1200–1400) sieht auch weit außerhalb aus.
  */
 function Balken({ wert }: { wert: Wert }) {
+  // Fork AI (forkai.143, F-039, Mockup-Variante A): schmaler Balken, Ziel kräftig
+  // grün, Meldegrenzen als kleine gelbe Striche, Messwert als farbiger Zeiger —
+  // und die Zahlen direkt darunter.
   const { min, max, istZahl } = wert
   if (min === null || max === null || istZahl === null) return null
+  const gv = wert.alarmVon
+  const gb = wert.alarmBis
 
-  const breite = max - min
-  const rand = breite > 0 ? breite / 2 : Math.abs(max) * 0.1 || 1
-  const von = Math.min(min - rand, istZahl)
-  const bis = Math.max(max + rand, istZahl)
-  const spanne = bis - von
+  const werte = [min, max, istZahl, gv, gb].filter((x): x is number => x != null)
+  const lo = Math.min(...werte)
+  const hi = Math.max(...werte)
+  const rand = (hi - lo) * 0.18 || Math.abs(hi) * 0.1 || 1
+  const von = lo - rand
+  const spanne = hi + rand - von
   if (spanne <= 0) return null
+  const pos = (x: number) => ((x - von) / spanne) * 100
+  const p = (x: number) => `${pos(x)}%`
 
-  const prozent = (x: number) => `${((x - von) / spanne) * 100}%`
+  const gleich = gv === min && gb === max
+  const zielDicht = pos(max) - pos(min) < 16
+  const lage = wert.meldet ? 'ist-meldet' : wert.lage === 'im' ? 'ist-im' : 'ist-rand'
 
   return (
-    <div className="zw-balken" aria-hidden="true">
-      <div className="zw-zone" style={{ left: prozent(min), right: `${100 - ((max - von) / spanne) * 100}%` }} />
-      <div className={classNames('zw-nadel', `ist-${wert.lage.replace('ü', 'ue')}`)} style={{ left: prozent(istZahl) }} />
+    <div className="zw-band" aria-hidden="true">
+      <div className="zw-balken">
+        <div className="zw-spur" />
+        <div className="zw-zone" style={{ left: p(min), width: `${pos(max) - pos(min)}%` }} />
+        {!gleich && gv != null && <div className="zw-grenze" style={{ left: p(gv) }} />}
+        {!gleich && gb != null && <div className="zw-grenze" style={{ left: p(gb) }} />}
+        <div className={classNames('zw-nadel', lage)} style={{ left: p(istZahl) }} title="Messwert jetzt" />
+      </div>
+      <div className="zw-skala">
+        {!gleich && gv != null && <span className="ist-grenze" style={{ left: p(gv) }}>{kurz(gv)}</span>}
+        {zielDicht
+          ? <span className="ist-ziel" style={{ left: `${(pos(min) + pos(max)) / 2}%` }}>{kurz(min)}–{kurz(max)}</span>
+          : <>
+              <span className="ist-ziel" style={{ left: p(min) }}>{kurz(min)}</span>
+              <span className="ist-ziel" style={{ left: p(max) }}>{kurz(max)}</span>
+            </>}
+        {!gleich && gb != null && <span className="ist-grenze" style={{ left: p(gb) }}>{kurz(gb)}</span>}
+      </div>
     </div>
   )
+}
+
+/** Zahl kurz, deutsch, ohne Tausenderpunkt: 1200, 1,4, 21. */
+function kurz(x: number): string {
+  return x.toLocaleString('de-DE', { maximumFractionDigits: 2, useGrouping: false })
 }
 
 function QuellePill({ wert }: { wert: Wert }) {
@@ -218,23 +248,36 @@ function ZielwertePage() {
 
                   <Balken wert={wert} />
 
-                  <div className="zw-fuss">
-                    <span>
+                  <div className="zw-fuss zw-ziel">
+                    <span className="zw-etikett">Ziel</span>
+                    <b className="zw-zahl">
                       {wert.band ? `${wert.band}${wert.einheit ? ` ${wert.einheit}` : ''}` : 'kein Ziel'}
-                    </span>
-                    <span className="zw-herkunft">
-                      <QuellePill wert={wert} />
-                      {wert.quelleZusatz}
-                    </span>
+                    </b>
+                    <QuellePill wert={wert} />
                   </div>
+                  {wert.quelleZusatz && <p className="zw-herkunft">{wert.quelleZusatz}</p>}
 
                   {/* Der Alarm steht bewusst AUF der Karte und nicht auf einer
                       eigenen Seite: Ziel und Meldeschwelle sind zwei Zahlen zu
                       einer Sache, und sie auseinanderzuziehen war der Anfang
                       der Verwirrung. */}
-                  <div className="zw-alarm zw-fuss">
-                    <span>{wert.alarm ? `Grenzwerte ${wert.alarm}` : 'keine Grenzwerte'}</span>
-                    <Glocke wert={wert} />
+                  <div className="zw-alarm">
+                    <div className="zw-fuss">
+                      <span className="zw-etikett">Meldet</span>
+                      <span className="zw-meldet-text">
+                        {wert.alarmVon == null && wert.alarmBis == null
+                          ? 'keine Grenzwerte'
+                          : wert.alarmVon === wert.min && wert.alarmBis === wert.max ? 'außerhalb des Ziels' : ''}
+                      </span>
+                      <Glocke wert={wert} />
+                    </div>
+                    {(wert.alarmVon != null || wert.alarmBis != null)
+                      && !(wert.alarmVon === wert.min && wert.alarmBis === wert.max) && (
+                      <div className="zw-chips">
+                        {wert.alarmVon != null && <span className="zw-chip">unter <b>{kurz(wert.alarmVon)}</b> {wert.einheit}</span>}
+                        {wert.alarmBis != null && <span className="zw-chip">über <b>{kurz(wert.alarmBis)}</b> {wert.einheit}</span>}
+                      </div>
+                    )}
                   </div>
                 </article>
               ))}

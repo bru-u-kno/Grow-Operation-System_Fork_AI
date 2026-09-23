@@ -33,23 +33,46 @@
   .zw-ist.ist-im { color: var(--accent-text); }
   .zw-ist.ist-darunter, .zw-ist.ist-darueber { color: var(--warn-text); }
 
-  .zw-balken {
-    position: relative; height: 6px; margin: 0 12px;
-    background: var(--sunk); border-radius: 3px; overflow: hidden;
-  }
-  .zw-zone { position: absolute; top: 0; bottom: 0; background: var(--accent-wash); }
+  /* Fork AI (forkai.143, F-039): schmaler Balken mit Zahlen, Zeiger in der Farbe der Lage. */
+  .zw-band { margin: 14px 12px 0; }
+  .zw-balken { position: relative; height: 12px; }
+  .zw-spur { position: absolute; left: 0; right: 0; top: 4px; height: 4px; border-radius: 2px; background: var(--sunk); }
+  .zw-zone { position: absolute; top: 4px; height: 4px; border-radius: 2px; background: var(--accent); opacity: .85; }
+  .zw-grenze { position: absolute; top: 1px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: var(--warn); }
   .zw-nadel {
-    position: absolute; top: -2px; width: 2px; height: 10px; background: var(--ink);
-    border-radius: 1px;
+    position: absolute; top: -1px; width: 3px; height: 14px; margin-left: -1.5px; border-radius: 2px;
+    background: var(--ink); color: var(--ink); box-shadow: 0 0 0 2px var(--bg);
   }
-  .zw-nadel.ist-darunter, .zw-nadel.ist-darueber { background: var(--warn); }
+  .zw-nadel::after {
+    content: ""; position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
+    border: 4px solid transparent; border-top: 5px solid currentColor;
+  }
+  .zw-nadel.ist-im { background: var(--accent-text); color: var(--accent-text); }
+  .zw-nadel.ist-rand { background: var(--warn-text); color: var(--warn-text); }
+  .zw-nadel.ist-meldet { background: var(--danger); color: var(--danger); }
+  .zw-skala { position: relative; height: 14px; margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+  .zw-skala span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .zw-skala .ist-ziel { color: var(--accent-text); }
+  .zw-skala .ist-grenze { color: var(--warn-text); }
 
   .zw-fuss {
     display: flex; justify-content: space-between; gap: 8px; padding: 9px 12px 0;
     font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
-  .zw-herkunft { color: var(--faint); text-align: right; }
+  .zw-herkunft { margin: 2px 12px 0; font-size: var(--fs-klein); color: var(--faint); }
+  .zw-fuss .zw-etikett { flex: 0 0 5.4em; font-family: var(--font-sans); font-size: var(--fs-etikett); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .zw-ziel { align-items: baseline; justify-content: flex-start; }
+  .zw-ziel .zw-zahl { flex: 1 1 auto; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .zw-ziel .zw-pill { margin-right: 0; }
+  .zw-meldet-text { flex: 1 1 auto; color: var(--muted); font-family: var(--font-sans); }
+  .zw-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 12px 0; }
+  .zw-chip {
+    display: flex; justify-content: center; align-items: baseline; gap: 4px; padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-radius: var(--r-pill);
+    font: 400 var(--fs-klein)/1.4 var(--font-sans); color: var(--faint); white-space: nowrap;
+  }
+  .zw-chip b { font-family: var(--font-mono); font-weight: 600; color: var(--warn-text); }
 
   .zw-pill {
     display: inline-block; margin-right: 5px; padding: 2px 6px; border-radius: var(--r-sm);
@@ -60,10 +83,8 @@
   .zw-pill.ist-fest { background: var(--warn-wash); color: var(--warn-text); }
   .zw-pill.ist-profil { background: var(--info-wash); color: var(--info-text); }
 
-  .zw-alarm {
-    padding: 7px 12px 10px;
-    font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--faint);
-  }
+  .zw-alarm { margin-top: 8px; padding-bottom: 10px; border-top: 1px solid var(--hair); }
+  .zw-alarm .zw-fuss { align-items: center; }
 
   /* Herkunftskette */
   .zw-kette { border-top: 1px solid var(--hair); background: var(--sunk); }
