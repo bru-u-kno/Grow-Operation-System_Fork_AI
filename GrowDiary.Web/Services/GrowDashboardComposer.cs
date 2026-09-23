@@ -384,7 +384,17 @@ public sealed class GrowDashboardComposer
                 };
             }
         }
-        else
+        // Fork AI (F-041): Luft und Feuchte bekommen ihr Ziel aus dem Plan des Grows —
+        // vor den zurückgerechneten Klimabändern, damit die ein Planziel nicht verdrängen.
+        var planSpalte = activeGrow is null || _knowledge is null
+            ? null
+            : MischplanService.ZielSpalteFuerGrow(activeGrow, _knowledge.NutrientPrograms)?.Spalte;
+        KachelZiele.ZieleSetzen(
+            cards, planSpalte,
+            activeGrow is null ? null : GrowPlan.GrowPlanRegister.Inhalt(activeGrow.Id),
+            lights);
+
+        if (lights != LightsNow.Off)
         {
             // Die abgeleiteten Klima-Bänder hängen am VPD-Ziel und damit am Tag.
             ApplyClimateBands(cards, targets, tent.LeafTempOffsetC, stage);
@@ -399,9 +409,10 @@ public sealed class GrowDashboardComposer
         // Der Profilname auf die Kacheln, solange es nicht das Mitgelieferte ist.
         ApplyProfileNote(cards, resolved);
 
-        // Zuletzt und damit ueber allem: was der Nutzer selbst eingetragen hat.
-        // Erst hier, damit es auch die zurueckgerechneten Klimabaender schlaegt.
-        ApplyUserTargets(cards, tent.Id, lights);
+        // Fork AI (F-041): die Grenzwerte der Alarmregeln — getrennt vom Ziel. Vorher
+        // legten sich feste Regeln als Ziel über die Kachel (ApplyUserTargets); dann
+        // stand bei Luft „21–27" als Ziel, obwohl es die Meldegrenze war.
+        KachelZiele.GrenzenSetzen(cards, _alertRules?.GetForTent(tent.Id), targets, rampenBoden, lights);
 
         return cards;
     }
@@ -448,15 +459,6 @@ public sealed class GrowDashboardComposer
     }
 
     /// <summary>
-    /// Der eingetragene Wert des Nutzers gewinnt — über dem Wissen und über
-    /// jedem zurückgerechneten Band.
-    /// </summary>
-    /// <remarks>
-    /// Und die Kachel sagt es: „dein Wert". Ohne den Zusatz stünde dort eine
-    /// Zahl, die von den mitgelieferten abweicht, ohne dass jemand erkennen
-    /// könnte warum — genau die Verwirrung, die das hier abstellt.
-    /// </remarks>
-    /// <summary>
     /// Trocknungs-Klima auf Temperatur und Feuchte, solange im Zelt frisch
     /// geerntet haengt.
     /// </summary>
@@ -488,39 +490,6 @@ public sealed class GrowDashboardComposer
         }
     }
 
-    private void ApplyUserTargets(List<MetricCard> cards, int tentId, LightsNow lights = LightsNow.Unknown)
-    {
-        var rules = _alertRules?.GetForTent(tentId);
-        if (rules is null || rules.Count == 0) return;
-
-        foreach (var card in cards)
-        {
-            // Auch der eigene Grenzwert für PPFD/CO₂/VPD meint den Tag — bei
-            // Licht aus würde er jede Nacht anschlagen.
-            if (lights == LightsNow.Off && LightClock.IsDaytimeOnly(card.Key)) continue;
-
-            if (UserTargets.For(card.Key, rules, lights) is not { } eigene) continue;
-
-            card.TargetMin = eigene.Min;
-            card.TargetMax = eigene.Max;
-
-            // Beide Baender an die Kachel, aber nur wo sie etwas bedeuten.
-            if (LightClock.HasNightBand(card.Key) && UserTargets.Baender(card.Key, rules) is { } baender)
-            {
-                card.TargetDayMin = baender.TagMin;
-                card.TargetDayMax = baender.TagMax;
-                card.TargetNightMin = baender.NachtMin;
-                card.TargetNightMax = baender.NachtMax;
-                card.TargetPhase = lights == LightsNow.Off ? "night" : "day";
-            }
-            card.TargetNote = UserTargets.SourceLabel;
-            // Kein abgeleiteter Wert mehr: was der Nutzer setzt, zaehlt voll in
-            // den Score. Sonst waere sein eigener Grenzwert der einzige, der
-            // nicht bewertet wird.
-            card.TargetDerived = false;
-        }
-    }
-
     private static void ApplyClimateBands(List<MetricCard> cards, HydroTargetValues? targets, double leafOffsetC, GrowStage? stage)
     {
         if (targets is null) return;
@@ -538,7 +507,7 @@ public sealed class GrowDashboardComposer
         // sonst „64–68 %" heraus, und ab ~60 % droht dort Grauschimmel.
         var deckel = stage is { } phase ? MoldGuard.MaxHumidityPercent(phase) : (double?)null;
 
-        if (luft is { } l && humidity is not null && humidity.TargetMin is null)
+        if (luft is { } l && humidity is not null && humidity.TargetMin is null && humidity.TargetMax is null)
         {
             var (min, max) = ClimateBandCalculator.HumidityBand(l, targets.VpdMin, targets.VpdMax, leafOffsetC, deckel);
             if (min is not null)
@@ -561,7 +530,7 @@ public sealed class GrowDashboardComposer
             }
         }
 
-        if (feuchte is { } f && temperature is not null && temperature.TargetMin is null)
+        if (feuchte is { } f && temperature is not null && temperature.TargetMin is null && temperature.TargetMax is null)
         {
             var (min, max) = ClimateBandCalculator.TemperatureBand(f, targets.VpdMin, targets.VpdMax, leafOffsetC);
             if (min is not null)

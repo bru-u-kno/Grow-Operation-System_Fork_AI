@@ -43,6 +43,24 @@ public sealed class MetricCard
     public string? TargetPhase { get; set; }
 
     /// <summary>
+    /// Fork AI (F-041): die Grenzwerte, bei denen gerade gemeldet wird — getrennt vom Ziel.
+    /// </summary>
+    /// <remarks>
+    /// Vorher legten sich feste Grenzwert-Regeln (Luft, Feuchte) als Ziel auf die
+    /// Kachel: dort stand „21–27 °C", gemeint war „ab hier kommt eine Meldung".
+    /// Das Ziel kommt jetzt aus dem Plan (<see cref="TargetMin"/>/<see cref="TargetMax"/>),
+    /// die Grenzen stehen hier — für das Band (gelbe Striche) und den Status „Grenze".
+    /// </remarks>
+    public double? AlarmMin { get; set; }
+    public double? AlarmMax { get; set; }
+
+    /// <summary>Fork AI (F-041): Grenzwerte tags und nachts, wo die Messgröße ein Nachtband hat.</summary>
+    public double? AlarmDayMin { get; set; }
+    public double? AlarmDayMax { get; set; }
+    public double? AlarmNightMin { get; set; }
+    public double? AlarmNightMax { get; set; }
+
+    /// <summary>
     /// Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht.
     /// </summary>
     /// <remarks>

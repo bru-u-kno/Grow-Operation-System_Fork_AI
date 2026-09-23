@@ -79,6 +79,14 @@ public sealed class MetricPayload
     /// <summary>Welches der beiden Baender gerade gilt: <c>day</c> oder <c>night</c>.</summary>
     public string? TargetPhase { get; set; }
 
+    /// <summary>Fork AI (F-041): Grenzwerte, bei denen gerade gemeldet wird — getrennt vom Ziel.</summary>
+    public double? AlarmMin { get; set; }
+    public double? AlarmMax { get; set; }
+    public double? AlarmDayMin { get; set; }
+    public double? AlarmDayMax { get; set; }
+    public double? AlarmNightMin { get; set; }
+    public double? AlarmNightMax { get; set; }
+
     /// <summary>Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht.</summary>
     public string? StatusNote { get; set; }
 
