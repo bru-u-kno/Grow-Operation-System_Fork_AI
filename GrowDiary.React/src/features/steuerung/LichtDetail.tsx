@@ -199,7 +199,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
         </div>
       </V1Card>
 
-      <V1Tabs items={LICHT_REITER} active={reiter} onChange={setReiter} label="Bereich" />
+      <V1Tabs items={LICHT_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
       {reiter === 'betrieb' && (
         <V1Section title="Betrieb">

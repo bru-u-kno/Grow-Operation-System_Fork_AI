@@ -438,7 +438,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         hint="Aus: die Dosier-Automation in Home Assistant wird abgeschaltet. Wächter und Licht-aus-Sicherung laufen weiter."
       />
 
-      <V1Tabs items={CO2_REITER} active={reiter} onChange={setReiter} label="Bereich" />
+      <V1Tabs items={CO2_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
       {reiter === 'ziel' && (
         <V1Section title="Ziel">

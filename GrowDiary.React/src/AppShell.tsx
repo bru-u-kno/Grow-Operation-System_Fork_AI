@@ -66,8 +66,15 @@ export function AppShell({ children, counts }: Props) {
   // NUR bei PUSH und REPLACE. Beim Zurueckgehen (POP) soll der Browser seinen
   // gemerkten Stand behalten — sonst verliert man beim Zurueck genau die
   // Stelle, an der man war.
+  //
+  // Fork AI (F-048): nur bei echtem PFAD-Wechsel. Vorher hing der Effekt auch
+  // an der Navigationsart — der erste Reiterwechsel einer Seite (URL-Parameter
+  // per REPLACE nach dem Menue-PUSH) aenderte sie und warf die Seite nach oben.
   const wechselArt = useNavigationType()
+  const gerolltBei = useRef(location.pathname)
   useEffect(() => {
+    if (gerolltBei.current === location.pathname) return
+    gerolltBei.current = location.pathname
     if (wechselArt === 'POP') return
     window.scrollTo({ top: 0, left: 0 })
   }, [location.pathname, wechselArt])

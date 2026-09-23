@@ -49,6 +49,7 @@ export function TabbedCollectionPage({ tabs, eyebrow, title, subtitle, paramName
           setParams(next, { replace: true })
         }}
         label="Bereich"
+            insBild
       />
       {active.render()}
     </V1Page>

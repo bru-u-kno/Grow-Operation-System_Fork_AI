@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { classNames } from '../utils'
+import { auslaufZuruecksetzen, reiterInsBild } from './reiter-ins-bild'
 
 export type Tone = 'neutral' | 'ok' | 'warn' | 'critical' | 'accent'
 
@@ -124,16 +125,28 @@ export function V1Alert({ title, message, tone = 'warn' }: { title?: string; mes
   )
 }
 
-export function V1Tabs<T extends string | number>({ items, active, onChange, label }: { items: Array<{ value: T; label: string; meta?: string | null; audit?: string }>; active: T; onChange: (value: T) => void; label?: string }) {
+export function V1Tabs<T extends string | number>({ items, active, onChange, label, insBild }: { items: Array<{ value: T; label: string; meta?: string | null; audit?: string }>; active: T; onChange: (value: T) => void; label?: string; /** Fork AI (F-048): nach dem Wechsel die Leiste unter die Kopfflaeche rollen — nur fuer Seiten-Reiter, nicht fuer Auswahlen in Blaettern. */ insBild?: boolean }) {
+  const leiste = useRef<HTMLDivElement>(null)
+  const abbrechen = useRef<(() => void) | null>(null)
+  useEffect(() => () => {
+    abbrechen.current?.()
+    if (insBild) auslaufZuruecksetzen()
+  }, [insBild])
   return (
-    <div className="v1-tabs" role="tablist" aria-label={label}>
+    <div className={classNames('v1-tabs', insBild && 'scroll-ziel')} role="tablist" aria-label={label} ref={leiste}>
       {items.map((item) => (
         <button
           key={String(item.value)}
           type="button"
           className={classNames('v1-tab', item.value === active && 'active')}
           data-audit={item.audit}
-          onClick={() => onChange(item.value)}
+          onClick={() => {
+            onChange(item.value)
+            if (insBild) {
+              abbrechen.current?.()
+              abbrechen.current = reiterInsBild(leiste.current)
+            }
+          }}
         >
           {/* The count rides in the label rather than on its own line: a second line
               was what forced the fixed heights and the truncation underneath them. */}

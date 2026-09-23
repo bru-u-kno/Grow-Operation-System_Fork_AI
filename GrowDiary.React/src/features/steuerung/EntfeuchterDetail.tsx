@@ -189,7 +189,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
         </p>
       </V1Card>
 
-      <V1Tabs items={ENTFEUCHTER_REITER} active={reiter} onChange={setReiter} label="Bereich" />
+      <V1Tabs items={ENTFEUCHTER_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
       {/* -------------------------------------------------------------- Regel */}
       {reiter === 'regel' && (

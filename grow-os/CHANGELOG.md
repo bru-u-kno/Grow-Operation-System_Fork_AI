@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.151
+
+**Fork AI.** Reiter am Handy: kein Sprung nach oben mehr, der gewählte Reiter rollt ins Bild.
+
+- Behoben — Der **erste** Reiterwechsel nach dem Öffnen einer Seite warf die Seite ganz nach oben
+  (Kosten, Geräte & Entitäten, Plan, Sammelseiten mit Reitern). Ursache: das „beim Seitenwechsel nach
+  oben"-Rollen reagierte auch auf die geänderte Navigationsart, nicht nur auf eine neue Seite. Jetzt
+  rollt es nur noch, wenn sich wirklich die Seite ändert.
+- Neu — Nach einem Tipp auf einen Seiten-Reiter rollt die Seite so, dass die Reiterleiste direkt unter
+  der Kopfleiste steht und der neue Inhalt darunter sichtbar ist. Ist ein Reiter kürzer als der
+  Bildschirm, bekommt die Seite unten Platz, damit die Leiste trotzdem an derselben Stelle ankommt.
+  Gilt für Kosten, Geräte & Entitäten, die Sammelseiten und die Steuerungs-Detailseiten (CO₂, Chiller,
+  Entfeuchter, Licht, Zuluft); Auswahlen in Blättern (z. B. „Feste Zahlen | Folgt dem Plan") rollen nicht.
+
 ## 2.0.0-forkai.150
 
 **Fork AI.** CO₂-Steuerung: Sperre und Freigabe vollständig im Fork, zwei Grenzen folgen dem Plan.

@@ -177,7 +177,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
         />
       </section>
 
-      <V1Tabs items={ZULUFT_REITER} active={reiter} onChange={setReiter} label="Bereich" />
+      <V1Tabs items={ZULUFT_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
       {reiter === 'regel' && (
         <V1Section title="Regel">

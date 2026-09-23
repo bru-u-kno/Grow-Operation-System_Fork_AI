@@ -327,3 +327,10 @@
 .v1-select-eintrag.is-gewaehlt { background: var(--accent-wash); color: var(--accent-text); }
 .v1-select-eintrag.is-betont { color: var(--warn-text); }
 .v1-select-leer { margin: 0; padding: var(--s-3); font-size: var(--fs-klein); color: var(--muted); }
+
+/* F-048: Auslauf unter dem Seiteninhalt, damit auch ein kurzer Reiter seine
+   Leiste unter die Kopfflaeche rollen kann (gesetzt von reiter-ins-bild.ts,
+   beim Verlassen der Seite wieder 0). */
+@layer features {
+  .v1-route-frame::after { content: ''; display: block; flex: none; height: var(--reiter-auslauf, 0px); }
+}

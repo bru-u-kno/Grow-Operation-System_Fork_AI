@@ -153,6 +153,12 @@ Drei Dinge, die nicht am Fork lagen — falls sie von Interesse sind:
   weil dort nur EC und pH je Woche stehen, im Fork mit Klimawerten je Woche
   aber spürbar. Behoben in forkai.107; beide Stellen brauchen dafür die
   Wissensbasis als Abhängigkeit.
+- **Erster Reiterwechsel springt nach oben.** `AppShell.tsx` rollt beim
+  Seitenwechsel nach oben und hing dafür an `[location.pathname, wechselArt]`.
+  Reiter, die in der Adresse stehen (`setParams(…, { replace: true })`), ändern
+  beim ersten Wechsel die Navigationsart von PUSH auf REPLACE — der Effekt läuft,
+  obwohl die Seite dieselbe ist. Im Fork (forkai.151) merkt sich der Effekt den
+  zuletzt gerollten Pfad; ein Einzeiler, gut übernehmbar.
 - **Reiterzeile am Telefon.** Auf schmalen Bildschirmen brach die Reiterzeile um
   und halbierte die Bewertungsscheibe darunter. Im Fork gelöst, aber durch einen
   eigenen Rahmen — als Vorlage taugt das eher zum Nachbauen als zum Übernehmen.
@@ -163,7 +169,7 @@ Eigene Funktionen liegen möglichst in eigenen Dateien und Tabellen (`Fork*`).
 Angefasst ist der Bestandscode dort, wo es nicht anders ging: Alarmauswertung und
 Zielband, Kachel-Modell und Live-Payload, Wissens-Schema und Mischplan (Klimawerte
 je Woche), Trendwächter und Grow-Workflow (Sollwerte über das Zielband),
-Navigation und App-Shell, Wissens-Loader (ein Haken nach dem Laden für
+Navigation und App-Shell (inkl. `V1Tabs` mit optionalem `insBild`), Wissens-Loader (ein Haken nach dem Laden für
 eigene Wochenwerte), Zelt-Einstellungen (Blatt-Offset an den
 Controller), Live-Kopfzeile, Sollwert-Profile, Grow-Formular und Addback, Benachrichtigungen, Hydro-Editor, Wochenplan, Sammelseite mit Reitern, Wissens-Vertrag, Grow-Seite, Ernte, Workflow-Controller, Grow-Controller
 (Plan beim Anlegen) sowie `Program.cs` (Plan-Übernahme beim Start). Welche

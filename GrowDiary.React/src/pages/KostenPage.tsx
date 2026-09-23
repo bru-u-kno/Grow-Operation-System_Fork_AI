@@ -133,6 +133,7 @@ function KostenPage() {
             active={reiter}
             onChange={reiterWechseln}
             label="Bereich"
+            insBild
           />
 
           {reiter === 'strom' && <StromAbschnitt seite={seite} onChanged={neuLaden} onError={setError} />}

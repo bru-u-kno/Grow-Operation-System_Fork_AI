@@ -231,7 +231,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
         </p>
       </V1Card>
 
-      <V1Tabs items={CHILLER_REITER} active={reiter} onChange={setReiter} label="Bereich" />
+      <V1Tabs items={CHILLER_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
       {reiter === 'betrieb' && (
         <V1Section title="Betrieb">

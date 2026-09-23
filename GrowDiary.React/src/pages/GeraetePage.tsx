@@ -399,6 +399,7 @@ export default function GeraetePage() {
     >
       <V1Tabs
         label="Bereich"
+            insBild
         active={reiter}
         onChange={setReiter}
         items={[
