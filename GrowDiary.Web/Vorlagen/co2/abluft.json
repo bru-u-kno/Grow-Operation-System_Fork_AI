@@ -17,13 +17,15 @@
     {
       "trigger": "state",
       "entity_id": "[[licht]]",
-      "to": "off"
+      "to": "off",
+      "not_from": ["unavailable", "unknown"]
     },
     {
       "trigger": "state",
       "entity_id": "[[licht]]",
       "to": "on",
-      "for": "00:10:00"
+      "for": "00:10:00",
+      "not_from": ["unavailable", "unknown"]
     },
     {
       "trigger": "state",
