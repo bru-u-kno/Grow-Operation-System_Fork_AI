@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.143
+
+**Fork AI.** Grenzwerte: die Wert-Karten sind klarer.
+
+- Geändert — Der Balken bleibt schmal, zeigt das Ziel aber kräftig grün, die Meldegrenzen als kleine
+  gelbe Striche und die Zahlen direkt darunter. Der Messwert ist ein Zeiger in der Farbe der Lage:
+  grün im Ziel, gelb außerhalb des Ziels, rot wenn gemeldet wird.
+- Geändert — Statt „21 – 27 °C" und „Grenzwerte 21 – 27" gibt es zwei klare Zeilen: **Ziel** (mit
+  FEST/PLAN und Herkunft darunter) und **Meldet** — mit den echten Grenzen als „unter …" / „über …",
+  auch dort, wo bisher nur „Plan ±0,2" stand. Sind Ziel und Grenzen gleich, steht „außerhalb des Ziels".
+- Geändert — „Luft" heißt jetzt **„Lufttemperatur"**.
+
 ## 2.0.0-forkai.142
 
 **Fork AI.** Grenzwerte: die Übergabe aus dem Plan ist aufgeräumt.

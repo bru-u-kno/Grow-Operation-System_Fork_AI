@@ -102,7 +102,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
     /// <summary>Anzeigenamen, sonst stünde dort die Kennung.</summary>
     private static readonly Dictionary<string, string> Namen = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["temperature"] = "Luft",
+        ["temperature"] = "Lufttemperatur",
         ["humidity"] = "Luftfeuchte",
         ["vpd"] = "VPD",
         ["co2"] = "CO₂",
