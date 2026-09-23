@@ -23,10 +23,10 @@ import '../steuerung/steuerung.css'
  * Entität mehrfach ein und bei einem Gerätetausch an drei Stellen nach. Hier
  * hängt jedes Gerät an einer Zeile; die Steuerungen verweisen darauf.
  *
- * <b>Vorgabe statt Vorbefüllung.</b> „Wie ab Werk" nimmt den Wert, mit dem das
- * Add-on ausgeliefert wurde; nur eine bewusst geänderte Zeile landet in der
- * Datenbank. Seit forkai.137 lässt sich eine optionale Rolle mit „keins"
- * ausdrücklich leeren.
+ * <b>Keine Werksvorgaben (seit forkai.138, F-034).</b> Die früheren Vorgaben
+ * waren die Geräte einer einzelnen Anlage; sie wurden einmalig als feste
+ * Zuordnung übernommen, wo es sie gab. Jede Zeile zeigt jetzt das Gerät, das
+ * wirklich dahintersteht; optionale Rollen lassen sich mit „keins" leeren.
  */
 
 const GRUPPEN: Array<{ key: string; label: string }> = [
@@ -177,14 +177,8 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
       })}
 
       <div className="st-knopfleiste">
-        <V1Button
-          onClick={() => modul && setAenderungen((current) => ({
-            ...current,
-            [modul.modul]: Object.fromEntries(modul.zeilen.map((zeile) => [zeile.rolle, zeile.vorgabe])),
-          }))}
-        >
-          Auf Vorgabe zurück
-        </V1Button>
+        {/* Fork AI (forkai.138, F-034): „Auf Vorgabe zurück" entfällt — es gibt
+            keine Werksvorgaben mehr, die Knopf-Wirkung wäre „alles leeren". */}
         <V1Button variant="primary" disabled={speichert} onClick={() => void speichern()}>
           {speichert ? 'Speichert…' : 'Speichern'}
         </V1Button>
@@ -230,9 +224,8 @@ function RollenZeile({
   // hilft niemandem. Findet der Filter nichts, steht die ganze Liste bereit.
   const vorschlaege = useMemo(() => {
     const passend = entities.filter((entity) => zeile.domains.includes(entity.domain))
-    // Die Vorgabe steht oben als „wie ab Werk" — nicht zweimal.
-    return (passend.length > 0 ? passend : entities).filter((entity) => entity.entityId !== zeile.vorgabe)
-  }, [entities, zeile.domains, zeile.vorgabe])
+    return passend.length > 0 ? passend : entities
+  }, [entities, zeile.domains])
 
   return (
     <V1Field
@@ -250,15 +243,11 @@ function RollenZeile({
           titel={zeile.label}
           unterzeile={zeile.hinweis ?? undefined}
           wert={wert}
-          platzhalter={zeile.pflicht ? zeile.vorgabe : '— keins —'}
+          platzhalter={zeile.pflicht ? '— bitte wählen —' : '— keins —'}
           onWahl={onChange}
           optionen={[
-            // Fork AI (forkai.137): „Wie ab Werk" trägt die Vorgabe selbst, und
-            // eine optionale Rolle lässt sich ausdrücklich leeren — wer keine
-            // Steckdose hat, soll nicht die Steckdose einer fremden Anlage erben.
-            ...(zeile.vorgabe
-              ? [{ wert: zeile.vorgabe, text: '— wie ab Werk —', hinweis: zeile.vorgabe, betont: true }]
-              : []),
+            // Fork AI (forkai.138): keine Werksvorgabe mehr; eine optionale Rolle
+            // lässt sich ausdrücklich leeren.
             ...(!zeile.pflicht
               ? [{ wert: '', text: '— keins —', hinweis: 'Diese Rolle bleibt leer.', betont: true }]
               : []),

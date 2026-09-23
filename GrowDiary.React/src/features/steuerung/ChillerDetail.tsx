@@ -121,6 +121,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
     keine: { titel: 'Nicht eingerichtet', text: 'Weder Steckdose noch Sollwert-Gerät zugeordnet.' },
   }
   const art = ANSTEUERUNG_TEXT[ansteuerung] ?? ANSTEUERUNG_TEXT.steckdose
+  const grad1 = (wert: number | null | undefined) =>
+    wert == null ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
   const zahl = (wert: number | null | undefined) => (wert == null ? '–' : wert.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
 
   return (
@@ -272,10 +274,10 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
               <div className="st-feldzeile">
                 <span className="st-etikett">
                   Schaltpunkte
-                  <small>Ein ab dem oberen Wert, aus beim Ziel — dazwischen passiert nichts.</small>
+                  <small>Dazwischen passiert nichts.</small>
                 </span>
                 <span className="st-nurlesen">
-                  {live.einschaltenAbC == null ? '–' : `${live.einschaltenAbC.toLocaleString('de-DE')} / ${live.ausschaltenBeiC?.toLocaleString('de-DE')} °C`}
+                  {live.einschaltenAbC == null ? '–' : `ein ${grad1(live.einschaltenAbC)} · aus ${grad1(live.ausschaltenBeiC)} °C`}
                 </span>
               </div>
             )}
