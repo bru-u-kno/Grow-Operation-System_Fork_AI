@@ -104,4 +104,33 @@ public sealed class KachelZieleTests
         Assert.Equal(20, karte.TargetMin);
         Assert.Equal(26, karte.TargetMax);
     }
+
+    [Fact]
+    public void WasserZielIstTagUndNachtAusDemPlan()
+    {
+        var spalte = new FeedChartColumn { Id = "flower-w5", WaterTempDayC = 20, WaterTempNightC = 18 };
+        var karte = new MetricCard { Key = "reservoir-temp", TargetMin = 17, TargetMax = 22 };
+
+        KachelZiele.ZieleSetzen([karte], spalte, null, LightsNow.Off);
+
+        Assert.Equal(18, karte.TargetMin);
+        Assert.Equal(18, karte.TargetMax);
+        Assert.Equal(20, karte.TargetDayMin);
+        Assert.Equal(18, karte.TargetNightMin);
+    }
+
+    [Fact]
+    public void WasserGrenzeFolgtDemPlan_TagUndNacht()
+    {
+        var regel = new TentAlertRule
+        {
+            MetricKey = "reservoir-temp", Enabled = true, Quelle = Grenzwertquelle.Plan, Toleranz = 2,
+        };
+        var band = new HydroTargetValues(5.8, 6.2, 1.4, 1.6, 400, 450, 20, 18, 1.4, 1.4, 1000, 1200, 1200, 1400);
+
+        var wirksam = Planzielgrenzen.Wirksam(regel, band, null)!;
+
+        Assert.Equal((18d, 22d), (wirksam.GrenzenFuer(LightsNow.On).Min!.Value, wirksam.GrenzenFuer(LightsNow.On).Max!.Value));
+        Assert.Equal((16d, 20d), (wirksam.GrenzenFuer(LightsNow.Off).Min!.Value, wirksam.GrenzenFuer(LightsNow.Off).Max!.Value));
+    }
 }

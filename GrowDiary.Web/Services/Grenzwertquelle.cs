@@ -95,15 +95,41 @@ public static class Planzielgrenzen
             return null;
         }
 
+        var toleranz = regel.Toleranz is { } eigene && eigene > 0
+            ? eigene
+            : StandardToleranz(regel.MetricKey);
+
+        // Fork AI (F-043): Wassertemperatur folgt dem Plan Tag/Nacht (z. B. 20/18 °C) —
+        // nicht mehr dem festen Arbeitsbereich 17–22. Tags Tageswert ± Toleranz,
+        // nachts Nachtwert ± Toleranz; die Lichtphase wählt die Alarmauswertung.
+        if (string.Equals(regel.MetricKey, "reservoir-temp", StringComparison.OrdinalIgnoreCase))
+        {
+            var tag = band.WaterTempDayC;
+            var nacht = band.WaterTempNightC;
+            return new TentAlertRule
+            {
+                Id = regel.Id,
+                TentId = regel.TentId,
+                MetricKey = regel.MetricKey,
+                MinValue = tag - toleranz,
+                MaxValue = tag + toleranz,
+                NightMinValue = nacht - toleranz,
+                NightMaxValue = nacht + toleranz,
+                NotifyService = regel.NotifyService,
+                Enabled = regel.Enabled,
+                CooldownMinutes = regel.CooldownMinutes,
+                Quelle = regel.Quelle,
+                Toleranz = toleranz,
+                LastState = regel.LastState,
+                LastNotifiedUtc = regel.LastNotifiedUtc,
+            };
+        }
+
         var (min, max) = Zielband.FuerMetrik(regel.MetricKey, band, rampenBodenC);
         if (min is null && max is null)
         {
             return null;
         }
-
-        var toleranz = regel.Toleranz is { } eigene && eigene > 0
-            ? eigene
-            : StandardToleranz(regel.MetricKey);
 
         return new TentAlertRule
         {

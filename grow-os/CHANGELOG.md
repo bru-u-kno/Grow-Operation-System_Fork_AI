@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.147
+
+**Fork AI.** Wassertemperatur wie die Luft: Ziel und Meldegrenzen aus dem Plan.
+
+- Geändert — Die Kachel „Wassertemp." zeigt das Ziel aus dem Plan, tags und nachts (z. B. 20 °C / 18 °C),
+  und die Abweichung davon. Vorher stand dort ein fester Arbeitsbereich von 17–22 °C.
+- Geändert — Die Meldung zur Wassertemperatur richtet sich nach dem Plan: tags Tageswert ± Toleranz,
+  nachts Nachtwert ± Toleranz (bei ±2 z. B. 18–22 °C tags, 16–20 °C nachts). Vorher erst unter 15 bzw.
+  über 24 °C.
+
 ## 2.0.0-forkai.146
 
 **Fork AI.** Live-Kacheln zeigen das Ziel aus dem Plan, die Grenzwerte getrennt davon.

@@ -45,6 +45,14 @@ public static class KachelZiele
     }
 
     /// <summary>
+    /// Fork AI (F-043): Wasser-Ziel Tag/Nacht aus dem Plan (Einzelwerte, z. B. 20/18 °C).
+    /// </summary>
+    public static TagNacht? WasserAusPlan(FeedChartColumn spalte)
+        => spalte.WaterTempDayC is { } tag
+            ? new TagNacht(tag, tag, spalte.WaterTempNightC ?? tag, spalte.WaterTempNightC ?? tag)
+            : null;
+
+    /// <summary>
     /// Legt das Plan-Ziel für Luft und Feuchte auf die Kacheln. Läuft VOR den
     /// zurückgerechneten Klimabändern, die ein gesetztes Ziel nicht überschreiben.
     /// </summary>
@@ -53,14 +61,15 @@ public static class KachelZiele
         if (spalte is null) return;
         foreach (var card in cards)
         {
-            if (AusPlan(card.Key, spalte, inhalt) is not { } ziel) continue;
+            var ziel = card.Key == "reservoir-temp" ? WasserAusPlan(spalte) : AusPlan(card.Key, spalte, inhalt);
+            if (ziel is not { } z) continue;
             var nachts = lichter == LightsNow.Off;
-            card.TargetMin = nachts ? ziel.NachtMin : ziel.TagMin;
-            card.TargetMax = nachts ? ziel.NachtMax : ziel.TagMax;
-            card.TargetDayMin = ziel.TagMin;
-            card.TargetDayMax = ziel.TagMax;
-            card.TargetNightMin = ziel.NachtMin;
-            card.TargetNightMax = ziel.NachtMax;
+            card.TargetMin = nachts ? z.NachtMin : z.TagMin;
+            card.TargetMax = nachts ? z.NachtMax : z.TagMax;
+            card.TargetDayMin = z.TagMin;
+            card.TargetDayMax = z.TagMax;
+            card.TargetNightMin = z.NachtMin;
+            card.TargetNightMax = z.NachtMax;
             card.TargetPhase = nachts ? "night" : "day";
             card.TargetNote = null;   // „ZIEL" steht auf der Kachel; die Woche nennt die Grenzwerte-Seite
             card.TargetDerived = false;
@@ -94,7 +103,7 @@ public static class KachelZiele
                 card.AlarmMax = max;
             }
 
-            if (LightClock.HasNightBand(card.Key))
+            if (LightClock.HasNightBand(card.Key) || card.Key == "reservoir-temp")
             {
                 var tag = wirksam.GrenzenFuer(LightsNow.On);
                 var nacht = wirksam.GrenzenFuer(LightsNow.Off);
