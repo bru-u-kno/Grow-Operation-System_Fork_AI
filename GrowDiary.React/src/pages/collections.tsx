@@ -4,6 +4,7 @@ import { TabbedCollectionPage } from './TabbedCollectionPage'
 import { PlanReiter } from '../features/zielwerte/PlanReiter'
 import { MeldungenReiter } from '../features/meldungen/MeldungenReiter'
 import { WochenZeile } from '../features/zielwerte/WochenZeile'
+import { BluelabZeile } from '../features/zielwerte/BluelabZeile'
 import { AppEinrichten } from './MobilePage'
 import { V1Page } from '../components/v1'
 import { KontextSprung, PlanKette, PushStand } from '../features/zielwerte/PlanKette'
@@ -60,6 +61,7 @@ export function GrenzwerteSeite() {
       <PushStand />
       <WochenZeile />
       <ZielwertePage />
+      <BluelabZeile />
       <KontextSprung text="Ziele dieser Woche ändern" to="/plan" label="Plan" audit="grenzwerte-zum-plan" />
     </V1Page>
   )

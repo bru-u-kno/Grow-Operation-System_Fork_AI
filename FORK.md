@@ -99,6 +99,11 @@ Entitäten einer einzelnen Anlage. `GeraeteRolle.Vorgabe` ist jetzt leer; die al
 in `BisherigeVorgabe` und werden einmalig von `RollenVorgabenUebernahme` als feste Zuordnung
 gespeichert — nur, wo die Entität in HA existiert. Bis dahin gelten sie als Rückfall weiter.
 
+**Grenzwerte → Bluelab-Gerät (seit forkai.141).** `BluelabGrenzenService` + Worker übertragen die
+wirksamen Grenzwerte (pH, EC, Wassertemperatur; bei Nachtband die weitere Spanne) per
+`script.edenic_set_alarm` an den Guardian. Rollen-Modul `bluelab`. Berührt (Original):
+`AlertEvaluationService` (neu: `WirksameRegeln`), `pages/collections.tsx` (Zeile unter Grenzwerte).
+
 **Geräte und Rollen statt Entity-IDs.** Die Steuerungen sprechen Rollen an, die
 mit Suchfeld, HA-Vorschlägen und Livewert zugeordnet werden — kein Gerätename
 steht mehr im Code. Alles an einer Stelle, *Geräte & Entitäten*: Reiter Geräte
