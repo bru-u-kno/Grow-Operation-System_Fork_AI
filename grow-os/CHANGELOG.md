@@ -5,6 +5,30 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.150
+
+**Fork AI.** CO₂-Steuerung: Sperre und Freigabe vollständig im Fork, zwei Grenzen folgen dem Plan.
+
+- Neu — Reiter **Klima** in drei Gruppen: *Sperre*, *Freigabe*, *Abluft T6*. Neu einstellbar sind
+  **Sperrt nach** (so lange muss die Feuchte über der Grenze liegen), **Notbremse Feuchte** (sperrt sofort),
+  **Mittelwert über** (Fenster des gleitenden Mittelwerts) und **T6 bei Klimasperre**. Bisher standen diese
+  Werte nur als Helfer in Home Assistant.
+- Neu — **Notbremse** und **Canopy-Obergrenze** wahlweise *Fest* oder *Plan +*: Feuchte-Obergrenze bzw.
+  Plan-Luft der laufenden Woche plus Abstand. Sie wandern mit der Plan-Woche mit (stündlicher Abgleich).
+  Neben dem Feld steht, was sich ergibt; ein Kasten fasst Sperre und Freigabe in zwei Zeilen zusammen.
+- Neu — **Freigabe am Mittelwert.** Das Klima gibt wieder frei, wenn der gleitende Mittelwert der Feuchte
+  unter Obergrenze − Hysterese liegt, nicht mehr beim ersten zufälligen Tiefpunkt der Sonde. Die Live-Karte
+  zeigt „Feuchte im Mittel". Das Fenster wird über den Optionen-Dialog des Filter-Helfers gesetzt — nur beim
+  Speichern und nur bei einer Änderung, weil jede Änderung den Mittelwert neu beginnen lässt.
+- Neu — „Fehlende anlegen" legt den Mittelwert-Helfer, „Feuchte über Grenze", Toleranz, Notbremse und die
+  T6-Klimastufe mit an. Die Vorlage „Klima OK" entspricht jetzt der laufenden Anlage; fehlt der Mittelwert,
+  gibt sie am Momentanwert frei wie bisher.
+- Geändert — Wertebereiche der Helfer: Notbremse ab 30 % (vorher 55), Canopy-Obergrenze ab 15 °C (vorher 22),
+  damit die Plan-Werte der Spätblüte und des Flush hineinpassen.
+- Behoben — Der Statustext behauptete bei gesperrtem Klima „normale Stufe"; es läuft die Klima-Zwischenstufe.
+- Handwerte bleiben: Werte, die im Fork noch nie gespeichert wurden, schreibt der Fork nicht — die Seite zeigt,
+  was in Home Assistant steht, und das erste Speichern übernimmt es.
+
 ## 2.0.0-forkai.149
 
 **Fork AI.** Seite „Grenzwerte" öffnet wieder.
