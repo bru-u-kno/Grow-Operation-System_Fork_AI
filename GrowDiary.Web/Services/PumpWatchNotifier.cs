@@ -24,13 +24,35 @@ public sealed class PumpWatchNotifier
     private readonly AnlagenRisikoService _risiken;
     private readonly ILogger<PumpWatchNotifier> _logger;
 
+    /// <summary>
+    /// Fork AI (forkai.136): Die Kühler-Regelung sitzt in Home Assistant
+    /// (Steuerung → Chiller). Meldet sie keinen Kühlbedarf, ist ein
+    /// ausgeschalteter Kühler die Regelung bei der Arbeit und kein Ausfall.
+    /// Vorher kannte der Wächter nur den Regler von Crop Steering.
+    /// </summary>
+    private async Task<bool> KeinKuehlbedarfAsync(CancellationToken ct)
+    {
+        if (_ha is null || _haSettings is null) return false;
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return false;
+        var bedarf = await _ha.GetEntityStateAsync(settings, ChillerSteuerungService.Entitaeten.Kuehlbedarf, ct);
+        return bedarf?.State == "off";
+    }
+
+    private readonly HomeAssistantService? _ha;
+    private readonly HomeAssistantSettingsRepository? _haSettings;
+
     public PumpWatchNotifier(
         AppSettingsRepository settings,
         NotificationService notifications,
         SystemHeartbeat heartbeat,
         AnlagenRisikoService risiken,
-        ILogger<PumpWatchNotifier> logger)
+        ILogger<PumpWatchNotifier> logger,
+        HomeAssistantService? ha = null,
+        HomeAssistantSettingsRepository? haSettings = null)
     {
+        _ha = ha;
+        _haSettings = haSettings;
         _settings = settings;
         _notifications = notifications;
         _heartbeat = heartbeat;
@@ -155,7 +177,8 @@ public sealed class PumpWatchNotifier
         // Umgekehrt bleibt der echte Ausfall sichtbar: hat der Regler EIN
         // befohlen und die Steckdose meldet trotzdem aus, ist das keine
         // Regelpause, sondern ein Defekt — dann greift die alte Beurteilung.
-        var absichtlich = KuehlerService.IstAbsichtlichAus(tent, KuehlerWorker.LetzterBefehl(_settings, tent.Id));
+        var absichtlich = KuehlerService.IstAbsichtlichAus(tent, KuehlerWorker.LetzterBefehl(_settings, tent.Id))
+            || await KeinKuehlbedarfAsync(cancellationToken);
 
         var befunde = AnlagenWatchService.Beurteilen(zustaende, nowUtc, SchonfristMinuten, absichtlich);
 

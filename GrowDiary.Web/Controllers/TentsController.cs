@@ -108,7 +108,10 @@ public sealed class TentsController : Controller
     {
         // Ist die Steuerung aus, gibt es nichts zu zeigen. Eine Kachel, die
         // dauerhaft „nicht eingerichtet" sagt, waere Rauschen.
-        if (!tent.ChillerControlEnabled || string.IsNullOrWhiteSpace(tent.ChillerSwitchEntityId))
+        // Fork AI (forkai.136): Crop Steering ist stillgelegt — der Kühler steht
+        // unter Steuerung → Chiller, nicht doppelt auf der Live-Seite.
+        if (!GrowDiary.Web.Infrastructure.ForkAiSchalter.CropSteeringAktiv
+            || !tent.ChillerControlEnabled || string.IsNullOrWhiteSpace(tent.ChillerSwitchEntityId))
         {
             return null;
         }
