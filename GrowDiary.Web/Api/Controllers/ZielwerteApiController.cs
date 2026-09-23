@@ -55,12 +55,16 @@ public sealed record ZielwertDto(
     double? AlarmVon = null,
     double? AlarmBis = null,
     bool Meldet = false,
-    IReadOnlyList<ZielPlanFeldDto>? PlanFelder = null);
+    IReadOnlyList<ZielPlanFeldDto>? PlanFelder = null,
+    /// <summary>Fork AI (forkai.145, F-040): seit wann die Regel außerhalb meldet (null = unbekannt).</summary>
+    DateTime? MeldetSeitUtc = null);
 
 /// <summary>Eine Gruppe der Ansicht „wo stelle ich das ein“.</summary>
 public sealed record ZielGruppeDto(string Titel, string Route, string RouteText, IReadOnlyList<ZielZeileDto> Zeilen, string Hinweis);
 
-public sealed record ZielZeileDto(string Links, string Rechts);
+/// <param name="Zusatz">Fork AI (forkai.145): kleiner Hinweis unter dem Namen („Tag · Nacht", „höchstens").</param>
+/// <param name="Bereich">Fork AI (forkai.145): Untergruppe in der Plan-Liste („Klima", „Nährlösung").</param>
+public sealed record ZielZeileDto(string Links, string Rechts, string? Zusatz = null, string? Bereich = null);
 
 public sealed record ZielwerteDto(
     int? GrowId,
@@ -293,12 +297,21 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 Gilt: eigene is not null,
                 Weg: false));
 
-            var quelle = eigene is not null ? "Fest"
+            // Fork AI (forkai.145, F-040): Lufttemperatur und Luftfeuchte laufen als
+            // feste Regeln, deren Zahlen der Wochenplan nachzieht (die Plan-Quelle kennt
+            // sie nicht). Solange der Plan sie führt, sind sie für den Nutzer Planwerte —
+            // „Fest" steht nur da, wo jemand die Grenze von Hand gesetzt hat.
+            var vomPlanGefuehrt = eigene is not null && spalte is not null
+                && Gesetzt(zeltId, key) == "vom Plan nachgezogen";
+            var quelle = vomPlanGefuehrt ? "Plan"
+                : eigene is not null ? "Fest"
                 : Leise(ausWoche) is not null ? "Plan"
                 : Leise(ausProfil) is not null ? "Profil"
                 : "–";
 
-            var zusatz = eigene is not null
+            var zusatz = vomPlanGefuehrt
+                ? PlanZusatz(key, spalte!, grow)
+                : eigene is not null
                 ? Gesetzt(zeltId, key)
                 : Leise(ausWoche) is not null ? spalte?.Label
                 : Leise(ausProfil) is not null ? profilName
@@ -316,7 +329,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 zusatz = string.IsNullOrWhiteSpace(zusatz) ? bezug : $"{zusatz} · {bezug}";
             }
 
-            if (eigene is not null && Leise(ausWoche) is not null)
+            if (eigene is not null && !vomPlanGefuehrt && Leise(ausWoche) is not null)
             {
                 hinweise.Add($"{Namen.GetValueOrDefault(key, key)} steht auf Fest — die Wochenspalte kommt nicht an.");
             }
@@ -347,7 +360,8 @@ public sealed class ZielwerteApiController : ApiControllerBase
                 alarmVon,
                 alarmBis,
                 Meldet(alarmVon, alarmBis, karte.NumericValue),
-                spalte is null ? null : PlanFelder(grow, spalte, key)));
+                spalte is null ? null : PlanFelder(grow, spalte, key),
+                aktiveRegel is { LastState: "Below" or "Above" } ? aktiveRegel.StateChangedUtc : null));
         }
 
         return Ok(new ZielwerteDto(
@@ -358,7 +372,7 @@ public sealed class ZielwerteApiController : ApiControllerBase
             profilName,
             hinweise,
             werte,
-            Gruppen(werte, spalte?.Label, profilName),
+            Gruppen(werte, spalte?.Label, profilName, spalte, spalte is null ? null : GrowPlanRegister.Inhalt(grow.Id)),
             _sync.Sollwerte().Select(u => new WochenplanUebergabeDto(
                 u.Rolle, Rollenname(u.Rolle), u.EntityId, Zahl(u.Wert), u.Zustand)).ToList(),
             _sync.Stand.LetzterLauf,
@@ -422,7 +436,14 @@ public sealed class ZielwerteApiController : ApiControllerBase
     }
 
     /// <summary>Die Ansicht „wo stelle ich das ein“ — nach Quelle statt nach Messgröße.</summary>
-    private static List<ZielGruppeDto> Gruppen(List<ZielwertDto> werte, string? woche, string? profil)
+    /// <remarks>
+    /// Fork AI (forkai.145, F-040): „Plan · Woche" zeigt alle Planwerte, nach Klima und
+    /// Nährlösung — auch Lufttemperatur (Tag · Nacht) und Luftfeuchte, die technisch als
+    /// vom Plan nachgezogene Zelt-Regeln laufen. „Zelt · feste Grenzen" bleibt nur für
+    /// Grenzen, die jemand von Hand gesetzt hat.
+    /// </remarks>
+    private static List<ZielGruppeDto> Gruppen(
+        List<ZielwertDto> werte, string? woche, string? profil, FeedChartColumn? spalte, GrowPlanInhalt? inhalt)
     {
         var gruppen = new List<ZielGruppeDto>();
 
@@ -430,10 +451,13 @@ public sealed class ZielwerteApiController : ApiControllerBase
         if (ausWoche.Count > 0)
         {
             gruppen.Add(new ZielGruppeDto(
-                woche is null ? "Feed-Chart" : $"Feed-Chart · {woche}",
-                "/zielwerte?tab=plan", "Plan ›",
-                ausWoche.Select(w => new ZielZeileDto(w.Name, Band(w.Min, w.Max) ?? "–")).ToList(),
-                "Wandert beim Wochenwechsel von selbst weiter."));
+                woche is null ? "Plan" : $"Plan · {woche}",
+                "/plan", "Plan ›",
+                ausWoche
+                    .Select(w => PlanZeile(w, spalte, inhalt))
+                    .OrderBy(z => z.Bereich == "Klima" ? 0 : 1)
+                    .ToList(),
+                "Wandert beim Wochenwechsel von selbst weiter. Ab wann gemeldet wird, steht auf den Karten oben."));
         }
 
         var ausProfil = werte.Where(w => w.Quelle == "Profil").ToList();
@@ -441,8 +465,8 @@ public sealed class ZielwerteApiController : ApiControllerBase
         {
             gruppen.Add(new ZielGruppeDto(
                 profil is null ? "Sollwertprofil" : $"Profil · {profil}",
-                "/zielwerte?tab=plan", "Plan ›",
-                ausProfil.Select(w => new ZielZeileDto(w.Name, Band(w.Min, w.Max) ?? "–")).ToList(),
+                "/plan", "Plan ›",
+                ausProfil.Select(w => new ZielZeileDto(w.Name, Mit(Band(w.Min, w.Max) ?? "–", w.Einheit))).ToList(),
                 "Je Phase, nicht je Woche — springt erst beim Phasenwechsel."));
         }
 
@@ -450,14 +474,51 @@ public sealed class ZielwerteApiController : ApiControllerBase
         if (fest.Count > 0)
         {
             gruppen.Add(new ZielGruppeDto(
-                "Zelt · feste Grenzen",
-                "/zielwerte?tab=jetzt", "Karte antippen ›",
-                fest.Select(w => new ZielZeileDto(w.Name, Band(w.Min, w.Max) ?? "–")).ToList(),
-                "Feste Zahlen sind zugleich das angezeigte Ziel — sie stechen Profil und Wochenspalte."));
+                "Von dir gesetzte Grenzen",
+                "/grenzwerte", "Karte antippen ›",
+                fest.Select(w => new ZielZeileDto(w.Name, Mit(Band(w.Min, w.Max) ?? "–", w.Einheit))).ToList(),
+                "Diese Zahlen hast du von Hand eingetragen — der Plan lässt sie in Ruhe."));
         }
 
         return gruppen;
     }
+
+    private static readonly HashSet<string> KlimaKeys = new(StringComparer.OrdinalIgnoreCase)
+        { "temperature", "humidity", "vpd", "co2", "ppfd" };
+
+    private static string Mit(string wert, string? einheit)
+        => string.IsNullOrWhiteSpace(einheit) || wert == "–" ? wert : $"{wert} {einheit}";
+
+    /// <summary>Eine Zeile der Plan-Liste: der Planwert selbst, nicht das Meldeband.</summary>
+    private static ZielZeileDto PlanZeile(ZielwertDto w, FeedChartColumn? spalte, GrowPlanInhalt? inhalt)
+    {
+        var bereich = KlimaKeys.Contains(w.Key) ? "Klima" : "Nährlösung";
+        switch (w.Key)
+        {
+            case "temperature" when spalte?.AirTempC is { } tag:
+            {
+                var nacht = inhalt?.NachtWerte(spalte).LuftC ?? spalte.AirTempNightC;
+                return new ZielZeileDto(w.Name, Mit(nacht is { } n ? $"{Zahl(tag)} · {Zahl(n)}" : Zahl(tag), "°C"),
+                    nacht is null ? "Tag" : "Tag · Nacht", bereich);
+            }
+            case "humidity" when spalte?.RhMax is { } rh:
+                return new ZielZeileDto(w.Name, Mit(Zahl(rh), "%"), "höchstens", bereich);
+            case "reservoir-temp" when spalte?.WaterTempDayC is { } wt:
+                return new ZielZeileDto(w.Name,
+                    Mit(spalte.WaterTempNightC is { } wn ? $"{Zahl(wt)} · {Zahl(wn)}" : Zahl(wt), "°C"),
+                    spalte.WaterTempNightC is null ? "Tag" : "Tag · Nacht", bereich);
+            default:
+                return new ZielZeileDto(w.Name, Mit(Band(w.Min, w.Max) ?? "–", w.Einheit), null, bereich);
+        }
+    }
+
+    /// <summary>Herkunft einer vom Plan geführten Zelt-Regel, z. B. „Blütewoche 5 · ±3 K".</summary>
+    private string PlanZusatz(string key, FeedChartColumn spalte, GrowRun grow) => key switch
+    {
+        "temperature" => $"{spalte.Label} · ±{Zahl(_sync.ErlaubteAbweichung(grow))} K",
+        "humidity" => $"{spalte.Label} · höchstens",
+        _ => spalte.Label,
+    };
 
     /// <summary>Nennt die Wochenspalte diese Messgröße überhaupt?</summary>
     /// <remarks>

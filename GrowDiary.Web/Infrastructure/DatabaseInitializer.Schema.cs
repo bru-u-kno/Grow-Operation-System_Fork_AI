@@ -79,6 +79,8 @@ public sealed partial class DatabaseInitializer
         // Fork AI, 13.09.2026: eigenes Zielband fuer die Dunkelphase.
         EnsureColumn(connection, "TentAlertRules", "NightMinValue", "REAL NULL");
         EnsureColumn(connection, "TentAlertRules", "NightMaxValue", "REAL NULL");
+        // Fork AI (forkai.145, F-040): seit wann der Zustand gilt — für „seit …" in der Warnung.
+        EnsureColumn(connection, "TentAlertRules", "StateChangedUtc", "TEXT NULL");
         EnsureColumn(connection, "Grows", "NightRampEnabled", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "Grows", "NightRampFloorC", "REAL NULL");
 

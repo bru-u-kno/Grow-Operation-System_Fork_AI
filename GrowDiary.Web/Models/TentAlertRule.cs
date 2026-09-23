@@ -79,4 +79,7 @@ public sealed class TentAlertRule
     public string? LastState { get; set; }
 
     public DateTime? LastNotifiedUtc { get; set; }
+
+    /// <summary>Fork AI (forkai.145, F-040): seit wann <see cref="LastState"/> gilt; null = unbekannt (vor dem Update).</summary>
+    public DateTime? StateChangedUtc { get; set; }
 }
