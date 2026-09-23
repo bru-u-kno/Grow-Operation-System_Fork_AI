@@ -196,3 +196,37 @@ public class CropSteeringUebernahmeTests
         => Assert.Empty(ChillerSteuerungService.UebernahmeAus(true,
             new[] { "switch.kuehler" }, new[] { "climate.kuehler" }));
 }
+
+/// <summary>Fork AI (F-032): Die Geräte-Zählung der Chiller-Seite.</summary>
+public class ChillerGeraeteZaehlenTests
+{
+    private static Dictionary<string, string?> Basis() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["wasser_temp"] = "sensor.w",
+        ["licht_zustand"] = "binary_sensor.l",
+        ["steckdose_zustand"] = null,
+        ["leistung"] = null,
+    };
+
+    [Fact]
+    public void NurSteckdose_DieLeereSollwertRolleIstKeineLuecke()
+    {
+        var g = Basis(); g["steckdose"] = "switch.k"; g["kuehler_sollwert"] = null;
+        Assert.Equal((3, 3), ChillerSteuerungService.GeraeteZaehlen(g));
+    }
+
+    [Fact]
+    public void NurSollwertGeraet_DieLeereSteckdoseIstKeineLuecke()
+    {
+        var g = Basis(); g["steckdose"] = null; g["kuehler_sollwert"] = "climate.k";
+        Assert.Equal((3, 3), ChillerSteuerungService.GeraeteZaehlen(g));
+    }
+
+    [Fact]
+    public void OhneBeides_FehltEineStelle()
+    {
+        var g = Basis(); g["steckdose"] = null; g["kuehler_sollwert"] = null;
+        var (zu, ges) = ChillerSteuerungService.GeraeteZaehlen(g);
+        Assert.True(zu < ges);
+    }
+}

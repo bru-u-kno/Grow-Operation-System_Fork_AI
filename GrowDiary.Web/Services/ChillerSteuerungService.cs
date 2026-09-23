@@ -189,6 +189,25 @@ public sealed class ChillerSteuerungService
         return gespeichert;
     }
 
+    /// <summary>
+    /// Fork AI (F-032): Wie viele Geräte zugeordnet sind — gezählt werden
+    /// Pflichtrollen und belegte optionale Rollen. Steckdose und Sollwert-Gerät
+    /// sind Alternativen; eine bewusst leere optionale Rolle ist keine Lücke.
+    /// Fehlen beide, zählt die Ansteuerung als eine offene Stelle.
+    /// </summary>
+    public static (int Zugeordnet, int Gesamt) GeraeteZaehlen(IReadOnlyDictionary<string, string?> geraete)
+    {
+        var rollen = SteuerungGeraeteRollen.FuerModul(Modul);
+        bool Belegt(string schluessel) => geraete.TryGetValue(schluessel, out var id) && !string.IsNullOrWhiteSpace(id);
+
+        var zugeordnet = rollen.Count(r => Belegt(r.Schluessel));
+        var gesamt = rollen.Count(r => r.Pflicht || Belegt(r.Schluessel));
+        geraete.TryGetValue(Rollen.Steckdose, out var steckdose);
+        geraete.TryGetValue(Rollen.KuehlerSollwert, out var sollwert);
+        if (ChillerAnsteuerung.Aus(steckdose, sollwert) == ChillerAnsteuerung.Keine) gesamt++;
+        return (zugeordnet, gesamt);
+    }
+
     /// <summary>Die Ansteuerung nach den aktuellen Rollen.</summary>
     public string AnsteuerungJetzt()
     {

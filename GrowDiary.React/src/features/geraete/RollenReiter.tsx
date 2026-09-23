@@ -23,9 +23,10 @@ import '../steuerung/steuerung.css'
  * Entität mehrfach ein und bei einem Gerätetausch an drei Stellen nach. Hier
  * hängt jedes Gerät an einer Zeile; die Steuerungen verweisen darauf.
  *
- * <b>Vorgabe statt Vorbefüllung.</b> Leer heißt „wie ab Werk" — die Rolle nimmt
- * dann den Wert, mit dem das Add-on ausgeliefert wurde. Nur eine bewusst
- * geänderte Zeile landet in der Datenbank.
+ * <b>Vorgabe statt Vorbefüllung.</b> „Wie ab Werk" nimmt den Wert, mit dem das
+ * Add-on ausgeliefert wurde; nur eine bewusst geänderte Zeile landet in der
+ * Datenbank. Seit forkai.137 lässt sich eine optionale Rolle mit „keins"
+ * ausdrücklich leeren.
  */
 
 const GRUPPEN: Array<{ key: string; label: string }> = [
@@ -229,8 +230,9 @@ function RollenZeile({
   // hilft niemandem. Findet der Filter nichts, steht die ganze Liste bereit.
   const vorschlaege = useMemo(() => {
     const passend = entities.filter((entity) => zeile.domains.includes(entity.domain))
-    return passend.length > 0 ? passend : entities
-  }, [entities, zeile.domains])
+    // Die Vorgabe steht oben als „wie ab Werk" — nicht zweimal.
+    return (passend.length > 0 ? passend : entities).filter((entity) => entity.entityId !== zeile.vorgabe)
+  }, [entities, zeile.domains, zeile.vorgabe])
 
   return (
     <V1Field
@@ -248,10 +250,18 @@ function RollenZeile({
           titel={zeile.label}
           unterzeile={zeile.hinweis ?? undefined}
           wert={wert}
-          platzhalter={zeile.vorgabe}
+          platzhalter={zeile.pflicht ? zeile.vorgabe : '— keins —'}
           onWahl={onChange}
           optionen={[
-            { wert: '', text: '— wie ab Werk —', hinweis: zeile.vorgabe, betont: true },
+            // Fork AI (forkai.137): „Wie ab Werk" trägt die Vorgabe selbst, und
+            // eine optionale Rolle lässt sich ausdrücklich leeren — wer keine
+            // Steckdose hat, soll nicht die Steckdose einer fremden Anlage erben.
+            ...(zeile.vorgabe
+              ? [{ wert: zeile.vorgabe, text: '— wie ab Werk —', hinweis: zeile.vorgabe, betont: true }]
+              : []),
+            ...(!zeile.pflicht
+              ? [{ wert: '', text: '— keins —', hinweis: 'Diese Rolle bleibt leer.', betont: true }]
+              : []),
             ...eigene.map((name): V1Option => ({
               wert: `@${name}`, text: name, gruppe: 'Eigene Geräte',
             })),
