@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.145
+
+**Fork AI.** Grenzwerte: klare Warnung, alle Planwerte an einer Stelle.
+
+- Geändert — Die Warnung oben zeigt je Wert eine Zeile: Ist-Wert, „zu hoch/zu niedrig", die
+  überschrittene Grenze und **seit wann** der Wert gemeldet wird. Antippen springt zur Karte.
+- Neu — Jede Grenzwert-Regel merkt sich, wann sie zuletzt zwischen „im Bereich" und „außerhalb"
+  gewechselt ist. Werte, die schon vor dem Update außerhalb lagen, zeigen das „seit" erst ab dem
+  nächsten Wechsel.
+- Geändert — „Feed-Chart" heißt **„Plan · Woche"** und zeigt alle Planwerte, getrennt nach Klima
+  und Nährlösung — auch Lufttemperatur (Tag · Nacht) und Luftfeuchte (höchstens).
+- Geändert — Lufttemperatur und Luftfeuchte gelten als Planwerte, solange der Plan sie führt
+  (Pill „PLAN", Herkunft z. B. „Blütewoche 5 · ±3 K"). Der Kasten „Zelt · feste Grenzen" entfällt;
+  nur von Hand gesetzte Grenzen erscheinen noch als „Von dir gesetzte Grenzen".
+
 ## 2.0.0-forkai.144
 
 **Fork AI.** Grenzwert-Karten wie im freigegebenen Mockup.

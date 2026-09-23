@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import { classNames } from '../utils'
@@ -7,6 +7,7 @@ import { WertBlatt } from '../features/zielwerte/WertBlatt'
 import type { AlarmRegel, PlanFeld } from '../features/zielwerte/wert-blatt'
 import '../features/zielwerte/zielwerte.css'
 import { UebergabeAbschnitt } from '../features/zielwerte/UebergabeAbschnitt'
+import { warnZeile } from '../features/zielwerte/warn-zeilen'
 import '../features/wochenplan/wochenplan.css'
 
 /**
@@ -54,13 +55,14 @@ type Wert = {
   alarmBis: number | null
   meldet: boolean
   planFelder: PlanFeld[] | null
+  meldetSeitUtc?: string | null
 }
 
 type Gruppe = {
   titel: string
   route: string
   routeText: string
-  zeilen: { links: string; rechts: string }[]
+  zeilen: { links: string; rechts: string; zusatz?: string | null; bereich?: string | null }[]
   hinweis: string
 }
 
@@ -216,13 +218,26 @@ function ZielwertePage() {
 
           {/* Fork AI (Schritt 2): was gerade außerhalb der Alarmgrenzen liegt —
               die Frage, mit der man die Seite meist öffnet. */}
+          {/* Fork AI (forkai.145, F-040): eine Zeile je Wert — Richtung, Grenze, seit wann. */}
           {melden.length > 0 && (
-            <V1Alert
-              tone="critical"
-              message={`${melden.length === 1 ? '1 Wert' : `${melden.length} Werte`} gerade außerhalb: ${melden
-                .map((w) => `${w.name} ${w.ist}${w.einheit ? ` ${w.einheit}` : ''}`)
-                .join(' · ')}`}
-            />
+            <section className="zw-warn" role="alert" data-audit="grenzwerte-warnung">
+              <div className="zw-warn-kopf">
+                {melden.length === 1 ? '1 Wert wird gemeldet' : `${melden.length} Werte werden gemeldet`}
+              </div>
+              {melden.map((w) => warnZeile(w)).map((z) => (
+                <button
+                  key={z.key}
+                  type="button"
+                  className="zw-warn-zeile"
+                  onClick={() => document.getElementById(`zw-karte-${z.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                >
+                  <span className="zw-warn-name">{z.name}</span>
+                  <span className="zw-warn-ist">{z.ist}{z.einheit && <i>{z.einheit}</i>}</span>
+                  <span className="zw-warn-grenze">{z.grenze ? <>Grenze <b>{z.grenze}</b></> : 'Grenze überschritten'}</span>
+                  <span className="zw-warn-richtung">{z.richtung}{z.seit && ` · seit ${z.seit}`}</span>
+                </button>
+              ))}
+            </section>
           )}
 
           {daten.hinweise.map((hinweis) => (
@@ -232,7 +247,7 @@ function ZielwertePage() {
           <V1Section title={kopf ?? 'Werte'}>
             <div className="zw-karten" data-audit="zielwerte-karten">
               {daten.werte.map((wert) => (
-                <article key={wert.key} className={classNames('zw-karte', wert.meldet && 'ist-meldet')}>
+                <article key={wert.key} id={`zw-karte-${wert.key}`} className={classNames('zw-karte', wert.meldet && 'ist-meldet')}>
                   <button
                     type="button"
                     className="zw-kopf"
@@ -310,11 +325,20 @@ function ZielwertePage() {
                       Fehlermeldung statt bei den Sollwerten. */}
                   <Link to={gruppe.route}>{gruppe.routeText}</Link>
                 </div>
-                {gruppe.zeilen.map((zeile) => (
-                  <div key={zeile.links} className="zw-zeile">
-                    <span>{zeile.links}</span>
-                    <span className="zw-zeile-r">{zeile.rechts}</span>
-                  </div>
+                {gruppe.zeilen.map((zeile, i) => (
+                  <Fragment key={zeile.links}>
+                    {/* Fork AI (forkai.145, F-040): Untergruppen Klima / Nährlösung. */}
+                    {zeile.bereich && zeile.bereich !== gruppe.zeilen[i - 1]?.bereich && (
+                      <div className="zw-bereich">{zeile.bereich}</div>
+                    )}
+                    <div className="zw-zeile">
+                      <span>
+                        {zeile.links}
+                        {zeile.zusatz && <small className="zw-zeile-zusatz">{zeile.zusatz}</small>}
+                      </span>
+                      <span className="zw-zeile-r">{zeile.rechts}</span>
+                    </div>
+                  </Fragment>
                 ))}
                 <p className="zw-gruppe-h">{gruppe.hinweis}</p>
               </div>

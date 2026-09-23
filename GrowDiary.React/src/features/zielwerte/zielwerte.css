@@ -341,3 +341,35 @@
   .ueb-fuss b { color: var(--muted); font-weight: 600; }
   .ueb-link { color: var(--accent-text); white-space: nowrap; }
 }
+
+/* Fork AI (forkai.145, F-040): Warnung je Wert und Untergruppen der Plan-Liste —
+   nach Mockup mockup-grenzwerte-warnung-plan.html (Variante A). Nur Tokens. */
+@layer components {
+  .zw-warn {
+    border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+    border-radius: var(--r-lg); background: var(--danger-wash); overflow: hidden;
+  }
+  .zw-warn-kopf {
+    padding: 10px 14px; border-bottom: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+    font-weight: 600; color: var(--danger-text);
+  }
+  .zw-warn-zeile {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; width: 100%;
+    padding: 9px 14px; border: 0; border-top: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
+    background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  .zw-warn-kopf + .zw-warn-zeile { border-top: 0; }
+  .zw-warn-name { font-size: var(--fs-text); color: var(--ink); }
+  .zw-warn-ist { font-family: var(--font-mono); font-weight: 700; color: var(--danger-text); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  .zw-warn-ist i { font-style: normal; font-weight: 400; font-size: var(--fs-klein); color: var(--faint); margin-left: 3px; }
+  .zw-warn-grenze { font-size: var(--fs-klein); color: var(--faint); }
+  .zw-warn-grenze b { font-family: var(--font-mono); font-weight: 600; color: var(--muted); }
+  .zw-warn-richtung { font-size: var(--fs-klein); color: var(--danger-text); text-align: right; white-space: nowrap; }
+  .zw-warn-richtung::after { content: " ›"; color: var(--faint); }
+
+  .zw-bereich {
+    padding: 8px 0 2px; font-size: var(--fs-etikett); letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .zw-zeile-zusatz { display: block; font-size: var(--fs-klein); color: var(--faint); }
+}
