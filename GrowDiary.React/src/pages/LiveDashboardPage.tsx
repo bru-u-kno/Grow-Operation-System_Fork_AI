@@ -8,6 +8,7 @@ import { useTentDashboard } from '../features/live/useTentDashboard'
 import { useTentSparklines } from '../features/live/useTentSparklines'
 import { layoutIsEmpty, seedLayout, type DashboardLayout } from '../features/live/dashboard-layout'
 import { buildPhaseTimeline, currentPhaseLabel } from '../features/grows/phase-timeline'
+import { decimalsForMetric, kachelUrteil } from '../features/live/metric-tile-model'
 import '../features/live/live-screen.css'
 import { V1Skeleton } from '../components/v1'
 import {
@@ -178,9 +179,15 @@ function LiveDashboardPage() {
   // aufgezaehlt — sonst stuenden drei Namen fuer ein Problem.
   const bewertbar = [...climateMetrics, ...hydroMetrics]
     .filter((metric) => metric.numericValue != null && !metric.targetDerived && (metric.targetMin != null || metric.targetMax != null))
+  // Fork AI (F-041): dieselbe Lesart wie die Kachel — ein Einzelwert-Ziel gilt
+  // auf die angezeigten Stellen gerundet, nicht auf die zehnte Nachkommastelle.
   const abweichungen = bewertbar
-    .filter((metric) => (metric.targetMin != null && metric.numericValue! < metric.targetMin)
-      || (metric.targetMax != null && metric.numericValue! > metric.targetMax))
+    .filter((metric) => kachelUrteil(
+      metric.numericValue,
+      { min: metric.targetMin, max: metric.targetMax },
+      { min: metric.alarmMin ?? null, max: metric.alarmMax ?? null },
+      decimalsForMetric(metric.key),
+    ) !== 'ok')
   // „Alle Messwerte im Zielband" stand hier auch dann, wenn es gar kein Zielband
   // gab — die Zeile sagte „alles gut", wo sie „ich habe nichts geprueft" sagen
   // musste. Ohne bewertbaren Wert wird das jetzt benannt.

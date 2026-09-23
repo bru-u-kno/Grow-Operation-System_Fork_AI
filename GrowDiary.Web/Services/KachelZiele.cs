@@ -62,7 +62,7 @@ public static class KachelZiele
             card.TargetNightMin = ziel.NachtMin;
             card.TargetNightMax = ziel.NachtMax;
             card.TargetPhase = nachts ? "night" : "day";
-            card.TargetNote = string.IsNullOrWhiteSpace(spalte.Label) ? null : spalte.Label;
+            card.TargetNote = null;   // „ZIEL" steht auf der Kachel; die Woche nennt die Grenzwerte-Seite
             card.TargetDerived = false;
         }
     }

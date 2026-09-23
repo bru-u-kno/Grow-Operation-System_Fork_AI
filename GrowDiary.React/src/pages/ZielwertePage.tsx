@@ -119,14 +119,18 @@ function Balken({ wert }: { wert: Wert }) {
     <div className="zw-band" aria-hidden="true">
       <div className="zw-balken">
         <div className="zw-spur" />
-        <div className="zw-zone" style={{ left: p(min), width: `${pos(max) - pos(min)}%` }} />
+        {/* Fork AI (F-041): Einzelwert-Ziel als Marke statt einer Zone ohne Breite. */}
+        <div className={classNames('zw-zone', min === max && 'ist-marke')} style={{ left: p(min), width: `${pos(max) - pos(min)}%` }} />
         {!gleich && gv != null && <div className="zw-grenze" style={{ left: p(gv) }} />}
         {!gleich && gb != null && <div className="zw-grenze" style={{ left: p(gb) }} />}
         <div className={classNames('zw-nadel', lage)} style={{ left: p(istZahl) }} title="Messwert jetzt" />
       </div>
       <div className="zw-skala">
         {!gleich && gv != null && <span className="ist-grenze" style={{ left: p(gv) }}>{kurz(gv)}</span>}
-        {zielDicht
+        {min === max
+          // Fork AI (F-041): Einzelwert-Ziel als eine Zahl, nicht „25–25".
+          ? <span className="ist-ziel" style={{ left: p(min) }}>{kurz(min)}</span>
+          : zielDicht
           ? <span className="ist-ziel" style={{ left: `${(pos(min) + pos(max)) / 2}%` }}>{kurz(min)}–{kurz(max)}</span>
           : <>
               <span className="ist-ziel" style={{ left: p(min) }}>{kurz(min)}</span>

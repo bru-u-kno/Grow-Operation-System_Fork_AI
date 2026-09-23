@@ -184,3 +184,125 @@ export function decimalsForMetric(key: string): number {
       return 0
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Fork AI (F-041): Ziel und Grenze getrennt auf der Kachel.
+ * ------------------------------------------------------------------------- */
+
+export type KachelUrteil = 'ok' | 'warn' | 'crit' | 'unknown'
+
+/** Ob das Ziel ein Einzelwert ist (SKX nennt viele Werte ohne Spanne: Luft 25 °C, VPD 1,4). */
+export function istEinzelwert(min: number | null | undefined, max: number | null | undefined): boolean {
+  return min != null && max != null && Math.abs(max - min) < 1e-9
+}
+
+/**
+ * Das Urteil der Kachel.
+ *
+ * Rot („Grenze") nur, wenn ein Grenzwert überschritten ist — dieselbe Aussage
+ * wie die Meldung aufs Handy. Sonst gegen das Ziel: drin = im Ziel, daneben =
+ * gelb. Bei einem Einzelwert zählt „im Ziel", solange der Wert auf die
+ * angezeigten Stellen gerundet genau das Ziel ist.
+ */
+export function kachelUrteil(
+  wert: number | null,
+  ziel: { min: number | null; max: number | null },
+  grenze: { min: number | null; max: number | null },
+  decimals = 1,
+): KachelUrteil {
+  if (wert == null || Number.isNaN(wert)) return 'unknown'
+  if ((grenze.min != null && wert < grenze.min) || (grenze.max != null && wert > grenze.max)) return 'crit'
+  if (ziel.min == null && ziel.max == null) return 'unknown'
+  const halb = 0.5 * 10 ** -decimals
+  const unten = ziel.min == null ? null : istEinzelwert(ziel.min, ziel.max) ? ziel.min - halb : ziel.min
+  const oben = ziel.max == null ? null : istEinzelwert(ziel.min, ziel.max) ? ziel.max + halb : ziel.max
+  return (unten == null || wert >= unten) && (oben == null || wert <= oben) ? 'ok' : 'warn'
+}
+
+/** Beschriftung des Urteils — bei Einzelwerten steht statt „daneben" die Abweichung. */
+export function urteilText(
+  urteil: KachelUrteil,
+  wert: number | null,
+  ziel: { min: number | null; max: number | null },
+  einheit: string | null | undefined,
+  decimals = 1,
+): string {
+  if (urteil === 'crit') return 'Grenze'
+  if (urteil === 'ok') return 'im Ziel'
+  if (urteil === 'warn' && wert != null && istEinzelwert(ziel.min, ziel.max)) {
+    const diff = wert - (ziel.min as number)
+    const e = einheit === '°C' ? 'K' : (einheit ?? '')
+    const zahl = Math.abs(diff).toFixed(decimals).replace('.', ',')
+    return `${diff > 0 ? '+' : '−'}${zahl}${e ? ` ${e}` : ''}`
+  }
+  return urteil === 'warn' ? 'daneben' : '—'
+}
+
+export type BandGeometrie = {
+  /** Grüne Zone (Spanne) — oder null bei einem Einzelwert. */
+  zone: { links: number; breite: number } | null
+  /** Grüne Zielmarke bei einem Einzelwert. */
+  zielMarke: number | null
+  /** Gelbe Striche der Grenzwerte. */
+  grenzen: number[]
+  /** Zeiger des Messwerts. */
+  nadel: number
+  /** Zahlen unter dem Band. */
+  skala: Array<{ pos: number; text: string; art: 'ziel' | 'grenze' }>
+}
+
+/**
+ * Das Band wie auf der Grenzwerte-Seite (forkai.143): 18 % Rand um alles, was
+ * gezeigt wird. Fallen Ziel und Grenze zusammen (RLF 45–55), bleiben die gelben
+ * Striche stehen — Bru will auch dann sehen, wo gemeldet wird (23.09.2026).
+ */
+export function bandGeometrie(
+  wert: number | null,
+  ziel: { min: number | null; max: number | null },
+  grenze: { min: number | null; max: number | null },
+  kurz: (x: number) => string,
+): BandGeometrie | null {
+  if (wert == null || Number.isNaN(wert)) return null
+  if (ziel.min == null && ziel.max == null && grenze.min == null && grenze.max == null) return null
+
+  const werte = [ziel.min, ziel.max, grenze.min, grenze.max, wert].filter((x): x is number => x != null)
+  const lo = Math.min(...werte)
+  const hi = Math.max(...werte)
+  const rand = (hi - lo) * 0.18 || Math.abs(hi) * 0.1 || 1
+  const von = lo - rand
+  const spanne = hi + rand - von
+  const pos = (x: number) => Math.round(((x - von) / spanne) * 1000) / 10
+
+  const einzel = istEinzelwert(ziel.min, ziel.max)
+  // Halboffenes Ziel („höchstens 55"): die Zone beginnt an der Grenze bzw. am Rand.
+  const zVon = ziel.min ?? grenze.min ?? (ziel.max != null ? von : null)
+  const zBis = ziel.max ?? grenze.max ?? (ziel.min != null ? hi + rand : null)
+  const zone = !einzel && zVon != null && zBis != null && (ziel.min != null || ziel.max != null)
+    ? { links: pos(zVon), breite: Math.max(1, pos(zBis) - pos(zVon)) }
+    : null
+
+  const grenzWerte = [grenze.min, grenze.max].filter((x): x is number => x != null)
+  const skala: BandGeometrie['skala'] = []
+  for (const g of grenzWerte) skala.push({ pos: pos(g), text: kurz(g), art: 'grenze' })
+  const zielWerte = einzel ? [ziel.min as number] : [ziel.min, ziel.max].filter((x): x is number => x != null)
+  for (const z of zielWerte) {
+    if (grenzWerte.some((g) => Math.abs(g - z) < 1e-9)) continue // gleiche Stelle: gelb gewinnt
+    skala.push({ pos: pos(z), text: kurz(z), art: 'ziel' })
+  }
+  skala.sort((a, b) => a.pos - b.pos)
+
+  return {
+    zone,
+    zielMarke: einzel ? pos(ziel.min as number) : null,
+    grenzen: grenzWerte.map(pos),
+    nadel: Math.max(0, Math.min(100, pos(wert))),
+    skala,
+  }
+}
+
+/** Kurze Zahl für die Skala: so viele Stellen wie nötig, deutsches Komma. */
+export function kurzeZahl(x: number, decimals = 1): string {
+  const t = x.toFixed(decimals + 1)
+  const knapp = t.includes('.') ? t.replace(/0+$/, '').replace(/\.$/, '') : t
+  return knapp.replace('.', ',')
+}

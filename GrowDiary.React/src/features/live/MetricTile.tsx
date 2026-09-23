@@ -1,7 +1,7 @@
-import { bandText, metricScale, metricStatus, statusLabel, targetLabel, type MetricStatus } from './metric-tile-model'
+import { bandGeometrie, bandText, kachelUrteil, kurzeZahl, targetLabel, urteilText, type MetricStatus } from './metric-tile-model'
 import { Sparkline, type HistoryPoint } from '../../components/SensorChart'
 import { useEffect, useState } from 'react'
-import { restdauer } from './licht-restzeit'
+import { naechsterZeitpunkt, restdauer } from './licht-restzeit'
 import { classNames } from '../../utils'
 
 export type MetricTileProps = {
@@ -44,6 +44,12 @@ export type MetricTileProps = {
   lightOffAt?: string | null
   /** Ob das Licht gerade an ist — entscheidet, welche der beiden Zeiten die naechste ist. */
   lightIsOn?: boolean
+  /**
+   * Fork AI (F-041): Grenzwerte (Meldegrenzen), getrennt vom Ziel — gelbe
+   * Striche auf dem Band, Status „Grenze", wenn überschritten.
+   */
+  alarmMin?: number | null
+  alarmMax?: number | null
 }
 
 /**
@@ -94,30 +100,48 @@ export function MetricTile({
   label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open,
   dayMin = null, dayMax = null, nightMin = null, nightMax = null, targetPhase = null,
   statusText = null, lightOnAt = null, lightOffAt = null, lightIsOn = false,
+  alarmMin = null, alarmMax = null,
 }: MetricTileProps) {
   const jetzt = useMinutentakt(Boolean(lightOnAt || lightOffAt))
   const restzeit = restdauer(jetzt, lightIsOn, lightOnAt, lightOffAt)
-  const status: MetricStatus = display != null && targetMin == null && targetMax == null
-    ? 'unknown'
-    : metricStatus(value, targetMin, targetMax, critical)
-  const scale = metricScale(value, targetMin, targetMax)
-  const target = footer ?? targetLabel(targetMin, targetMax, unit, decimals)
 
-  /* Tag und Nacht nebeneinander statt der Zielzeile.
+  /* Fork AI (F-041): Ziel (Plan) und Grenze (Meldung) getrennt.
    *
-   * Nur wo beide Baender bekannt sind und ein Zielband ueberhaupt gilt: die
-   * Leiste ersetzt die Zeile „Ziel …", sie kommt nicht dazu. `footer` gewinnt,
-   * denn wo eine eigene Fusszeile steht (Licht: „12/12 · an 05:04"), gibt es
-   * kein Band zu zeigen.
-   *
-   * Warum beide Spalten auch dann, wenn dieselbe Spanne zweimal dasteht: das
-   * ist die Aussage. Bei der Luftfeuchte heisst es „hier wird nachts nicht
-   * gelockert" — und genau das ist die Frage, die man sich nachts vor der
-   * Kachel stellt. */
-  const tagText = bandText(dayMin, dayMax, decimals)
-  const nachtText = bandText(nightMin, nightMax, decimals)
+   * Vorher stand bei Luft „Tag 21–27" — das waren die Meldegrenzen, und 26,8 °C
+   * galt als „im Ziel". Jetzt: das Ziel steht unter „ZIEL", die Grenzen sind
+   * gelbe Striche auf dem Band, und rot wird es nur, wo auch gemeldet wird.
+   * `critical` (alte zweite Grenze) zählt weiter als Grenze, wo niemand
+   * Alarmgrenzen übergibt. */
+  const ziel = { min: targetMin, max: targetMax }
+  const grenze = { min: alarmMin ?? critical?.min ?? null, max: alarmMax ?? critical?.max ?? null }
+  const stellen = decimals ?? 1
+  const urteil = display != null && targetMin == null && targetMax == null && grenze.min == null && grenze.max == null
+    ? 'unknown'
+    : kachelUrteil(value, ziel, grenze, stellen)
+  const status: MetricStatus = urteil
+  const statusTextJetzt = urteil === 'unknown' ? null : urteilText(urteil, value, ziel, unit, stellen)
+  const band = bandGeometrie(value, ziel, grenze, (x) => kurzeZahl(x, stellen))
+
+  /* Tag und Nacht in EINER Zeile unter „ZIEL" (Mockup v3): das gerade gültige
+   * hell, das andere gedimmt. Einzelwert als eine Zahl, „höchstens" als „≤". */
+  const mitEinheit = (text: string | null) => (text == null ? null : unit ? `${text} ${unit}` : text)
+  const tagText = mitEinheit(bandText(dayMin, dayMax, decimals))
+  const nachtText = mitEinheit(bandText(nightMin, nightMax, decimals))
   const baender = footer == null && tagText != null && nachtText != null && targetPhase != null
     ? { tag: tagText, nacht: nachtText, nachtAktiv: targetPhase === 'night' }
+    : null
+  const zielText = targetMin == null && targetMax == null ? null : bandText(targetMin, targetMax, decimals)
+  // Nur für Kacheln ohne Ziel/Grenze, die trotzdem eine Fußzeile haben (z. B. „Kein Entity gemappt").
+  const fusszeile = footer ?? (zielText == null ? targetLabel(targetMin, targetMax, unit, decimals) : null)
+
+  /* Licht: beide Schaltzeiten untereinander, die nächste hell. */
+  const lichtZeiten = lightOnAt || lightOffAt
+    ? (() => {
+        const an = lightOnAt ? naechsterZeitpunkt(jetzt, lightOnAt) : null
+        const aus = lightOffAt ? naechsterZeitpunkt(jetzt, lightOffAt) : null
+        const naechsteIstAn = an != null && (aus == null || an.getTime() < aus.getTime())
+        return { naechsteIstAn }
+      })()
     : null
 
   const shown = display ?? (value == null || Number.isNaN(value)
@@ -141,8 +165,8 @@ export function MetricTile({
     >
       <div className="gos-metric-head">
         <span className="gos-metric-label">{label}</span>
-        {status !== 'unknown'
-          ? <span className="gos-metric-status">{statusLabel(status)}</span>
+        {statusTextJetzt
+          ? <span className="gos-metric-status">{statusTextJetzt}</span>
           : statusText && <span className="gos-metric-status is-note">{statusText}</span>}
       </div>
 
@@ -151,49 +175,68 @@ export function MetricTile({
         {unit && display == null && <span className="unit">{unit}</span>}
       </div>
 
-      {trend && trend.length > 1 ? (
-        // Die Kurve ERSETZT das Zielband, sie kommt nicht dazu: sonst wächst jede
-        // Kachel und die Seite mit ihr. Der Zielbereich steht als Text darunter
-        // weiter da, und die Farbe kommt vom Status der Kachel.
+      {/* Die 24-h-Kurve bleibt — sie ist der Einstieg in den Verlauf. */}
+      {trend && trend.length > 1 && (
         <div className="gos-metric-spark" aria-hidden="true">
           <Sparkline points={trend} height={22} />
         </div>
-      ) : scale ? (
-        <div className="gos-metric-scale" aria-hidden="true">
-          <span className="band" style={{ left: `${scale.bandLeft}%`, width: `${scale.bandWidth}%` }} />
-          <span className={classNames('mark', scale.clamped && 'clamped')} style={{ left: `${scale.marker}%` }} />
-        </div>
-      ) : (
-        // Ohne Skala bleibt die Höhe trotzdem stehen, sonst stehen Kacheln mit
-        // und ohne Zielbereich unterschiedlich hoch nebeneinander.
-        <div className="gos-metric-scale is-empty" aria-hidden="true" />
       )}
 
-      {/* Der Zusatz nennt, woran ein zurueckgerechnetes Ziel haengt. „Ziel
-          15,8–19,6 °C" allein liest sich als „kuehl runter", obwohl in
-          Wahrheit die Feuchte zu niedrig ist. */}
-      {baender ? (
-        <>
-          <div className="gos-metric-bands">
-            <div className={classNames('spalte', !baender.nachtAktiv && 'is-aktiv')}>
-              <i><span className="zeichen" aria-hidden="true">{'\u2600\uFE0E'}</span>Tag</i>{baender.tag}
+      {(baender || zielText) && (
+        <div className="gos-metric-ziel">
+          <div className="gos-metric-ziel-n">ZIEL</div>
+          {baender ? (
+            <div className="gos-metric-tn">
+              <span className={classNames(!baender.nachtAktiv && 'is-aktiv')}>
+                <i aria-hidden="true">{'\u2600\uFE0E'}</i>{baender.tag}
+              </span>
+              <span className={classNames(baender.nachtAktiv && 'is-aktiv')}>
+                <i aria-hidden="true">{'\u263E\uFE0E'}</i>{baender.nacht}
+              </span>
             </div>
-            <div className={classNames('spalte', baender.nachtAktiv && 'is-aktiv')}>
-              <i><span className="zeichen" aria-hidden="true">{'\u263E\uFE0E'}</span>Nacht</i>{baender.nacht}
+          ) : (
+            <div className="gos-metric-zv">
+              {zielText}{unit && <span className="u"> {unit}</span>}
             </div>
-          </div>
-          {targetNote && <div className="gos-metric-target">{targetNote}</div>}
-        </>
-      ) : target && <div className="gos-metric-target">{target}{targetNote ? ` · ${targetNote}` : ''}</div>}
-      {/* Herkunft neutral, Veraltet warnend — beides zusammen waere doppelt,
-          also gewinnt die Warnung. */}
-      {/* Wann es umschlaegt — die Frage, die man vor der Licht-Kachel hat.
-          Gerechnet in der Oberflaeche, damit die Angabe nicht zwischen zwei
-          Abrufen altert. */}
-      {restzeit && (
-        <div className="gos-metric-source">
-          {restzeit === 'gleich' ? 'Wechsel gleich' : <>noch <span className="dauer">{restzeit}</span></>}
+          )}
         </div>
+      )}
+
+      {band && (
+        <div className="gos-metric-band" aria-hidden="true">
+          <div className="balken">
+            <div className="spur" />
+            {band.zone && <div className="zone" style={{ left: `${band.zone.links}%`, width: `${band.zone.breite}%` }} />}
+            {band.zielMarke != null && <div className="zielmarke" style={{ left: `${band.zielMarke}%` }} />}
+            {band.grenzen.map((g, i) => <div key={i} className="grenze" style={{ left: `${g}%` }} />)}
+            <div className={classNames('nadel', `ist-${urteil}`)} style={{ left: `${band.nadel}%` }} />
+          </div>
+          <div className="skala">
+            {band.skala.map((z, i) => (
+              <span key={i} className={z.art === 'grenze' ? 'ist-grenze' : 'ist-ziel'} style={{ left: `${z.pos}%` }}>{z.text}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {targetNote && !baender && <div className="gos-metric-target">{targetNote}</div>}
+      {!band && !baender && !zielText && fusszeile && !lichtZeiten && <div className="gos-metric-target">{fusszeile}</div>}
+
+      {lichtZeiten && (
+        <div className="gos-metric-licht">
+          {lightOnAt && <><span className="k">an</span><span className={classNames(lichtZeiten.naechsteIstAn && 'is-aktiv')}>{lightOnAt} Uhr</span></>}
+          {lightOffAt && <><span className="k">aus</span><span className={classNames(!lichtZeiten.naechsteIstAn && 'is-aktiv')}>{lightOffAt} Uhr</span></>}
+        </div>
+      )}
+      {restzeit && (
+        restzeit === 'gleich'
+          ? <div className="gos-metric-source">Wechsel gleich</div>
+          : (
+            <div className="gos-metric-wechsel">
+              <div className="gos-metric-ziel-n">WECHSELT IN</div>
+              <div className="dauer">{restzeit}</div>
+            </div>
+          )
       )}
       {stale
         ? <div className="gos-metric-stale">{stale}</div>

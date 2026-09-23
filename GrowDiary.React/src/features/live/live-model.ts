@@ -1,3 +1,4 @@
+import { decimalsForMetric, kachelUrteil } from './metric-tile-model'
 import type { GrowSummary, MetricPayload, TentDto, TentLivePayload } from '../../types'
 import { zeltZweckName } from '../../deutsche-woerter'
 
@@ -143,10 +144,24 @@ export function buildScore(metrics: MetricPayload[], tent: TentDto | null) {
     const wert = metric.numericValue as number
     const unten = metric.targetMin
     const oben = metric.targetMax
-    if ((unten == null || wert >= unten) && (oben == null || wert <= oben)) continue
+    const urteil = kachelUrteil(
+      wert,
+      { min: unten, max: oben },
+      { min: metric.alarmMin ?? null, max: metric.alarmMax ?? null },
+      decimalsForMetric(metric.key),
+    )
+    if (urteil === 'ok') continue
+
+    // Fork AI (F-041): mit Grenzwerten entscheidet die Grenze — daneben, aber noch
+    // ohne Meldung, kostet halb so viel. Sonst zöge bei einem Einzelwert-Ziel
+    // (Luft 25 °C) jede Zehntelabweichung den vollen Abzug.
+    if (metric.alarmMin != null || metric.alarmMax != null) {
+      abzug += urteil === 'crit' ? 20 : 10
+      continue
+    }
 
     const abstand = unten != null && wert < unten ? unten - wert : wert - (oben as number)
-    const breite = unten != null && oben != null ? Math.abs(oben - unten) : Math.abs(unten ?? oben ?? 1) * 0.2
+    const breite = unten != null && oben != null && oben !== unten ? Math.abs(oben - unten) : Math.abs(unten ?? oben ?? 1) * 0.2
     // Mehr als eine Zielbreite daneben wiegt doppelt.
     abzug += abstand > Math.max(breite, Number.EPSILON) ? 20 : 10
   }

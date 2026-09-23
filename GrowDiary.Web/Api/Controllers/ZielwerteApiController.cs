@@ -589,6 +589,8 @@ public sealed class ZielwerteApiController : ApiControllerBase
         if (min is null && max is null) return null;
         if (min is null) return $"bis {Zahl(max!.Value)}";
         if (max is null) return $"ab {Zahl(min.Value)}";
+        // Fork AI (F-041): Einzelwert-Ziel (min = max) als eine Zahl, nicht „25 – 25".
+        if (min.Value.Equals(max.Value)) return Zahl(min.Value);
         return $"{Zahl(min.Value)} – {Zahl(max.Value)}";
     }
 

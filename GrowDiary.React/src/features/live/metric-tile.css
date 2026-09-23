@@ -103,6 +103,52 @@
   /* Herkunft ist Auskunft, keine Warnung — deshalb gedeckt statt amber.
      --muted statt --faint: die Zeile traegt Bedeutung, nicht Dekor. */
   .gos-metric-source { margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--muted); }
+
+  /* Fork AI (F-041, Mockup v3): „ZIEL" + Wert, Band wie auf der Grenzwerte-Seite. */
+  .gos-metric-ziel { margin-top: 9px; }
+  .gos-metric-ziel-n { font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .12em; color: var(--faint); }
+  .gos-metric-zv, .gos-metric-tn {
+    margin-top: 4px; font: 400 var(--fs-text)/1.2 var(--font-mono);
+    font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink);
+  }
+  .gos-metric-zv .u { font-size: var(--fs-etikett); color: var(--faint); }
+  .gos-metric-tn { display: flex; gap: 12px; }
+  .gos-metric-tn span { color: var(--faint); }
+  .gos-metric-tn span.is-aktiv { color: var(--ink); }
+  .gos-metric-tn i { font-style: normal; font-size: var(--fs-etikett); margin-right: 4px; font-variant-emoji: text; }
+
+  .gos-metric-band { margin: 12px 2px 0; }
+  .gos-metric-band .balken { position: relative; height: 12px; }
+  .gos-metric-band .spur { position: absolute; left: 0; right: 0; top: 4px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 13%, transparent); }
+  .gos-metric-band .zone { position: absolute; top: 4px; height: 4px; border-radius: 2px; background: var(--accent); opacity: .85; }
+  .gos-metric-band .zielmarke { position: absolute; top: 2px; width: 4px; height: 8px; margin-left: -2px; border-radius: 1px; background: var(--accent); }
+  .gos-metric-band .grenze { position: absolute; top: 1px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: var(--warn); }
+  .gos-metric-band .nadel {
+    position: absolute; top: -1px; width: 3px; height: 14px; margin-left: -1.5px; border-radius: 2px;
+    background: var(--ink); color: var(--ink); box-shadow: 0 0 0 2px var(--panel);
+  }
+  .gos-metric-band .nadel::after {
+    content: ""; position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
+    border: 4px solid transparent; border-top: 5px solid currentColor;
+  }
+  .gos-metric-band .nadel.ist-ok { background: var(--accent-text); color: var(--accent-text); }
+  .gos-metric-band .nadel.ist-warn { background: var(--warn-text); color: var(--warn-text); }
+  .gos-metric-band .nadel.ist-crit { background: var(--danger); color: var(--danger); }
+  .gos-metric-band .skala { position: relative; height: 14px; margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+  .gos-metric-band .skala span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .gos-metric-band .skala .ist-ziel { color: var(--accent-text); }
+  .gos-metric-band .skala .ist-grenze { color: var(--warn-text); }
+
+  /* Licht: Schaltzeiten untereinander, die nächste hell; darunter die Restzeit. */
+  .gos-metric-licht {
+    display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 3px; margin-top: 10px;
+    font: 400 var(--fs-text)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .gos-metric-licht .k { font-size: var(--fs-etikett); color: var(--faint); align-self: center; }
+  .gos-metric-licht span:not(.k) { color: var(--faint); }
+  .gos-metric-licht span.is-aktiv { color: var(--ink); }
+  .gos-metric-wechsel { margin-top: 8px; }
+  .gos-metric-wechsel .dauer { margin-top: 4px; font: 400 var(--fs-text)/1.2 var(--font-mono); white-space: nowrap; color: var(--ink); }
 }
 
 /* Mehrere Kameras: eine Bühne, darunter der Streifen zum Umschalten. */

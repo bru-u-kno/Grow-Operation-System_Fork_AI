@@ -374,6 +374,16 @@ export interface MetricPayload {
   targetNightMax?: number | null
   /** Welches der beiden Baender gerade gilt: 'day' oder 'night'. */
   targetPhase?: string | null
+  /**
+   * Fork AI (F-041): Grenzwerte, bei denen gerade gemeldet wird — getrennt vom
+   * Ziel. Gelbe Striche auf dem Band, Status „Grenze", wenn überschritten.
+   */
+  alarmMin?: number | null
+  alarmMax?: number | null
+  alarmDayMin?: number | null
+  alarmDayMax?: number | null
+  alarmNightMin?: number | null
+  alarmNightMax?: number | null
   /** Kurzer Status in der Ecke, wo es keine Bewertung gibt — „12/12" beim Licht. */
   statusNote?: string | null
   /** Schaltzeiten des Lichts als 'HH:mm'; die Restzeit rechnet die Oberflaeche. */

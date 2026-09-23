@@ -537,6 +537,8 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
               nightMin={metric.targetNightMin}
               nightMax={metric.targetNightMax}
               targetPhase={metric.targetPhase}
+              alarmMin={metric.alarmMin}
+              alarmMax={metric.alarmMax}
               statusText={metric.statusNote}
               lightOnAt={metric.lightOnAt}
               lightOffAt={metric.lightOffAt}
