@@ -95,10 +95,19 @@ function Balken({ wert }: { wert: Wert }) {
   // Fork AI (forkai.143, F-039, Mockup-Variante A): schmaler Balken, Ziel kräftig
   // grün, Meldegrenzen als kleine gelbe Striche, Messwert als farbiger Zeiger —
   // und die Zahlen direkt darunter.
-  const { min, max, istZahl } = wert
-  if (min === null || max === null || istZahl === null) return null
+  const { istZahl } = wert
   const gv = wert.alarmVon
   const gb = wert.alarmBis
+  // Fork AI (F-046): halboffenes Ziel („höchstens 55 %") — die JSON-Antwort lässt
+  // `min` dann ganz weg (undefined, nicht null). Vorher ging das durch die Prüfung
+  // `=== null`, und kurz(undefined) warf: die ganze Seite blieb schwarz.
+  // Die Zone beginnt dann an der Grenze, die Zahl steht nur für die genannte Seite.
+  if (istZahl == null || (wert.min == null && wert.max == null)) return null
+  const zielVon = wert.min ?? null
+  const zielBis = wert.max ?? null
+  const min = zielVon ?? gv ?? null
+  const max = zielBis ?? gb ?? null
+  if (min == null || max == null) return null
 
   const werte = [min, max, istZahl, gv, gb].filter((x): x is number => x != null)
   const lo = Math.min(...werte)
@@ -110,7 +119,7 @@ function Balken({ wert }: { wert: Wert }) {
   const pos = (x: number) => ((x - von) / spanne) * 100
   const p = (x: number) => `${pos(x)}%`
 
-  const gleich = gv === min && gb === max
+  const gleich = gv === zielVon && gb === zielBis
   const zielDicht = pos(max) - pos(min) < 16
   // lage kommt als „im Ziel" / „darunter" / „darüber".
   const lage = wert.meldet ? 'ist-meldet' : wert.lage.startsWith('im') ? 'ist-im' : 'ist-rand'
@@ -127,7 +136,11 @@ function Balken({ wert }: { wert: Wert }) {
       </div>
       <div className="zw-skala">
         {!gleich && gv != null && <span className="ist-grenze" style={{ left: p(gv) }}>{kurz(gv)}</span>}
-        {min === max
+        {zielVon == null || zielBis == null
+          // Fork AI (F-046): halboffen — nur die genannte Seite, und nicht doppelt auf einer Grenze.
+          ? ((zielBis ?? zielVon) !== (zielBis != null ? gb : gv)
+              && <span className="ist-ziel" style={{ left: p((zielBis ?? zielVon) as number) }}>{kurz((zielBis ?? zielVon) as number)}</span>)
+          : min === max
           // Fork AI (F-041): Einzelwert-Ziel als eine Zahl, nicht „25–25".
           ? <span className="ist-ziel" style={{ left: p(min) }}>{kurz(min)}</span>
           : zielDicht

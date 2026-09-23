@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.149
+
+**Fork AI.** Seite „Grenzwerte" öffnet wieder.
+
+- Behoben — Die Seite „Grenzwerte" blieb schwarz, seit die Luftfeuchte als Ziel nur „höchstens" kennt
+  (seit forkai.146). Ein Ziel mit nur einer Seite wird jetzt richtig gezeichnet: die grüne Zone beginnt
+  an der Grenze, die Zahl steht nur einmal.
+
 ## 2.0.0-forkai.148
 
 **Fork AI.** Plan: Korrekturen an der Vorlage gelten als Startstand.
