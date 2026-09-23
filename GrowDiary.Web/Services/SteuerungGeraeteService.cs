@@ -23,7 +23,27 @@ public sealed class SteuerungGeraeteService
 {
     private readonly SteuerungRepository _repo;
 
-    public SteuerungGeraeteService(SteuerungRepository repo) => _repo = repo;
+    public SteuerungGeraeteService(SteuerungRepository repo, AppSettingsRepository? einstellungen = null)
+    {
+        _repo = repo;
+        _einstellungen = einstellungen;
+    }
+
+    private readonly AppSettingsRepository? _einstellungen;
+
+    /// <summary>Merker: die bisherigen Vorgaben sind als Zuordnungen übernommen.</summary>
+    public const string UebernahmeSchluessel = "fork-ai:rollen:vorgaben-uebernommen";
+
+    /// <summary>
+    /// Fork AI (F-034): Solange die bisherigen Vorgaben noch nicht übernommen sind,
+    /// gelten sie weiter — sonst stünde eine Anlage nach dem Update kurz ohne
+    /// Geräte da. Danach gibt es keinen Rückfall mehr.
+    /// </summary>
+    public string Rueckfall(GeraeteRolle? rolle)
+        => rolle is null ? string.Empty
+            : _einstellungen is not null && _einstellungen.GetValue(UebernahmeSchluessel) is not null
+                ? string.Empty
+                : rolle.BisherigeVorgabe;
 
     /// <summary>
     /// Die Entität einer Rolle — die gespeicherte, sonst die Vorgabe. Null nur,
@@ -35,7 +55,7 @@ public sealed class SteuerungGeraeteService
         var gespeichert = _repo.GetGeraete(modul)
             .FirstOrDefault(g => string.Equals(g.Rolle, schluessel, StringComparison.OrdinalIgnoreCase))?.EntityId;
 
-        var wert = string.IsNullOrWhiteSpace(gespeichert) ? rolle?.Vorgabe : gespeichert;
+        var wert = string.IsNullOrWhiteSpace(gespeichert) ? Rueckfall(rolle) : gespeichert;
         return Aufloesen(wert);
     }
 
@@ -50,7 +70,7 @@ public sealed class SteuerungGeraeteService
         {
             var wert = gespeichert.TryGetValue(rolle.Schluessel, out var eigen) && !string.IsNullOrWhiteSpace(eigen)
                 ? eigen
-                : rolle.Vorgabe;
+                : Rueckfall(rolle);
             ergebnis[rolle.Schluessel] = Aufloesen(wert);
         }
         return ergebnis;
@@ -120,7 +140,7 @@ public sealed class SteuerungGeraeteService
             // Leer bei einer optionalen Rolle mit Vorgabe heißt „habe ich nicht"
             // und nicht „wie ab Werk" — sonst käme die Vorgabe zurück.
             if ((wert.Length == 0 || wert == SteuerungGeraeteRollen.BewusstLeer)
-                && !rolle.Pflicht && !string.IsNullOrWhiteSpace(rolle.Vorgabe))
+                && !rolle.Pflicht && !string.IsNullOrWhiteSpace(Rueckfall(rolle)))
             {
                 _repo.SetGeraet(modul, schluessel, SteuerungGeraeteRollen.BewusstLeer);
                 continue;

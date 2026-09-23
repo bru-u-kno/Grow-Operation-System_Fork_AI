@@ -230,3 +230,40 @@ public class ChillerGeraeteZaehlenTests
         Assert.True(zu < ges);
     }
 }
+
+/// <summary>Fork AI (F-034): Frühere Vorgaben werden nur übernommen, wo es sie gibt.</summary>
+public class RollenVorgabenUebernahmeTests
+{
+    private static readonly GeraeteRolle[] Rollen =
+    {
+        new("chiller", "wasser_temp", "Wasserfühler", "messen", "sensor.w", new[] { "sensor" }),
+        new("chiller", "steckdose", "Kühler · schalten", "schalten", "switch.k", new[] { "switch" }, Pflicht: false),
+        new("chiller", "kuehler_sollwert", "Kühler · Sollwert", "schalten", "", new[] { "climate" }, Pflicht: false),
+    };
+
+    [Fact]
+    public void BeiBruWirdAllesUebernommen()
+    {
+        var r = RollenVorgabenUebernahme.Uebernehmen(Rollen, _ => Array.Empty<string>(),
+            new HashSet<string>(new[] { "sensor.w", "switch.k" })).ToList();
+        Assert.Equal(2, r.Count);
+    }
+
+    [Fact]
+    public void FremdeKennungenBleibenDraussen()
+        => Assert.Empty(RollenVorgabenUebernahme.Uebernehmen(Rollen, _ => Array.Empty<string>(),
+            new HashSet<string>(new[] { "sensor.anderes" })));
+
+    [Fact]
+    public void EigeneZuordnungenWerdenNichtUeberschrieben()
+    {
+        var r = RollenVorgabenUebernahme.Uebernehmen(Rollen, _ => new[] { "wasser_temp" },
+            new HashSet<string>(new[] { "sensor.w", "switch.k" })).ToList();
+        Assert.Single(r);
+        Assert.Equal("steckdose", r[0].Rolle);
+    }
+
+    [Fact]
+    public void EsGibtKeineWerksvorgabeMehr()
+        => Assert.All(SteuerungGeraeteRollen.Alle, rolle => Assert.Equal(string.Empty, rolle.Vorgabe));
+}

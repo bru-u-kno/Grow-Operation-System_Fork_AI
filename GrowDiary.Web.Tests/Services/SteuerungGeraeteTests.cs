@@ -24,10 +24,10 @@ public sealed class SteuerungGeraeteTests
             // Fork AI (Chiller-Ansteuerung): Eine optionale Rolle darf ohne
             // Vorgabe kommen — ein Kühler mit eigenem Sollwert ist die Ausnahme,
             // nicht der Normalfall.
-            if (!rolle.Pflicht && string.IsNullOrEmpty(rolle.Vorgabe)) continue;
+            if (!rolle.Pflicht && string.IsNullOrEmpty(rolle.BisherigeVorgabe)) continue;
 
-            var domain = SteuerungGeraeteService.Domain(rolle.Vorgabe);
-            Assert.True(domain is not null, $"Vorgabe von {rolle.Modul}/{rolle.Schluessel} ist keine Entity-ID: {rolle.Vorgabe}");
+            var domain = SteuerungGeraeteService.Domain(rolle.BisherigeVorgabe);
+            Assert.True(domain is not null, $"Vorgabe von {rolle.Modul}/{rolle.Schluessel} ist keine Entity-ID: {rolle.BisherigeVorgabe}");
             Assert.True(rolle.Domains.Contains(domain!, StringComparer.OrdinalIgnoreCase),
                 $"Vorgabe von {rolle.Modul}/{rolle.Schluessel} ist {domain}, erlaubt sind {string.Join("/", rolle.Domains)}.");
         }
@@ -55,7 +55,7 @@ public sealed class SteuerungGeraeteTests
     public void Co2BehaeltSeineBisherigenGeraeteAlsVorgabe()
     {
         var vorgaben = SteuerungGeraeteRollen.FuerModul("co2")
-            .ToDictionary(rolle => rolle.Schluessel, rolle => rolle.Vorgabe, StringComparer.Ordinal);
+            .ToDictionary(rolle => rolle.Schluessel, rolle => rolle.BisherigeVorgabe, StringComparer.Ordinal);
 
         Assert.Equal("sensor.big_co2_light_sensor_co2", vorgaben["co2_sensor"]);
         Assert.Equal("sensor.big_probe_sensor_sonden_temperatur", vorgaben["canopy"]);
