@@ -211,6 +211,20 @@ public sealed class AlertEvaluationService
     /// Wassertemperatur planmaessig unter den Nachtsollwert faehrt. Ohne ihn
     /// meldete der Alarm jede Nacht die eigene Regelung der App.</para>
     /// </remarks>
+    /// <summary>
+    /// Fork AI (forkai.141, F-037): die Regeln eines Zelts mit den Grenzen, gegen
+    /// die gerade gemessen wird (Plan oder fest) — für die Übertragung ans
+    /// Bluelab-Gerät. Plan-Regeln ohne Band fallen weg wie in der Auswertung.
+    /// </summary>
+    public IReadOnlyList<TentAlertRule> WirksameRegeln(Tent tent)
+    {
+        var band = PlanbandFuer(tent);
+        return _rules.GetEnabledForTent(tent.Id)
+            .Select(r => Planzielgrenzen.Wirksam(r, band.Ziele, band.RampenBodenC))
+            .OfType<TentAlertRule>()
+            .ToList();
+    }
+
     private Planband PlanbandFuer(Tent tent)
     {
         if (_targetValues is null || _grows is null)

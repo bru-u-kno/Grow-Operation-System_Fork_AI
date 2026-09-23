@@ -157,6 +157,26 @@ public static class SteuerungGeraeteRollen
             "sensor.big_probe_sensor_sonden_temperatur", new[] { "sensor" }, Einheit: "°C",
             Hinweis: "Fällt das Zelt unter das Minimum, pausiert die Zuluft."),
 
+        // Fork AI (forkai.141, F-037): Alarmgrenzen am Bluelab Guardian. Der Fork
+        // überträgt seine Grenzwerte (pH, EC, Wassertemperatur) ans Gerät — nur
+        // wenn Skript und Grenz-Entitäten zugeordnet sind. Alles optional: wer
+        // kein Bluelab hat, lässt das Modul leer.
+        new("bluelab", "skript", "Grenze setzen · Skript", GruppeSchalten,
+            "script.edenic_set_alarm", new[] { "script" }, Pflicht: false,
+            Hinweis: "Skript mit den Feldern setting_key und value, das eine Alarmgrenze in der Edenic-Cloud setzt."),
+        new("bluelab", "ph_low", "pH · unten", GruppeMessen,
+            "number.bluelab_guardian_ph_low_alarm", new[] { "number" }, Pflicht: false),
+        new("bluelab", "ph_high", "pH · oben", GruppeMessen,
+            "number.bluelab_guardian_ph_high_alarm", new[] { "number" }, Pflicht: false),
+        new("bluelab", "ec_low", "EC · unten", GruppeMessen,
+            "number.bluelab_guardian_ec_low_alarm", new[] { "number" }, Pflicht: false, Einheit: "mS/cm"),
+        new("bluelab", "ec_high", "EC · oben", GruppeMessen,
+            "number.bluelab_guardian_ec_high_alarm", new[] { "number" }, Pflicht: false, Einheit: "mS/cm"),
+        new("bluelab", "temp_low", "Wassertemperatur · unten", GruppeMessen,
+            "number.bluelab_guardian_temp_low_alarm", new[] { "number" }, Pflicht: false, Einheit: "°C"),
+        new("bluelab", "temp_high", "Wassertemperatur · oben", GruppeMessen,
+            "number.bluelab_guardian_temp_high_alarm", new[] { "number" }, Pflicht: false, Einheit: "°C"),
+
         // Kühler: ein Fühler im Wasser, eine Steckdose und der Lichtzustand.
         // Die Lampe steht hier, weil Tag und Nacht am Licht hängen und nicht an
         // der Uhr — verschiebt sich die Lichtphase, verschiebt sich das Ziel mit.

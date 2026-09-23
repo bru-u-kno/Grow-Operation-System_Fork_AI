@@ -32,7 +32,9 @@ public sealed class SteuerungGeraeteService
     private readonly AppSettingsRepository? _einstellungen;
 
     /// <summary>Merker: die bisherigen Vorgaben sind als Zuordnungen übernommen.</summary>
-    public const string UebernahmeSchluessel = "fork-ai:rollen:vorgaben-uebernommen";
+    /// <remarks>Mit „:2" (forkai.141): läuft erneut für die neuen Bluelab-Rollen;
+    /// bestehende Zuordnungen fasst die Übernahme nie an.</remarks>
+    public const string UebernahmeSchluessel = "fork-ai:rollen:vorgaben-uebernommen:2";
 
     /// <summary>
     /// Fork AI (F-034): Solange die bisherigen Vorgaben noch nicht übernommen sind,
