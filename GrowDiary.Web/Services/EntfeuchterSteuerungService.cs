@@ -104,8 +104,14 @@ public sealed class EntfeuchterSteuerungService
         if (!settings.IsConfigured) return new EntfeuchterEinstellungen();
 
         var entities = await _ha.GetEntitiesAsync(settings, ct);
-        return AusHomeAssistant(entities.ToDictionary(
+        var uebernommen = AusHomeAssistant(entities.ToDictionary(
             x => x.EntityId, x => (string?)x.State, StringComparer.OrdinalIgnoreCase));
+        // Fork AI (forkai.139, F-035): Beim ersten Aufruf übernimmt der Fork die
+        // Werte aus Home Assistant sofort als eigenen Stand — gespeichert wird nur
+        // im Fork, nach HA wird nichts geschrieben. Nur mit echter Antwort von HA,
+        // sonst stünden die Werkseinstellungen als „übernommen" da.
+        if (entities.Count > 0) _repo.SetEinstellungen(Modul, uebernommen);
+        return uebernommen;
     }
 
     /// <summary>

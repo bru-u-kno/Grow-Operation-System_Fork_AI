@@ -167,9 +167,19 @@ public sealed class ChillerSteuerungService
         var zustaende = entities.ToDictionary(
             x => x.EntityId, x => (string?)x.State, StringComparer.OrdinalIgnoreCase);
         var automatik = AutomatikFuer(AnsteuerungJetzt());
-        return vorhanden is null
+        var e = vorhanden is null
             ? AusHomeAssistant(zustaende, automatik)
             : MitHystereseAusHomeAssistant(vorhanden, zustaende);
+        // Fork AI (forkai.139, F-035): Beim ersten Aufruf übernimmt der Fork die
+        // Werte aus Home Assistant sofort als eigenen Stand — gespeichert wird nur
+        // im Fork, nach HA wird nichts geschrieben. Nur mit echter Antwort von HA,
+        // sonst stünden die Werkseinstellungen als „übernommen" da.
+        if (entities.Count > 0)
+        {
+            e.HystereseGefuehrt = true;
+            _repo.SetEinstellungen(Modul, e);
+        }
+        return e;
     }
 
     /// <summary>
