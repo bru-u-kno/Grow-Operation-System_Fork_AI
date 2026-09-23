@@ -284,3 +284,37 @@
 @layer components {
   .wb-ziel small.wb-herkunft { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
 }
+
+/* Fork AI (forkai.142, F-038): Übergabe aus dem Plan — nach Mockup
+   mockup-grenzwerte-uebergabe.html. Nur Tokens. */
+@layer components {
+  .ueb-gruppe { padding: var(--s-2) 0 var(--s-3); }
+  .ueb-gruppe + .ueb-gruppe { border-top: 1px solid var(--hair); }
+  .ueb-gruppe h3 { margin: var(--s-2) 0 2px; font-size: var(--fs-text); font-weight: 600; }
+  .ueb-wozu { margin: 0 0 var(--s-2); font-size: var(--fs-klein); color: var(--faint); }
+
+  .ueb-zeile { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); padding: var(--s-2) 0; border-top: 1px solid var(--hair); }
+  .ueb-wozu + .ueb-zeile { border-top: 0; }
+  .ueb-name { min-width: 0; font-size: var(--fs-text); line-height: 1.35; }
+  .ueb-name small { display: block; font-size: var(--fs-klein); color: var(--faint); }
+  .ueb-rechts { flex: 0 0 auto; text-align: right; }
+  .ueb-wert { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-gross); white-space: nowrap; }
+  .ueb-wert i { font-style: normal; font-size: var(--fs-klein); color: var(--faint); margin-left: 3px; }
+  .ueb-zustand { display: block; margin-top: 2px; font-family: var(--font-mono); font-size: var(--fs-klein); color: var(--accent-text); white-space: nowrap; }
+  .ueb-zustand.ist-warn { color: var(--warn-text); }
+  button.ueb-zustand { margin-left: auto; }
+
+  .ueb-zeile.ist-co2 { flex-wrap: wrap; }
+  .ueb-stufen { flex: 1 0 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-1); margin-top: var(--s-2); }
+  .ueb-stufen-titel { grid-column: 1 / -1; font-size: var(--fs-klein); color: var(--faint); }
+  .ueb-stufe { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s-1) var(--s-1); border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--sunk); }
+  .ueb-stufe em { font-style: normal; font-size: var(--fs-etikett); color: var(--faint); white-space: nowrap; }
+  .ueb-stufe b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .ueb-stufe b i { font-style: normal; font-weight: 400; font-size: var(--fs-etikett); color: var(--faint); margin-left: 3px; }
+  .ueb-stufe.ist-aktiv { border-color: var(--accent-dim); background: var(--accent-wash); }
+  .ueb-stufe.ist-aktiv em { color: var(--accent-text); }
+
+  .ueb-fuss { margin: var(--s-2) 0 0; font-size: var(--fs-klein); color: var(--faint); }
+  .ueb-fuss b { color: var(--muted); font-weight: 600; }
+  .ueb-link { color: var(--accent-text); white-space: nowrap; }
+}
