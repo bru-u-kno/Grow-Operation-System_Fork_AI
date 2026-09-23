@@ -45,7 +45,6 @@ const SEITEN = [
   { pfad: '/regeln', name: 'regeln' },
   // Neu in beta.52 und beim Bauen in KEINER Sichtpruefung — genau der
   // blinde Fleck, den das Messprotokoll oben schon einmal hatte.
-  { pfad: '/cropsteering', name: 'cropsteering' },
   { pfad: '/archiv', name: 'archiv' },
 ]
 

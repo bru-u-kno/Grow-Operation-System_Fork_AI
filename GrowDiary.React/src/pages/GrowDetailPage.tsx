@@ -8,7 +8,6 @@ import { useGrowDetailMutations } from '../features/grow-detail/useGrowDetailMut
 import { formatGrowStatus } from '../features/grow-detail/grow-detail-model'
 import { V1Alert, V1Badge, V1Button, V1Empty, V1LinkButton, V1Page, V1Section, V1Stat } from '../components/v1'
 import { balkenText, buildPhaseTimeline, flipLabel } from '../features/grows/phase-timeline'
-import { NightRampCard } from '../features/grows/NightRampCard'
 import { CuringSection } from '../features/curing/CuringSection'
 import { PlanAuswertung } from '../features/zielwerte/PlanAuswertung'
 import { GrowPlantsCard } from '../features/grow-detail/GrowPlantsCard'
@@ -303,9 +302,9 @@ function GrowDetailPage() {
             dann wie gefahren wird. */}
         <GrowPlantsCard growId={grow.id} growPlantCount={grow.plantCount} systemId={grow.systemId ?? null} onSorten={setPflanzenSorten} onAnzahl={setPflanzenAnzahl} />
 
-        {/* Die Nachtabsenkung steht bei den Fakten, nicht bei der Verwaltung:
-            sie ist eine Anbau-Entscheidung, kein Aufräumen. */}
-        <NightRampCard growId={grow.id} />
+        {/* Fork AI (forkai.136): Die Karte „Nachtabsenkung" (Crop Steering)
+            ist entfallen — die Wassertemperatur führt der Grow-Plan, geregelt
+            wird unter Steuerung → Chiller. */}
 
         {/* Das Aushaerten steht VOR der Verwaltung: es ist der letzte Schritt
             am Lauf, nicht dessen Abwicklung. Der Abschnitt bleibt weg, solange

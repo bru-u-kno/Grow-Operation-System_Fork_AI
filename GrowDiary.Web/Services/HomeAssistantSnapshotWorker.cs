@@ -139,8 +139,12 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
                         // Licht an der Tagwert, bei Licht aus der Nachtwert.
                         // Zweimal am Tag ein Sollwert — mehr macht Grow OS hier
                         // nicht, geregelt wird in Home Assistant.
-                        await nachtabsenkung.SchreibenAsync(
-                            tent, flanke.Kind == LightTransitionKind.LightOn, DateTime.Now, cancellationToken);
+                        // Fork AI (forkai.136): stillgelegt, der Grow-Plan führt das Ziel.
+                        if (GrowDiary.Web.Infrastructure.ForkAiSchalter.CropSteeringAktiv)
+                        {
+                            await nachtabsenkung.SchreibenAsync(
+                                tent, flanke.Kind == LightTransitionKind.LightOn, DateTime.Now, cancellationToken);
+                        }
                     }
                 }
 

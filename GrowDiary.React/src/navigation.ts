@@ -140,7 +140,7 @@ export const navGroups: NavGroup[] = [
       // einem Menuepunkt — „Sollwert-Profile" ist der Reiter „Profile".
       // Fork AI (forkai.133): aus „Ziele & Meldungen" — Plan (Pflanzen), Grenzwerte, Handy (Einrichtung).
       { to: '/grenzwerte', label: 'Grenzwerte', end: true, icon: '◈', short: 'Grenzen', keywords: 'grenzwert grenzwerte schwelle alarm alarme meldet melden überwachen tag nacht nachtgrenze abweichung toleranz ziele zielwerte ziele & meldungen wächter' },
-      { to: '/cropsteering', label: 'Crop Steering', end: true, versteckt: true, icon: '❄', short: 'Steering', keywords: 'wassertemperatur kühler chiller steckdose nachtabsenkung rampe tag nacht wurzeltemperatur steuern' },
+      // Fork AI (forkai.136): „Crop Steering" entfernt — stillgelegt, auch aus der Suche.
       // Fork AI (forkai.6). Steht unter Betrieb, weil man es anfasst, WÄHREND
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
       // erfasst. Das Archiv rechnet den Strom aus Lampen-Watt; hier kommt er

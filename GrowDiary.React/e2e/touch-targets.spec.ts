@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test'
  * über elementFromPoint, ob der Rand des 44px-Quadrats um die Mitte noch dasselbe
  * Bedienelement trifft.
  */
-const ROUTES = ['/', '/zelte', '/hydro', '/grows/1', '/sensoren', '/regeln', '/aufgaben', '/messung', '/messungen', '/wissen', '/home-assistant', '/cropsteering']
+const ROUTES = ['/', '/zelte', '/hydro', '/grows/1', '/sensoren', '/regeln', '/aufgaben', '/messung', '/messungen', '/wissen', '/home-assistant']
 const MIN = 44
 
 // Mit Touch, nicht nur schmal: die Vergrößerung hängt an `@media (pointer: coarse)`,

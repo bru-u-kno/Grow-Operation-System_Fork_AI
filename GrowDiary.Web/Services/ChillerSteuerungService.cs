@@ -62,6 +62,7 @@ public sealed class ChillerSteuerungService
     private readonly GrowRepository _grows;
     private readonly WochenplanSyncService _wochenplan;
     private readonly ILogger<ChillerSteuerungService> _logger;
+    private readonly AppSettingsRepository? _einstellungen;
 
     public ChillerSteuerungService(
         SteuerungRepository repo,
@@ -70,8 +71,10 @@ public sealed class ChillerSteuerungService
         SteuerungGeraeteService geraete,
         GrowRepository grows,
         WochenplanSyncService wochenplan,
-        ILogger<ChillerSteuerungService> logger)
+        ILogger<ChillerSteuerungService> logger,
+        AppSettingsRepository? einstellungen = null)
     {
+        _einstellungen = einstellungen;
         _repo = repo;
         _ha = ha;
         _haSettings = haSettings;
@@ -79,6 +82,68 @@ public sealed class ChillerSteuerungService
         _grows = grows;
         _wochenplan = wochenplan;
         _logger = logger;
+    }
+
+    // ------------------------------------------------ Übernahme (forkai.136)
+
+    private const string UebernahmeSchluessel = "fork-ai:chiller:cropsteering-uebernommen";
+
+    /// <summary>
+    /// Einmalig: was ein Nutzer in Crop Steering eingetragen hatte, wird zur
+    /// Rolle der Chiller-Steuerung — die Steckdose am Zelt und ein Zielgerät
+    /// (climate/number). Nur, wenn für die Ansteuerung noch nichts gespeichert
+    /// ist; danach nie wieder.
+    /// </summary>
+    public void CropSteeringUebernehmen()
+    {
+        if (_einstellungen is null || _einstellungen.GetValue(UebernahmeSchluessel) is not null) return;
+
+        try
+        {
+            var gespeichert = _geraete.Gespeichert(Modul);
+            var zelte = _grows.GetTents();
+            var vorschlag = UebernahmeAus(
+                gespeichert.ContainsKey(Rollen.Steckdose) || gespeichert.ContainsKey(Rollen.KuehlerSollwert),
+                zelte.Select(z => z.ChillerSwitchEntityId),
+                zelte.Select(z => z.WaterTargetEntityId));
+
+            if (vorschlag.Count > 0)
+            {
+                var fehler = _geraete.Speichern(Modul, vorschlag.ToDictionary(p => p.Key, p => (string?)p.Value));
+                _logger.LogInformation("Crop Steering übernommen: {Rollen} (Fehler: {Fehler})",
+                    string.Join(", ", vorschlag.Select(p => $"{p.Key}={p.Value}")), fehler.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Übernahme aus Crop Steering fehlgeschlagen.");
+        }
+
+        _einstellungen.SetValue(UebernahmeSchluessel, DateTime.UtcNow.ToString("O"));
+    }
+
+    /// <summary>Was übernommen würde — rein, ohne Datenbank.</summary>
+    public static Dictionary<string, string> UebernahmeAus(
+        bool schonZugeordnet, IEnumerable<string?> steckdosen, IEnumerable<string?> zielgeraete)
+    {
+        var ergebnis = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (schonZugeordnet) return ergebnis;
+
+        if (steckdosen.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s)) is { } steckdose)
+        {
+            ergebnis[Rollen.Steckdose] = steckdose.Trim();
+        }
+
+        // Nur echte Sollwert-Geräte. Ein input_number war ein Helfer — der
+        // Fork schreibt seine Ziele schon selbst.
+        if (zielgeraete.FirstOrDefault(z => z is not null
+                && (z.StartsWith("climate.", StringComparison.OrdinalIgnoreCase)
+                    || z.StartsWith("number.", StringComparison.OrdinalIgnoreCase))) is { } ziel)
+        {
+            ergebnis[Rollen.KuehlerSollwert] = ziel.Trim();
+        }
+
+        return ergebnis;
     }
 
     // ----------------------------------------------------------- Einstellungen
@@ -276,7 +341,9 @@ public sealed class ChillerSteuerungService
         var (rest, gewechselt) = Sperre(Text(Entitaeten.LetzterSchaltvorgang),
             e.MindestlaufzeitMin, e.MindestpauseMin, steckdoseAn == true, DateTime.Now);
 
-        var doppelt = Doppelsteuerung(_grows.GetTents(), Rolle(Rollen.Steckdose));
+        var doppelt = GrowDiary.Web.Infrastructure.ForkAiSchalter.CropSteeringAktiv
+            ? Doppelsteuerung(_grows.GetTents(), Rolle(Rollen.Steckdose))
+            : null;
 
         return new ChillerLive(
             HaErreichbar: entities.Count > 0,

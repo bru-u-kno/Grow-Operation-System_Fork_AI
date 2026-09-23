@@ -356,7 +356,7 @@ export type ChillerLive = {
   leistungW: number | null
   automatikAn: boolean | null
   waechterAn: boolean | null
-  /** Woher das Zielpaar kommt: plan, cropsteering oder hand. */
+  /** Woher das Zielpaar kommt: plan oder hand. */
   zielQuelle: string
   sperreRestMin: number | null
   letzterWechsel: string | null

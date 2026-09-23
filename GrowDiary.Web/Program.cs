@@ -163,7 +163,11 @@ builder.Services.AddHostedService<AutoMeasurementWorker>();
 builder.Services.AddHostedService<DosingWorker>();
 // Eigener Minutentakt und NICHT an der Lichtflanke: die haengt zweimal am Tag,
 // die Wassertemperatur wandert dazwischen.
-builder.Services.AddHostedService<KuehlerWorker>();
+// Fork AI (forkai.136): Crop Steering stillgelegt — siehe ForkAiSchalter.
+if (GrowDiary.Web.Infrastructure.ForkAiSchalter.CropSteeringAktiv)
+{
+    builder.Services.AddHostedService<KuehlerWorker>();
+}
 builder.Services.AddHostedService<ZaehlerstandWorker>(); // Fork AI (forkai.6)
 builder.Services.AddHostedService<Co2SyncWorker>(); // Fork AI (forkai.20)
 builder.Services.AddHostedService<WochenplanSyncWorker>(); // Fork AI (forkai.53)
@@ -177,6 +181,12 @@ if (!string.IsNullOrWhiteSpace(defaultUrls))
 var app = builder.Build();
 
 app.Services.GetRequiredService<DatabaseInitializer>().Initialize();
+
+// Fork AI (forkai.136): Einträge aus Crop Steering einmalig als Chiller-Rollen übernehmen.
+using (var uebernahme = app.Services.CreateScope())
+{
+    uebernahme.ServiceProvider.GetRequiredService<ChillerSteuerungService>().CropSteeringUebernehmen();
+}
 // Fork AI (F-004): eigene Wochenwerte liegen nach jedem Laden auf dem Plan.
 var wissensbasis = app.Services.GetRequiredService<KnowledgeBaseLoader>();
 wissensbasis.NachDemLaden = app.Services.GetRequiredService<WochenwertUeberlagerung>().Anwenden;

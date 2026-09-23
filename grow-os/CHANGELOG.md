@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.136
+
+**Fork AI.** Crop Steering ist stillgelegt — die Wassertemperatur hat nur noch eine Stelle.
+
+- Entfernt — Die Seite **Crop Steering**, ihr Menü- und Sucheintrag, die Zeile in der
+  Steuerung-Übersicht und die Karte „Nachtabsenkung" am Grow. Alte Adressen führen zu
+  *Steuerung → Chiller*. Das Ziel kommt aus dem Plan, geregelt wird über die Chiller-Steuerung.
+- Entfernt — Der Kühler-Regler und die Absenkrampe im Add-on laufen nicht mehr. Sie hätten
+  neben der Chiller-Steuerung einen zweiten Weg zum selben Kühler geöffnet.
+- Neu — Wer in Crop Steering eine Steckdose oder ein Zielgerät (climate/number) eingetragen hatte,
+  findet sie einmalig als Rolle der Chiller-Steuerung wieder.
+- Behoben — Der Kühler-Wächter hielt einen ausgeschalteten Kühler nur dann für Absicht, wenn
+  Crop Steering ihn abgeschaltet hatte. Jetzt zählt auch die Chiller-Steuerung: meldet sie
+  keinen Kühlbedarf, ist „aus" kein Ausfall.
+
 ## 2.0.0-forkai.135
 
 **Fork AI.** Water Chiller: auch Kühler mit eigenem Thermostat, Hysterese wirklich einstellbar.

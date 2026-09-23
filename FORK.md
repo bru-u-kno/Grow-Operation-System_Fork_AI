@@ -77,6 +77,20 @@ Nachtziel ins Gerät); mit beiden ist die Steckdose Not-Aus. Berührt:
 `SteuerungGeraeteService` (optionale Rolle bewusst leer), `HomeAssistantState`/
 `HomeAssistantService` (Attribut `temperature`).
 
+**Crop Steering stillgelegt (seit forkai.136).** Die Seite des Entwicklers
+(Nachtabsenkung und Kühler-Regler im Add-on) ist im Fork abgeschaltet: Die
+Wassertemperatur führt der Grow-Plan, geregelt wird unter Steuerung → Chiller —
+sonst gäbe es zwei Regler für denselben Kühler und zwei Stellen für dasselbe Ziel.
+Ein Schalter an einer Stelle (`Infrastructure/ForkAiSchalter.CropSteeringAktiv`);
+die Original-Dateien bleiben unverändert liegen. Alte Adressen leiten zum Chiller,
+die Grow-Karte „Nachtabsenkung", der Menü-/Sucheintrag und die Übersichtszeile
+entfallen. Einmalig werden Einträge aus Crop Steering (Steckdose am Zelt,
+climate-/number-Zielgerät) als Chiller-Rollen übernommen. Der Kühler-Wächter
+wertet einen ausgeschalteten Kühler als Absicht, wenn die HA-Regelung keinen
+Kühlbedarf meldet. Berührt (Original): `Program.cs`, `HomeAssistantSnapshotWorker`,
+`TentsController`, `PumpWatchNotifier`, `App.tsx`, `navigation.ts`,
+`GrowDetailPage.tsx`, E2E-Listen.
+
 **Geräte und Rollen statt Entity-IDs.** Die Steuerungen sprechen Rollen an, die
 mit Suchfeld, HA-Vorschlägen und Livewert zugeordnet werden — kein Gerätename
 steht mehr im Code. Alles an einer Stelle, *Geräte & Entitäten*: Reiter Geräte

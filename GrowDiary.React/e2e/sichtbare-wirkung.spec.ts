@@ -159,7 +159,8 @@ test.describe('Sichtbare Wirkung', () => {
       .toBeGreaterThanOrEqual(lage.leistenUnten)
   })
 
-  test('Crop Steering sagt, ob es gerade aktiv ist', async ({ page }) => {
+  // Fork AI (forkai.136): Crop Steering stillgelegt.
+  test.skip('Crop Steering sagt, ob es gerade aktiv ist', async ({ page }) => {
     darfUeberspringen(!(await page.request.get('/api/grows')).ok(), 'Kein Backend — siehe oben.')
 
     // Rückmeldung des Testers: „dort steht nicht, wann es aktiv ist." Der Plan

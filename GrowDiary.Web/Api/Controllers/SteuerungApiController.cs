@@ -77,14 +77,6 @@ public sealed class SteuerungApiController : ApiControllerBase
         double? Zahl(string id) => double.TryParse(Text(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
         string F(double? v, string einheit, string format = "0") => v is { } x ? x.ToString(format, de) + einheit : "–";
 
-        // Die Absenkung haengt am laufenden Grow, das Zielgeraet am Zelt — beides
-        // gehoert dem Entwickler, wir lesen es nur.
-        var zelte = _grows.GetTents();
-        var absenkungAn = _grows.GetActiveGrows().Any(g => g.NightRampEnabled);
-        var zielgeraet = zelte
-            .Select(z => z.WaterTargetEntityId)
-            .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
-
         var module = new List<SteuerungModulDto>
         {
             new(
@@ -126,20 +118,8 @@ public sealed class SteuerungApiController : ApiControllerBase
                         ? "kühlt"
                         : chiller.Kuehlbedarf == true ? "wartet auf Schaltsperre" : "bereit",
                 HatDetail: true),
-            // Fork AI: Crop Steering gehoert thematisch hierher — die Absenkung
-            // fuehrt dasselbe Zielpaar, das der Kuehler abarbeitet. Die Zeile
-            // verweist auf die Seite des Entwicklers (zweite Route, keine
-            // Kopie), damit beide Haelften an einem Ort stehen.
-            new(
-                Kennung: "cropsteering",
-                Titel: "Crop Steering",
-                Status: absenkungAn ? "an" : "aus",
-                Kurz: absenkungAn
-                    ? "Absenkung führt die Wassertemperatur über den Tag"
-                    : "Absenkung aus · das Ziel führt der Plan",
-                Wert: F(chiller.ZielAktivC, " °C", "0.0"),
-                Unterzeile: zielgeraet is { } ziel ? $"schreibt {ziel}" : "kein Zielgerät zugeordnet",
-                HatDetail: true),
+            // Fork AI (forkai.136): Die Zeile „Crop Steering" ist entfallen —
+            // stillgelegt, siehe ForkAiSchalter. Das Ziel führt der Plan.
             new(
                 Kennung: "abluft",
                 Titel: "Abluft T6",
