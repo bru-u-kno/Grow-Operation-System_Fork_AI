@@ -44,7 +44,7 @@ public sealed class GeraeteUebersichtTests
         {
             var definition = SteuerungGeraeteRollen.Finden(Co2SteuerungService.Modul, rolle);
             Assert.True(definition is not null, $"Rolle {rolle} gibt es nicht mehr.");
-            Assert.Equal(definition!.Vorgabe, entity);
+            Assert.Equal(definition!.BisherigeVorgabe, entity);
         }
     }
 

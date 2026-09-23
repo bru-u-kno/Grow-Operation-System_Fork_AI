@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.138
+
+**Fork AI.** Rollen ohne fremde Werksvorgaben, Steuerungs-Zeilen brechen am Handy nicht mehr um.
+
+- Geändert — Rollen haben keine **Werksvorgabe** mehr. Die bisherigen Vorgaben waren die Geräte
+  einer einzelnen Anlage; sie werden beim ersten Start einmalig als feste Zuordnung übernommen,
+  aber nur, wenn es die Entität in Home Assistant gibt. Wer sie nicht hat, sieht die Rolle leer
+  statt einer fremden Kennung. Die Option „— wie ab Werk —" und der Knopf „Auf Vorgabe zurück"
+  entfallen; jede Zeile zeigt das Gerät, das wirklich dahintersteht.
+- Behoben — Auf den Steuerungs-Seiten brach die rechte Spalte am Handy um („Rolle/n ›",
+  „Rollen bearbeiten / ›", Schaltpunkte). Links und Werte bleiben jetzt auf einer Zeile.
+- Geändert — Die Schaltpunkte des Water Chillers stehen als „ein 20,6 · aus 20,0 °C" da, immer mit
+  einer Nachkommastelle.
+
 ## 2.0.0-forkai.137
 
 **Fork AI.** Water Chiller: die Seite zeigt, wie der Kühler angesteuert wird.

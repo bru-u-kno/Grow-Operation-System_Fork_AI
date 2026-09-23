@@ -36,7 +36,7 @@ public sealed class RolleBewusstLeerTests : IDisposable
     [Fact]
     public void DieVorgabeEintragenHoltSieZurueck()
     {
-        var vorgabe = SteuerungGeraeteRollen.Finden("chiller", "steckdose")!.Vorgabe;
+        var vorgabe = SteuerungGeraeteRollen.Finden("chiller", "steckdose")!.BisherigeVorgabe;
         _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = "" });
         _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = vorgabe });
 

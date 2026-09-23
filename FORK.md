@@ -94,6 +94,11 @@ Kühlbedarf meldet. Berührt (Original): `Program.cs`, `HomeAssistantSnapshotWor
 `TentsController`, `PumpWatchNotifier`, `App.tsx`, `navigation.ts`,
 `GrowDetailPage.tsx`, E2E-Listen.
 
+**Keine Werksvorgaben für Rollen (seit forkai.138).** Die Vorgaben der Rollen waren die
+Entitäten einer einzelnen Anlage. `GeraeteRolle.Vorgabe` ist jetzt leer; die alten Werte stehen
+in `BisherigeVorgabe` und werden einmalig von `RollenVorgabenUebernahme` als feste Zuordnung
+gespeichert — nur, wo die Entität in HA existiert. Bis dahin gelten sie als Rückfall weiter.
+
 **Geräte und Rollen statt Entity-IDs.** Die Steuerungen sprechen Rollen an, die
 mit Suchfeld, HA-Vorschlägen und Livewert zugeordnet werden — kein Gerätename
 steht mehr im Code. Alles an einer Stelle, *Geräte & Entitäten*: Reiter Geräte

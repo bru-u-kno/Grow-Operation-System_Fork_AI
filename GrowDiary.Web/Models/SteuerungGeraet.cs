@@ -22,11 +22,21 @@ public sealed record GeraeteRolle(
     string Schluessel,
     string Label,
     string Gruppe,
-    string Vorgabe,
+    string BisherigeVorgabe,
     IReadOnlyList<string> Domains,
     bool Pflicht = true,
     string? Einheit = null,
-    string? Hinweis = null);
+    string? Hinweis = null)
+{
+    /// <summary>
+    /// Fork AI (forkai.138, F-034): Es gibt keine Werksvorgabe mehr. Die früheren
+    /// Vorgaben waren die Entitäten einer einzelnen Anlage (Brus) — für jeden
+    /// anderen Benutzer fremde Kennungen. Sie stehen nur noch in
+    /// <see cref="BisherigeVorgabe"/> und werden einmalig übernommen, wo es die
+    /// Entität in Home Assistant wirklich gibt (<c>RollenVorgabenUebernahme</c>).
+    /// </summary>
+    public string Vorgabe => string.Empty;
+}
 
 /// <summary>Eine gespeicherte Zuordnung: welche Entität hinter einer Rolle steht.</summary>
 public sealed class SteuerungGeraet

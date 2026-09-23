@@ -66,6 +66,12 @@
   .st-feldzeile { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--hair); }
   .st-feldzeile:first-of-type { border-top: 0; }
   .st-feldzeile > .st-etikett { min-width: 0; }
+  /* Fork AI (forkai.138, F-033): Die rechte Spalte (Link, Nur-Lesen-Wert)
+     schrumpft nicht und bricht nicht um — am Handy stand sonst „Rolle/n ›"
+     auf zwei Zeilen. Umbrechen darf nur das Etikett links. */
+  .st-feldzeile > .v1-button,
+  .st-feldzeile > .st-nurlesen,
+  .st-geraete-zeile > .v1-button { flex: 0 0 auto; white-space: nowrap; }
   .st-etikett { font-size: var(--fs-text); }
   .st-etikett small { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
   .st-eingaben { flex: 0 0 auto; display: flex; align-items: center; gap: var(--s-2); }
