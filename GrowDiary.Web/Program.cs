@@ -118,6 +118,9 @@ builder.Services.AddSingleton<GrowPlanRepository>(); // Fork AI (Grow-Plan)
 builder.Services.AddSingleton<GrowDiary.Web.Services.GrowPlan.EigeneProgramme>(); // Fork AI (Grow-Plan)
 builder.Services.AddSingleton<GrowDiary.Web.Services.GrowPlan.GrowPlanService>(); // Fork AI (Grow-Plan)
 builder.Services.AddScoped<SteuerungGeraeteService>();
+// Fork AI (forkai.141, F-037): Grenzwerte → Bluelab-Gerät.
+builder.Services.AddScoped<BluelabGrenzenService>();
+builder.Services.AddHostedService<BluelabGrenzenWorker>();
 // Fork AI (forkai.22): Geraetesicht ueber die bestehenden Entity-Quellen.
 builder.Services.AddSingleton<GeraeteRepository>();
 builder.Services.AddSingleton<HomeAssistantRegistryService>();

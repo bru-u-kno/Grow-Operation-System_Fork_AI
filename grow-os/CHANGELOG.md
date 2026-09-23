@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.141
+
+**Fork AI.** Die Grenzwerte gehen auch ans Bluelab-Gerät.
+
+- Neu — Die Grenzwerte für pH, EC und Wassertemperatur werden automatisch an die Alarmgrenzen des
+  **Bluelab Guardian** übertragen (über das Skript „Edenic Alarmgrenze setzen"). Gepflegt wird nur
+  noch unter *Grenzwerte* — dem Plan folgend oder fest. Hat eine Grenze ein Nachtband, bekommt das
+  Gerät die weitere Spanne aus Tag und Nacht, damit es nachts nicht falsch alarmiert.
+- Neu — Abgleich alle fünf Minuten; geschrieben wird nur, was am Gerät abweicht, nacheinander und
+  denselben Wert höchstens alle 30 Minuten.
+- Neu — Unter *Grenzwerte* zeigt eine Zeile, ob die Gerätegrenzen übernommen sind.
+- Neu — Rollen-Modul **„Bluelab · Gerätealarm"** unter *Geräte & Entitäten → Rollen* (Skript und die
+  sechs Grenz-Entitäten, alles optional). Ohne Zuordnung passiert nichts.
+
 ## 2.0.0-forkai.140
 
 **Fork AI.** Water Chiller pendelt um das Ziel.

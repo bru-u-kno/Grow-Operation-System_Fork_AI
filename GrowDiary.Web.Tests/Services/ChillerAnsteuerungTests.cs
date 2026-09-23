@@ -267,3 +267,42 @@ public class RollenVorgabenUebernahmeTests
     public void EsGibtKeineWerksvorgabeMehr()
         => Assert.All(SteuerungGeraeteRollen.Alle, rolle => Assert.Equal(string.Empty, rolle.Vorgabe));
 }
+
+/// <summary>Fork AI (F-037): Grenzwerte → Bluelab-Gerät.</summary>
+public class BluelabGrenzenTests
+{
+    private static TentAlertRule Regel(string key, double? min, double? max, double? nMin = null, double? nMax = null)
+        => new() { MetricKey = key, MinValue = min, MaxValue = max, NightMinValue = nMin, NightMaxValue = nMax, Enabled = true };
+
+    [Fact]
+    public void DasGeraetBekommtDieGrenzenDerRegeln()
+    {
+        var soll = BluelabGrenzenService.Sollwerte(new[] { Regel("reservoir-ec", 1.4, 1.8), Regel("reservoir-ph", 5.6, 6.0) });
+        Assert.Equal(1.4, soll["ec_low"]);
+        Assert.Equal(1.8, soll["ec_high"]);
+        Assert.Equal(5.6, soll["ph_low"]);
+        Assert.Equal(6.0, soll["ph_high"]);
+        Assert.False(soll.ContainsKey("temp_low"));
+    }
+
+    [Fact]
+    public void MitNachtbandGiltDieWeitereSpanne()
+    {
+        // Tag 18–22, Nacht 16–20 → Gerät 16–22: nachts kein falscher Alarm.
+        var soll = BluelabGrenzenService.Sollwerte(new[] { Regel("reservoir-temp", 18, 22, 16, 20) });
+        Assert.Equal(16, soll["temp_low"]);
+        Assert.Equal(22, soll["temp_high"]);
+    }
+
+    [Fact]
+    public void GerundetWirdNachAussen()
+    {
+        var soll = BluelabGrenzenService.Sollwerte(new[] { Regel("reservoir-ec", 1.44, 1.86) });
+        Assert.Equal(1.4, soll["ec_low"], 3);
+        Assert.Equal(1.9, soll["ec_high"], 3);
+    }
+
+    [Fact]
+    public void JedeBluelabRolleIstOptional()
+        => Assert.All(SteuerungGeraeteRollen.FuerModul("bluelab"), r => Assert.False(r.Pflicht));
+}

@@ -518,6 +518,13 @@ public sealed class SteuerungApiController : ApiControllerBase
         return Ok(await _bestand.AufnehmenAsync(modul, belegt, settings, ct));
     }
 
+    /// <summary>Fork AI (forkai.141, F-037): Stand der Übertragung ans Bluelab-Gerät.</summary>
+    [HttpGet("bluelab")]
+    [ProducesResponseType(typeof(BluelabGrenzenService.Stand), StatusCodes.Status200OK)]
+    public async Task<ActionResult<BluelabGrenzenService.Stand>> Bluelab(
+        [FromServices] BluelabGrenzenService bluelab, CancellationToken ct)
+        => Ok(await bluelab.StandAsync(ct));
+
     [HttpGet("geraete")]
     [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<SteuerungGeraeteSeiteDto>> Geraete(CancellationToken ct)
@@ -602,6 +609,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         "zuluft" => "Zuluft · Keller",
         "chiller" => "Water Chiller",
         "entfeuchter" => "Entfeuchter",
+        "bluelab" => "Bluelab · Gerätealarm",
         "cropsteering" => "Crop Steering",
         _ => modul,
     };
