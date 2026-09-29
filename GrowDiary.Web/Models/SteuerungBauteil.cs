@@ -255,8 +255,12 @@ public static class SteuerungBauteile
             Einheit: "ppm", Zustandsklasse: "measurement",
             Vorlage: "{% set t = states('[[canopy]]') | float(30) %}{% set kuehl = states('input_number.co2_ziel_kuehl_unter_25_c') | int(650) %}{% set mittel = states('input_number.co2_ziel_mittel_25_bis_27_c') | int(820) %}{% set warm = states('input_number.co2_zielwert') | int(920) %}{% set alt = states('sensor.co2_ziel_effektiv') | int(0) %}{% if t >= 27.0 %}{{ warm }}{% elif t >= 26.5 and alt == warm %}{{ warm }}{% elif t >= 25.0 %}{{ mittel }}{% elif t >= 24.5 and alt == mittel %}{{ mittel }}{% else %}{{ kuehl }}{% endif %}"),
         new(Co2, "binary_sensor.co2_bedarf", "CO2 Bedarf", BauteilArt.RechenSchalter,
-            "An, solange nachdosiert werden soll. Hält seinen Zustand, wenn der Sensor schweigt.",
-            Vorlage: "{% set co2_s = states.[[co2_sensor]] %}{% set weg = co2_s is none or co2_s.state in ['unknown','unavailable'] %}{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% if weg or ziel <= 0 %}{% set seit = (as_timestamp(now()) - as_timestamp(co2_s.last_changed)) if co2_s is not none else 9999 %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% else %}{% set ist = co2_s.state | float(0) %}{% set h = states('input_number.co2_hysterese') | float(100) %}{% if ist <= 0 %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% elif ist < ziel - h %}true{% elif ist >= ziel %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% endif %}"),
+            "An, solange nachdosiert werden soll. Schweigt der Fühler oder meldet er Unsinn, ist sofort kein Bedarf.",
+            // Fork AI (29.09.2026): Vorher hielt der Bedarf bei schweigendem
+            // Fühler fünf Minuten lang „an" — und der Impuls-Bedarf rechnete
+            // mit Ist 0, also mit der längsten Impulsdauer. Gas nach Gefühl.
+            // Ohne Messwert wird nicht dosiert: aus ist die sichere Seite.
+            Vorlage: "{% set co2_s = states.[[co2_sensor]] %}{% set ist = (co2_s.state if co2_s is not none else 'unavailable') | float(-1) %}{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% if ist <= 0 or ziel <= 0 %}false{% else %}{% set h = states('input_number.co2_hysterese') | float(100) %}{% if ist < ziel - h %}true{% elif ist >= ziel %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% endif %}"),
         new(Co2, "sensor.co2_sonden_rh_mittel", "CO2 Sonden RH Mittel", BauteilArt.Mittelwert,
             "Gleitender Mittelwert der Feuchte. An ihm hängt die Freigabe — der Momentanwert rauscht zu stark.",
             Pflicht: false, HaengtAn: BrauchtRh,
@@ -277,7 +281,10 @@ public static class SteuerungBauteile
         new(Co2, "sensor.co2_impuls_bedarf", "CO2 Impuls Bedarf", BauteilArt.RechenSensor,
             "Wie lang der nächste Impuls sein muss — aus fehlenden ppm, Volumen und Durchfluss.",
             Einheit: "s", Zustandsklasse: "measurement",
-            Vorlage: "{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% set ist = states('[[co2_sensor]]') | float(0) %}{% set gps = states('input_number.co2_gramm_pro_sekunde') | float(0.26) %}{% set vol = states('input_number.co2_zeltvolumen') | float(5.76) %}{% set mn = states('input_number.co2_impulsdauer') | float(5) %}{% set mx = states('input_number.co2_impulsdauer_max') | float(20) %}{% set gramm = ([ziel - ist, 0] | max) * vol / 557 %}{{ ([ [gramm / gps, mn] | max, mx ] | min) | round(0) | int }}"),
+            // Fork AI (29.09.2026): Ohne Messwert 0 s. Vorher galt Ist = 0 —
+            // die fehlenden ppm waren dann das ganze Ziel, der Impuls die
+            // Höchstdauer.
+            Vorlage: "{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% set ist = states('[[co2_sensor]]') | float(-1) %}{% if ist <= 0 or ziel <= 0 %}0{% else %}{% set gps = states('input_number.co2_gramm_pro_sekunde') | float(0.26) %}{% set vol = states('input_number.co2_zeltvolumen') | float(5.76) %}{% set mn = states('input_number.co2_impulsdauer') | float(5) %}{% set mx = states('input_number.co2_impulsdauer_max') | float(20) %}{% set gramm = ([ziel - ist, 0] | max) * vol / 557 %}{{ ([ [gramm / gps, mn] | max, mx ] | min) | round(0) | int }}{% endif %}"),
 
         // --- Automationen -------------------------------------------------
         new(Co2, "automation.co2_dosierung_rdwc_port_5", "CO2 Dosierung", BauteilArt.Automation,

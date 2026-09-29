@@ -1,6 +1,6 @@
 {
   "alias": "CO2 Dosierung",
-  "description": "Bedarfsgerechte Impuls-Dosierung. Je Impuls: Ventil auf, Impulsdauer aus sensor.co2_impuls_bedarf, Ventil zu, 20 s spaeter Nachpruefung (noch einmal zu, falls der Befehl verworfen wurde), Rest der Wartezeit. Zaehler, Zeitstempel und Flaschenrest werden je Impuls fortgeschrieben. Die Schleife endet, sobald der Bedarf weg ist, das Licht aus geht, das Klima sperrt, die Abluft nicht mehr gedrosselt ist oder die Hoechstzahl erreicht ist. Zuletzt wird das Ventil in jedem Fall geschlossen. Autokalibrierung: bei erteilter Freigabe und gedrosselter Abluft wird der ppm-Anstieg je Impuls gemessen und der Durchfluss als gleitender Mittelwert (80/20) nachgefuehrt - ein Netto-Wert nach Abluftverlust, fuer die Impulslaenge richtig, fuer den Flaschenverbrauch eine Untergrenze. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/dosierung/1. Abweichung zur handgebauten Fassung: Dort endet das Dosierfenster rechnerisch vor der geplanten Aus-Zeit des Licht-Controllers. Ohne eine Rolle fuer diese Zeit laesst sich das nicht allgemeingueltig ableiten; die Vorlage dosiert daher bis Licht-aus. co2_ende_vor_licht_aus bleibt wirkungslos, bis es diese Rolle gibt - die Seite sagt das. Bloecke mit dem Schluessel 'wenn' entfallen, wenn die genannte Rolle frei ist: Wer keinen Abluft-Regler hat, bekommt die Drosselungs-Bedingungen nicht - dosiert wird trotzdem.",
+  "description": "Bedarfsgerechte Impuls-Dosierung. Je Impuls: Ventil auf, Impulsdauer aus sensor.co2_impuls_bedarf, Ventil zu, 20 s spaeter Nachpruefung (noch einmal zu, falls der Befehl verworfen wurde), Rest der Wartezeit. Zaehler, Zeitstempel und Flaschenrest werden je Impuls fortgeschrieben. Die Schleife endet, sobald der Bedarf weg ist, das Licht aus geht, das Klima sperrt, die Abluft nicht mehr gedrosselt ist oder die Hoechstzahl erreicht ist. Zuletzt wird das Ventil in jedem Fall geschlossen. Autokalibrierung: bei erteilter Freigabe und gedrosselter Abluft wird der ppm-Anstieg je Impuls gemessen und der Durchfluss als gleitender Mittelwert (80/20) nachgefuehrt - ein Netto-Wert nach Abluftverlust, fuer die Impulslaenge richtig, fuer den Flaschenverbrauch eine Untergrenze. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/dosierung/2. Abweichung zur handgebauten Fassung: Dort endet das Dosierfenster rechnerisch vor der geplanten Aus-Zeit des Licht-Controllers. Ohne eine Rolle fuer diese Zeit laesst sich das nicht allgemeingueltig ableiten; die Vorlage dosiert daher bis Licht-aus. co2_ende_vor_licht_aus bleibt wirkungslos, bis es diese Rolle gibt - die Seite sagt das. Bloecke mit dem Schluessel 'wenn' entfallen, wenn die genannte Rolle frei ist: Wer keinen Abluft-Regler hat, bekommt die Drosselungs-Bedingungen nicht - dosiert wird trotzdem. Seit Fassung 2 (29.09.2026) endet die Schleife, sobald eine Freigabe NICHT MEHR 'on' meldet - vorher nur bei 'off', ein unavailable hielt sie am Laufen. Ohne gueltigen Impuls-Bedarf (0 s oder nicht lesbar) wird nicht geoeffnet.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [
@@ -59,9 +59,14 @@
         "sequence": [
           {
             "variables": {
-              "impuls": "{{ states('sensor.co2_impuls_bedarf') | int(states('input_number.co2_impulsdauer') | int(5)) }}",
+              "impuls": "{{ states('sensor.co2_impuls_bedarf') | int(0) }}",
               "co2_vor": "{{ states('[[co2_sensor]]') | float(0) }}"
             }
+          },
+          {
+            "alias": "Ohne gueltigen Impuls-Bedarf nicht oeffnen",
+            "condition": "template",
+            "value_template": "{{ impuls | int(0) > 0 }}"
           },
           {
             "action": "select.select_option",
@@ -211,19 +216,34 @@
             "condition": "or",
             "conditions": [
               {
-                "condition": "state",
-                "entity_id": "binary_sensor.co2_bedarf",
-                "state": "off"
+                "condition": "not",
+                "conditions": [
+                  {
+                    "condition": "state",
+                    "entity_id": "binary_sensor.co2_bedarf",
+                    "state": "on"
+                  }
+                ]
               },
               {
-                "condition": "state",
-                "entity_id": "[[licht]]",
-                "state": "off"
+                "condition": "not",
+                "conditions": [
+                  {
+                    "condition": "state",
+                    "entity_id": "[[licht]]",
+                    "state": "on"
+                  }
+                ]
               },
               {
-                "condition": "state",
-                "entity_id": "binary_sensor.co2_klima_ok",
-                "state": "off"
+                "condition": "not",
+                "conditions": [
+                  {
+                    "condition": "state",
+                    "entity_id": "binary_sensor.co2_klima_ok",
+                    "state": "on"
+                  }
+                ]
               },
               {
                 "condition": "and",
