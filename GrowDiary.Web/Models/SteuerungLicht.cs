@@ -60,4 +60,16 @@ public sealed class LichtEinstellungen
 /// <param name="Soll">Der gewollte Zustand als Text, so wie ihn Home Assistant meldet.</param>
 /// <param name="SeitUtc">Wann zuletzt geschrieben wurde — die Prüffrist läuft ab hier.</param>
 /// <param name="Versuche">Bisherige Schreibversuche, der erste zählt mit.</param>
-public sealed record LichtOffen(string EntityId, string Soll, DateTime SeitUtc, int Versuche);
+/// <param name="ErstUtc">
+/// Wann der Befehl gegeben wurde. Nach Ablauf von
+/// <see cref="GrowDiary.Web.Services.LichtSteuerungService.Nachschreibfenster"/>
+/// wird nicht mehr nachgeschrieben — ein alter Befehl ist kein Befehl mehr.
+/// </param>
+/// <param name="Vorher">
+/// Was die Entität vor dem Befehl meldete. Meldet sie später etwas Drittes, hat
+/// jemand anderes geschaltet (AC-App, Taster, Automation) — dann wird nichts
+/// nachgeschrieben.
+/// </param>
+public sealed record LichtOffen(
+    string EntityId, string Soll, DateTime SeitUtc, int Versuche,
+    DateTime? ErstUtc = null, string? Vorher = null);

@@ -22,12 +22,26 @@ namespace GrowDiary.Web.Services;
 /// verwirft; <b>später prüfen</b> und wiederholen, weil ein angenommener Aufruf
 /// noch lange nicht ein übernommener ist.</para>
 ///
-/// <para><b>Wo die Prüfung läuft.</b> Nicht im Schreib-Aufruf — der wäre eine
-/// Minute lang offen. Die offenen Sollwerte stehen im Speicher; jedes Laden des
-/// Livebilds prüft sie gegen den Ist-Zustand und schreibt einmal nach, wenn die
-/// Frist abgelaufen ist. Die Oberfläche fragt das Livebild ohnehin regelmäßig
-/// ab. Bleibt sie zu, bleibt der letzte Versuch stehen — wie zuvor in der
-/// Dashboard-Karte, deren Wiederholung auch am offenen Browser hing.</para>
+/// <para><b>Wo die Prüfung läuft.</b> Bei einem einzelnen Befehl (an, aus,
+/// Stufe) nicht im Schreib-Aufruf — der wäre eine Minute lang offen. Die offenen
+/// Sollwerte stehen im Speicher; jedes Laden des Livebilds prüft sie gegen den
+/// Ist-Zustand und schreibt nach, wenn die Frist abgelaufen ist
+/// (<see cref="Nachpruefung"/>).</para>
+///
+/// <para><b>Aber nur im Nachschreibfenster (29.09.2026).</b> Vorher gab es
+/// keine Grenze: ein „aus" um 22:00, das die Wolke verwarf, wurde beim nächsten
+/// Öffnen der Seite nachgeschrieben — auch Tage später, mitten in der
+/// Lichtphase, nachdem das Licht längst in der AC-App eingeschaltet war. Jetzt
+/// endet das Nachschreiben nach <see cref="Nachschreibfenster"/>, und sobald
+/// die Entität etwas anderes meldet als vor dem Befehl, hat jemand anderes
+/// geschaltet und der Befehl gilt als überholt. Zwei offene Tabs schreiben
+/// nicht mehr gleichzeitig nach.</para>
+///
+/// <para><b>Mehrere Schritte gehen durch den <see cref="AcSchreiber"/>.</b> Ein
+/// Preset sind drei Aufrufe: Ein-Zeit, Aus-Zeit, Modus. Vorher wurde „Schedule"
+/// auch dann gesetzt, wenn die Zeiten nicht ankamen — der Controller schaltete
+/// dann nach den alten. Der Schreiber prüft jeden Schritt nach und bricht nach
+/// dem ersten nicht bestätigten ab.</para>
 /// </remarks>
 public sealed class LichtSteuerungService
 {
@@ -67,24 +81,36 @@ public sealed class LichtSteuerungService
     /// <summary>Offene Sollwerte je Entität. Statisch, weil der Dienst je Anfrage neu entsteht.</summary>
     private static readonly ConcurrentDictionary<string, LichtOffen> Offene = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Nur einer prüft und schreibt gleichzeitig nach — zwei Tabs sind zwei parallele Aufträge.</summary>
+    private static readonly SemaphoreSlim Pruefsperre = new(1, 1);
+
     private readonly SteuerungRepository _repo;
     private readonly HomeAssistantService _ha;
+    private readonly IAcFunk _funk;
+    private readonly AcSchreiber _schreiber;
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly SteuerungGeraeteService _geraete;
     private readonly ILogger<LichtSteuerungService> _logger;
+    private readonly Func<TimeSpan, CancellationToken, Task>? _warten;
 
     public LichtSteuerungService(
         SteuerungRepository repo,
         HomeAssistantService ha,
+        IAcFunk funk,
+        AcSchreiber schreiber,
         HomeAssistantSettingsRepository haSettings,
         SteuerungGeraeteService geraete,
-        ILogger<LichtSteuerungService> logger)
+        ILogger<LichtSteuerungService> logger,
+        Func<TimeSpan, CancellationToken, Task>? warten = null)
     {
         _repo = repo;
         _ha = ha;
+        _funk = funk;
+        _schreiber = schreiber;
         _haSettings = haSettings;
         _geraete = geraete;
         _logger = logger;
+        _warten = warten;
     }
 
     // ----------------------------------------------------------- Einstellungen
@@ -220,8 +246,10 @@ public sealed class LichtSteuerungService
     }
 
     /// <summary>
-    /// Schreibt der Reihe nach, was vom Soll abweicht, und merkt sich die
-    /// Sollwerte zur späteren Prüfung.
+    /// Schreibt, was vom Soll abweicht. Ein einzelner Auftrag wird gesendet und
+    /// zur späteren Prüfung gemerkt; mehrere gehen der Reihe nach durch den
+    /// <see cref="AcSchreiber"/>, der jeden Schritt nachprüft und nach dem ersten
+    /// nicht bestätigten abbricht.
     /// </summary>
     private async Task<bool> SchreibenAsync(IReadOnlyList<(string Rolle, string Soll)> auftraege, LichtEinstellungen e, CancellationToken ct)
     {
@@ -229,50 +257,70 @@ public sealed class LichtSteuerungService
         if (!settings.IsConfigured) return false;
 
         var geraete = _geraete.EntitiesFuerModul(Modul);
-        var entities = await _ha.GetEntitiesAsync(settings, ct);
-        var nachId = entities.ToDictionary(x => x.EntityId, x => x.State ?? string.Empty, StringComparer.OrdinalIgnoreCase);
-
-        var alles = true;
-        var erster = true;
+        var ziele = new List<(string EntityId, string Soll)>();
         foreach (var (rolle, soll) in auftraege)
         {
-            if (!geraete.TryGetValue(rolle, out var id) || string.IsNullOrWhiteSpace(id))
-            {
-                alles = false;
-                continue;
-            }
-
-            if (nachId.TryGetValue(id, out var ist) && Gleich(ist, soll)) continue;
-
-            if (!erster && e.SchreibAbstandMs > 0) await Task.Delay(e.SchreibAbstandMs, ct);
-            erster = false;
-
-            alles &= await SchreibenAsync(settings, id, soll, ct);
-            Offene[id] = new LichtOffen(id, soll, DateTime.UtcNow, 1);
+            // Fehlt eine Rolle, wird gar nichts geschrieben: ein Preset ohne
+            // Aus-Zeit waere derselbe halbe Zustand wie ein verworfener Schritt.
+            if (!geraete.TryGetValue(rolle, out var id) || string.IsNullOrWhiteSpace(id)) return false;
+            ziele.Add((id, soll));
         }
 
-        return alles;
+        if (ziele.Count > 1)
+        {
+            var schritte = ziele
+                .Select(z => Schritt(z.EntityId, z.Soll))
+                .OfType<AcSchreibschritt>()
+                .ToList();
+            if (schritte.Count != ziele.Count) return false;
+
+            var ergebnisse = await _schreiber.SchreibenAsync(settings, schritte, _warten, ct);
+            var bestaetigt = ergebnisse.Count == schritte.Count && ergebnisse.All(r => r.Bestaetigt);
+            if (!bestaetigt)
+            {
+                var haengt = ergebnisse.FirstOrDefault(r => !r.Bestaetigt);
+                _logger.LogWarning(
+                    "Licht: {Entity} nicht bestätigt ({Fehler}) — die folgenden Schritte wurden nicht geschrieben.",
+                    haengt?.EntityId, haengt?.Fehler);
+            }
+            return bestaetigt;
+        }
+
+        var (entityId, sollWert) = ziele[0];
+        var vorher = (await _funk.ZustandAsync(settings, entityId, ct))?.State;
+        if (vorher is not null && Gleich(vorher, sollWert)) return true;
+
+        var gesendet = await SendenAsync(settings, entityId, sollWert, ct);
+        var jetzt = DateTime.UtcNow;
+        Offene[entityId] = new LichtOffen(entityId, sollWert, jetzt, 1, jetzt, vorher);
+        return gesendet;
     }
 
-    private Task<bool> SchreibenAsync(HomeAssistantSettings settings, string entityId, string soll, CancellationToken ct)
+    /// <summary>Der Aufruf, der diese Entität auf den Sollwert stellt.</summary>
+    internal static AcSchreibschritt? Schritt(string entityId, string soll)
     {
         var domaene = entityId.Split('.', 2)[0];
         return domaene switch
         {
-            "select" => _ha.CallEntityServiceAsync(settings, "select", "select_option", entityId, ct,
-                new Dictionary<string, object> { ["option"] = soll }),
-            "time" => _ha.CallEntityServiceAsync(settings, "time", "set_value", entityId, ct,
-                new Dictionary<string, object> { ["time"] = soll }),
-            "number" => _ha.CallEntityServiceAsync(settings, "number", "set_value", entityId, ct,
+            "select" => new AcSchreibschritt(entityId, "select", "select_option",
+                new Dictionary<string, object> { ["option"] = soll }, soll),
+            "time" => new AcSchreibschritt(entityId, "time", "set_value",
+                new Dictionary<string, object> { ["time"] = soll }, soll),
+            "number" => new AcSchreibschritt(entityId, "number", "set_value",
                 new Dictionary<string, object>
                 {
                     ["value"] = double.TryParse(soll, NumberStyles.Float, CultureInfo.InvariantCulture, out var zahl) ? (object)zahl : soll,
-                }),
-            "input_datetime" => _ha.CallEntityServiceAsync(settings, "input_datetime", "set_datetime", entityId, ct,
-                new Dictionary<string, object> { ["time"] = soll }),
-            _ => Task.FromResult(false),
+                }, soll),
+            "input_datetime" => new AcSchreibschritt(entityId, "input_datetime", "set_datetime",
+                new Dictionary<string, object> { ["time"] = soll }, soll),
+            _ => null,
         };
     }
+
+    private Task<bool> SendenAsync(HomeAssistantSettings settings, string entityId, string soll, CancellationToken ct)
+        => Schritt(entityId, soll) is { } s
+            ? _funk.SchickenAsync(settings, s.Domain, s.Dienst, s.EntityId, s.Daten, ct)
+            : Task.FromResult(false);
 
     /// <summary>Die vier Helfer der alten Dashboard-Karte nachziehen.</summary>
     private async Task<bool> HelferSpiegelnAsync(LichtEinstellungen e, CancellationToken ct)
@@ -288,15 +336,61 @@ public sealed class LichtSteuerungService
                      (Entitaeten.BlueteEin, e.BlueteEin), (Entitaeten.BlueteAus, e.BlueteAus),
                  })
         {
-            alles &= await SchreibenAsync(settings, id, wert + ":00", ct);
+            alles &= await SendenAsync(settings, id, wert + ":00", ct);
         }
 
         return alles;
     }
 
+    /// <summary>Was mit einem offenen Sollwert geschieht.</summary>
+    public enum Nachpruefschritt
+    {
+        /// <summary>Übernommen — vergessen.</summary>
+        Erledigt,
+        /// <summary>Jemand anderes hat geschaltet — vergessen, nicht nachschreiben.</summary>
+        Ueberholt,
+        /// <summary>Prüffrist läuft noch.</summary>
+        Warten,
+        /// <summary>Frist abgelaufen, noch Versuche und Zeit übrig — noch einmal schreiben.</summary>
+        Nachschreiben,
+        /// <summary>Versuche aufgebraucht oder Fenster vorbei — melden, nie mehr schreiben.</summary>
+        Aufgegeben,
+    }
+
     /// <summary>
-    /// Die offenen Sollwerte gegen den Ist-Zustand halten: übernommen → vergessen,
-    /// Frist abgelaufen → einmal nachschreiben, Versuche aufgebraucht → melden.
+    /// Wie lange nach dem Befehl höchstens nachgeschrieben wird: jede Wiederholung
+    /// bekommt ihre Prüffrist, und das Ganze einmal Luft obendrauf.
+    /// </summary>
+    /// <remarks>Mit den Vorgaben (20 s, 2 Wiederholungen) sind das zwei Minuten.</remarks>
+    public static TimeSpan Nachschreibfenster(LichtEinstellungen e)
+        => TimeSpan.FromSeconds(e.VerifySekunden * (e.MaxWiederholungen + 1) * 2);
+
+    /// <summary>
+    /// Die Entscheidung über einen offenen Sollwert — rein, damit jeder Fall
+    /// seinen eigenen Test hat.
+    /// </summary>
+    public static Nachpruefschritt Nachpruefung(LichtOffen offen, string? ist, DateTime jetztUtc, LichtEinstellungen e)
+    {
+        if (ist is not null && Gleich(ist, offen.Soll)) return Nachpruefschritt.Erledigt;
+
+        // Meldet die Entität etwas Drittes — weder den alten Stand noch den
+        // gewollten —, hat jemand anderes geschaltet. Unbekannt (unavailable,
+        // nicht lesbar) ist kein Drittes: da bleibt die Frage offen.
+        var lesbar = ist is not null && ist is not ("unavailable" or "unknown" or "");
+        if (lesbar && offen.Vorher is { } vorher && !Gleich(ist!, vorher)) return Nachpruefschritt.Ueberholt;
+
+        if (jetztUtc - offen.SeitUtc < TimeSpan.FromSeconds(e.VerifySekunden)) return Nachpruefschritt.Warten;
+
+        // Ohne Befehlszeit (alter Eintrag) zählt der letzte Versuch als Anfang.
+        var anfang = offen.ErstUtc ?? offen.SeitUtc;
+        if (jetztUtc - anfang > Nachschreibfenster(e)) return Nachpruefschritt.Aufgegeben;
+        if (offen.Versuche > e.MaxWiederholungen) return Nachpruefschritt.Aufgegeben;
+
+        return Nachpruefschritt.Nachschreiben;
+    }
+
+    /// <summary>
+    /// Die offenen Sollwerte gegen den Ist-Zustand halten (<see cref="Nachpruefung"/>).
     /// </summary>
     private async Task<(IReadOnlyList<string> Unbestaetigt, IReadOnlyList<string> Fehlgeschlagen)> OffenePruefenAsync(
         IReadOnlyDictionary<string, HomeAssistantEntity> nachId,
@@ -306,45 +400,64 @@ public sealed class LichtSteuerungService
     {
         if (Offene.IsEmpty) return (Array.Empty<string>(), Array.Empty<string>());
 
-        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        var unbestaetigt = new List<string>();
-        var fehlgeschlagen = new List<string>();
-
-        foreach (var offen in Offene.Values.ToList())
+        // Prüft gerade ein anderer Aufruf (zweiter Tab), wird hier nur gelesen.
+        var darfSchreiben = await Pruefsperre.WaitAsync(0, ct);
+        try
         {
-            if (!geraete.Values.Any(id => string.Equals(id, offen.EntityId, StringComparison.OrdinalIgnoreCase)))
+            var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+            var unbestaetigt = new List<string>();
+            var fehlgeschlagen = new List<string>();
+
+            foreach (var offen in Offene.Values.ToList())
             {
-                Offene.TryRemove(offen.EntityId, out _);
-                continue;
+                if (!geraete.Values.Any(id => string.Equals(id, offen.EntityId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Offene.TryRemove(offen.EntityId, out _);
+                    continue;
+                }
+
+                var ist = nachId.TryGetValue(offen.EntityId, out var s) ? s.State : null;
+                switch (Nachpruefung(offen, ist, DateTime.UtcNow, e))
+                {
+                    case Nachpruefschritt.Erledigt:
+                        Offene.TryRemove(offen.EntityId, out _);
+                        break;
+
+                    case Nachpruefschritt.Ueberholt:
+                        _logger.LogInformation(
+                            "Licht: {Entity} steht jetzt auf {Ist} — anderswo geschaltet, {Soll} wird nicht nachgeschrieben.",
+                            offen.EntityId, ist, offen.Soll);
+                        Offene.TryRemove(offen.EntityId, out _);
+                        break;
+
+                    case Nachpruefschritt.Warten:
+                        unbestaetigt.Add(offen.EntityId);
+                        break;
+
+                    case Nachpruefschritt.Aufgegeben:
+                        fehlgeschlagen.Add(offen.EntityId);
+                        break;
+
+                    case Nachpruefschritt.Nachschreiben when darfSchreiben:
+                        _logger.LogWarning("Licht: {Entity} steht auf {Ist}, gewollt war {Soll} — Versuch {Nummer}.",
+                            offen.EntityId, ist, offen.Soll, offen.Versuche + 1);
+                        await SendenAsync(settings, offen.EntityId, offen.Soll, ct);
+                        Offene[offen.EntityId] = offen with { SeitUtc = DateTime.UtcNow, Versuche = offen.Versuche + 1 };
+                        unbestaetigt.Add(offen.EntityId);
+                        break;
+
+                    case Nachpruefschritt.Nachschreiben:
+                        unbestaetigt.Add(offen.EntityId);
+                        break;
+                }
             }
 
-            var ist = nachId.TryGetValue(offen.EntityId, out var s) ? s.State ?? string.Empty : string.Empty;
-            if (Gleich(ist, offen.Soll))
-            {
-                Offene.TryRemove(offen.EntityId, out _);
-                continue;
-            }
-
-            if (DateTime.UtcNow - offen.SeitUtc < TimeSpan.FromSeconds(e.VerifySekunden))
-            {
-                unbestaetigt.Add(offen.EntityId);
-                continue;
-            }
-
-            if (offen.Versuche > e.MaxWiederholungen)
-            {
-                fehlgeschlagen.Add(offen.EntityId);
-                continue;
-            }
-
-            _logger.LogWarning("Licht: {Entity} steht auf {Ist}, gewollt war {Soll} — Versuch {Nummer}.",
-                offen.EntityId, ist, offen.Soll, offen.Versuche + 1);
-            await SchreibenAsync(settings, offen.EntityId, offen.Soll, ct);
-            Offene[offen.EntityId] = offen with { SeitUtc = DateTime.UtcNow, Versuche = offen.Versuche + 1 };
-            unbestaetigt.Add(offen.EntityId);
+            return (unbestaetigt, fehlgeschlagen);
         }
-
-        return (unbestaetigt, fehlgeschlagen);
+        finally
+        {
+            if (darfSchreiben) Pruefsperre.Release();
+        }
     }
 
     /// <summary>Einen gemeldeten Fehlschlag wegräumen, wenn der Nutzer ihn zur Kenntnis genommen hat.</summary>
@@ -397,7 +510,7 @@ public sealed class LichtSteuerungService
         => ein <= aus ? jetzt >= ein && jetzt < aus : jetzt >= ein || jetzt < aus;
 
     /// <summary>„05:00", „05:00:00" und „5:00" gelten als dieselbe Zeit.</summary>
-    private static bool Gleich(string ist, string soll)
+    internal static bool Gleich(string ist, string soll)
     {
         if (string.Equals(ist, soll, StringComparison.OrdinalIgnoreCase)) return true;
         if (Zeit(ist) is { } a && Zeit(soll) is { } b) return a == b;
