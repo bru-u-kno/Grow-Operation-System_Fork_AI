@@ -41,34 +41,13 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.Now;
-
-            await CaptureReadingsAsync(stoppingToken);
-
-            var today = DateOnly.FromDateTime(now);
-            // Ab 02:00, nicht NUR 02:00–02:05: der Takt ist 5 Minuten PLUS
-            // Capture-Laufzeit. Ein zaehes HA um 01:59 haette das enge Fenster
-            // uebersprungen — und weil die Rohdaten nach 7 Tagen aufgeraeumt
-            // werden, waere der Vortag irgendwann unwiederbringlich ohne
-            // Tagesstatistik geblieben.
-            if (now.Hour >= 2 && _lastAggregationDateLocal != today)
+            try
             {
-                await AggregateYesterdayAsync(stoppingToken);
-                await CleanupOldReadingsAsync();
-                _lastAggregationDateLocal = today;
+                await DurchlaufAsync(DateTime.Now, stoppingToken);
             }
-
-            // Kalibrier-/Wartungs-Erinnerung: einmal täglich am Vormittag (nicht mitten in der Nacht).
-            if (now.Hour >= 8 && _lastCalibrationCheckDateLocal != today)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                await RunCalibrationReminderAsync(stoppingToken);
-                _lastCalibrationCheckDateLocal = today;
-            }
-
-            // Täglicher Digest zur eingestellten Uhrzeit.
-            if (_lastDigestDateLocal != today)
-            {
-                await RunDigestIfDueAsync(now, today, stoppingToken);
+                break;
             }
 
             try
@@ -79,6 +58,74 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
             {
                 break;
             }
+        }
+    }
+
+    /// <summary>Ein Takt: erfassen, dann die täglichen Arbeiten, wenn sie fällig sind.</summary>
+    /// <remarks>
+    /// <para><b>Jeder Schritt für sich abgesichert (29.09.2026).</b> Vorher lief
+    /// die Schleife ohne <c>try/catch</c>. Eine Ausnahme — eine gesperrte
+    /// SQLite-Datei während einer Sicherung reicht — beendete nach der Vorgabe
+    /// von .NET (<c>BackgroundServiceExceptionBehavior.StopHost</c>) das ganze
+    /// Add-on. Mit ihm fielen Alarme, Wächter und Dosier-Riegel. Jetzt scheitert
+    /// ein Schritt allein und wird im nächsten Takt wieder versucht; die übrigen
+    /// laufen weiter.</para>
+    /// </remarks>
+    public async Task DurchlaufAsync(DateTime now, CancellationToken stoppingToken)
+    {
+        await SicherAsync("Messwerte erfassen", () => CaptureReadingsAsync(stoppingToken), stoppingToken);
+
+        var today = DateOnly.FromDateTime(now);
+        // Ab 02:00, nicht NUR 02:00–02:05: der Takt ist 5 Minuten PLUS
+        // Capture-Laufzeit. Ein zaehes HA um 01:59 haette das enge Fenster
+        // uebersprungen — und weil die Rohdaten nach 7 Tagen aufgeraeumt
+        // werden, waere der Vortag irgendwann unwiederbringlich ohne
+        // Tagesstatistik geblieben.
+        // Erledigt erst nach Erfolg: die Tagesstatistik schreibt per
+        // ON CONFLICT … DO UPDATE, ein zweiter Versuch ist harmlos.
+        if (now.Hour >= 2 && _lastAggregationDateLocal != today)
+        {
+            var ok = await SicherAsync("Tagesstatistik", async () =>
+            {
+                await AggregateYesterdayAsync(stoppingToken);
+                await CleanupOldReadingsAsync();
+            }, stoppingToken);
+            if (ok) _lastAggregationDateLocal = today;
+        }
+
+        // Kalibrier-/Wartungs-Erinnerung: einmal täglich am Vormittag (nicht mitten in der Nacht).
+        // Auch nach einem Fehler erledigt — sonst kämen Erinnerungen, die schon
+        // raus sind, alle fünf Minuten erneut.
+        if (now.Hour >= 8 && _lastCalibrationCheckDateLocal != today)
+        {
+            await SicherAsync("Kalibrier-Erinnerung", () => RunCalibrationReminderAsync(stoppingToken), stoppingToken);
+            _lastCalibrationCheckDateLocal = today;
+        }
+
+        // Täglicher Digest zur eingestellten Uhrzeit.
+        if (_lastDigestDateLocal != today)
+        {
+            await SicherAsync("Tagesbericht", () => RunDigestIfDueAsync(now, today, stoppingToken), stoppingToken);
+        }
+    }
+
+    /// <summary>Führt einen Schritt aus; eine Ausnahme wird geloggt statt den Worker zu beenden.</summary>
+    /// <returns><c>true</c>, wenn der Schritt ohne Ausnahme durchlief.</returns>
+    private async Task<bool> SicherAsync(string schritt, Func<Task> arbeit, CancellationToken stoppingToken)
+    {
+        try
+        {
+            await arbeit();
+            return true;
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Snapshot-Takt: {Schritt} fehlgeschlagen — nächster Versuch im nächsten Takt.", schritt);
+            return false;
         }
     }
 
