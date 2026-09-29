@@ -212,19 +212,21 @@ public static class DosingGuard
         // zwei Schritten. Ablehnen hiesse, dass gar nichts passiert.
         var ml = Math.Min(requestedMl, pump.MaxSingleDoseMl);
 
-        // Was auf Tagesgrenze und Mischzeit zaehlt: nur, was in die Loesung
-        // gegangen ist. Kalibrierlaeufe gehen in den Messbecher und aendern an
-        // der Loesung nichts — beim ersten Durchspielen war deshalb nach dem
-        // Kalibrieren 18 Minuten lang keine Dosis moeglich.
+        // Was auf Tagesgrenze und Mischzeit zaehlt: alles, was in die Loesung
+        // gegangen sein KANN — auch eine Dosis, deren Einschalten nicht
+        // bestaetigt wurde (DosingService.KannGelaufenSein). Kalibrierlaeufe
+        // gehen in den Messbecher und aendern an der Loesung nichts — beim
+        // ersten Durchspielen war deshalb nach dem Kalibrieren 18 Minuten lang
+        // keine Dosis moeglich.
         var gelaufen = context.DosesToday
-            .Where(dose => dose.Outcome == DoseOutcome.Done && dose.Trigger != DoseTrigger.Calibration)
+            .Where(dose => DosingService.KannGelaufenSein(dose) && dose.Trigger != DoseTrigger.Calibration)
             .ToList();
         if (gelaufen.Count >= pump.MaxDosesPerDay)
         {
             return DosingDecision.No($"Tagesgrenze erreicht: schon {gelaufen.Count} Dosierungen.");
         }
 
-        var heuteMl = gelaufen.Sum(dose => dose.DosedMl);
+        var heuteMl = gelaufen.Sum(DosingService.HoechstensGegeben);
         if (heuteMl >= pump.MaxMlPerDay)
         {
             return DosingDecision.No($"Tagesmenge erreicht: schon {heuteMl:0.#} ml.");
@@ -331,29 +333,62 @@ public sealed class DosingService
 {
     private readonly GrowRepository _repository;
     private readonly DosingRepository _dosing;
-    private readonly HomeAssistantService _homeAssistant;
+    private readonly IAcFunk _funk;
+    private readonly Ausschalter _ausschalter;
     private readonly ILogger<DosingService> _logger;
+    private readonly Func<TimeSpan, CancellationToken, Task> _warten;
 
     public DosingService(
         GrowRepository repository,
         DosingRepository dosing,
-        HomeAssistantService homeAssistant,
-        ILogger<DosingService> logger)
+        IAcFunk funk,
+        Ausschalter ausschalter,
+        ILogger<DosingService> logger,
+        Func<TimeSpan, CancellationToken, Task>? warten = null)
     {
         _repository = repository;
         _dosing = dosing;
-        _homeAssistant = homeAssistant;
+        _funk = funk;
+        _ausschalter = ausschalter;
         _logger = logger;
+        _warten = warten ?? ((dauer, token) => Task.Delay(dauer, token));
     }
+
+    /// <summary>
+    /// Zählt diese Dosis auf Tagesgrenze und Mischpause?
+    /// </summary>
+    /// <remarks>
+    /// <para><c>Failed</c> zählt mit. „Home Assistant hat nicht geschaltet"
+    /// heisst oft nur: die Antwort kam nicht binnen vier Sekunden — der Befehl
+    /// kann trotzdem angekommen sein, und die Pumpe lief. Vorher zählte nur
+    /// <c>Done</c>; die Automatik dosierte dann eine Minute später erneut, auf
+    /// einen Messwert aus der noch nicht durchmischten Lösung.</para>
+    /// <para>Im Zweifel also: gelaufen. Eine ausgefallene Dosis kostet eine
+    /// Mischpause, eine doppelte kostet womöglich den Lauf.</para>
+    /// </remarks>
+    public static bool KannGelaufenSein(DoseEvent dose)
+        => dose.Outcome is DoseOutcome.Done or DoseOutcome.Failed;
+
+    /// <summary>Die Menge, die eine Dosis höchstens ins Becken gebracht hat.</summary>
+    /// <remarks>Bei <c>Failed</c> die angeforderte — ob etwas floss, weiss niemand.</remarks>
+    public static double HoechstensGegeben(DoseEvent dose)
+        => dose.Outcome == DoseOutcome.Failed ? dose.RequestedMl : dose.DosedMl;
 
     /// <summary>
     /// Lässt die Pumpe für die angegebene Zeit laufen.
     /// </summary>
     /// <remarks>
-    /// Das Ausschalten steht in einem <c>finally</c> und läuft auch dann, wenn
-    /// der Aufruf abgebrochen wird. Was es NICHT übersteht, ist ein Absturz des
-    /// ganzen Add-ons — dagegen hilft nur die Abschaltung in Home Assistant und
-    /// der Auswurf beim Start (<see cref="TurnAllOffAsync"/>).
+    /// <para>Das Ausschalten steht in einem <c>finally</c> und läuft auch dann,
+    /// wenn der Aufruf abgebrochen wird — und auch dann, wenn schon das
+    /// Einschalten scheiterte: ein Zeitlimit beim „an" heisst nicht, dass die
+    /// Pumpe steht. Ausgeschaltet wird mit Nachkontrolle
+    /// (<see cref="Ausschalter"/>).</para>
+    /// <para>Was es NICHT übersteht, ist ein Absturz des ganzen Add-ons —
+    /// dagegen hilft nur die Abschaltung in Home Assistant und der Auswurf beim
+    /// Start (<see cref="TurnAllOffAsync"/>).</para>
+    /// <para><c>false</c> heisst: nicht bestätigt gelaufen. Die Aufrufer buchen
+    /// das als <c>Failed</c>, und <see cref="KannGelaufenSein"/> zählt es
+    /// trotzdem auf Tagesgrenze und Mischpause.</para>
     /// </remarks>
     public async Task<bool> RunForSecondsAsync(DosingPump pump, double seconds, CancellationToken cancellationToken = default, double? maxSeconds = null)
     {
@@ -375,23 +410,29 @@ public sealed class DosingService
 
         var (domain, _) = SplitEntity(pump.HaEntityId);
 
-        var an = await _homeAssistant.CallEntityServiceAsync(settings, domain, "turn_on", pump.HaEntityId, cancellationToken);
-        if (!an)
-        {
-            _logger.LogWarning("Pumpe {Pump} liess sich nicht einschalten.", pump.Name);
-            return false;
-        }
-
+        var an = false;
         try
         {
+            // Ohne den uebergebenen Token: ein Abbruch zwischen Senden und
+            // Antwort liesse offen, ob die Pumpe laeuft.
+            an = await _funk.SchickenAsync(
+                settings, domain, "turn_on", pump.HaEntityId, new Dictionary<string, object>(), CancellationToken.None);
+            if (!an)
+            {
+                // Kein Rueckweg ohne Ausschalten: das „an" kann angekommen
+                // sein, nur die Antwort nicht.
+                _logger.LogWarning("Pumpe {Pump}: Einschalten nicht bestätigt — wird vorsorglich ausgeschaltet.", pump.Name);
+                return false;
+            }
+
             // Bewusst ohne den uebergebenen Token: bricht der Aufrufer ab, soll
             // trotzdem die volle Zeit gewartet und danach ausgeschaltet werden.
             // Ein Abbruch mitten im Lauf darf die Pumpe nicht laufen lassen.
-            await Task.Delay(TimeSpan.FromSeconds(kappt), CancellationToken.None);
+            await _warten(TimeSpan.FromSeconds(kappt), CancellationToken.None);
         }
         finally
         {
-            var aus = await _homeAssistant.CallEntityServiceAsync(settings, domain, "turn_off", pump.HaEntityId, CancellationToken.None);
+            var aus = await _ausschalter.AusschaltenAsync(settings, pump.HaEntityId, _warten);
             if (!aus)
             {
                 _logger.LogError(
@@ -400,7 +441,7 @@ public sealed class DosingService
             }
         }
 
-        return true;
+        return an;
     }
 
     /// <summary>Schaltet eine einzelne Pumpe aus — ohne Bedingungen.</summary>
@@ -412,29 +453,68 @@ public sealed class DosingService
         var settings = _repository.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured || string.IsNullOrWhiteSpace(pump.HaEntityId)) return false;
 
-        var (domain, _) = SplitEntity(pump.HaEntityId);
-        return await _homeAssistant.CallEntityServiceAsync(settings, domain, "turn_off", pump.HaEntityId, cancellationToken);
+        return await _ausschalter.AusschaltenAsync(settings, pump.HaEntityId, _warten);
     }
 
+    /// <summary>Wie oft der Auswurf beim Start höchstens ansetzt.</summary>
+    public const int AuswurfRunden = 10;
+
+    /// <summary>Pause zwischen zwei Runden des Auswurfs.</summary>
+    /// <remarks>
+    /// Zehn Runden à 30 s decken fünf Minuten ab — so lange braucht Home
+    /// Assistant nach einem gemeinsamen Neustart des Hosts im schlechten Fall,
+    /// bis es Dienste annimmt.
+    /// </remarks>
+    public static readonly TimeSpan AuswurfPause = TimeSpan.FromSeconds(30);
+
     /// <summary>
-    /// Wirft beim Start jede eingerichtete Pumpe einmal aus.
+    /// Wirft beim Start jede eingerichtete Pumpe aus — bis sie „aus" meldet.
     /// </summary>
     /// <remarks>
-    /// Der Totmann: Ist Grow OS mitten in einer Dosis abgestürzt, läuft die
+    /// <para>Der Totmann: Ist Grow OS mitten in einer Dosis abgestürzt, läuft die
     /// Pumpe seither. Der erste Handgriff nach dem Hochfahren ist deshalb, alle
-    /// abzuschalten — das kostet nichts, wenn ohnehin alles aus war.
+    /// abzuschalten — das kostet nichts, wenn ohnehin alles aus war.</para>
+    /// <para>Vorher ein einziger Versuch ohne Blick aufs Ergebnis. Startet das
+    /// Add-on zusammen mit Home Assistant, nimmt HA in den ersten Sekunden
+    /// nichts an — der Totmann griff dann genau im Fall nicht, für den es ihn
+    /// gibt. Jetzt: je Runde alle noch nicht bestätigten Pumpen, bis alle aus
+    /// sind oder die Runden aufgebraucht.</para>
     /// </remarks>
-    public async Task TurnAllOffAsync(CancellationToken cancellationToken = default)
+    /// <returns>Die Pumpen, die sich nicht bestätigt ausschalten liessen.</returns>
+    public async Task<IReadOnlyList<DosingPump>> TurnAllOffAsync(CancellationToken cancellationToken = default)
     {
-        var settings = _repository.GetEffectiveHomeAssistantSettings();
-        if (!settings.IsConfigured) return;
+        var offen = _dosing.GetPumps()
+            .Where(pump => !pump.SimulationMode && !string.IsNullOrWhiteSpace(pump.HaEntityId))
+            .ToList();
 
-        foreach (var pump in _dosing.GetPumps())
+        for (var runde = 1; runde <= AuswurfRunden && offen.Count > 0; runde++)
         {
-            if (string.IsNullOrWhiteSpace(pump.HaEntityId)) continue;
-            var (domain, _) = SplitEntity(pump.HaEntityId);
-            await _homeAssistant.CallEntityServiceAsync(settings, domain, "turn_off", pump.HaEntityId, cancellationToken);
+            if (runde > 1) await _warten(AuswurfPause, cancellationToken);
+
+            // Jede Runde neu lesen: die Einstellungen koennen beim Start noch
+            // fehlen und erst danach eingetragen werden.
+            var settings = _repository.GetEffectiveHomeAssistantSettings();
+            if (!settings.IsConfigured) continue;
+
+            var nochOffen = new List<DosingPump>();
+            foreach (var pump in offen)
+            {
+                if (!await _ausschalter.AusschaltenAsync(settings, pump.HaEntityId, _warten))
+                {
+                    nochOffen.Add(pump);
+                }
+            }
+            offen = nochOffen;
         }
+
+        foreach (var pump in offen)
+        {
+            _logger.LogError(
+                "Pumpen-Auswurf beim Start: {Pump} ({Entity}) meldet nicht „aus\" — in Home Assistant prüfen.",
+                pump.Name, pump.HaEntityId);
+        }
+
+        return offen;
     }
 
     /// <summary>„switch.dosier_ph_minus" → („switch", "dosier_ph_minus").</summary>

@@ -20,19 +20,33 @@ namespace GrowDiary.Web.Services;
 /// auch wenn das Nachsehen dazwischen scheitert — deshalb steht das Schließen in
 /// einem <c>finally</c>. Zwei Sekunden CO₂ sind in jedem Zelt harmlos; ein
 /// offen gebliebenes Ventil ist es nicht.</para>
+/// <para>Das gilt auch, wenn schon das Öffnen scheiterte: die AC-Infinity-Wolke
+/// antwortet oft langsamer als das Zeitlimit von vier Sekunden, das „an" kann
+/// also angekommen sein, obwohl der Aufruf als gescheitert zurückkam. Vorher
+/// kehrte die Probe dann ohne Schließen zurück. Geschlossen wird mit
+/// Nachkontrolle und Wiederholung (<see cref="Ausschalter"/>) — die Wolke
+/// verwirft Aufträge auch still.</para>
 /// </remarks>
 public sealed class SteuerungProbeService
 {
     private static readonly TimeSpan Offenzeit = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan Nachlauf = TimeSpan.FromSeconds(3);
 
-    private readonly HomeAssistantService _ha;
+    private readonly IAcFunk _funk;
+    private readonly Ausschalter _ausschalter;
     private readonly ILogger<SteuerungProbeService> _log;
+    private readonly Func<TimeSpan, CancellationToken, Task> _warten;
 
-    public SteuerungProbeService(HomeAssistantService ha, ILogger<SteuerungProbeService> log)
+    public SteuerungProbeService(
+        IAcFunk funk,
+        Ausschalter ausschalter,
+        ILogger<SteuerungProbeService> log,
+        Func<TimeSpan, CancellationToken, Task>? warten = null)
     {
-        _ha = ha;
+        _funk = funk;
+        _ausschalter = ausschalter;
         _log = log;
+        _warten = warten ?? ((dauer, token) => Task.Delay(dauer, token));
     }
 
     public sealed record Ergebnis(
@@ -58,38 +72,48 @@ public sealed class SteuerungProbeService
         zuordnung.TryGetValue("port_zustand", out var zustandEntity);
         zuordnung.TryGetValue("co2_sensor", out var co2Entity);
 
-        var co2Vorher = co2Entity is null ? null : (await _ha.GetEntityStateAsync(settings, co2Entity, ct))?.State;
-        var vorher = zustandEntity is null ? null : (await _ha.GetEntityStateAsync(settings, zustandEntity, ct))?.State;
+        var co2Vorher = co2Entity is null ? null : (await _funk.ZustandAsync(settings, co2Entity, ct))?.State;
+        var vorher = zustandEntity is null ? null : (await _funk.ZustandAsync(settings, zustandEntity, ct))?.State;
 
-        var geschaltet = await SchaltenAsync(settings, schalter, an: true, ct);
-        if (!geschaltet)
-        {
-            return new Ergebnis(false, false, true, co2Vorher, null,
-                "Der Schaltbefehl kam nicht durch. Stimmt die zugeordnete Entität?");
-        }
-
+        var geschaltet = false;
+        var zu = false;
         string? waehrend = null;
         try
         {
-            await Task.Delay(Offenzeit, ct);
-            if (zustandEntity is not null)
+            geschaltet = await SchaltenAsync(settings, schalter, CancellationToken.None);
+            if (geschaltet)
             {
-                waehrend = (await _ha.GetEntityStateAsync(settings, zustandEntity, ct))?.State;
+                await _warten(Offenzeit, ct);
+                if (zustandEntity is not null)
+                {
+                    waehrend = (await _funk.ZustandAsync(settings, zustandEntity, ct))?.State;
+                }
             }
         }
         finally
         {
-            // Muss laufen, egal was oben schiefging. Ein offen gebliebenes
-            // Ventil ist die eine Sache, die hier nicht passieren darf.
-            await SchaltenAsync(settings, schalter, an: false, CancellationToken.None);
+            // Muss laufen, egal was oben schiefging — auch nach einem
+            // gescheiterten Oeffnen. Ein offen gebliebenes Ventil ist die eine
+            // Sache, die hier nicht passieren darf.
+            zu = await _ausschalter.AusschaltenAsync(settings, schalter, _warten);
         }
 
-        await Task.Delay(Nachlauf, ct);
-        var nachher = zustandEntity is null ? null : (await _ha.GetEntityStateAsync(settings, zustandEntity, ct))?.State;
-        var co2Nachher = co2Entity is null ? null : (await _ha.GetEntityStateAsync(settings, co2Entity, ct))?.State;
+        if (!geschaltet)
+        {
+            return new Ergebnis(false, false, zu, co2Vorher, null, zu
+                ? "Der Schaltbefehl kam nicht durch. Stimmt die zugeordnete Entität?"
+                : "Der Schaltbefehl kam nicht bestätigt durch, und das Ventil meldet sich nicht als geschlossen. "
+                + "Bitte sofort von Hand nachsehen und schließen.");
+        }
+
+        await _warten(Nachlauf, ct);
+        var nachher = zustandEntity is null ? null : (await _funk.ZustandAsync(settings, zustandEntity, ct))?.State;
+        var co2Nachher = co2Entity is null ? null : (await _funk.ZustandAsync(settings, co2Entity, ct))?.State;
 
         var sprang = Offen(waehrend) && !Offen(vorher);
-        var wiederZu = !Offen(nachher);
+        // Zu heisst: der Schalter hat „aus" bestaetigt UND der Port meldet
+        // nicht mehr „an".
+        var wiederZu = zu && !Offen(nachher);
 
         _log.LogInformation(
             "Probeschaltung: geschaltet, Zustand vorher {Vorher}, waehrend {Waehrend}, nachher {Nachher}.",
@@ -123,17 +147,14 @@ public sealed class SteuerungProbeService
            && (zustand.Equals("on", StringComparison.OrdinalIgnoreCase)
                || zustand.Equals("On", StringComparison.Ordinal));
 
-    private async Task<bool> SchaltenAsync(
-        HomeAssistantSettings settings, string entityId, bool an, CancellationToken ct)
+    /// <summary>Öffnet das Ventil. Geschlossen wird über <see cref="Ausschalter"/>.</summary>
+    private Task<bool> SchaltenAsync(HomeAssistantSettings settings, string entityId, CancellationToken ct)
     {
         var domain = entityId.Split('.', 2)[0];
-        return domain switch
-        {
-            "select" => await _ha.CallEntityServiceAsync(
-                settings, "select", "select_option", entityId, ct,
-                new Dictionary<string, object> { ["option"] = an ? "On" : "Off" }),
-            _ => await _ha.CallEntityServiceAsync(
-                settings, domain, an ? "turn_on" : "turn_off", entityId, ct),
-        };
+        return domain == "select"
+            ? _funk.SchickenAsync(settings, "select", "select_option", entityId,
+                new Dictionary<string, object> { ["option"] = "On" }, ct)
+            : _funk.SchickenAsync(settings, domain, "turn_on", entityId,
+                new Dictionary<string, object>(), ct);
     }
 }

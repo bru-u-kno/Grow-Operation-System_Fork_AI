@@ -160,7 +160,7 @@ public sealed class DosingContextBuilder
     /// </remarks>
     public static DateTime? LetzteImBecken(IEnumerable<DoseEvent> dosen)
         => dosen
-            .Where(dose => dose.Outcome == DoseOutcome.Done
+            .Where(dose => DosingService.KannGelaufenSein(dose)
                 && dose.Trigger != DoseTrigger.Calibration)
             .Select(dose => (DateTime?)dose.OccurredAtUtc)
             .Max();

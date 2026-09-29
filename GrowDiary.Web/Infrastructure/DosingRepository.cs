@@ -163,9 +163,10 @@ public sealed class DosingRepository : RepositoryBase
     }
 
     /// <summary>
-    /// Die gelaufenen Dosen einer Pumpe seit einem Zeitpunkt. Was davon auf
-    /// Tagesgrenze und Sperrfrist zählt, entscheidet <c>DosingGuard</c> — hier
-    /// wird nur geholt.
+    /// Die gelaufenen Dosen einer Pumpe seit einem Zeitpunkt — und die, die
+    /// gelaufen sein KÖNNEN (<c>Failed</c>, siehe
+    /// <c>DosingService.KannGelaufenSein</c>). Was davon auf Tagesgrenze und
+    /// Sperrfrist zählt, entscheidet <c>DosingGuard</c> — hier wird nur geholt.
     /// </summary>
     public List<DoseEvent> GetDosesSince(int pumpId, DateTime sinceUtc)
     {
@@ -173,7 +174,7 @@ public sealed class DosingRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT * FROM DoseEvents
-             WHERE PumpId = $pumpId AND Outcome = 'Done' AND OccurredAtUtc >= $since
+             WHERE PumpId = $pumpId AND Outcome IN ('Done', 'Failed') AND OccurredAtUtc >= $since
              ORDER BY OccurredAtUtc DESC;
         """;
         command.Parameters.AddWithValue("$pumpId", pumpId);
