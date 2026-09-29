@@ -150,7 +150,7 @@ public sealed class Co2SteuerungService
 
         var vorher = _repo.GetEinstellungen<Co2Einstellungen>(Modul);
         _repo.SetEinstellungen(Modul, e);
-        var erreicht = await NachHomeAssistantSchreibenAsync(e, ct);
+        var erreicht = await NachHomeAssistantSchreibenAsync(e, ct, AutomatikSchalten(vorher, e));
 
         // Das Mittelungsfenster ist eine Option des Filter-Helfers, kein
         // input_number. Jede Änderung lädt den Helfer neu und leert dabei seinen
@@ -379,8 +379,60 @@ public sealed class Co2SteuerungService
 
     // ------------------------------------------------------- nach HA schreiben
 
+    /// <summary>
+    /// Der stündliche Abgleich: Zahlen und Schalter-Helfer nachziehen — die
+    /// Automation selbst NICHT.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (29.09.2026).</b> Vorher schrieb der Stundenlauf auch
+    /// <c>automation.turn_on</c>. Wer die CO₂-Automation in Home Assistant
+    /// ausschaltet — Ventil klemmt, Arbeit im Zelt, Flasche wird getauscht —,
+    /// dem schaltete der Fork sie spätestens nach einer Stunde wieder ein. Ein
+    /// Not-Aus, das sich selbst zurücknimmt, ist keines.</para>
+    /// <para>An- und ausgeschaltet wird die Automation nur noch, wenn jemand auf
+    /// der CO₂-Seite den Schalter „Automatik" umlegt und speichert
+    /// (<see cref="AutomatikSchalten"/>).</para>
+    /// </remarks>
+    public Task<bool> StuendlichAbgleichenAsync(Co2Einstellungen e, CancellationToken ct)
+        => NachHomeAssistantSchreibenAsync(e, ct, mitAutomatik: false);
+
+    /// <summary>
+    /// Schaltet dieses Speichern die Automation? Nur, wenn der Schalter
+    /// „Automatik" selbst umgelegt wurde (oder zum ersten Mal gespeichert wird).
+    /// </summary>
+    /// <remarks>
+    /// Die Seite liest den Zustand der Automation nicht aus Home Assistant
+    /// zurück. Wer sie dort ausgeschaltet hat und im Fork nur einen ppm-Wert
+    /// ändert, schickte sonst mit dem Speichern ein <c>turn_on</c> hinterher.
+    /// </remarks>
+    public static bool AutomatikSchalten(Co2Einstellungen? vorher, Co2Einstellungen neu)
+        => vorher is null || vorher.AutomatikAktiv != neu.AutomatikAktiv;
+
+    /// <summary>
+    /// Die Schalter, die beim Schreiben nach Home Assistant gesetzt werden —
+    /// als Liste, damit prüfbar ist, was wann angefasst wird.
+    /// </summary>
+    /// <param name="mitAutomatik">Auch die Automation selbst schalten? Nur beim Speichern.</param>
+    public static IReadOnlyList<(string Domain, string Dienst, string Entity)> Schalterliste(Co2Einstellungen e, bool mitAutomatik)
+    {
+        var liste = new List<(string, string, string)>
+        {
+            ("input_boolean", e.Autokalibrierung ? "turn_on" : "turn_off", Entitaeten.Autokalibrierung),
+            ("input_boolean", e.AbluftDrosseln ? "turn_on" : "turn_off", Entitaeten.AbluftDrosseln),
+        };
+        if (mitAutomatik)
+        {
+            liste.Add(("automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik));
+        }
+        return liste;
+    }
+
     /// <summary>Alle Sollwerte in die HA-Helfer schreiben. false, wenn HA nicht erreichbar oder ein Schreiben scheiterte.</summary>
-    public async Task<bool> NachHomeAssistantSchreibenAsync(Co2Einstellungen e, CancellationToken ct)
+    /// <param name="mitAutomatik">
+    /// Auch die Automation an- oder ausschalten. Nur beim Speichern — der
+    /// Stundenlauf geht über <see cref="StuendlichAbgleichenAsync"/>.
+    /// </param>
+    public async Task<bool> NachHomeAssistantSchreibenAsync(Co2Einstellungen e, CancellationToken ct, bool mitAutomatik = true)
     {
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return false;
@@ -397,14 +449,12 @@ public sealed class Co2SteuerungService
                 new Dictionary<string, object> { ["value"] = wert });
             alles &= ok;
         }
-        alles &= await Schalter(Entitaeten.Autokalibrierung, e.Autokalibrierung);
-        alles &= await Schalter(Entitaeten.AbluftDrosseln, e.AbluftDrosseln);
-        alles &= await _ha.CallEntityServiceAsync(settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik, ct);
+        foreach (var (domain, dienst, entity) in Schalterliste(e, mitAutomatik))
+        {
+            alles &= await _ha.CallEntityServiceAsync(settings, domain, dienst, entity, ct);
+        }
         if (!alles) _logger.LogWarning("CO₂-Sollwerte: nicht alle Helfer in Home Assistant angenommen.");
         return alles;
-
-        Task<bool> Schalter(string entity, bool an)
-            => _ha.CallEntityServiceAsync(settings, "input_boolean", an ? "turn_on" : "turn_off", entity, ct);
     }
 
     /// <summary>

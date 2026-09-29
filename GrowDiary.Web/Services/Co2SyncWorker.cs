@@ -69,7 +69,8 @@ public sealed class Co2SyncWorker : BackgroundService
         if (DateTime.UtcNow - _letzterSollwertlauf >= Sollwerttakt)
         {
             _letzterSollwertlauf = DateTime.UtcNow;
-            var ok = await dienst.NachHomeAssistantSchreibenAsync(gespeichert, ct);
+            // Ohne die Automation selbst: wer sie in HA ausgeschaltet hat, meint das so.
+            var ok = await dienst.StuendlichAbgleichenAsync(gespeichert, ct);
             _logger.LogInformation("CO₂-Sollwerte nach Home Assistant geschrieben: {Ergebnis}.", ok ? "vollständig" : "unvollständig");
         }
     }
