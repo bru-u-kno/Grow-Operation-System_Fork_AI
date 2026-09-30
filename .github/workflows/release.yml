@@ -45,7 +45,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # ALLES, was ein Release unmoeglich macht, faellt HIER auf — bevor das
+      # Image gebaut wird. Sonst ueberschreibt der Image-Bau im Zweifel ein
+      # schon ausgeliefertes Image, und erst der letzte Schritt merkt es.
       - name: Nummer aus dem Tag lesen und pruefen
         id: nummer
         run: |
@@ -61,9 +66,29 @@ jobs:
             echo "::error::grow-os/CHANGELOG.md hat keinen Abschnitt '## $V'."
             exit 1
           fi
-          ALT=$(grep -E '^version:' grow-os/config.yaml | sed -E 's/^version:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')
+          # Die veroeffentlichte Nummer steht auf MAIN, nicht im getaggten
+          # Commit — der Release-Commit liegt ja ueber dem Tag. Wer einen Tag
+          # nach dem Release neu setzt, haette sonst das ausgelieferte Image
+          # unter derselben Nummer mit ungeprueftem Code ueberschrieben.
+          git fetch origin main
+          ALT=$(git show origin/main:grow-os/config.yaml | grep -E '^version:' | sed -E 's/^version:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')
           if [ "$ALT" = "$V" ]; then
-            echo "::error::config.yaml traegt schon $V — diese Nummer ist bereits veroeffentlicht."
+            echo "::error::main traegt schon $V — diese Nummer ist bereits veroeffentlicht."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::main enthaelt Commits, die im Tag fehlen. Erst main in den Branch holen, dann neu taggen."
+            exit 1
+          fi
+          # Der GITHUB_TOKEN darf keine Aenderung an .github/workflows nach
+          # main schieben — GitHub lehnt das ab, und dieses Recht kann der
+          # Token nicht bekommen. Solche Commits muessen VOR dem Taggen von
+          # Hand nach main (nach gruener CI am Branch).
+          WORKFLOWS=$(git diff --name-only origin/main HEAD -- .github/workflows)
+          if [ -n "$WORKFLOWS" ]; then
+            echo "::error::Der Tag aendert Workflow-Dateien gegenueber main:"
+            printf '%s\n' "$WORKFLOWS"
+            echo "::error::Erst main von Hand auf diesen Commit vorspulen (CI am Branch gruen), dann neu taggen."
             exit 1
           fi
           echo "Release $V (bisher $ALT)"

@@ -45,6 +45,13 @@ zeigt ihn erst an, wenn `config.yaml` die Nummer trägt.
 
 ## Schritt 2 — Tag pushen
 
+**Ausnahme: Der Release ändert `.github/workflows/`.** Solche Commits darf der
+GITHUB_TOKEN nicht nach `main` schieben — GitHub lehnt das ab, und das Recht
+dazu kann der Token nicht bekommen (Befund des Prüfers vor forkai.153). Dann
+zuerst die CI am Branch grün abwarten, `main` von Hand auf genau diesen Commit
+vorspulen, **danach** taggen. release.yml prüft das als Erstes und bricht vor
+dem Image-Bau ab, wenn es vergessen wurde.
+
 ```
 git tag -a v<X> -m "<X>"
 git push origin v<X>

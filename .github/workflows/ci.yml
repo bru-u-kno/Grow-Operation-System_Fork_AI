@@ -83,8 +83,11 @@ jobs:
   # ein echter Rauchtest — keine Route darf beim Rendern abstuerzen —,
   # aber mehr auch nicht.
   #
-  # Auf zwei Rechner verteilt (--shard). Playwright haelt `serial`-Gruppen
-  # dabei zusammen; jede Datei laeuft genau einmal, in genau einem Teil.
+  # Auf zwei Rechner verteilt (--shard). Mit `fullyParallel` teilt Playwright
+  # nach TESTS, nicht nach Dateien — eine Datei kann in beiden Teilen
+  # vorkommen, jeder Test laeuft aber genau einmal. `serial`-Gruppen bleiben
+  # zusammen. Nachgezaehlt mit `--list`: 803 Tests, Teile 402 + 401, streng
+  # 268 + 268 + 267, ohne Doppelte.
   e2e-rauch:
     runs-on: ubuntu-latest
     strategy:
