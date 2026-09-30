@@ -55,8 +55,27 @@ jobs:
       # Die MAPPE, nicht die einzelnen Projekte. Vorher standen hier zwei
       # Zeilen mit je einem Pfad — ein drittes Testprojekt haette niemand
       # bemerkt. Dieselbe Fehlerklasse wie das Menue, dem eine Seite fehlte.
+      #
+      # Mit TRX-Dateien: die Laufzeit JEDES Tests. Am 30.09.2026 brauchte derselbe
+      # Commit einmal 2:52 und einmal 8:22 Minuten — alle Tests grün, aber welcher
+      # bremste, stand nirgends. Die langsamsten stehen jetzt im Protokoll und in
+      # der Zusammenfassung des Laufs, alle als Datei am Lauf.
       - name: Test backend
-        run: dotnet test GrowDiary.slnx --configuration Release --no-build --verbosity minimal
+        run: >-
+          dotnet test GrowDiary.slnx --configuration Release --no-build --verbosity minimal
+          --logger trx --results-directory "${{ runner.temp }}/testergebnisse"
+
+      - name: Langsamste Backend-Tests
+        if: ${{ !cancelled() }}
+        run: python3 scripts/langsamste-tests.py "${{ runner.temp }}/testergebnisse" 15
+
+      - name: Testergebnisse aufheben
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-testergebnisse
+          path: ${{ runner.temp }}/testergebnisse/
+          retention-days: 14
 
   frontend:
     runs-on: ubuntu-latest
