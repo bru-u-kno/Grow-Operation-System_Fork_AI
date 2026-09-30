@@ -328,6 +328,23 @@ public static class DosingGuard
     }
 }
 
+/// <summary>Wie ein Pumpenlauf ausgegangen ist.</summary>
+public enum Pumpenlauf
+{
+    /// <summary>Eingeschaltet, gelaufen, ausgeschaltet.</summary>
+    Gelaufen,
+    /// <summary>
+    /// Nichts gesendet — Home Assistant war nicht konfiguriert oder nicht
+    /// erreichbar. Sicher: es ist nichts geflossen.
+    /// </summary>
+    NichtGesendet,
+    /// <summary>
+    /// Gesendet, aber das Einschalten wurde nicht bestätigt. Die Pumpe kann
+    /// kurz gelaufen sein; sie ist vorsorglich ausgeschaltet.
+    /// </summary>
+    Unsicher,
+}
+
 /// <summary>Schaltet die Pumpe tatsächlich — und schaltet sie garantiert wieder aus.</summary>
 public sealed class DosingService
 {
@@ -374,6 +391,30 @@ public sealed class DosingService
     public static double HoechstensGegeben(DoseEvent dose)
         => dose.Outcome == DoseOutcome.Failed ? dose.RequestedMl : dose.DosedMl;
 
+    /// <summary>Wie ein Pumpenlauf ins Protokoll kommt.</summary>
+    /// <remarks>
+    /// <para><c>NichtGesendet</c> wird <c>Rejected</c>: es ist sicher nichts
+    /// geflossen, also zählt es weder auf Tagesgrenze noch Mischpause. Vorher
+    /// (bis 29.09.2026) landete auch das als <c>Failed</c> — bei ausgefallenem
+    /// Home Assistant sperrten sechs Versuche die Pumpe bis Mitternacht, auch
+    /// von Hand.</para>
+    /// <para><c>Unsicher</c> wird <c>Failed</c> und zählt (<see cref="KannGelaufenSein"/>).</para>
+    /// </remarks>
+    public static DoseOutcome Ausgang(Pumpenlauf lauf) => lauf switch
+    {
+        Pumpenlauf.Gelaufen => DoseOutcome.Done,
+        Pumpenlauf.NichtGesendet => DoseOutcome.Rejected,
+        _ => DoseOutcome.Failed,
+    };
+
+    /// <summary>Der Satz fürs Protokoll und die Oberfläche, wenn nicht gelaufen.</summary>
+    public static string Grund(Pumpenlauf lauf) => lauf switch
+    {
+        Pumpenlauf.NichtGesendet => "Home Assistant nicht erreichbar — nichts gesendet, nichts geflossen.",
+        Pumpenlauf.Unsicher => "Einschalten nicht bestätigt — die Pumpe kann kurz gelaufen sein und ist vorsorglich aus.",
+        _ => string.Empty,
+    };
+
     /// <summary>
     /// Lässt die Pumpe für die angegebene Zeit laufen.
     /// </summary>
@@ -386,14 +427,14 @@ public sealed class DosingService
     /// <para>Was es NICHT übersteht, ist ein Absturz des ganzen Add-ons —
     /// dagegen hilft nur die Abschaltung in Home Assistant und der Auswurf beim
     /// Start (<see cref="TurnAllOffAsync"/>).</para>
-    /// <para><c>false</c> heisst: nicht bestätigt gelaufen. Die Aufrufer buchen
-    /// das als <c>Failed</c>, und <see cref="KannGelaufenSein"/> zählt es
-    /// trotzdem auf Tagesgrenze und Mischpause.</para>
+    /// <para>Das Ergebnis unterscheidet, ob überhaupt gesendet wurde
+    /// (<see cref="Pumpenlauf"/>, <see cref="Ausgang"/>): nur ein gesendetes,
+    /// unbestätigtes Einschalten zählt auf Tagesgrenze und Mischpause.</para>
     /// </remarks>
-    public async Task<bool> RunForSecondsAsync(DosingPump pump, double seconds, CancellationToken cancellationToken = default, double? maxSeconds = null)
+    public async Task<Pumpenlauf> RunForSecondsAsync(DosingPump pump, double seconds, CancellationToken cancellationToken = default, double? maxSeconds = null)
     {
         var kappt = Math.Clamp(seconds, 0, maxSeconds ?? DosingGuard.AbsoluteMaxSeconds);
-        if (kappt <= 0) return false;
+        if (kappt <= 0) return Pumpenlauf.NichtGesendet;
 
         // Testbetrieb: die Zeit vergeht wirklich, damit die Anzeige die echte
         // Dauer zeigt — geschaltet wird nichts. Ohne Home Assistant liesse sich
@@ -401,14 +442,23 @@ public sealed class DosingService
         if (pump.SimulationMode)
         {
             _logger.LogInformation("Testbetrieb: Pumpe {Pump} laeuft {Seconds:0.#} s — es fliesst nichts.", pump.Name, kappt);
-            await Task.Delay(TimeSpan.FromSeconds(kappt), CancellationToken.None);
-            return true;
+            await _warten(TimeSpan.FromSeconds(kappt), CancellationToken.None);
+            return Pumpenlauf.Gelaufen;
         }
 
         var settings = _repository.GetEffectiveHomeAssistantSettings();
-        if (!settings.IsConfigured) return false;
+        if (!settings.IsConfigured) return Pumpenlauf.NichtGesendet;
 
         var (domain, _) = SplitEntity(pump.HaEntityId);
+
+        // Erst nachsehen, ob Home Assistant antwortet. Kommt nichts zurück,
+        // wird auch nichts gesendet — dann ist sicher, dass nichts floss, und
+        // der Versuch sperrt nicht die Tagesgrenze.
+        if (await _funk.ZustandAsync(settings, pump.HaEntityId, CancellationToken.None) is null)
+        {
+            _logger.LogWarning("Pumpe {Pump}: Home Assistant meldet keinen Zustand — nichts gesendet.", pump.Name);
+            return Pumpenlauf.NichtGesendet;
+        }
 
         var an = false;
         try
@@ -422,7 +472,7 @@ public sealed class DosingService
                 // Kein Rueckweg ohne Ausschalten: das „an" kann angekommen
                 // sein, nur die Antwort nicht.
                 _logger.LogWarning("Pumpe {Pump}: Einschalten nicht bestätigt — wird vorsorglich ausgeschaltet.", pump.Name);
-                return false;
+                return Pumpenlauf.Unsicher;
             }
 
             // Bewusst ohne den uebergebenen Token: bricht der Aufrufer ab, soll
@@ -441,7 +491,7 @@ public sealed class DosingService
             }
         }
 
-        return an;
+        return Pumpenlauf.Gelaufen;
     }
 
     /// <summary>Schaltet eine einzelne Pumpe aus — ohne Bedingungen.</summary>
@@ -483,8 +533,10 @@ public sealed class DosingService
     /// <returns>Die Pumpen, die sich nicht bestätigt ausschalten liessen.</returns>
     public async Task<IReadOnlyList<DosingPump>> TurnAllOffAsync(CancellationToken cancellationToken = default)
     {
+        // Auch Pumpen im Testbetrieb: wer eine echte Pumpe nach einem Absturz
+        // auf Testbetrieb stellt, soll den Totmann trotzdem behalten.
         var offen = _dosing.GetPumps()
-            .Where(pump => !pump.SimulationMode && !string.IsNullOrWhiteSpace(pump.HaEntityId))
+            .Where(pump => !string.IsNullOrWhiteSpace(pump.HaEntityId))
             .ToList();
 
         for (var runde = 1; runde <= AuswurfRunden && offen.Count > 0; runde++)

@@ -144,7 +144,8 @@ public sealed class DosingApiController : ApiControllerBase
             ? DosingCalculator.SecondsForTarget(ziel, pump.MlPerMinute) ?? request.Seconds
             : request.Seconds;
         var seconds = Math.Clamp(gewuenscht, 5, DosingGuard.MaxCalibrationSeconds);
-        var ok = await _service.RunForSecondsAsync(pump, seconds, cancellationToken, DosingGuard.MaxCalibrationSeconds);
+        var lauf = await _service.RunForSecondsAsync(pump, seconds, cancellationToken, DosingGuard.MaxCalibrationSeconds);
+        var ok = lauf == Pumpenlauf.Gelaufen;
 
         _dosing.InsertEvent(new DoseEvent
         {
@@ -152,19 +153,19 @@ public sealed class DosingApiController : ApiControllerBase
             TentId = pump.TentId,
             OccurredAtUtc = DateTime.UtcNow,
             Trigger = DoseTrigger.Calibration,
-            Outcome = ok ? DoseOutcome.Done : DoseOutcome.Failed,
+            Outcome = DosingService.Ausgang(lauf),
             RequestedMl = 0,
             // Vor der Kalibrierung ist die Fördermenge unbekannt — was hier
             // geflossen ist, weiss erst der Messbecher.
             DosedMl = 0,
             SecondsRun = ok ? seconds : 0,
-            Reason = ok ? $"Kalibrierlauf {seconds:0.#} s" : "Kalibrierlauf: Home Assistant hat nicht geschaltet.",
+            Reason = ok ? $"Kalibrierlauf {seconds:0.#} s" : "Kalibrierlauf: " + DosingService.Grund(lauf),
             Simulated = pump.SimulationMode,
         });
 
         return Ok(new DoseResultDto(ok, 0, ok ? seconds : 0,
             ok ? $"{seconds:0.#} s gelaufen — jetzt genau ablesen, was im Becher steht."
-               : "Home Assistant hat die Pumpe nicht geschaltet."));
+               : DosingService.Grund(lauf)));
     }
 
     /// <summary>Trägt ein, was im Becher stand, und rechnet die Fördermenge daraus.</summary>
@@ -219,27 +220,28 @@ public sealed class DosingApiController : ApiControllerBase
             return Ok(new DoseResultDto(false, 0, 0, decision.Reason));
         }
 
-        var ok = await _service.RunForSecondsAsync(pump, decision.Seconds, cancellationToken);
+        var lauf = await _service.RunForSecondsAsync(pump, decision.Seconds, cancellationToken);
+        var ok = lauf == Pumpenlauf.Gelaufen;
         _dosing.InsertEvent(new DoseEvent
         {
             PumpId = pump.Id,
             TentId = pump.TentId,
             OccurredAtUtc = nowUtc,
             Trigger = DoseTrigger.Manual,
-            Outcome = ok ? DoseOutcome.Done : DoseOutcome.Failed,
+            Outcome = DosingService.Ausgang(lauf),
             RequestedMl = request.Ml,
             DosedMl = ok ? decision.Ml : 0,
             SecondsRun = ok ? decision.Seconds : 0,
             ValueBefore = context.Reading,
             Simulated = pump.SimulationMode,
-            Reason = ok ? (pump.SimulationMode ? "Testbetrieb — es ist nichts geflossen." : "Von Hand ausgelöst.") : "Home Assistant hat die Pumpe nicht geschaltet.",
+            Reason = ok ? (pump.SimulationMode ? "Testbetrieb — es ist nichts geflossen." : "Von Hand ausgelöst.") : DosingService.Grund(lauf),
         });
 
         var partnerHinweis = ok ? PlanPartner(pump, decision.Ml, nowUtc) : null;
 
         return Ok(new DoseResultDto(ok, ok ? decision.Ml : 0, ok ? decision.Seconds : 0,
             ok ? $"{decision.Ml:0.##} ml gegeben." + (partnerHinweis ?? " Erst mischen, dann neu messen.")
-               : "Home Assistant hat die Pumpe nicht geschaltet."));
+               : DosingService.Grund(lauf)));
     }
 
     /// <summary>Alles, was fuer eines der beiden Pumpen des Paares noch aussteht.</summary>

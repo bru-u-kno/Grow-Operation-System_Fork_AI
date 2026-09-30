@@ -63,6 +63,14 @@ public sealed class AusschaltenNachFehlschlagTests : IDisposable
         /// <summary>So viele „aus" verwirft die Wolke still, bevor eines greift.</summary>
         public Dictionary<string, int> AusVerworfen { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// So oft meldet die Wolke nach einem angekommenen „aus" noch den alten
+        /// Zustand — sie ist träge, nicht taub.
+        /// </summary>
+        public Dictionary<string, int> SpaeteMeldung { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        private readonly Dictionary<string, int> _nochAlt = new(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Solange wahr, ist Home Assistant nicht erreichbar — nichts kommt an, nichts ist lesbar.</summary>
         public bool Weg { get; set; }
 
@@ -78,9 +86,15 @@ public sealed class AusschaltenNachFehlschlagTests : IDisposable
 
         public Task<HomeAssistantState?> ZustandAsync(
             HomeAssistantSettings einstellungen, string entityId, CancellationToken ct)
-            => Task.FromResult(Weg || !_stand.TryGetValue(entityId, out var z)
-                ? null
-                : new HomeAssistantState { EntityId = entityId, State = z });
+        {
+            if (Weg || !_stand.TryGetValue(entityId, out var z)) return Task.FromResult<HomeAssistantState?>(null);
+            if (_nochAlt.TryGetValue(entityId, out var rest) && rest > 0)
+            {
+                _nochAlt[entityId] = rest - 1;
+                z = "on";
+            }
+            return Task.FromResult<HomeAssistantState?>(new HomeAssistantState { EntityId = entityId, State = z });
+        }
 
         public Task<bool> SchickenAsync(
             HomeAssistantSettings einstellungen, string domain, string dienst, string entityId,
@@ -100,6 +114,7 @@ public sealed class AusschaltenNachFehlschlagTests : IDisposable
             }
 
             _stand[entityId] = an ? "on" : "off";
+            if (!an && SpaeteMeldung.TryGetValue(entityId, out var spaet)) _nochAlt[entityId] = spaet;
             return Task.FromResult(!AntwortZuSpaet.Contains(entityId));
         }
     }
@@ -138,7 +153,8 @@ public sealed class AusschaltenNachFehlschlagTests : IDisposable
 
         var gelaufen = await Dosierer(anlage).RunForSecondsAsync(PhPumpe(), 3);
 
-        Assert.False(gelaufen);
+        Assert.Equal(Pumpenlauf.Unsicher, gelaufen);
+        Assert.Equal(DoseOutcome.Failed, DosingService.Ausgang(gelaufen));
         Assert.Equal(1, anlage.Anzahl(Pumpe, "turn_on"));
         Assert.True(anlage.Anzahl(Pumpe, "turn_off") >= 1, "Nach einem unbestätigten Einschalten kam kein „aus\".");
         Assert.Equal("off", anlage.Stand(Pumpe));
@@ -153,8 +169,83 @@ public sealed class AusschaltenNachFehlschlagTests : IDisposable
 
         var gelaufen = await Dosierer(anlage).RunForSecondsAsync(PhPumpe(), 3);
 
-        Assert.True(gelaufen);
+        Assert.Equal(Pumpenlauf.Gelaufen, gelaufen);
         Assert.Equal(2, anlage.Anzahl(Pumpe, "turn_off"));
+        Assert.Equal("off", anlage.Stand(Pumpe));
+    }
+
+    /// <summary>
+    /// Ist Home Assistant weg, wird nichts gesendet — und der Versuch sperrt
+    /// die Pumpe nicht. Vorher (Prüfer-Befund 29.09.2026) zählte jeder
+    /// Versuch als <c>Failed</c> auf die Tagesgrenze: sechs Versuche bei
+    /// ausgefallenem HA sperrten die Pumpe bis Mitternacht, auch von Hand.
+    /// </summary>
+    [Fact]
+    public async Task HomeAssistantWeg_NichtsGesendetUndKeineSperre()
+    {
+        var anlage = new Anlage { Weg = true };
+
+        var lauf = await Dosierer(anlage).RunForSecondsAsync(PhPumpe(), 3);
+
+        Assert.Equal(Pumpenlauf.NichtGesendet, lauf);
+        Assert.Equal(0, anlage.Anzahl(Pumpe, "turn_on"));
+        Assert.Equal(DoseOutcome.Rejected, DosingService.Ausgang(lauf));
+
+        // Sechs solche Versuche sperren die siebte Dosis nicht.
+        var jetzt = new DateTime(2026, 9, 29, 20, 0, 0, DateTimeKind.Utc);
+        var versuche = Enumerable.Range(1, 6).Select(i => new DoseEvent
+        {
+            PumpId = 1, TentId = 1, OccurredAtUtc = jetzt.AddMinutes(-30 * i),
+            Trigger = DoseTrigger.Manual, Outcome = DosingService.Ausgang(lauf), RequestedMl = 2,
+        }).ToList();
+        var kontext = new DosingContext(6.4, TimeSpan.FromMinutes(1), jetzt.AddDays(-3), false,
+            versuche, WaterLevelOk: null, CirculationOn: true);
+        Assert.True(DosingGuard.Evaluate(PhPumpe(), 2, kontext, jetzt).Allowed);
+    }
+
+    [Fact]
+    public async Task NichtKonfiguriert_NichtsGesendet()
+    {
+        _grows.SaveHomeAssistantSettings(new HomeAssistantSettings { Enabled = false });
+        var anlage = new Anlage();
+        anlage.Setzen(Pumpe, "off");
+
+        var lauf = await Dosierer(anlage).RunForSecondsAsync(PhPumpe(), 3);
+
+        Assert.Equal(Pumpenlauf.NichtGesendet, lauf);
+        Assert.Empty(anlage.Gesendet);
+    }
+
+    /// <summary>
+    /// Eine träge Wolke meldet „aus" erst nach einigen Sekunden. Das ist kein
+    /// Fehlschlag — es wird nachgefragt, nicht erneut gesendet, und nicht
+    /// „nicht geschlossen" gemeldet (Prüfer-Befund 29.09.2026: vorher las der
+    /// Ausschalter nach zwei Sekunden einmal nach).
+    /// </summary>
+    [Fact]
+    public async Task TraegeWolke_WirdAbgewartetStattFalschGemeldet()
+    {
+        var anlage = new Anlage();
+        anlage.Setzen(Ventil, "off");
+        anlage.SpaeteMeldung[Ventil] = 8; // acht Nachfragen lang noch „on"
+
+        var ergebnis = await Probe(anlage).ProbierenAsync(Zuordnung(), Einstellungen);
+
+        Assert.True(ergebnis.WiederZu);
+        Assert.Equal(1, anlage.Anzahl(Ventil, "turn_off"));
+    }
+
+    [Fact]
+    public async Task AuswurfBeimStart_SchaltetAuchPumpenImTestbetriebAus()
+    {
+        var pumpe = PhPumpe();
+        pumpe.SimulationMode = true;
+        _dosing.InsertPump(pumpe);
+        var anlage = new Anlage();
+        anlage.Setzen(Pumpe, "on");
+
+        await Dosierer(anlage).TurnAllOffAsync();
+
         Assert.Equal("off", anlage.Stand(Pumpe));
     }
 

@@ -206,14 +206,15 @@ public sealed class DosingWorker : BackgroundService
 
             dosing.DeletePending(pending.Id);
 
-            var ok = await service.RunForSecondsAsync(ziel, sekunden, cancellationToken);
+            var lauf = await service.RunForSecondsAsync(ziel, sekunden, cancellationToken);
+            var ok = lauf == Pumpenlauf.Gelaufen;
             dosing.InsertEvent(new DoseEvent
             {
                 PumpId = ziel.Id,
                 TentId = ziel.TentId,
                 OccurredAtUtc = nowUtc,
                 Trigger = DoseTrigger.Partner,
-                Outcome = ok ? DoseOutcome.Done : DoseOutcome.Failed,
+                Outcome = DosingService.Ausgang(lauf),
                 RequestedMl = pending.Ml,
                 DosedMl = ok ? pending.Ml : 0,
                 SecondsRun = ok ? sekunden : 0,
@@ -221,7 +222,7 @@ public sealed class DosingWorker : BackgroundService
                 Simulated = ziel.SimulationMode,
                 Reason = ok
                     ? pending.Reason ?? "Zweite Hälfte."
-                    : "Zweite Hälfte: Home Assistant hat die Pumpe nicht geschaltet.",
+                    : "Zweite Hälfte: " + DosingService.Grund(lauf),
             });
 
             if (ok)
@@ -281,14 +282,15 @@ public sealed class DosingWorker : BackgroundService
             return false;
         }
 
-        var ok = await service.RunForSecondsAsync(pump, decision.Seconds, cancellationToken);
+        var lauf = await service.RunForSecondsAsync(pump, decision.Seconds, cancellationToken);
+        var ok = lauf == Pumpenlauf.Gelaufen;
         dosing.InsertEvent(new DoseEvent
         {
             PumpId = pump.Id,
             TentId = pump.TentId,
             OccurredAtUtc = nowUtc,
             Trigger = DoseTrigger.Automatic,
-            Outcome = ok ? DoseOutcome.Done : DoseOutcome.Failed,
+            Outcome = DosingService.Ausgang(lauf),
             RequestedMl = decision.Ml,
             DosedMl = ok ? decision.Ml : 0,
             SecondsRun = ok ? decision.Seconds : 0,
@@ -297,7 +299,7 @@ public sealed class DosingWorker : BackgroundService
             Simulated = pump.SimulationMode,
             Reason = ok
                 ? (pump.SimulationMode ? "Automatik im Testbetrieb — es ist nichts geflossen." : "Automatik.")
-                : "Automatik: Home Assistant hat die Pumpe nicht geschaltet.",
+                : "Automatik: " + DosingService.Grund(lauf),
         });
 
         if (!ok)

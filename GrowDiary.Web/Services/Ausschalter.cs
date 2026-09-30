@@ -27,12 +27,21 @@ public sealed class Ausschalter
     /// <summary>Wie oft „aus" höchstens gesendet wird.</summary>
     public const int Versuche = 3;
 
-    /// <summary>Wartezeit zwischen Senden und Nachlesen.</summary>
+    /// <summary>In diesem Takt wird nach dem Senden nachgefragt.</summary>
+    /// <remarks>Derselbe Takt wie <see cref="AcSchreiber.Nachfragetakt"/>.</remarks>
+    public static TimeSpan Nachfragetakt => AcSchreiber.Nachfragetakt;
+
+    /// <summary>So lange wird je Versuch auf „aus" gewartet, bevor erneut gesendet wird.</summary>
     /// <remarks>
-    /// Zwei Sekunden wie <see cref="AcSchreiber.Pause"/> — die AC-Infinity-Wolke
-    /// meldet den neuen Zustand träge zurück, ein Steckdosen-Schalter sofort.
+    /// <para>Dieselbe Frist wie <see cref="AcSchreiber.Wartezeit"/> — es ist
+    /// dieselbe Wolke. Anfangs stand hier eine feste Pause von zwei Sekunden;
+    /// die AC-Infinity-Wolke meldet den neuen Zustand oft später zurück, und die
+    /// Probe meldete dann „Ventil nicht geschlossen", obwohl es nur spät
+    /// zurückkam (Prüfer-Befund 29.09.2026).</para>
+    /// <para>Eine Steckdose meldet sofort — dort ist nach dem ersten Nachfragen
+    /// Schluss.</para>
     /// </remarks>
-    public static readonly TimeSpan Nachlesepause = TimeSpan.FromSeconds(2);
+    public static TimeSpan Wartezeit => AcSchreiber.Wartezeit;
 
     private readonly IAcFunk _funk;
     private readonly ILogger<Ausschalter> _logger;
@@ -60,24 +69,30 @@ public sealed class Ausschalter
         warten ??= (dauer, token) => Task.Delay(dauer, token);
         var (domain, dienst, daten) = AusBefehl(entityId);
 
+        var nachfragen = Math.Max(1, (int)Math.Ceiling(Wartezeit / Nachfragetakt));
+
         for (var versuch = 1; versuch <= Versuche; versuch++)
         {
             await _funk.SchickenAsync(einstellungen, domain, dienst, entityId, daten, CancellationToken.None);
-            await warten(Nachlesepause, CancellationToken.None);
 
-            var ist = await _funk.ZustandAsync(einstellungen, entityId, CancellationToken.None);
-            if (IstAus(ist?.State))
+            string? ist = null;
+            for (var frage = 1; frage <= nachfragen; frage++)
             {
-                if (versuch > 1)
+                await warten(Nachfragetakt, CancellationToken.None);
+                ist = (await _funk.ZustandAsync(einstellungen, entityId, CancellationToken.None))?.State;
+                if (IstAus(ist))
                 {
-                    _logger.LogInformation("{Entity} ist aus (nach {Versuch} Versuchen).", entityId, versuch);
+                    if (versuch > 1)
+                    {
+                        _logger.LogInformation("{Entity} ist aus (nach {Versuch} Versuchen).", entityId, versuch);
+                    }
+                    return true;
                 }
-                return true;
             }
 
             _logger.LogWarning(
                 "{Entity} meldet nach dem Ausschalten „{Ist}\" (Versuch {Versuch} von {Versuche}).",
-                entityId, ist?.State ?? "nichts", versuch, Versuche);
+                entityId, ist ?? "nichts", versuch, Versuche);
         }
 
         _logger.LogError("{Entity} liess sich NICHT bestätigt ausschalten — in Home Assistant prüfen.", entityId);
