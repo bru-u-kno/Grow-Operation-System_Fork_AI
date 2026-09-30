@@ -19,9 +19,15 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Jeder Job hat eine Zeitgrenze. Ohne sie wartet GitHub bis zu SECHS STUNDEN:
+# am 30.09.2026 hing `playwright install --with-deps` acht Minuten und mehr
+# an einem Paketspiegel, waehrend alle anderen Jobs nach vier Minuten fertig
+# waren. Ein Release haette so den ganzen Abend gewartet. Die Grenzen liegen
+# beim Drei- bis Vierfachen der gemessenen Dauer.
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,6 +54,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -90,6 +97,7 @@ jobs:
   # 268 + 268 + 267, ohne Doppelte.
   e2e-rauch:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -112,6 +120,7 @@ jobs:
       - name: Install Playwright browser
         working-directory: GrowDiary.React
         run: npx playwright install --with-deps chromium
+        timeout-minutes: 5
 
       - name: E2E ohne Backend (Rauchtest, Teil ${{ matrix.teil }}/2)
         working-directory: GrowDiary.React
@@ -136,6 +145,7 @@ jobs:
   # Datenbank und koennen sich nicht gegenseitig Daten veraendern.
   e2e-streng:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -172,6 +182,7 @@ jobs:
       - name: Install Playwright browser
         working-directory: GrowDiary.React
         run: npx playwright install --with-deps chromium
+        timeout-minutes: 5
 
       # Die Datenbank liegt in einem frischen Temp-Verzeichnis: der
       # Demobestand saet nur in eine Datenbank ganz ohne Grows, und die

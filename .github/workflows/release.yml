@@ -40,6 +40,7 @@ env:
 jobs:
   version:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.nummer.outputs.version }}
     steps:
@@ -110,6 +111,7 @@ jobs:
   veroeffentlichen:
     needs: [version, pruefen, image]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       packages: write
