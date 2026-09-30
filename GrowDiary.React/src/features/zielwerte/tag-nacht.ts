@@ -4,6 +4,7 @@
  */
 import { zahlOderNull } from '../../zahlenfeld'
 import type { BlattUebergabe } from './WertBlatt'
+import { zahlText } from './wert-blatt'
 
 /** Welche Übergabe-Rollen zu Tag und Nacht einer Messgröße gehören. */
 export const TAG_NACHT_ROLLEN: Record<string, { tag: readonly string[]; nacht: readonly string[]; abweichung: boolean }> = {
@@ -105,3 +106,59 @@ export function weichtVomPlanAb(stand: ZeilenStand | null, von: string, bis: str
   return anders(a, stand.planVon) || anders(b, stand.planBis)
 }
 
+
+/** Die „Erlaubte Abweichung" aus dem Feld — nur, was auch gespeichert werden darf (0 < K ≤ 15). */
+export function abweichungAus(text: string): number | null {
+  const k = zahl(text)
+  return k != null && k > 0 && k <= 15 ? k : null
+}
+
+/**
+ * Der Stand einer Zeile, wenn der Plan mit der Abweichung `k` rechnet: die Mitte
+ * (der Planwert) bleibt, die Spanne wird ± k. Ohne gültiges `k` bleibt der Stand,
+ * wie der Server ihn zuletzt übergeben hat.
+ */
+export function standMitAbweichung(stand: ZeilenStand | null, k: number | null): ZeilenStand | null {
+  if (!stand || k == null || stand.planVon == null || stand.planBis == null) return stand
+  const mitte = (stand.planVon + stand.planBis) / 2
+  return { ...stand, planVon: mitte - k, planBis: mitte + k }
+}
+
+type AbweichungsZeilen = { min: string; max: string; nachtMin?: string; nachtMax?: string; toleranz: string }
+
+/**
+ * Fork AI (forkai.154): Eine neue „Erlaubte Abweichung" rechnet die Zeilen, die
+ * dem Plan folgen, SOFORT mit. Vorher standen bis zum Speichern die alten Grenzen
+ * in Tag und Nacht, und die Änderung sah wirkungslos aus (Bru, 30.09.2026:
+ * Blütewoche 6 auf ± 4 K gestellt, Tag blieb 20–26, Nacht 16–22).
+ *
+ * „Folgt dem Plan" wird gegen die Abweichung geprüft, die bis eben im Feld stand.
+ * Eine Zeile mit eigenen Zahlen bleibt, wie sie ist — die hat jemand bewusst gesetzt.
+ */
+export function zeilenBeiAbweichung(
+  zeilen: AbweichungsZeilen,
+  tag: ZeilenStand | null,
+  nacht: ZeilenStand | null,
+  neuerText: string,
+): Partial<AbweichungsZeilen> {
+  const aenderung: Partial<AbweichungsZeilen> = { toleranz: neuerText }
+  const neu = abweichungAus(neuerText)
+  if (neu == null) return aenderung
+  const alt = abweichungAus(zeilen.toleranz)
+
+  const tagAlt = standMitAbweichung(tag, alt)
+  const tagNeu = standMitAbweichung(tag, neu)
+  if (tagAlt?.folgtPlan && tagNeu?.planVon != null && tagNeu.planBis != null && !weichtVomPlanAb(tagAlt, zeilen.min, zeilen.max)) {
+    aenderung.min = zahlText(tagNeu.planVon)
+    aenderung.max = zahlText(tagNeu.planBis)
+  }
+
+  const nachtAlt = standMitAbweichung(nacht, alt)
+  const nachtNeu = standMitAbweichung(nacht, neu)
+  if (nachtAlt?.folgtPlan && nachtNeu?.planVon != null && nachtNeu.planBis != null
+    && !weichtVomPlanAb(nachtAlt, zeilen.nachtMin ?? '', zeilen.nachtMax ?? '')) {
+    aenderung.nachtMin = zahlText(nachtNeu.planVon)
+    aenderung.nachtMax = zahlText(nachtNeu.planBis)
+  }
+  return aenderung
+}

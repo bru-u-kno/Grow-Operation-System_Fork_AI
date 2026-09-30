@@ -8,7 +8,10 @@ import {
   UEBERGABE_JE_METRIK, alarmGeaendert, entwurfAus, pruefen,
   regelnMitAenderung, zahlText, type AlarmRegel, type Entwurf, type PlanFeld,
 } from './wert-blatt'
-import { TAG_NACHT_ROLLEN, deutscheWoche, engesBand, planKurz, planWaereText, planwertText, weichtVomPlanAb, zeilenStand } from './tag-nacht'
+import {
+  TAG_NACHT_ROLLEN, abweichungAus, deutscheWoche, engesBand, planKurz, planWaereText, planwertText,
+  standMitAbweichung, weichtVomPlanAb, zeilenBeiAbweichung, zeilenStand,
+} from './tag-nacht'
 import { nachtWieTagFuer, type PlanStand } from './plan-reiter'
 import { KontextSprung } from './PlanKette'
 
@@ -73,8 +76,13 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
       .catch(() => { if (!aus) setWieTag(false) })
     return () => { aus = true }
   }, [tagNacht, growId, spalteId])
-  const tagStand = tagNacht ? zeilenStand(uebergabe, tagNacht.tag) : null
-  const nachtStand = tagNacht ? zeilenStand(uebergabe, tagNacht.nacht) : null
+  // Was der Server zuletzt übergeben hat — und was der Plan mit der Abweichung
+  // rechnen WIRD, die gerade im Feld steht (forkai.154: live, nicht erst nach dem Speichern).
+  const tagRoh = tagNacht ? zeilenStand(uebergabe, tagNacht.tag) : null
+  const nachtRoh = tagNacht ? zeilenStand(uebergabe, tagNacht.nacht) : null
+  const abweichung = tagNacht?.abweichung ? abweichungAus(entwurf.toleranz) : null
+  const tagStand = standMitAbweichung(tagRoh, abweichung)
+  const nachtStand = standMitAbweichung(nachtRoh, abweichung)
   // Nacht gilt gerade, wenn die aktuellen Alarmgrenzen die Nachtgrenzen sind und sich vom Tag unterscheiden.
   const nachtJetzt = Boolean(wert.regel) && wert.alarmVon === wert.regel?.nachtMin && wert.alarmBis === wert.regel?.nachtMax
     && (wert.regel?.min !== wert.regel?.nachtMin || wert.regel?.max !== wert.regel?.nachtMax)
@@ -198,7 +206,7 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
             {tagNacht.abweichung && (
               <div className="tn-abweichung">
                 <V1Field label="Erlaubte Abweichung ± K" hint="So weit darf der Wert vom Planwert abweichen, bevor gemeldet wird.">
-                  <input inputMode="decimal" value={entwurf.toleranz} placeholder="3" onChange={(e) => { setz({ toleranz: e.target.value }); setWarnung(null) }} />
+                  <input inputMode="decimal" value={entwurf.toleranz} placeholder="3" onChange={(e) => { setz(zeilenBeiAbweichung(entwurf, tagRoh, nachtRoh, e.target.value)); setWarnung(null) }} />
                 </V1Field>
               </div>
             )}

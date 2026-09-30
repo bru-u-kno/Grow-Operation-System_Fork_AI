@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.154
+
+**Fork AI.** Grenzwerte: die erlaubte Abweichung der Lufttemperatur wirkt sofort sichtbar.
+
+- Behoben — **„Erlaubte Abweichung ± K" änderte Tag und Nacht nicht.** Wer im Blatt der Lufttemperatur
+  die Abweichung von 3 auf 4 K stellte, sah weiter die alten Grenzen (z. B. 20–26 °C tags, 16–22 °C
+  nachts) — es sah aus, als hätte die Zahl keine Wirkung, und man speicherte nicht. Jetzt rechnen die
+  Zeilen, die dem Plan folgen, beim Tippen mit: aus dem Planwert 23 °C wird mit ± 4 K sofort 19–27 °C,
+  nachts aus 19 °C sofort 15–23 °C, und der Hinweis nennt „± 4 K". Zeilen mit eigenen Zahlen bleiben,
+  wie sie sind. Gespeichert wird genau, was im Blatt steht.
+
 ## 2.0.0-forkai.153
 
 **Fork AI.** Sicherheit an der Hardware: Pumpe, CO₂-Ventil und Licht bleiben nicht mehr im falschen Zustand hängen.
