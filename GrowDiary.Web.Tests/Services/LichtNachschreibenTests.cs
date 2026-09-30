@@ -155,9 +155,10 @@ public sealed class LichtNachschreibenTests : IDisposable
         }
     }
 
-    private LichtSteuerungService Licht(Wolke wolke)
+    private LichtSteuerungService Licht(Wolke wolke, List<TimeSpan>? wartezeiten = null, LichtEinstellungen? einstellungen = null)
     {
         var steuerung = new SteuerungRepository(_pfade);
+        if (einstellungen is not null) steuerung.SetEinstellungen(LichtSteuerungService.Modul, einstellungen);
         steuerung.SetGeraet(LichtSteuerungService.Modul, LichtSteuerungService.Rollen.Modus, Modus);
         steuerung.SetGeraet(LichtSteuerungService.Modul, LichtSteuerungService.Rollen.EinZeit, Ein);
         steuerung.SetGeraet(LichtSteuerungService.Modul, LichtSteuerungService.Rollen.AusZeit, Aus);
@@ -174,7 +175,7 @@ public sealed class LichtNachschreibenTests : IDisposable
         return new LichtSteuerungService(
             steuerung, keinNetz, wolke, new AcSchreiber(wolke, NullLogger<AcSchreiber>.Instance),
             haSettings, new SteuerungGeraeteService(steuerung), NullLogger<LichtSteuerungService>.Instance,
-            (_, _) => Task.CompletedTask);
+            (dauer, _) => { wartezeiten?.Add(dauer); return Task.CompletedTask; });
     }
 
     [Fact]
@@ -207,5 +208,31 @@ public sealed class LichtNachschreibenTests : IDisposable
         Assert.Equal([Ein, Aus, Modus], wolke.Gesendet.Distinct());
         Assert.Equal(LichtSteuerungService.Modi.Zeitplan, wolke.Stand(Modus));
         Assert.Equal(Vorgabe.BlueteEin + ":00", wolke.Stand(Ein));
+    }
+
+    /// <summary>
+    /// Die Felder „Abstand zwischen Befehlen", „Prüfen nach" und
+    /// „Wiederholungen" wirken auf das Preset. Nach dem Umbau auf den
+    /// AcSchreiber galten zunächst dessen feste Werte — die Felder standen auf
+    /// der Seite und bewirkten nichts (Prüfer-Befund 29.09.2026).
+    /// </summary>
+    [Fact]
+    public async Task Preset_BenutztAbstandUndWiederholungenAusDenEinstellungen()
+    {
+        var wolke = new Wolke();
+        wolke.Setzen(Modus, "On");
+        wolke.Setzen(Ein, "08:00:00");
+        wolke.Setzen(Aus, "20:00:00");
+        wolke.Verwirft.Add(Aus);
+        var wartezeiten = new List<TimeSpan>();
+        var einstellungen = new LichtEinstellungen { SchreibAbstandMs = 3500, VerifySekunden = 7, MaxWiederholungen = 0 };
+
+        await Licht(wolke, wartezeiten, einstellungen).BefehlAsync("preset", "bluete", null, CancellationToken.None);
+
+        Assert.Contains(TimeSpan.FromMilliseconds(3500), wartezeiten);
+        // Keine Wiederholung: die verworfene Aus-Zeit wird genau einmal gesendet.
+        Assert.Equal(1, wolke.Gesendet.Count(e => e == Aus));
+        // Die Prüffrist: 7 Nachfragen im Sekundentakt nach dem einen Versuch.
+        Assert.Equal(7, wartezeiten.Count(w => w == AcSchreiber.Nachfragetakt) - 1);
     }
 }

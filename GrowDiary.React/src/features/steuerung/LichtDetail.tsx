@@ -5,6 +5,7 @@ import { LICHT_MODI, LICHT_REITER } from './steuerung-typen'
 import type { LichtEinstellungen, LichtReiter, LichtSeite, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
+import { befehlsMeldung, speicherMeldung } from './licht-meldungen'
 
 /**
  * Fork AI: Steuerung › Licht — die Bedienung der LED, die bisher als eigene
@@ -85,9 +86,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
     try {
       const zurueck = await apiFetch<LichtSeite>('/api/steuerung/licht', { method: 'PUT', body: JSON.stringify(entwurf) })
       setSeite(zurueck); setEntwurf(zurueck.einstellungen); setFehler(null)
-      setMeldung(zurueck.haAngenommen === false
-        ? 'Gespeichert — aber nicht alles kam beim Controller an. Die Seite prüft es weiter nach.'
-        : 'Gespeichert.')
+      setMeldung(speicherMeldung(zurueck.haAngenommen))
     } catch (caught) {
       const felder = (caught as { fields?: Record<string, string> })?.fields
       if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
@@ -105,6 +104,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
         body: JSON.stringify({ art, preset: daten?.preset ?? null, stufe: daten?.stufe ?? null }),
       })
       setSeite(zurueck); setEntwurf(zurueck.einstellungen); setFehler(null)
+      setMeldung(befehlsMeldung(art, zurueck.haAngenommen))
     } catch (caught) {
       setFehler(formatApiError(caught, 'Der Befehl konnte nicht gesendet werden.'))
     } finally {

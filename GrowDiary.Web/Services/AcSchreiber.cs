@@ -59,6 +59,15 @@ public sealed class HomeAssistantFunk : IAcFunk
         => _homeAssistant.CallEntityServiceAsync(einstellungen, domain, dienst, entityId, ct, daten);
 }
 
+/// <summary>Abstand, Prüffrist und Versuche eines Schreibvorgangs.</summary>
+/// <remarks>
+/// Ohne Angabe gelten die Werte aus der Karte des Testers
+/// (<see cref="AcSchreiber.Standard"/>). Die Licht-Steuerung gibt ihre eigenen
+/// Einstellungen mit — sonst stünden auf ihrer Seite Felder, die nichts
+/// bewirken (Prüfer-Befund 29.09.2026).
+/// </remarks>
+public sealed record AcTakt(TimeSpan Pause, TimeSpan Wartezeit, int Versuche);
+
 /// <summary>Wie ein Schreibvorgang ausgegangen ist.</summary>
 /// <param name="Uebersprungen">Stand schon auf dem Sollwert — nichts gesendet.</param>
 /// <param name="Bestaetigt">Der Controller meldet den Sollwert.</param>
@@ -129,6 +138,9 @@ public sealed class AcSchreiber
     /// <summary>Wie oft ein Schritt wiederholt wird, bevor er als gescheitert gilt.</summary>
     public const int Versuche = 3;
 
+    /// <summary>Die Vorgabe: <see cref="Pause"/>, <see cref="Wartezeit"/>, <see cref="Versuche"/>.</summary>
+    public static readonly AcTakt Standard = new(Pause, Wartezeit, Versuche);
+
     private readonly IAcFunk _funk;
     private readonly ILogger<AcSchreiber> _logger;
 
@@ -150,9 +162,11 @@ public sealed class AcSchreiber
         HomeAssistantSettings einstellungen,
         IReadOnlyList<AcSchreibschritt> schritte,
         Func<TimeSpan, CancellationToken, Task>? warten = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        AcTakt? takt = null)
     {
         warten ??= (dauer, token) => Task.Delay(dauer, token);
+        takt ??= Standard;
         var ergebnisse = new List<AcSchrittErgebnis>();
         var erster = true;
 
@@ -167,10 +181,10 @@ public sealed class AcSchreiber
                 continue;
             }
 
-            if (!erster) await warten(Pause, ct);
+            if (!erster && takt.Pause > TimeSpan.Zero) await warten(takt.Pause, ct);
             erster = false;
 
-            var ergebnis = await EinSchrittAsync(einstellungen, schritt, warten, ct);
+            var ergebnis = await EinSchrittAsync(einstellungen, schritt, warten, takt, ct);
             ergebnisse.Add(ergebnis);
 
             // Nach einem gescheiterten Schritt die folgenden gar nicht erst
@@ -186,11 +200,12 @@ public sealed class AcSchreiber
         HomeAssistantSettings einstellungen,
         AcSchreibschritt schritt,
         Func<TimeSpan, CancellationToken, Task> warten,
+        AcTakt takt,
         CancellationToken ct)
     {
         string? ist = null;
 
-        for (var versuch = 1; versuch <= Versuche; versuch++)
+        for (var versuch = 1; versuch <= takt.Versuche; versuch++)
         {
             var gesendet = await _funk.SchickenAsync(
                 einstellungen, schritt.Domain, schritt.Dienst, schritt.EntityId, schritt.Daten, ct);
@@ -202,7 +217,7 @@ public sealed class AcSchreiber
             }
 
             // So lange nachfragen, bis es steht — längstens die Wartezeit.
-            var versucheJeRunde = Math.Max(1, (int)(Wartezeit.Ticks / Nachfragetakt.Ticks));
+            var versucheJeRunde = Math.Max(1, (int)(takt.Wartezeit.Ticks / Nachfragetakt.Ticks));
             for (var frage = 0; frage < versucheJeRunde; frage++)
             {
                 await warten(Nachfragetakt, ct);
@@ -221,9 +236,9 @@ public sealed class AcSchreiber
                 schritt.EntityId, versuch, ist, schritt.Soll);
         }
 
-        return new AcSchrittErgebnis(schritt.EntityId, false, false, Versuche, ist,
+        return new AcSchrittErgebnis(schritt.EntityId, false, false, takt.Versuche, ist,
             $"Der Controller meldet weiterhin {ist ?? "nichts"} statt {schritt.Soll}. "
-            + "Die AC-Infinity-Cloud verwirft Aufträge gelegentlich — nach drei Versuchen "
+            + $"Die AC-Infinity-Cloud verwirft Aufträge gelegentlich — nach {takt.Versuche} Versuchen "
             + "gebe ich auf, statt weiter zu senden.");
     }
 

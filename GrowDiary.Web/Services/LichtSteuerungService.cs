@@ -274,7 +274,7 @@ public sealed class LichtSteuerungService
                 .ToList();
             if (schritte.Count != ziele.Count) return false;
 
-            var ergebnisse = await _schreiber.SchreibenAsync(settings, schritte, _warten, ct);
+            var ergebnisse = await _schreiber.SchreibenAsync(settings, schritte, _warten, ct, Takt(e));
             var bestaetigt = ergebnisse.Count == schritte.Count && ergebnisse.All(r => r.Bestaetigt);
             if (!bestaetigt)
             {
@@ -295,6 +295,15 @@ public sealed class LichtSteuerungService
         Offene[entityId] = new LichtOffen(entityId, sollWert, jetzt, 1, jetzt, vorher);
         return gesendet;
     }
+
+    /// <summary>
+    /// Abstand, Prüffrist und Versuche aus den Einstellungen der Seite — der
+    /// erste Versuch plus <see cref="LichtEinstellungen.MaxWiederholungen"/>.
+    /// </summary>
+    public static AcTakt Takt(LichtEinstellungen e) => new(
+        TimeSpan.FromMilliseconds(e.SchreibAbstandMs),
+        TimeSpan.FromSeconds(e.VerifySekunden),
+        e.MaxWiederholungen + 1);
 
     /// <summary>Der Aufruf, der diese Entität auf den Sollwert stellt.</summary>
     internal static AcSchreibschritt? Schritt(string entityId, string soll)
