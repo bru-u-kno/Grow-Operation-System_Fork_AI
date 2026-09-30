@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  deutscheWoche, engesBand, grenzenZumSpeichern, planKurz, planWaereText, planwertText, standMitAbweichung, weichtVomPlanAb,
+  abweichungAus, deutscheWoche, engesBand, grenzenZumSpeichern, planKurz, planWaereText, planwertText, standMitAbweichung, weichtVomPlanAb,
   zeilenBeiAbweichung, zeilenStand,
 } from './tag-nacht'
 
@@ -87,8 +87,7 @@ describe('zeilenBeiAbweichung (forkai.154: Abweichung rechnet live mit)', () => 
     expect(zeilenBeiAbweichung(eigenerTag, tag, nacht, '4')).toEqual({ toleranz: '4', nachtMin: '15', nachtMax: '23' })
   })
 
-  it('ungültige oder halbe Eingaben ändern nur das Feld selbst', () => {
-    expect(zeilenBeiAbweichung(start, tag, nacht, '')).toEqual({ toleranz: '' })
+  it('ungültige Eingaben ändern nur das Feld selbst', () => {
     expect(zeilenBeiAbweichung(start, tag, nacht, '0')).toEqual({ toleranz: '0' })
     expect(zeilenBeiAbweichung(start, tag, nacht, '16')).toEqual({ toleranz: '16' })
   })
@@ -117,5 +116,19 @@ describe('grenzenZumSpeichern (forkai.154: Vorschau ist nur Anzeige)', () => {
     const eigen = { ...start, min: '21', max: '28', toleranz: '4' }
     const gespeichert = grenzenZumSpeichern(eigen, regel, standMitAbweichung(tag, 4), standMitAbweichung(nacht, 4))
     expect(gespeichert).toEqual({ ...eigen, nachtMin: '16', nachtMax: '22' })
+  })
+})
+
+describe('leeres Feld = Standard des Servers (Prüfer-Befund vor forkai.154)', () => {
+  // Gespeichert war ± 4: die Übergabe steht auf 19–27 / 15–23.
+  const tag4 = zeilenStand([u('luft-unten', '19'), u('luft-oben', '27')], ['luft-unten', 'luft-oben'])
+  const nacht4 = zeilenStand([u('luft-nacht-unten', '15'), u('luft-nacht-oben', '23')], ['luft-nacht-unten', 'luft-nacht-oben'])
+  const mitVier = { min: '19', max: '27', nachtMin: '15', nachtMax: '23', toleranz: '4' }
+
+  it('Feld leeren: die Vorschau springt auf ± 3 — genau das, was der Server dann setzt', () => {
+    expect(zeilenBeiAbweichung(mitVier, tag4, nacht4, '')).toEqual({
+      toleranz: '', min: '20', max: '26', nachtMin: '16', nachtMax: '22',
+    })
+    expect(planwertText(standMitAbweichung(tag4, abweichungAus(''))!, '°C')).toBe('Planwert 23 °C ± 3 K')
   })
 })

@@ -10,7 +10,7 @@ import {
 } from './wert-blatt'
 import {
   TAG_NACHT_ROLLEN, abweichungAus, deutscheWoche, engesBand, planKurz, planWaereText, planwertText,
-  grenzenZumSpeichern, standMitAbweichung, weichtVomPlanAb, zeilenBeiAbweichung, zeilenStand,
+  STANDARD_ABWEICHUNG_K, grenzenZumSpeichern, standMitAbweichung, weichtVomPlanAb, zeilenBeiAbweichung, zeilenStand,
 } from './tag-nacht'
 import { nachtWieTagFuer, type PlanStand } from './plan-reiter'
 import { KontextSprung } from './PlanKette'
@@ -126,7 +126,13 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
         const aktuell = await apiFetch<TentAlertRulesDto>(`/api/alerts/tents/${zeltId}`)
         // Zeilen, die dem Plan folgen, gehen mit den bisherigen Zahlen raus — der
         // Server rechnet sie mit der neuen Abweichung selbst (grenzenZumSpeichern).
-        const basis = tagNacht ? grenzenZumSpeichern(entwurf, wert.regel, tagStand, nachtStand) : entwurf
+        // Die Zahlen von JETZT (aktuell), nicht vom Laden der Seite: hat der Plan
+        // inzwischen nachgezogen, wären die alten sonst wieder eine „Handänderung".
+        const jetzt = aktuell.rules.find((r) => r.metricKey.toLowerCase() === wert.key.toLowerCase())
+        const regelJetzt = jetzt
+          ? { min: jetzt.minValue ?? null, max: jetzt.maxValue ?? null, nachtMin: jetzt.nightMinValue ?? null, nachtMax: jetzt.nightMaxValue ?? null }
+          : wert.regel
+        const basis = tagNacht ? grenzenZumSpeichern(entwurf, regelJetzt, tagStand, nachtStand) : entwurf
         // „Tag und Nacht": die Nacht bekommt dieselben Grenzen wie der Tag.
         const gespeichert = tagNacht && wieTag ? { ...basis, nachtMin: basis.min, nachtMax: basis.max } : basis
         await apiFetch(`/api/alerts/tents/${zeltId}`, {
@@ -209,7 +215,7 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
             {tagNacht.abweichung && (
               <div className="tn-abweichung">
                 <V1Field label="Erlaubte Abweichung ± K" hint="So weit darf der Wert vom Planwert abweichen, bevor gemeldet wird.">
-                  <input inputMode="decimal" value={entwurf.toleranz} placeholder="3" onChange={(e) => { setz(zeilenBeiAbweichung(entwurf, tagRoh, nachtRoh, e.target.value)); setWarnung(null) }} />
+                  <input inputMode="decimal" value={entwurf.toleranz} placeholder={String(STANDARD_ABWEICHUNG_K)} onChange={(e) => { setz(zeilenBeiAbweichung(entwurf, tagRoh, nachtRoh, e.target.value)); setWarnung(null) }} />
                 </V1Field>
               </div>
             )}

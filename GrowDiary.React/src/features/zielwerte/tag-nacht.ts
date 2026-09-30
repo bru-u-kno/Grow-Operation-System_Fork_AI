@@ -107,8 +107,24 @@ export function weichtVomPlanAb(stand: ZeilenStand | null, von: string, bis: str
 }
 
 
-/** Die „Erlaubte Abweichung" aus dem Feld — nur, was auch gespeichert werden darf (0 < K ≤ 15). */
+/**
+ * Die Abweichung, mit der der Server rechnet, wenn das Feld leer ist.
+ *
+ * EINE WAHRHEIT: die Zahl gehört `WochenplanSyncService.LufttemperaturSpanne`.
+ * Hier steht sie nur, weil das Blatt ohne Server vorrechnen muss;
+ * `abweichung-standard.node.test.ts` liest beide Stellen und schlägt an, sobald
+ * sie auseinanderlaufen.
+ */
+export const STANDARD_ABWEICHUNG_K = 3
+
+/**
+ * Die „Erlaubte Abweichung" aus dem Feld — nur, was auch gespeichert werden darf
+ * (0 < K ≤ 15). Ein LEERES Feld ist gültig und heißt: der Server nimmt seinen
+ * Standard (Prüfer-Befund vor forkai.154 — vorher blieb die Vorschau dann auf dem
+ * alten Stand, gespeichert wurde aber ± 3).
+ */
 export function abweichungAus(text: string): number | null {
+  if (text.trim() === '') return STANDARD_ABWEICHUNG_K
   const k = zahl(text)
   return k != null && k > 0 && k <= 15 ? k : null
 }
