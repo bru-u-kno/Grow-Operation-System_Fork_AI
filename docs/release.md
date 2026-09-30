@@ -29,12 +29,15 @@ Manifest abfragen, hochzählen) liefen bis forkai.152 nacheinander und dauerten 
 `grow-os/CHANGELOG.md` bekommt den Abschnitt `## X`; `config.yaml` bleibt, wie es ist.
 Home Assistant zeigt den Changelog erst, wenn `config.yaml` die Nummer trägt.
 
-**2. Tag pushen.**
+**2. Release starten — per Release-Branch oder per Tag.**
 
 ```bash
-git tag -a v2.0.0-forkai.153 -m "2.0.0-forkai.153"
-git push origin v2.0.0-forkai.153
+git push origin HEAD:release/2.0.0-forkai.153      # aus einer Claude-Sitzung
+git tag -a v2.0.0-forkai.153 -m "2.0.0-forkai.153" && git push origin v2.0.0-forkai.153
 ```
+
+Claude-Sitzungen dürfen keine Tags pushen (HTTP 403), Branches schon. Beim Branch-Weg legt
+der Workflow den Tag am Ende selbst an und löscht den Branch.
 
 **3. release.yml erledigt den Rest — in dieser Reihenfolge:**
 

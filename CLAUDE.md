@@ -311,7 +311,8 @@ Wo eine Zahl gebraucht wird, die es schon gibt: **verweisen, nicht abtippen.**
 
 ## RELEASE
 
-Ein Release ist ein Tag: `git tag -a vX -m X && git push origin vX`. Dann
+Ein Release ist ein Branch `release/X` (aus einer Claude-Sitzung — Tags darf
+sie nicht pushen) oder ein Tag `vX`. Dann
 erzwingt `.github/workflows/release.yml` die Reihenfolge: CI (`ci.yml`) und
 Image laufen gleichzeitig; **erst wenn beides grün ist**, wird das Manifest
 anonym geprüft (HTTP 200, drei Architekturen), `config.yaml` hochgezählt und

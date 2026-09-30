@@ -10,9 +10,10 @@ name: CI
 # schwaecheren Pruefung vorbeikommen.
 on:
   push:
-    # Nur Branches. Ein Release-Tag startet release.yml, und das ruft diese
-    # Pruefung selbst auf — sonst liefe sie beim Tag doppelt.
-    branches: ['**']
+    # Nur Branches, und keine Release-Branches: Tag und release/* starten
+    # release.yml, und das ruft diese Pruefung selbst auf — sonst liefe sie
+    # doppelt. (Nur branches-ignore gesetzt heisst: Tags starten nichts.)
+    branches-ignore: ['release/**']
   pull_request:
   workflow_call:
 

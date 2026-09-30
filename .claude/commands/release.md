@@ -52,6 +52,17 @@ zuerst die CI am Branch grün abwarten, `main` von Hand auf genau diesen Commit
 vorspulen, **danach** taggen. release.yml prüft das als Erstes und bricht vor
 dem Image-Bau ab, wenn es vergessen wurde.
 
+**Aus einer Claude-Sitzung: Release-Branch.** GitHub lehnt Tag-Pushes aus
+einer Claude-Sitzung mit HTTP 403 ab (30.09.2026) — Branches gehen:
+
+```
+git push origin HEAD:release/<X>
+```
+
+Der Workflow legt den Tag `v<X>` am Ende selbst an und löscht den Branch.
+
+**Von Hand geht weiterhin der Tag:**
+
 ```
 git tag -a v<X> -m "<X>"
 git push origin v<X>

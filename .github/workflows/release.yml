@@ -1,8 +1,14 @@
 name: Release
 
-# Ein Release = ein Tag pushen:
+# Ein Release startet auf einem von zwei Wegen:
 #
-#   git tag -a v2.0.0-forkai.153 -m "2.0.0-forkai.153" && git push origin v2.0.0-forkai.153
+#   Release-Branch:  git push origin HEAD:release/2.0.0-forkai.153
+#   Tag:             git tag -a v2.0.0-forkai.153 -m "2.0.0-forkai.153" && git push origin v2.0.0-forkai.153
+#
+# Der Branch ist der Weg fuer Claude-Sitzungen: GitHub lehnt Tag-Pushes aus
+# einer solchen Sitzung mit HTTP 403 ab (30.09.2026, forkai.153), Branches
+# gehen. Beim Branch-Weg legt der Workflow den Tag am Ende SELBST an und
+# loescht den Branch wieder — die Geschichte sieht aus wie beim Tag-Weg.
 #
 # Was dann passiert, erzwingt GitHub — nicht die Sorgfalt dessen, der
 # released:
@@ -19,12 +25,14 @@ name: Release
 # Image unter der Nummer bleibt liegen, wird aber nie angeboten; nach der
 # Reparatur ueberschreibt der naechste Lauf es unter derselben Nummer.
 #
-# Der Changelog-Eintrag steht schon im getaggten Commit. Home Assistant zeigt
+# Der Changelog-Eintrag steht schon im Release-Commit. Home Assistant zeigt
 # ihn erst an, wenn es das Update anbietet — also erst nach Schritt 2.
 on:
   push:
     tags:
       - "v*.*.*"
+    branches:
+      - "release/*"
 
 permissions:
   contents: read
@@ -52,13 +60,24 @@ jobs:
       # ALLES, was ein Release unmoeglich macht, faellt HIER auf — bevor das
       # Image gebaut wird. Sonst ueberschreibt der Image-Bau im Zweifel ein
       # schon ausgeliefertes Image, und erst der letzte Schritt merkt es.
-      - name: Nummer aus dem Tag lesen und pruefen
+      - name: Nummer aus Tag oder Release-Branch lesen und pruefen
         id: nummer
         run: |
           set -euo pipefail
-          V="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="${GITHUB_REF_NAME#release/}"
+            V="${V#v}"
+          fi
           if ! printf '%s' "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then
-            echo "::error::Tag '$GITHUB_REF_NAME' ist keine Version wie v2.0.0-forkai.153."
+            echo "::error::'$GITHUB_REF_NAME' traegt keine Version wie 2.0.0-forkai.153."
+            exit 1
+          fi
+          # Beim Branch-Weg legt der Workflow den Tag am Ende selbst an. Gibt
+          # es ihn schon, scheitert das — lieber jetzt als nach dem Image-Bau.
+          if [ "$GITHUB_REF_TYPE" = "branch" ] && git ls-remote --exit-code --tags origin "refs/tags/v$V" > /dev/null; then
+            echo "::error::Den Tag v$V gibt es schon. Diese Nummer ist vergeben."
             exit 1
           fi
           # Ohne Eintrag zeigt Home Assistant beim Update den Text der VORIGEN
@@ -78,7 +97,7 @@ jobs:
             exit 1
           fi
           if ! git merge-base --is-ancestor origin/main HEAD; then
-            echo "::error::main enthaelt Commits, die im Tag fehlen. Erst main in den Branch holen, dann neu taggen."
+            echo "::error::main enthaelt Commits, die im Release-Commit fehlen. Erst main in den Branch holen, dann neu starten."
             exit 1
           fi
           # Der GITHUB_TOKEN darf keine Aenderung an .github/workflows nach
@@ -87,9 +106,9 @@ jobs:
           # Hand nach main (nach gruener CI am Branch).
           WORKFLOWS=$(git diff --name-only origin/main HEAD -- .github/workflows)
           if [ -n "$WORKFLOWS" ]; then
-            echo "::error::Der Tag aendert Workflow-Dateien gegenueber main:"
+            echo "::error::Der Release-Commit aendert Workflow-Dateien gegenueber main:"
             printf '%s\n' "$WORKFLOWS"
-            echo "::error::Erst main von Hand auf diesen Commit vorspulen (CI am Branch gruen), dann neu taggen."
+            echo "::error::Erst main von Hand auf diesen Commit vorspulen (CI am Branch gruen), dann neu starten."
             exit 1
           fi
           echo "Release $V (bisher $ALT)"
@@ -153,13 +172,13 @@ jobs:
           done
 
       # Nur vorspulen, nie ueberschreiben: liegt auf main etwas, das im
-      # getaggten Commit fehlt, bricht der Lauf ab, statt es zu verlieren.
+      # Release-Commit fehlt, bricht der Lauf ab, statt es zu verlieren.
       - name: config.yaml hochzaehlen und nach main schieben
         run: |
           set -euo pipefail
           git fetch origin main
           if ! git merge-base --is-ancestor origin/main HEAD; then
-            echo "::error::main enthaelt Commits, die im Tag fehlen. Erst main in den Branch holen, dann neu taggen."
+            echo "::error::main enthaelt Commits, die im Release-Commit fehlen. Erst main in den Branch holen, dann neu starten."
             exit 1
           fi
           sed -i -E "s/^version:.*/version: \"${V}\"/" grow-os/config.yaml
@@ -169,6 +188,19 @@ jobs:
           git commit -am "Release ${V}" \
             -m "CI und Image gruen in Lauf ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           git push origin HEAD:main
+
+      # Beim Tag-Weg gibt es den Tag schon. Beim Branch-Weg entsteht er hier —
+      # auf dem Release-Commit mit der hochgezaehlten config.yaml, wie bei den
+      # Releases bis forkai.152. Ein Push mit dem GITHUB_TOKEN startet keinen
+      # weiteren Workflow; dieser Tag loest also nicht noch einmal release.yml
+      # aus.
+      - name: Tag anlegen und Release-Branch loeschen
+        if: github.ref_type == 'branch'
+        run: |
+          set -euo pipefail
+          git tag -a "v${V}" -m "${V}"
+          git push origin "refs/tags/v${V}"
+          git push origin --delete "${GITHUB_REF_NAME}"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
