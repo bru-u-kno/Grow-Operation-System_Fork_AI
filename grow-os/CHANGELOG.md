@@ -5,6 +5,37 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.153
+
+**Fork AI.** Sicherheit an der Hardware: Pumpe, CO₂-Ventil und Licht bleiben nicht mehr im falschen Zustand hängen.
+
+- Behoben — **Dosierpumpe lief nach einem langsamen Home Assistant weiter.** Kam die Antwort auf „an" später
+  als vier Sekunden, galt die Dosis als gescheitert und die Pumpe wurde nie ausgeschaltet. Jetzt wird in jedem
+  Fall ausgeschaltet, nachgelesen und bis zu dreimal wiederholt. Eine solche unsichere Dosis zählt auf
+  Mischpause und Tagesgrenze — vorher dosierte die Automatik eine Minute später gleich noch einmal. Beim Start
+  versucht Grow OS bis zu fünf Minuten lang, jede Pumpe auszuschalten, statt nur einmal — auch Pumpen im
+  Testbetrieb. Ist Home Assistant gar nicht erreichbar, wird nichts gesendet, und der Versuch sperrt die
+  Pumpe nicht bis Mitternacht.
+- Behoben — **CO₂-Probeschaltung konnte das Ventil offen lassen**, wenn schon das Öffnen nicht bestätigt kam.
+  Das Ventil wird jetzt immer geschlossen und bis zu 20 Sekunden lang nachgeprüft — die AC-Infinity-Cloud meldet
+  oft spät zurück; geht es wirklich nicht zu, sagt die Seite es deutlich.
+- Behoben — **CO₂-Vorlagen dosierten bei ausgefallenem Fühler weiter.** „CO2 Bedarf" hielt fünf Minuten lang
+  „an", der Impuls-Bedarf rechnete mit 0 ppm und lieferte die längste Impulsdauer. Jetzt: kein Messwert, kein
+  Gas. Die Dosier-Schleife endet auch, wenn Licht, Klima oder Bedarf „nicht verfügbar" melden, und der
+  CO₂-Wächter sieht zusätzlich beim Start von Home Assistant und jede Minute nach. Gilt für Automationen, die
+  Grow OS anlegt — selbst gebaute Automationen bleiben unberührt.
+- Behoben — **Not-Aus der CO₂-Automation hielt nur eine Stunde.** Der stündliche Abgleich schaltete sie wieder
+  ein, ebenso jedes Speichern auf der CO₂-Seite. Jetzt schaltet nur noch der Schalter „Automatik" selbst.
+- Behoben — **Licht schaltete Stunden oder Tage später nach alten Befehlen.** Ein verworfener Befehl wurde beim
+  nächsten Öffnen der Seite nachgeschrieben, auch mitten in der Lichtphase. Nachgeschrieben wird jetzt nur
+  noch zwei Minuten lang und nie, wenn inzwischen anderswo geschaltet wurde.
+- Behoben — **Preset setzte den Zeitplan auch ohne neue Zeiten.** Jeder Schritt wird jetzt nachgeprüft; kommt
+  eine Zeit nicht an, bleibt der Modus, wie er war, und die Seite meldet es. Das Anwenden eines Presets dauert
+  dafür ein paar Sekunden. „Abstand zwischen Befehlen", „Prüfen nach" und „Wiederholungen" unter Erweitert
+  gelten dabei.
+- Behoben — **Ein Datenbankfehler beendete das ganze Add-on**, etwa eine gesperrte Datei während einer
+  Sicherung. Der fehlgeschlagene Schritt wird jetzt protokolliert und im nächsten Takt wiederholt.
+
 ## 2.0.0-forkai.152
 
 **Fork AI.** Kosten: Erfassen-Knöpfe öffnen immer und springen genau zum Formular.
