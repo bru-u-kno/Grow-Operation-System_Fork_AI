@@ -1,5 +1,11 @@
+using System.Net;
+using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
+using GrowDiary.Web.Services.Knowledge;
+using GrowDiary.Web.Tests.TestFakes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GrowDiary.Web.Tests.Services;
 
@@ -15,8 +21,132 @@ namespace GrowDiary.Web.Tests.Services;
 /// Automation nicht, und jedes Speichern eines ppm-Werts schaltete sie mit
 /// ein.</para>
 /// </remarks>
-public sealed class Co2NotAusBleibtTests
+public sealed class Co2NotAusBleibtTests : IDisposable
 {
+    // ---------- Der echte Weg: Worker → Dienst → HTTP an Home Assistant ----------
+    //
+    // Die Listen-Tests unten prüfen nur die Zutaten. Der Prüfer hat am
+    // 29.09.2026 gezeigt, dass sie grün bleiben, wenn der Worker wieder den
+    // alten Aufruf nimmt — genau der eigentliche Fehler. Diese Tests laufen
+    // durch den echten Dienst und zählen, was bei Home Assistant ankommt.
+
+    private readonly string _wurzel;
+    private readonly AppPaths _pfade;
+    private readonly RecordingHttpHandler _ha;
+
+    public Co2NotAusBleibtTests()
+    {
+        _wurzel = Path.Combine(Path.GetTempPath(), "Co2NotAus_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_wurzel);
+        KopiereWissen(Path.Combine(ProjektWurzel(), "GrowDiary.Web", "wwwroot", "knowledge-defaults"), _wurzel);
+        _pfade = new AppPaths(_wurzel);
+        TestDatabase.InitializeWithDefaultTent(_pfade);
+        new HomeAssistantSettingsRepository(_pfade).SaveHomeAssistantSettings(new HomeAssistantSettings
+        {
+            BaseUrl = "http://ha.local:8123", AccessToken = "token", Enabled = true,
+        });
+        _ha = new RecordingHttpHandler((anfrage, _) => anfrage.Method == HttpMethod.Get
+            ? RecordingHttpHandler.Json(anfrage.RequestUri!.AbsolutePath.EndsWith("/api/states") ? "[]" : "{}",
+                anfrage.RequestUri!.AbsolutePath.EndsWith("/api/states") ? HttpStatusCode.OK : HttpStatusCode.NotFound)
+            : RecordingHttpHandler.Json("[]"));
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_wurzel, recursive: true); } catch { /* Windows haelt manchmal fest */ }
+    }
+
+    private Co2SteuerungService Dienst()
+    {
+        var ha = new HomeAssistantService(new StubHttpClientFactory(_ha), NullLogger<HomeAssistantService>.Instance);
+        var haSettings = new HomeAssistantSettingsRepository(_pfade);
+        var steuerung = new SteuerungRepository(_pfade);
+        var grows = new GrowRepository(_pfade);
+        var wissen = new KnowledgeBaseLoader(_pfade, NullLogger<KnowledgeBaseLoader>.Instance);
+        wissen.Initialize();
+        return new Co2SteuerungService(
+            steuerung, new KostenRepository(_pfade), new JournalRepository(_pfade), grows,
+            new HydroSetupRepository(_pfade, new TentRepository(_pfade)), new TargetValueService(wissen), wissen,
+            ha, haSettings, new SteuerungGeraeteService(steuerung),
+            new WochenplanSyncService(grows, wissen, steuerung, new AlertRuleRepository(_pfade), ha, haSettings,
+                NullLogger<WochenplanSyncService>.Instance),
+            new SteuerungMittelwertService(ha, haSettings, NullLogger<SteuerungMittelwertService>.Instance),
+            NullLogger<Co2SteuerungService>.Instance);
+    }
+
+    private int AutomationsAufrufe()
+        => _ha.Requests.Count(r => r.Method == HttpMethod.Post
+            && r.Uri.AbsolutePath.Contains("/api/services/automation/", StringComparison.Ordinal));
+
+    private int SchalterAufrufe()
+        => _ha.Requests.Count(r => r.Method == HttpMethod.Post
+            && r.Uri.AbsolutePath.Contains("/api/services/input_boolean/", StringComparison.Ordinal));
+
+    [Fact]
+    public async Task Worker_StundenlaufSchaltetDieAutomationNicht()
+    {
+        new SteuerungRepository(_pfade).SetEinstellungen(Co2SteuerungService.Modul, Einstellungen(automatik: true));
+        var dienste = new ServiceCollection()
+            .AddScoped(_ => Dienst())
+            .AddScoped(_ => new SteuerungRepository(_pfade))
+            .BuildServiceProvider();
+        var worker = new Co2SyncWorker(dienste, NullLogger<Co2SyncWorker>.Instance);
+
+        await worker.EinmalAsync(CancellationToken.None);
+
+        // Selbsttest: der Stundenlauf lief wirklich und schrieb die Schalter-Helfer.
+        Assert.True(SchalterAufrufe() >= 2, "Der Stundenlauf hat nichts geschrieben — der Test sieht ihn nicht.");
+        Assert.Equal(0, AutomationsAufrufe());
+    }
+
+    [Fact]
+    public async Task SpeichernOhneUmlegen_SchaltetDieAutomationNicht()
+    {
+        var dienst = Dienst();
+        new SteuerungRepository(_pfade).SetEinstellungen(Co2SteuerungService.Modul, Einstellungen(automatik: true));
+
+        var neu = Einstellungen(automatik: true);
+        await dienst.SpeichernAsync(neu, CancellationToken.None);
+
+        Assert.True(SchalterAufrufe() >= 2, "Speichern hat nichts geschrieben — der Test sieht es nicht.");
+        Assert.Equal(0, AutomationsAufrufe());
+    }
+
+    [Fact]
+    public async Task SpeichernMitUmlegen_SchaltetDieAutomation()
+    {
+        var dienst = Dienst();
+        new SteuerungRepository(_pfade).SetEinstellungen(Co2SteuerungService.Modul, Einstellungen(automatik: true));
+
+        await dienst.SpeichernAsync(Einstellungen(automatik: false), CancellationToken.None);
+
+        Assert.Equal(1, AutomationsAufrufe());
+    }
+
+    private static string ProjektWurzel()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir, "GrowDiary.Web"))) return dir;
+            dir = Path.GetDirectoryName(dir);
+        }
+        throw new InvalidOperationException("Projektwurzel nicht gefunden.");
+    }
+
+    private static void KopiereWissen(string quelle, string ziel)
+    {
+        var nach = Path.Combine(ziel, "wwwroot", "knowledge-defaults");
+        foreach (var datei in Directory.EnumerateFiles(quelle, "*.json", SearchOption.AllDirectories))
+        {
+            var pfad = Path.Combine(nach, Path.GetRelativePath(quelle, datei));
+            Directory.CreateDirectory(Path.GetDirectoryName(pfad)!);
+            File.Copy(datei, pfad);
+        }
+    }
+
+    // ---------- Die Zutaten ----------
+
     private static Co2Einstellungen Einstellungen(bool automatik = true) => new() { AutomatikAktiv = automatik };
 
     [Fact]

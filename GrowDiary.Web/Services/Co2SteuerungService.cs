@@ -432,7 +432,7 @@ public sealed class Co2SteuerungService
     /// Auch die Automation an- oder ausschalten. Nur beim Speichern — der
     /// Stundenlauf geht über <see cref="StuendlichAbgleichenAsync"/>.
     /// </param>
-    public async Task<bool> NachHomeAssistantSchreibenAsync(Co2Einstellungen e, CancellationToken ct, bool mitAutomatik = true)
+    public async Task<bool> NachHomeAssistantSchreibenAsync(Co2Einstellungen e, CancellationToken ct, bool mitAutomatik)
     {
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return false;

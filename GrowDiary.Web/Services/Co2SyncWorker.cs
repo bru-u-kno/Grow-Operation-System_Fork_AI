@@ -55,7 +55,8 @@ public sealed class Co2SyncWorker : BackgroundService
         }
     }
 
-    private async Task EinmalAsync(CancellationToken ct)
+    /// <summary>Ein Durchlauf: Takt, und stündlich der Abgleich der Sollwerte. Öffentlich für den Test der Verdrahtung.</summary>
+    public async Task EinmalAsync(CancellationToken ct)
     {
         using var scope = _serviceProvider.CreateScope();
         var dienst = scope.ServiceProvider.GetRequiredService<Co2SteuerungService>();
