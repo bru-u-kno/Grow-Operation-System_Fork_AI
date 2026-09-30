@@ -6,10 +6,12 @@ Anlass (30.09.2026): Derselbe Commit brauchte im Backend einmal 2:52 und einmal
 Die CI schreibt deshalb TRX-Dateien; dieses Skript nennt die langsamsten Tests
 im Protokoll und in der Zusammenfassung des Laufs.
 
-Aufruf: langsamste-tests.py <verzeichnis> [anzahl]
+Aufruf: langsamste-tests.py <verzeichnis> [anzahl] [mindestens]
 
-Bricht ab (Exit 1), wenn es KEINE Ergebnisse findet: eine Auswertung, die bei
-leerer Grundmenge still nichts meldet, hat nichts gemessen (CLAUDE.md).
+Bricht ab (Exit 1), wenn es weniger als <mindestens> Ergebnisse findet (ohne
+Angabe: 1). Eine Auswertung, die bei leerer Grundmenge still nichts meldet, hat
+nichts gemessen (CLAUDE.md) — und seit die Backend-Tests auf drei Rechner
+verteilt sind, faellt hier auch ein Filter auf, der fast nichts mehr auswaehlt.
 """
 
 import glob
@@ -29,6 +31,7 @@ def sekunden(dauer: str) -> float:
 def main() -> int:
     verzeichnis = sys.argv[1]
     anzahl = int(sys.argv[2]) if len(sys.argv) > 2 else 15
+    mindestens = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     dateien = sorted(glob.glob(os.path.join(verzeichnis, "**", "*.trx"), recursive=True))
     ergebnisse = []
     for datei in dateien:
@@ -36,8 +39,9 @@ def main() -> int:
             if r.get("duration"):
                 ergebnisse.append((sekunden(r.get("duration")), r.get("testName"), os.path.basename(datei)))
 
-    if not ergebnisse:
-        print(f"::error::Keine Testergebnisse in {verzeichnis} ({len(dateien)} TRX-Dateien) — die Messung misst nichts.")
+    if len(ergebnisse) < max(1, mindestens):
+        print(f"::error::Nur {len(ergebnisse)} Testergebnisse in {verzeichnis} ({len(dateien)} TRX-Dateien), "
+              f"erwartet mindestens {mindestens} — Filter oder Testlauf pruefen nichts.")
         return 1
 
     ergebnisse.sort(reverse=True)
