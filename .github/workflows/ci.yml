@@ -19,11 +19,16 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-# Jeder Job hat eine Zeitgrenze. Ohne sie wartet GitHub bis zu SECHS STUNDEN:
-# am 30.09.2026 hing `playwright install --with-deps` acht Minuten und mehr
-# an einem Paketspiegel, waehrend alle anderen Jobs nach vier Minuten fertig
-# waren. Ein Release haette so den ganzen Abend gewartet. Die Grenzen liegen
-# beim Drei- bis Vierfachen der gemessenen Dauer.
+# Jeder Job hat eine Zeitgrenze. Ohne sie wartet GitHub bis zu SECHS STUNDEN.
+# Die Grenzen liegen beim Drei- bis Vierfachen der gemessenen Dauer.
+#
+# Der Browser-Install hat BEWUSST keine eigene, knappere Grenze: am 30.09.2026
+# lieferte der Azure-Ubuntu-Spiegel die 27 MB Systempakete von `--with-deps`
+# (vor allem Schriften) mit 97 kB/s — 4:35 statt ~15 s. Eine 5-Minuten-Grenze
+# hat daraus einen ROTEN Lauf gemacht (Lauf 433), obwohl nichts kaputt war.
+# Langsam ist besser als rot; gegen echtes Haengen reicht die Job-Grenze.
+# Die Pakete weglassen geht nicht: die Pixelpruefungen messen mit genau diesen
+# Schriften (CLAUDE.md, „Mein Rechner ist nicht die Anlage").
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -120,7 +125,6 @@ jobs:
       - name: Install Playwright browser
         working-directory: GrowDiary.React
         run: npx playwright install --with-deps chromium
-        timeout-minutes: 5
 
       - name: E2E ohne Backend (Rauchtest, Teil ${{ matrix.teil }}/2)
         working-directory: GrowDiary.React
@@ -182,7 +186,6 @@ jobs:
       - name: Install Playwright browser
         working-directory: GrowDiary.React
         run: npx playwright install --with-deps chromium
-        timeout-minutes: 5
 
       # Die Datenbank liegt in einem frischen Temp-Verzeichnis: der
       # Demobestand saet nur in eine Datenbank ganz ohne Grows, und die
