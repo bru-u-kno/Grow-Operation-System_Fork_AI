@@ -311,6 +311,9 @@ Wo eine Zahl gebraucht wird, die es schon gibt: **verweisen, nicht abtippen.**
 
 ## RELEASE
 
-CI grün **vor** dem Image: `ci.yml` → `gh workflow run docker-publish.yml -f
-version=X` → GHCR-Manifest HTTP 200 → erst dann `config.yaml` hochzählen. Der
-Docker-Build führt keine Tests aus.
+Ein Release ist ein Tag: `git tag -a vX -m X && git push origin vX`. Dann
+erzwingt `.github/workflows/release.yml` die Reihenfolge: CI (`ci.yml`) und
+Image laufen gleichzeitig; **erst wenn beides grün ist**, wird das Manifest
+anonym geprüft (HTTP 200, drei Architekturen), `config.yaml` hochgezählt und
+nach `main` vorgespult. Der Docker-Build führt keine Tests aus — deshalb zählt
+nie ein Mensch von Hand hoch. Ablauf: `/release`.

@@ -1,0 +1,157 @@
+name: Release
+
+# Ein Release = ein Tag pushen:
+#
+#   git tag -a v2.0.0-forkai.153 -m "2.0.0-forkai.153" && git push origin v2.0.0-forkai.153
+#
+# Was dann passiert, erzwingt GitHub — nicht die Sorgfalt dessen, der
+# released:
+#
+#   1. CI (ci.yml, alle Pruefungen) und Image-Bau (docker-publish.yml) laufen
+#      GLEICHZEITIG. Das Image liegt danach unter seiner Versionsnummer in
+#      GHCR, aber Home Assistant bietet es noch niemandem an — das tut es erst,
+#      wenn `grow-os/config.yaml` die Nummer traegt.
+#   2. Erst wenn BEIDES gruen ist: Manifest ansehen (anonym abrufbar, alle drei
+#      Architekturen), dann `config.yaml` hochzaehlen und nach main schieben,
+#      dann `latest` setzen.
+#
+# Ist die CI rot, wird nichts hochgezaehlt und nichts nach main geschoben. Das
+# Image unter der Nummer bleibt liegen, wird aber nie angeboten; nach der
+# Reparatur ueberschreibt der naechste Lauf es unter derselben Nummer.
+#
+# Der Changelog-Eintrag steht schon im getaggten Commit. Home Assistant zeigt
+# ihn erst an, wenn es das Update anbietet — also erst nach Schritt 2.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+# Zwei Releases gleichzeitig wuerden beide main vorspulen wollen.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.nummer.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Nummer aus dem Tag lesen und pruefen
+        id: nummer
+        run: |
+          set -euo pipefail
+          V="${GITHUB_REF_NAME#v}"
+          if ! printf '%s' "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then
+            echo "::error::Tag '$GITHUB_REF_NAME' ist keine Version wie v2.0.0-forkai.153."
+            exit 1
+          fi
+          # Ohne Eintrag zeigt Home Assistant beim Update den Text der VORIGEN
+          # Version an. Das faellt hier auf, nicht erst beim Nutzer.
+          if ! grep -qxF "## $V" grow-os/CHANGELOG.md; then
+            echo "::error::grow-os/CHANGELOG.md hat keinen Abschnitt '## $V'."
+            exit 1
+          fi
+          ALT=$(grep -E '^version:' grow-os/config.yaml | sed -E 's/^version:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')
+          if [ "$ALT" = "$V" ]; then
+            echo "::error::config.yaml traegt schon $V — diese Nummer ist bereits veroeffentlicht."
+            exit 1
+          fi
+          echo "Release $V (bisher $ALT)"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+  pruefen:
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    needs: version
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      latest: false
+
+  veroeffentlichen:
+    needs: [version, pruefen, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      V: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # So, wie Home Assistant es abruft: ANONYM. Ein Image, das nur mit
+      # Anmeldung abrufbar ist, besteht jeden Workflow und scheitert beim
+      # Nutzer.
+      - name: Manifest ansehen (anonym, alle Architekturen)
+        run: |
+          set -euo pipefail
+          REPO="${GITHUB_REPOSITORY,,}"
+          TOKEN=$(curl -sf "https://ghcr.io/token?scope=repository:${REPO}:pull" | jq -r .token)
+          ANTWORT=$(mktemp)
+          CODE=$(curl -s -o "$ANTWORT" -w '%{http_code}' \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.oci.image.index.v1+json" \
+            -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+            "https://ghcr.io/v2/${REPO}/manifests/${V}")
+          echo "HTTP $CODE"
+          if [ "$CODE" != "200" ]; then
+            echo "::error::ghcr.io/${REPO}:${V} ist anonym nicht abrufbar (HTTP $CODE)."
+            exit 1
+          fi
+          PLATTFORMEN=$(jq -r '.manifests[] | select(.platform.os == "linux")
+            | .platform.architecture + (if .platform.variant then "/" + .platform.variant else "" end)' "$ANTWORT" | sort)
+          echo "$PLATTFORMEN"
+          for P in amd64 arm64 arm/v7; do
+            if ! printf '%s\n' "$PLATTFORMEN" | grep -qxF "$P"; then
+              echo "::error::Im Manifest fehlt die Architektur $P."
+              exit 1
+            fi
+          done
+
+      # Nur vorspulen, nie ueberschreiben: liegt auf main etwas, das im
+      # getaggten Commit fehlt, bricht der Lauf ab, statt es zu verlieren.
+      - name: config.yaml hochzaehlen und nach main schieben
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::main enthaelt Commits, die im Tag fehlen. Erst main in den Branch holen, dann neu taggen."
+            exit 1
+          fi
+          sed -i -E "s/^version:.*/version: \"${V}\"/" grow-os/config.yaml
+          grep -qxF "version: \"${V}\"" grow-os/config.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release ${V}" \
+            -m "CI und Image gruen in Lauf ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          git push origin HEAD:main
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Erst jetzt: `latest` zeigt nie auf ein Image, dessen CI nicht gruen war.
+      - name: latest setzen
+        run: |
+          REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${V}"

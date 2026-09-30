@@ -20,43 +20,34 @@ Problem hat ein anderes vergrößert. Deshalb steht hier jetzt der ganze Ablauf.
 
 ## Ablauf
 
-**1. Code committen — ohne Versionsnummer.**
-Änderungen, Tests, Changelog-Eintrag vorbereiten, aber `config.yaml` noch nicht anfassen.
+Seit forkai.153 erzwingt `.github/workflows/release.yml` diese Reihenfolge — nicht mehr
+die Sorgfalt dessen, der released. Die Schritte von Hand (CI abwarten, Image anstoßen,
+Manifest abfragen, hochzählen) liefen bis forkai.152 nacheinander und dauerten rund
+20 Minuten.
+
+**1. Code und Changelog-Eintrag committen — ohne Versionsnummer.**
+`grow-os/CHANGELOG.md` bekommt den Abschnitt `## X`; `config.yaml` bleibt, wie es ist.
+Home Assistant zeigt den Changelog erst, wenn `config.yaml` die Nummer trägt.
+
+**2. Tag pushen.**
 
 ```bash
-git push origin main
+git tag -a v2.0.0-forkai.153 -m "2.0.0-forkai.153"
+git push origin v2.0.0-forkai.153
 ```
 
-**2. CI abwarten, bis sie grün ist.**
-Der Docker-Workflow führt keine Tests aus; ein grüner Bildbau sagt nichts über Korrektheit.
+**3. release.yml erledigt den Rest — in dieser Reihenfolge:**
 
-```bash
-gh run watch "$(gh run list --workflow=ci.yml --limit 1 --json databaseId -q '.[0].databaseId')" --exit-status
-```
+- CI (`ci.yml`, alle Prüfungen) und Image-Bau laufen **gleichzeitig**. Das Image liegt
+  danach unter seiner Nummer in GHCR, wird aber noch niemandem angeboten.
+- **Erst wenn beides grün ist:** Manifest anonym abrufen (HTTP 200, amd64 · arm64 · arm/v7),
+  `config.yaml` hochzählen, nach `main` vorspulen, `latest` setzen.
 
-**3. Image mit der neuen Version bauen — Version explizit übergeben.**
-Der Workflow nimmt die Nummer als Eingabe entgegen, statt sie aus `config.yaml` zu lesen.
-Das Image ist inhaltlich identisch: Weder `config.yaml` noch die Versionsnummer landen
-darin.
+Damit ist das Fenster vom 2026-07-26 zu: `config.yaml` erreicht `main` erst, wenn das Image
+nachweislich abrufbar ist. Ist die CI rot, wird nichts hochgezählt.
 
-```bash
-gh workflow run docker-publish.yml --ref main -f version=1.8.3
-```
-
-**4. Prüfen, dass das Image wirklich abrufbar ist.**
-
-```bash
-TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:nerdstreak/grow-operation-system:pull" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $TOKEN" \
-  -H "Accept: application/vnd.oci.image.index.v1+json" \
-  "https://ghcr.io/v2/nerdstreak/grow-operation-system/manifests/1.8.3"
-```
-
-Erwartet: `200`.
-
-**5. Erst jetzt die Version veröffentlichen.**
-`grow-os/config.yaml` und `CHANGELOG.md` bumpen, committen, pushen. In dem Moment sehen die
-Nutzer das Update — und das Image liegt bereits bereit.
+**4. Hinsehen.** Den Lauf ansehen, `config.yaml` auf `main` lesen, in Home Assistant den
+Add-on-Store neu einlesen lassen. Einzelheiten: `.claude/commands/release.md`.
 
 ## Was wann eine Versionsnummer bekommt
 

@@ -1,16 +1,27 @@
 name: CI
 
+# Vier Jobs GLEICHZEITIG statt eines Jobs nacheinander. Bis forkai.152 lief
+# alles in einem Job hintereinander: 18,5 Minuten, davon ~14 in den beiden
+# E2E-Durchgaengen. Die Pruefungen sind dieselben geblieben — nur die
+# Reihenfolge ist weg, und die E2E-Mappen sind auf mehrere Rechner verteilt.
+#
+# release.yml ruft genau diese Datei auf (workflow_call). Es gibt also nur
+# EINE Beschreibung des Tors; ein Release kann nicht an einer anderen,
+# schwaecheren Pruefung vorbeikommen.
 on:
   push:
+    # Nur Branches. Ein Release-Tag startet release.yml, und das ruft diese
+    # Pruefung selbst auf — sonst liefe sie beim Tag doppelt.
+    branches: ['**']
   pull_request:
+  workflow_call:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build-test:
+  backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,13 +30,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: GrowDiary.React/package-lock.json
 
       - name: Restore backend
         run: dotnet restore GrowDiary.slnx
@@ -42,6 +46,18 @@ jobs:
       - name: Test backend
         run: dotnet test GrowDiary.slnx --configuration Release --no-build --verbosity minimal
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: GrowDiary.React/package-lock.json
 
       - name: Install frontend
         working-directory: GrowDiary.React
@@ -63,23 +79,97 @@ jobs:
         working-directory: GrowDiary.React
         run: npm run build
 
+  # Ohne Backend: jede Seite zeigt ihren Lade- oder Leerzustand. Das ist
+  # ein echter Rauchtest — keine Route darf beim Rendern abstuerzen —,
+  # aber mehr auch nicht.
+  #
+  # Auf zwei Rechner verteilt (--shard). Playwright haelt `serial`-Gruppen
+  # dabei zusammen; jede Datei laeuft genau einmal, in genau einem Teil.
+  e2e-rauch:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        teil: [1, 2]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: GrowDiary.React/package-lock.json
+
+      - name: Install frontend
+        working-directory: GrowDiary.React
+        run: npm ci
+
       - name: Install Playwright browser
         working-directory: GrowDiary.React
         run: npx playwright install --with-deps chromium
 
-      # Ohne Backend: jede Seite zeigt ihren Lade- oder Leerzustand. Das ist
-      # ein echter Rauchtest — keine Route darf beim Rendern abstuerzen —,
-      # aber mehr auch nicht.
-      - name: E2E ohne Backend (Rauchtest)
+      - name: E2E ohne Backend (Rauchtest, Teil ${{ matrix.teil }}/2)
         working-directory: GrowDiary.React
-        run: npm run test:e2e
+        run: npx playwright test --shard=${{ matrix.teil }}/2
 
-      # Und dasselbe noch einmal GEGEN DIE LAUFENDE APP mit vollem
-      # Demobestand. Erst hier pruefen die Faelle wirklich etwas:
-      # von 34 Faellen aus vier Dateien uebersprangen sich im Lauf ohne
-      # Backend 31 und drei liefen. E2E_STRENG=1 macht jeden Uebersprung
-      # zum Fehler, damit das nicht wieder still passiert.
-      #
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-rauch-${{ matrix.teil }}
+          path: GrowDiary.React/playwright-report/
+          retention-days: 7
+
+  # Und dieselbe Mappe noch einmal GEGEN DIE LAUFENDE APP mit vollem
+  # Demobestand. Erst hier pruefen die Faelle wirklich etwas:
+  # von 34 Faellen aus vier Dateien uebersprangen sich im Lauf ohne
+  # Backend 31 und drei liefen. E2E_STRENG=1 macht jeden Uebersprung
+  # zum Fehler, damit das nicht wieder still passiert.
+  #
+  # Auf drei Rechner verteilt; JEDER Teil startet seine eigene App mit
+  # eigenem, frischem Demobestand. Die Teile teilen sich also keine
+  # Datenbank und koennen sich nicht gegenseitig Daten veraendern.
+  e2e-streng:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        teil: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: GrowDiary.React/package-lock.json
+
+      - name: Build backend
+        run: dotnet build GrowDiary.Web/GrowDiary.Web.csproj --configuration Release
+
+      - name: Install frontend
+        working-directory: GrowDiary.React
+        run: npm ci
+
+      # Schreibt nach GrowDiary.Web/wwwroot — daraus liefert die App gleich
+      # die Oberflaeche aus.
+      - name: Build frontend
+        working-directory: GrowDiary.React
+        run: npm run build
+
+      - name: Install Playwright browser
+        working-directory: GrowDiary.React
+        run: npx playwright install --with-deps chromium
+
       # Die Datenbank liegt in einem frischen Temp-Verzeichnis: der
       # Demobestand saet nur in eine Datenbank ganz ohne Grows, und die
       # Tests schreiben.
@@ -112,12 +202,12 @@ jobs:
           cat "${RUNNER_TEMP}/growos.log"
           exit 1
 
-      - name: E2E gegen die laufende App (streng)
+      - name: E2E gegen die laufende App (streng, Teil ${{ matrix.teil }}/3)
         working-directory: GrowDiary.React
         env:
           GROW_OS_URL: http://localhost:5076
           E2E_STRENG: '1'
-        run: npx playwright test
+        run: npx playwright test --shard=${{ matrix.teil }}/3
 
       - name: Protokoll der App bei Fehlschlag
         if: ${{ failure() }}
@@ -127,6 +217,6 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-streng-${{ matrix.teil }}
           path: GrowDiary.React/playwright-report/
           retention-days: 7

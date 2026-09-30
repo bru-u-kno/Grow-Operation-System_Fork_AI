@@ -2,11 +2,27 @@ name: Docker image
 
 # Baut ein Multi-Arch-Image (Raspberry Pi arm64/arm32 + PC amd64) und pusht es
 # nach GHCR, damit Nutzer es per Installer nur noch herunterladen (statt selbst
-# bauen) muessen. Laeuft bei jedem v*-Tag und kann manuell gestartet werden.
+# bauen) muessen.
+#
+# Der Weg fuer ein Release ist release.yml (Tag v*.*.* pushen): das ruft diese
+# Datei auf, GLEICHZEITIG mit der CI, und zaehlt erst hoch, wenn beides gruen
+# ist. Bis forkai.152 startete ein v*-Tag diese Datei direkt — jetzt nicht mehr,
+# sonst entstuende beim Release jedes Image doppelt. Von Hand starten geht
+# weiterhin.
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_call:
+    inputs:
+      version:
+        description: Versionsnummer des Images, z. B. 2.0.0-forkai.153.
+        required: true
+        type: string
+      latest:
+        description: >-
+          Auch `latest` setzen? release.yml uebergibt false und setzt `latest`
+          selbst — erst, wenn die CI gruen ist.
+        required: false
+        default: true
+        type: boolean
   workflow_dispatch:
     inputs:
       version:
@@ -17,6 +33,11 @@ on:
           window in which the store advertises a version whose image does not exist yet.
         required: false
         type: string
+      latest:
+        description: Auch `latest` setzen?
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -74,11 +95,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          # Nur die Versionsnummer — die zieht Home Assistant. Die frueheren
+          # semver-Kurzformen (2.0, 2) entstanden nur bei einem Tag-Push, den
+          # es hier nicht mehr gibt, und haetten ein ungeprueftes Image unter
+          # einem allgemeinen Namen veroeffentlicht.
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ inputs.latest }}
             type=raw,value=${{ steps.addonver.outputs.version }}
 
       - name: Build and push
