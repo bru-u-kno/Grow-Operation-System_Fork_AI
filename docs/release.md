@@ -42,7 +42,9 @@ der Workflow den Tag am Ende selbst an und löscht den Branch.
 **3. release.yml erledigt den Rest — in dieser Reihenfolge:**
 
 - CI (`ci.yml`, alle Prüfungen) und Image-Bau laufen **gleichzeitig**. Das Image liegt
-  danach unter seiner Nummer in GHCR, wird aber noch niemandem angeboten.
+  danach unter seiner Nummer in GHCR, wird aber noch niemandem angeboten. Hat die CI
+  genau diesen Commit schon grün geprüft (Push auf den Arbeitsbranch), prüft release.yml
+  nicht noch einmal; läuft sie noch, wartet es darauf.
 - **Erst wenn beides grün ist:** Manifest anonym abrufen (HTTP 200, amd64 · arm64 · arm/v7),
   `config.yaml` hochzählen, nach `main` vorspulen, `latest` setzen.
 

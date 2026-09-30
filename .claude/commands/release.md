@@ -70,9 +70,13 @@ git push origin v<X>
 
 Dann läuft release.yml:
 
-1. **Gleichzeitig:** die ganze CI (`ci.yml`, per `workflow_call` — dieselbe
-   Datei wie bei jedem Push, kein schwächeres Tor) und der Image-Bau
-   (`docker-publish.yml`, ohne `latest`).
+1. **Gleichzeitig:** die Prüfung und der Image-Bau (`docker-publish.yml`, ohne
+   `latest`). Geprüft wird nur, wenn es für **genau diesen Commit** noch keinen
+   grünen CI-Lauf gibt — ein Push-Lauf fährt die `ci.yml` aus demselben Commit,
+   das ist dasselbe Tor. Läuft die CI noch, wartet release.yml darauf. Arbeits-
+   und Release-Branch dürfen also direkt nacheinander gepusht werden; ein
+   Release dauert dann nur noch Image + Veröffentlichen (~3 Minuten nach
+   grüner CI). Seit forkai.155.
 2. **Erst wenn beides grün ist:** Manifest **anonym** abrufen (HTTP 200,
    amd64 · arm64 · arm/v7), `config.yaml` auf `<X>` setzen, nach `main`
    **vorspulen** (nie überschreiben), dann `latest` setzen.

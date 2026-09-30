@@ -114,7 +114,56 @@ jobs:
           echo "Release $V (bisher $ALT)"
           echo "version=$V" >> "$GITHUB_OUTPUT"
 
+  # Hat die CI GENAU diesen Commit schon geprueft (Push auf den Arbeitsbranch),
+  # wird nicht noch einmal geprueft. Bis forkai.154 lief jede Pruefung beim
+  # Release ein zweites Mal — 5 bis 13 Minuten fuer ein Ergebnis, das schon
+  # feststand. Gleichwertig ist das, weil ein CI-Lauf auf einem Push die ci.yml
+  # AUS DIESEM COMMIT faehrt: dasselbe Tor, derselbe Stand.
+  #
+  # Laeuft die CI fuer den Commit noch, wird gewartet statt doppelt gestartet —
+  # Arbeitsbranch und Release-Branch duerfen also direkt nacheinander gepusht
+  # werden. Kein Lauf, oder keiner gruen: dann prueft release.yml selbst.
+  ci-stand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      gruen: ${{ steps.stand.outputs.gruen }}
+      lauf: ${{ steps.stand.outputs.lauf }}
+    steps:
+      - name: CI-Lauf fuer genau diesen Commit suchen
+        id: stand
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 80); do
+            LAEUFE=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&per_page=20")
+            GRUEN=$(jq -r '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and .event == "push" and .conclusion == "success")][0].id // empty' <<<"$LAEUFE")
+            if [ -n "$GRUEN" ]; then
+              echo "CI war fuer $GITHUB_SHA schon gruen: Lauf $GRUEN — keine zweite Pruefung."
+              echo "gruen=true" >> "$GITHUB_OUTPUT"
+              echo "lauf=$GRUEN" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            OFFEN=$(jq -r '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and .event == "push" and .status != "completed")] | length' <<<"$LAEUFE")
+            if [ "$OFFEN" = "0" ]; then
+              echo "Kein gruener CI-Lauf fuer $GITHUB_SHA — release.yml prueft selbst."
+              echo "gruen=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "CI fuer $GITHUB_SHA laeuft noch — warte (Runde $i)."
+            sleep 20
+          done
+          echo "CI fuer $GITHUB_SHA nach 26 Minuten nicht fertig — release.yml prueft selbst."
+          echo "gruen=false" >> "$GITHUB_OUTPUT"
+
   pruefen:
+    needs: ci-stand
+    if: needs.ci-stand.outputs.gruen != 'true'
     uses: ./.github/workflows/ci.yml
 
   image:
@@ -127,8 +176,18 @@ jobs:
       version: ${{ needs.version.outputs.version }}
       latest: false
 
+  # Veroeffentlicht wird nur, wenn der Commit nachweislich geprueft ist: von
+  # `pruefen` in diesem Lauf, oder — und nur dann ist `pruefen` uebersprungen —
+  # von einem gruenen CI-Lauf auf genau diesem Commit.
   veroeffentlichen:
-    needs: [version, pruefen, image]
+    needs: [version, ci-stand, pruefen, image]
+    if: >-
+      !cancelled()
+      && needs.version.result == 'success'
+      && needs.image.result == 'success'
+      && needs.ci-stand.result == 'success'
+      && (needs.pruefen.result == 'success'
+          || (needs.pruefen.result == 'skipped' && needs.ci-stand.outputs.gruen == 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -136,6 +195,7 @@ jobs:
       packages: write
     env:
       V: ${{ needs.version.outputs.version }}
+      CI_LAUF: ${{ needs.ci-stand.outputs.lauf }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -185,8 +245,13 @@ jobs:
           grep -qxF "version: \"${V}\"" grow-os/config.yaml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "${CI_LAUF}" ]; then
+            CI_TEXT="CI gruen in Lauf ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${CI_LAUF} (derselbe Commit)"
+          else
+            CI_TEXT="CI gruen in diesem Release-Lauf"
+          fi
           git commit -am "Release ${V}" \
-            -m "CI und Image gruen in Lauf ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            -m "${CI_TEXT}; Image und Veroeffentlichung in Lauf ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           git push origin HEAD:main
 
       # Beim Tag-Weg gibt es den Tag schon. Beim Branch-Weg entsteht er hier —
