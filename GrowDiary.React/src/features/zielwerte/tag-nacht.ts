@@ -162,3 +162,35 @@ export function zeilenBeiAbweichung(
   }
   return aenderung
 }
+
+/**
+ * Fork AI (forkai.154): Was beim Speichern für Tag und Nacht rausgeht.
+ *
+ * Die Vorschau aus {@link zeilenBeiAbweichung} ist NUR Anzeige. Zeilen, die dem
+ * Plan folgen, gehen mit den Zahlen zum Server, die er selbst zuletzt geschrieben
+ * hat — neu rechnet er sie mit `/api/wochenplan/uebergeben`. Schickte das Blatt
+ * die schon umgerechneten Zahlen (19/27 statt 20/26), hielte
+ * `WochenplanSyncService.Zeltgrenzen` sie für eine Handänderung („von dir") und
+ * zöge die Grenzen nie wieder mit dem Plan nach — auch in den nächsten Wochen nicht.
+ * Zeilen mit eigenen Zahlen gehen unverändert raus.
+ */
+export function grenzenZumSpeichern<T extends AbweichungsZeilen>(
+  entwurf: T,
+  regel: { min: number | null; max: number | null; nachtMin: number | null; nachtMax: number | null } | null,
+  tag: ZeilenStand | null,
+  nacht: ZeilenStand | null,
+): T {
+  if (!regel) return entwurf
+  const folgt = (stand: ZeilenStand | null, von: string, bis: string) =>
+    stand?.folgtPlan === true && !weichtVomPlanAb(stand, von, bis)
+  const ergebnis = { ...entwurf }
+  if (folgt(tag, entwurf.min, entwurf.max)) {
+    ergebnis.min = zahlText(regel.min)
+    ergebnis.max = zahlText(regel.max)
+  }
+  if (folgt(nacht, entwurf.nachtMin ?? '', entwurf.nachtMax ?? '')) {
+    ergebnis.nachtMin = zahlText(regel.nachtMin)
+    ergebnis.nachtMax = zahlText(regel.nachtMax)
+  }
+  return ergebnis
+}

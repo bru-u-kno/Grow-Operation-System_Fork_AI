@@ -14,7 +14,8 @@
   nachts) — es sah aus, als hätte die Zahl keine Wirkung, und man speicherte nicht. Jetzt rechnen die
   Zeilen, die dem Plan folgen, beim Tippen mit: aus dem Planwert 23 °C wird mit ± 4 K sofort 19–27 °C,
   nachts aus 19 °C sofort 15–23 °C, und der Hinweis nennt „± 4 K". Zeilen mit eigenen Zahlen bleiben,
-  wie sie sind. Gespeichert wird genau, was im Blatt steht.
+  wie sie sind. Nach dem Speichern gelten genau die Grenzen, die das Blatt gezeigt hat — und die Zeilen
+  folgen weiter dem Plan, ziehen also in den nächsten Wochen mit.
 
 ## 2.0.0-forkai.153
 

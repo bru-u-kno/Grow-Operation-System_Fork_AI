@@ -10,7 +10,7 @@ import {
 } from './wert-blatt'
 import {
   TAG_NACHT_ROLLEN, abweichungAus, deutscheWoche, engesBand, planKurz, planWaereText, planwertText,
-  standMitAbweichung, weichtVomPlanAb, zeilenBeiAbweichung, zeilenStand,
+  grenzenZumSpeichern, standMitAbweichung, weichtVomPlanAb, zeilenBeiAbweichung, zeilenStand,
 } from './tag-nacht'
 import { nachtWieTagFuer, type PlanStand } from './plan-reiter'
 import { KontextSprung } from './PlanKette'
@@ -124,8 +124,11 @@ export function WertBlatt({ wert, growId, zeltId, spalteId, woche, uebergabe, on
         // Frisch holen: der Server ersetzt den ganzen Satz, und der Wochenplan
         // kann ihn seit dem Laden der Seite nachgezogen haben.
         const aktuell = await apiFetch<TentAlertRulesDto>(`/api/alerts/tents/${zeltId}`)
+        // Zeilen, die dem Plan folgen, gehen mit den bisherigen Zahlen raus — der
+        // Server rechnet sie mit der neuen Abweichung selbst (grenzenZumSpeichern).
+        const basis = tagNacht ? grenzenZumSpeichern(entwurf, wert.regel, tagStand, nachtStand) : entwurf
         // „Tag und Nacht": die Nacht bekommt dieselben Grenzen wie der Tag.
-        const gespeichert = tagNacht && wieTag ? { ...entwurf, nachtMin: entwurf.min, nachtMax: entwurf.max } : entwurf
+        const gespeichert = tagNacht && wieTag ? { ...basis, nachtMin: basis.min, nachtMax: basis.max } : basis
         await apiFetch(`/api/alerts/tents/${zeltId}`, {
           method: 'PUT',
           body: JSON.stringify({ rules: regelnMitAenderung(aktuell.rules, wert.key, gespeichert) }),

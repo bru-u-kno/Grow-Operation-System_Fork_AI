@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  deutscheWoche, engesBand, planKurz, planWaereText, planwertText, standMitAbweichung, weichtVomPlanAb,
+  deutscheWoche, engesBand, grenzenZumSpeichern, planKurz, planWaereText, planwertText, standMitAbweichung, weichtVomPlanAb,
   zeilenBeiAbweichung, zeilenStand,
 } from './tag-nacht'
 
@@ -97,5 +97,25 @@ describe('zeilenBeiAbweichung (forkai.154: Abweichung rechnet live mit)', () => 
     const mitVier = standMitAbweichung(tag, 4)
     expect(planwertText(mitVier!, '°C')).toBe('Planwert 23 °C ± 4 K')
     expect(weichtVomPlanAb(mitVier, '19', '27')).toBe(false)
+  })
+})
+
+describe('grenzenZumSpeichern (forkai.154: Vorschau ist nur Anzeige)', () => {
+  const tag = zeilenStand([u('luft-unten', '20'), u('luft-oben', '26')], ['luft-unten', 'luft-oben'])
+  const nacht = zeilenStand([u('luft-nacht-unten', '16'), u('luft-nacht-oben', '22')], ['luft-nacht-unten', 'luft-nacht-oben'])
+  const regel = { min: 20, max: 26, nachtMin: 16, nachtMax: 22 }
+  const start = { min: '20', max: '26', nachtMin: '16', nachtMax: '22', toleranz: '' }
+
+  it('Zeilen, die dem Plan folgen, gehen mit den bisherigen Zahlen raus — sonst hielte der Server sie für „von dir"', () => {
+    const vorschau = { ...start, ...zeilenBeiAbweichung(start, tag, nacht, '4') }
+    expect(vorschau.min).toBe('19')
+    const gespeichert = grenzenZumSpeichern(vorschau, regel, standMitAbweichung(tag, 4), standMitAbweichung(nacht, 4))
+    expect(gespeichert).toEqual({ min: '20', max: '26', nachtMin: '16', nachtMax: '22', toleranz: '4' })
+  })
+
+  it('eigene Zahlen gehen unverändert raus', () => {
+    const eigen = { ...start, min: '21', max: '28', toleranz: '4' }
+    const gespeichert = grenzenZumSpeichern(eigen, regel, standMitAbweichung(tag, 4), standMitAbweichung(nacht, 4))
+    expect(gespeichert).toEqual({ ...eigen, nachtMin: '16', nachtMax: '22' })
   })
 })
