@@ -16,8 +16,8 @@ import { readFileSync } from 'node:fs'
  *
  * <b>Was hinzukommt.</b> Detailseiten haben keine Menü-Zeile, gehören aber zu
  * den inhaltsreichsten der App. Sie stehen unten ausgeschrieben — mit der Id
- * aus dem Demobestand, der genau ein Zelt, ein System und einen laufenden Grow
- * anlegt.
+ * aus dem Demobestand, der Blüte-, Mutter- und Quarantänezelt, zwei Systeme
+ * und einen laufenden Grow anlegt.
  */
 
 /** Die Seiten aus dem Menü — die Wahrheit steht in `navigation.ts`. */
@@ -38,8 +38,8 @@ function ausDemMenue(): string[] {
 /**
  * Detailseiten, die kein Menü hat.
  *
- * Die Ids stammen aus dem Demobestand: ein Zelt, ein Hydro-System, ein
- * laufender Grow. Fehlt der Bestand, meldet die Prüfung das über
+ * Die Ids stammen aus dem Demobestand: drei Zelte (1 Blüte, 2 Mutter,
+ * 3 Quarantäne), ein Hydro-System, ein laufender Grow. Fehlt der Bestand, meldet die Prüfung das über
  * `darfUeberspringen` — sie erfindet sich keine leere Seite.
  */
 const DETAILSEITEN = [
@@ -89,6 +89,17 @@ const DETAILSEITEN = [
 
   // Fork AI (forkai.136): `/steuerung/cropsteering` entfällt — Crop Steering
   // ist stillgelegt, die Adresse leitet zum Chiller weiter.
+
+  /* Zwei Lagen, die der Demobestand erst seit dem 01.10.2026 herstellt.
+     Mutter- und Quarantänezelt (Ids 2 und 3) tragen die Bereichs-Karten der
+     Zeltseite — auf /zelte/1 (Blütezelt, nur Production erlaubt) gibt es
+     keine. Der Reiter „Verbrauch" trägt den Füllstand-Balken der CO₂-Flasche;
+     `/kosten` aus dem Menü öffnet den Reiter „Strom" und sieht ihn nie. Beide
+     Karten waren repariert worden, ohne dass eine Prüfung sie je geöffnet
+     hatte. */
+  '/zelte/2',
+  '/zelte/3',
+  '/kosten?tab=verbrauch',
 ]
 
 /** Jede Seite genau einmal. */

@@ -1,8 +1,11 @@
 using System.Globalization;
+using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Api.Controllers;
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.Knowledge;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GrowDiary.Web.Tests;
@@ -433,6 +436,163 @@ public sealed class DemobestandStimmigTests : IDisposable
         else
         {
             Assert.Equal(jetzt, ergebnis);
+        }
+    }
+
+    /// <summary>
+    /// Der Bestand hat einen Mutter- und einen Quarantäne-Bereich — mit Pflanzen,
+    /// im passenden Zelt, und die App nimmt beide so an, wie sie sind.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (01.10.2026).</b> <c>GET /api/setups</c> lieferte im
+    /// Testbestand <c>[]</c>; die Bereichs-Karte der Zeltseite rendert dann nie.
+    /// Ihre rohen Wörter wurden repariert, ohne dass jemand sie ansehen konnte.</para>
+    ///
+    /// <para><b>Gegen die Regeln der App geprüft, nicht gegen eine Liste:</b>
+    /// die Zelt-Verträglichkeit über <see cref="SetupTentCompatibilityPolicy"/>,
+    /// die Feldwerte über <see cref="SetupsApiController.Update"/> — wer dort
+    /// abgelehnt würde, ist im Bestand falsch. Das Licht über
+    /// <see cref="LightCycleLearner.Mismatch"/>: eine Mutter, die unter 12/12
+    /// steht, geht in die Blüte.</para>
+    /// </remarks>
+    [Fact]
+    public void Der_Bestand_hat_Mutter_und_Quarantaene_Bereich_im_passenden_Zelt()
+    {
+        var bereiche = _grows.GetSetups();
+        var muetter = bereiche.Where(b => b.SetupType == SetupType.Mother).ToList();
+        var quarantaenen = bereiche.Where(b => b.SetupType == SetupType.Quarantine).ToList();
+
+        // Mengenwaechter: ohne Bereiche prueft alles Weitere nichts — und die
+        // Karte auf der Zeltseite stuende wieder nur im Leerzustand da.
+        Assert.True(muetter.Count >= 1, "Kein Mutter-Bereich im Bestand — die Bereichs-Karte rendert nie.");
+        Assert.True(quarantaenen.Count >= 1, "Kein Quarantäne-Bereich im Bestand — die Bereichs-Karte rendert nie.");
+
+        var steuerung = new SetupsApiController(_grows);
+        foreach (var bereich in muetter.Concat(quarantaenen))
+        {
+            var zelt = _grows.GetTent(bereich.TentId);
+            Assert.NotNull(zelt);
+            Assert.True(SetupTentCompatibilityPolicy.IsCompatible(zelt!.TentType, bereich.SetupType),
+                $"„{bereich.Name}“ ({bereich.SetupType}) steht in „{zelt.Name}“ ({zelt.TentType}) — das lässt die App nicht zu.");
+            Assert.Equal(SetupStatus.Active, bereich.Status);
+
+            // Dieselben Werte, unverändert zurückgeschickt: die App muss sie annehmen.
+            var antwort = steuerung.Update(bereich.Id, new UpdateSetupRequest
+            {
+                Name = bereich.Name,
+                Status = bereich.Status,
+                Notes = bereich.Notes,
+                CloneCounterTotal = bereich.CloneCounterTotal,
+                LastCloneCutAt = bereich.LastCloneCutAt,
+                MotherHealthStatus = bereich.MotherHealthStatus,
+                QuarantineStartedAt = bereich.QuarantineStartedAt,
+                QuarantinePlannedEndAt = bereich.QuarantinePlannedEndAt,
+                QuarantineResult = bereich.QuarantineResult,
+            });
+            Assert.True(antwort.Result is OkObjectResult,
+                $"Die App lehnt „{bereich.Name}“ ab, so wie der Bestand ihn angelegt hat: {antwort.Result}");
+
+            var pflanzen = _grows.GetPlantsBySetup(bereich.Id);
+            Assert.True(pflanzen.Count >= 1, $"„{bereich.Name}“ hat keine Pflanzen.");
+            Assert.All(pflanzen, p => Assert.Equal(PlantStatus.Active, p.PlantStatus));
+
+            // Das Licht passt zu Pflanzen, die vegetativ bleiben sollen.
+            var plan = _grows.GetActiveLightScheduleForTent(zelt.Id);
+            Assert.NotNull(plan);
+            var an = TimeOnly.Parse(plan!.LightsOnTime, CultureInfo.InvariantCulture);
+            var aus = TimeOnly.Parse(plan.LightsOffTime, CultureInfo.InvariantCulture);
+            var stunden = (aus - an).TotalHours;
+            var zyklus = new LearnedCycle(stunden, an, aus, Days: 7);
+            var phase = bereich.SetupType == SetupType.Mother ? GrowStage.Veg : GrowStage.Clone;
+            var beanstandung = LightCycleLearner.Mismatch(zyklus, phase, SeedType.Feminized);
+            Assert.True(beanstandung is null,
+                $"Licht in „{zelt.Name}“ widerspricht der eigenen Regel der App: {beanstandung}");
+        }
+
+        // Mutter: Pflanzen mit der Rolle Mutter, und der Stecklingszaehler
+        // stimmt mit den Stecklingen ueberein, die wirklich dastehen.
+        var alle = _grows.GetPlants();
+        foreach (var bereich in muetter)
+        {
+            var mutterpflanzen = _grows.GetPlantsBySetup(bereich.Id);
+            Assert.All(mutterpflanzen, p => Assert.Equal(PlantRole.Mother, p.PlantRole));
+            var ids = mutterpflanzen.Select(p => p.Id).ToHashSet();
+            var stecklinge = alle.Where(p => p.ParentPlantId is { } eltern && ids.Contains(eltern)).ToList();
+
+            Assert.True(stecklinge.Count >= 1, $"„{bereich.Name}“ hat keinen Steckling geschnitten — „Stecklinge“ und „Schnitt“ stünden auf „–“.");
+            Assert.Equal(stecklinge.Count, bereich.CloneCounterTotal);
+            Assert.NotNull(bereich.LastCloneCutAt);
+            Assert.True(bereich.LastCloneCutAt <= DateTime.Now, "Der letzte Schnitt liegt in der Zukunft.");
+            Assert.False(string.IsNullOrWhiteSpace(bereich.MotherHealthStatus));
+        }
+
+        // Quarantaene: laeuft gerade. Ein offenes Ergebnis nach dem geplanten
+        // Ende waere ein vergessener Bereich, keine laufende Pruefung.
+        foreach (var bereich in quarantaenen)
+        {
+            Assert.NotNull(bereich.QuarantineStartedAt);
+            Assert.NotNull(bereich.QuarantinePlannedEndAt);
+            Assert.True(bereich.QuarantineStartedAt <= DateTime.Now, "Die Quarantäne beginnt in der Zukunft.");
+            Assert.False(string.IsNullOrWhiteSpace(bereich.QuarantineResult));
+            if (string.Equals(bereich.QuarantineResult, "Pending", StringComparison.Ordinal))
+            {
+                Assert.True(bereich.QuarantinePlannedEndAt > DateTime.Now,
+                    "Ergebnis offen, aber das geplante Ende ist vorbei — so sähe ein vergessener Bereich aus.");
+            }
+
+            // Der Fall „ohne Sorte“ gehört auf die Karte: ein Zugang von außen.
+            Assert.Contains(_grows.GetPlantsBySetup(bereich.Id), p => p.StrainId is null);
+        }
+    }
+
+    /// <summary>
+    /// Ein Artikel zeigt einen gemessenen Füllstand samt Prognose.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (01.10.2026).</b> Der Bestand hatte keinen
+    /// Verbrauchsartikel; der Füllstand-Balken der Kostenseite („Noch … %",
+    /// „aus dem gebuchten Verbrauch") rendert ohne gebuchten Verbrauch nie.</para>
+    ///
+    /// <para>Gerechnet wird mit <see cref="KostenSeiteService.Berechnen"/> —
+    /// derselben Rechnung, die <c>GET /api/kosten</c> ausliefert. Eine eigene
+    /// Nachrechnung hier prüfte nur sich selbst.</para>
+    /// </remarks>
+    [Fact]
+    public void Ein_Artikel_hat_gemessenen_Fuellstand_mit_Prognose()
+    {
+        var kosten = _dienste.GetRequiredService<KostenRepository>();
+        var hardware = _dienste.GetRequiredService<HardwareRepository>();
+        var jetzt = DateTime.UtcNow;
+
+        var seite = KostenSeiteService.Berechnen(
+            LaufenderGrow(), _grows.GetAllGrows(), new StromQuelle(), null, null,
+            kosten.GetZaehlerstaende(), kosten.GetArtikel(), kosten.GetNachfuellungen(),
+            kosten.GetAnschaffungen(), jetzt, hardware.GetHardwareItems(), kosten.GetVerbraeuche());
+
+        // Mengenwaechter: ohne Artikel liefe die Pruefung null Mal.
+        Assert.True(seite.Artikel.Count >= 1, "Kein Verbrauchsartikel im Bestand.");
+
+        var gemessen = seite.Artikel
+            .Where(a => a.Aktuell is { FuellstandQuelle: "gemessen", FuellstandProzent: not null, PrognoseLeerAmUtc: not null })
+            .ToList();
+        Assert.True(gemessen.Count >= 1,
+            "Kein Artikel mit gemessenem Füllstand und Prognose — der Balken auf der Kostenseite rendert nie. "
+            + "Artikel: " + string.Join(" | ", seite.Artikel.Select(a =>
+                $"{a.Name}: Quelle={a.Aktuell?.FuellstandQuelle}, Füllstand={a.Aktuell?.FuellstandProzent}, Prognose={a.Aktuell?.PrognoseLeerAmUtc:O}")));
+
+        foreach (var artikel in gemessen)
+        {
+            var aktuell = artikel.Aktuell!;
+            // Weder fast voll noch fast leer: beides waere als Anzeige-Lage wertlos,
+            // und „fast leer" loeste im Betrieb sofort ein Nachkaufen aus.
+            Assert.InRange(aktuell.FuellstandProzent!.Value, 15, 85);
+            Assert.True(aktuell.PrognoseLeerAmUtc > jetzt, $"{artikel.Name}: die Prognose liegt in der Vergangenheit.");
+            // Eine Prognose, die weiter reicht als ein Jahr, ist Hochrechnung aus
+            // zu wenig — genau das, wovor die Seite selbst warnt.
+            Assert.True(aktuell.PrognoseLeerAmUtc < jetzt.AddDays(365),
+                $"{artikel.Name}: leer erst am {aktuell.PrognoseLeerAmUtc:d} — keine Prognose, die jemand ernst nimmt.");
+            Assert.True(artikel.MittlereLaufzeitTage is > 0,
+                $"{artikel.Name}: keine abgeschlossene Füllung — „Ø … Tage“ stünde leer.");
         }
     }
 }
