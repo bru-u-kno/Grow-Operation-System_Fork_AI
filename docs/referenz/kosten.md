@@ -123,7 +123,10 @@ fehlt der Strom davor) oder ob der Preis fehlt (dann nur kWh).
   `ForkVerbrauchsartikel`, `ForkNachfuellungen`, `ForkZaehlerstaende`,
   `ForkAnschaffungen` selbst an
   (`CREATE TABLE IF NOT EXISTS`) — **nicht** im Kern-Schema, damit der
-  Abgleich mit dem Original konfliktfrei bleibt.
+  Abgleich mit dem Original konfliktfrei bleibt. Ob das schon geschehen ist,
+  merkt sich `Infrastructure/SchemaWaechter.cs` je Datenbankdatei; nach dem
+  Einspielen einer Sicherung vergisst er es, und der nächste Zugriff ergänzt,
+  was fehlt (forkai.157).
 - Rechnung: `GrowDiary.Web/Services/KostenSeiteService.cs` — statisch,
   ohne Datenbank, geprüft in `GrowDiary.Web.Tests/Services/KostenSeiteTests.cs`.
 - Worker: `GrowDiary.Web/Services/ZaehlerstandWorker.cs` (Takt 10 min;

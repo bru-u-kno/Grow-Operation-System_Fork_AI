@@ -60,6 +60,13 @@ Im Frontend: `KnowledgePage.tsx` (704), `ManualMeasurementPage.tsx` (658), `Addb
 Tabelle `AppliedSchemaMigrations`, aber der Hauptweg ist „prüfen und nachziehen". Praktisch
 heißt das: **jede Version kann jede ältere Datenbank öffnen**, ohne Migrationskette.
 
+Die Fork-Tabellen (Kosten, Geräte, Steuerung, Grow-Plan, Wochenwerte) liegen außerhalb
+davon; jedes dieser Repositories legt sie beim ersten Zugriff an. Ob das je Datei schon
+geschehen ist, hält **ein** Merker: `SchemaWaechter` (forkai.157). Die Wiederherstellung
+einer Sicherung setzt ihn zurück — vorher fehlten nach dem Einspielen einer älteren
+Sicherung die Tabellen bis zum Neustart. `ForkTabellenTests` zählt, dass jede Datei mit
+einer Fork-Tabelle ihn benutzt.
+
 **Einstellungen liegen als Key-Value** in `AppSettings` (`notify:*`, `ai:*`,
 `trendwatch:seen:*`). Jede Einstellungsgruppe hat ihr eigenes Repository, das die Präfixe
 kennt. Seit heute gibt es zusätzlich `AppSettingsRepository` für generisches Key-Value.

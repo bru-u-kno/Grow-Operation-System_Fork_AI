@@ -26,13 +26,51 @@ public sealed class GeraeteUebersichtTests
         IReadOnlyList<HardwareItem>? hardware = null,
         Dictionary<string, GespeichertesGeraet>? gespeichert = null,
         Dictionary<string, string>? zuordnungen = null,
-        Dictionary<string, HerkunftEintrag>? herkunft = null)
+        Dictionary<string, HerkunftEintrag>? herkunft = null,
+        IReadOnlyCollection<int>? zeltIds = null)
         => GeraeteUebersichtService.Zusammenfassen(
             verwendungen,
             herkunft ?? new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase),
             hardware ?? Array.Empty<HardwareItem>(),
             gespeichert ?? new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase),
-            zuordnungen ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+            zuordnungen ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            zeltIds);
+
+    /// <summary>
+    /// forkai.157: Eine Korrektur, die auf ein gelöschtes Zelt oder einen
+    /// gelöschten Hardware-Artikel zeigt, gilt dort als „nicht eingetragen".
+    /// Vorher reichte die Übersicht die tote Nummer weiter — beim Löschen räumt
+    /// niemand die Gerätekorrekturen auf, und das soll auch nicht jeder
+    /// Löschweg einzeln tun müssen.
+    /// </summary>
+    [Fact]
+    public void GeloeschtesZeltUndGeloeschteHardwareGeltenAlsNichtEingetragen()
+    {
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["camera.pro"] = new("camera.pro", "cam1", "Pro", "reolink_1", "fritz", "FRITZ!Box"),
+        };
+        var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ha:cam1"] = new() { Schluessel = "ha:cam1", Name = "Kamera", TentId = 99, HardwareItemId = 77 },
+        };
+        var vorhanden = new HardwareItem { Id = 5, Name = "Andere", Category = "Kamera" };
+
+        var kamera = Assert.Single(
+            Bauen(Verwendungen(("camera.pro", "Kamera")), hardware: [vorhanden], gespeichert: gespeichert, herkunft: herkunft, zeltIds: [1, 2]),
+            g => g.Schluessel == "ha:cam1");
+
+        Assert.Null(kamera.TentId);
+        Assert.Null(kamera.HardwareItemId);
+
+        // Gegenprobe: was es gibt, bleibt stehen.
+        gespeichert["ha:cam1"] = new() { Schluessel = "ha:cam1", Name = "Kamera", TentId = 2, HardwareItemId = 5 };
+        var mit = Assert.Single(
+            Bauen(Verwendungen(("camera.pro", "Kamera")), hardware: [vorhanden], gespeichert: gespeichert, herkunft: herkunft, zeltIds: [1, 2]),
+            g => g.Schluessel == "ha:cam1");
+        Assert.Equal(2, mit.TentId);
+        Assert.Equal(5, mit.HardwareItemId);
+    }
 
     [Fact]
     public void DieVergleichstabelleKenntNurEchteRollenUndDerenVorgabe()

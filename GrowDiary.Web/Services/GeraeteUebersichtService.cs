@@ -68,7 +68,8 @@ public sealed class GeraeteUebersichtService
             herkunft,
             _hardware.GetHardwareItems(),
             _geraete.Geraete(),
-            _geraete.Zuordnungen());
+            _geraete.Zuordnungen(),
+            _zelte.GetTents(includeArchived: true).Select(z => z.Id).ToHashSet());
     }
 
     // ------------------------------------------------------- Quellen einsammeln
@@ -136,7 +137,8 @@ public sealed class GeraeteUebersichtService
         IReadOnlyDictionary<string, HerkunftEintrag> herkunft,
         IReadOnlyList<HardwareItem> hardware,
         IReadOnlyDictionary<string, GespeichertesGeraet> gespeichert,
-        IReadOnlyDictionary<string, string> zuordnungen)
+        IReadOnlyDictionary<string, string> zuordnungen,
+        IReadOnlyCollection<int>? zeltIds = null)
     {
         var eimer = new Dictionary<string, Eimer>(StringComparer.OrdinalIgnoreCase);
 
@@ -237,8 +239,12 @@ public sealed class GeraeteUebersichtService
                 // Fehlen einer — dann gilt weiter, was Home Assistant sagt.
                 (string.IsNullOrWhiteSpace(eigen?.Name) ? null : eigen!.Name)
                     ?? eintrag.Name ?? hardwareItem?.Name ?? GeraeteSchluessel.AlsName(schluessel),
-                eigen?.TentId ?? hardwareItem?.TentId,
-                eigen?.HardwareItemId ?? hardwareItem?.Id,
+                // forkai.157: Ein gespeichertes Zelt, das es nicht mehr gibt, ist kein
+                // Zelt — dann gilt, was der Hardware-Artikel sagt. Die Hardware-Nummer
+                // kommt aus HardwareZu, das nur findet, was existiert.
+                (eigen?.TentId is { } eigenesZelt && (zeltIds is null || zeltIds.Contains(eigenesZelt)) ? eigenesZelt : (int?)null)
+                    ?? hardwareItem?.TentId,
+                hardwareItem?.Id,
                 eintrag.Entitaeten.OrderBy(e => e.EntityId, StringComparer.OrdinalIgnoreCase).ToList())
             {
                 Bestaetigt = eintrag.Bestaetigt || eigen is not null,
@@ -320,7 +326,8 @@ public sealed class GeraeteUebersichtService
         IReadOnlyList<HardwareItem> hardware,
         GespeichertesGeraet? eigen)
     {
-        if (eigen?.HardwareItemId is { } id) return hardware.FirstOrDefault(h => h.Id == id);
+        // forkai.157: Ein gelöschter Artikel ist keine Zuordnung — dann weiter wie ohne Eintrag.
+        if (eigen?.HardwareItemId is { } id && hardware.FirstOrDefault(h => h.Id == id) is { } eigenerArtikel) return eigenerArtikel;
 
         if (schluessel.StartsWith("hw:", StringComparison.Ordinal)
             && int.TryParse(schluessel[3..], out var hardwareId))

@@ -31,6 +31,12 @@
   oder Nachfüllung in der Tabelle stand; die Artikelnamen standen in Silben untereinander.
 - Behoben — **Ein Grow, der im Bearbeiten-Formular auf „Beendet“ oder „Abgebrochen“ gestellt wird, bekommt
   jetzt ein Enddatum** — wie über „Abschließen“. Ohne Enddatum wusste niemand, wie lange er lief.
+- Behoben — **Nach dem Einspielen einer Sicherung fehlten Fork-Tabellen bis zum Neustart.** Stammte die
+  Sicherung aus einer älteren Version, brachen Kosten-, Geräte- und Grow-Plan-Seite sowie die CO₂-Regelung
+  mit „no such table“ ab, bis das Add-on neu startete. Jetzt werden fehlende Tabellen und Spalten beim
+  nächsten Zugriff ergänzt — für alle fünf Bereiche an einer Stelle.
+- Behoben — **Geräteseite:** Eine Korrektur, die auf ein inzwischen gelöschtes Zelt oder einen gelöschten
+  Hardware-Artikel zeigt, gilt dort als nicht eingetragen, statt die tote Nummer weiterzureichen.
 
 ## 2.0.0-forkai.156
 

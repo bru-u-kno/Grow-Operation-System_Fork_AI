@@ -349,6 +349,13 @@ public sealed partial class SystemApiController
             RestoreOptionalFileWithRollback(extractedWal, _paths.DatabasePath + "-wal", rollbackRoot, "grow-diary.db-wal");
             RestoreOptionalFileWithRollback(extractedShm, _paths.DatabasePath + "-shm", rollbackRoot, "grow-diary.db-shm");
 
+            // Fork AI (forkai.157): Die Datei ist ausgetauscht. Die Fork-Tabellen
+            // (Kosten, Geräte) liegen außerhalb des Kern-Schemas, und die
+            // Versionsprüfung oben sieht sie nicht — eine ältere Sicherung bringt sie
+            // nicht oder ohne neue Spalten mit. Ohne das hier brach jeder Zugriff mit
+            // „no such table" ab, bis die App neu startete.
+            SchemaWaechter.Vergessen();
+
             var extractedKnowledgeRoot = Path.Combine(tempRoot, "App_Data", "knowledge");
             if (Directory.Exists(extractedKnowledgeRoot))
             {
@@ -386,6 +393,7 @@ public sealed partial class SystemApiController
             {
                 Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
                 RestoreRollbackFiles(rollbackRoot);
+                SchemaWaechter.Vergessen(); // auch die zurückgerollte Datei ist eine andere
             }
             catch
             {

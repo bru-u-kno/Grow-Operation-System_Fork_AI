@@ -15,9 +15,6 @@ namespace GrowDiary.Web.Infrastructure;
 /// </remarks>
 public sealed class WochenwertRepository : RepositoryBase
 {
-    private static readonly object SchemaLock = new();
-    private static readonly HashSet<string> SchemaSteht = new(StringComparer.OrdinalIgnoreCase);
-
     public WochenwertRepository(AppPaths paths) : base(paths)
     {
     }
@@ -25,27 +22,25 @@ public sealed class WochenwertRepository : RepositoryBase
     private SqliteConnection Open()
     {
         var connection = OpenConnection();
-        var datei = connection.DataSource ?? string.Empty;
-        lock (SchemaLock)
-        {
-            if (!SchemaSteht.Contains(datei))
-            {
-                using var command = connection.CreateCommand();
-                command.CommandText = """
-                    CREATE TABLE IF NOT EXISTS ForkWochenwerte (
-                        ProgrammId TEXT NOT NULL,
-                        SpalteId TEXT NOT NULL,
-                        Feld TEXT NOT NULL,
-                        Wert REAL NOT NULL,
-                        UpdatedAtUtc TEXT NOT NULL,
-                        PRIMARY KEY (ProgrammId, SpalteId, Feld)
-                    );
-                    """;
-                command.ExecuteNonQuery();
-                SchemaSteht.Add(datei);
-            }
-        }
+        // forkai.157: Der Merker je Datei steht jetzt im SchemaWaechter, der nach einer Wiederherstellung vergisst.
+        SchemaWaechter.Sichern(connection, "wochenwerte", SchemaAnlegen);
         return connection;
+    }
+
+    private static void SchemaAnlegen(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS ForkWochenwerte (
+                ProgrammId TEXT NOT NULL,
+                SpalteId TEXT NOT NULL,
+                Feld TEXT NOT NULL,
+                Wert REAL NOT NULL,
+                UpdatedAtUtc TEXT NOT NULL,
+                PRIMARY KEY (ProgrammId, SpalteId, Feld)
+            );
+            """;
+        command.ExecuteNonQuery();
     }
 
     public IReadOnlyList<Wochenwert> Alle()

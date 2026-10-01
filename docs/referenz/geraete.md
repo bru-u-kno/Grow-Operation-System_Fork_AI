@@ -70,6 +70,9 @@ einer Umstellung ist das die eigentliche Frage — was hängt daran?
 - `GrowDiary.Web/Services/HomeAssistantRegistryService.cs` — Register über
   `/api/websocket`
 - `GrowDiary.Web/Infrastructure/GeraeteRepository.cs` — `ForkGeraete`,
-  `ForkGeraetEntitaeten` (Korrekturen des Nutzers, ab Etappe 3)
+  `ForkGeraetEntitaeten` (Korrekturen des Nutzers, ab Etappe 3); angelegt über
+  den `SchemaWaechter`, geprüft in `ForkTabellenTests` (forkai.157). Zeigt eine
+  Korrektur auf ein gelöschtes Zelt oder einen gelöschten Hardware-Artikel,
+  gilt sie dort als nicht eingetragen.
 - `GrowDiary.Web/Api/Controllers/GeraeteApiController.cs` — `GET /api/geraete`
 - `GrowDiary.React/src/pages/GeraetePage.tsx`, `pages/geraete.css`

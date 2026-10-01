@@ -430,6 +430,49 @@ public sealed class SystemApiControllerTests : IDisposable
         Assert.Contains(events, entry => entry.Action == "backup-restored" && entry.Success);
     }
 
+    /// <summary>
+    /// forkai.157: Nach einer Wiederherstellung legen Kosten und Geräte ihre
+    /// Tabellen neu an — ohne Neustart.
+    /// </summary>
+    /// <remarks>
+    /// Die Sicherung entsteht hier, BEVOR es die Fork-Tabellen in der Datei gibt —
+    /// wie eine Sicherung aus einer älteren Version. Die Versionsprüfung lässt sie
+    /// durch, weil sie nur das Kern-Schema kennt. Vorher merkten sich beide
+    /// Repositories „Tabellen angelegt" für den ganzen Prozess, und nach dem
+    /// Dateitausch brach jeder Zugriff mit „no such table" ab, bis die App neu
+    /// startete.
+    /// </remarks>
+    [Fact]
+    public void RestoreBackup_ForkTabellenEntstehenNachDemTauschNeu()
+    {
+        var created = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+
+        var kosten = new KostenRepository(_paths);
+        var geraete = new GeraeteRepository(_paths);
+        // Die drei übrigen Fork-Bereiche einmal anfassen, damit ihr Merker „angelegt" steht.
+        Assert.Empty(new SteuerungRepository(_paths).GetCo2Tage(5));
+        Assert.Null(new GrowPlanRepository(_paths).Laden(1, "plan"));
+        Assert.Empty(new WochenwertRepository(_paths).Alle());
+        kosten.CreateAnschaffung(new GrowDiary.Web.Models.Anschaffung { Name = "Nach der Sicherung", EinzelpreisEur = 10, NutzungsdauerMonate = 12 });
+        geraete.EntitaetZuordnen("sensor.nach_der_sicherung", "ha:abc");
+        Assert.Single(kosten.GetAnschaffungen());
+
+        var ok = Assert.IsType<OkObjectResult>(_controller.RestoreBackup(created.FileName).Result);
+        Assert.True(Assert.IsType<BackupRestoreResultDto>(ok.Value).Success);
+
+        // Neue Instanzen wie nach einer Anfrage — der Merker ist statisch, nicht je Instanz.
+        Assert.Empty(new KostenRepository(_paths).GetAnschaffungen());
+        Assert.Empty(new GeraeteRepository(_paths).Zuordnungen());
+
+        Assert.Empty(new SteuerungRepository(_paths).GetCo2Tage(5));   // CO2-Regelung
+        Assert.Null(new GrowPlanRepository(_paths).Laden(1, "plan"));     // Grow-Plan
+        Assert.Empty(new WochenwertRepository(_paths).Alle());            // Wochenwerte
+
+        // Und wieder beschreibbar, samt der Spalten aus forkai.157.
+        new KostenRepository(_paths).CreateAnschaffung(new GrowDiary.Web.Models.Anschaffung { Name = "Nach dem Tausch", EinzelpreisEur = 5, NutzungsdauerMonate = 24 });
+        Assert.Equal(24, Assert.Single(new KostenRepository(_paths).GetAnschaffungen()).NutzungsdauerMonate);
+    }
+
     [Fact]
     public void RestoreBackup_BlocksSchemaMismatchAndDoesNotChangeDatabase()
     {

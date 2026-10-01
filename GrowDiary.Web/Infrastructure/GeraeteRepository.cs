@@ -19,9 +19,6 @@ namespace GrowDiary.Web.Infrastructure;
 /// </remarks>
 public sealed class GeraeteRepository : RepositoryBase
 {
-    private static readonly object SchemaLock = new();
-    private static bool _schemaEnsured;
-
     public GeraeteRepository(AppPaths paths) : base(paths)
     {
     }
@@ -29,57 +26,46 @@ public sealed class GeraeteRepository : RepositoryBase
     private SqliteConnection Open()
     {
         var connection = OpenConnection();
-        EnsureSchema(connection);
+        // forkai.157: Vorher ein statischer Merker für den ganzen Prozess — eine
+        // zweite Datenbank und jede wiederhergestellte Sicherung blieben ohne
+        // Tabellen („no such table: ForkGeraete"). Siehe SchemaWaechter.
+        SchemaWaechter.Sichern(connection, "geraete", EnsureSchema);
         return connection;
     }
 
     private static void EnsureSchema(SqliteConnection connection)
     {
-        if (_schemaEnsured) return;
-        lock (SchemaLock)
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS ForkGeraete (
+                Schluessel TEXT PRIMARY KEY,
+                Name TEXT NOT NULL,
+                TentId INTEGER NULL,
+                HardwareItemId INTEGER NULL,
+                ElternSchluessel TEXT NULL,
+                Anschluss TEXT NULL,
+                IstRubrik INTEGER NOT NULL DEFAULT 0,
+                UpdatedAtUtc TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS ForkGeraetEntitaeten (
+                EntityId TEXT PRIMARY KEY,
+                Schluessel TEXT NOT NULL,
+                UpdatedAtUtc TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkGeraetEntitaeten_Schluessel
+                ON ForkGeraetEntitaeten(Schluessel);
+            """;
+        command.ExecuteNonQuery();
+
+        // Nachruesten fuer Anlagen, die die Tabelle vor forkai.27 angelegt haben —
+        // und fuer jede Sicherung aus der Zeit davor, die wiederhergestellt wird.
+        if (!SchemaWaechter.SpalteVorhanden(connection, "ForkGeraete", "IstRubrik"))
         {
-            if (_schemaEnsured) return;
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                CREATE TABLE IF NOT EXISTS ForkGeraete (
-                    Schluessel TEXT PRIMARY KEY,
-                    Name TEXT NOT NULL,
-                    TentId INTEGER NULL,
-                    HardwareItemId INTEGER NULL,
-                    ElternSchluessel TEXT NULL,
-                    Anschluss TEXT NULL,
-                    IstRubrik INTEGER NOT NULL DEFAULT 0,
-                    UpdatedAtUtc TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS ForkGeraetEntitaeten (
-                    EntityId TEXT PRIMARY KEY,
-                    Schluessel TEXT NOT NULL,
-                    UpdatedAtUtc TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS IX_ForkGeraetEntitaeten_Schluessel
-                    ON ForkGeraetEntitaeten(Schluessel);
-                """;
-            command.ExecuteNonQuery();
-
-            // Nachruesten fuer Anlagen, die die Tabelle vor forkai.27 angelegt haben.
-            // SQLite kennt kein "ADD COLUMN IF NOT EXISTS", also erst nachsehen.
-            using var spalten = connection.CreateCommand();
-            spalten.CommandText = "PRAGMA table_info(ForkGeraete);";
-            var vorhanden = new List<string>();
-            using (var leser = spalten.ExecuteReader())
-            {
-                while (leser.Read()) vorhanden.Add(leser.GetString(1));
-            }
-
-            if (!vorhanden.Contains("IstRubrik", StringComparer.OrdinalIgnoreCase))
-            {
-                using var ergaenzen = connection.CreateCommand();
-                ergaenzen.CommandText = "ALTER TABLE ForkGeraete ADD COLUMN IstRubrik INTEGER NOT NULL DEFAULT 0;";
-                ergaenzen.ExecuteNonQuery();
-            }
-
-            _schemaEnsured = true;
+            using var ergaenzen = connection.CreateCommand();
+            ergaenzen.CommandText = "ALTER TABLE ForkGeraete ADD COLUMN IstRubrik INTEGER NOT NULL DEFAULT 0;";
+            ergaenzen.ExecuteNonQuery();
         }
+
     }
 
     /// <summary>Alle vom Nutzer gesetzten Gerätezeilen, nach Schlüssel.</summary>

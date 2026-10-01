@@ -16,9 +16,6 @@ namespace GrowDiary.Web.Infrastructure;
 /// </remarks>
 public sealed class GrowPlanRepository : RepositoryBase
 {
-    private static readonly object SchemaLock = new();
-    private static readonly HashSet<string> SchemaSteht = new(StringComparer.OrdinalIgnoreCase);
-
     internal static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -32,41 +29,39 @@ public sealed class GrowPlanRepository : RepositoryBase
     private SqliteConnection Open()
     {
         var connection = OpenConnection();
-        var datei = connection.DataSource ?? string.Empty;
-        lock (SchemaLock)
-        {
-            if (!SchemaSteht.Contains(datei))
-            {
-                using var command = connection.CreateCommand();
-                command.CommandText = """
-                    CREATE TABLE IF NOT EXISTS ForkGrowPlan (
-                        GrowId INTEGER NOT NULL,
-                        Stand TEXT NOT NULL,
-                        InhaltJson TEXT NOT NULL,
-                        Vermerk TEXT NULL,
-                        AngelegtUtc TEXT NOT NULL,
-                        GeaendertUtc TEXT NOT NULL,
-                        PRIMARY KEY (GrowId, Stand)
-                    );
-                    CREATE TABLE IF NOT EXISTS ForkGrowPlanBuch (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        GrowId INTEGER NOT NULL,
-                        ZeitUtc TEXT NOT NULL,
-                        Art TEXT NOT NULL,
-                        SpalteId TEXT NULL,
-                        Feld TEXT NULL,
-                        Alt TEXT NULL,
-                        Neu TEXT NULL,
-                        Ziel TEXT NULL,
-                        Grund TEXT NULL
-                    );
-                    CREATE INDEX IF NOT EXISTS IX_ForkGrowPlanBuch_Grow ON ForkGrowPlanBuch (GrowId, Id);
-                    """;
-                command.ExecuteNonQuery();
-                SchemaSteht.Add(datei);
-            }
-        }
+        // forkai.157: Der Merker je Datei steht jetzt im SchemaWaechter, der nach einer Wiederherstellung vergisst.
+        SchemaWaechter.Sichern(connection, "growplan", SchemaAnlegen);
         return connection;
+    }
+
+    private static void SchemaAnlegen(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS ForkGrowPlan (
+                GrowId INTEGER NOT NULL,
+                Stand TEXT NOT NULL,
+                InhaltJson TEXT NOT NULL,
+                Vermerk TEXT NULL,
+                AngelegtUtc TEXT NOT NULL,
+                GeaendertUtc TEXT NOT NULL,
+                PRIMARY KEY (GrowId, Stand)
+            );
+            CREATE TABLE IF NOT EXISTS ForkGrowPlanBuch (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                GrowId INTEGER NOT NULL,
+                ZeitUtc TEXT NOT NULL,
+                Art TEXT NOT NULL,
+                SpalteId TEXT NULL,
+                Feld TEXT NULL,
+                Alt TEXT NULL,
+                Neu TEXT NULL,
+                Ziel TEXT NULL,
+                Grund TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkGrowPlanBuch_Grow ON ForkGrowPlanBuch (GrowId, Id);
+            """;
+        command.ExecuteNonQuery();
     }
 
     public GrowPlanStand? Laden(int growId, string stand)

@@ -20,24 +20,12 @@ namespace GrowDiary.Web.Infrastructure;
 /// </remarks>
 public sealed class SteuerungRepository : RepositoryBase
 {
-    private static readonly object SchemaLock = new();
 
-    /// <summary>
-    /// Für welche Datenbankdateien das Schema schon steht.
-    /// </summary>
-    /// <remarks>
-    /// Fork AI (forkai.55): Früher stand hier ein einzelnes <c>bool</c>. Das
-    /// hielt, solange es genau eine Datenbank gibt — im Betrieb trifft das zu.
-    /// In den Tests bekommt jeder Fall seine eigene Datei: der erste legte das
-    /// Schema an und setzte das Merkzeichen, jeder weitere sprang über das
-    /// Anlegen hinweg und fand eine leere Datei vor. Der Licht-Rundweg fiel
-    /// deshalb mit „no such table: ForkSteuerungEinstellungen" um — nicht wegen
-    /// eines Fehlers in seinem eigenen Code.
-    ///
-    /// Der Schlüssel ist der Dateipfad, nicht die Verbindung: mehrere
-    /// Verbindungen auf dieselbe Datei sollen weiterhin nur einmal anlegen.
-    /// </remarks>
-    private static readonly HashSet<string> SchemaSteht = new(StringComparer.OrdinalIgnoreCase);
+    // Fork AI (forkai.55): Der Merker „Schema steht" gilt je Datenbankdatei —
+    // ein einzelnes bool liess jede weitere Testdatenbank leer. forkai.157: Er
+    // steht jetzt im SchemaWaechter, der ihn nach einer Wiederherstellung
+    // vergisst; sonst fehlten ForkCo2Tage & Co. bis zum Neustart, und die
+    // CO2-Regelung im Hintergrund schlug fehl.
     private static readonly JsonSerializerOptions JsonOptionen = new(JsonSerializerDefaults.Web);
 
     public SteuerungRepository(AppPaths paths) : base(paths)
@@ -47,73 +35,67 @@ public sealed class SteuerungRepository : RepositoryBase
     private SqliteConnection Open()
     {
         var connection = OpenConnection();
-        EnsureSchema(connection);
+        SchemaWaechter.Sichern(connection, "steuerung", EnsureSchema);
         return connection;
     }
 
     private static void EnsureSchema(SqliteConnection connection)
     {
-        var datei = connection.DataSource ?? string.Empty;
-        lock (SchemaLock)
-        {
-            if (SchemaSteht.Contains(datei)) return;
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                CREATE TABLE IF NOT EXISTS ForkSteuerungEinstellungen (
-                    Modul TEXT PRIMARY KEY,
-                    Json TEXT NOT NULL,
-                    UpdatedAtUtc TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS ForkSteuerungGeraete (
-                    Modul TEXT NOT NULL,
-                    Rolle TEXT NOT NULL,
-                    EntityId TEXT NOT NULL,
-                    UpdatedAtUtc TEXT NOT NULL,
-                    PRIMARY KEY (Modul, Rolle)
-                );
-                CREATE TABLE IF NOT EXISTS ForkCo2Tage (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Datum TEXT NOT NULL UNIQUE,
-                    GrowId INTEGER NULL,
-                    Impulse INTEGER NOT NULL DEFAULT 0,
-                    VentilSekunden REAL NOT NULL DEFAULT 0,
-                    Gramm REAL NOT NULL DEFAULT 0,
-                    ZielErreichtUm TEXT NULL,
-                    FlascheStartKg REAL NOT NULL DEFAULT 0,
-                    FlascheEndeKg REAL NULL,
-                    GrammVorher REAL NOT NULL DEFAULT 0,
-                    Flaschenwechsel INTEGER NOT NULL DEFAULT 0,
-                    Abgeschlossen INTEGER NOT NULL DEFAULT 0,
-                    JournalEntryId INTEGER NULL,
-                    VerbrauchId INTEGER NULL,
-                    CreatedAtUtc TEXT NOT NULL,
-                    AbgeschlossenUtc TEXT NULL
-                );
-                """;
-            command.ExecuteNonQuery();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS ForkSteuerungEinstellungen (
+                Modul TEXT PRIMARY KEY,
+                Json TEXT NOT NULL,
+                UpdatedAtUtc TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS ForkSteuerungGeraete (
+                Modul TEXT NOT NULL,
+                Rolle TEXT NOT NULL,
+                EntityId TEXT NOT NULL,
+                UpdatedAtUtc TEXT NOT NULL,
+                PRIMARY KEY (Modul, Rolle)
+            );
+            CREATE TABLE IF NOT EXISTS ForkCo2Tage (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Datum TEXT NOT NULL UNIQUE,
+                GrowId INTEGER NULL,
+                Impulse INTEGER NOT NULL DEFAULT 0,
+                VentilSekunden REAL NOT NULL DEFAULT 0,
+                Gramm REAL NOT NULL DEFAULT 0,
+                ZielErreichtUm TEXT NULL,
+                FlascheStartKg REAL NOT NULL DEFAULT 0,
+                FlascheEndeKg REAL NULL,
+                GrammVorher REAL NOT NULL DEFAULT 0,
+                Flaschenwechsel INTEGER NOT NULL DEFAULT 0,
+                Abgeschlossen INTEGER NOT NULL DEFAULT 0,
+                JournalEntryId INTEGER NULL,
+                VerbrauchId INTEGER NULL,
+                CreatedAtUtc TEXT NOT NULL,
+                AbgeschlossenUtc TEXT NULL
+            );
+            """;
+        command.ExecuteNonQuery();
 
-            // Fork AI (forkai.20): nachgereichte Spalten. ALTER TABLE ADD COLUMN
-            // ist der einzige Weg, ohne die Tabelle neu zu bauen; auf einer
-            // frischen Datenbank sind sie schon da, deshalb der geschluckte
-            // Fehler statt einer Abfrage auf PRAGMA table_info.
-            foreach (var spalte in new[]
-                     {
-                         "ALTER TABLE ForkCo2Tage ADD COLUMN GrammVorher REAL NOT NULL DEFAULT 0;",
-                         "ALTER TABLE ForkCo2Tage ADD COLUMN Flaschenwechsel INTEGER NOT NULL DEFAULT 0;",
-                     })
+        // Fork AI (forkai.20): nachgereichte Spalten. ALTER TABLE ADD COLUMN
+        // ist der einzige Weg, ohne die Tabelle neu zu bauen; auf einer
+        // frischen Datenbank sind sie schon da, deshalb der geschluckte
+        // Fehler statt einer Abfrage auf PRAGMA table_info.
+        foreach (var spalte in new[]
+                 {
+                     "ALTER TABLE ForkCo2Tage ADD COLUMN GrammVorher REAL NOT NULL DEFAULT 0;",
+                     "ALTER TABLE ForkCo2Tage ADD COLUMN Flaschenwechsel INTEGER NOT NULL DEFAULT 0;",
+                 })
+        {
+            try
             {
-                try
-                {
-                    using var nachtrag = connection.CreateCommand();
-                    nachtrag.CommandText = spalte;
-                    nachtrag.ExecuteNonQuery();
-                }
-                catch (SqliteException)
-                {
-                    // Spalte existiert bereits.
-                }
+                using var nachtrag = connection.CreateCommand();
+                nachtrag.CommandText = spalte;
+                nachtrag.ExecuteNonQuery();
             }
-            SchemaSteht.Add(datei);
+            catch (SqliteException)
+            {
+                // Spalte existiert bereits.
+            }
         }
     }
 
