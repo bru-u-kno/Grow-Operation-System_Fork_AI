@@ -46,6 +46,13 @@ const SEITEN = [
   // Neu in beta.52 und beim Bauen in KEINER Sichtpruefung — genau der
   // blinde Fleck, den das Messprotokoll oben schon einmal hatte.
   { pfad: '/archiv', name: 'archiv' },
+  // Seit dem 01.10.2026 im Demobestand: Bereichs-Karten (Mutter- und
+  // Quarantänezelt) und der Reiter „Verbrauch" der Kosten. Dort war die Seite
+  // am Telefon 641 px breit — der Screenreader-Kopf „Aktion" entkam der
+  // Wischhülle der Tabelle. Keine Sichtprüfung hatte den Reiter je geöffnet.
+  { pfad: '/zelte/2', name: 'mutterzelt' },
+  { pfad: '/zelte/3', name: 'quarantaenezelt' },
+  { pfad: '/kosten?tab=verbrauch', name: 'kosten-verbrauch' },
 ]
 
 /** Was rechts hinausragt, ohne dass man es wegwischen könnte. */

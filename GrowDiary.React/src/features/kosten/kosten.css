@@ -35,14 +35,21 @@
   .ko-hint a { color: var(--accent-text); }
 
   /* Tabellen — derselbe Satz wie .cs-tabelle. */
-  .ko-tabelle-huelle { overflow-x: auto; }
+  /* position: relative macht die Hülle zum Bezugsrahmen absolut gesetzter
+     Kinder. Sonst entkam der Screenreader-Kopf „Aktion" (.v1-sr-only) der
+     Wischhülle, und die ganze Seite war am Telefon 641 px breit (01.10.2026). */
+  .ko-tabelle-huelle { overflow-x: auto; position: relative; }
   .ko-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
   .ko-tabelle th[scope='col'] {
     text-align: left; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
     letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
     padding: 0 var(--s-3) var(--s-2) 0; white-space: nowrap;
   }
-  .ko-tabelle th[scope='row'] { text-align: left; font-weight: 500; color: var(--ink); }
+  /* overflow-wrap: normal, nicht das geerbte anywhere: damit durfte der
+     Browser die Spalte schmaler rechnen als das längste Wort, und der
+     Artikelname brach mitten durch („CO₂-Fl/asche"). Lange Namen machen die
+     Tabelle jetzt breiter — dafür ist die Wischhülle da. */
+  .ko-tabelle th[scope='row'] { text-align: left; font-weight: 500; color: var(--ink); overflow-wrap: normal; }
   .ko-tabelle th[scope='row'] small { display: block; font-weight: 400; color: var(--faint); font-size: var(--fs-etikett); }
   .ko-tabelle td, .ko-tabelle th[scope='row'] { padding: var(--s-2) var(--s-3) var(--s-2) 0; border-top: 1px solid var(--hair); vertical-align: top; }
   .ko-tabelle td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }

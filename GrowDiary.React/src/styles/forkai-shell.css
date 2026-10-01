@@ -131,6 +131,12 @@
   border: 0; background: transparent; cursor: pointer;
   font: inherit;
 }
+/* Der Knopf nimmt die volle Breite — in der einzeiligen Fußzeile der
+   Seitenleiste (.v1-nav-foot, shell.css) schob er „EINSTELLUNGEN" und den
+   Theme-Knopf rechts aus der Leiste (x = 325 bei 236 px Leiste). Dort waren
+   sie abgeschnitten und nur seitwärts scrollend erreichbar; aufgefallen am
+   01.10.2026, als ein Speichern-Knopf der Rollen-Seite darüber lag. */
+.v1-desktop-nav .v1-nav-foot { flex-wrap: wrap; }
 
 /* ---------- Erfassen-Blatt und Anpassen (beide Breiten) ---------- */
 .forkai-sheet-dim {

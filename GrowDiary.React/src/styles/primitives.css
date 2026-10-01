@@ -371,6 +371,10 @@
 
   /* ---------- aus Phase 2 zurueckgeholt ---------- */
   .v1-card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  /* Ein Knopf in der Kopfzeile schrumpft nicht unter sein Wort. Mit dem
+     geerbten overflow-wrap: anywhere quetschte die Flexzeile „Entfernen" auf
+     zwei Zeilen („Entferne/n", Bereichs-Karte der Zeltseite, 01.10.2026). */
+  .v1-card-title-row > .v1-button { flex-shrink: 0; white-space: nowrap; }
   .v1-metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .v1-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 
