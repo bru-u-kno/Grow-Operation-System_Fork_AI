@@ -19,8 +19,10 @@
 - **Geändert wird erst auf Knopfdruck, und nur die schwache Stelle.** Alles andere in den Automationen bleibt,
   wie es ist — Reconnect-Schutz, Dosierfenster, Push-Meldungen, Autokalibrierung. Es kommen keine neuen
   Einstellwerte dazu: der Wächter sieht mit derselben Wartezeit nach, die er schon hat. Vorher wird jede
-  Automation gesichert, danach aus Home Assistant nachgelesen. Läuft gerade eine Dosierung oder steht das
-  Ventil offen, wird nichts geschrieben — neu schreiben bräche den Impuls ab.
+  Automation gesichert — lässt sie sich nicht sichern, bleibt sie unverändert —, danach aus Home Assistant
+  nachgelesen. Läuft gerade eine Dosierung oder steht das Ventil offen, wird nichts geschrieben — neu schreiben
+  bräche den Impuls ab; das wird vor jeder einzelnen Automation neu nachgesehen. Eine eigene Rückfall-Impulsdauer
+  bleibt wirksam: die Sperre prüft nur, ob der CO₂-Fühler einen Wert liefert.
 - Geändert — **Die Vorlage der Dosierung prüft den CO₂-Fühler jetzt selbst** (Fassung 3): kein Messwert, kein
   Gas, auch wenn ein Rechenwert noch einen alten Stand hat. Dieselbe Sperre bekommen abgesicherte Automationen.
 - Für die Sperre braucht es einen zugeordneten CO₂-Sensor (unter „Rollen bearbeiten"). Fehlt er, sagt die

@@ -15,17 +15,23 @@ namespace GrowDiary.Web.Services;
 /// <para><b>Warum nicht einfach die Vorlage darüberschreiben.</b> Die
 /// handgebaute Dosierung kann mehr als die Vorlage: Reconnect-Schutz über die
 /// geplante Ein-Zeit, ein Dosierfenster vor Licht-aus, eine Push-Meldung im
-/// Wächter. Wer die Vorlage darüberlegt, nimmt das weg, ohne dass es jemand
-/// merkt. Deshalb wird hier nur die schwache Stelle ersetzt, alles andere
-/// bleibt, wie es ist.</para>
+/// Wächter, eine Rückfall-Impulsdauer. Wer die Vorlage darüberlegt, nimmt das
+/// weg, ohne dass es jemand merkt. Deshalb wird hier nur die schwache Stelle
+/// ersetzt, alles andere bleibt, wie es ist.</para>
 /// <para><b>Erkannt wird am Inhalt, nicht am Namen.</b> Eine Dosierung ist,
 /// was in einer Schleife ein Ventil öffnet; ein Wächter ist, was nach einer
-/// Wartezeit das Ventil schließt. So greift die Prüfung auch bei einer
-/// Automation, die anders heißt als hier.</para>
+/// Wartezeit den Dosier-Port schließt. So greift die Prüfung auch bei einer
+/// Automation, die anders heißt als hier. Gelesen werden beide Schreibweisen
+/// von Home Assistant (<c>triggers</c>/<c>actions</c> und die ältere
+/// <c>trigger</c>/<c>action</c>/<c>platform</c>).</para>
+/// <para><b>Nur wo die Umschreibung gleichwertig ist.</b> „ist off" wird nur
+/// dann zu „ist nicht on", wenn das außer bei „nicht verfügbar" dasselbe
+/// bedeutet: eine einzelne An/Aus-Entität ohne Wartezeit. Bei einem Klimagerät
+/// („heat"/„cool"/„off") oder einer Wartezeit hieße es etwas anderes.</para>
 /// <para><b>Keine neuen Einstellwerte.</b> Alle Zeiten kommen aus der
-/// Automation selbst (etwa die 90 s des Wächters). Neu ist nur die Grenze
-/// „ein Messwert über 0 ppm" — das ist keine Einstellung, sondern die
-/// Bedingung dafür, dass überhaupt gemessen wird.</para>
+/// Automation selbst (etwa die 90 s des Wächters), der Fühler aus der Rolle.
+/// Neu ist nur die Grenze „ein Messwert über 0 ppm" — das ist keine
+/// Einstellung, sondern die Bedingung dafür, dass überhaupt gemessen wird.</para>
 /// <para>Alle Umbauten sind wiederholbar: eine abgesicherte Automation liefert
 /// keinen Befund mehr, ein zweites Absichern ändert nichts.</para>
 /// </remarks>
@@ -49,15 +55,22 @@ public static class Co2Absicherung
     /// <summary>Was die Prüfung über die Anlage wissen muss.</summary>
     /// <param name="Co2Sensor">Der zugeordnete CO₂-Fühler (Rolle <c>co2_sensor</c>) oder null.</param>
     /// <param name="Dosierungen">Die Entitäten der Dosier-Automationen.</param>
-    public sealed record Rahmen(string? Co2Sensor, IReadOnlySet<string> Dosierungen);
+    /// <param name="Ports">Die Dosier-Steckdose (Rollen <c>port_schalter</c>, <c>port_zustand</c>), soweit zugeordnet.</param>
+    public sealed record Rahmen(string? Co2Sensor, IReadOnlySet<string> Dosierungen, IReadOnlySet<string>? Ports = null);
 
     /// <summary>Kennzeichen der eingefügten Bausteine. Daran erkennt die Prüfung ihre eigene Arbeit.</summary>
     public const string SperreAlias = "Fork AI: ohne CO₂-Messwert nicht öffnen";
     public const string AbbruchAlias = "Fork AI: CO₂-Messwert fehlt";
     public const string NeustartKennung = "fork_ai_neustart";
     public const string TaktKennung = "fork_ai_takt";
-    public const string WarAnVariable = "fork_ai_dosierung_war_an";
+    public const string WarAnPraefix = "fork_ai_war_an_";
     public const string WiederEinAlias = "Fork AI: nur wieder einschalten, wenn sie vorher an war";
+
+    /// <summary>Bereiche, deren Zustand nur „on"/„off" (oder nicht verfügbar) ist.</summary>
+    private static readonly HashSet<string> AnAusBereiche = new(StringComparer.Ordinal)
+    {
+        "binary_sensor", "input_boolean", "switch", "light", "fan", "automation",
+    };
 
     // ------------------------------------------------------------ Prüfen
 
@@ -87,7 +100,7 @@ public static class Co2Absicherung
                 behebbar ? null : "Dafür muss unter „Rollen bearbeiten“ ein CO₂-Sensor zugeordnet sein."));
         }
 
-        if (WaechterZweig(config) is { } w && !w.SiehtNeustart)
+        if (WaechterFinden(config, rahmen, umwandeln: false) is { SiehtNeustart: false })
         {
             befunde.Add(new Befund(Art.WaechterUebersiehtNeustart,
                 "Wächter übersieht einen Port, der vor einem Neustart offen stand",
@@ -97,7 +110,7 @@ public static class Co2Absicherung
                 true, null));
         }
 
-        if (WiederEinSchritte(config, rahmen.Dosierungen).Any())
+        if (WiederEinSchritte(Liste(config, "actions", "action", umwandeln: false), rahmen.Dosierungen).Any())
         {
             befunde.Add(new Befund(Art.NotAusWirdZurueckgenommen,
                 "Not-Aus der Dosierung wird zurückgenommen",
@@ -129,25 +142,18 @@ public static class Co2Absicherung
 
             if (!string.IsNullOrWhiteSpace(rahmen.Co2Sensor) && !HatSperre(schleife))
             {
-                SperreEinbauen(schleife, rahmen.Co2Sensor!, kopie.ToJsonString());
+                SperreEinbauen(schleife, rahmen.Co2Sensor!);
             }
         }
 
-        if (WaechterZweig(kopie) is { SiehtNeustart: false } w)
+        if (WaechterFinden(kopie, rahmen, umwandeln: true) is { SiehtNeustart: false } w)
         {
             WaechterErweitern(kopie, w);
         }
 
-        // Erst alle Stellen einfassen, dann die Variable davor setzen — sonst
-        // verschiebt das Einfügen die übrigen Stellen.
-        var wiederEin = WiederEinSchritte(kopie, rahmen.Dosierungen).ToList();
-        foreach (var (liste, index) in wiederEin)
+        if (Liste(kopie, "actions", "action", umwandeln: true) is { } aktionen)
         {
-            WiederEinBedingen(liste, index);
-        }
-        if (wiederEin.Count > 0)
-        {
-            WarAnMerken(wiederEin[0].Liste, rahmen.Dosierungen);
+            WiederEinBedingen(aktionen, rahmen.Dosierungen);
         }
 
         return kopie;
@@ -191,7 +197,8 @@ public static class Co2Absicherung
 
     /// <summary>
     /// Zustands-Bedingungen „ist off" im Abbruch, die direkt wirken (nicht unter
-    /// einem <c>not</c>) — mit der Liste und Stelle, an der sie stehen.
+    /// einem <c>not</c>) und sich gleichwertig umdrehen lassen — mit der Liste
+    /// und Stelle, an der sie stehen.
     /// </summary>
     private static IEnumerable<(JsonArray Liste, int Index, JsonObject Bedingung)> OffBedingungen(JsonNode? knoten)
     {
@@ -200,7 +207,7 @@ public static class Co2Absicherung
         {
             if (liste[i] is not JsonObject b) continue;
             var art = b["condition"]?.ToString();
-            if (art == "state" && b["state"] is JsonValue v && v.ToString() == "off")
+            if (art == "state" && Umdrehbar(b))
             {
                 yield return (liste, i, b);
             }
@@ -210,6 +217,24 @@ public static class Co2Absicherung
             }
             // „not" ist genau die gewollte Form, darunter wird nichts umgedreht.
         }
+    }
+
+    /// <summary>
+    /// „ist off" ≡ „ist nicht on" bis auf „nicht verfügbar" — nur für eine
+    /// einzelne An/Aus-Entität ohne Wartezeit und ohne Attribut. Mit Wartezeit
+    /// („seit 2 min off") wäre „nicht seit 2 min on" kurz nach dem Einschalten
+    /// wahr; eine Liste hieße danach „irgendeine" statt „alle".
+    /// </summary>
+    private static bool Umdrehbar(JsonObject b)
+    {
+        if (b["state"] is not JsonValue v || v.ToString() != "off") return false;
+        if (b["for"] is not null || b["attribute"] is not null || b["match"] is not null) return false;
+        if (b["entity_id"] is not JsonValue e) return false;
+
+        var entity = e.ToString();
+        if (entity.Contains(',', StringComparison.Ordinal)) return false;
+        var punkt = entity.IndexOf('.', StringComparison.Ordinal);
+        return punkt > 0 && AnAusBereiche.Contains(entity[..punkt]);
     }
 
     /// <summary>„ist off" wird „ist nicht on" — damit zählt auch „nicht verfügbar".</summary>
@@ -235,21 +260,21 @@ public static class Co2Absicherung
     /// Vor dem ersten Öffnen: kein Messwert, kein Gas. Und die Schleife endet,
     /// sobald der Messwert fehlt — sonst dreht sie leer bis zur Höchstzahl.
     /// </summary>
-    private static void SperreEinbauen(JsonObject schleife, string co2Sensor, string ganzeAutomation)
+    /// <remarks>
+    /// Geprüft wird nur der Fühler. Wie die Automation die Impulsdauer rechnet
+    /// — mit eigenem Rückfallwert, wenn der Rechenwert ausfällt — bleibt ihre
+    /// Sache; das ist eine Entscheidung dessen, der sie gebaut hat.
+    /// </remarks>
+    private static void SperreEinbauen(JsonObject schleife, string co2Sensor)
     {
         var ablauf = (JsonArray)schleife["sequence"]!;
         var oeffnen = ablauf.Select((s, i) => (s, i)).First(t => IstOeffnen(t.s as JsonObject)).i;
-
-        // Den Impuls-Bedarf nur prüfen, wenn die Automation ihn auch benutzt.
-        var impuls = ganzeAutomation.Contains(Co2SteuerungService.Entitaeten.ImpulsBedarf, StringComparison.Ordinal)
-            ? $" and states('{Co2SteuerungService.Entitaeten.ImpulsBedarf}') | int(0) > 0"
-            : string.Empty;
 
         ablauf.Insert(oeffnen, new JsonObject
         {
             ["alias"] = SperreAlias,
             ["condition"] = "template",
-            ["value_template"] = $"{{{{ states('{co2Sensor}') | float(-1) > 0{impuls} }}}}",
+            ["value_template"] = $"{{{{ states('{co2Sensor}') | float(-1) > 0 }}}}",
         });
 
         var abbruch = new JsonObject
@@ -286,42 +311,67 @@ public static class Co2Absicherung
 
     // ------------------------------------------------------------ Wächter
 
-    private sealed record Waechter(JsonObject Zweig, JsonObject AusloeserBedingung, IReadOnlyList<JsonObject> Lang, bool SiehtNeustart);
+    /// <param name="Stelle">Im <c>choose</c>-Zweig: die Liste und Stelle der Bedingung, die die
+    /// Wartezeit-Auslöser nennt (auch verschachtelt) — oder null, wenn die ganze Automation schließt.</param>
+    private sealed record Waechter(
+        (JsonArray Liste, int Index)? Stelle, IReadOnlyList<JsonObject> Lang, bool SiehtNeustart);
 
     /// <summary>
-    /// Der Zweig eines Wächters: ausgelöst von Zustands-Auslösern mit Wartezeit
-    /// („länger als …"), und er schließt das Ventil.
+    /// Ein Wächter: Zustands-Auslöser mit Wartezeit („länger als …"), und er
+    /// schließt den Dosier-Port — entweder in einem <c>choose</c>-Zweig, der
+    /// diese Auslöser nennt, oder als ganze Automation.
     /// </summary>
-    private static Waechter? WaechterZweig(JsonObject config)
+    private static Waechter? WaechterFinden(JsonObject config, Rahmen rahmen, bool umwandeln)
     {
-        if (config["triggers"] is not JsonArray ausloeser) return null;
+        if (Liste(config, "triggers", "trigger", umwandeln) is not { } ausloeser) return null;
+        var aktionen = Liste(config, "actions", "action", umwandeln);
+        if (aktionen is null) return null;
 
         var lang = ausloeser.OfType<JsonObject>()
-            .Where(t => t["trigger"]?.ToString() == "state" && t["for"] is not null && t["id"] is not null && t["to"] is not null)
-            .GroupBy(t => t["id"]!.ToString(), StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+            .Where(t => AusloeserArt(t) == "state" && t["for"] is not null && t["to"] is JsonValue && t["entity_id"] is not null)
+            .ToList();
         if (lang.Count == 0) return null;
 
-        foreach (var zweig in AlleObjekte(config["actions"]).Where(o => o["conditions"] is JsonArray && o["sequence"] is JsonArray))
+        // Nur was den Dosier-Port schließt, ist ein CO₂-Wächter — nicht jede
+        // Automation, die nach einer Wartezeit irgendetwas ausschaltet.
+        var beobachtet = lang.SelectMany(t => Entitaeten(t["entity_id"])).ToHashSet(StringComparer.Ordinal);
+        var ports = rahmen.Ports ?? new HashSet<string>();
+        bool SchliesstPort(JsonObject s) => IstSchliessen(s) && Ziele(s).Any(z => beobachtet.Contains(z) || ports.Contains(z));
+
+        var starts = ausloeser.OfType<JsonObject>()
+            .Where(t => AusloeserArt(t) == "homeassistant" && t["event"]?.ToString() == "start")
+            .Select(t => t["id"]?.ToString()).OfType<string>().ToList();
+        var takte = ausloeser.OfType<JsonObject>()
+            .Where(t => AusloeserArt(t) == "time_pattern")
+            .Select(t => t["id"]?.ToString()).OfType<string>().ToList();
+        bool Sieht(string text) => starts.Any(k => text.Contains($"\"{k}\"", StringComparison.Ordinal))
+            && takte.Any(k => text.Contains($"\"{k}\"", StringComparison.Ordinal));
+
+        var mitKennung = lang.Where(t => t["id"] is JsonValue)
+            .GroupBy(t => t["id"]!.ToString(), StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+        foreach (var zweig in AlleObjekte(aktionen).Where(o => o["conditions"] is JsonArray && o["sequence"] is JsonArray))
         {
-            if (!((JsonArray)zweig["sequence"]!).Any(s => IstSchliessen(s as JsonObject))) continue;
+            if (!((JsonArray)zweig["sequence"]!).OfType<JsonObject>().Any(SchliesstPort)) continue;
 
-            var bedingung = ((JsonArray)zweig["conditions"]!).OfType<JsonObject>()
-                .FirstOrDefault(b => b["condition"]?.ToString() == "trigger" && Kennungen(b["id"]).Any(lang.ContainsKey));
-            if (bedingung is null) continue;
+            // Die Auslöser-Bedingung kann direkt dastehen oder in einem „oder“
+            // stecken (so die Fork-Vorlage).
+            var fund = Listen(zweig["conditions"])
+                .SelectMany(l => l.Select((b, i) => (Liste: l, Index: i, B: b as JsonObject)))
+                .FirstOrDefault(t => t.B?["condition"]?.ToString() == "trigger" && Kennungen(t.B["id"]).Any(mitKennung.ContainsKey));
+            if (fund.B is null) continue;
 
-            var genutzt = Kennungen(bedingung["id"]).Where(lang.ContainsKey).Select(k => lang[k]).ToList();
-            var text = zweig["conditions"]!.ToJsonString();
-            var start = ausloeser.OfType<JsonObject>()
-                .Where(t => t["trigger"]?.ToString() == "homeassistant" && t["event"]?.ToString() == "start")
-                .Select(t => t["id"]?.ToString());
-            var takt = ausloeser.OfType<JsonObject>()
-                .Where(t => t["trigger"]?.ToString() == "time_pattern")
-                .Select(t => t["id"]?.ToString());
-            var sieht = start.Any(k => k is not null && text.Contains($"\"{k}\"", StringComparison.Ordinal))
-                && takt.Any(k => k is not null && text.Contains($"\"{k}\"", StringComparison.Ordinal));
+            var genutzt = Kennungen(fund.B["id"]).Where(mitKennung.ContainsKey).Select(k => mitKennung[k]).ToList();
+            return new Waechter((fund.Liste, fund.Index), genutzt, Sieht(zweig["conditions"]!.ToJsonString()));
+        }
 
-            return new Waechter(zweig, bedingung, genutzt, sieht);
+        // Ohne choose: die ganze Automation ist der Wächter — wenn sie selbst
+        // den Port schließt (nicht erst in einem Zweig, der etwas anderes prüft).
+        if (aktionen.OfType<JsonObject>().Any(SchliesstPort))
+        {
+            var bedingungen = Liste(config, "conditions", "condition", umwandeln);
+            return new Waechter(null, lang, Sieht(bedingungen?.ToJsonString() ?? string.Empty));
         }
 
         return null;
@@ -336,14 +386,17 @@ public static class Co2Absicherung
 
     private static void WaechterErweitern(JsonObject config, Waechter w)
     {
-        var ausloeser = (JsonArray)config["triggers"]!;
-        ausloeser.Add(new JsonObject { ["trigger"] = "homeassistant", ["event"] = "start", ["id"] = NeustartKennung });
-        ausloeser.Add(new JsonObject { ["trigger"] = "time_pattern", ["minutes"] = "/1", ["id"] = TaktKennung });
+        var ausloeser = Liste(config, "triggers", "trigger", umwandeln: true)!;
+
+        // Dieselbe Schreibweise wie die vorhandenen Auslöser.
+        var schluessel = ausloeser.OfType<JsonObject>().Any(t => t["trigger"] is not null) ? "trigger" : "platform";
+        ausloeser.Add(new JsonObject { [schluessel] = "homeassistant", ["event"] = "start", ["id"] = NeustartKennung });
+        ausloeser.Add(new JsonObject { [schluessel] = "time_pattern", ["minutes"] = "/1", ["id"] = TaktKennung });
 
         // Beim Start: steht der Port offen, ist er verwaist — nach einem
         // Neustart läuft keine Dosierung weiter. Im Takt: offen seit mindestens
         // derselben Wartezeit wie die bisherigen Auslöser.
-        JsonObject Zustand(JsonObject t, bool mitWartezeit)
+        static JsonObject Zustand(JsonObject t, bool mitWartezeit)
         {
             var b = new JsonObject
             {
@@ -355,47 +408,64 @@ public static class Co2Absicherung
             return b;
         }
 
-        JsonObject Oder(IEnumerable<JsonObject> teile) => new()
+        static JsonObject Oder(IEnumerable<JsonObject> teile) => new()
         {
             ["condition"] = "or",
             ["conditions"] = new JsonArray(teile.Cast<JsonNode>().ToArray()),
         };
 
-        var bedingungen = (JsonArray)w.Zweig["conditions"]!;
-        var stelle = bedingungen.IndexOf(w.AusloeserBedingung);
-        var bisher = (JsonObject)w.AusloeserBedingung.DeepClone();
+        JsonObject Bei(string kennung, bool mitWartezeit) => new()
+        {
+            ["condition"] = "and",
+            ["conditions"] = new JsonArray(
+                new JsonObject { ["condition"] = "trigger", ["id"] = new JsonArray(kennung) },
+                Oder(w.Lang.Select(t => Zustand(t, mitWartezeit)))),
+        };
 
-        bedingungen[stelle] = Oder(
+        if (w.Stelle is var (liste, index))
+        {
+            var bisher = (JsonObject)liste[index]!.DeepClone();
+            liste[index] = Oder([bisher, Bei(NeustartKennung, false), Bei(TaktKennung, true)]);
+            return;
+        }
+
+        // Die ganze Automation schließt: alle bisherigen Auslöser gelten wie
+        // vorher, die neuen nur, wenn der Port wirklich offen steht.
+        var oben = Liste(config, "conditions", "condition", umwandeln: true);
+        if (oben is null)
+        {
+            oben = [];
+            config["conditions"] = oben;
+        }
+        oben.Add(Oder(
         [
-            bisher,
             new JsonObject
             {
-                ["condition"] = "and",
-                ["conditions"] = new JsonArray(
-                    new JsonObject { ["condition"] = "trigger", ["id"] = new JsonArray(NeustartKennung) },
-                    Oder(w.Lang.Select(t => Zustand(t, false)))),
+                ["condition"] = "not",
+                ["conditions"] = new JsonArray(new JsonObject
+                {
+                    ["condition"] = "trigger",
+                    ["id"] = new JsonArray(NeustartKennung, TaktKennung),
+                }),
             },
-            new JsonObject
-            {
-                ["condition"] = "and",
-                ["conditions"] = new JsonArray(
-                    new JsonObject { ["condition"] = "trigger", ["id"] = new JsonArray(TaktKennung) },
-                    Oder(w.Lang.Select(t => Zustand(t, true)))),
-            },
-        ]);
+            Bei(NeustartKennung, false),
+            Bei(TaktKennung, true),
+        ]));
     }
 
     // ------------------------------------------------------------ Not-Aus
 
     /// <summary>
-    /// Ein <c>automation.turn_on</c> einer Dosierung, dem in derselben Liste ein
-    /// <c>turn_off</c> derselben Dosierung vorausgeht — das Muster „Zyklus
+    /// Ein <c>automation.turn_on</c>, das eine Dosierung wieder einschaltet,
+    /// die vorher in derselben Liste ausgeschaltet wurde — das Muster „Zyklus
     /// abbrechen und wieder scharf schalten". Ein bloßes Einschalten (etwa
     /// morgens) ist gewollt und wird nicht angefasst.
     /// </summary>
-    private static IEnumerable<(JsonArray Liste, int Index)> WiederEinSchritte(JsonObject config, IReadOnlySet<string> dosierungen)
+    /// <returns>Stelle des Schritts und die Dosierungen, die er so wieder einschaltet.</returns>
+    private static IEnumerable<(int Index, IReadOnlyList<string> Dosierungen)> WiederEinSchritte(
+        JsonArray? liste, IReadOnlySet<string> dosierungen)
     {
-        if (config["actions"] is not JsonArray liste) yield break;
+        if (liste is null) yield break;
 
         var ausgeschaltet = new HashSet<string>(StringComparer.Ordinal);
         for (var i = 0; i < liste.Count; i++)
@@ -408,60 +478,133 @@ public static class Co2Absicherung
             {
                 ausgeschaltet.UnionWith(ziele);
             }
-            else if (Aktion(s) == "automation.turn_on" && ziele.Any(ausgeschaltet.Contains))
+            else if (Aktion(s) == "automation.turn_on" && ziele.Where(ausgeschaltet.Contains).ToList() is { Count: > 0 } wieder)
             {
-                yield return (liste, i);
+                yield return (i, wieder);
             }
         }
     }
 
-    private static void WiederEinBedingen(JsonArray liste, int index)
+    /// <summary>
+    /// Jede Dosierung bekommt ihre eigene Merkvariable und ihren eigenen
+    /// Einschalt-Schritt — bei zwei Zelten darf das eine nicht nach dem
+    /// anderen entscheiden.
+    /// </summary>
+    private static void WiederEinBedingen(JsonArray liste, IReadOnlySet<string> dosierungen)
     {
-        var einschalten = liste[index]!;
+        // Von hinten nach vorn: das Ersetzen eines Schritts durch mehrere
+        // verschiebt die Stellen dahinter.
+        var stellen = WiederEinSchritte(liste, dosierungen).OrderByDescending(t => t.Index).ToList();
+        if (stellen.Count == 0) return;
 
-        liste[index] = new JsonObject
+        var gemerkt = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var (index, wieder) in stellen)
         {
-            ["alias"] = WiederEinAlias,
-            ["if"] = new JsonArray(new JsonObject
+            var schritt = (JsonObject)liste[index]!;
+            var uebrig = Ziele(schritt).Where(z => !wieder.Contains(z)).ToList();
+
+            var ersatz = new List<JsonNode>();
+            foreach (var dosierung in wieder)
             {
-                ["condition"] = "template",
-                ["value_template"] = $"{{{{ {WarAnVariable} }}}}",
-            }),
-            ["then"] = new JsonArray(einschalten.DeepClone()),
-        };
+                gemerkt.Add(dosierung);
+                ersatz.Add(new JsonObject
+                {
+                    ["alias"] = WiederEinAlias,
+                    ["if"] = new JsonArray(new JsonObject
+                    {
+                        ["condition"] = "template",
+                        ["value_template"] = $"{{{{ {Merkname(dosierung)} }}}}",
+                    }),
+                    ["then"] = new JsonArray(MitZielen(schritt, [dosierung])),
+                });
+            }
+            if (uebrig.Count > 0) ersatz.Add(MitZielen(schritt, uebrig));
+
+            liste.RemoveAt(index);
+            for (var k = ersatz.Count - 1; k >= 0; k--) liste.Insert(index, ersatz[k]);
+        }
+
+        // Der Zustand VOR dem Ausschalten — als erster Schritt.
+        var merken = new JsonObject();
+        foreach (var d in gemerkt) merken[Merkname(d)] = $"{{{{ is_state('{d}', 'on') }}}}";
+        liste.Insert(0, new JsonObject { ["variables"] = merken });
     }
 
-    /// <summary>Der Zustand VOR dem Ausschalten — als erster Schritt, einmal.</summary>
-    private static void WarAnMerken(JsonArray liste, IReadOnlySet<string> dosierungen)
+    private static string Merkname(string automation)
+        => WarAnPraefix + automation[(automation.IndexOf('.', StringComparison.Ordinal) + 1)..];
+
+    /// <summary>Derselbe Schritt, aber nur für diese Ziele.</summary>
+    private static JsonObject MitZielen(JsonObject schritt, IReadOnlyList<string> ziele)
     {
-        if (liste.OfType<JsonObject>().Any(s => s["variables"]?[WarAnVariable] is not null)) return;
-        var dosierung = liste.OfType<JsonObject>()
-            .Where(s => Aktion(s) == "automation.turn_off")
-            .SelectMany(Ziele)
-            .First(dosierungen.Contains);
-        liste.Insert(0, new JsonObject
+        var kopie = (JsonObject)schritt.DeepClone();
+        kopie.Remove("entity_id");
+        if (kopie["data"] is JsonObject daten)
         {
-            ["variables"] = new JsonObject
-            {
-                [WarAnVariable] = $"{{{{ is_state('{dosierung}', 'on') }}}}",
-            },
-        });
+            daten.Remove("entity_id");
+            if (daten.Count == 0) kopie.Remove("data");
+        }
+        var ziel = kopie["target"] as JsonObject ?? new JsonObject();
+        ziel["entity_id"] = ziele.Count == 1 ? ziele[0] : new JsonArray(ziele.Select(z => (JsonNode)z).ToArray());
+        kopie["target"] = ziel;
+        return kopie;
     }
 
     // ------------------------------------------------------------ Werkzeug
+
+    /// <summary>
+    /// Die Liste unter dem neuen Schlüssel (<c>triggers</c>) oder dem alten
+    /// (<c>trigger</c>). Ein einzelnes Objekt statt einer Liste wird beim
+    /// Umbauen zur Liste; beim Prüfen nur als Kopie gelesen.
+    /// </summary>
+    private static JsonArray? Liste(JsonObject config, string neu, string alt, bool umwandeln)
+    {
+        foreach (var schluessel in new[] { neu, alt })
+        {
+            switch (config[schluessel])
+            {
+                case JsonArray a:
+                    return a;
+                case JsonObject einzeln when umwandeln:
+                    var liste = new JsonArray(einzeln.DeepClone());
+                    config[schluessel] = liste;
+                    return liste;
+                case JsonObject einzeln:
+                    return new JsonArray(einzeln.DeepClone());
+            }
+        }
+        return null;
+    }
+
+    private static string? AusloeserArt(JsonObject t) => (t["trigger"] ?? t["platform"])?.ToString();
 
     private static string? Aktion(JsonObject? schritt)
         => (schritt?["action"] ?? schritt?["service"])?.ToString();
 
     private static IEnumerable<string> Ziele(JsonObject schritt)
+        => Entitaeten(schritt["target"]?["entity_id"] ?? schritt["entity_id"] ?? schritt["data"]?["entity_id"]);
+
+    private static IEnumerable<string> Entitaeten(JsonNode? knoten) => knoten switch
     {
-        var knoten = schritt["target"]?["entity_id"] ?? schritt["entity_id"] ?? schritt["data"]?["entity_id"];
-        return knoten switch
+        JsonArray a => a.Select(k => k?.ToString()).OfType<string>(),
+        JsonValue v => v.ToString().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+        _ => [],
+    };
+
+    /// <summary>Alle Listen in einem Baum, die Liste selbst eingeschlossen.</summary>
+    private static IEnumerable<JsonArray> Listen(JsonNode? knoten)
+    {
+        switch (knoten)
         {
-            JsonArray a => a.Select(k => k?.ToString()).OfType<string>(),
-            JsonValue v => v.ToString().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
-            _ => [],
-        };
+            case JsonArray a:
+                yield return a;
+                foreach (var e in a.ToList())
+                foreach (var l in Listen(e)) yield return l;
+                break;
+            case JsonObject o:
+                foreach (var p in o.ToList())
+                foreach (var l in Listen(p.Value)) yield return l;
+                break;
+        }
     }
 
     private static IEnumerable<JsonObject> AlleObjekte(JsonNode? knoten)

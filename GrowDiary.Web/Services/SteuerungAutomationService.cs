@@ -269,22 +269,25 @@ public sealed class SteuerungAutomationService
 
     /// <summary>Den vorhandenen Stand wegschreiben, damit ein Zurück existiert.</summary>
     /// <remarks>Auch die Absicherung (<see cref="SteuerungAbsicherungService"/>) sichert hierüber.</remarks>
-    public async Task SichernAsync(HttpClient client, string kennung, CancellationToken ct)
+    /// <returns>True, wenn der alte Stand wirklich auf der Platte liegt.</returns>
+    public async Task<bool> SichernAsync(HttpClient client, string kennung, CancellationToken ct)
     {
         try
         {
             var antwort = await client.GetAsync($"{ConfigPfad}/{kennung}", ct);
-            if (!antwort.IsSuccessStatusCode) return;
+            if (!antwort.IsSuccessStatusCode) return false;
 
             var ordner = Path.Combine(AppContext.BaseDirectory, "App_Data", "automations-backup");
             Directory.CreateDirectory(ordner);
             var ziel = Path.Combine(ordner, $"{kennung}-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
             await File.WriteAllTextAsync(ziel, await antwort.Content.ReadAsStringAsync(ct), ct);
             _log.LogInformation("Alter Stand von {Kennung} gesichert: {Ziel}", kennung, ziel);
+            return true;
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException)
         {
             _log.LogWarning(ex, "Sicherung von {Kennung} fehlgeschlagen.", kennung);
+            return false;
         }
     }
 

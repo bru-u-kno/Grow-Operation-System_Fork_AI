@@ -90,7 +90,25 @@ public sealed class SteuerungAbsicherungService
         {
             if (!Co2Absicherung.Pruefen(a.Config, vorher.Rahmen).Any(b => b.Behebbar)) continue;
 
-            await _automationen.SichernAsync(client, a.ConfigId, ct);
+            // Vor JEDEM Schreiben neu nachsehen: die Dosierung hat einen
+            // Auslöser alle zwei Minuten und kann mitten im Absichern anlaufen.
+            if (await DosiertGeradeAsync(client, zuordnung, vorher.Rahmen.Dosierungen, settings, ct))
+            {
+                var nachher0 = await LesenAsync(zuordnung, settings, ct);
+                return new Bilanz(
+                    "Mitten im Absichern hat eine Dosierung begonnen — angehalten, bevor die nächste Automation neu "
+                    + "geschrieben wurde. Schon Abgesichertes bleibt; den Rest bitte in einer Pause noch einmal.",
+                    einzeln, nachher0.Lage);
+            }
+
+            // Ohne Sicherung kein Schreiben: die Seite verspricht ein Zurück.
+            if (!await _automationen.SichernAsync(client, a.ConfigId, ct))
+            {
+                einzeln.Add(new Ergebnis(a.EntityId, a.Name, false,
+                    "Der alte Stand ließ sich nicht sichern — deshalb nicht geändert."));
+                continue;
+            }
+
             var neu = Co2Absicherung.Absichern(a.Config, vorher.Rahmen);
             var fehler = await SteuerungAutomationService.SchreibenAsync(client, a.ConfigId, neu, ct);
 
@@ -175,13 +193,9 @@ public sealed class SteuerungAbsicherungService
             }
         }
 
-        var rahmen = new Co2Absicherung.Rahmen(fuehler, dosierungen);
-        var laeuft = dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft);
-        if (zuordnung.TryGetValue("port_zustand", out var port)
-            && await _ha.GetEntityStateAsync(settings, port, ct) is { } portZustand)
-        {
-            laeuft |= string.Equals(portZustand.State, "on", StringComparison.OrdinalIgnoreCase);
-        }
+        var rahmen = new Co2Absicherung.Rahmen(fuehler, dosierungen, Ports(zuordnung));
+        var laeuft = dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft)
+            || await PortOffenAsync(zuordnung, settings, ct);
 
         var automationen = gelesen
             .Select(g => new Automation(g.EntityId, g.Name, Co2Absicherung.Pruefen(g.Config, rahmen)))
@@ -190,6 +204,29 @@ public sealed class SteuerungAbsicherungService
             .ToList();
 
         return new Stand(new Lage(true, laeuft, automationen, hinweis), gelesen, rahmen);
+    }
+
+    private static IReadOnlySet<string> Ports(IReadOnlyDictionary<string, string> zuordnung)
+        => new[] { "port_schalter", "port_zustand" }
+            .Select(r => zuordnung.TryGetValue(r, out var e) ? e : null)
+            .OfType<string>()
+            .ToHashSet(StringComparer.Ordinal);
+
+    private async Task<bool> PortOffenAsync(
+        IReadOnlyDictionary<string, string> zuordnung, HomeAssistantSettings settings, CancellationToken ct)
+        => zuordnung.TryGetValue("port_zustand", out var port)
+           && await _ha.GetEntityStateAsync(settings, port, ct) is { } zustand
+           && string.Equals(zustand.State, "on", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Läuft eine Dosierung oder steht der Port offen? Antwortet HA nicht, zählt das als ja.</summary>
+    private async Task<bool> DosiertGeradeAsync(
+        HttpClient client, IReadOnlyDictionary<string, string> zuordnung, IReadOnlySet<string> dosierungen,
+        HomeAssistantSettings settings, CancellationToken ct)
+    {
+        var zustaende = await AutomationenAsync(client, ct);
+        if (zustaende is null) return true;
+        return dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft)
+            || await PortOffenAsync(zuordnung, settings, ct);
     }
 
     private sealed record Zustand(string EntityId, string Name, string ConfigId, bool Laeuft);

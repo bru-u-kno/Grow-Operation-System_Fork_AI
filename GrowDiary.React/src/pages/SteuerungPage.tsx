@@ -834,7 +834,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               <div className="st-feldzeile is-gestapelt" key={a.entityId}>
                 <span className="st-etikett">
                   {a.name}
-                  {a.befunde.length === 0 && <small>In Ordnung — schließt im Zweifel.</small>}
+                  {a.befunde.length === 0 && <small>Keine der vier bekannten Schwachstellen gefunden.</small>}
                 </span>
                 {a.befunde.map((b) => (
                   <p className="st-befund" key={b.art}>

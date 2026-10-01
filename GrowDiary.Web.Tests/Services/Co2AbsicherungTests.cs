@@ -20,8 +20,13 @@ public sealed class Co2AbsicherungTests
     private const string Fuehler = "sensor.big_co2_light_sensor_co2";
     private const string Dosierung = "automation.co2_dosierung_rdwc_port_5";
 
+    private static readonly HashSet<string> Ports = new(StringComparer.Ordinal)
+    {
+        "select.rdwc_venti_aktiver_modus_2", "binary_sensor.big_port_5_zustand",
+    };
+
     private static readonly Co2Absicherung.Rahmen Rahmen =
-        new(Fuehler, new HashSet<string>(StringComparer.Ordinal) { Dosierung });
+        new(Fuehler, new HashSet<string>(StringComparer.Ordinal) { Dosierung }, Ports);
 
     private static JsonObject Echt(string name)
     {
@@ -122,14 +127,63 @@ public sealed class Co2AbsicherungTests
 
         var vorschrift = ablauf[sperre]!["value_template"]!.ToString();
         Assert.Equal(
-            "{{ states('sensor.big_co2_light_sensor_co2') | float(-1) > 0 and states('sensor.co2_impuls_bedarf') | int(0) > 0 }}",
+            "{{ states('sensor.big_co2_light_sensor_co2') | float(-1) > 0 }}",
             vorschrift);
+    }
+
+    [Fact]
+    public void Dosierung_InDerEchtenAbbruchForm_KommtDerAbbruchInsOder()
+    {
+        // Die echte Dosierung hat until: [ { or: [...] } ] — genau dieser Fall.
+        var neu = Co2Absicherung.Absichern(Echt("dosierung"), Rahmen);
+        var bis = Schleife(neu)["until"]!.AsArray();
+
+        Assert.Single(bis);
+        var oder = bis[0]!["conditions"]!.AsArray();
+        var abbruch = Assert.Single(oder, b => b?["alias"]?.GetValue<string>() == Co2Absicherung.AbbruchAlias);
+        Assert.Equal("{{ states('sensor.big_co2_light_sensor_co2') | float(-1) <= 0 }}", abbruch!["value_template"]!.ToString());
+    }
+
+    [Fact]
+    public void Dosierung_DieRueckfallImpulsdauerBleibtWirksam()
+    {
+        // Die Handfassung dosiert mit co2_impulsdauer weiter, wenn der
+        // Rechenwert ausfällt. Die Sperre prüft nur den Fühler — sonst wäre
+        // diese Entscheidung still abgeschaltet.
+        var ablauf = Schleife(Co2Absicherung.Absichern(Echt("dosierung"), Rahmen))["sequence"]!.AsArray();
+        var sperre = ablauf.Single(s => s?["alias"]?.GetValue<string>() == Co2Absicherung.SperreAlias)!;
+        Assert.DoesNotContain("co2_impuls_bedarf", sperre["value_template"]!.ToString());
+    }
+
+    [Theory]
+    [InlineData("for")]
+    [InlineData("klima")]
+    [InlineData("liste")]
+    public void Dosierung_OffWirdNurUmgedrehtWoEsGleichwertigIst(string fall)
+    {
+        var config = Echt("dosierung");
+        var oder = (JsonArray)Schleife(config)["until"]![0]!["conditions"]!;
+        var bedingung = (JsonObject)oder[0]!;
+        switch (fall)
+        {
+            case "for": bedingung["for"] = "00:02:00"; break;                         // „seit 2 min aus“
+            case "klima": bedingung["entity_id"] = "climate.entfeuchter"; break;     // kennt kein „on“
+            case "liste": bedingung["entity_id"] = new JsonArray("binary_sensor.a", "binary_sensor.b"); break;
+        }
+        var vorher = bedingung.ToJsonString();
+
+        var neu = Co2Absicherung.Absichern(config, Rahmen);
+        Assert.Equal(vorher, Schleife(neu)["until"]![0]!["conditions"]![0]!.ToJsonString());
+
+        // Die beiden übrigen werden weiterhin umgedreht.
+        Assert.Equal(2, Schleife(neu)["until"]![0]!["conditions"]!.AsArray()
+            .Count(b => b?["condition"]?.ToString() == "not" && b["conditions"]?[0]?["state"]?.ToString() == "on"));
     }
 
     [Fact]
     public void Dosierung_OhneZugeordnetenFuehler_WirdDieSperreNichtErfunden()
     {
-        var ohne = new Co2Absicherung.Rahmen(null, Rahmen.Dosierungen);
+        var ohne = new Co2Absicherung.Rahmen(null, Rahmen.Dosierungen, Ports);
 
         var befund = Co2Absicherung.Pruefen(Echt("dosierung"), ohne).Single(b => b.Art == Art.OeffnetOhneMesswert);
         Assert.False(befund.Behebbar);
@@ -191,10 +245,85 @@ public sealed class Co2AbsicherungTests
     }
 
     [Fact]
+    public void Waechter_BeimNeustartNurWennDerPortWirklichOffenSteht()
+    {
+        var neu = Co2Absicherung.Absichern(Echt("waechter"), Rahmen);
+        var oder = neu["actions"]![0]!["choose"]![0]!["conditions"]![0]!["conditions"]!.AsArray();
+
+        var start = oder.Single(b => b!.ToJsonString().Contains(Co2Absicherung.NeustartKennung))!;
+        var zustaende = start["conditions"]![1]!["conditions"]!.AsArray();
+        Assert.Equal(2, zustaende.Count);
+        Assert.All(zustaende, z =>
+        {
+            Assert.Equal("state", z!["condition"]!.ToString());
+            Assert.Null(z["for"]); // beim Start: gleich, ohne Wartezeit
+        });
+    }
+
+    [Fact]
+    public void Waechter_OhneChoose_WirdErkanntUndGegatet()
+    {
+        // Die ganze Automation ist der Wächter: Port lange an → zu.
+        var config = (JsonObject)JsonNode.Parse("""
+            {"alias":"Wächter schlicht","triggers":[{"trigger":"state","entity_id":"binary_sensor.big_port_5_zustand","to":"on","for":"00:01:30"}],
+             "actions":[{"action":"select.select_option","data":{"option":"Off"},"target":{"entity_id":"select.rdwc_venti_aktiver_modus_2"}}],"mode":"single"}
+            """)!;
+        Assert.Equal([Art.WaechterUebersiehtNeustart], Arten(config));
+
+        var neu = Co2Absicherung.Absichern(config, Rahmen);
+        Assert.Empty(Arten(neu));
+
+        // Der bisherige Auslöser schließt weiter ohne Bedingung, die neuen nur bei offenem Port.
+        var tor = neu["conditions"]![0]!["conditions"]!.AsArray();
+        Assert.Equal("not", tor[0]!["condition"]!.ToString());
+        Assert.Contains("\"for\":\"00:01:30\"", tor[2]!.ToJsonString());
+        Assert.True(JsonNode.DeepEquals(config["actions"], neu["actions"]));
+    }
+
+    [Fact]
+    public void Waechter_ImAltenFormat_WirdErkanntUndBleibtImAltenFormat()
+    {
+        var alt = Echt("waechter");
+        var text = alt.ToJsonString()
+            .Replace("\"triggers\":", "\"trigger\":")
+            .Replace("\"actions\":", "\"action\":")
+            .Replace("\"trigger\":\"state\"", "\"platform\":\"state\"");
+        var config = (JsonObject)JsonNode.Parse(text)!;
+        Assert.Equal([Art.WaechterUebersiehtNeustart], Arten(config));
+
+        var neu = Co2Absicherung.Absichern(config, Rahmen);
+        Assert.Empty(Arten(neu));
+        Assert.Null(neu["triggers"]);
+        Assert.Contains(neu["trigger"]!.AsArray(), t => t?["platform"]?.ToString() == "homeassistant");
+    }
+
+    [Fact]
+    public void Waechter_EineAutomationDieNichtDenPortSchliesst_IstKeiner()
+    {
+        // „Licht 10 min an → Abluft aus“: Wartezeit-Auslöser und Ausschalten,
+        // aber nicht der Dosier-Port.
+        var config = (JsonObject)JsonNode.Parse("""
+            {"triggers":[{"trigger":"state","entity_id":"light.zelt","to":"on","for":"00:10:00"}],
+             "actions":[{"action":"switch.turn_off","target":{"entity_id":"switch.abluft"}}]}
+            """)!;
+        Assert.Empty(Arten(config));
+    }
+
+    [Fact]
     public void Waechter_DieForkVorlageGiltSchonAlsAbgesichert()
     {
         var vorlage = Vorlage("waechter");
         Assert.DoesNotContain(Art.WaechterUebersiehtNeustart, Arten(vorlage));
+
+        // Selbsttest: ohne Start- und Takt-Auslöser wird sie als Wächter erkannt
+        // — sonst wäre „kein Befund“ oben auch ohne Hinsehen wahr.
+        var ohne = Vorlage("waechter");
+        var ausloeser = ohne["triggers"]!.AsArray();
+        foreach (var t in ausloeser.Where(t => t?["trigger"]?.ToString() is "homeassistant" or "time_pattern").ToList())
+        {
+            ausloeser.Remove(t);
+        }
+        Assert.Equal([Art.WaechterUebersiehtNeustart], Arten(ohne));
     }
 
     // ------------------------------------------------------------ Not-Aus
@@ -207,12 +336,44 @@ public sealed class Co2AbsicherungTests
 
         Assert.Equal(
             "{{ is_state('automation.co2_dosierung_rdwc_port_5', 'on') }}",
-            schritte[0]!["variables"]![Co2Absicherung.WarAnVariable]!.ToString());
+            schritte[0]!["variables"]![Co2Absicherung.WarAnPraefix + "co2_dosierung_rdwc_port_5"]!.ToString());
         Assert.Equal("automation.turn_off", schritte[1]!["action"]!.ToString());
         Assert.Equal(Co2Absicherung.WiederEinAlias, schritte[2]!["alias"]!.ToString());
         Assert.Equal("automation.turn_on", schritte[2]!["then"]![0]!["action"]!.ToString());
         Assert.Equal("Off", schritte[3]!["data"]!["option"]!.ToString());
         Assert.Equal(4, schritte.Count);
+    }
+
+    [Fact]
+    public void NotAus_ZweiDosierungen_JedeMitEigenerMerkvariable()
+    {
+        const string zwei = "automation.co2_dosierung_zelt_2";
+        var rahmen = new Co2Absicherung.Rahmen(Fuehler, new HashSet<string> { Dosierung, zwei }, Ports);
+        var config = (JsonObject)JsonNode.Parse($$$"""
+            {"triggers":[{"trigger":"state","entity_id":"binary_sensor.licht","to":"off"}],
+             "actions":[
+               {"action":"automation.turn_off","data":{"stop_actions":true},"target":{"entity_id":["{{{Dosierung}}}","{{{zwei}}}"]}},
+               {"action":"automation.turn_on","target":{"entity_id":["{{{Dosierung}}}","{{{zwei}}}","automation.etwas_anderes"]}}]}
+            """)!;
+        Assert.Equal([Art.NotAusWirdZurueckgenommen], Arten(config, rahmen));
+
+        var neu = Co2Absicherung.Absichern(config, rahmen);
+        Assert.Empty(Arten(neu, rahmen));
+        var schritte = neu["actions"]!.AsArray();
+
+        var merken = schritte[0]!["variables"]!.AsObject();
+        Assert.Equal($"{{{{ is_state('{Dosierung}', 'on') }}}}", merken[Co2Absicherung.WarAnPraefix + "co2_dosierung_rdwc_port_5"]!.ToString());
+        Assert.Equal($"{{{{ is_state('{zwei}', 'on') }}}}", merken[Co2Absicherung.WarAnPraefix + "co2_dosierung_zelt_2"]!.ToString());
+
+        // Jede Dosierung schaltet nur nach ihrem eigenen Merker wieder ein.
+        Assert.Equal("{{ fork_ai_war_an_co2_dosierung_rdwc_port_5 }}", schritte[2]!["if"]![0]!["value_template"]!.ToString());
+        Assert.Equal(Dosierung, schritte[2]!["then"]![0]!["target"]!["entity_id"]!.ToString());
+        Assert.Equal("{{ fork_ai_war_an_co2_dosierung_zelt_2 }}", schritte[3]!["if"]![0]!["value_template"]!.ToString());
+        Assert.Equal(zwei, schritte[3]!["then"]![0]!["target"]!["entity_id"]!.ToString());
+
+        // Was keine Dosierung ist, wird weiter ohne Bedingung eingeschaltet.
+        Assert.Equal("automation.etwas_anderes", schritte[4]!["target"]!["entity_id"]!.ToString());
+        Assert.Equal(5, schritte.Count);
     }
 
     [Fact]
@@ -227,7 +388,7 @@ public sealed class Co2AbsicherungTests
     [Fact]
     public void NotAus_AndereAutomationenAlsDieDosierungZaehlenNicht()
     {
-        var fremd = new Co2Absicherung.Rahmen(Fuehler, new HashSet<string> { "automation.etwas_anderes" });
+        var fremd = new Co2Absicherung.Rahmen(Fuehler, new HashSet<string> { "automation.etwas_anderes" }, Ports);
         Assert.DoesNotContain(Art.NotAusWirdZurueckgenommen, Arten(Echt("licht-aus-sicherung"), fremd));
     }
 
