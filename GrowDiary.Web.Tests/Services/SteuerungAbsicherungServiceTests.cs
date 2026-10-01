@@ -144,7 +144,7 @@ public sealed class SteuerungAbsicherungServiceTests
                 // Im Nachbau steht der Zustand sofort fest — kein Warten.
                 Rechenwerte = new SteuerungRechenwertAbsicherung(ha, NullLogger.Instance)
                 {
-                    Wartezeit = TimeSpan.Zero, Takt = TimeSpan.Zero,
+                    Wartezeit = TimeSpan.Zero, Takt = TimeSpan.Zero, SocketFrist = TimeSpan.FromSeconds(2),
                 },
             };
         }
@@ -441,6 +441,45 @@ public sealed class SteuerungAbsicherungServiceTests
         Assert.Equal(alt, ha.Optionen[BedarfEintrag]["state"]!.ToString());
         Assert.Equal(0, ha.DialogeOffen);
     }
+
+    [Fact]
+    public async Task Rechenwerte_SchweigtDerWebSocket_HaengtNichts()
+    {
+        await using var socket = await NachgebauterSocket.StartenAsync(
+            Dosierung, [LichtAus], NachgebautesHa.Eintraege, schweigtAufRegistry: true);
+        var einstellungen = new HomeAssistantSettings { Enabled = true, BaseUrl = socket.Adresse, AccessToken = "test" };
+        var ha = new NachgebautesHa();
+
+        var lesen = ha.Dienst().PruefenAsync(Rollen, einstellungen, default);
+        var fertig = await Task.WhenAny(lesen, Task.Delay(TimeSpan.FromSeconds(20)));
+
+        Assert.Same(lesen, fertig);
+        var lage = await lesen;
+        Assert.All(lage.Rechenwerte, r =>
+        {
+            Assert.Equal("NichtLesbar", r.Stand);
+            Assert.False(r.Behebbar);
+        });
+        Assert.Contains("nicht geantwortet", lage.Rechenwerte[0].Hinweis);
+    }
+
+    [Fact]
+    public async Task Rechenwerte_HilftAuchDasZurueckschreibenNicht_SagtDieSeiteDas()
+    {
+        await using var socket = await NachgebauterSocket.StartenAsync(Dosierung, [LichtAus], NachgebautesHa.Eintraege);
+        var einstellungen = new HomeAssistantSettings { Enabled = true, BaseUrl = socket.Adresse, AccessToken = "test" };
+        var ha = new NachgebautesHa();
+        ha.Dialog.VerliertEinheitImmer = true;
+
+        var bilanz = await ha.Dienst().AbsichernAsync(Rollen, einstellungen, default);
+
+        var impuls = Assert.Single(bilanz.Einzeln, e => e.EntityId == "sensor.co2_impuls_bedarf");
+        Assert.False(impuls.Geschrieben);
+        Assert.DoesNotContain("wurde zurückgeschrieben", impuls.Fehler);
+        Assert.Contains("weicht der Helfer noch vom alten Stand ab", impuls.Fehler);
+        Assert.Contains("App_Data/automations-backup", impuls.Fehler);
+        Assert.Equal(0, ha.DialogeOffen);
+    }
 }
 
 /// <summary>Ein WebSocket nach Art von Home Assistant: Anmeldung, dann search/related.</summary>
@@ -457,7 +496,8 @@ internal sealed class NachgebauterSocket : IAsyncDisposable
     }
 
     public static async Task<NachgebauterSocket> StartenAsync(
-        string dosierung, string[] verwandte, IReadOnlyDictionary<string, string>? eintraege = null)
+        string dosierung, string[] verwandte, IReadOnlyDictionary<string, string>? eintraege = null,
+        bool schweigtAufRegistry = false)
     {
         var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -485,6 +525,7 @@ internal sealed class NachgebauterSocket : IAsyncDisposable
                 var id = nachricht["id"]!.GetValue<int>();
                 if (nachricht["type"]?.ToString() == "config/entity_registry/get")
                 {
+                    if (schweigtAufRegistry) continue; // halboffene Verbindung: keine Antwort
                     var entity = nachricht["entity_id"]!.ToString();
                     if (eintraege is not null && eintraege.TryGetValue(entity, out var eintrag))
                     {
@@ -541,6 +582,9 @@ internal static class OptionsDialog
         /// <summary>Beim ersten Speichern geht die Einheit verloren.</summary>
         public bool VerliertEinheit { get; set; }
 
+        /// <summary>Bei jedem Speichern geht die Einheit verloren — auch beim Zurückschreiben.</summary>
+        public bool VerliertEinheitImmer { get; set; }
+
         /// <summary>Wird beim Öffnen eines Dialogs aufgerufen.</summary>
         public Action? BeimOeffnen { get; set; }
     }
@@ -591,7 +635,7 @@ internal static class OptionsDialog
         // values.update(user_input); fehlende optionale Schlüssel werden gelöscht.
         foreach (var p in eingabe) o[p.Key] = p.Value?.DeepClone();
         foreach (var k in erlaubt.Where(k => k != "state" && !eingabe.ContainsKey(k))) o.Remove(k);
-        if (verhalten.VerliertEinheit)
+        if (verhalten.VerliertEinheit || verhalten.VerliertEinheitImmer)
         {
             o.Remove("unit_of_measurement");
             verhalten.VerliertEinheit = false;

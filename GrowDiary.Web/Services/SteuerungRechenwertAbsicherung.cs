@@ -51,6 +51,14 @@ public sealed class SteuerungRechenwertAbsicherung
     /// <summary>Abstand der Blicke auf den Zustand in dieser Zeit.</summary>
     public TimeSpan Takt { get; init; } = TimeSpan.FromSeconds(1);
 
+    /// <summary>
+    /// Wie lange auf eine Antwort am WebSocket gewartet wird. Die HTTP-Aufrufe
+    /// haben ihre Zeitgrenze im Client; der WebSocket hat keine — und läuft hier
+    /// ohne das Abbruchsignal der Anfrage. Ohne diese Grenze hinge eine
+    /// halboffene Verbindung ewig.
+    /// </summary>
+    public TimeSpan SocketFrist { get; init; } = TimeSpan.FromSeconds(10);
+
     /// <summary>Ein Rechenwert, wie die Seite ihn zeigt.</summary>
     /// <param name="Stand"><see cref="Co2Rechenwerte.Stand"/> als Text, oder „NichtLesbar".</param>
     public sealed record Rechenwert(
@@ -182,11 +190,29 @@ public sealed class SteuerungRechenwertAbsicherung
 
         // Etwas stimmt nicht: der ganze alte Stand wieder hinein.
         _log.LogWarning("Rechenwert {EntityId}: {Problem} — alter Stand zurück.", entityId, problem);
-        var zurueckFehler = await ZurueckschreibenAsync(client, eintrag.Id!, vorher, alt, ct);
+        var zurueckFehler = await ZurueckschreibenAsync(client, eintrag.Id!, vorher, alt, ct)
+            ?? await StandGleichAsync(client, eintrag.Id!, vorher, alt, ct);
         return Fehler(zurueckFehler is null
             ? $"{problem} — der alte Stand wurde zurückgeschrieben."
             : $"{problem}, und das Zurückschreiben scheiterte ({zurueckFehler}). "
               + "Der alte Stand liegt im Add-on unter App_Data/automations-backup.");
+    }
+
+    /// <summary>
+    /// Nach dem Zurückschreiben nachlesen: steht wirklich der alte Stand da?
+    /// Verliert Home Assistant beim Speichern jedes Mal dasselbe Feld, hilft
+    /// auch das Zurückschreiben nicht — dann muss es die Seite sagen.
+    /// </summary>
+    /// <returns>Null, wenn alles wieder stimmt, sonst was abweicht.</returns>
+    private static async Task<string?> StandGleichAsync(
+        HttpClient client, string eintrag, JsonArray vorher, string alteFormel, CancellationToken ct)
+    {
+        if (await OeffnenAsync(client, eintrag, ct) is not { } dialog) return "danach nicht mehr lesbar";
+        await SchliessenAsync(client, dialog.Id, ct);
+        return JsonNode.DeepEquals(Co2Rechenwerte.Antwort(vorher, alteFormel), Co2Rechenwerte.Antwort(dialog.Schema, alteFormel))
+            && Co2Rechenwerte.FormelAusDialog(dialog.Schema) is { } formel && formel == alteFormel
+            ? null
+            : "danach weicht der Helfer noch vom alten Stand ab";
     }
 
     /// <summary>Den gesicherten Stand zurück — alle Werte, nicht nur die Formel.</summary>
@@ -201,12 +227,19 @@ public sealed class SteuerungRechenwertAbsicherung
 
     // ------------------------------------------------------------ Home Assistant
 
-    private static async Task<(string? Id, string? Fehler)> EintragAsync(
+    private async Task<(string? Id, string? Fehler)> EintragAsync(
         HomeAssistantSocket socket, string entityId, CancellationToken ct)
     {
+        using var frist = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        frist.CancelAfter(SocketFrist);
         var antwort = await socket.BefehlAsync("config/entity_registry/get",
-            new Dictionary<string, object?> { ["entity_id"] = entityId }, ct);
-        if (!antwort.Erfolg) return (null, $"{entityId} ist in Home Assistant nicht registriert.");
+            new Dictionary<string, object?> { ["entity_id"] = entityId }, frist.Token);
+        if (!antwort.Erfolg)
+        {
+            return (null, frist.IsCancellationRequested
+                ? "Home Assistant hat am WebSocket nicht geantwortet — die Formel wurde nicht gelesen."
+                : $"{entityId} ist in Home Assistant nicht registriert.");
+        }
 
         var id = antwort.Ergebnis is { ValueKind: JsonValueKind.Object } e
             && e.TryGetProperty("config_entry_id", out var k) && k.ValueKind == JsonValueKind.String

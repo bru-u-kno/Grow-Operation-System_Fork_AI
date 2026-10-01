@@ -23,7 +23,7 @@
   sind. Vorher wird der alte Stand gesichert; danach liest Fork AI nach, was Home Assistant wirklich hat —
   die Formel und jede andere Einstellung des Helfers — und sieht nach, ob der Rechenwert einen Wert liefert.
   Stimmt etwas nicht, kommt der alte Stand von selbst zurück, und die Seite sagt es — auch wenn man die
-  Seite inzwischen verlassen hat. Lehnt Home Assistant ab, nennt die Seite den Grund. Wie bei den
+  Seite inzwischen verlassen hat. Ob das Zurückschreiben gelungen ist, wird ebenfalls nachgelesen. Lehnt Home Assistant ab, nennt die Seite den Grund. Wie bei den
   Automationen: nicht während einer Dosierung.
 - Behoben — **Einrichten von Zuluft und Chiller scheiterte an den Rechenwerten.** Fork AI schickte die
   „Verfügbarkeit“ eines Rechenwerts an eine Stelle, die Home Assistant (2026.9) nicht mehr kennt; der Dialog

@@ -155,6 +155,7 @@ public sealed class SteuerungRechenwertService
                 $"{DialogPfad}/{dialog}", new { next_step_id = schritt }, ct);
             if (!gewaehlt.IsSuccessStatusCode)
             {
+                await SchliessenAsync(client, dialog, ct);
                 return (false, $"Art '{schritt}' wurde nicht angenommen ({(int)gewaehlt.StatusCode}).");
             }
 
@@ -178,6 +179,8 @@ public sealed class SteuerungRechenwertService
             if (typ != "create_entry")
             {
                 var fehler = antwort.TryGetProperty("errors", out var e) ? e.ToString() : typ;
+                // Ein erneutes Formular heißt: der Dialog ist noch offen.
+                await SchliessenAsync(client, dialog, ct);
                 return (false, $"Der Dialog hat nichts angelegt: {fehler}");
             }
 
