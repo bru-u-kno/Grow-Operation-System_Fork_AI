@@ -36,6 +36,18 @@ type AbsicherungsLage = {
     name: string
     befunde: Array<{ art: string; titel: string; erklaerung: string; behebbar: boolean; hinweis: string | null }>
   }>
+  /** Die CO₂-Rechenwerte (Formeln der Template-Helfer). */
+  rechenwerte: Array<{
+    entityId: string
+    name: string
+    /** Aktuell · Veraltet · Angepasst · OhneFuehler · NichtLesbar */
+    stand: string
+    heute: string | null
+    danach: string | null
+    alteFormel: string | null
+    neueFormel: string | null
+    hinweis: string | null
+  }>
 }
 
 type AbsicherungsBilanz = {
@@ -265,8 +277,14 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       } else {
         const gut = bilanz.einzeln.filter((e) => e.geschrieben)
         const schlecht = bilanz.einzeln.filter((e) => !e.geschrieben)
-        const teile = [`${gut.length} ${gut.length === 1 ? 'Automation' : 'Automationen'} abgesichert`]
-        for (const e of schlecht) teile.push(`${e.name}: ${e.fehler ?? 'nicht geschrieben'}`)
+        const automationen = gut.filter((e) => e.entityId.startsWith('automation.')).length
+        const rechenwerte = gut.length - automationen
+        const gezaehlt = [
+          automationen > 0 ? `${automationen} ${automationen === 1 ? 'Automation' : 'Automationen'}` : null,
+          rechenwerte > 0 ? `${rechenwerte} ${rechenwerte === 1 ? 'Rechenwert' : 'Rechenwerte'}` : null,
+        ].filter(Boolean).join(' und ')
+        const teile = [gezaehlt ? `${gezaehlt} abgesichert` : 'Nichts abgesichert']
+        for (const e of schlecht) teile.push(`${e.name}: ${(e.fehler ?? 'nicht geschrieben').replace(/\.$/, '')}`)
         setAbsicherMeldung({ ton: schlecht.length > 0 ? 'warn' : 'ok', text: `${teile.join('. ')}.` })
       }
     } catch (caught) {
@@ -843,6 +861,35 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                     {b.hinweis && <em>{b.hinweis}</em>}
                   </p>
                 ))}
+              </div>
+            ))}
+            {absicherung.rechenwerte.map((r) => (
+              <div className="st-feldzeile is-gestapelt" key={r.entityId}>
+                <span className="st-etikett">
+                  {r.name}
+                  <small>
+                    {r.stand === 'Aktuell' ? 'Aktuelle Formel — schweigt der Fühler, wird nicht dosiert.'
+                      : r.stand === 'Veraltet' ? 'Rechenwert mit älterer Formel'
+                      : r.stand === 'Angepasst' ? 'Von Hand angepasste Formel'
+                      : 'Formel nicht geprüft'}
+                  </small>
+                </span>
+                {r.stand === 'Veraltet' && (
+                  <p className="st-befund">
+                    <b>Rechnet weiter, wenn der CO₂-Fühler schweigt</b>
+                    Heute: {r.heute}. Nach dem Absichern: {r.danach}. Mit gültigem Messwert rechnet er wie bisher.
+                  </p>
+                )}
+                {r.hinweis && <p className="st-hinweis">{r.hinweis}</p>}
+                {r.alteFormel && r.neueFormel && (
+                  <details className="st-formeln">
+                    <summary>Formeln vergleichen</summary>
+                    <span>In Home Assistant</span>
+                    <code>{r.alteFormel}</code>
+                    <span>Aktuelle Fassung von Fork AI</span>
+                    <code>{r.neueFormel}</code>
+                  </details>
+                )}
               </div>
             ))}
             {absicherung.hinweis && <p className="st-hinweis">{absicherung.hinweis}</p>}

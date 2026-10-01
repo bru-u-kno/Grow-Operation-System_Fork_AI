@@ -5,6 +5,22 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.156
+
+**Fork AI.** CO₂: auch die beiden Rechenwerte lassen sich jetzt absichern.
+
+- Neu — **„CO2 Bedarf" und „CO2 Impuls Bedarf" in „Sicherheit der CO₂-Automationen".** Beide Rechenwerte behielten
+  ihre Formel aus der Zeit vor forkai.153: Schwieg der CO₂-Fühler, blieb der Bedarf bis zu 5 Minuten „an“
+  (bei 0 ppm unbegrenzt), und der Impuls-Bedarf rechnete mit 0 ppm die Höchstdauer. Die Seite zeigt jetzt
+  je Rechenwert, was er heute tut und was er nach dem Absichern tut („sofort aus“, „0 s“). Mit gültigem
+  Messwert rechnen beide wie bisher.
+- **Ersetzt wird nur eine bekannte ältere Formel von Fork AI.** Eine von Hand angepasste Formel wird nur
+  angezeigt — mit der aktuellen Fassung daneben zum Vergleichen, aber nicht überschrieben.
+- Geändert wird nur die Formel. Name, Einheit, Zustandsklasse und Verfügbarkeit des Helfers bleiben, wie sie
+  sind. Vorher wird die alte Formel gesichert; danach liest Fork AI nach, was Home Assistant wirklich hat,
+  und sieht nach, ob der Rechenwert einen Wert liefert. Bleibt er „nicht verfügbar“, kommt die alte Formel
+  von selbst zurück, und die Seite sagt es. Wie bei den Automationen: nicht während einer Dosierung.
+
 ## 2.0.0-forkai.155
 
 **Fork AI.** CO₂: vorhandene Automationen lassen sich jetzt absichern — auch von Hand gebaute.

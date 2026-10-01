@@ -94,6 +94,11 @@
   .st-befund { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); line-height: 1.5; color: var(--faint); overflow-wrap: anywhere; }
   .st-befund b { display: block; color: var(--warn-text); font-weight: 600; }
   .st-befund em { display: block; margin-top: 2px; font-style: normal; color: var(--ink); }
+  /* Fork AI: Alte und neue Formel eines Rechenwerts zum Vergleichen. */
+  .st-formeln { margin-top: var(--s-2); font-size: var(--fs-etikett); color: var(--faint); }
+  .st-formeln summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--ink); }
+  .st-formeln span { display: block; margin-top: var(--s-2); }
+  .st-formeln code { display: block; margin-top: 2px; padding: var(--s-2); font-family: var(--font-mono); font-size: var(--fs-etikett); line-height: 1.45; color: var(--ink); background: var(--sunk); border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; font-variant-ligatures: none; }
   .st-fehler { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--danger-text); }
 
   .st-fuss { margin-top: var(--s-3); font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); text-align: center; }

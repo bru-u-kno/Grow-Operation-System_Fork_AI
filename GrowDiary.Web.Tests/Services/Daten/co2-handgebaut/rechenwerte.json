@@ -1,0 +1,21 @@
+{
+  "_quelle": "Home Assistant 2026.9.4, Helfer-Optionen vom 30.09.2026 (ha_search, include_config)",
+  "binary_sensor.co2_bedarf": {
+    "config_entry_id": "01M228M2H8E9NXMDH433K4F5TT",
+    "optionen": {
+      "template_type": "binary_sensor",
+      "name": "CO2 Bedarf",
+      "state": "{% set co2_s = states.sensor.big_co2_light_sensor_co2 %}{% set weg = co2_s is none or co2_s.state in ['unknown','unavailable'] %}{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% if weg or ziel <= 0 %}{% set seit = (as_timestamp(now()) - as_timestamp(co2_s.last_changed)) if co2_s is not none else 9999 %}{% if seit > 300 %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% else %}{% set ist = co2_s.state | float(0) %}{% set h = states('input_number.co2_hysterese') | float(100) %}{% if ist <= 0 %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% elif ist < ziel - h %}true{% elif ist >= ziel %}false{% else %}{{ is_state('binary_sensor.co2_bedarf', 'on') }}{% endif %}{% endif %}"
+    }
+  },
+  "sensor.co2_impuls_bedarf": {
+    "config_entry_id": "01M228KX5ZYT085T0Q16R72H29",
+    "optionen": {
+      "template_type": "sensor",
+      "name": "CO2 Impuls Bedarf",
+      "state": "{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% set ist = states('sensor.big_co2_light_sensor_co2') | float(0) %}{% set gps = states('input_number.co2_gramm_pro_sekunde') | float(0.26) %}{% set vol = states('input_number.co2_zeltvolumen') | float(5.76) %}{% set mn = states('input_number.co2_impulsdauer') | float(5) %}{% set mx = states('input_number.co2_impulsdauer_max') | float(20) %}{% set gramm = ([ziel - ist, 0] | max) * vol / 557 %}{{ ([ [gramm / gps, mn] | max, mx ] | min) | round(0) | int }}",
+      "unit_of_measurement": "s",
+      "state_class": "measurement"
+    }
+  }
+}

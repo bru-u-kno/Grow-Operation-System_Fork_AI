@@ -20,6 +20,10 @@ namespace GrowDiary.Web.Services;
 /// Dosierung schaltet — das findet Home Assistant selbst über
 /// <c>search/related</c>. So kommt auch eine „Licht-aus-Sicherung" dazu, die
 /// in keinem Katalog steht.</para>
+/// <para><b>Auch die Rechenwerte.</b> „CO2 Bedarf" und „CO2 Impuls Bedarf"
+/// in einer bekannten älteren Fassung werden über
+/// <see cref="SteuerungRechenwertAbsicherung"/> ersetzt — von Hand angepasste
+/// nur angezeigt.</para>
 /// <para><b>Nicht während des Dosierens.</b> Wer eine laufende Automation neu
 /// schreibt, bricht sie ab — mitten im Impuls bliebe das Ventil offen, bis der
 /// Wächter es schließt. Läuft eine Dosierung oder steht der Port offen, wird
@@ -40,16 +44,25 @@ public sealed class SteuerungAbsicherungService
         _ha = ha;
         _automationen = automationen;
         _log = log;
+        Rechenwerte = new SteuerungRechenwertAbsicherung(ha, log);
     }
+
+    /// <summary>Die Rechenwerte (Formeln der Template-Helfer) — eigener Weg über den Einstellungsdialog.</summary>
+    public SteuerungRechenwertAbsicherung Rechenwerte { get; init; }
 
     public sealed record Automation(string EntityId, string Name, IReadOnlyList<Co2Absicherung.Befund> Befunde);
 
     /// <param name="Erreichbar">Hat Home Assistant geantwortet?</param>
     /// <param name="DosiertGerade">Läuft eine Dosierung oder steht der Port offen? Dann wird nicht geschrieben.</param>
     /// <param name="Hinweis">Was nicht geprüft werden konnte, in Klartext.</param>
-    public sealed record Lage(bool Erreichbar, bool DosiertGerade, IReadOnlyList<Automation> Automationen, string? Hinweis)
+    /// <param name="Rechenwerte">Die CO₂-Rechenwerte und ob ihre Formel veraltet ist.</param>
+    public sealed record Lage(
+        bool Erreichbar, bool DosiertGerade, IReadOnlyList<Automation> Automationen, string? Hinweis,
+        IReadOnlyList<SteuerungRechenwertAbsicherung.Rechenwert>? Rechenwerte = null)
     {
-        public int Behebbar => Automationen.Sum(a => a.Befunde.Count(b => b.Behebbar));
+        public IReadOnlyList<SteuerungRechenwertAbsicherung.Rechenwert> Rechenwerte { get; init; } = Rechenwerte ?? [];
+
+        public int Behebbar => Automationen.Sum(a => a.Befunde.Count(b => b.Behebbar)) + Rechenwerte.Count(r => r.Behebbar);
     }
 
     public sealed record Ergebnis(string EntityId, string Name, bool Geschrieben, string? Fehler);
@@ -131,6 +144,35 @@ public sealed class SteuerungAbsicherungService
             else _log.LogWarning("Automation {EntityId} nicht abgesichert: {Fehler}", a.EntityId, fehler);
         }
 
+        var veraltet = vorher.Lage.Rechenwerte.Where(r => r.Behebbar).ToList();
+        if (veraltet.Count > 0)
+        {
+            await using var socket = await HomeAssistantSocket.OeffnenAsync(settings, ct);
+            foreach (var r in veraltet)
+            {
+                if (socket is null)
+                {
+                    einzeln.Add(new Ergebnis(r.EntityId, r.Name, false, "Home Assistant nimmt die WebSocket-Anmeldung nicht an."));
+                    continue;
+                }
+
+                // Ein Rechenwert lädt beim Ändern neu und steht kurz auf „nicht
+                // verfügbar“ — mitten im Zyklus endet die Schleife dann. Sicher,
+                // aber unnötig: auch hier erst nachsehen.
+                if (await DosiertGeradeAsync(client, zuordnung, vorher.Rahmen.Dosierungen, settings, ct))
+                {
+                    var nachher0 = await LesenAsync(zuordnung, settings, ct);
+                    return new Bilanz(
+                        "Mitten im Absichern hat eine Dosierung begonnen — angehalten, bevor der nächste Rechenwert "
+                        + "geändert wurde. Schon Abgesichertes bleibt; den Rest bitte in einer Pause noch einmal.",
+                        einzeln, nachher0.Lage);
+                }
+
+                var e = await Rechenwerte.ErsetzenAsync(client, socket, settings, r.EntityId, zuordnung, ct);
+                einzeln.Add(new Ergebnis(e.EntityId, e.Name, e.Geschrieben, e.Fehler));
+            }
+        }
+
         var nachher = await LesenAsync(zuordnung, settings, ct);
         return new Bilanz(null, einzeln, nachher.Lage);
     }
@@ -173,10 +215,11 @@ public sealed class SteuerungAbsicherungService
             .ToHashSet(StringComparer.Ordinal);
 
         // Wer schaltet die Dosierung sonst noch? Das weiss nur Home Assistant.
+        await using var socket = await HomeAssistantSocket.OeffnenAsync(settings, ct);
         string? hinweis = null;
         if (dosierungen.Count > 0)
         {
-            var verwandte = await VerwandteAsync(settings, dosierungen, ct);
+            var verwandte = socket is null ? null : await VerwandteAsync(socket, dosierungen, ct);
             if (verwandte is null)
             {
                 hinweis = "Automationen, die die Dosierung nur ein- und ausschalten, konnten nicht gesucht werden.";
@@ -203,7 +246,9 @@ public sealed class SteuerungAbsicherungService
             .ThenBy(a => a.Name, StringComparer.CurrentCulture)
             .ToList();
 
-        return new Stand(new Lage(true, laeuft, automationen, hinweis), gelesen, rahmen);
+        var rechenwerte = await Rechenwerte.LesenAsync(client, socket, zuordnung, ct);
+
+        return new Stand(new Lage(true, laeuft, automationen, hinweis, rechenwerte), gelesen, rahmen);
     }
 
     private static IReadOnlySet<string> Ports(IReadOnlyDictionary<string, string> zuordnung)
@@ -283,11 +328,8 @@ public sealed class SteuerungAbsicherungService
 
     /// <summary>Die Automationen, die eine der Dosierungen erwähnen. Null, wenn die Suche nicht ging.</summary>
     private static async Task<IReadOnlyCollection<string>?> VerwandteAsync(
-        HomeAssistantSettings settings, IEnumerable<string> dosierungen, CancellationToken ct)
+        HomeAssistantSocket socket, IEnumerable<string> dosierungen, CancellationToken ct)
     {
-        await using var socket = await HomeAssistantSocket.OeffnenAsync(settings, ct);
-        if (socket is null) return null;
-
         var gefunden = new HashSet<string>(StringComparer.Ordinal);
         foreach (var d in dosierungen)
         {
