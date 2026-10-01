@@ -4,8 +4,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { spaeterInsBild } from '../components/reiter-ins-bild'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Stat, V1Tabs } from '../components/v1'
-import { LAGER, euro, growOptionen, tage } from '../features/kosten/kosten-typen'
-import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
+import { LAGER, VERTEILT, dauerText, euro, growOptionen, plusMonate, tage } from '../features/kosten/kosten-typen'
+import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung, KostenSeite, KostenVerteilung, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
 import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../utils'
 import { feldText, istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import { phaseName } from '../deutsche-woerter'
@@ -277,7 +277,7 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
       <section className="v1-kpi-grid" data-audit="kosten-summe">
         <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)} kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
         <V1Stat label="Verbrauchsartikel" value={euro(artikel)} hint={`${seite.nachfuellungen.filter((f) => grow && f.growId === grow.id).length} Nachfüllungen`} />
-        <V1Stat label="Anschaffungen" value={euro(anschaffungen)} hint={`${seite.anschaffungen.filter((x) => grow && x.growId === grow.id).length} Positionen im Grow`} />
+        <V1Stat label="Anschaffungen" value={euro(anschaffungen)} hint={`${seite.anschaffungen.filter((x) => x.imGrowEur > 0).length} Positionen im Grow`} />
         <V1Stat label="Je Pflanze" value={euro(summe.proPflanzeEur)} hint={grow?.pflanzen ? `${grow.pflanzen} Pflanzen, bisher` : 'Pflanzenzahl im Grow eintragen'} />
       </section>
     </>
@@ -1260,8 +1260,15 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
 }) {
   const growOpts = growOptionen(seite)
   const vorbelegtGrow = vorhanden
-    ? (vorhanden.growId != null ? String(vorhanden.growId) : LAGER)
+    ? (vorhanden.nutzungsdauerMonate != null ? VERTEILT : vorhanden.growId != null ? String(vorhanden.growId) : LAGER)
     : (seite.grow && growOpts.some((o) => o.value === String(seite.grow!.id)) ? String(seite.grow.id) : (growOpts[0]?.value ?? LAGER))
+  // forkai.157: Die Nutzungsdauer steht in Jahren, solange sie in ganzen
+  // Jahren aufgeht — gespeichert wird immer in Monaten.
+  const vorhandeneMonate = vorhanden?.nutzungsdauerMonate ?? null
+  const [dauer, setDauer] = useState(vorhandeneMonate == null ? '' : String(vorhandeneMonate % 12 === 0 ? vorhandeneMonate / 12 : vorhandeneMonate))
+  const [dauerEinheit, setDauerEinheit] = useState<'jahre' | 'monate'>(vorhandeneMonate != null && vorhandeneMonate % 12 !== 0 ? 'monate' : 'jahre')
+  const [zelt, setZelt] = useState(vorhanden?.tentId != null ? String(vorhanden.tentId) : '')
+  const [ausgemustert, setAusgemustert] = useState(vorhanden?.ausgemustertAmUtc ? toLocalInputValue(new Date(vorhanden.ausgemustertAmUtc)).slice(0, 10) : '')
   const [name, setName] = useState(vorhanden?.name ?? '')
   const [hersteller, setHersteller] = useState(vorhanden?.hersteller ?? '')
   const [produkt, setProdukt] = useState(vorhanden?.produkt ?? '')
@@ -1277,11 +1284,31 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
   const stueckZahl = zahlOderNull(stueck)
   const preisZahl = zahlOderNull(preis)
   const gesamt = stueckZahl != null && preisZahl != null ? stueckZahl * preisZahl : null
+  const verteilt = fuerGrow === VERTEILT
+  const dauerZahl = zahlOderNull(dauer)
+  const monate = dauerZahl != null && Number.isInteger(dauerZahl) && dauerZahl > 0 ? (dauerEinheit === 'jahre' ? dauerZahl * 12 : dauerZahl) : null
+  const einGrow = fuerGrow !== LAGER && !verteilt
+
+  // Was je Tag anfällt — dieselbe Rechnung wie AnschaffungVerteilung im Backend:
+  // Preis durch die Kalendertage vom Kaufdatum bis zum Ende der Nutzungsdauer.
+  const verteilVorschau = useMemo(() => {
+    if (!verteilt || gesamt == null || monate == null || !datum) return null
+    const von = new Date(`${datum}T12:00:00`)
+    const bis = plusMonate(von, monate)
+    const tageGesamt = Math.round((bis.getTime() - von.getTime()) / 86_400_000)
+    if (tageGesamt <= 0) return null
+    const letzter = new Date(bis)
+    letzter.setDate(letzter.getDate() - 1)
+    return `≈ ${euro(gesamt / tageGesamt)} je Tag über ${dauerText(monate)}, bis ${formatDate(letzter.toISOString())}`
+  }, [verteilt, gesamt, monate, datum])
 
   async function speichern() {
     if (istUnlesbar(stueck) || istUnlesbar(preis)) { onError('Stück oder Einzelpreis sind keine Zahl.'); return }
     if (stueckZahl == null || stueckZahl < 1) { onError('Stückzahl fehlt.'); return }
     if (preisZahl == null) { onError('Einzelpreis fehlt.'); return }
+    if (verteilt && (istUnlesbar(dauer) || monate == null)) { onError('Nutzungsdauer fehlt — ganze Jahre oder Monate, mindestens 1.'); return }
+    if (verteilt && monate != null && monate > 600) { onError('Nutzungsdauer höchstens 50 Jahre.'); return }
+    if (verteilt && ausgemustert && datum && ausgemustert < datum) { onError('Ausgemustert kann nicht vor dem Kaufdatum liegen.'); return }
     setBusy(true)
     try {
       await apiFetch(vorhanden ? `/api/kosten/anschaffungen/${vorhanden.id}` : '/api/kosten/anschaffungen', {
@@ -1293,14 +1320,18 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
           datum: datum ? new Date(`${datum}T12:00:00`).toISOString() : null,
           stueck: Math.round(stueckZahl),
           einzelpreisEur: preisZahl,
-          growId: fuerGrow === LAGER ? null : Number(fuerGrow),
+          growId: einGrow ? Number(fuerGrow) : null,
           ohneGrow: fuerGrow === LAGER,
           notiz: notiz.trim() || null,
           alsHardware: !vorhanden && alsHardware,
-          journal: !vorhanden && journal && fuerGrow !== LAGER,
+          journal: !vorhanden && journal && einGrow,
+          nutzungsdauerMonate: verteilt ? monate : null,
+          tentId: verteilt && zelt ? Number(zelt) : null,
+          ausgemustertAm: verteilt && ausgemustert ? new Date(`${ausgemustert}T12:00:00`).toISOString() : null,
         }),
       })
-      onDone(vorhanden ? `${name.trim()} gespeichert.` : `${name.trim()} erfasst${gesamt != null ? ` — ${euro(gesamt)}` : ''}.`)
+      const wie = verteilt && monate != null ? `, verteilt über ${dauerText(monate)}` : ''
+      onDone(vorhanden ? `${name.trim()} gespeichert${wie}.` : `${name.trim()} erfasst${gesamt != null ? ` — ${euro(gesamt)}` : ''}${wie}.`)
     } catch (caught) {
       onError(formatApiError(caught, 'Anschaffung konnte nicht gespeichert werden.'))
     } finally {
@@ -1324,11 +1355,37 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
         <V1Field label="Einzelpreis (€)">
           <input type="text" inputMode="decimal" value={preis} onChange={(e) => setPreis(e.target.value)} placeholder="4,90" />
         </V1Field>
-        <V1Field label="Für Grow" hint="alle laufenden Grows oder Lager, wenn es noch keinem Durchgang gehört">
-          <select value={fuerGrow} onChange={(e) => setFuerGrow(e.target.value)}>
-            {growOpts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        <V1Field label="Zählt für" hint={verteilt ? 'jeder Grow, der in der Nutzungsdauer läuft, trägt seine Tage' : 'ein laufender Grow, über die Nutzungsdauer auf alle Grows verteilt, oder Lager'}>
+          <select value={fuerGrow} onChange={(e) => setFuerGrow(e.target.value)} data-audit="kosten-anschaffung-zaehlt-fuer">
+            {growOpts.filter((o) => o.value !== LAGER).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <option value={VERTEILT}>Auf alle Grows verteilen</option>
+            <option value={LAGER}>Lager — noch keinem Grow zugeordnet</option>
           </select>
         </V1Field>
+        {verteilt && (
+          <>
+            <V1Field label="Nutzungsdauer" hint="ab dem Datum oben; danach ist es abbezahlt">
+              <div className="ko-dauer">
+                <input type="text" inputMode="numeric" value={dauer} onChange={(e) => setDauer(e.target.value)} placeholder="3" aria-label="Nutzungsdauer" data-audit="kosten-anschaffung-dauer" />
+                <select value={dauerEinheit} onChange={(e) => setDauerEinheit(e.target.value as 'jahre' | 'monate')} aria-label="Einheit der Nutzungsdauer" data-audit="kosten-anschaffung-dauer-einheit">
+                  <option value="jahre">Jahre</option>
+                  <option value="monate">Monate</option>
+                </select>
+              </div>
+            </V1Field>
+            <V1Field label="Nur Grows im Zelt" hint="„alle Zelte“: jeder laufende Grow trägt mit, egal wo">
+              <select value={zelt} onChange={(e) => setZelt(e.target.value)} data-audit="kosten-anschaffung-zelt">
+                <option value="">alle Zelte</option>
+                {seite.zelte.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+              </select>
+            </V1Field>
+            {vorhanden && (
+              <V1Field label="Ausgemustert am" hint="kaputt oder verkauft: der Rest fällt auf die Grows dieses Tages">
+                <input type="date" value={ausgemustert} min={datum || undefined} onChange={(e) => setAusgemustert(e.target.value)} data-audit="kosten-anschaffung-ausgemustert" />
+              </V1Field>
+            )}
+          </>
+        )}
         <V1Field label="Notiz" wide>
           <input type="text" value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Shop, Bestellnummer …" />
         </V1Field>
@@ -1341,13 +1398,13 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
             <span>Auch als Hardware-Artikel anlegen<small>legt unter Sensoren &amp; Wartung einen Eintrag an (Lebensdauer, Wartung) — für Werkzeug meist unnötig, für Technik sinnvoll</small></span>
           </label>
           <label className="ko-check">
-            <input type="checkbox" checked={journal && fuerGrow !== LAGER} onChange={(e) => setJournal(e.target.checked)} disabled={fuerGrow === LAGER} />
+            <input type="checkbox" checked={journal && einGrow} onChange={(e) => setJournal(e.target.checked)} disabled={!einGrow} />
             <span>Journal-Eintrag im gewählten Grow anlegen</span>
           </label>
         </>
       )}
 
-      {gesamt != null && <p className="ko-vorschau" data-audit="kosten-anschaffung-vorschau">Ergibt: {euro(gesamt)}</p>}
+      {gesamt != null && <p className="ko-vorschau" data-audit="kosten-anschaffung-vorschau">Ergibt: {euro(gesamt)}{verteilVorschau && <> · {verteilVorschau}</>}</p>}
 
       <div className="v1-form-actions">
         <V1Button variant="primary" onClick={() => void speichern()} disabled={busy || istLeer(name)} audit="kosten-anschaffung-speichern">Speichern</V1Button>
@@ -1362,7 +1419,8 @@ function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite
   const [busy, setBusy] = useState(false)
   const [bearbeiten, setBearbeiten] = useState<KostenAnschaffung | null>(null)
   const liste = seite.anschaffungen
-  const imGrow = seite.grow ? liste.filter((a) => a.growId === seite.grow!.id) : []
+  // forkai.157: „im Grow" heißt: trägt etwas bei — einmalig zugeordnet oder mit einem Anteil.
+  const imGrow = seite.grow ? liste.filter((a) => a.imGrowEur > 0) : []
 
   async function loeschen(a: KostenAnschaffung) {
     if (!window.confirm(`„${a.name}“ vom ${formatDate(a.datumUtc)} löschen?${a.hardwareItemId != null ? ' Der Hardware-Artikel dazu bleibt bestehen.' : ''}`)) return
@@ -1380,7 +1438,7 @@ function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite
   return (
     <V1Section title="Anschaffungen" action={<V1Button onClick={onErfassen}>Anschaffung erfassen</V1Button>}>
       <V1Card className="ko-stapel">
-        <p className="ko-hint">Was gekauft wurde und bleibt: Werkzeug, Technik, Zubehör. Wird nicht leer, hat keine Laufzeit — zählt einmal, im Grow, dem du es zuordnest. „Lager“ zählt in keinen Durchgang.</p>
+        <p className="ko-hint">Was gekauft wurde und bleibt: Werkzeug, Technik, Zubehör. Zählt entweder einmal, im Grow, dem du es zuordnest — oder verteilt über seine Nutzungsdauer: jeder Grow, der in der Zeit läuft, trägt seine Tage; laufen zwei gleichzeitig, teilen sie sich den Tag. Tage ohne Grow verfallen als Leerlauf. „Lager“ zählt in keinen Durchgang.</p>
         {bearbeiten && (
           <AnschaffungForm seite={seite} vorhanden={bearbeiten} onDone={(text) => { setBearbeiten(null); onChanged(text) }} onCancel={() => setBearbeiten(null)} onError={onError} />
         )}
@@ -1396,19 +1454,21 @@ function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite
                   <th scope="col">Stück</th>
                   <th scope="col">Einzelpreis</th>
                   <th scope="col">Gesamt</th>
-                  <th scope="col">Grow</th>
+                  <th scope="col">Zählt für</th>
                   <th scope="col"><span className="sr-only">Aktion</span></th>
                 </tr>
               </thead>
               <tbody>
                 {liste.map((a) => (
-                  <tr key={a.id} className={seite.grow && a.growId === seite.grow.id ? 'is-aktuell' : undefined}>
+                  <tr key={a.id} className={seite.grow && a.imGrowEur > 0 ? 'is-aktuell' : undefined}>
                     <td>{formatDate(a.datumUtc)}</td>
                     <th scope="row">{a.name}{(a.hersteller || a.produkt) && <small>{[a.hersteller, a.produkt].filter(Boolean).join(' · ')}</small>}{a.notiz && <small>{a.notiz}</small>}</th>
                     <td>{a.stueck}</td>
                     <td>{euro(a.einzelpreisEur)}</td>
                     <td>{euro(a.gesamtEur)}</td>
-                    <td>{a.growId != null ? <Link to={`/grows/${a.growId}`}>{a.growName ?? a.growId}</Link> : <span className="ls-pill is-plan">Lager</span>}</td>
+                    <td>{a.verteilung && a.nutzungsdauerMonate != null
+                      ? <VerteilungZelle a={a} v={a.verteilung} monate={a.nutzungsdauerMonate} grow={seite.grow?.name ?? null} />
+                      : a.growId != null ? <Link to={`/grows/${a.growId}`}>{a.growName ?? a.growId}</Link> : <span className="ls-pill is-plan">Lager</span>}</td>
                     <td>
                       <button type="button" className="ls-btn is-small" disabled={busy} onClick={() => setBearbeiten(a)}>Bearbeiten</button>{' '}
                       <button type="button" className="ls-btn is-small is-ghost" disabled={busy} onClick={() => void loeschen(a)}>Löschen</button>
@@ -1432,6 +1492,28 @@ function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite
         )}
       </V1Card>
     </V1Section>
+  )
+}
+
+/**
+ * forkai.157: Wohin der Preis einer verteilten Anschaffung bisher gegangen ist.
+ * Verteilt + Leerlauf + offen ergibt den Gesamtpreis — deshalb stehen alle
+ * drei da, sonst sähe die Summe der Durchgänge nach einem Rechenfehler aus.
+ */
+function VerteilungZelle({ a, v, monate, grow }: { a: KostenAnschaffung; v: KostenVerteilung; monate: number; grow: string | null }) {
+  const rest = [
+    v.leerlaufEur >= 0.005 ? `Leerlauf ${euro(v.leerlaufEur)}` : null,
+    v.offenEur >= 0.005 ? `offen ${euro(v.offenEur)}` : null,
+  ].filter(Boolean)
+  return (
+    <span className="ko-verteilt" data-audit="kosten-anschaffung-verteilung">
+      <span className="ls-pill">verteilt · {dauerText(monate)}</span>
+      <small>{euro(v.eurProTag)} je Tag{a.zeltName ? ` · nur ${a.zeltName}` : ''}</small>
+      <small>{v.ausgemustertTag ? `ausgemustert ${formatDate(v.ausgemustertTag)}` : `bis ${formatDate(v.letzterTag)}`}</small>
+      {grow && a.imGrowEur > 0 && <small>davon {grow}: {euro(a.imGrowEur)}</small>}
+      <small>bisher {euro(v.verteiltEur)} auf {v.anzahlGrows === 1 ? '1 Grow' : `${v.anzahlGrows} Grows`}</small>
+      {rest.length > 0 && <small>{rest.join(' · ')}</small>}
+    </span>
   )
 }
 

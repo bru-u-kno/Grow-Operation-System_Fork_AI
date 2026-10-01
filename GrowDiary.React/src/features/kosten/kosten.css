@@ -35,14 +35,22 @@
   .ko-hint a { color: var(--accent-text); }
 
   /* Tabellen — derselbe Satz wie .cs-tabelle. */
-  .ko-tabelle-huelle { overflow-x: auto; }
+  /* position: relative — sonst entkommt der unsichtbare Spaltenkopf „Aktion"
+     (.sr-only, absolut positioniert) dem Wischbereich: sein Bezugsrahmen lag
+     außerhalb, und er zog die ganze Seite am Telefon 228 px breit. Sichtbar
+     erst mit Anschaffungen im Bestand, deshalb fiel es im Demobestand nie auf
+     (forkai.157). */
+  .ko-tabelle-huelle { overflow-x: auto; position: relative; }
   .ko-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
   .ko-tabelle th[scope='col'] {
     text-align: left; font-family: var(--font-mono); font-size: var(--fs-etikett); font-weight: 500;
     letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
     padding: 0 var(--s-3) var(--s-2) 0; white-space: nowrap;
   }
-  .ko-tabelle th[scope='row'] { text-align: left; font-weight: 500; color: var(--ink); }
+  /* Mindestbreite: die Zahlenzellen brechen nie um (nowrap), die Namenszelle
+     schon — am Telefon blieb ihr sonst eine Handbreit, und „Erntescheren"
+     stand in Silben untereinander (forkai.157). */
+  .ko-tabelle th[scope='row'] { text-align: left; font-weight: 500; color: var(--ink); min-width: 9em; }
   .ko-tabelle th[scope='row'] small { display: block; font-weight: 400; color: var(--faint); font-size: var(--fs-etikett); }
   .ko-tabelle td, .ko-tabelle th[scope='row'] { padding: var(--s-2) var(--s-3) var(--s-2) 0; border-top: 1px solid var(--hair); vertical-align: top; }
   .ko-tabelle td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -57,6 +65,11 @@
     .ko-tabelle th[scope='col'], .ko-tabelle td, .ko-tabelle th[scope='row'] { padding-right: var(--s-2); }
     .ko-tabelle th[scope='col'] { letter-spacing: .06em; }
   }
+  /* forkai.157: Zelle einer verteilten Anschaffung — Etikett, darunter
+     woher die Zahl kommt. Jede Angabe eine eigene Zeile, damit die Spalte
+     nicht in die Breite läuft. */
+  .ko-tabelle .ko-verteilt .ls-pill { margin-left: 0; }
+  .ko-tabelle .ko-verteilt small { display: block; font-family: var(--font-sans); color: var(--muted); font-size: var(--fs-etikett); line-height: 1.5; }
   .ko-link { background: none; border: 0; padding: 0; color: var(--accent-text); font: inherit; cursor: pointer; text-decoration: underline; }
 
   /* Ein Verbrauchsartikel: eine .v1-card im .co-grid. Der Balken ist eine
@@ -76,6 +89,11 @@
 
   /* Formulare: Erfassung und Quelle. */
   .ko-form-inhalt { display: grid; gap: var(--s-3); }
+  /* forkai.157: Nutzungsdauer — Zahl und Einheit in einer Zeile. Zwei Klassen
+     im Selektor, damit die Breite aus .v1-field select nicht gewinnt. */
+  .v1-field .ko-dauer { display: flex; gap: var(--s-2); min-width: 0; }
+  .v1-field .ko-dauer input { flex: 1 1 5em; min-width: 0; }
+  .v1-field .ko-dauer select { flex: 0 0 auto; width: auto; }
   .ko-check { display: flex; gap: var(--s-2); align-items: flex-start; font-size: var(--fs-text); color: var(--ink); line-height: 1.45; }
   .ko-check input { margin-top: 3px; accent-color: var(--accent); }
   .ko-check small { display: block; color: var(--muted); font-size: var(--fs-klein); }

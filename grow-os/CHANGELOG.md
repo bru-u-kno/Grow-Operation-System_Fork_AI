@@ -5,6 +5,31 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.157
+
+**Fork AI.** Kosten: Anschaffungen lassen sich auf alle Grows verteilen.
+
+- Neu — **„Auf alle Grows verteilen“ bei einer Anschaffung.** Bisher zählte eine Anschaffung ganz in einem
+  Grow oder in keinem. Eine Lampe, die jahrelang läuft, belastete so einen Durchgang mit dem vollen Preis und
+  alle folgenden mit nichts. Jetzt gibt man eine Nutzungsdauer in Jahren oder Monaten an; der Preis wird über
+  diese Zeit verteilt, und jeder Grow trägt die Tage, an denen er läuft. Laufen zwei Grows gleichzeitig, teilen
+  sie sich den Tag. Optional zählen nur Grows in einem bestimmten Zelt.
+- **Verteilt wird über die Zeit, nicht über die Zahl der Grows** — wie viele noch kommen, weiß niemand. So
+  ändert sich ein abgeschlossener Grow nie mehr nachträglich. Tage ohne laufenden Grow verfallen als
+  „Leerlauf“; die Tabelle zeigt je Anschaffung, was bisher verteilt ist, was im Leerlauf lag und was noch
+  offen ist.
+- **Ausgemustert am** (beim Bearbeiten): Geht ein Gerät vorzeitig kaputt oder wird verkauft, fällt der noch
+  nicht verteilte Rest auf die Grows, die an diesem Tag laufen. Läuft keiner, ist auch der Rest Leerlauf.
+- Bestehende Anschaffungen bleiben, wie sie sind: einmalig im zugeordneten Grow.
+- Behoben — **Der Reiter „Durchgänge“ rechnete Verbrauchsartikel anders als die Übersicht.** Bei Artikeln mit
+  „erst der Verbrauch zählt“ (z. B. ein Kanister, der mehrere Grows hält) stand dort der ganze Kauf statt des
+  Verbrauchten — derselbe Grow hatte zwei verschiedene Summen. Jetzt rechnen Übersicht, Artikelzeile und
+  Durchgänge an einer Stelle.
+- Behoben — **Verbrauch wurde mit dem Preis der ältesten Füllung bewertet** statt mit dem der Füllung, die
+  zu dem Zeitpunkt lief. Bei einem Nachkauf zu anderem Preis stand die Summe falsch.
+- Behoben — **Am Telefon war die Kosten-Seite breiter als der Bildschirm**, sobald eine Anschaffung
+  in der Tabelle stand; die Artikelnamen standen in Silben untereinander.
+
 ## 2.0.0-forkai.156
 
 **Fork AI.** CO₂: auch die beiden Rechenwerte lassen sich jetzt absichern.

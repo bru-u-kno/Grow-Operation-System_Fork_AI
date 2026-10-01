@@ -113,10 +113,17 @@ public sealed class KostenRepository : RepositoryBase
             // forkai.90: zwei weitere Spalten. AufGrowBuchen faellt bewusst auf 0
             // zurueck — bestehende Installationen behalten damit exakt die Zahlen,
             // die sie vorher hatten, und entscheiden je Artikel neu.
+            //
+            // forkai.157: drei Spalten fuer die verteilte Anschaffung. Alle drei
+            // fallen auf NULL — eine bestehende Anschaffung zaehlt damit weiter
+            // einmalig in ihrem Grow, wie bisher.
             foreach (var (tabelle, spalte, typ) in new[]
             {
                 ("ForkVerbrauchsartikel", "AufGrowBuchen", "INTEGER NOT NULL DEFAULT 0"),
                 ("ForkVerbraeuche", "MessungId", "INTEGER NULL"),
+                ("ForkAnschaffungen", "NutzungsdauerMonate", "INTEGER NULL"),
+                ("ForkAnschaffungen", "TentId", "INTEGER NULL"),
+                ("ForkAnschaffungen", "AusgemustertAmUtc", "TEXT NULL"),
             })
             {
                 if (!SpalteVorhanden(connection, tabelle, spalte))
@@ -262,8 +269,10 @@ public sealed class KostenRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkAnschaffungen (Name, Hersteller, Produkt, DatumUtc, Stueck, EinzelpreisEur, GrowId, Notiz, HardwareItemId, CreatedAtUtc)
-            VALUES ($name, $hersteller, $produkt, $datumUtc, $stueck, $einzelpreis, $growId, $notiz, $hardwareItemId, $createdAtUtc);
+            INSERT INTO ForkAnschaffungen (Name, Hersteller, Produkt, DatumUtc, Stueck, EinzelpreisEur, GrowId, Notiz, HardwareItemId,
+                NutzungsdauerMonate, TentId, AusgemustertAmUtc, CreatedAtUtc)
+            VALUES ($name, $hersteller, $produkt, $datumUtc, $stueck, $einzelpreis, $growId, $notiz, $hardwareItemId,
+                $nutzungsdauerMonate, $tentId, $ausgemustertAmUtc, $createdAtUtc);
             SELECT last_insert_rowid();
             """;
         BindAnschaffung(command, a);
@@ -278,7 +287,8 @@ public sealed class KostenRepository : RepositoryBase
         command.CommandText = """
             UPDATE ForkAnschaffungen
             SET Name = $name, Hersteller = $hersteller, Produkt = $produkt, DatumUtc = $datumUtc, Stueck = $stueck,
-                EinzelpreisEur = $einzelpreis, GrowId = $growId, Notiz = $notiz, HardwareItemId = $hardwareItemId
+                EinzelpreisEur = $einzelpreis, GrowId = $growId, Notiz = $notiz, HardwareItemId = $hardwareItemId,
+                NutzungsdauerMonate = $nutzungsdauerMonate, TentId = $tentId, AusgemustertAmUtc = $ausgemustertAmUtc
             WHERE Id = $id;
             """;
         BindAnschaffung(command, a);
@@ -306,6 +316,9 @@ public sealed class KostenRepository : RepositoryBase
         command.Parameters.AddWithValue("$growId", (object?)a.GrowId ?? DBNull.Value);
         command.Parameters.AddWithValue("$notiz", (object?)NormalizeOptional(a.Notiz) ?? DBNull.Value);
         command.Parameters.AddWithValue("$hardwareItemId", (object?)a.HardwareItemId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$nutzungsdauerMonate", (object?)a.NutzungsdauerMonate ?? DBNull.Value);
+        command.Parameters.AddWithValue("$tentId", (object?)a.TentId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$ausgemustertAmUtc", a.AusgemustertAmUtc is { } aus ? ToStorageUtc(aus) : (object)DBNull.Value);
     }
 
     private static Anschaffung MapAnschaffung(SqliteDataReader reader) => new()
@@ -320,6 +333,9 @@ public sealed class KostenRepository : RepositoryBase
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
         Notiz = NullString(reader["Notiz"]),
         HardwareItemId = reader["HardwareItemId"] is DBNull ? null : Convert.ToInt32(reader["HardwareItemId"], CultureInfo.InvariantCulture),
+        NutzungsdauerMonate = reader["NutzungsdauerMonate"] is DBNull ? null : Convert.ToInt32(reader["NutzungsdauerMonate"], CultureInfo.InvariantCulture),
+        TentId = reader["TentId"] is DBNull ? null : Convert.ToInt32(reader["TentId"], CultureInfo.InvariantCulture),
+        AusgemustertAmUtc = reader["AusgemustertAmUtc"] is DBNull ? null : ParseStoredUtcDateTime(reader["AusgemustertAmUtc"].ToString()),
         CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"].ToString()) ?? DateTime.UtcNow,
     };
 

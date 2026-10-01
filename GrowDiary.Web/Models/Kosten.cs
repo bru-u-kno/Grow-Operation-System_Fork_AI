@@ -98,7 +98,9 @@ public static class VerbrauchsEinheiten
 
 /// <summary>
 /// Etwas, das gekauft wurde und bleibt (forkai.9): Werkzeug, Technik, Zubehör.
-/// Wird nicht leer, hat keine Laufzeit — zählt einmal, im Grow, dem es zugeordnet ist.
+/// Wird nicht leer. Zählt entweder einmal, im Grow, dem es zugeordnet ist —
+/// oder (forkai.157) verteilt über eine Nutzungsdauer auf alle Grows, die in
+/// dieser Zeit laufen.
 /// </summary>
 public sealed class Anschaffung
 {
@@ -110,8 +112,30 @@ public sealed class Anschaffung
     public int Stueck { get; set; } = 1;
     public double EinzelpreisEur { get; set; }
 
-    /// <summary>Null = Lager, zählt in keinen Durchgang.</summary>
+    /// <summary>Null = Lager, zählt in keinen Durchgang — es sei denn, die Anschaffung wird verteilt.</summary>
     public int? GrowId { get; set; }
+
+    /// <summary>
+    /// forkai.157: Über wie viele Monate ab <see cref="DatumUtc"/> sich der Preis
+    /// verteilt. Null = einmalig im zugeordneten Grow (das bisherige Verhalten).
+    /// Die Rechnung steht in <c>AnschaffungVerteilung</c>.
+    /// </summary>
+    public int? NutzungsdauerMonate { get; set; }
+
+    /// <summary>
+    /// forkai.157: Nur Grows in diesem Zelt tragen einen Anteil. Null = jeder
+    /// Grow, der läuft — richtig für Werkzeug, das zwischen Zelten wandert.
+    /// Nur bei verteilten Anschaffungen von Bedeutung.
+    /// </summary>
+    public int? TentId { get; set; }
+
+    /// <summary>
+    /// forkai.157: Vorzeitig außer Betrieb — kaputt, verkauft, ersetzt. Ab dem
+    /// Tag gibt es keine Tagesanteile mehr; der noch nicht verteilte Rest fällt
+    /// auf die Grows, die an diesem Tag laufen. Null = läuft die volle Dauer.
+    /// </summary>
+    public DateTime? AusgemustertAmUtc { get; set; }
+
     public string? Notiz { get; set; }
 
     /// <summary>Der Hardware-Artikel, der beim Erfassen angelegt wurde — falls gewünscht.</summary>

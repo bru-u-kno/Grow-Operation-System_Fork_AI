@@ -364,14 +364,55 @@ public sealed class KostenApiController : ApiControllerBase
         public bool AlsHardware { get; set; }
         /// <summary>Einen Journal-Eintrag im Grow anlegen.</summary>
         public bool Journal { get; set; } = true;
+
+        /// <summary>
+        /// forkai.157: Über so viele Monate ab dem Datum auf alle Grows verteilen,
+        /// die in der Zeit laufen. Null = einmalig im Grow (bisher). Mit Wert
+        /// gehört die Anschaffung keinem einzelnen Grow, GrowId wird ignoriert.
+        /// </summary>
+        public int? NutzungsdauerMonate { get; set; }
+
+        /// <summary>forkai.157: Nur Grows in diesem Zelt tragen einen Anteil; null = alle. Nur beim Verteilen.</summary>
+        public int? TentId { get; set; }
+
+        /// <summary>forkai.157: Vorzeitig außer Betrieb; der Rest fällt auf die Grows dieses Tages. Nur beim Verteilen.</summary>
+        public DateTime? AusgemustertAm { get; set; }
     }
 
-    private ActionResult? AnschaffungPruefen(AnschaffungRequest request)
+    private ActionResult? AnschaffungPruefen(AnschaffungRequest request, DateTime datumUtc)
     {
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Die Anschaffung braucht einen Namen.");
         if (request.Stueck <= 0) return BadRequestError("stueck_invalid", "Stückzahl muss mindestens 1 sein.");
         if (request.EinzelpreisEur < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
+        if (request.NutzungsdauerMonate is { } monate)
+        {
+            if (monate < 1 || monate > AnschaffungVerteilung.MaxMonate)
+            {
+                return BadRequestError("nutzungsdauer_invalid", $"Die Nutzungsdauer liegt zwischen 1 und {AnschaffungVerteilung.MaxMonate} Monaten.");
+            }
+            if (request.TentId is { } tentId && _grows.GetTent(tentId) is null)
+            {
+                return BadRequestError("tent_not_found", $"Zelt {tentId} existiert nicht.");
+            }
+            if (request.AusgemustertAm is not null && ZuUtc(request.AusgemustertAm).ToLocalTime().Date < datumUtc.ToLocalTime().Date)
+            {
+                return BadRequestError("ausgemustert_invalid", "Ausgemustert kann nicht vor dem Kaufdatum liegen.");
+            }
+        }
         return null;
+    }
+
+    /// <summary>
+    /// forkai.157: Zelt und Ausmusterung haben nur beim Verteilen eine Bedeutung.
+    /// Ohne Verteilung bleiben sie leer — sonst stünde ein Wert in der
+    /// Datenbank, den keine Oberfläche zeigt und keine Rechnung liest.
+    /// </summary>
+    private static void VerteilungUebernehmen(Anschaffung a, AnschaffungRequest request)
+    {
+        var verteilt = request.NutzungsdauerMonate is > 0;
+        a.NutzungsdauerMonate = verteilt ? request.NutzungsdauerMonate : null;
+        a.TentId = verteilt ? request.TentId : null;
+        a.AusgemustertAmUtc = verteilt && request.AusgemustertAm is not null ? ZuUtc(request.AusgemustertAm) : null;
     }
 
     [HttpPost("anschaffungen")]
@@ -379,9 +420,10 @@ public sealed class KostenApiController : ApiControllerBase
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<Anschaffung> CreateAnschaffung([FromBody] AnschaffungRequest request)
     {
-        if (AnschaffungPruefen(request) is { } fehler) return fehler;
         var datum = ZuUtc(request.Datum);
-        var growId = request.OhneGrow ? null : request.GrowId ?? _seite.LaufenderGrow(datum.ToLocalTime().Date).GrowId;
+        if (AnschaffungPruefen(request, datum) is { } fehler) return fehler;
+        var verteilt = request.NutzungsdauerMonate is > 0;
+        var growId = request.OhneGrow || verteilt ? null : request.GrowId ?? _seite.LaufenderGrow(datum.ToLocalTime().Date).GrowId;
         if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
 
         var (herstellerN, produktN) = Angleichen(request.Hersteller, request.Produkt);
@@ -397,6 +439,7 @@ public sealed class KostenApiController : ApiControllerBase
                 Manufacturer = herstellerN,
                 Model = produktN,
                 GrowId = growId,
+                TentId = verteilt ? request.TentId : null,
                 InstalledAtUtc = datum,
             });
             hardwareId = item.Id;
@@ -408,6 +451,7 @@ public sealed class KostenApiController : ApiControllerBase
             DatumUtc = datum, Stueck = request.Stueck, EinzelpreisEur = request.EinzelpreisEur,
             GrowId = growId, Notiz = request.Notiz, HardwareItemId = hardwareId,
         };
+        VerteilungUebernehmen(a, request);
         a.Id = _repo.CreateAnschaffung(a);
 
         if (request.Journal && growId is { } gid && _grows.GetGrow(gid) is not null)
@@ -438,18 +482,20 @@ public sealed class KostenApiController : ApiControllerBase
     {
         var a = _repo.GetAnschaffung(id);
         if (a is null) return NotFoundError("anschaffung_not_found", $"Anschaffung {id} existiert nicht.");
-        if (AnschaffungPruefen(request) is { } fehler) return fehler;
-        var growId = request.OhneGrow ? null : request.GrowId ?? a.GrowId;
+        var datum = request.Datum is null ? a.DatumUtc : ZuUtc(request.Datum);
+        if (AnschaffungPruefen(request, datum) is { } fehler) return fehler;
+        var growId = request.OhneGrow || request.NutzungsdauerMonate is > 0 ? null : request.GrowId ?? a.GrowId;
         if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
         var (herstellerAU, produktAU) = Angleichen(request.Hersteller, request.Produkt);
         a.Name = request.Name;
         a.Hersteller = herstellerAU;
         a.Produkt = produktAU;
-        a.DatumUtc = request.Datum is null ? a.DatumUtc : ZuUtc(request.Datum);
+        a.DatumUtc = datum;
         a.Stueck = request.Stueck;
         a.EinzelpreisEur = request.EinzelpreisEur;
         a.GrowId = growId;
         a.Notiz = request.Notiz;
+        VerteilungUebernehmen(a, request);
         _repo.UpdateAnschaffung(a);
         return Ok(_repo.GetAnschaffung(id));
     }

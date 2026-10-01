@@ -18,7 +18,8 @@
     Zeile; „Strom-Quelle einstellen“.
   - **Verbrauch**: Artikel-Karten (laufende Füllung, Prognose, Bearbeiten) und
     die Nachfüll-Historie.
-  - **Anschaffungen**: Werkzeug/Technik/Zubehör mit Stück, Einzelpreis, Grow.
+  - **Anschaffungen**: Werkzeug/Technik/Zubehör mit Stück, Einzelpreis und
+    „Zählt für“ (Grow, verteilt oder Lager).
   - **Durchgänge**: dieselbe Rechnung für alle Grows, anklickbar.
 
 Der Strompreis je kWh steht **nicht** hier, sondern in den Einstellungen
@@ -49,7 +50,24 @@ Schreibweise fest.
 **Anschaffungen (forkai.9).** Was gekauft wird und bleibt: Name, Hersteller,
 Produkt, Datum, Stück, Einzelpreis, Grow oder Lager, Notiz. Zählt einmal, hat
 keine Laufzeit. Optional legt das Erfassen einen Hardware-Artikel (Kategorie
-„Zubehör“) unter Sensoren & Wartung an und einen Journal-Eintrag im Grow. Eine **Nachfüllung** ist Datum, Menge, Kosten, Notiz, Grow. Beim
+„Zubehör“) unter Sensoren & Wartung an und einen Journal-Eintrag im Grow.
+
+**Verteilte Anschaffungen (forkai.157).** „Zählt für: Auf alle Grows
+verteilen“ plus eine Nutzungsdauer (Jahre oder Monate, höchstens 50 Jahre)
+verteilt den Preis ab dem Datum linear über die Kalendertage der Dauer. Jeder
+Tag geht an die Grows, die an ihm laufen (Start bis Ende einschließlich, ein
+laufender bis heute); mehrere teilen ihn zu gleichen Teilen. Optional zählen
+nur Grows eines Zelts. Ein Tag ohne Grow ist **Leerlauf** und wird von
+niemandem getragen. **Ausgemustert am** (nur beim Bearbeiten) beendet die
+Tagesanteile; der Rest fällt auf die Grows dieses Tages, sonst in den
+Leerlauf. Über die Zeit statt über die Zahl der Grows, damit ein
+abgeschlossener Grow sich nie mehr ändert. Verteilt + Leerlauf + offen ergibt
+immer den Gesamtpreis; die Tabelle zeigt alle drei. Geplante Grows tragen
+nichts, abgeschlossene ohne Enddatum (Altbestand) ebenfalls. Rechnung:
+`GrowDiary.Web/Services/AnschaffungVerteilung.cs`, geprüft in
+`AnschaffungVerteilungTests` und über HTTP in `AnschaffungVerteilenRundwegTests`.
+
+Eine **Nachfüllung** ist Datum, Menge, Kosten, Notiz, Grow. Beim
 Erfassen ist „Vorherige Füllung damit als leer markieren“ vorbelegt — die neue
 Flasche hängt ja dran, die alte nicht mehr. Aus dem Leer-Zeitpunkt entsteht
 die **Laufzeit** der alten Füllung; daraus die Prognose für die neue. Auf
@@ -67,8 +85,9 @@ Wunsch (vorbelegt) entsteht ein Journal-Eintrag im Grow.
 | Prognose „leer ≈“ | Mittel der letzten drei Laufzeiten **je Mengeneinheit** × Menge der laufenden Füllung — eine halbe Flasche hält halb so lang; Laufzeiten unter einem Tag zählen nicht (Fehlgriff) | `ArtikelBerechnen` |
 | Füllstand % | 1 − vergangene Tage ÷ Prognose-Tage, zeitbasiert | `ArtikelBerechnen` |
 | Euro je Tag (Artikel) | Kosten der Füllung ÷ Prognose-Tage (laufend) bzw. ÷ Laufzeit (abgeschlossen) | `ArtikelBerechnen` |
-| Anschaffungen | Summe Stück × Einzelpreis der Positionen mit `GrowId` = Grow; Lager zählt nirgends | `Berechnen` |
-| Gesamt | Strom + Füllungen + Anschaffungen des Grows | `Berechnen` |
+| Anschaffungen | Einmalige: Stück × Einzelpreis der Positionen mit `GrowId` = Grow; verteilte: Anteil des Grows (s. o.); Lager zählt nirgends | `AnschaffungEurImGrow` |
+| Verbrauchsartikel | Füllungen des Grows, bei „erst der Verbrauch zählt“ der gebuchte Verbrauch × Preis der damals laufenden Füllung — dieselbe Rechnung für Übersicht, Artikelzeile und Durchgänge | `ArtikelEurImGrow` |
+| Gesamt | Strom + Verbrauchsartikel + Anschaffungen des Grows | `Berechnen` |
 | Je Tag / je Pflanze | Gesamt ÷ Tag im Grow bzw. ÷ `PlantCount` | `Berechnen` |
 | Prognose Ernte | Gesamt + Resttage × Ø je Tag; Ernte = Flip + Züchter-Blütewochen (Mitte von min/max) | `Ernteprognose` |
 

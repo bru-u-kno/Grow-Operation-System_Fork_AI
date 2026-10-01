@@ -91,7 +91,35 @@ public sealed record KostenNachfuellung(
 
 public sealed record KostenAnschaffung(
     int Id, string Name, string? Hersteller, string? Produkt, DateTime DatumUtc, int Stueck, double EinzelpreisEur, double GesamtEur,
-    int? GrowId, string? GrowName, string? Notiz, int? HardwareItemId);
+    int? GrowId, string? GrowName, string? Notiz, int? HardwareItemId,
+    /// <summary>forkai.157: Null = einmalig im Grow; sonst verteilt über so viele Monate.</summary>
+    int? NutzungsdauerMonate,
+    /// <summary>forkai.157: Nur Grows in diesem Zelt tragen einen Anteil; null = alle.</summary>
+    int? TentId,
+    string? ZeltName,
+    DateTime? AusgemustertAmUtc,
+    /// <summary>forkai.157: Die Verteilung, Stand heute — null bei einmaligen Anschaffungen.</summary>
+    KostenVerteilung? Verteilung,
+    /// <summary>Was diese Anschaffung den gezeigten Grow kostet — einmalig voll, verteilt sein Anteil.</summary>
+    double ImGrowEur);
+
+/// <summary>
+/// forkai.157: Wo der Preis einer verteilten Anschaffung bisher gelandet ist.
+/// Verteilt + Leerlauf + Offen ergibt immer den Gesamtpreis.
+/// </summary>
+public sealed record KostenVerteilung(
+    /// <summary>Letzter Tag der Nutzungsdauer (Ortszeit), einschließlich.</summary>
+    DateTime LetzterTag,
+    DateTime? AusgemustertTag,
+    double EurProTag,
+    double VerteiltEur,
+    double LeerlaufEur,
+    double RestwertEur,
+    double OffenEur,
+    int AnzahlGrows);
+
+/// <summary>forkai.157: Ein Zelt zur Auswahl „nur Grows in diesem Zelt".</summary>
+public sealed record KostenZelt(int Id, string Name);
 
 public sealed record KostenDurchgang(int GrowId, string Name, DateTime StartDate, DateTime? EndDate, bool Laeuft, double? StromEur, double ArtikelEur, double AnschaffungenEur, double? GesamtEur);
 
@@ -105,7 +133,8 @@ public sealed record KostenSeite(
     IReadOnlyList<KostenDurchgang> Durchgaenge,
     IReadOnlyList<string> Einheiten,
     IReadOnlyList<string> Hersteller,
-    IReadOnlyList<KostenProdukt> Produkte);
+    IReadOnlyList<KostenProdukt> Produkte,
+    IReadOnlyList<KostenZelt> Zelte);
 
 /// <summary>Ein bekanntes Produkt mit seinem Hersteller — für den Vorschlag im Formular.</summary>
 public sealed record KostenProdukt(string? Hersteller, string Produkt);
@@ -223,7 +252,8 @@ public sealed class KostenSeiteService
             _kosten.GetAnschaffungen(),
             DateTime.UtcNow,
             _hardware.GetHardwareItems(),
-            _kosten.GetVerbraeuche());
+            _kosten.GetVerbraeuche(),
+            _grows.GetTents());
     }
 
     // ------------------------------------------------------------ Rechnung
@@ -240,9 +270,12 @@ public sealed class KostenSeiteService
         IReadOnlyList<Anschaffung> anschaffungen,
         DateTime jetztUtc,
         IReadOnlyList<HardwareItem>? hardware = null,
-        IReadOnlyList<Verbrauch>? verbraeuche = null)
+        IReadOnlyList<Verbrauch>? verbraeuche = null,
+        IReadOnlyList<Tent>? zelte = null)
     {
         hardware ??= [];
+        verbraeuche ??= [];
+        zelte ??= [];
         var hersteller = Stammdaten.Sortiert(
             artikel.Select(a => a.Hersteller)
             .Concat(anschaffungen.Select(a => a.Hersteller))
@@ -260,7 +293,7 @@ public sealed class KostenSeiteService
         var growNachId = alleGrows.ToDictionary(g => g.Id);
 
         var strom = StromBerechnen(grow, quelle, preisCent, leistungW, staende, jetztUtc);
-        var artikelListe = artikel.Select(a => ArtikelBerechnen(a, fuellungen, verbraeuche ?? Array.Empty<Verbrauch>(), grow?.Id, jetztUtc)).ToList();
+        var artikelListe = artikel.Select(a => ArtikelBerechnen(a, fuellungen, verbraeuche, grow?.Id, jetztUtc)).ToList();
         var fuellungenListe = fuellungen
             .OrderByDescending(f => f.ZeitpunktUtc)
             .Select(f =>
@@ -274,42 +307,34 @@ public sealed class KostenSeiteService
             })
             .ToList();
 
-        // forkai.90: Zwei Buchungsziele, je Artikel gewaehlt.
-        //  * AufGrowBuchen = false (Voreinstellung, bisheriges Verhalten):
-        //    die Nachfuellung zaehlt voll in dem Durchgang, dem sie zugeordnet ist.
-        //  * AufGrowBuchen = true: die Nachfuellung ist lagerneutral, und nur der
-        //    gebuchte Verbrauch trifft den Durchgang — bewertet ueber
-        //    VerbrauchsansichtService.PreisJeEinheit, also mit dem Preis der
-        //    Fuellung, aus der die Menge stammt.
-        // Ohne die Trennung zaehlte ein 10-L-Kanister voll auf den Lauf, in dem
-        // er gekauft wurde, obwohl er drei Laeufe haelt.
-        var aufGrow = artikel.Where(a => a.AufGrowBuchen).Select(a => a.Id).ToHashSet();
+        // forkai.157: Artikel und Anschaffungen je Grow rechnet EINE Stelle —
+        // die Übersicht, die Artikelzeilen und der Reiter „Durchgänge" fragen
+        // dieselbe. Vorher hatte „Durchgänge" eine eigene, ältere Rechnung, die
+        // AufGrowBuchen nicht kannte: derselbe Grow stand dort mit dem ganzen
+        // Kanister statt mit dem Verbrauchten.
+        var verteilungen = anschaffungen
+            .Where(AnschaffungVerteilung.IstVerteilt)
+            .ToDictionary(a => a.Id, a => AnschaffungVerteilung.Berechnen(a, alleGrows, heute));
 
-        var fuellungenEur = grow is null
-            ? 0
-            : fuellungen.Where(f => f.GrowId == grow.Id && !aufGrow.Contains(f.ArtikelId)).Sum(f => f.KostenEur ?? 0);
-
-        var verbrauchEur = grow is null || verbraeuche is null
-            ? 0
-            : verbraeuche
-                .Where(v => v.GrowId == grow.Id && aufGrow.Contains(v.ArtikelId))
-                .Sum(v =>
-                {
-                    artikelNachId.TryGetValue(v.ArtikelId, out var a);
-                    var preis = VerbrauchsansichtService.PreisJeEinheit(
-                        fuellungen.Where(f => f.ArtikelId == v.ArtikelId).ToList(), v.ZeitpunktUtc, a);
-                    return preis is { } p ? v.Menge * p : 0;
-                });
-
-        var artikelEur = fuellungenEur + verbrauchEur;
-        var anschaffungenEur = grow is null ? 0 : anschaffungen.Where(a => a.GrowId == grow.Id).Sum(a => a.GesamtEur);
+        var artikelEur = grow is null ? 0 : ArtikelEurImGrow(grow.Id, artikel, fuellungen, verbraeuche);
+        var anschaffungenEur = grow is null ? 0 : anschaffungen.Sum(a => AnschaffungEurImGrow(a, grow.Id, verteilungen));
         var gesamt = (strom.EurSeitStart ?? 0) + artikelEur + anschaffungenEur;
 
+        var zeltNachId = zelte.ToDictionary(z => z.Id, z => z.Name);
         var anschaffungenListe = anschaffungen
             .OrderByDescending(a => a.DatumUtc).ThenByDescending(a => a.Id)
-            .Select(a => new KostenAnschaffung(
-                a.Id, a.Name, a.Hersteller, a.Produkt, a.DatumUtc, a.Stueck, a.EinzelpreisEur, a.GesamtEur,
-                a.GrowId, a.GrowId is { } gid2 && growNachId.TryGetValue(gid2, out var g2) ? g2.Name : null, a.Notiz, a.HardwareItemId))
+            .Select(a =>
+            {
+                KostenVerteilung? verteilung = verteilungen.TryGetValue(a.Id, out var v)
+                    ? new KostenVerteilung(v.BisTag.AddDays(-1), v.AusgemustertTag, v.EurProTag, v.VerteiltEur, v.LeerlaufEur, v.RestwertEur, v.OffenEur, v.JeGrow.Count)
+                    : null;
+                return new KostenAnschaffung(
+                    a.Id, a.Name, a.Hersteller, a.Produkt, a.DatumUtc, a.Stueck, a.EinzelpreisEur, a.GesamtEur,
+                    a.GrowId, a.GrowId is { } gid2 && growNachId.TryGetValue(gid2, out var g2) ? g2.Name : null, a.Notiz, a.HardwareItemId,
+                    a.NutzungsdauerMonate, a.TentId, a.TentId is { } tid && zeltNachId.TryGetValue(tid, out var zelt) ? zelt : null,
+                    a.AusgemustertAmUtc, verteilung,
+                    grow is null ? 0 : AnschaffungEurImGrow(a, grow.Id, verteilungen));
+            })
             .ToList();
 
         KostenGrowInfo? info = null;
@@ -339,15 +364,48 @@ public sealed class KostenSeiteService
             .Select(g =>
             {
                 var s = StromBerechnen(g, quelle, preisCent, null, staende, jetztUtc);
-                var a = fuellungen.Where(f => f.GrowId == g.Id).Sum(f => f.KostenEur ?? 0);
-                var an = anschaffungen.Where(x => x.GrowId == g.Id).Sum(x => x.GesamtEur);
+                var a = ArtikelEurImGrow(g.Id, artikel, fuellungen, verbraeuche);
+                var an = anschaffungen.Sum(x => AnschaffungEurImGrow(x, g.Id, verteilungen));
                 var summeEur = s.EurSeitStart is { } se ? se + a + an : (a + an > 0 ? a + an : (double?)null);
                 return new KostenDurchgang(g.Id, g.Name, g.StartDate, g.EndDate, g.Status == GrowStatus.Running, s.EurSeitStart, a, an, summeEur);
             })
             .ToList();
 
-        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle, hersteller, produkte);
+        var zelteListe = zelte.OrderBy(z => z.Name, StringComparer.CurrentCultureIgnoreCase).Select(z => new KostenZelt(z.Id, z.Name)).ToList();
+        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle, hersteller, produkte, zelteListe);
     }
+
+    /// <summary>
+    /// Was die Verbrauchsartikel einen Grow kosten (forkai.90, forkai.157).
+    /// </summary>
+    /// <remarks>
+    /// Zwei Buchungsziele, je Artikel gewählt:
+    /// <list type="bullet">
+    /// <item>AufGrowBuchen = false (Voreinstellung, bisheriges Verhalten): die
+    /// Nachfüllung zählt voll in dem Durchgang, dem sie zugeordnet ist.</item>
+    /// <item>AufGrowBuchen = true: die Nachfüllung ist lagerneutral, und nur der
+    /// gebuchte Verbrauch trifft den Durchgang — bewertet über
+    /// <see cref="VerbrauchsansichtService.PreisJeEinheit"/>, also mit dem Preis
+    /// der Füllung, aus der die Menge stammt.</item>
+    /// </list>
+    /// Ohne die Trennung zählte ein 10-L-Kanister voll auf den Lauf, in dem er
+    /// gekauft wurde, obwohl er drei Läufe hält.
+    /// </remarks>
+    public static double ArtikelEurImGrow(int growId, Verbrauchsartikel artikel, IReadOnlyList<Nachfuellung> fuellungenDesArtikels, IReadOnlyList<Verbrauch> verbraeuche)
+        => artikel.AufGrowBuchen
+            ? verbraeuche
+                .Where(v => v.ArtikelId == artikel.Id && v.GrowId == growId)
+                .Sum(v => VerbrauchsansichtService.PreisJeEinheit(fuellungenDesArtikels, v.ZeitpunktUtc, artikel) is { } preis ? v.Menge * preis : 0)
+            : fuellungenDesArtikels.Where(f => f.ArtikelId == artikel.Id && f.GrowId == growId).Sum(f => f.KostenEur ?? 0);
+
+    private static double ArtikelEurImGrow(int growId, IReadOnlyList<Verbrauchsartikel> artikel, IReadOnlyList<Nachfuellung> fuellungen, IReadOnlyList<Verbrauch> verbraeuche)
+        => artikel.Sum(a => ArtikelEurImGrow(growId, a, fuellungen.Where(f => f.ArtikelId == a.Id).ToList(), verbraeuche));
+
+    /// <summary>Einmalig: der volle Preis im zugeordneten Grow. Verteilt: der Anteil dieses Grows (forkai.157).</summary>
+    private static double AnschaffungEurImGrow(Anschaffung a, int growId, IReadOnlyDictionary<int, AnschaffungAnteile> verteilungen)
+        => verteilungen.TryGetValue(a.Id, out var v)
+            ? v.JeGrow.GetValueOrDefault(growId)
+            : a.GrowId == growId ? a.GesamtEur : 0;
 
     private static (double? Prognose, string? Hinweis) Ernteprognose(GrowRun grow, DateTime heute, double bisher, double proTag)
     {
@@ -541,15 +599,7 @@ public sealed class KostenSeiteService
         // Fuellungen. Vorher kannte diese Zeile nur Fuellungen — Purolyt stand
         // deshalb auf 0 EUR, obwohl 2,93 EUR gebucht waren und in der
         // Gesamtsumme auch auftauchten.
-        double summeImGrow = 0;
-        if (growId is { } g)
-        {
-            summeImGrow = a.AufGrowBuchen
-                ? verbraeuche
-                    .Where(v => v.ArtikelId == a.Id && v.GrowId == g)
-                    .Sum(v => VerbrauchsansichtService.PreisJeEinheit(eigene, v.ZeitpunktUtc, a) is { } preis ? v.Menge * preis : 0)
-                : eigene.Where(f => f.GrowId == g).Sum(f => f.KostenEur ?? 0);
-        }
+        var summeImGrow = growId is { } g ? ArtikelEurImGrow(g, a, eigene, verbraeuche) : 0;
 
         return new KostenArtikel(
             a.Id, a.Name, a.Hersteller, a.Produkt, a.PreisEur, a.Einheit, a.Gebinde, a.TentId, a.Notiz, a.Aktiv,

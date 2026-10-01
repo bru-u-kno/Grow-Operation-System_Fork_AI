@@ -332,8 +332,9 @@ public sealed class RundwegVollstaendigTests
             + "fahren KostenSeiteTests und die Oberflaechen-Erfassung.",
         ["AnschaffungRequest"] =
             "Der Demobestand legt keine Anschaffung an; ohne Bestand faehrt der Rundweg ins "
-            + "Leere und waere gruen, ohne etwas zu pruefen. Die Felder fahren KostenSeiteTests "
-            + "und die Oberflaechen-Erfassung (Anlegen, Bearbeiten, zweimal speichern).",
+            + "Leere und waere gruen, ohne etwas zu pruefen. Die Felder fahren KostenSeiteTests, "
+            + "AnschaffungVerteilenRundwegTests (forkai.157: legt selbst an, speichert zweimal, "
+            + "stellt zurueck) und die Oberflaechen-Erfassung.",
         ["NachfuellungUpdateRequest"] =
             "Der Demobestand legt keine Nachfuellung an; ohne Bestand faehrt der Rundweg "
             + "ins Leere und waere gruen, ohne etwas zu pruefen. Der Vertrag ist fuer den "

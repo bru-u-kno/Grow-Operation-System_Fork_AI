@@ -139,11 +139,16 @@ public sealed class VerbrauchsansichtService
     /// Artikelpreis; gibt es auch den nicht, bleibt die Zeile ohne Betrag. Eine
     /// Null hinzuschreiben wäre schlimmer: Die Summe sähe vollständig aus und
     /// wäre zu niedrig.
+    /// <para>forkai.157: Die Reihenfolge der Liste ist egal — sortiert wird hier.
+    /// Vorher hing das Ergebnis daran, wer aufruft: das Repository liefert
+    /// neueste zuerst, und die Kosten-Seite fand damit die ÄLTESTE Füllung vor
+    /// dem Zeitpunkt statt der jüngsten.</para>
     /// </remarks>
     public static double? PreisJeEinheit(
         IReadOnlyList<Nachfuellung> fuellungen, DateTime zeitpunkt, Verbrauchsartikel? artikel)
     {
-        var passend = fuellungen.LastOrDefault(n => n.ZeitpunktUtc <= zeitpunkt) ?? fuellungen.FirstOrDefault();
+        var aufsteigend = fuellungen.OrderBy(n => n.ZeitpunktUtc).ThenBy(n => n.Id).ToList();
+        var passend = aufsteigend.LastOrDefault(n => n.ZeitpunktUtc <= zeitpunkt) ?? aufsteigend.FirstOrDefault();
         if (passend is { Menge: > 0 } f && f.KostenEur is { } kosten)
         {
             return kosten / f.Menge;

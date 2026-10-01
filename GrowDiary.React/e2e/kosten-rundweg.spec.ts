@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { backendAntwortet, darfUeberspringen } from './pflicht'
+import { gibSchloss, nimmSchloss } from './schloss'
 
 /**
  * Die vier Formulare der Kosten-Seite werden ausgefüllt, abgeschickt und nachgelesen.
@@ -30,6 +31,14 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
  */
 
 test.describe.configure({ mode: 'serial' })
+
+/* forkai.157: Das Schloss, weil diese Datei in den geteilten Bestand schreibt —
+   über die Formulare und beim Aufräumen der verteilten Anschaffung auch direkt.
+   Eine verteilte Anschaffung zieht jedem laufenden Grow einen Anteil ab; eine
+   parallel laufende Datei, die dessen Kosten liest, sähe sonst eine Summe, die
+   vom Zeitpunkt abhängt. */
+test.beforeEach(async () => { await nimmSchloss() })
+test.afterEach(() => { gibSchloss() })
 
 /** Ein Wert, der in diesem Lauf einmalig ist — sonst prüft der zweite Lauf den ersten. */
 function marke(): string {
@@ -156,6 +165,77 @@ test.describe('Kosten-Rundweg', () => {
     // als ein <main> (Seitenrahmen und Blattinhalt), und Playwright bricht bei
     // mehrdeutigen Treffern ab, statt eines auszuwuerfeln — zu Recht.
     await expect(page.locator('[data-audit="kosten-anschaffungen"]')).toContainText(name)
+  })
+
+  /**
+   * forkai.157: Eine Anschaffung auf alle Grows verteilen. Drei Felder kommen
+   * nur in diesem Fall ins Formular (Dauer, Einheit, Zelt) und eines nur beim
+   * Bearbeiten (Ausgemustert). Das Bearbeiten läuft ZWEIMAL — der zweite
+   * Durchgang trifft den Zustand „schon verteilt", den das Anlegen nie sieht.
+   * Am Ende räumt der Test auf: eine verteilte Anschaffung zöge sonst in jedem
+   * Lauf einen Anteil vom laufenden Grow der Anlage ab.
+   */
+  test('Anschaffung verteilt erfassen, zweimal bearbeiten und wiederfinden', async ({ page }) => {
+    const name = `LED verteilt ${marke()}`
+    const zeile = () => page.locator('[data-audit="kosten-anschaffungen"] tr', { hasText: name })
+
+    await kostenSeite(page, 'anschaffungen')
+    await page.locator('[data-audit="kosten-anschaffung-erfassen"]').click()
+    const formular = page.locator('[data-audit="kosten-anschaffung-form"]')
+    await expect(formular).toBeVisible()
+
+    await formular.locator('input[placeholder="Erntescheren"]').fill(name)
+    await formular.locator('input[placeholder="4,90"]').fill('600')
+    await formular.locator('[data-audit="kosten-anschaffung-zaehlt-fuer"]').selectOption('verteilt')
+    await formular.locator('[data-audit="kosten-anschaffung-dauer"]').fill('3')
+    // Der Journal-Haken gehört zu EINEM Grow; beim Verteilen gibt es keinen.
+    await expect(formular.getByRole('checkbox', { name: 'Journal-Eintrag im gewählten Grow anlegen' })).toBeDisabled()
+    await expect(formular.locator('[data-audit="kosten-anschaffung-vorschau"]')).toContainText('je Tag über 3 Jahre')
+
+    const rumpf = await abgeschickt(page, 'POST', /\/api\/kosten\/anschaffungen$/, async () => {
+      await page.locator('[data-audit="kosten-anschaffung-speichern"]').click()
+    })
+    expect(rumpf.nutzungsdauerMonate, 'Aus „3 Jahre“ wurden nicht 36 Monate.').toBe(36)
+    expect(rumpf.growId, 'Verteilt gehört die Anschaffung keinem einzelnen Grow.').toBeNull()
+
+    await kostenSeite(page, 'anschaffungen')
+    await expect(zeile().locator('[data-audit="kosten-anschaffung-verteilung"]')).toContainText('verteilt · 3 Jahre')
+
+    // --- erstes Bearbeiten: ausmustern ---
+    await zeile().getByRole('button', { name: 'Bearbeiten' }).click()
+    await expect(formular).toBeVisible()
+    await expect(formular.locator('[data-audit="kosten-anschaffung-zaehlt-fuer"]')).toHaveValue('verteilt')
+    await expect(formular.locator('[data-audit="kosten-anschaffung-dauer"]')).toHaveValue('3')
+    await expect(formular.locator('[data-audit="kosten-anschaffung-dauer-einheit"]')).toHaveValue('jahre')
+    const heute = await formular.locator('input[type="date"]').first().inputValue()
+    await formular.locator('[data-audit="kosten-anschaffung-ausgemustert"]').fill(heute)
+
+    const erstes = await abgeschickt(page, 'PUT', /\/api\/kosten\/anschaffungen\/\d+$/, async () => {
+      await page.locator('[data-audit="kosten-anschaffung-speichern"]').click()
+    })
+    expect(erstes.nutzungsdauerMonate).toBe(36)
+    expect(String(erstes.ausgemustertAm ?? ''), 'Das Ausmusterungsdatum kam nicht an.').not.toBe('')
+
+    await kostenSeite(page, 'anschaffungen')
+    await expect(zeile().locator('[data-audit="kosten-anschaffung-verteilung"]')).toContainText('ausgemustert')
+
+    // --- zweites Bearbeiten, ohne Änderung: nichts darf verlorengehen ---
+    await zeile().getByRole('button', { name: 'Bearbeiten' }).click()
+    await expect(formular.locator('[data-audit="kosten-anschaffung-ausgemustert"]')).toHaveValue(heute)
+    const zweites = await abgeschickt(page, 'PUT', /\/api\/kosten\/anschaffungen\/\d+$/, async () => {
+      await page.locator('[data-audit="kosten-anschaffung-speichern"]').click()
+    })
+    expect(zweites.nutzungsdauerMonate).toBe(36)
+    expect(zweites.ausgemustertAm).toBe(erstes.ausgemustertAm)
+
+    await kostenSeite(page, 'anschaffungen')
+    await expect(zeile().locator('[data-audit="kosten-anschaffung-verteilung"]')).toContainText('ausgemustert')
+
+    // Aufräumen über die API — der Löschknopf fragt per window.confirm.
+    const seite = await (await page.request.get('/api/kosten')).json() as { anschaffungen: Array<{ id: number; name: string }> }
+    const id = seite.anschaffungen.find((a) => a.name === name)?.id
+    expect(id, 'Die Anschaffung war nach dem Speichern nicht mehr zu finden.').toBeDefined()
+    expect((await page.request.delete(`/api/kosten/anschaffungen/${id}`)).ok()).toBe(true)
   })
 
   test('Strom-Quelle speichern und den vorherigen Stand zurückgeben', async ({ page }) => {

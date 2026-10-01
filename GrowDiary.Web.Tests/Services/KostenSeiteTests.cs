@@ -233,6 +233,52 @@ public sealed class KostenSeiteTests
         Assert.Equal(30, seite.Durchgaenge.Single(d => d.GrowId == 9).ArtikelEur);
     }
 
+    /// <summary>
+    /// forkai.157: Der Reiter „Durchgänge" rechnete Verbrauchsartikel anders als
+    /// die Übersicht. Bei „erst der Verbrauch zählt" (AufGrowBuchen) zählte er
+    /// den ganzen Kauf und keinen Verbrauch — derselbe Grow hatte zwei Summen.
+    /// </summary>
+    [Fact]
+    public void DurchgaengeRechnenVerbrauchsartikelWieDieUebersicht()
+    {
+        var grow = Grow();
+        var purolyt = new Verbrauchsartikel { Id = 1, Name = "Purolyt", Einheit = "L", AufGrowBuchen = true };
+        var kanister = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 80, GrowId = 1, ZeitpunktUtc = new DateTime(2026, 7, 1, 10, 0, 0, DateTimeKind.Utc) };
+        var co2 = new Verbrauchsartikel { Id = 2, Name = "CO₂", Einheit = "kg" };
+        var flasche = new Nachfuellung { Id = 2, ArtikelId = 2, Menge = 10, KostenEur = 34.90, GrowId = 1, ZeitpunktUtc = new DateTime(2026, 7, 2, 10, 0, 0, DateTimeKind.Utc) };
+        var gabe = new Verbrauch { Id = 1, ArtikelId = 1, GrowId = 1, Menge = 0.5, ZeitpunktUtc = new DateTime(2026, 7, 10, 10, 0, 0, DateTimeKind.Utc) };
+
+        var seite = KostenSeiteService.Berechnen(grow, [grow], Quelle, 32, null, [], [purolyt, co2], [kanister, flasche], [], Jetzt, verbraeuche: [gabe]);
+
+        // 0,5 L × 8 €/L = 4 € Purolyt, dazu die CO₂-Flasche voll
+        Assert.Equal(38.90, seite.Summe.ArtikelEur, precision: 2);
+        Assert.Equal(seite.Summe.ArtikelEur, seite.Durchgaenge.Single().ArtikelEur, precision: 2);
+        Assert.Equal(seite.Summe.ArtikelEur, seite.Artikel.Sum(a => a.SummeEurImGrow), precision: 2);
+    }
+
+    /// <summary>
+    /// forkai.157: Ein Verbrauch kostet, was die Füllung gekostet hat, aus der er
+    /// stammt. Die Füllungen kommen aus dem Repository NEUESTE ZUERST, die
+    /// Preisrechnung suchte aber die letzte vor dem Zeitpunkt — und fand so die
+    /// älteste. Mit zwei Kanistern zu verschiedenen Preisen stand der falsche da.
+    /// </summary>
+    [Fact]
+    public void VerbrauchKostetDenPreisDerFuellungDieDamalsLief()
+    {
+        var grow = Grow();
+        var purolyt = new Verbrauchsartikel { Id = 1, Name = "Purolyt", Einheit = "L", AufGrowBuchen = true };
+        var alt = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, KostenEur = 50, ZeitpunktUtc = new DateTime(2026, 5, 1, 10, 0, 0, DateTimeKind.Utc) };
+        var neu = new Nachfuellung { Id = 2, ArtikelId = 1, Menge = 10, KostenEur = 100, ZeitpunktUtc = new DateTime(2026, 7, 1, 10, 0, 0, DateTimeKind.Utc) };
+        var gabe = new Verbrauch { Id = 1, ArtikelId = 1, GrowId = 1, Menge = 1, ZeitpunktUtc = new DateTime(2026, 7, 10, 10, 0, 0, DateTimeKind.Utc) };
+
+        // So wie GetNachfuellungen sie liefert: neueste zuerst.
+        var seite = KostenSeiteService.Berechnen(grow, [grow], Quelle, 32, null, [], [purolyt], [neu, alt], [], Jetzt, verbraeuche: [gabe]);
+
+        Assert.Equal(10, seite.Summe.ArtikelEur, precision: 2);
+        Assert.Equal(10, seite.Artikel.Single().SummeEurImGrow, precision: 2);
+        Assert.Equal(10, seite.Durchgaenge.Single().ArtikelEur, precision: 2);
+    }
+
     [Fact]
     public void AnschaffungenZaehlenEinmalUndNurImZugeordnetenGrow()
     {

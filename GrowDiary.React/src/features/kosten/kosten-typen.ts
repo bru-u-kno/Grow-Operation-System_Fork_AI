@@ -123,6 +123,33 @@ export type KostenAnschaffung = {
   growName: string | null
   notiz: string | null
   hardwareItemId: number | null
+  /** forkai.157: null = einmalig im Grow; sonst über so viele Monate auf alle laufenden Grows verteilt */
+  nutzungsdauerMonate: number | null
+  /** Nur Grows in diesem Zelt tragen einen Anteil; null = alle */
+  tentId: number | null
+  zeltName: string | null
+  /** Vorzeitig außer Betrieb; der Rest fällt auf die Grows dieses Tages */
+  ausgemustertAmUtc: string | null
+  /** Wo der Preis bisher gelandet ist — null bei einmaligen Anschaffungen */
+  verteilung: KostenVerteilung | null
+  /** Was die Anschaffung den gezeigten Grow kostet: einmalig voll, verteilt sein Anteil */
+  imGrowEur: number
+}
+
+/** forkai.157: Spiegel von KostenVerteilung (KostenSeiteService.cs). Verteilt + Leerlauf + Offen = Gesamtpreis. */
+export type KostenVerteilung = {
+  /** Letzter Tag der Nutzungsdauer, einschließlich */
+  letzterTag: string
+  ausgemustertTag: string | null
+  eurProTag: number
+  verteiltEur: number
+  /** Tage ohne laufenden Grow — die trägt niemand */
+  leerlaufEur: number
+  /** Bei Ausmusterung umgelegter Rest */
+  restwertEur: number
+  /** Noch nicht verteilt, weil die Tage erst kommen */
+  offenEur: number
+  anzahlGrows: number
 }
 
 export type KostenDurchgang = {
@@ -151,10 +178,37 @@ export type KostenSeite = {
   hersteller: string[]
   /** Bekannte Produkte mit Hersteller — für den Vorschlag beim Tippen */
   produkte: Array<{ hersteller: string | null; produkt: string }>
+  /** forkai.157: Zelte für „nur Grows in diesem Zelt" */
+  zelte: Array<{ id: number; name: string }>
 }
 
 /** „Lager" — ausdrücklich keinem Grow zugeordnet. Als Select-Wert, weil ein <option> keinen null-Wert tragen kann. */
 export const LAGER = 'lager'
+
+/**
+ * forkai.157: „Auf alle Grows verteilen" — die Anschaffung gehört keinem
+ * einzelnen Grow, sondern verteilt sich über ihre Nutzungsdauer.
+ */
+export const VERTEILT = 'verteilt'
+
+/**
+ * Monate addieren wie .NET `DateTime.AddMonths` — am Monatsende wird gekappt:
+ * 31.01. + 1 Monat = 28.02., nicht 03.03. wie `Date.setMonth`. Die Vorschau im
+ * Formular muss dieselbe Tageszahl ergeben wie AnschaffungVerteilung im Backend,
+ * sonst nennt sie einen anderen Betrag je Tag als die Tabelle danach.
+ */
+export function plusMonate(datum: Date, monate: number): Date {
+  const ziel = new Date(datum.getFullYear(), datum.getMonth() + monate, 1, datum.getHours(), datum.getMinutes())
+  const letzterTag = new Date(ziel.getFullYear(), ziel.getMonth() + 1, 0).getDate()
+  ziel.setDate(Math.min(datum.getDate(), letzterTag))
+  return ziel
+}
+
+/** Nutzungsdauer lesbar: „3 Jahre", „18 Monate", „1 Jahr". */
+export function dauerText(monate: number): string {
+  if (monate % 12 === 0) return monate === 12 ? '1 Jahr' : `${monate / 12} Jahre`
+  return monate === 1 ? '1 Monat' : `${monate} Monate`
+}
 
 /** Auswahl „Für Grow": alle laufenden Grows plus Lager. */
 export function growOptionen(seite: KostenSeite): Array<{ value: string; label: string }> {
