@@ -473,6 +473,45 @@ public sealed class SystemApiControllerTests : IDisposable
         Assert.Equal(24, Assert.Single(new KostenRepository(_paths).GetAnschaffungen()).NutzungsdauerMonate);
     }
 
+    /// <summary>
+    /// forkai.157 (Prüfer-Befund): Auch Fork-Spalten in KERN-Tabellen fehlen nach
+    /// dem Einspielen einer älteren Sicherung — <c>TentAlertRules.StateChangedUtc</c>
+    /// kam am 23.09.2026, die Schema-Version blieb dieselbe. Die Alarm-Auswertung
+    /// schlug danach alle paar Sekunden mit „no such column" fehl, bis die App neu
+    /// startete. Nach dem Tausch läuft deshalb der Initialisierer — dasselbe, was
+    /// ein Neustart täte.
+    /// </summary>
+    [Fact]
+    public void RestoreBackup_ErgaenztFehlendeSpaltenImKernSchema()
+    {
+        Sql("ALTER TABLE TentAlertRules DROP COLUMN StateChangedUtc;");
+        Assert.False(SpalteDa("TentAlertRules", "StateChangedUtc"));
+        var created = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+        TestDatabase.Initialize(_paths); // die laufende Datei hat die Spalte wieder
+        Assert.True(SpalteDa("TentAlertRules", "StateChangedUtc"));
+
+        var ok = Assert.IsType<OkObjectResult>(_controller.RestoreBackup(created.FileName).Result);
+        Assert.True(Assert.IsType<BackupRestoreResultDto>(ok.Value).Success);
+
+        Assert.True(SpalteDa("TentAlertRules", "StateChangedUtc"), "Nach der Wiederherstellung fehlt StateChangedUtc — die Alarm-Auswertung liefe bis zum Neustart ins Leere.");
+    }
+
+    private void Sql(string befehl)
+    {
+        using var verbindung = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_paths.DatabasePath}");
+        verbindung.Open();
+        using var c = verbindung.CreateCommand();
+        c.CommandText = befehl;
+        c.ExecuteNonQuery();
+    }
+
+    private bool SpalteDa(string tabelle, string spalte)
+    {
+        using var verbindung = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_paths.DatabasePath}");
+        verbindung.Open();
+        return SchemaWaechter.SpalteVorhanden(verbindung, tabelle, spalte);
+    }
+
     [Fact]
     public void RestoreBackup_BlocksSchemaMismatchAndDoesNotChangeDatabase()
     {

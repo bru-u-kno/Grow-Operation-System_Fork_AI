@@ -43,6 +43,41 @@ public sealed class GeraeteUebersichtTests
     /// niemand die Gerätekorrekturen auf, und das soll auch nicht jeder
     /// Löschweg einzeln tun müssen.
     /// </summary>
+    /// <summary>
+    /// forkai.157: Ein ARCHIVIERTES Zelt ist kein gelöschtes — eine Korrektur, die
+    /// darauf zeigt, bleibt stehen. Geprüft an einer echten Datenbank, denn genau die
+    /// Verdrahtung (includeArchived) blieb im ersten Anlauf ungeprüft: der Prüfer
+    /// stellte sie auf false, und alle Tests blieben grün.
+    /// </summary>
+    [Fact]
+    public void ArchivierteZelteGeltenAlsBekanntGeloeschteNicht()
+    {
+        var wurzel = Path.Combine(Path.GetTempPath(), "GeraeteZelte_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(wurzel);
+        try
+        {
+            var pfade = new GrowDiary.Web.Infrastructure.AppPaths(wurzel);
+            TestDatabase.Initialize(pfade);
+            var zelte = new GrowDiary.Web.Infrastructure.TentRepository(pfade);
+            var aktiv = zelte.CreateTent("Aktiv");
+            var archiviert = zelte.CreateTent("Archiviert");
+            var geloescht = zelte.CreateTent("Gelöscht");
+            zelte.ArchiveTent(archiviert.Id);
+            zelte.DeleteTent(geloescht.Id);
+
+            var bekannt = GeraeteUebersichtService.BekannteZelte(zelte);
+
+            Assert.Contains(aktiv.Id, bekannt);
+            Assert.Contains(archiviert.Id, bekannt);
+            Assert.DoesNotContain(geloescht.Id, bekannt);
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            try { Directory.Delete(wurzel, recursive: true); } catch { /* nach bestem Bemühen */ }
+        }
+    }
+
     [Fact]
     public void GeloeschtesZeltUndGeloeschteHardwareGeltenAlsNichtEingetragen()
     {

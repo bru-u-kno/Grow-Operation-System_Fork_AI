@@ -63,9 +63,16 @@ heißt das: **jede Version kann jede ältere Datenbank öffnen**, ohne Migration
 Die Fork-Tabellen (Kosten, Geräte, Steuerung, Grow-Plan, Wochenwerte) liegen außerhalb
 davon; jedes dieser Repositories legt sie beim ersten Zugriff an. Ob das je Datei schon
 geschehen ist, hält **ein** Merker: `SchemaWaechter` (forkai.157). Die Wiederherstellung
-einer Sicherung setzt ihn zurück — vorher fehlten nach dem Einspielen einer älteren
-Sicherung die Tabellen bis zum Neustart. `ForkTabellenTests` zählt, dass jede Datei mit
-einer Fork-Tabelle ihn benutzt.
+einer Sicherung lässt danach `DatabaseInitializer.Initialize()` laufen und setzt den Merker
+zurück — vorher fehlten nach dem Einspielen einer älteren Sicherung Tabellen und Spalten
+bis zum Neustart (die Schema-Version im Kern bleibt über viele Ausgaben gleich und hält
+eine solche Sicherung nicht auf). `ForkTabellenTests` zählt, dass jede Datei mit einer
+Fork-Tabelle den Wächter benutzt und nicht an ihm vorbei anlegt.
+
+**Offen:** Die Wiederherstellung ist nicht gegen gleichzeitige Zugriffe gesperrt. Öffnet
+ein Hintergrund-Worker zwischen dem Wegräumen der alten und dem Kopieren der neuen Datei
+eine Verbindung, entsteht dort eine leere Datenbank (nachgestellt: einige von 100
+Durchgängen). Die Sicherheitssicherung bleibt erhalten.
 
 **Einstellungen liegen als Key-Value** in `AppSettings` (`notify:*`, `ai:*`,
 `trendwatch:seen:*`). Jede Einstellungsgruppe hat ihr eigenes Repository, das die Präfixe

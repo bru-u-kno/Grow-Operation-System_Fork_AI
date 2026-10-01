@@ -31,12 +31,14 @@
   oder Nachfüllung in der Tabelle stand; die Artikelnamen standen in Silben untereinander.
 - Behoben — **Ein Grow, der im Bearbeiten-Formular auf „Beendet“ oder „Abgebrochen“ gestellt wird, bekommt
   jetzt ein Enddatum** — wie über „Abschließen“. Ohne Enddatum wusste niemand, wie lange er lief.
-- Behoben — **Nach dem Einspielen einer Sicherung fehlten Fork-Tabellen bis zum Neustart.** Stammte die
-  Sicherung aus einer älteren Version, brachen Kosten-, Geräte- und Grow-Plan-Seite sowie die CO₂-Regelung
-  mit „no such table“ ab, bis das Add-on neu startete. Jetzt werden fehlende Tabellen und Spalten beim
-  nächsten Zugriff ergänzt — für alle fünf Bereiche an einer Stelle.
-- Behoben — **Geräteseite:** Eine Korrektur, die auf ein inzwischen gelöschtes Zelt oder einen gelöschten
-  Hardware-Artikel zeigt, gilt dort als nicht eingetragen, statt die tote Nummer weiterzureichen.
+- Behoben — **Nach dem Einspielen einer Sicherung fehlten Tabellen und Spalten bis zum Neustart.** Stammte
+  die Sicherung aus einer älteren Version, brachen Kosten-, Geräte- und Grow-Plan-Seite, die CO₂-Regelung und
+  die Alarm-Auswertung mit „no such table“ bzw. „no such column“ ab, bis das Add-on neu startete. Jetzt läuft
+  nach dem Einspielen dieselbe Prüfung wie beim Start, und die Fork-Bereiche ergänzen beim nächsten Zugriff,
+  was ihnen fehlt. (Das Einspielen ist nur über die API erreichbar, nicht über die Oberfläche.)
+- Behoben — **Geräteseite:** Eine gespeicherte Korrektur, die auf ein inzwischen gelöschtes Zelt oder einen
+  gelöschten Hardware-Artikel zeigt, wird dort ignoriert; es gilt wieder, was sich aus Home Assistant und
+  dem Inventar ergibt. Ein archiviertes Zelt bleibt gültig.
 
 ## 2.0.0-forkai.156
 

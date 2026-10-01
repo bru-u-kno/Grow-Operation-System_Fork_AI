@@ -69,7 +69,7 @@ public sealed class GeraeteUebersichtService
             _hardware.GetHardwareItems(),
             _geraete.Geraete(),
             _geraete.Zuordnungen(),
-            _zelte.GetTents(includeArchived: true).Select(z => z.Id).ToHashSet());
+            BekannteZelte(_zelte));
     }
 
     // ------------------------------------------------------- Quellen einsammeln
@@ -132,13 +132,22 @@ public sealed class GeraeteUebersichtService
     // ------------------------------------------------------------ Zusammenfassen
 
     /// <summary>Rein rechnend und ohne Datenbank — deshalb prüfbar.</summary>
+    /// <summary>
+    /// forkai.157: Die Zelte, auf die eine Gerätekorrektur zeigen darf — auch
+    /// archivierte. Ein archiviertes Zelt gibt es noch; nur ein gelöschtes nicht.
+    /// </summary>
+    public static IReadOnlySet<int> BekannteZelte(TentRepository zelte)
+        => zelte.GetTents(includeArchived: true).Select(z => z.Id).ToHashSet();
+
+    /// <param name="zeltIds">Die Zelte, die es gibt (<see cref="BekannteZelte"/>); null prüft nicht —
+    /// bewusst ohne Vorgabewert, damit kein Aufrufer die Prüfung still weglässt.</param>
     public static IReadOnlyList<Geraet> Zusammenfassen(
         IReadOnlyDictionary<string, List<GeraetVerwendung>> verwendungen,
         IReadOnlyDictionary<string, HerkunftEintrag> herkunft,
         IReadOnlyList<HardwareItem> hardware,
         IReadOnlyDictionary<string, GespeichertesGeraet> gespeichert,
         IReadOnlyDictionary<string, string> zuordnungen,
-        IReadOnlyCollection<int>? zeltIds = null)
+        IReadOnlyCollection<int>? zeltIds)
     {
         var eimer = new Dictionary<string, Eimer>(StringComparer.OrdinalIgnoreCase);
 

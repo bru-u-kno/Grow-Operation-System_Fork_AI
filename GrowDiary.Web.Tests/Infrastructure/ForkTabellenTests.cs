@@ -16,8 +16,9 @@ namespace GrowDiary.Web.Tests.Infrastructure;
 /// <c>SystemApiControllerTests.RestoreBackup_ForkTabellenEntstehenNachDemTauschNeu</c>.</para>
 ///
 /// <para><b>Dazu der Rundweg der Geräte-Korrekturen.</b> Speichern, Verwerfen und
-/// Zuordnen hatten keinen einzigen Test; nur ein Ausnahme-Eintrag im Rundweg-Zähler
-/// erwähnte sie.</para>
+/// Zuordnen fuhr kein Test gegen die Datenbank; <c>GeraeteUebersichtTests</c> prüft
+/// nur, was aus gespeicherten Korrekturen wird, und der Rundweg-Zähler verwies auf
+/// sie.</para>
 /// </remarks>
 public sealed class ForkTabellenTests : IDisposable
 {
@@ -160,17 +161,32 @@ public sealed class ForkTabellenTests : IDisposable
     /// Wiederherstellung einer Sicherung, und ihre Tabellen fehlen bis zum Neustart.
     /// </summary>
     /// <remarks>
-    /// So entstand der Fehler: fünf Repositories, fünf eigene Merker, zwei davon
+    /// <para>So entstand der Fehler: fünf Repositories, fünf eigene Merker, zwei davon
     /// je Prozess statt je Datei, keiner kannte die Wiederherstellung. Gezählt wird
     /// über die Grundmenge (jede .cs-Datei unter GrowDiary.Web), ohne Kommentare —
-    /// ein Name in der Doku ist kein Aufruf.
+    /// ein Name in der Doku ist kein Aufruf.</para>
+    ///
+    /// <para><b>Drei Bedingungen, weil eine allein umgehbar war</b> (Prüfer, 01.10.2026):
+    /// ein ungenutzter <c>Sichern(</c>-Aufruf neben einem direkten Anlegen bestand die
+    /// erste Fassung, ebenso ein Tabellenname in Anführungszeichen.</para>
+    /// <list type="number">
+    /// <item>Erkannt wird jede Schreibweise von <c>CREATE TABLE … Fork…</c>.</item>
+    /// <item>Die Anlege-Methode, die an <c>Sichern</c> geht, wird sonst nirgends
+    /// aufgerufen — nur ihre Deklaration darf den Namen mit Klammer tragen.</item>
+    /// <item>Jedes <c>OpenConnection()</c> der Datei hat einen <c>Sichern</c>-Aufruf
+    /// zur Seite: eine zweite Öffnung wäre ein Weg am Wächter vorbei.</item>
+    /// </list>
     /// </remarks>
     [Fact]
     public void JedeForkTabelleEntstehtUeberDenSchemaWaechter()
     {
         var wurzel = Path.Combine(Projektwurzel(), "GrowDiary.Web");
+        var anlegend = new System.Text.RegularExpressions.Regex(
+            @"CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?\\?[""\[`]?Fork", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var sichern = new System.Text.RegularExpressions.Regex(
+            @"SchemaWaechter\.Sichern\(\s*\w+\s*,\s*""[^""]+""\s*,\s*(\w+)\s*\)");
         var anlegende = new List<string>();
-        var ohneWaechter = new List<string>();
+        var befunde = new List<string>();
 
         foreach (var datei in Directory.EnumerateFiles(wurzel, "*.cs", SearchOption.AllDirectories))
         {
@@ -178,18 +194,34 @@ public sealed class ForkTabellenTests : IDisposable
                 || datei.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")) continue;
 
             var code = OhneKommentare(File.ReadAllText(datei));
-            if (!code.Contains("CREATE TABLE IF NOT EXISTS Fork", StringComparison.Ordinal)) continue;
+            if (!anlegend.IsMatch(code)) continue;
 
             var name = Path.GetRelativePath(wurzel, datei);
             anlegende.Add(name);
-            if (!code.Contains("SchemaWaechter.Sichern(", StringComparison.Ordinal)) ohneWaechter.Add(name);
+
+            var aufrufe = sichern.Matches(code);
+            if (aufrufe.Count == 0)
+            {
+                befunde.Add($"{name}: kein SchemaWaechter.Sichern");
+                continue;
+            }
+
+            foreach (System.Text.RegularExpressions.Match aufruf in aufrufe)
+            {
+                var methode = aufruf.Groups[1].Value;
+                var direkt = System.Text.RegularExpressions.Regex.Matches(code, $@"\b{methode}\s*\(").Count;
+                if (direkt != 1) befunde.Add($"{name}: {methode} wird {direkt - 1}-mal direkt aufgerufen, am Wächter vorbei");
+            }
+
+            var oeffnungen = System.Text.RegularExpressions.Regex.Matches(code, @"\bOpenConnection\s*\(").Count;
+            if (oeffnungen > aufrufe.Count) befunde.Add($"{name}: {oeffnungen}× OpenConnection, aber nur {aufrufe.Count}× Sichern");
         }
 
         // Mengenwächter: Kosten, Geräte, Steuerung, Grow-Plan, Wochenwerte.
         Assert.True(anlegende.Count >= 5, $"Nur {anlegende.Count} Dateien legen Fork-Tabellen an — die Zählung sieht ihre Grundmenge nicht.");
-        Assert.True(ohneWaechter.Count == 0,
-            "Diese Dateien legen Fork-Tabellen ohne SchemaWaechter an — nach einer Wiederherstellung fehlen ihre Tabellen bis zum Neustart: "
-            + string.Join(", ", ohneWaechter));
+        Assert.True(befunde.Count == 0,
+            "Fork-Tabellen am SchemaWaechter vorbei — nach einer Wiederherstellung fehlen sie bis zum Neustart:\n"
+            + string.Join("\n", befunde));
     }
 
     private static string OhneKommentare(string code)

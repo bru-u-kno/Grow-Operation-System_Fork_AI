@@ -349,12 +349,14 @@ public sealed partial class SystemApiController
             RestoreOptionalFileWithRollback(extractedWal, _paths.DatabasePath + "-wal", rollbackRoot, "grow-diary.db-wal");
             RestoreOptionalFileWithRollback(extractedShm, _paths.DatabasePath + "-shm", rollbackRoot, "grow-diary.db-shm");
 
-            // Fork AI (forkai.157): Die Datei ist ausgetauscht. Die Fork-Tabellen
-            // (Kosten, Geräte) liegen außerhalb des Kern-Schemas, und die
-            // Versionsprüfung oben sieht sie nicht — eine ältere Sicherung bringt sie
-            // nicht oder ohne neue Spalten mit. Ohne das hier brach jeder Zugriff mit
-            // „no such table" ab, bis die App neu startete.
-            SchemaWaechter.Vergessen();
+            // Fork AI (forkai.157): Die Datei ist ausgetauscht. Die Versionspruefung oben
+            // kennt nur die Kern-Schema-Version, und die blieb ueber viele Ausgaben gleich:
+            // eine aeltere Sicherung bringt Spalten nicht mit, die spaeter dazukamen
+            // (z. B. TentAlertRules.StateChangedUtc) — die Alarm-Auswertung schlug dann bis
+            // zum Neustart fehl. Deshalb hier, was sonst nur beim Start laeuft. Die
+            // Fork-Tabellen (Kosten, Geraete, Steuerung, Grow-Plan, Wochenwerte) ergaenzt
+            // danach der SchemaWaechter, der im finally unten vergisst.
+            _initialisierer.Initialize();
 
             var extractedKnowledgeRoot = Path.Combine(tempRoot, "App_Data", "knowledge");
             if (Directory.Exists(extractedKnowledgeRoot))
@@ -393,7 +395,6 @@ public sealed partial class SystemApiController
             {
                 Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
                 RestoreRollbackFiles(rollbackRoot);
-                SchemaWaechter.Vergessen(); // auch die zurückgerollte Datei ist eine andere
             }
             catch
             {
@@ -407,6 +408,9 @@ public sealed partial class SystemApiController
         }
         finally
         {
+            // forkai.157: Ob getauscht, zurueckgerollt oder abgebrochen — die Datei
+            // kann eine andere sein. Der naechste Zugriff jedes Fork-Bereichs prueft neu.
+            SchemaWaechter.Vergessen();
             DeleteDirectoryBestEffort(tempRoot);
             DeleteDirectoryBestEffort(rollbackRoot);
         }
