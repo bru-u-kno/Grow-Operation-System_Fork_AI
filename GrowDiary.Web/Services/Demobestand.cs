@@ -31,7 +31,7 @@ namespace GrowDiary.Web.Services;
 /// <para><b>Alles trägt „Testdaten" im Namen.</b> Wer den Bestand später neben
 /// eigenen Läufen sieht, muss die Frage „ist das echt?" nicht stellen.</para>
 /// </summary>
-public static class Demobestand
+public static partial class Demobestand
 {
     /// <summary>
     /// Ortszeit auf die Mittagsstunde legen.
@@ -99,10 +99,18 @@ public static class Demobestand
         AbgeschlossenenGrowAnlegen(grows, ernten, zelt.Id, aufbau.Id,
             "Northern Lights (Testdaten)", "Northern Lights", "Sensi Seeds",
             vorTagen: 190, dauerTage: 82, nass: 412, trocken: 96);
-        AbgeschlossenenGrowAnlegen(grows, ernten, zelt.Id, aufbau.Id,
+        var growGorillaGlue = AbgeschlossenenGrowAnlegen(grows, ernten, zelt.Id, aufbau.Id,
             "Gorilla Glue (Testdaten)", "Gorilla Glue #4", "GG Strains",
             vorTagen: 95, dauerTage: 88, nass: 468, trocken: 108,
             sorteId: zweiteSorte.Id);
+
+        // Mutter- und Quarantaene-Bereich in eigenen Zelten, und die
+        // CO2-Flasche mit gebuchtem Verbrauch — zwei Lagen, die die Oberflaeche
+        // kannte, der Bestand aber nie herstellte (Demobestand.Bereiche.cs,
+        // Demobestand.Kosten.cs).
+        BereicheAnlegen(grows, setups, hauptSorte.Id, zweiteSorte.Id);
+        Co2FlascheAnlegen(dienste.GetRequiredService<KostenRepository>(), journal,
+            zelt.Id, laufend.Id, growGorillaGlue);
 
         // Der Versuchsaufbau „Zelt (AC-Test)" bekommt ein Geraet, damit die
         // Seite im Testbestand etwas zeigt statt nur „noch nichts eingetragen".
@@ -113,7 +121,7 @@ public static class Demobestand
             new AcGeraet("LED Top (Testdaten)", DemoData.LichtLeistung, null,
                 DemoData.LichtEinZeit, DemoData.LichtAusZeit),
         ]);
-        return $"1 Zelt, 1 RDWC-Aufbau, 3 Grows (1 laufend, 2 im Archiv), {anzahl} Messungen";
+        return $"3 Zelte (Blüte, Mutter, Quarantäne), 1 RDWC-Aufbau, 3 Grows (1 laufend, 2 im Archiv), {anzahl} Messungen";
     }
 
     private static Tent ZeltAnlegen(GrowRepository grows)
@@ -124,9 +132,10 @@ public static class Demobestand
         return grows.CreateTent(new Tent
         {
             Name = "Blütezelt (Testdaten)",
-            // Production, weil das Setup weiter unten SetupType.Production ist:
-            // SetupTentCompatibilityPolicy laesst zu einem Production-Zelt nur
-            // ein Production-Setup zu.
+            // Production: SetupTentCompatibilityPolicy laesst in einem
+            // Production-Zelt nur Production-Bereiche zu. Mutter und Quarantaene
+            // stehen deshalb in eigenen Zelten (Demobestand.Bereiche.cs) — eine
+            // Mutter unter 12/12 bluehte ohnehin.
             TentType = TentType.Production,
             Status = TentStatus.Active,
             WidthCm = 120,
@@ -1091,7 +1100,7 @@ public static class Demobestand
         }
     }
 
-    private static void AbgeschlossenenGrowAnlegen(
+    private static int AbgeschlossenenGrowAnlegen(
         GrowRepository grows, HarvestRepository ernten, int zeltId, int aufbauId,
         string name, string sorte, string zuechter,
         int vorTagen, int dauerTage, double nass, double trocken,
@@ -1153,6 +1162,8 @@ public static class Demobestand
             EffectNotes = "Ruhig, körperbetont.",
             NugStructure = "Dicht.",
         });
+
+        return grow.Id;
     }
     /// <summary>Ein Ablauf, der gerade laeuft.</summary>
     /// <remarks>
