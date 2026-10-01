@@ -172,6 +172,56 @@ public static class DosingGuard
     public const double MaxCalibrationSeconds = 300;
 
     public static DosingDecision Evaluate(DosingPump pump, double requestedMl, DosingContext context, DateTime nowUtc)
+        => Pruefen(pump, requestedMl, context, nowUtc, zweiteHaelfte: false);
+
+    /// <summary>
+    /// Die Anschläge für die zweite Hälfte eines Zweikomponenten-Düngers (B).
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (01.10.2026).</b> B lief bis hierher an allen
+    /// Anschlägen vorbei — keine Einzel-, keine Tagesgrenze. Begründet war das
+    /// mit der Mischpause: sie hat gerade erst A gesehen und würde B genau
+    /// deshalb ablehnen.</para>
+    ///
+    /// <para><b>Was jetzt gilt.</b> Zwei Riegel entfallen, weil sie B
+    /// <i>dauerhaft</i> sperrten, obwohl B legitim ist:</para>
+    /// <list type="bullet">
+    /// <item>die <b>Mischpause</b> — A liegt per Konstruktion nur die Trennzeit
+    /// zurück, sie wäre immer zu kurz;</item>
+    /// <item>„<b>im Becken steht noch eine Hälfte aus</b>" — das ist B selbst.</item>
+    /// </list>
+    /// <para>Alles andere gilt wie für jede Dosis: Entität, Fördermenge, die
+    /// stehende Umwälzung, die größte Einzeldosis, Tagesanzahl und Tagesmenge
+    /// der Pumpe B. Was davon greift, löst sich von selbst (spätestens um
+    /// Mitternacht) — B wartet dann, und solange wartet auch A
+    /// (<see cref="DosingContext.TentHasPendingDose"/>). Lieber eine Weile
+    /// keine Düngung als mehr B, als der Nutzer je erlaubt hat.</para>
+    ///
+    /// <para><b>Die harte Laufzeitgrenze wird vorab eingerechnet</b>, nicht
+    /// erst geprüft: <see cref="Evaluate"/> lehnt über 60 s ab, und bei einer
+    /// langsamen Pumpe wäre das für B jeden Takt dieselbe Ablehnung — eine
+    /// ewig wartende Hälfte. Stattdessen geht ein Lauf bis zur Grenze, der
+    /// Rest folgt im nächsten Takt.</para>
+    /// </remarks>
+    public static DosingDecision PruefeZweiteHaelfte(DosingPump partner, double requestedMl, DosingContext context, DateTime nowUtc)
+    {
+        if (partner.MlPerMinute is { } rate && rate > 0)
+        {
+            requestedMl = Math.Min(requestedMl, HoechstensJeLauf(rate));
+        }
+
+        return Pruefen(partner, requestedMl, context, nowUtc, zweiteHaelfte: true);
+    }
+
+    /// <summary>
+    /// Wie viel eine Pumpe in <see cref="AbsoluteMaxSeconds"/> höchstens
+    /// fördert — abgerundet auf 0,01 ml, damit die Rückrechnung in Sekunden
+    /// nie über der Grenze landet.
+    /// </summary>
+    public static double HoechstensJeLauf(double mlPerMinute)
+        => mlPerMinute <= 0 ? 0 : Math.Floor(mlPerMinute * AbsoluteMaxSeconds / 60.0 * 100) / 100;
+
+    private static DosingDecision Pruefen(DosingPump pump, double requestedMl, DosingContext context, DateTime nowUtc, bool zweiteHaelfte)
     {
         // Im Testbetrieb wird nichts geschaltet — dann braucht es auch keine
         // Entität. Alles andere gilt unverändert, sonst prüfte der Test etwas
@@ -184,7 +234,8 @@ public static class DosingGuard
         // Wartet im Zelt noch eine zweite Dünger-Hälfte, dosiert hier niemand —
         // auch keine andere Pumpe. Sonst korrigiert pH einen Zustand, den B
         // gleich wieder verschiebt, oder A läuft doppelt, bevor B je kam.
-        if (context.TentHasPendingDose)
+        // Für B selbst gilt das nicht: die ausstehende Hälfte IST B.
+        if (context.TentHasPendingDose && !zweiteHaelfte)
         {
             return DosingDecision.No("Im Becken steht noch eine zweite Dünger-Hälfte aus — erst wird die Düngung vollständig.");
         }
@@ -244,8 +295,10 @@ public static class DosingGuard
         // dosiert hat. Vorher zählte nur die eigene Historie, und eine Minute
         // nach der B-Hälfte hätte die pH-Pumpe in die Schliere gemessen.
         var letzteEigene = gelaufen.MaxBy(dose => dose.OccurredAtUtc)?.OccurredAtUtc;
+        // Für B gilt sie nicht: A liegt per Konstruktion nur die Trennzeit
+        // zurueck, die Pause waere immer zu kurz (PruefeZweiteHaelfte).
         var letzteImBecken = new[] { letzteEigene, context.LastTentDoseUtc }.Max();
-        if (letzteImBecken is { } zuletzt)
+        if (letzteImBecken is { } zuletzt && !zweiteHaelfte)
         {
             var seit = nowUtc - zuletzt;
             if (seit < TimeSpan.FromMinutes(pump.MinIntervalMinutes))

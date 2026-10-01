@@ -742,6 +742,7 @@ public sealed partial class DatabaseInitializer
                 SourceDoseEventId INTEGER NULL,
                 Reason TEXT NULL,
                 CreatedAtUtc TEXT NOT NULL,
+                Fehlversuche INTEGER NOT NULL DEFAULT 0,
                 FOREIGN KEY (PumpId) REFERENCES DosingPumps(Id) ON DELETE CASCADE
             );
             CREATE INDEX IF NOT EXISTS IX_PendingDoses_DueAtUtc ON PendingDoses(DueAtUtc);

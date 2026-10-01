@@ -204,8 +204,8 @@ public sealed class DosingRepository : RepositoryBase
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO PendingDoses (PumpId, Ml, DueAtUtc, SourceDoseEventId, Reason, CreatedAtUtc)
-            VALUES ($pumpId, $ml, $due, $source, $reason, $created);
+            INSERT INTO PendingDoses (PumpId, Ml, DueAtUtc, SourceDoseEventId, Reason, CreatedAtUtc, Fehlversuche)
+            VALUES ($pumpId, $ml, $due, $source, $reason, $created, $fehlversuche);
             SELECT last_insert_rowid();
         """;
         command.Parameters.AddWithValue("$pumpId", pending.PumpId);
@@ -214,6 +214,7 @@ public sealed class DosingRepository : RepositoryBase
         AddNullable(command, "$source", (double?)pending.SourceDoseEventId);
         command.Parameters.AddWithValue("$reason", (object?)pending.Reason ?? DBNull.Value);
         command.Parameters.AddWithValue("$created", ToStorageUtc(pending.CreatedAtUtc));
+        command.Parameters.AddWithValue("$fehlversuche", pending.Fehlversuche);
         return Convert.ToInt32(command.ExecuteScalar());
     }
 
@@ -223,7 +224,7 @@ public sealed class DosingRepository : RepositoryBase
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, PumpId, Ml, DueAtUtc, SourceDoseEventId, Reason, CreatedAtUtc
+            SELECT Id, PumpId, Ml, DueAtUtc, SourceDoseEventId, Reason, CreatedAtUtc, Fehlversuche
             FROM PendingDoses
             WHERE DueAtUtc <= $now
             ORDER BY DueAtUtc ASC;
@@ -241,7 +242,7 @@ public sealed class DosingRepository : RepositoryBase
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, PumpId, Ml, DueAtUtc, SourceDoseEventId, Reason, CreatedAtUtc
+            SELECT Id, PumpId, Ml, DueAtUtc, SourceDoseEventId, Reason, CreatedAtUtc, Fehlversuche
             FROM PendingDoses WHERE PumpId = $pumpId ORDER BY DueAtUtc ASC;
         """;
         command.Parameters.AddWithValue("$pumpId", pumpId);
@@ -270,6 +271,7 @@ public sealed class DosingRepository : RepositoryBase
         SourceDoseEventId = (int?)NullableDouble(reader["SourceDoseEventId"]),
         Reason = NullString(reader["Reason"]),
         CreatedAtUtc = ParseStoredUtcDateTime(NullString(reader["CreatedAtUtc"])) ?? DateTime.UtcNow,
+        Fehlversuche = Convert.ToInt32(reader["Fehlversuche"]),
     };
 
     // ---------- Abbildung ----------

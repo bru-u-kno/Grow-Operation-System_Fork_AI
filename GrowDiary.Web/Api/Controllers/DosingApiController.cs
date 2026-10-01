@@ -222,7 +222,7 @@ public sealed class DosingApiController : ApiControllerBase
 
         var lauf = await _service.RunForSecondsAsync(pump, decision.Seconds, cancellationToken);
         var ok = lauf == Pumpenlauf.Gelaufen;
-        _dosing.InsertEvent(new DoseEvent
+        var ereignisId = _dosing.InsertEvent(new DoseEvent
         {
             PumpId = pump.Id,
             TentId = pump.TentId,
@@ -237,7 +237,7 @@ public sealed class DosingApiController : ApiControllerBase
             Reason = ok ? (pump.SimulationMode ? "Testbetrieb — es ist nichts geflossen." : "Von Hand ausgelöst.") : DosingService.Grund(lauf),
         });
 
-        var partnerHinweis = ok ? PlanPartner(pump, decision.Ml, nowUtc) : null;
+        var partnerHinweis = ok ? PlanPartner(pump, decision.Ml, nowUtc, ereignisId) : null;
 
         return Ok(new DoseResultDto(ok, ok ? decision.Ml : 0, ok ? decision.Seconds : 0,
             ok ? $"{decision.Ml:0.##} ml gegeben." + (partnerHinweis ?? " Erst mischen, dann neu messen.")
@@ -261,27 +261,14 @@ public sealed class DosingApiController : ApiControllerBase
     /// <remarks>
     /// Nicht sofort und nicht im selben Aufruf: A und B duerfen sich nicht
     /// konzentriert begegnen, und ein HTTP-Aufruf, der fuenf Minuten stehen
-    /// bleibt, ist keine Loesung. Der Dosier-Worker holt sie ab.
+    /// bleibt, ist keine Loesung. Der Dosier-Worker holt sie ab. Die
+    /// Einplanung selbst steht in <see cref="PartnerDosing.Einplanen"/> — die
+    /// Automatik braucht dieselbe, und bis zum 01.10.2026 hatte sie keine.
     /// </remarks>
-    private string? PlanPartner(DosingPump pump, double dosedMl, DateTime nowUtc)
-    {
-        if (PartnerDosing.PartnerMl(pump, dosedMl) is not { } partnerMl) return null;
-
-        var partner = _dosing.GetPump(pump.PartnerPumpId!.Value);
-        if (partner is null) return null;
-
-        var faellig = PartnerDosing.PartnerDueAt(pump, nowUtc);
-        _dosing.InsertPending(new PendingDose
-        {
-            PumpId = partner.Id,
-            Ml = partnerMl,
-            DueAtUtc = faellig,
-            Reason = $"Zweite Hälfte zu {dosedMl:0.##} ml aus {pump.Name}.",
-        });
-
-        var minuten = Math.Max(pump.PartnerDelayMinutes, PartnerDosing.MinDelayMinutes);
-        return $" {partner.Name} gibt in {minuten} min {partnerMl:0.##} ml nach.";
-    }
+    private string? PlanPartner(DosingPump pump, double dosedMl, DateTime nowUtc, int ereignisId)
+        => PartnerDosing.Einplanen(_dosing, pump, dosedMl, nowUtc, ereignisId) is { } haelfte
+            ? $" {haelfte.Partner.Name} gibt in {haelfte.Minuten} min {haelfte.Ml:0.##} ml nach."
+            : null;
 
     /// <summary>
     /// Sofort aus. Der wichtigste Knopf auf der ganzen Seite.
