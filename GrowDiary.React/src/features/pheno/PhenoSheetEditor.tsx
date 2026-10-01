@@ -72,7 +72,7 @@ export function PhenoSheetEditor({
   })
 
   const stretch = draft.heightAtFlipCm && draft.heightAtHarvestCm && draft.heightAtFlipCm > 0
-    ? (draft.heightAtHarvestCm / draft.heightAtFlipCm).toFixed(2)
+    ? (draft.heightAtHarvestCm / draft.heightAtFlipCm).toFixed(2).replace('.', ',')
     : null
 
   return (

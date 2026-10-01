@@ -406,7 +406,12 @@ app.Use(async (context, next) =>
     {
         var isLocal = AdminAccessPolicy.IsLocalRequest(context);
         var canAccess = AdminAccessPolicy.CanAccess(context);
-        if (!isLocal)
+        // Ins Prüfprotokoll: jede Abweisung, und erlaubte Zugriffe nur auf
+        // Verwaltungswege (Sicherung, Einstellungen, Exporte). Seit am
+        // 01.10.2026 ganz /api geschützt ist, stünde sonst jede Anfrage der
+        // Oberfläche darin — die Licht-Seite fragt alle 10 s —, und echte
+        // Ereignisse gingen in den 500 angezeigten Zeilen unter.
+        if (!isLocal && (!canAccess || AdminAccessPolicy.IsAdminPath(context.Request.Path)))
         {
             TryLogAdminAccess(context, canAccess);
         }

@@ -6,6 +6,7 @@ import type { EntfeuchterEinstellungen, EntfeuchterReiter, EntfeuchterSeite, Ste
 import { HYSTERESE_STUFEN, bandBerechnen, hystereseStufe, tempMax, zahl } from './entfeuchter-band'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
+import { feldFehlerAus, leereZahlenfelder, ohneLuecken, zahlAusFeld } from './feld-fehler'
 
 /**
  * Fork AI (forkai.129, F-023): Steuerung › Entfeuchter — Mockup Stand 3,
@@ -83,6 +84,8 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
 
   const speichern = async () => {
     if (!entwurf) return
+    const leer = leereZahlenfelder(entwurf)
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<EntfeuchterSeite>('/api/steuerung/entfeuchter', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -91,7 +94,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
         ? 'Gespeichert — aber nicht alle Helfer haben den Wert angenommen.'
         : 'Gespeichert.')
     } catch (caught) {
-      const felder = (caught as { fields?: Record<string, string> })?.fields
+      const felder = feldFehlerAus(caught)
       if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
@@ -105,14 +108,15 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
   }
 
   const live = seite.live
+  const anzeige = ohneLuecken(entwurf, seite.einstellungen)
   const setz = <K extends keyof EntfeuchterEinstellungen>(feld: K, wert: EntfeuchterEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
 
   const band = bandBerechnen({ aus: live.ausAktivProzent, ein: live.einAktivProzent, deckel: live.rhObergrenzeProzent, ist: live.feuchteProzent })
   const phase = live.tagPhase === true ? 'Tag' : live.tagPhase === false ? 'Nacht' : null
-  const ausSpaetestens = live.einAktivProzent == null ? null : live.einAktivProzent - entwurf.hystereseProzent
+  const ausSpaetestens = live.einAktivProzent == null ? null : live.einAktivProzent - anzeige.hystereseProzent
 
-  const tagMax = tempMax(entwurf.tempMaxTagModus, entwurf.tempMaxTagAbstandK, entwurf.tempMaxTagFestC, live.planLuftTagC)
-  const nachtMax = tempMax(entwurf.tempMaxNachtModus, entwurf.tempMaxNachtAbstandK, entwurf.tempMaxNachtFestC, live.planLuftNachtC)
+  const tagMax = tempMax(anzeige.tempMaxTagModus, anzeige.tempMaxTagAbstandK, anzeige.tempMaxTagFestC, live.planLuftTagC)
+  const nachtMax = tempMax(anzeige.tempMaxNachtModus, anzeige.tempMaxNachtAbstandK, anzeige.tempMaxNachtFestC, live.planLuftNachtC)
   const grenze = live.co2CanopyGrenzeC
   const ueberCo2 = grenze != null && (tagMax > grenze || nachtMax > grenze)
 
@@ -181,7 +185,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
         )}
         <p className="st-hinweis">
           {live.portAn === true
-            ? `Läuft, bis die Feuchte unter ${zahl(live.ausAktivProzent)} % fällt — frühestens nach ${entwurf.mindestlaufzeitMin} min Laufzeit.`
+            ? `Läuft, bis die Feuchte unter ${zahl(live.ausAktivProzent)} % fällt — frühestens nach ${anzeige.mindestlaufzeitMin} min Laufzeit.`
             : `Springt an, wenn die Feuchte über ${zahl(live.einAktivProzent)} % steigt.`}
           {entwurf.vpdRegelung && live.vpdUnten != null && live.vpdOben != null
             ? ` Schwellen aus dem VPD-Band ${zahl(live.vpdUnten, 2)}–${zahl(live.vpdOben, 2)}, EIN gedeckelt von der Plan-Feuchte.`
@@ -348,9 +352,9 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
             <Zahl label="Außenluft zuerst" hinweis="Trocknet die Zuluft gerade, wartet er stattdessen so lange — die Außenluft bekommt ihre Chance." einheit="min" wert={entwurf.wartezeitAussenluftMin} min={0} max={120} schritt={1} onChange={(v) => setz('wartezeitAussenluftMin', Math.round(v))} fehler={feldFehler.WartezeitAussenluftMin} />
             <p className="st-hinweis">
               {live.zuluftVorrang === true
-                ? `Gerade: Zuluft trocknet → es gelten ${entwurf.wartezeitAussenluftMin} min.`
+                ? `Gerade: Zuluft trocknet → es gelten ${anzeige.wartezeitAussenluftMin} min.`
                 : live.zuluftVorrang === false
-                  ? `Gerade: Außenluft bringt nichts → es gelten ${entwurf.einschaltverzoegerungMin} min.`
+                  ? `Gerade: Außenluft bringt nichts → es gelten ${anzeige.einschaltverzoegerungMin} min.`
                   : 'Ob die Zuluft gerade trocknet, ist nicht bekannt.'}
               {' '}Ob die Zuluft trocknet, entscheidet die Zuluft-Steuerung.
             </p>
@@ -463,10 +467,10 @@ function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChange, fehl
           max={max}
           step={schritt}
           aria-label={label}
-          value={wert}
+          value={Number.isFinite(wert) ? wert : ''}
           onChange={(e) => {
-            const neu = Number(e.target.value)
-            if (Number.isFinite(neu)) onChange(neu)
+            const neu = zahlAusFeld(e.target.value)
+            if (neu != null) onChange(neu)
           }}
         />
         {einheit && <span className="st-einheit">{einheit}</span>}

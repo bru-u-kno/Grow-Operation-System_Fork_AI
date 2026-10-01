@@ -3,6 +3,7 @@ import type {
   HardwareItemStatus, PlantRole, PlantStatus, ReservoirPosition, SeedKind, SeedType,
   StartMaterial, TentType, ValueOrigin,
 } from './types'
+import type { MotherHealthStatus, QuarantineResult, SetupStatus, SetupType } from './types/shared'
 
 /**
  * Deutsche Namen für die Enum-Werte, die auf dem Bildschirm landen.
@@ -286,6 +287,67 @@ export function stufenName(wert: string | null | undefined): string {
 }
 
 /** Nur für die Zählung: was übersetzt ist. */
+/**
+ * Bereiche im Zelt (Mutter, Quarantäne …) — bis zum 01.10.2026 stand auf der
+ * Zeltseite „Mother", „Active", „Pending" roh da.
+ *
+ * Nachgeschlagen wird ohne Rücksicht auf Groß-/Kleinschreibung: der
+ * `SetupsApiController` nimmt etwa „watch" an und speichert es so.
+ */
+function ohneSchreibweise(tabelle: Record<string, string>, wert: string): string {
+  const schluessel = Object.keys(tabelle).find((k) => k.toLowerCase() === wert.toLowerCase())
+  return schluessel ? tabelle[schluessel] : wert
+}
+
+const BEREICHSART_NAMEN: Record<SetupType, string> = {
+  Production: 'Produktion',
+  Mother: 'Mutter',
+  Quarantine: 'Quarantäne',
+  Propagation: 'Anzucht',
+}
+
+/** „Mother" wird „Mutter". */
+export function bereichsartName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ohneSchreibweise(BEREICHSART_NAMEN, wert)
+}
+
+const BEREICHSSTATUS_NAMEN: Record<SetupStatus, string> = {
+  Planning: 'geplant',
+  Active: 'aktiv',
+  Archived: 'archiviert',
+}
+
+/** „Active" wird „aktiv". */
+export function bereichsstatusName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ohneSchreibweise(BEREICHSSTATUS_NAMEN, wert)
+}
+
+const MUTTERZUSTAND_NAMEN: Record<MotherHealthStatus, string> = {
+  Stable: 'stabil',
+  Watch: 'beobachten',
+  Critical: 'kritisch',
+}
+
+/** „Watch" wird „beobachten". */
+export function mutterzustandName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ohneSchreibweise(MUTTERZUSTAND_NAMEN, wert)
+}
+
+const QUARANTAENE_NAMEN: Record<QuarantineResult, string> = {
+  Pending: 'offen',
+  Cleared: 'freigegeben',
+  Rejected: 'abgelehnt',
+}
+
+/** „Cleared" wird „freigegeben". */
+export function quarantaeneErgebnisName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ohneSchreibweise(QUARANTAENE_NAMEN, wert)
+}
+
 export const WOERTERBUECHER = {
   stufe: STUFEN_NAMEN,
   phase: PHASEN_NAMEN,
@@ -302,4 +364,8 @@ export const WOERTERBUECHER = {
   geraeteStatus: GERAETESTATUS_NAMEN,
   pflanzenRolle: PFLANZENROLLE_NAMEN,
   pflanzenStatus: PFLANZENSTATUS_NAMEN,
+  bereichsart: BEREICHSART_NAMEN,
+  bereichsstatus: BEREICHSSTATUS_NAMEN,
+  mutterzustand: MUTTERZUSTAND_NAMEN,
+  quarantaene: QUARANTAENE_NAMEN,
 }

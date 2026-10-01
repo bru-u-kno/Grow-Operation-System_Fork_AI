@@ -6,6 +6,7 @@ import { ZULUFT_REITER } from './steuerung-typen'
 import type { SteuerungModul, ZuluftEinstellungen, ZuluftReiter, ZuluftSeite } from './steuerung-typen'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
+import { feldFehlerAus, leereZahlenfelder, ohneLuecken, zahlAusFeld } from './feld-fehler'
 
 /**
  * Fork AI (forkai.76): Steuerung › Zuluft — die Kellerzuluft, die bisher als
@@ -83,6 +84,8 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
 
   const speichern = async () => {
     if (!entwurf) return
+    const leer = leereZahlenfelder(entwurf)
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<ZuluftSeite>('/api/steuerung/zuluft', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -91,7 +94,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
         ? 'Gespeichert — aber nicht alle Helfer haben den Wert angenommen.'
         : 'Gespeichert.')
     } catch (caught) {
-      const felder = (caught as { fields?: Record<string, string> })?.fields
+      const felder = feldFehlerAus(caught)
       if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
@@ -105,6 +108,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
   }
 
   const live = seite.live
+  const anzeige = ohneLuecken(entwurf, seite.einstellungen)
   const setz = <K extends keyof ZuluftEinstellungen>(feld: K, wert: ZuluftEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
 
   const zustand = live.portAn === true ? 'saugt' : live.bedarf === true ? 'wartet' : live.pauseZeltKalt === true ? 'pausiert' : 'bereit'
@@ -148,7 +152,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
         <V1Alert
           tone="warn"
           title="Pausiert — Zelt zu kalt"
-          message={`Die Außenluft würde trocknen, aber das Zelt hat ${Zeig(live.zeltTempC, ' °C', 1)}. Die Zuluft läuft wieder ab ${Zeig(entwurf.zeltTemperaturMinC == null ? null : entwurf.zeltTemperaturMinC + 1, ' °C', 1)}; bis dahin entfeuchtet der Trotec allein.`}
+          message={`Die Außenluft würde trocknen, aber das Zelt hat ${Zeig(live.zeltTempC, ' °C', 1)}. Die Zuluft läuft wieder ab ${Zeig(anzeige.zeltTemperaturMinC == null ? null : anzeige.zeltTemperaturMinC + 1, ' °C', 1)}; bis dahin entfeuchtet der Trotec allein.`}
         />
       )}
 
@@ -156,7 +160,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
         <button type="button" className="zl-kachel" onClick={() => setRechenweg(true)}>
           <V1Stat
             label="Differenz"
-            value={live.differenzGm3 == null ? '–' : live.differenzGm3.toFixed(2)}
+            value={Zeig(live.differenzGm3, '', 2)}
             unit=" g/m³"
             hint="Rechenweg ansehen ›"
             tone={live.bedarf === true ? 'ok' : 'neutral'}
@@ -321,15 +325,15 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           <p className="zl-pfeil" aria-hidden="true">↓</p>
           <Glied
             marke="Differenz"
-            wert={`${Zeig(live.differenzGm3, ' g/m³', 2)} · Schwelle ${entwurf.mindestDifferenzGm3.toLocaleString('de-DE')}`}
+            wert={`${Zeig(live.differenzGm3, ' g/m³', 2)} · Schwelle ${anzeige.mindestDifferenzGm3.toLocaleString('de-DE')}`}
           />
           <p className="zl-pfeil" aria-hidden="true">↓</p>
           <Glied
             marke="Zelt"
-            wert={`${Zeig(live.zeltTempC, ' °C', 1)} · Minimum ${Zeig(entwurf.zeltTemperaturMinC, ' °C', 1)}${live.pauseZeltKalt === true ? ' · Pause' : ''}`}
+            wert={`${Zeig(live.zeltTempC, ' °C', 1)} · Minimum ${Zeig(anzeige.zeltTemperaturMinC, ' °C', 1)}${live.pauseZeltKalt === true ? ' · Pause' : ''}`}
           />
           <p className="zl-pfeil" aria-hidden="true">↓</p>
-                    <Glied ziel marke="Zielstufe" wert={live.zielstufe == null ? '–' : `${live.zielstufe} von ${entwurf.stufeMax}`} />
+                    <Glied ziel marke="Zielstufe" wert={live.zielstufe == null ? '–' : `${live.zielstufe} von ${anzeige.stufeMax}`} />
         </div>
         <p className="st-hinweis">
           Gerechnet wird mit absoluter Feuchte nach Magnus. Relative Prozente allein sagen nichts darüber,
@@ -342,7 +346,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
 
 /** Ein Messwert, wie er im Rechenweg steht — mit „–" statt einer erfundenen Null. */
 function Zeig(wert: number | null, einheit: string, stellen: number) {
-  return wert == null ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen }) + einheit
+  return wert == null || !Number.isFinite(wert) ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen }) + einheit
 }
 
 function Glied({ marke, wert, ziel }: { marke: string; wert: string; ziel?: boolean }) {
@@ -384,10 +388,10 @@ function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChange, fehl
           max={max}
           step={schritt}
           aria-label={label}
-          value={wert}
+          value={Number.isFinite(wert) ? wert : ''}
           onChange={(e) => {
-            const neu = Number(e.target.value)
-            if (Number.isFinite(neu)) onChange(neu)
+            const neu = zahlAusFeld(e.target.value)
+            if (neu != null) onChange(neu)
           }}
         />
         {einheit && <span className="st-einheit">{einheit}</span>}

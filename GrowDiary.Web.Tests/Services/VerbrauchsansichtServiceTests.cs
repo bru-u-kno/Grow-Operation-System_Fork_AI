@@ -36,6 +36,25 @@ public class VerbrauchsansichtServiceTests
         Assert.Equal(4.0, VerbrauchsansichtService.PreisJeEinheit(fuellungen, Am("2026-07-15"), null));
     }
 
+    /// <summary>
+    /// Die Kostenseite reicht die Füllungen so herein, wie das Repository sie
+    /// liefert: NEUESTE ZUERST. Bis zum 01.10.2026 galt dann der Preis der
+    /// ältesten Füllung — 1 kg im August kostete 3 statt 4 €.
+    /// </summary>
+    [Fact]
+    public void DieReihenfolgeDerFuellungenSpieltKeineRolle()
+    {
+        var neuesteZuerst = new[]
+        {
+            Fuellung("2026-06-01", 10, 40),   // 4,00 je Einheit
+            Fuellung("2026-01-10", 10, 30),   // 3,00 je Einheit
+        };
+
+        Assert.Equal(4.0, VerbrauchsansichtService.PreisJeEinheit(neuesteZuerst, Am("2026-08-15"), null));
+        Assert.Equal(3.0, VerbrauchsansichtService.PreisJeEinheit(neuesteZuerst, Am("2026-03-15"), null));
+        Assert.Equal(3.0, VerbrauchsansichtService.PreisJeEinheit(neuesteZuerst, Am("2025-12-01"), null));
+    }
+
     [Fact]
     public void EineBuchungVorDerErstenFuellungNimmtDieErste()
     {

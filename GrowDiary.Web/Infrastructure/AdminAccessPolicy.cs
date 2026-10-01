@@ -21,6 +21,9 @@ public static class AdminAccessPolicy
         "/settings",
         "/einstellungen",
         "/api/settings",
+        // Derselbe Endpunkt wie /api/settings/home-assistant, nur ein zweiter
+        // Weg (SettingsApiController) — sonst läse ein Nachbar-Add-on ihn hier.
+        "/api/home-assistant/settings",
         "/api/system/backup",
         "/api/system/release-readiness",
         "/api/system/database-status",
@@ -64,33 +67,67 @@ public static class AdminAccessPolicy
         "/api/tasks"
     };
 
-    public static IReadOnlyList<string> ProtectedRoutePrefixes => ProtectedPrefixes.Concat(ProtectedProductApiPrefixes).ToArray();
+    /// <summary>
+    /// Wege unter <c>/api</c>, die bewusst JEDER erreichen darf — mit Grund.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (Sicherheitsprüfung 01.10.2026): Bis hierher war die Sperre eine
+    /// handgeschriebene Liste geschützter Präfixe. Sie kannte 33 Präfixe, die App
+    /// hat über 60 — offen lagen unter anderem <c>/api/dosing</c> (Pumpe
+    /// dosieren), <c>/api/steuerung</c> (Licht schalten, Automationen anlegen),
+    /// <c>/api/tents</c> und <c>/api/kosten</c>. Jedes Nachbar-Add-on konnte dort
+    /// schreiben. Seitdem gilt umgekehrt: alles unter <c>/api</c> ist geschützt,
+    /// offen ist nur, was hier mit Grund steht. Eine Liste kann nur an dem
+    /// scheitern, was schon draufsteht — und eine vergessene Ausnahme sperrt,
+    /// statt zu öffnen.
+    /// </remarks>
+    private static readonly Dictionary<string, string> OffeneApiWege = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["/api/system/backend-health"] =
+            "Lebenszeichen mit Zählungen und Baukennung, ohne Inhalte — fragt Grow MCP "
+            + "und der Start-Check ab, bevor überhaupt klar ist, wie man hereinkommt.",
+        ["/api/error"] =
+            "Der Fehlerbehandler (UseExceptionHandler) — er antwortet nur auf eine "
+            + "Anfrage, die schon durch die Sperre gegangen ist.",
+    };
+
+    /// <summary>Die offenen Wege samt Grund — für Tests und die Sicherheitsübersicht.</summary>
+    public static IReadOnlyDictionary<string, string> OpenApiRoutes => OffeneApiWege;
+
+    public static IReadOnlyList<string> ProtectedRoutePrefixes => ProtectedPrefixes.Concat(ProtectedProductApiPrefixes).Append("/api").ToArray();
 
     public static IReadOnlyList<string> ProtectedProductApiRoutePrefixes => ProtectedProductApiPrefixes;
 
     public static bool IsProtectedPath(PathString path)
     {
-        if (ProtectedPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
+        if (IsAdminPath(path))
         {
             return true;
         }
 
-        if (ProtectedProductApiPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
+        if (path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return !OffeneApiWege.Keys.Any(weg => path.StartsWithSegments(weg, StringComparison.OrdinalIgnoreCase));
         }
 
         /* Hier stand ein Waechter fuer drei Legacy-Kamera-Pfade
            (/tents/{id}/camera.jpg, /camera-stream, /latest-snapshot). Die
            Routen sind am 02.09.2026 geloescht — die Oberflaeche nimmt an allen
-           Stellen /api/live/tents/{id}/camera. Ein Waechter fuer Pfade, die es
-           nicht gibt, schuetzt nichts und liest sich, als gaebe es sie noch.
-
-           Beim Aufraeumen kam heraus, dass "/api/live" GAR NICHT in der Liste
-           oben stand: geschuetzt waren nur die drei alten Wege, waehrend der
-           neue offen lag. Er steht jetzt dort. */
+           Stellen /api/live/tents/{id}/camera. */
         return false;
     }
+
+    /// <summary>
+    /// Verwaltung, Sicherungen, Exporte, Prüfprotokoll — auch lesend nur über
+    /// Ingress oder Loopback, nie für ein Nachbar-Add-on.
+    /// </summary>
+    /// <remarks>
+    /// Eine Sicherung ist die ganze SQLite-Datei; außerhalb des Add-on-Betriebs
+    /// steht darin das HA-Token im Klartext, und den Dateinamen verrät das
+    /// Prüfprotokoll. Grow MCP braucht keinen dieser Wege.
+    /// </remarks>
+    public static bool IsAdminPath(PathString path)
+        => ProtectedPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Das interne Add-on-Netz von Home Assistant.
@@ -125,6 +162,7 @@ public static class AdminAccessPolicy
     /// <summary>Eine lesende Anfrage eines anderen Add-ons im internen Netz.</summary>
     public static bool IsInternalAddonRead(HttpContext context)
         => HttpMethods.IsGet(context.Request.Method)
+           && !IsAdminPath(context.Request.Path)
            && context.Connection.RemoteIpAddress is { } ip
            && AddonNetworks.Any(bereich => IsInSubnet(ip, bereich.Netz, bereich.Bits));
 
@@ -149,9 +187,33 @@ public static class AdminAccessPolicy
         return true;
     }
 
+    /// <summary>
+    /// Die Adressen des Ingress-Proxys im Supervisor.
+    /// </summary>
+    /// <remarks>
+    /// Quelle: Home-Assistant-Entwicklerdoku „Presenting your app → Ingress":
+    /// ein Add-on soll Ingress-Anfragen nur von 172.30.32.2 annehmen.
+    /// </remarks>
+    private static readonly IPAddress[] IngressProxies =
+    [
+        // Nur IPv4: der Supervisor vergibt fest nur diese Adresse, und Ingress
+        // spricht das Add-on über IPv4 an. Eine IPv6 im Add-on-Netz vergibt
+        // Docker frei — sie könnte einem anderen Container gehören.
+        IPAddress.Parse("172.30.32.2"),
+    ];
+
     /// <summary>True when the request is proxied through the Home Assistant ingress.</summary>
+    /// <remarks>
+    /// Fork AI (Sicherheitsprüfung 01.10.2026): Vorher genügte der Kopf allein.
+    /// Den kann jeder setzen — jedes Add-on im internen Netz bekam mit
+    /// <c>X-Ingress-Path: /x</c> vollen Schreibzugriff, auch auf Sicherung
+    /// zurückspielen und Einstellungen. Der Kopf zählt jetzt nur, wenn die
+    /// Anfrage vom Ingress-Proxy des Supervisors kommt.
+    /// </remarks>
     public static bool IsIngressRequest(HttpContext context)
-        => context.Request.Headers.ContainsKey(IngressPathHeaderName);
+        => context.Request.Headers.ContainsKey(IngressPathHeaderName)
+           && context.Connection.RemoteIpAddress is { } ip
+           && IngressProxies.Contains(ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip);
 
     public static bool IsLocalRequest(HttpContext context)
     {

@@ -13,7 +13,8 @@ function toMinutes(time: string): number | null {
 
 function formatHours(minutes: number): string {
   const hours = minutes / 60
-  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+  // Deutsch: 18,5/5,5 — nicht 18.5/5.5.
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace('.', ',')
 }
 
 function photoperiod(on: string, off: string): string | null {

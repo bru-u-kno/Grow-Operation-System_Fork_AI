@@ -143,7 +143,13 @@ public sealed class VerbrauchsansichtService
     public static double? PreisJeEinheit(
         IReadOnlyList<Nachfuellung> fuellungen, DateTime zeitpunkt, Verbrauchsartikel? artikel)
     {
-        var passend = fuellungen.LastOrDefault(n => n.ZeitpunktUtc <= zeitpunkt) ?? fuellungen.FirstOrDefault();
+        // Unabhängig von der Reihenfolge des Aufrufers: die jüngste Füllung bis
+        // zum Zeitpunkt, sonst die älteste überhaupt. Vorher LastOrDefault auf
+        // eine aufsteigende Liste — die Kostenseite reicht sie aber absteigend
+        // herein (KostenRepository: ORDER BY ZeitpunktUtc DESC) und bewertete
+        // damit jeden Verbrauch zum Preis der ÄLTESTEN Füllung.
+        var passend = fuellungen.Where(n => n.ZeitpunktUtc <= zeitpunkt).MaxBy(n => n.ZeitpunktUtc)
+                      ?? fuellungen.MinBy(n => n.ZeitpunktUtc);
         if (passend is { Menge: > 0 } f && f.KostenEur is { } kosten)
         {
             return kosten / f.Menge;

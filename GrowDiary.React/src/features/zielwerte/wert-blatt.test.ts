@@ -90,3 +90,23 @@ describe('regelnMitAenderung', () => {
     expect(neu[2]).toMatchObject({ metricKey: 'orp', minValue: 400, enabled: true })
   })
 })
+
+describe('Werte ab 1000', () => {
+  const co2: PlanFeld[] = [
+    { feld: 'co2Min', bezeichnung: 'CO₂ von', einheit: 'ppm', min: 300, max: 2000, schritt: 50, wert: 1200, startwert: 1200, herkunft: 'programm' },
+  ]
+  const co2Regel: AlarmRegel = {
+    quelle: 'Fest', min: null, max: 1500, nachtMin: null, nachtMax: null, toleranz: null,
+    standardToleranz: 100, karenzMinuten: 10, aktiv: true, planMoeglich: false,
+  }
+
+  it('übersteht die Runde durch das Eingabefeld (kein Tausenderpunkt)', () => {
+    const e = entwurfAus(co2, co2Regel)
+    expect(e.max).toBe('1500')
+    expect(e.plan.co2Min).toBe('1200')
+    // Unverändert geöffnet heißt: nichts geändert — vorher „1 Änderung" (1500 gegen 1,5).
+    expect(alarmGeaendert(co2Regel, e)).toBe(false)
+    expect(planAenderungen(co2, e, 'w')).toEqual([])
+  })
+})
+

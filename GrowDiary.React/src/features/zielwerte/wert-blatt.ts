@@ -65,10 +65,17 @@ const PAARE: ReadonlyArray<readonly [string, string]> = [
   ['ppfdMin', 'ppfdMax'], ['orpMin', 'orpMax'],
 ]
 
-/** Zahl deutsch, ohne überflüssige Nachkommastellen. */
+/**
+ * Zahl deutsch, ohne überflüssige Nachkommastellen — und OHNE Tausenderpunkt.
+ *
+ * Der Text steht in Eingabefeldern und wird mit `zahlOderNull` zurückgelesen,
+ * das den Punkt als Dezimaltrenner nimmt. Mit Tausenderpunkt wurde aus 1500 ppm
+ * „1.500" und beim Speichern 1,5 — die CO₂-Grenze meldete danach dauerhaft
+ * (Prüfung 01.10.2026). Wie `wochenwerte-bearbeiten.ts`.
+ */
 export function zahlText(wert: number | null | undefined): string {
   if (wert == null) return ''
-  return wert.toLocaleString('de-DE', { maximumFractionDigits: 3 })
+  return wert.toLocaleString('de-DE', { maximumFractionDigits: 3, useGrouping: false })
 }
 
 export function entwurfAus(felder: readonly PlanFeld[], regel: AlarmRegel | null): Entwurf {

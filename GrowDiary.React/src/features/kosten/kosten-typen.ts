@@ -62,10 +62,14 @@ export type KostenFuellungAktuell = {
   prognoseLeerAmUtc: string | null
   fuellstandProzent: number | null
   eurProTag: number | null
-  /** Wie viel seit dieser Füllung gebucht wurde. */
-  verbraucht: number
-  /** `gemessen` aus gebuchten Verbräuchen, `geschaetzt` aus früheren Laufzeiten. */
-  quelle: string
+  /** Wie viel seit dieser Füllung gebucht wurde (Backend: `VerbrauchtMenge`). */
+  verbrauchtMenge: number
+  /**
+   * `gemessen` aus gebuchten Verbräuchen, `geschaetzt` aus früheren Laufzeiten
+   * (Backend: `FuellstandQuelle`). Hieß hier bis zum 01.10.2026 `quelle` — das
+   * Feld kam nie an, und die Seite schrieb immer „geschätzt".
+   */
+  fuellstandQuelle: string
 }
 
 export type KostenArtikel = {

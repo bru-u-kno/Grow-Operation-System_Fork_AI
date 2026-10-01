@@ -56,6 +56,11 @@ describe('Deutsche Wörter', () => {
     ['ReservoirPosition', WOERTERBUECHER.tankplatz],
     ['PlantRole', WOERTERBUECHER.pflanzenRolle],
     ['PlantStatus', WOERTERBUECHER.pflanzenStatus],
+    // Die Bereiche auf der Zeltseite — bis zum 01.10.2026 ohne Tabelle.
+    ['SetupType', WOERTERBUECHER.bereichsart],
+    ['SetupStatus', WOERTERBUECHER.bereichsstatus],
+    ['MotherHealthStatus', WOERTERBUECHER.mutterzustand],
+    ['QuarantineResult', WOERTERBUECHER.quarantaene],
     // Die vier Stufen-Typen: bis zum 02.09.2026 lag ihre Tabelle in
     // utils.ts und wurde von NIEMANDEM gezaehlt. Genau dort ist „Info“
     // schon einmal roh auf den Schirm gefallen.

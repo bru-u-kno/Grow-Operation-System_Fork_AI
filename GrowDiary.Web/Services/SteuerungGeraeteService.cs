@@ -212,7 +212,9 @@ public sealed class SteuerungGeraeteService
     public static string? Domain(string? entityId)
     {
         if (string.IsNullOrWhiteSpace(entityId)) return null;
-        var teile = entityId.Trim().Split('.');
-        return teile.Length == 2 && teile[0].Length > 0 && teile[1].Length > 0 ? teile[0] : null;
+        var wert = entityId.Trim();
+        // Streng nach HA-Format, nicht nur „ein Punkt": der Wert landet roh in
+        // erzeugten Automationen (siehe SteuerungBauteile.VorlageFuellen).
+        return SteuerungBauteile.IstEntityId(wert) ? wert[..wert.IndexOf('.')] : null;
     }
 }

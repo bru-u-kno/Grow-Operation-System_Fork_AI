@@ -301,7 +301,8 @@ public sealed class AlertEvaluationService
     private static string Format(double value)
     {
         var rounded = Math.Round(value, 2);
-        return rounded.ToString(rounded == Math.Truncate(rounded) ? "0.##" : "0.##", CultureInfo.InvariantCulture);
+        // Deutsch, nicht invariant: das ist der Text auf dem Handy.
+        return rounded.ToString("0.##", CultureInfo.GetCultureInfo(Deutsch.Kennung));
     }
 
     public static (string Label, string Unit) MetricDisplay(string metricKey) => metricKey switch

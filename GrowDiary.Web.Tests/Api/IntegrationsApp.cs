@@ -1,4 +1,5 @@
 using GrowDiary.Web.Infrastructure;
+using Microsoft.AspNetCore.Builder;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -72,6 +73,10 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
 
         builder.UseContentRoot(_datenordner);
         builder.UseEnvironment("Development");
+        // Der Testserver liefert keine Absenderadresse. Seit dem 01.10.2026
+        // zählt der Ingress-Kopf nur vom Ingress-Proxy des Supervisors — also
+        // wird hier dessen Adresse nachgestellt, wie beim echten Weg.
+        builder.ConfigureServices(dienste => dienste.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, IngressAbsender>());
         var host = base.CreateHost(builder);
 
         // Den Bestand SELBST saeen statt ueber GROW_OS_DEMO. Grund:
@@ -178,4 +183,19 @@ public sealed class IntegrationsAppTests
         var pfade = new AppPaths(_app.Services.GetRequiredService<IWebHostEnvironment>().ContentRootPath);
         Assert.StartsWith(_app.Datenordner, pfade.DatabasePath, StringComparison.Ordinal);
     }
+}
+
+/// <summary>Setzt die Absenderadresse des Ingress-Proxys, wenn der Testserver keine liefert.</summary>
+internal sealed class IngressAbsender : IStartupFilter
+{
+    public Action<Microsoft.AspNetCore.Builder.IApplicationBuilder> Configure(Action<Microsoft.AspNetCore.Builder.IApplicationBuilder> next)
+        => app =>
+        {
+            app.Use(async (context, weiter) =>
+            {
+                context.Connection.RemoteIpAddress ??= System.Net.IPAddress.Parse("172.30.32.2");
+                await weiter();
+            });
+            next(app);
+        };
 }

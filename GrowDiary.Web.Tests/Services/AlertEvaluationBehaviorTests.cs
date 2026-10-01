@@ -84,6 +84,24 @@ public sealed class AlertEvaluationBehaviorTests : IDisposable
         Assert.NotNull(rule.LastNotifiedUtc);
     }
 
+    /// <summary>
+    /// Der Push ist Oberflächentext: deutsche Zahlen. Bis zum 01.10.2026 stand
+    /// dort „pH 5.25 (Grenze 5.5)" — formatiert mit der invarianten Kultur.
+    /// </summary>
+    [Fact]
+    public async Task Breach_PushUsesGermanNumbers()
+    {
+        var handler = new RecordingHttpHandler((_, _) => RecordingHttpHandler.Json("[]"));
+        var service = Service(handler);
+
+        await service.EvaluateAsync(_tent, Ph(5.25));
+
+        var push = Assert.Single(handler.Requests);
+        Assert.Contains("5,25", push.Body);
+        Assert.Contains("Grenze 5,5", push.Body);
+        Assert.DoesNotContain("5.25", push.Body);
+    }
+
     [Fact]
     public async Task ContinuedBreach_AcrossPolls_DoesNotSpam()
     {

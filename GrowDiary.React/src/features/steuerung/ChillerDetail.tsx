@@ -5,6 +5,7 @@ import { CHILLER_REITER } from './steuerung-typen'
 import type { ChillerEinstellungen, ChillerReiter, ChillerSeite, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
+import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
 
 /**
  * Fork AI: Steuerung › Water Chiller — der Wasserkühler, der bisher als Kachel
@@ -80,6 +81,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
 
   const speichern = async () => {
     if (!entwurf) return
+    const leer = leereZahlenfelder(entwurf)
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<ChillerSeite>('/api/steuerung/chiller', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -88,7 +91,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
         ? 'Gespeichert — aber nicht alle Helfer haben den Wert angenommen.'
         : 'Gespeichert.')
     } catch (caught) {
-      const felder = (caught as { fields?: Record<string, string> })?.fields
+      const felder = feldFehlerAus(caught)
       if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
@@ -122,8 +125,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
   }
   const art = ANSTEUERUNG_TEXT[ansteuerung] ?? ANSTEUERUNG_TEXT.steckdose
   const grad1 = (wert: number | null | undefined) =>
-    wert == null ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-  const zahl = (wert: number | null | undefined) => (wert == null ? '–' : wert.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
+    wert == null || !Number.isFinite(wert) ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  const zahl = (wert: number | null | undefined) => (wert == null || !Number.isFinite(wert) ? '–' : wert.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
 
   return (
     <V1Page
@@ -177,13 +180,13 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
       <section className="v1-kpi-grid">
         <V1Stat
           label="Wasser"
-          value={live.wasserC == null ? '–' : live.wasserC.toFixed(1)}
+          value={grad1(live.wasserC)}
           unit=" °C"
           tone={live.kuehlbedarf === true ? 'warn' : 'ok'}
         />
         <V1Stat
           label="Ziel jetzt"
-          value={live.zielAktivC == null ? '–' : live.zielAktivC.toFixed(1)}
+          value={grad1(live.zielAktivC)}
           unit=" °C"
           hint={live.tagPhase == null ? null : live.tagPhase ? 'Tag' : 'Nacht'}
         />
@@ -205,7 +208,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
         ) : (
           <V1Stat
             label="Soll im Gerät"
-            value={live.kuehlerSollC == null ? '–' : live.kuehlerSollC.toFixed(1)}
+            value={grad1(live.kuehlerSollC)}
             unit={live.kuehlerSollC == null ? null : ' °C'}
             tone={live.kuehlerSollC == null ? 'neutral' : sollStimmt ? 'ok' : 'warn'}
             hint={live.kuehlerSollC == null ? 'kein Wert vom Gerät' : sollStimmt ? 'stimmt mit dem Ziel' : 'weicht vom Ziel ab'}
@@ -412,10 +415,10 @@ function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChange, fehl
           max={max}
           step={schritt}
           aria-label={label}
-          value={wert}
+          value={Number.isFinite(wert) ? wert : ''}
           onChange={(e) => {
-            const neu = Number(e.target.value)
-            if (Number.isFinite(neu)) onChange(neu)
+            const neu = zahlAusFeld(e.target.value)
+            if (neu != null) onChange(neu)
           }}
         />
         {einheit && <span className="st-einheit">{einheit}</span>}

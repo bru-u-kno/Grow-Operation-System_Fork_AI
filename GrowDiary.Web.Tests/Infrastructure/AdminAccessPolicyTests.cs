@@ -91,13 +91,120 @@ public sealed class AdminAccessPolicyTests
         Assert.False(AdminAccessPolicy.CanAccess(context));
     }
 
-    [Fact]
-    public void CanAccess_AllowsRemoteRequestsThroughIngress()
+    [Theory]
+    [InlineData("172.30.32.2")]
+    [InlineData("::ffff:172.30.32.2")]
+    public void CanAccess_AllowsRequestsThroughTheIngressProxy(string ip)
     {
-        var context = CreateContext(IPAddress.Parse("203.0.113.10"), IPAddress.Parse("192.168.1.20"));
+        var context = CreateContext(IPAddress.Parse(ip), IPAddress.Parse("172.30.33.2"));
+        context.Request.Method = HttpMethods.Post;
         context.Request.Headers[AdminAccessPolicy.IngressPathHeaderName] = "/api/hassio_ingress/token";
 
         Assert.True(AdminAccessPolicy.CanAccess(context));
+    }
+
+    /// <summary>
+    /// Den Ingress-Kopf kann jeder setzen. Bis zum 01.10.2026 genügte er allein:
+    /// ein Nachbar-Add-on schrieb mit <c>X-Ingress-Path: /x</c> überall hin.
+    /// </summary>
+    [Theory]
+    [InlineData("172.30.33.7")]    // ein Nachbar-Add-on
+    [InlineData("172.30.32.1")]    // der Gateway
+    [InlineData("203.0.113.10")]   // irgendwer
+    [InlineData("192.168.1.50")]   // das Heimnetz
+    [InlineData("fd0c:ac1e:2100::2")]   // IPv6 im Add-on-Netz vergibt Docker frei
+    public void CanAccess_RejectsASpoofedIngressHeader(string ip)
+    {
+        var context = CreateContext(IPAddress.Parse(ip), IPAddress.Parse("172.30.33.2"));
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Headers[AdminAccessPolicy.IngressPathHeaderName] = "/x";
+
+        Assert.False(AdminAccessPolicy.CanAccess(context));
+    }
+
+    /// <summary>Eine Sicherung ist die ganze Datenbank — auch lesend nichts für Nachbarn.</summary>
+    [Theory]
+    [InlineData("/api/system/backup/grow-os-backup-20260101-120000.zip")]
+    [InlineData("/api/system/audit-events")]
+    [InlineData("/api/settings")]
+    [InlineData("/api/exports/grows/1")]
+    [InlineData("/api/home-assistant/settings")]   // zweiter Weg zu /api/settings/home-assistant
+    public void CanAccess_RejectsAdminReadsFromTheInternalAddonNetwork(string path)
+    {
+        var context = CreateContext(IPAddress.Parse("172.30.33.7"), IPAddress.Parse("172.30.33.2"));
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = path;
+
+        Assert.False(AdminAccessPolicy.CanAccess(context));
+    }
+
+    /// <summary>
+    /// Zählung über die Grundmenge: JEDE Route unter /api ist geschützt, außer
+    /// den ausdrücklich offenen Wegen mit Grund.
+    /// </summary>
+    /// <remarks>
+    /// Bis zum 01.10.2026 prüfte diese Datei nur eine handgeschriebene Liste —
+    /// und die Sperre selbst war auch eine. Offen lagen dadurch unter anderem
+    /// <c>POST /api/dosing/pumps/{id}/dose</c> und <c>/api/steuerung/licht/befehl</c>.
+    /// </remarks>
+    [Fact]
+    public void EveryApiRoute_IsProtected_UnlessExplicitlyOpen()
+    {
+        var routen = typeof(AdminAccessPolicy).Assembly.GetTypes()
+            .Where(t => typeof(Microsoft.AspNetCore.Mvc.ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)
+            .SelectMany(t =>
+            {
+                var basis = t.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.RouteAttribute), true)
+                    .Cast<Microsoft.AspNetCore.Mvc.RouteAttribute>().Select(r => r.Template).FirstOrDefault() ?? "";
+                return t.GetMethods()
+                    .SelectMany(m => m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute), true)
+                        .Cast<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>())
+                    .Select(a => a.Template is null ? basis
+                        : a.Template.StartsWith("~/") ? a.Template[2..]
+                        : a.Template.StartsWith('/') ? a.Template[1..]
+                        : string.IsNullOrEmpty(basis) ? a.Template : basis + "/" + a.Template);
+            })
+            .Select(r => "/" + r.Trim('/'))
+            .Where(r => r.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+            .Distinct()
+            .ToList();
+
+        // Mengenwächter: ohne ihn wäre eine leere Grundmenge grün.
+        Assert.True(routen.Count >= 200, $"Nur {routen.Count} API-Routen gefunden — sieht die Zählung ihre Grundmenge?");
+        Assert.Contains("/api/dosing/pumps/{id:int}/dose", routen);
+
+        var offen = routen
+            .Where(r => !AdminAccessPolicy.IsProtectedPath(new PathString(r)))
+            .Where(r => !AdminAccessPolicy.OpenApiRoutes.Keys.Any(w => r.StartsWith(w, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        Assert.True(offen.Count == 0, "Ungeschützt: " + string.Join(", ", offen));
+    }
+
+    /// <summary>
+    /// Die offene Liste ist seit dem Umbau die EINZIGE Stelle, an der etwas
+    /// aufgehen kann — die Zählung oben nimmt ihre Einträge aus und sähe eine
+    /// zu weite Ausnahme (etwa "/api/dosing") nicht. Deshalb steht ihr Inhalt
+    /// hier fest; wer etwas öffnet, muss es auch hier begründen.
+    /// </summary>
+    [Fact]
+    public void OpenApiRoutes_AreExactlyTheKnownSafeOnes()
+    {
+        Assert.Equal(
+            new[] { "/api/error", "/api/system/backend-health" },
+            AdminAccessPolicy.OpenApiRoutes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+        Assert.All(AdminAccessPolicy.OpenApiRoutes.Values, grund => Assert.True(grund.Length > 20));
+    }
+
+    [Theory]
+    [InlineData("/api/dosing/pumps/1/dose")]
+    [InlineData("/api/steuerung/licht/befehl")]
+    [InlineData("/api/steuerung/chiller/automationen")]
+    [InlineData("/api/tents/1")]
+    [InlineData("/api/kosten")]
+    [InlineData("/api/wochenplan/werte/1")]
+    public void IsProtectedPath_ProtectsTheFormerlyOpenWritePaths(string path)
+    {
+        Assert.True(AdminAccessPolicy.IsProtectedPath(new PathString(path)));
     }
 
     /// <summary>

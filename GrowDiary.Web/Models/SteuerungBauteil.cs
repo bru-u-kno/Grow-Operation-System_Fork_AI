@@ -476,7 +476,11 @@ public static class SteuerungBauteile
         var fertig = vorlage;
         foreach (var (rolle, entity) in zuordnung)
         {
-            if (!string.IsNullOrWhiteSpace(entity))
+            // Nur echte Entity-IDs. Eingesetzt wird roh in JSON- und Jinja-Text;
+            // ein Wert mit " oder ' bricht dort aus und kann eine Automation um
+            // beliebige Aktionen erweitern (Sicherheitsprüfung 01.10.2026).
+            // Ein ungültiger Wert bleibt Platzhalter — die Vorschrift entfällt.
+            if (IstEntityId(entity))
             {
                 fertig = fertig.Replace($"[[{rolle}]]", entity, StringComparison.Ordinal);
             }
@@ -484,6 +488,14 @@ public static class SteuerungBauteile
 
         return fertig.Contains("[[", StringComparison.Ordinal) ? null : fertig;
     }
+
+    /// <summary>
+    /// Hat der Text die Form einer HA-Entity-ID (<c>domain.objekt_id</c>, nur
+    /// Kleinbuchstaben, Ziffern und Unterstrich)?
+    /// </summary>
+    public static bool IstEntityId(string? wert)
+        => !string.IsNullOrEmpty(wert)
+           && System.Text.RegularExpressions.Regex.IsMatch(wert, "^[a-z0-9_]+\\.[a-z0-9_]+$");
 
     /// <summary>Welche Rollen eine Vorlage braucht.</summary>
     public static IReadOnlyList<string> PlatzhalterIn(string vorlage)

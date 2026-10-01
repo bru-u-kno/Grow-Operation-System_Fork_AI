@@ -181,9 +181,9 @@ public sealed class WatchdogService
     public async Task<WatchdogVerdict> CheckAndNotifyAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
     {
         var verdict = Inspect(nowUtc).Verdict;
-        var previous = _heartbeat.NotifiedCode;
+        var schritt = Entscheiden(verdict.IsProblem, _heartbeat.NotifiedCode, verdict.ChangeKey);
 
-        if (verdict.IsProblem && previous != verdict.ChangeKey)
+        if (schritt.Warnen)
         {
             var sent = await _notifications.SendAsync(
                 NotificationCategory.System, "🌱 Grow OS · Systemwarnung", $"{verdict.Headline}: {verdict.Detail}", cancellationToken);
@@ -204,9 +204,14 @@ public sealed class WatchdogService
                 verdict.Detail,
                 verdict.Code);
         }
-        else if (!verdict.IsProblem && previous is not null)
+
+        if (schritt.RisikoSchliessen)
         {
             _risiken.Entwarnen(RiskEventType.HomeAssistantUnavailable, null);
+        }
+
+        if (schritt.EntwarnungSenden)
+        {
             await _notifications.SendAsync(
                 NotificationCategory.System, "🌱 Grow OS · Entwarnung", "Die Überwachung läuft wieder — Sensordaten kommen an.", cancellationToken);
             _heartbeat.NotifiedCode = null;
@@ -215,4 +220,22 @@ public sealed class WatchdogService
 
         return verdict;
     }
+
+    /// <summary>Was ein Takt tut — rein, damit jeder Zweig ohne Datenbank prüfbar ist.</summary>
+    /// <remarks>
+    /// Fork AI (Prüfung 01.10.2026): Das Risiko „Home Assistant nicht erreichbar"
+    /// wurde vorher nur geschlossen, wenn vorher ein Push RAUSGEGANGEN war
+    /// (<c>NotifiedCode</c> gesetzt). Ohne eingerichtete Benachrichtigung, mit
+    /// abgeschalteter Kategorie, in der Ruhezeit oder nach einem Neustart
+    /// (<c>NotifiedCode</c> lebt nur im Speicher) blieb ein kritisches Risiko
+    /// für immer offen. Das Risiko folgt jetzt dem Zustand, nur der Push hängt
+    /// an der Merkmarke.
+    /// </remarks>
+    public static WatchdogSchritt Entscheiden(bool istProblem, string? gemeldet, string aenderungsSchluessel)
+        => istProblem
+            ? new WatchdogSchritt(Warnen: gemeldet != aenderungsSchluessel, RisikoSchliessen: false, EntwarnungSenden: false)
+            : new WatchdogSchritt(Warnen: false, RisikoSchliessen: true, EntwarnungSenden: gemeldet is not null);
 }
+
+/// <summary>Die Handlungen eines Watchdog-Takts.</summary>
+public sealed record WatchdogSchritt(bool Warnen, bool RisikoSchliessen, bool EntwarnungSenden);

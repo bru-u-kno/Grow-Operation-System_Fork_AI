@@ -198,4 +198,30 @@ public sealed class WatchdogServiceTests
         Assert.Equal(WatchdogService.Ok, verdict.Code);
         Assert.Contains("4 Minuten", verdict.Detail);
     }
+
+    /// <summary>
+    /// Das kritische Risiko schließt, sobald alles wieder läuft — auch wenn der
+    /// Warn-Push nie rausging (keine Benachrichtigung eingerichtet, Ruhezeit)
+    /// oder ein Neustart die Merkmarke gelöscht hat.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("ha-offline")]
+    public void Recovery_AlwaysClosesTheRisk_PushOnlyWhenOneWasSent(string? gemeldet)
+    {
+        var schritt = WatchdogService.Entscheiden(istProblem: false, gemeldet, "idle");
+
+        Assert.True(schritt.RisikoSchliessen);
+        Assert.False(schritt.Warnen);
+        Assert.Equal(gemeldet is not null, schritt.EntwarnungSenden);
+    }
+
+    [Fact]
+    public void Problem_WarnsOncePerState()
+    {
+        Assert.True(WatchdogService.Entscheiden(true, null, "ha-offline").Warnen);
+        Assert.False(WatchdogService.Entscheiden(true, "ha-offline", "ha-offline").Warnen);
+        Assert.True(WatchdogService.Entscheiden(true, "ha-offline", "dark:Zelt 2").Warnen);
+        Assert.False(WatchdogService.Entscheiden(true, null, "ha-offline").RisikoSchliessen);
+    }
 }
