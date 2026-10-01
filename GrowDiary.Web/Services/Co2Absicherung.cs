@@ -179,7 +179,9 @@ public static class Co2Absicherung
         return aktion switch
         {
             "select.select_option" => schritt?["data"]?["option"]?.ToString() == "On",
-            "switch.turn_on" or "valve.open_valve" => true,
+            // input_boolean: die Vorlage schaltet ein so zugeordnetes Ventil seit
+            // 01.10.2026 mit turn_on/turn_off (SteuerungAutomationService.Fuellen).
+            "switch.turn_on" or "input_boolean.turn_on" or "valve.open_valve" => true,
             _ => false,
         };
     }
@@ -190,7 +192,7 @@ public static class Co2Absicherung
         return aktion switch
         {
             "select.select_option" => schritt?["data"]?["option"]?.ToString() == "Off",
-            "switch.turn_off" or "valve.close_valve" => true,
+            "switch.turn_off" or "input_boolean.turn_off" or "valve.close_valve" => true,
             _ => false,
         };
     }

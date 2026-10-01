@@ -99,6 +99,13 @@ public static class SteuerungGeraeteRollen
         new("co2", "port_schalter", "Dosier-Steckdose · schalten", GruppeSchalten,
             "select.rdwc_venti_aktiver_modus_2", new[] { "select", "switch", "input_boolean" },
             Hinweis: "Was das Ventil wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
+        // Fork AI (01.10.2026): Die Dosier-Vorlage prüfte vor dem Öffnen
+        // port_zustand auf „on" — vor dem Öffnen ist das Ventil aber zu, die
+        // Dosierung startete nie. Gemeint war „Port online", wie in der
+        // handgebauten Fassung. Optional: ohne sie entfällt nur diese Prüfung.
+        new("co2", "port_status", "Dosier-Steckdose · Port online", GruppeMessen,
+            "binary_sensor.big_port_5_status", new[] { "binary_sensor" }, Pflicht: false,
+            Hinweis: "Erreichbar oder nicht — nicht, ob das Ventil offen ist. Ohne sie dosiert die Vorlage auch, wenn der Port nicht antwortet."),
         new("co2", "abluft_stufe", "Abluft T6 · Stufe", GruppeSchalten,
             "number.rdwc_venti_einschaltleistung", new[] { "number" }, Pflicht: false),
         new("co2", "licht", "Licht-Status", GruppeUmfeld,

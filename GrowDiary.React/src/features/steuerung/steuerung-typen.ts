@@ -464,7 +464,7 @@ export type BauteilStand = {
   name: string
   art: string
   zweck: string
-  /** `Da` | `Stumm` | `Fehlt` | `Entfaellt` */
+  /** `Da` | `Stumm` | `Fehlt` | `Entfaellt` | `Veraltet` */
   stand: string
   pflicht: boolean
   ohneDas: string | null
@@ -476,6 +476,8 @@ export type Bestandsaufnahme = {
   da: number
   fehlt: number
   entfaellt: number
+  /** Vom Fork angelegte Automationen in älterer Fassung als die mitgelieferte Vorlage. */
+  veraltet: number
   fehlendeRollen: string[]
   ausgefalleneFunktionen: string[]
   bauteile: BauteilStand[]
