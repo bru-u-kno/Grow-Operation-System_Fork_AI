@@ -312,6 +312,10 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "DosingPumps", "PartnerDelayMinutes", "INTEGER NOT NULL DEFAULT 5");
         EnsureColumn(connection, "DosingPumps", "CostPerLiterEur", "REAL NULL");
 
+        // Zweite Duenger-Haelfte: Fehlversuche bei nicht erreichbarem Home
+        // Assistant. Vorher war B nach dem ersten solchen Versuch weg.
+        EnsureColumn(connection, "PendingDoses", "Fehlversuche", "INTEGER NOT NULL DEFAULT 0");
+
         // Stroemung: Luftstrom am Blatt als Zahl, Wasserfluss als Stufe.
         EnsureColumn(connection, "Measurements", "AirflowAtLeafMPerMin", "REAL NULL");
         EnsureColumn(connection, "Measurements", "WaterFlow", "TEXT NULL");

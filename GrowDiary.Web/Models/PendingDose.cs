@@ -28,4 +28,19 @@ public sealed class PendingDose
 
     public string? Reason { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Wie oft diese Hälfte schon an einem nicht erreichbaren Home Assistant
+    /// gescheitert ist (<c>Pumpenlauf.NichtGesendet</c> — nachweislich nichts
+    /// geflossen).
+    /// </summary>
+    /// <remarks>
+    /// Bis zum 01.10.2026 war die Hälfte nach dem ersten solchen Fehlschlag
+    /// endgültig weg, obwohl sicher nichts geflossen war. Jetzt bleibt sie
+    /// stehen — aber nicht für immer: nach
+    /// <see cref="Services.PartnerDosing.MaxFehlversuche"/> Versuchen wird sie
+    /// verworfen und protokolliert, sonst hielte ein dauerhaft fehlendes Home
+    /// Assistant das ganze Becken an.
+    /// </remarks>
+    public int Fehlversuche { get; set; }
 }
