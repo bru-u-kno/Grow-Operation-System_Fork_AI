@@ -39,13 +39,13 @@ public sealed class AnschaffungVerteilenRundwegTests
         var rumpf = new JsonObject
         {
             ["name"] = "Rundweg LED verteilt",
-            ["datum"] = "2026-01-01T12:00:00Z",
+            ["datum"] = "2026-01-01T12:00:00",
             ["stueck"] = 1,
             ["einzelpreisEur"] = 365.0,
             ["growId"] = growId,
             ["nutzungsdauerMonate"] = 36,
             ["tentId"] = zeltId,
-            ["ausgemustertAm"] = "2026-12-31T12:00:00Z",
+            ["ausgemustertAm"] = "2026-12-31T12:00:00",
             ["journal"] = false,
         };
         var angelegt = await client.PostAsJsonAsync("/api/kosten/anschaffungen", rumpf);
@@ -81,14 +81,14 @@ public sealed class AnschaffungVerteilenRundwegTests
     [InlineData(0, null, null, "nutzungsdauer_invalid")]
     [InlineData(601, null, null, "nutzungsdauer_invalid")]
     [InlineData(12, 999_999, null, "tent_not_found")]
-    [InlineData(12, null, "2025-12-31T12:00:00Z", "ausgemustert_invalid")]
+    [InlineData(12, null, "2025-12-31T12:00:00", "ausgemustert_invalid")]
     public async Task UnmoeglicheVerteilungWirdAbgelehnt(int monate, int? zelt, string? ausgemustert, string code)
     {
         using var client = _app.IngressClient();
         var antwort = await client.PostAsJsonAsync("/api/kosten/anschaffungen", new JsonObject
         {
             ["name"] = "Rundweg abgelehnt",
-            ["datum"] = "2026-01-01T12:00:00Z",
+            ["datum"] = "2026-01-01T12:00:00",
             ["stueck"] = 1,
             ["einzelpreisEur"] = 10.0,
             ["nutzungsdauerMonate"] = monate,
@@ -105,7 +105,8 @@ public sealed class AnschaffungVerteilenRundwegTests
     {
         Assert.Equal(36, zeile["nutzungsdauerMonate"]!.GetValue<int>());
         Assert.Equal(zeltId, zeile["tentId"]!.GetValue<int>());
-        Assert.StartsWith("2026-12-31", zeile["ausgemustertAmUtc"]!.GetValue<string>());
+        // Ohne „Z" geschickt heißt Ortszeit (ZuUtc); zurück kommt UTC — verglichen wird der Ortstag.
+        Assert.Equal(new DateTime(2026, 12, 31), DateTime.Parse(zeile["ausgemustertAmUtc"]!.GetValue<string>()).ToUniversalTime().ToLocalTime().Date);
         Assert.Null(zeile["growId"]); // verteilt gehört sie keinem einzelnen Grow
         var verteilung = zeile["verteilung"]!.AsObject();
         Assert.StartsWith("2026-12-31", verteilung["ausgemustertTag"]!.GetValue<string>());

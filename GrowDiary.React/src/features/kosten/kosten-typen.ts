@@ -178,8 +178,10 @@ export type KostenSeite = {
   hersteller: string[]
   /** Bekannte Produkte mit Hersteller — für den Vorschlag beim Tippen */
   produkte: Array<{ hersteller: string | null; produkt: string }>
-  /** forkai.157: Zelte für „nur Grows in diesem Zelt" */
-  zelte: Array<{ id: number; name: string }>
+  /** forkai.157: Zelte für „nur Grows in diesem Zelt" — auch archivierte, an denen noch eine Anschaffung hängen kann */
+  zelte: Array<{ id: number; name: string; archiviert: boolean }>
+  /** forkai.157: Höchste Nutzungsdauer in Monaten — vom Backend, damit die Grenze an einer Stelle steht */
+  maxNutzungsdauerMonate: number
 }
 
 /** „Lager" — ausdrücklich keinem Grow zugeordnet. Als Select-Wert, weil ein <option> keinen null-Wert tragen kann. */

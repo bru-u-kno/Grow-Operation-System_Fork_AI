@@ -119,7 +119,7 @@ public sealed record KostenVerteilung(
     int AnzahlGrows);
 
 /// <summary>forkai.157: Ein Zelt zur Auswahl „nur Grows in diesem Zelt".</summary>
-public sealed record KostenZelt(int Id, string Name);
+public sealed record KostenZelt(int Id, string Name, bool Archiviert);
 
 public sealed record KostenDurchgang(int GrowId, string Name, DateTime StartDate, DateTime? EndDate, bool Laeuft, double? StromEur, double ArtikelEur, double AnschaffungenEur, double? GesamtEur);
 
@@ -134,7 +134,9 @@ public sealed record KostenSeite(
     IReadOnlyList<string> Einheiten,
     IReadOnlyList<string> Hersteller,
     IReadOnlyList<KostenProdukt> Produkte,
-    IReadOnlyList<KostenZelt> Zelte);
+    IReadOnlyList<KostenZelt> Zelte,
+    /// <summary>forkai.157: Höchste Nutzungsdauer — die Oberfläche prüft gegen diese Zahl, statt sie abzutippen.</summary>
+    int MaxNutzungsdauerMonate);
 
 /// <summary>Ein bekanntes Produkt mit seinem Hersteller — für den Vorschlag im Formular.</summary>
 public sealed record KostenProdukt(string? Hersteller, string Produkt);
@@ -253,7 +255,10 @@ public sealed class KostenSeiteService
             DateTime.UtcNow,
             _hardware.GetHardwareItems(),
             _kosten.GetVerbraeuche(),
-            _grows.GetTents());
+            // Auch archivierte: eine Anschaffung, die an einem archivierten Zelt
+            // haengt, rechnet weiter nur mit dessen Grows — die Auswahl muss das
+            // Zelt dann auch zeigen, statt „alle Zelte" zu behaupten.
+            _grows.GetTents(includeArchived: true));
     }
 
     // ------------------------------------------------------------ Rechnung
@@ -371,8 +376,12 @@ public sealed class KostenSeiteService
             })
             .ToList();
 
-        var zelteListe = zelte.OrderBy(z => z.Name, StringComparer.CurrentCultureIgnoreCase).Select(z => new KostenZelt(z.Id, z.Name)).ToList();
-        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle, hersteller, produkte, zelteListe);
+        var zelteListe = zelte
+            .OrderBy(z => z.Status == TentStatus.Archived).ThenBy(z => z.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(z => new KostenZelt(z.Id, z.Name, z.Status == TentStatus.Archived))
+            .ToList();
+        return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle, hersteller, produkte, zelteListe,
+            AnschaffungVerteilung.MaxMonate);
     }
 
     /// <summary>

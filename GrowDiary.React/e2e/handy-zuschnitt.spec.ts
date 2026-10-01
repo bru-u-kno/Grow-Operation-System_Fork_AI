@@ -46,6 +46,14 @@ const SEITEN = [
   // Neu in beta.52 und beim Bauen in KEINER Sichtpruefung — genau der
   // blinde Fleck, den das Messprotokoll oben schon einmal hatte.
   { pfad: '/archiv', name: 'archiv' },
+  // forkai.157: Die Kosten-Seite stand in keiner Telefon-Pruefung. Auf dem
+  // Reiter Anschaffungen zog ein unsichtbarer Spaltenkopf („Aktion", .sr-only)
+  // die Seite 228 px breit — er entkam dem Wischbereich der Tabelle. Sichtbar
+  // erst, seit der Demobestand Anschaffungen und eine Nachfuellung anlegt.
+  { pfad: '/kosten?tab=strom', name: 'kosten-strom' },
+  { pfad: '/kosten?tab=verbrauch', name: 'kosten-verbrauch' },
+  { pfad: '/kosten?tab=anschaffungen', name: 'kosten-anschaffungen' },
+  { pfad: '/kosten?tab=durchgaenge', name: 'kosten-durchgaenge' },
 ]
 
 /** Was rechts hinausragt, ohne dass man es wegwischen könnte. */

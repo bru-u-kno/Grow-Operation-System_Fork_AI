@@ -1307,7 +1307,7 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
     if (stueckZahl == null || stueckZahl < 1) { onError('Stückzahl fehlt.'); return }
     if (preisZahl == null) { onError('Einzelpreis fehlt.'); return }
     if (verteilt && (istUnlesbar(dauer) || monate == null)) { onError('Nutzungsdauer fehlt — ganze Jahre oder Monate, mindestens 1.'); return }
-    if (verteilt && monate != null && monate > 600) { onError('Nutzungsdauer höchstens 50 Jahre.'); return }
+    if (verteilt && monate != null && monate > seite.maxNutzungsdauerMonate) { onError(`Nutzungsdauer höchstens ${dauerText(seite.maxNutzungsdauerMonate)}.`); return }
     if (verteilt && ausgemustert && datum && ausgemustert < datum) { onError('Ausgemustert kann nicht vor dem Kaufdatum liegen.'); return }
     setBusy(true)
     try {
@@ -1376,7 +1376,10 @@ function AnschaffungForm({ seite, vorhanden, onDone, onCancel, onError }: {
             <V1Field label="Nur Grows im Zelt" hint="„alle Zelte“: jeder laufende Grow trägt mit, egal wo">
               <select value={zelt} onChange={(e) => setZelt(e.target.value)} data-audit="kosten-anschaffung-zelt">
                 <option value="">alle Zelte</option>
-                {seite.zelte.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+                {seite.zelte.filter((z) => !z.archiviert || String(z.id) === zelt).map((z) => <option key={z.id} value={z.id}>{z.name}{z.archiviert ? ' (archiviert)' : ''}</option>)}
+                {/* Ein inzwischen gelöschtes Zelt: die Rechnung zählt weiter nur dessen
+                    Grows — die Auswahl darf dann nicht „alle Zelte“ behaupten. */}
+                {zelt && !seite.zelte.some((z) => String(z.id) === zelt) && <option value={zelt}>Zelt {zelt} (gelöscht)</option>}
               </select>
             </V1Field>
             {vorhanden && (
@@ -1421,6 +1424,8 @@ function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite
   const liste = seite.anschaffungen
   // forkai.157: „im Grow" heißt: trägt etwas bei — einmalig zugeordnet oder mit einem Anteil.
   const imGrow = seite.grow ? liste.filter((a) => a.imGrowEur > 0) : []
+  const einmaligImGrow = imGrow.filter((a) => a.nutzungsdauerMonate == null)
+  const anteileImGrow = imGrow.filter((a) => a.nutzungsdauerMonate != null).reduce((n, a) => n + a.imGrowEur, 0)
 
   async function loeschen(a: KostenAnschaffung) {
     if (!window.confirm(`„${a.name}“ vom ${formatDate(a.datumUtc)} löschen?${a.hardwareItemId != null ? ' Der Hardware-Artikel dazu bleibt bestehen.' : ''}`)) return
@@ -1478,11 +1483,14 @@ function AnschaffungenTabelle({ seite, onErfassen, onChanged, onError }: { seite
                 {seite.grow && imGrow.length > 0 && (
                   <tr className="is-summe">
                     <td></td>
-                    <th scope="row">Summe im Durchgang {seite.grow.name}</th>
-                    <td>{imGrow.reduce((n, a) => n + a.stueck, 0)}</td>
+                    {/* forkai.157: Keine Spaltensumme — verteilte Anschaffungen stehen
+                        oben mit dem vollen Preis, zählen hier aber nur mit ihrem
+                        Anteil. Deshalb sagt die Zeile, was sie ist, und schlüsselt auf. */}
+                    <th scope="row">Kostet den Durchgang {seite.grow.name}</th>
+                    <td>{einmaligImGrow.length > 0 ? einmaligImGrow.reduce((n, a) => n + a.stueck, 0) : ''}</td>
                     <td></td>
                     <td>{euro(seite.summe.anschaffungenEur)}</td>
-                    <td></td>
+                    <td>{anteileImGrow > 0 && <span className="ko-verteilt"><small>einmalig {euro(seite.summe.anschaffungenEur - anteileImGrow)}</small><small>Anteile verteilter {euro(anteileImGrow)}</small></span>}</td>
                     <td></td>
                   </tr>
                 )}

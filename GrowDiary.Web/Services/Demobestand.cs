@@ -90,6 +90,7 @@ public static class Demobestand
         GlasAnlegen(aushaerten, laufend.Id);
         PumpenAnlegen(dosierung, zelt.Id);
         LaufendenAblaufAnlegen(dienste, laufend.Id);
+        AnschaffungenAnlegen(dienste.GetRequiredService<KostenRepository>(), zelt.Id, laufend.Id);
 
         /* Der erste Lauf bleibt ABSICHTLICH ohne Verknuepfung in die
            Bibliothek: "Northern Lights" steht dort nicht, und genau dieser
@@ -1154,6 +1155,52 @@ public static class Demobestand
             NugStructure = "Dicht.",
         });
     }
+    /// <summary>Drei Anschaffungen: eine einmalige, zwei verteilte (forkai.157).</summary>
+    /// <remarks>
+    /// <para><b>Warum das noetig ist.</b> Ohne Anschaffung stand die Tabelle auf
+    /// /kosten?tab=anschaffungen leer, und keine Oberflaechen-Pruefung sah sie.
+    /// Genau dort zog ein unsichtbarer Spaltenkopf die Seite am Telefon 228 px
+    /// breit — gefunden erst mit Hand angelegten Daten.</para>
+    ///
+    /// <para>Die Lampe beginnt vor dem ersten abgeschlossenen Lauf, damit sich
+    /// ihr Preis über alle drei Grows und die Pausen dazwischen (Leerlauf)
+    /// verteilt. Der Ventilator ist vor 20 Tagen ausgemustert — mitten im
+    /// laufenden Grow, der damit den Rest traegt. So zeigt der Bestand jede
+    /// Zeile, die die Verteilungszelle kennt.</para>
+    /// </remarks>
+    private static void AnschaffungenAnlegen(KostenRepository kosten, int zeltId, int laufendId)
+    {
+        kosten.CreateAnschaffung(new Anschaffung
+        {
+            Name = "LED-Lampe 480 W (Testdaten)",
+            Hersteller = "Lumatek",
+            DatumUtc = Tag(300).ToUniversalTime(),
+            Stueck = 1,
+            EinzelpreisEur = 600,
+            NutzungsdauerMonate = 36,
+            TentId = zeltId,
+            Notiz = "Testdaten: verteilt über drei Jahre.",
+        });
+        kosten.CreateAnschaffung(new Anschaffung
+        {
+            Name = "Umluft-Ventilator (Testdaten)",
+            DatumUtc = Tag(250).ToUniversalTime(),
+            Stueck = 2,
+            EinzelpreisEur = 34.90,
+            NutzungsdauerMonate = 24,
+            AusgemustertAmUtc = Tag(20).ToUniversalTime(),
+            Notiz = "Testdaten: vorzeitig ausgemustert.",
+        });
+        kosten.CreateAnschaffung(new Anschaffung
+        {
+            Name = "Erntescheren (Testdaten)",
+            DatumUtc = Tag(10).ToUniversalTime(),
+            Stueck = 3,
+            EinzelpreisEur = 4.90,
+            GrowId = laufendId,
+        });
+    }
+
     /// <summary>Ein Ablauf, der gerade laeuft.</summary>
     /// <remarks>
     /// <para><b>Warum das noetig ist.</b> Der Bestand hatte keine einzige

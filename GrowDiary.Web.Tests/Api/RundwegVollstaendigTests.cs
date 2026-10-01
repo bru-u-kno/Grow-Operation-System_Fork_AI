@@ -331,10 +331,10 @@ public sealed class RundwegVollstaendigTests
             + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen. Die Felder "
             + "fahren KostenSeiteTests und die Oberflaechen-Erfassung.",
         ["AnschaffungRequest"] =
-            "Der Demobestand legt keine Anschaffung an; ohne Bestand faehrt der Rundweg ins "
-            + "Leere und waere gruen, ohne etwas zu pruefen. Die Felder fahren KostenSeiteTests, "
-            + "AnschaffungVerteilenRundwegTests (forkai.157: legt selbst an, speichert zweimal, "
-            + "stellt zurueck) und die Oberflaechen-Erfassung.",
+            "Kein einzelner Lese-Weg: eine Anschaffung kommt nur eingebettet in GET /api/kosten "
+            + "zurueck, und mit anderen Feldnamen (AusgemustertAm -> ausgemustertAmUtc). Die Felder "
+            + "fahren AnschaffungVerteilenRundwegTests (forkai.157: legt selbst an, speichert zweimal, "
+            + "stellt zurueck), KostenSeiteTests und e2e/kosten-rundweg.spec.ts.",
         ["NachfuellungUpdateRequest"] =
             "Der Demobestand legt keine Nachfuellung an; ohne Bestand faehrt der Rundweg "
             + "ins Leere und waere gruen, ohne etwas zu pruefen. Der Vertrag ist fuer den "

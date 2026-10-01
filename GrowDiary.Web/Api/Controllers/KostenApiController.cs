@@ -379,7 +379,9 @@ public sealed class KostenApiController : ApiControllerBase
         public DateTime? AusgemustertAm { get; set; }
     }
 
-    private ActionResult? AnschaffungPruefen(AnschaffungRequest request, DateTime datumUtc)
+    /// <param name="bisherigesZelt">Das gespeicherte Zelt beim Bearbeiten. Ist es inzwischen gelöscht, darf
+    /// die Anschaffung trotzdem gespeichert werden — sonst scheiterte jede Änderung an der Notiz.</param>
+    private ActionResult? AnschaffungPruefen(AnschaffungRequest request, DateTime datumUtc, int? bisherigesZelt = null)
     {
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Die Anschaffung braucht einen Namen.");
         if (request.Stueck <= 0) return BadRequestError("stueck_invalid", "Stückzahl muss mindestens 1 sein.");
@@ -390,7 +392,7 @@ public sealed class KostenApiController : ApiControllerBase
             {
                 return BadRequestError("nutzungsdauer_invalid", $"Die Nutzungsdauer liegt zwischen 1 und {AnschaffungVerteilung.MaxMonate} Monaten.");
             }
-            if (request.TentId is { } tentId && _grows.GetTent(tentId) is null)
+            if (request.TentId is { } tentId && tentId != bisherigesZelt && _grows.GetTent(tentId) is null)
             {
                 return BadRequestError("tent_not_found", $"Zelt {tentId} existiert nicht.");
             }
@@ -483,7 +485,7 @@ public sealed class KostenApiController : ApiControllerBase
         var a = _repo.GetAnschaffung(id);
         if (a is null) return NotFoundError("anschaffung_not_found", $"Anschaffung {id} existiert nicht.");
         var datum = request.Datum is null ? a.DatumUtc : ZuUtc(request.Datum);
-        if (AnschaffungPruefen(request, datum) is { } fehler) return fehler;
+        if (AnschaffungPruefen(request, datum, a.TentId) is { } fehler) return fehler;
         var growId = request.OhneGrow || request.NutzungsdauerMonate is > 0 ? null : request.GrowId ?? a.GrowId;
         if (growId is { } gidPruef && _grows.GetGrow(gidPruef) is null) return BadRequestError("grow_not_found", $"Grow {gidPruef} existiert nicht.");
         var (herstellerAU, produktAU) = Angleichen(request.Hersteller, request.Produkt);

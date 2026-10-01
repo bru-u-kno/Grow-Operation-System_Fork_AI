@@ -17,7 +17,15 @@ namespace GrowDiary.Web.Infrastructure;
 public sealed class KostenRepository : RepositoryBase
 {
     private static readonly object SchemaLock = new();
-    private static bool _schemaEnsured;
+
+    /// <summary>
+    /// forkai.157: Je Datenbankdatei, nicht je Prozess. Ein einziger Merker galt
+    /// für ALLE Datenbanken — die Tests legen viele Wegwerf-Datenbanken an, und
+    /// jede nach der ersten blieb ohne Kosten-Tabellen. Aufgefallen, als der
+    /// Demobestand erstmals Anschaffungen anlegte: „no such table:
+    /// ForkAnschaffungen" in elf Bestandstests.
+    /// </summary>
+    private static readonly HashSet<string> SchemaVorhanden = new(StringComparer.Ordinal);
 
     public KostenRepository(AppPaths paths) : base(paths)
     {
@@ -32,10 +40,10 @@ public sealed class KostenRepository : RepositoryBase
 
     private static void EnsureSchema(SqliteConnection connection)
     {
-        if (_schemaEnsured) return;
+        var datei = connection.DataSource;
         lock (SchemaLock)
         {
-            if (_schemaEnsured) return;
+            if (SchemaVorhanden.Contains(datei)) return;
             using var command = connection.CreateCommand();
             command.CommandText = """
                 CREATE TABLE IF NOT EXISTS ForkVerbrauchsartikel (
@@ -133,7 +141,7 @@ public sealed class KostenRepository : RepositoryBase
                     alter.ExecuteNonQuery();
                 }
             }
-            _schemaEnsured = true;
+            SchemaVorhanden.Add(datei);
         }
     }
 

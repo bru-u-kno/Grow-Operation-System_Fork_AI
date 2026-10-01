@@ -18,7 +18,14 @@ namespace GrowDiary.Web.Tests.Services;
 public sealed class AnschaffungVerteilungTests
 {
     private static readonly DateTime Heute = new(2026, 6, 9);
-    private static readonly DateTime JetztUtc = new(2026, 6, 9, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime JetztUtc = Mittag(2026, 6, 9);
+
+    /// <summary>
+    /// Mittag ORTSZEIT, in UTC. Die Rechnung arbeitet mit Ortstagen; ein fester
+    /// UTC-Mittag fiele in Auckland schon auf den Folgetag, und die Tests wären
+    /// dort rot, ohne dass die Rechnung falsch ist.
+    /// </summary>
+    private static DateTime Mittag(int jahr, int monat, int tag) => new DateTime(jahr, monat, tag, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
 
     private static Anschaffung Lampe(int monate = 12, int? zelt = null, DateTime? ausgemustert = null) => new()
     {
@@ -26,7 +33,7 @@ public sealed class AnschaffungVerteilungTests
         Name = "LED 480 W",
         Stueck = 1,
         EinzelpreisEur = 365,
-        DatumUtc = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+        DatumUtc = Mittag(2026, 1, 1),
         NutzungsdauerMonate = monate,
         TentId = zelt,
         AusgemustertAmUtc = ausgemustert,
@@ -91,7 +98,7 @@ public sealed class AnschaffungVerteilungTests
     public void VorzeitigAusgemustertFaelltDerRestAufDenLaufendenGrow()
     {
         // Kaputt am 01.06.: bis 31.05. regulär (31 Tage), der Rest 01.06.–31.12. (214 Tage) dazu.
-        var v = AnschaffungVerteilung.Berechnen(Lampe(ausgemustert: new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc)), [Erster(), Zweiter()], Heute);
+        var v = AnschaffungVerteilung.Berechnen(Lampe(ausgemustert: Mittag(2026, 6, 1)), [Erster(), Zweiter()], Heute);
 
         Assert.Equal(new DateTime(2026, 6, 1), v.AusgemustertTag);
         Assert.Equal(214, v.RestwertEur, precision: 6);
@@ -103,7 +110,7 @@ public sealed class AnschaffungVerteilungTests
     [Fact]
     public void AusgemustertOhneLaufendenGrowIstDerRestLeerlauf()
     {
-        var v = AnschaffungVerteilung.Berechnen(Lampe(ausgemustert: new DateTime(2026, 4, 15, 12, 0, 0, DateTimeKind.Utc)), [Erster(), Zweiter()], Heute);
+        var v = AnschaffungVerteilung.Berechnen(Lampe(ausgemustert: Mittag(2026, 4, 15)), [Erster(), Zweiter()], Heute);
 
         Assert.Equal(90, v.JeGrow[1], precision: 6);
         Assert.False(v.JeGrow.ContainsKey(2)); // startete erst nach der Ausmusterung

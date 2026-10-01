@@ -106,6 +106,59 @@ public sealed class GrowUpdatePreservationTests : IDisposable
         Assert.Equal("Blattlage heute deutlich besser.", danach.Notes);
     }
 
+    /// <summary>
+    /// forkai.157: Wer einen laufenden Grow im Bearbeiten-Formular auf
+    /// „Beendet" oder „Abgebrochen" stellt, bekommt ein Enddatum — wie über den
+    /// Knopf „Abschließen". Ohne Enddatum weiß niemand, wie lange der Grow lief:
+    /// die verteilten Anschaffungen nahmen ihm dann rückwirkend seinen Anteil
+    /// und gaben ihn den parallelen Grows. „Abgebrochen" gibt es NUR auf diesem
+    /// Weg, also traf es jeden abgebrochenen Grow.
+    /// </summary>
+    [Theory]
+    [InlineData(GrowStatus.Completed)]
+    [InlineData(GrowStatus.Aborted)]
+    public void BeendenImFormularSetztDasEnddatum(GrowStatus status)
+    {
+        var growId = _repository.CreateGrow(new GrowRun
+        {
+            TentId = _tent.Id,
+            Name = "Lauf 13",
+            StartDate = new DateTime(2026, 5, 1),
+            Status = GrowStatus.Running,
+            SeedType = SeedType.Feminized,
+        });
+
+        var antwort = _controller.Update(growId, new GrowUpsertRequest
+        {
+            Name = "Lauf 13",
+            TentId = _tent.Id,
+            StartDate = "2026-05-01",
+            Status = status,
+            SeedType = SeedType.Feminized,
+            EntryPoint = GrowEntryPoint.Germination,
+        });
+
+        Assert.IsType<OkObjectResult>(antwort.Result);
+        Assert.Equal(DateTime.Today, _repository.GetGrow(growId)!.EndDate);
+
+        // Nochmal speichern: das Enddatum bleibt, es wandert nicht auf „heute" mit.
+        var gestern = DateTime.Today.AddDays(-1);
+        var grow = _repository.GetGrow(growId)!;
+        grow.EndDate = gestern;
+        _repository.UpdateGrow(grow);
+        _controller.Update(growId, new GrowUpsertRequest
+        {
+            Name = "Lauf 13",
+            TentId = _tent.Id,
+            StartDate = "2026-05-01",
+            Status = status,
+            SeedType = SeedType.Feminized,
+            EntryPoint = GrowEntryPoint.Germination,
+            Notes = "zweites Speichern",
+        });
+        Assert.Equal(gestern, _repository.GetGrow(growId)!.EndDate);
+    }
+
     [Fact]
     public void AnExplicitOptOutStillTurnsTheFeedChartTargetsOff()
     {

@@ -240,6 +240,17 @@ public sealed class GrowsApiController : ApiControllerBase
         grow.VegStartedAt = existing.VegStartedAt;
         grow.FinishStartedAt = existing.FinishStartedAt;
         grow.EndDate = existing.EndDate;
+
+        // Fork AI (forkai.157): Wer den Grow hier beendet oder abbricht, bekommt
+        // ein Enddatum — wie über „Abschließen" (Complete). Ohne Enddatum weiß
+        // niemand, wie lange er lief; die verteilten Anschaffungen nahmen ihm
+        // dann rückwirkend seinen Anteil. „Abgebrochen" gibt es nur auf diesem Weg.
+        if (grow.Status is GrowStatus.Completed or GrowStatus.Aborted
+            && existing.Status is GrowStatus.Planning or GrowStatus.Running)
+        {
+            grow.EndDate ??= DateTime.Today;
+        }
+
         grow.NightRampEnabled = existing.NightRampEnabled;
         grow.NightRampFloorC = existing.NightRampFloorC;
 

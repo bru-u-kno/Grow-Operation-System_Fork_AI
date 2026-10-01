@@ -48,8 +48,8 @@ werden ignoriert). Wer einen neuen Hersteller anlegt, legt damit auch seine
 Schreibweise fest.
 
 **Anschaffungen (forkai.9).** Was gekauft wird und bleibt: Name, Hersteller,
-Produkt, Datum, Stück, Einzelpreis, Grow oder Lager, Notiz. Zählt einmal, hat
-keine Laufzeit. Optional legt das Erfassen einen Hardware-Artikel (Kategorie
+Produkt, Datum, Stück, Einzelpreis, Grow oder Lager, Notiz. Zählt einmal im
+zugeordneten Grow — oder verteilt (s. u.). Optional legt das Erfassen einen Hardware-Artikel (Kategorie
 „Zubehör“) unter Sensoren & Wartung an und einen Journal-Eintrag im Grow.
 
 **Verteilte Anschaffungen (forkai.157).** „Zählt für: Auf alle Grows
@@ -63,7 +63,10 @@ Tagesanteile; der Rest fällt auf die Grows dieses Tages, sonst in den
 Leerlauf. Über die Zeit statt über die Zahl der Grows, damit ein
 abgeschlossener Grow sich nie mehr ändert. Verteilt + Leerlauf + offen ergibt
 immer den Gesamtpreis; die Tabelle zeigt alle drei. Geplante Grows tragen
-nichts, abgeschlossene ohne Enddatum (Altbestand) ebenfalls. Rechnung:
+nichts, abgeschlossene ohne Enddatum ebenfalls (seit forkai.157 setzt auch das
+Bearbeiten-Formular beim Beenden oder Abbrechen das Enddatum; ohne bleibt nur
+Altbestand). Ein archiviertes Zelt bleibt wählbar, solange eine Anschaffung
+daran hängt. Rechnung:
 `GrowDiary.Web/Services/AnschaffungVerteilung.cs`, geprüft in
 `AnschaffungVerteilungTests` und über HTTP in `AnschaffungVerteilenRundwegTests`.
 

@@ -17,7 +17,7 @@
 - **Verteilt wird über die Zeit, nicht über die Zahl der Grows** — wie viele noch kommen, weiß niemand. So
   ändert sich ein abgeschlossener Grow nie mehr nachträglich. Tage ohne laufenden Grow verfallen als
   „Leerlauf“; die Tabelle zeigt je Anschaffung, was bisher verteilt ist, was im Leerlauf lag und was noch
-  offen ist.
+  offen ist. Die Zeile „Kostet den Durchgang“ schlüsselt auf, was einmalig und was als Anteil zählt.
 - **Ausgemustert am** (beim Bearbeiten): Geht ein Gerät vorzeitig kaputt oder wird verkauft, fällt der noch
   nicht verteilte Rest auf die Grows, die an diesem Tag laufen. Läuft keiner, ist auch der Rest Leerlauf.
 - Bestehende Anschaffungen bleiben, wie sie sind: einmalig im zugeordneten Grow.
@@ -28,7 +28,9 @@
 - Behoben — **Verbrauch wurde mit dem Preis der ältesten Füllung bewertet** statt mit dem der Füllung, die
   zu dem Zeitpunkt lief. Bei einem Nachkauf zu anderem Preis stand die Summe falsch.
 - Behoben — **Am Telefon war die Kosten-Seite breiter als der Bildschirm**, sobald eine Anschaffung
-  in der Tabelle stand; die Artikelnamen standen in Silben untereinander.
+  oder Nachfüllung in der Tabelle stand; die Artikelnamen standen in Silben untereinander.
+- Behoben — **Ein Grow, der im Bearbeiten-Formular auf „Beendet“ oder „Abgebrochen“ gestellt wird, bekommt
+  jetzt ein Enddatum** — wie über „Abschließen“. Ohne Enddatum wusste niemand, wie lange er lief.
 
 ## 2.0.0-forkai.156
 
