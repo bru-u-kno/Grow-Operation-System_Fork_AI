@@ -9,17 +9,27 @@
 
 **Fork AI.** CO₂: auch die beiden Rechenwerte lassen sich jetzt absichern.
 
-- Neu — **„CO2 Bedarf" und „CO2 Impuls Bedarf" in „Sicherheit der CO₂-Automationen".** Beide Rechenwerte behielten
+- Neu — **„CO2 Bedarf" und „CO2 Impuls Bedarf" in „Sicherheit der CO₂-Regelung"** (so heißt der Abschnitt jetzt,
+  er umfasst Automationen und Rechenwerte). Beide Rechenwerte behielten
   ihre Formel aus der Zeit vor forkai.153: Schwieg der CO₂-Fühler, blieb der Bedarf bis zu 5 Minuten „an“
   (bei 0 ppm unbegrenzt), und der Impuls-Bedarf rechnete mit 0 ppm die Höchstdauer. Die Seite zeigt jetzt
   je Rechenwert, was er heute tut und was er nach dem Absichern tut („sofort aus“, „0 s“). Mit gültigem
   Messwert rechnen beide wie bisher.
 - **Ersetzt wird nur eine bekannte ältere Formel von Fork AI.** Eine von Hand angepasste Formel wird nur
-  angezeigt — mit der aktuellen Fassung daneben zum Vergleichen, aber nicht überschrieben.
+  angezeigt — mit der aktuellen Fassung daneben zum Vergleichen, aber nicht überschrieben. Rechnet eine Formel
+  mit einem anderen CO₂-Fühler als dem unter „Rollen bearbeiten“ zugeordneten, sagt die Seite das und ändert
+  ebenfalls nichts.
 - Geändert wird nur die Formel. Name, Einheit, Zustandsklasse und Verfügbarkeit des Helfers bleiben, wie sie
-  sind. Vorher wird die alte Formel gesichert; danach liest Fork AI nach, was Home Assistant wirklich hat,
-  und sieht nach, ob der Rechenwert einen Wert liefert. Bleibt er „nicht verfügbar“, kommt die alte Formel
-  von selbst zurück, und die Seite sagt es. Wie bei den Automationen: nicht während einer Dosierung.
+  sind. Vorher wird der alte Stand gesichert; danach liest Fork AI nach, was Home Assistant wirklich hat —
+  die Formel und jede andere Einstellung des Helfers — und sieht nach, ob der Rechenwert einen Wert liefert.
+  Stimmt etwas nicht, kommt der alte Stand von selbst zurück, und die Seite sagt es — auch wenn man die
+  Seite inzwischen verlassen hat. Lehnt Home Assistant ab, nennt die Seite den Grund. Wie bei den
+  Automationen: nicht während einer Dosierung.
+- Behoben — **Einrichten von Zuluft und Chiller scheiterte an den Rechenwerten.** Fork AI schickte die
+  „Verfügbarkeit“ eines Rechenwerts an eine Stelle, die Home Assistant (2026.9) nicht mehr kennt; der Dialog
+  lehnte den Rechenwert ab, und alle folgenden wurden nicht mehr angelegt. Die Meldung lautete nur
+  „Abgelehnt (400).“ Jetzt steht die Verfügbarkeit im Abschnitt, in den sie gehört, eine Ablehnung nennt den
+  Grund, und der abgelehnte Dialog wird geschlossen, statt bis zum nächsten Neustart offen zu bleiben.
 
 ## 2.0.0-forkai.155
 

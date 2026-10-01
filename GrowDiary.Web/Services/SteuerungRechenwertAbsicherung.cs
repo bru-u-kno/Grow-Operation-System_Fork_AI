@@ -18,6 +18,13 @@ namespace GrowDiary.Web.Services;
 /// (<c>binary_sensor</c>/<c>sensor</c>) und belegt jedes Feld mit dem
 /// gespeicherten Wert vor. Zum bloßen Lesen wird er mit <c>DELETE</c> wieder
 /// geschlossen, ohne dass etwas gespeichert wird.</para>
+/// <para><b>Nicht abbrechbar, sobald begonnen.</b> Ein offener Dialog
+/// verfällt in Home Assistant nicht von selbst — er bleibt, bis er
+/// abgeschlossen oder abgebrochen wird. Und ein Schreiben ohne Nachsehen
+/// hinterließe vielleicht einen Rechenwert ohne Wert. Deshalb laufen alle
+/// Aufrufe an Home Assistant ohne das Abbruchsignal der Anfrage: verlässt der
+/// Bediener die Seite, wird trotzdem zu Ende gelesen, geschlossen und
+/// nötigenfalls zurückgeschrieben.</para>
 /// <para><b>Was dabei schiefgehen kann.</b> Ein Feld, das beim Absenden fehlt,
 /// löscht Home Assistant — deshalb geht jeder vorbelegte Wert unverändert
 /// zurück (<see cref="Co2Rechenwerte.Antwort"/>). Und eine Formel, die Home
@@ -57,10 +64,11 @@ public sealed class SteuerungRechenwertAbsicherung
     public async Task<IReadOnlyList<Rechenwert>> LesenAsync(
         HttpClient client, HomeAssistantSocket? socket, IReadOnlyDictionary<string, string> zuordnung, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var ergebnis = new List<Rechenwert>();
         foreach (var entityId in Co2Rechenwerte.Betroffene)
         {
-            ergebnis.Add(await EinenLesenAsync(client, socket, entityId, zuordnung, ct));
+            ergebnis.Add(await EinenLesenAsync(client, socket, entityId, zuordnung, CancellationToken.None));
         }
         return ergebnis;
     }
@@ -88,6 +96,10 @@ public sealed class SteuerungRechenwertAbsicherung
             Co2Rechenwerte.Stand.Veraltet => new(entityId, name, stand.ToString(), alt!.Heute, alt.Danach, formel, neu, null),
             Co2Rechenwerte.Stand.Angepasst => new(entityId, name, stand.ToString(), null, null, formel, neu,
                 "Die Formel ist von Hand angepasst — Fork AI ersetzt sie nicht. Zum Vergleich steht die aktuelle Fassung daneben."),
+            Co2Rechenwerte.Stand.AndererFuehler => new(entityId, name, stand.ToString(), null, null, formel, neu,
+                $"Die Formel rechnet mit {Co2Rechenwerte.FuehlerInFormel(entityId, formel)}, unter „Rollen bearbeiten“ ist "
+                + $"{zuordnung.GetValueOrDefault("co2_sensor")} zugeordnet. Fork AI ändert sie nicht — welcher Fühler stimmt, "
+                + "weißt du. Stimmt die Zuordnung nicht, danach hier noch einmal nachsehen."),
             _ => new(entityId, name, stand.ToString(), null, null, formel, null,
                 "Dafür muss unter „Rollen bearbeiten“ ein CO₂-Sensor zugeordnet sein."),
         };
@@ -105,6 +117,10 @@ public sealed class SteuerungRechenwertAbsicherung
     {
         var name = SteuerungBauteile.Alle.Single(b => b.EntityId == entityId).Name;
         Ergebnis Fehler(string grund) => new(entityId, name, false, grund);
+
+        // Ab hier läuft es zu Ende — auch wenn der Bediener die Seite verlässt.
+        ct.ThrowIfCancellationRequested();
+        ct = CancellationToken.None;
 
         var eintrag = await EintragAsync(socket, entityId, ct);
         if (eintrag.Fehler is not null) return Fehler(eintrag.Fehler);
@@ -129,31 +145,58 @@ public sealed class SteuerungRechenwertAbsicherung
 
         var neu = Co2Rechenwerte.Aktuelle(entityId, zuordnung)!;
         var gesendet = await AbsendenAsync(client, dialog.Value.Id, Co2Rechenwerte.Antwort(vorher, neu), ct);
-        if (gesendet is not null) return Fehler(gesendet);
-
-        // Nachlesen, was Home Assistant jetzt wirklich hat.
-        var jetzt = await FormelLesenAsync(client, eintrag.Id!, ct);
-        if (jetzt is null || Co2Rechenwerte.Beurteilen(entityId, jetzt, zuordnung).Stand != Co2Rechenwerte.Stand.Aktuell)
+        if (gesendet is not null)
         {
-            return Fehler("Geschrieben, aber Home Assistant zeigt danach nicht die neue Formel.");
+            // Bei einer Ablehnung bleibt der Dialog in Home Assistant offen.
+            await SchliessenAsync(client, dialog.Value.Id, ct);
+            return Fehler(gesendet);
         }
 
-        if (await LiefertWertAsync(settings, entityId, ct))
+        // Nachlesen, was Home Assistant jetzt wirklich hat — die Formel UND
+        // alle übrigen Werte. Fehlt danach etwa die Einheit, hat die Antwort
+        // ein Feld nicht so zurückgeschickt, wie Home Assistant es erwartet.
+        string? problem;
+        var nachher = await OeffnenAsync(client, eintrag.Id!, ct);
+        if (nachher is null)
+        {
+            problem = "Geschrieben, aber der Einstellungsdialog lässt sich danach nicht mehr öffnen";
+        }
+        else
+        {
+            await SchliessenAsync(client, nachher.Value.Id, ct);
+            var jetzt = Co2Rechenwerte.FormelAusDialog(nachher.Value.Schema);
+            problem = jetzt is null || Co2Rechenwerte.Beurteilen(entityId, jetzt, zuordnung).Stand != Co2Rechenwerte.Stand.Aktuell
+                ? "Geschrieben, aber Home Assistant zeigt danach nicht die neue Formel"
+                : !JsonNode.DeepEquals(Co2Rechenwerte.Antwort(vorher, neu), Co2Rechenwerte.Antwort(nachher.Value.Schema, neu))
+                    ? "Geschrieben, aber danach fehlte oder änderte sich eine andere Einstellung des Helfers"
+                    : !await LiefertWertAsync(settings, entityId, ct)
+                        ? "Nach dem Ersetzen lieferte der Rechenwert keinen Wert"
+                        : null;
+        }
+
+        if (problem is null)
         {
             _log.LogInformation("Rechenwert {EntityId} auf die aktuelle Formel gebracht.", entityId);
             return new Ergebnis(entityId, name, true, null);
         }
 
-        // Liefert nichts: die alte Formel wieder hinein.
-        _log.LogWarning("Rechenwert {EntityId} liefert nach dem Ersetzen keinen Wert — alte Formel zurück.", entityId);
-        var zurueck = await OeffnenAsync(client, eintrag.Id!, ct);
-        var zurueckFehler = zurueck is null
-            ? "Dialog ließ sich nicht öffnen"
-            : await AbsendenAsync(client, zurueck.Value.Id, Co2Rechenwerte.Antwort(zurueck.Value.Schema, alt), ct);
+        // Etwas stimmt nicht: der ganze alte Stand wieder hinein.
+        _log.LogWarning("Rechenwert {EntityId}: {Problem} — alter Stand zurück.", entityId, problem);
+        var zurueckFehler = await ZurueckschreibenAsync(client, eintrag.Id!, vorher, alt, ct);
         return Fehler(zurueckFehler is null
-            ? "Nach dem Ersetzen lieferte der Rechenwert keinen Wert — die alte Formel wurde zurückgeschrieben."
-            : $"Nach dem Ersetzen lieferte der Rechenwert keinen Wert, und das Zurückschreiben scheiterte ({zurueckFehler}). "
-              + "Die alte Formel liegt im Add-on unter App_Data/automations-backup.");
+            ? $"{problem} — der alte Stand wurde zurückgeschrieben."
+            : $"{problem}, und das Zurückschreiben scheiterte ({zurueckFehler}). "
+              + "Der alte Stand liegt im Add-on unter App_Data/automations-backup.");
+    }
+
+    /// <summary>Den gesicherten Stand zurück — alle Werte, nicht nur die Formel.</summary>
+    private static async Task<string?> ZurueckschreibenAsync(
+        HttpClient client, string eintrag, JsonArray vorher, string alteFormel, CancellationToken ct)
+    {
+        if (await OeffnenAsync(client, eintrag, ct) is not { } dialog) return "Dialog ließ sich nicht öffnen";
+        var fehler = await AbsendenAsync(client, dialog.Id, Co2Rechenwerte.Antwort(vorher, alteFormel), ct);
+        if (fehler is not null) await SchliessenAsync(client, dialog.Id, ct);
+        return fehler;
     }
 
     // ------------------------------------------------------------ Home Assistant
@@ -201,7 +244,8 @@ public sealed class SteuerungRechenwertAbsicherung
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            // Ein offener Dialog verfällt in Home Assistant von selbst.
+            // Mehr lässt sich nicht tun. Der Dialog bleibt in Home Assistant
+            // offen, bis HA neu startet — er speichert aber nichts.
         }
     }
 
@@ -223,7 +267,13 @@ public sealed class SteuerungRechenwertAbsicherung
             var inhalt = JsonNode.Parse(await antwort.Content.ReadAsStringAsync(ct)) as JsonObject;
             if (!antwort.IsSuccessStatusCode)
             {
-                return $"Home Assistant hat abgelehnt ({(int)antwort.StatusCode}): {inhalt?["message"]}";
+                // Schemafehler kommen als {"errors": {"base": [...]}}
+                // (helpers/data_entry_flow.py), andere als {"message": ...}.
+                var grund = inhalt?["errors"]?["base"]?[0]?.ToString()
+                    ?? inhalt?["errors"]?.ToJsonString()
+                    ?? inhalt?["message"]?.ToString()
+                    ?? "ohne Begründung";
+                return $"Home Assistant hat abgelehnt ({(int)antwort.StatusCode}): {grund}";
             }
             // Bei fehlerhaften Feldern antwortet HA mit 200 und dem Formular noch einmal.
             return inhalt?["type"]?.ToString() == "create_entry"

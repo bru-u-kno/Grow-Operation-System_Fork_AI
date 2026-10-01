@@ -69,6 +69,12 @@ public sealed class SteuerungAbsicherungServiceTests
         /// <summary>Nach dem Speichern liefert der Rechenwert keinen Zustand mehr.</summary>
         public bool RechenwertFaelltAus { get; set; }
 
+        /// <summary>Das Verhalten des Dialogs (ablehnen, Feld verlieren, Haken für Abbrüche).</summary>
+        public OptionsDialog.Verhalten Dialog { get; } = new();
+
+        /// <summary>Wird beim Abfragen des Zustands eines Rechenwerts aufgerufen.</summary>
+        public Action? BeimZustand { get; set; }
+
         private readonly Dictionary<string, string> _dialoge = new();
         public int DialogeOffen => _dialoge.Count;
         public List<JsonObject> Abgeschickt { get; } = [];
@@ -96,12 +102,13 @@ public sealed class SteuerungAbsicherungServiceTests
                 if (pfad.StartsWith("/api/states/", StringComparison.Ordinal) && Eintraege.ContainsKey(pfad["/api/states/".Length..]))
                 {
                     var entity = pfad["/api/states/".Length..];
+                    BeimZustand?.Invoke();
                     var wert = RechenwertFaelltAus ? "unavailable" : entity.StartsWith("binary_sensor", StringComparison.Ordinal) ? "on" : "9";
                     return RecordingHttpHandler.Json(RecordingHttpHandler.EntityStateJson(entity, wert));
                 }
                 if (pfad.StartsWith(OptionsDialog.Pfad, StringComparison.Ordinal))
                 {
-                    return OptionsDialog.Beantworten(anfrage, inhalt, Optionen, _dialoge, Abgeschickt);
+                    return OptionsDialog.Beantworten(anfrage, inhalt, Optionen, _dialoge, Abgeschickt, Dialog);
                 }
                 const string config = "/api/config/automation/config/";
                 if (pfad.StartsWith(config, StringComparison.Ordinal))
@@ -357,6 +364,83 @@ public sealed class SteuerungAbsicherungServiceTests
         Assert.Equal(angepasst, ha.Optionen[BedarfEintrag]["state"]!.ToString());
         Assert.DoesNotContain(ha.Abgeschickt, a => a["state"]!.ToString().Contains("co2_bedarf", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public async Task Rechenwerte_LehntHomeAssistantAb_WirdDerDialogGeschlossen_UndDerGrundGenannt()
+    {
+        await using var socket = await NachgebauterSocket.StartenAsync(Dosierung, [LichtAus], NachgebautesHa.Eintraege);
+        var einstellungen = new HomeAssistantSettings { Enabled = true, BaseUrl = socket.Adresse, AccessToken = "test" };
+        var ha = new NachgebautesHa();
+        ha.Dialog.LehntAb = true;
+        var alt = ha.Optionen[BedarfEintrag]["state"]!.ToString();
+
+        var bilanz = await ha.Dienst().AbsichernAsync(Rollen, einstellungen, default);
+
+        var bedarf = Assert.Single(bilanz.Einzeln, e => e.EntityId == "binary_sensor.co2_bedarf");
+        Assert.False(bedarf.Geschrieben);
+        Assert.Contains("expected str", bedarf.Fehler);
+        Assert.Equal(0, ha.DialogeOffen);
+        Assert.Equal(alt, ha.Optionen[BedarfEintrag]["state"]!.ToString());
+    }
+
+    [Fact]
+    public async Task Rechenwerte_GehtBeimSchreibenEinWertVerloren_KommtDerGanzeAlteStandZurueck()
+    {
+        await using var socket = await NachgebauterSocket.StartenAsync(Dosierung, [LichtAus], NachgebautesHa.Eintraege);
+        var einstellungen = new HomeAssistantSettings { Enabled = true, BaseUrl = socket.Adresse, AccessToken = "test" };
+        var ha = new NachgebautesHa();
+        // Der Bedarf wird zuerst geschrieben — damit trifft es den Impuls-Bedarf mit Einheit.
+        ha.Dialog.BeimOeffnen = () => { if (ha.Abgeschickt.Count == 1) ha.Dialog.VerliertEinheit = true; };
+        var alt = ha.Optionen[ImpulsEintrag]["state"]!.ToString();
+
+        var bilanz = await ha.Dienst().AbsichernAsync(Rollen, einstellungen, default);
+
+        var impuls = Assert.Single(bilanz.Einzeln, e => e.EntityId == "sensor.co2_impuls_bedarf");
+        Assert.False(impuls.Geschrieben);
+        Assert.Contains("andere Einstellung", impuls.Fehler);
+        Assert.Equal(alt, ha.Optionen[ImpulsEintrag]["state"]!.ToString());
+        Assert.Equal("s", ha.Optionen[ImpulsEintrag]["unit_of_measurement"]!.ToString());
+        Assert.Equal(0, ha.DialogeOffen);
+    }
+
+    [Fact]
+    public async Task Rechenwerte_VerlaesstDerBedienerDieSeiteBeimLesen_BleibtKeinDialogOffen()
+    {
+        await using var socket = await NachgebauterSocket.StartenAsync(Dosierung, [LichtAus], NachgebautesHa.Eintraege);
+        var einstellungen = new HomeAssistantSettings { Enabled = true, BaseUrl = socket.Adresse, AccessToken = "test" };
+        var ha = new NachgebautesHa();
+        using var abbruch = new CancellationTokenSource();
+        ha.Dialog.BeimOeffnen = abbruch.Cancel;
+
+        await ha.Dienst().PruefenAsync(Rollen, einstellungen, abbruch.Token);
+
+        Assert.True(abbruch.IsCancellationRequested, "Der Abbruch kam nie — der Test prüft nichts.");
+        Assert.Equal(0, ha.DialogeOffen);
+    }
+
+    [Fact]
+    public async Task Rechenwerte_AbbruchWaehrendDesNachsehens_SchreibtTrotzdemZurueck()
+    {
+        await using var socket = await NachgebauterSocket.StartenAsync(Dosierung, [LichtAus], NachgebautesHa.Eintraege);
+        var einstellungen = new HomeAssistantSettings { Enabled = true, BaseUrl = socket.Adresse, AccessToken = "test" };
+        var ha = new NachgebautesHa { RechenwertFaelltAus = true };
+        using var abbruch = new CancellationTokenSource();
+        ha.BeimZustand = abbruch.Cancel;
+        var alt = ha.Optionen[BedarfEintrag]["state"]!.ToString();
+
+        try
+        {
+            await ha.Dienst().AbsichernAsync(Rollen, einstellungen, abbruch.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Der Abbruch darf die Anfrage beenden — aber erst nach dem Zurückschreiben.
+        }
+
+        Assert.True(abbruch.IsCancellationRequested, "Der Abbruch kam nie — der Test prüft nichts.");
+        Assert.Equal(alt, ha.Optionen[BedarfEintrag]["state"]!.ToString());
+        Assert.Equal(0, ha.DialogeOffen);
+    }
 }
 
 /// <summary>Ein WebSocket nach Art von Home Assistant: Anmeldung, dann search/related.</summary>
@@ -448,9 +532,27 @@ internal static class OptionsDialog
         ["sensor"] = [("state", true), ("unit_of_measurement", false), ("device_class", false), ("state_class", false), ("device_id", false)],
     };
 
+    /// <summary>Stellschrauben für Fehlerfälle.</summary>
+    public sealed class Verhalten
+    {
+        /// <summary>Jedes Absenden wird abgelehnt (wie bei einem Schemafehler).</summary>
+        public bool LehntAb { get; set; }
+
+        /// <summary>Beim ersten Speichern geht die Einheit verloren.</summary>
+        public bool VerliertEinheit { get; set; }
+
+        /// <summary>Wird beim Öffnen eines Dialogs aufgerufen.</summary>
+        public Action? BeimOeffnen { get; set; }
+    }
+
+    private static HttpResponseMessage Fehler400(string grund)
+        => RecordingHttpHandler.Json(
+            new JsonObject { ["errors"] = new JsonObject { ["base"] = new JsonArray(grund) } }.ToJsonString(),
+            HttpStatusCode.BadRequest);
+
     public static HttpResponseMessage Beantworten(
         HttpRequestMessage anfrage, string? inhalt, Dictionary<string, JsonObject> optionen,
-        Dictionary<string, string> dialoge, List<JsonObject> abgeschickt)
+        Dictionary<string, string> dialoge, List<JsonObject> abgeschickt, Verhalten verhalten)
     {
         var pfad = anfrage.RequestUri!.AbsolutePath;
         if (pfad == Pfad && anfrage.Method == HttpMethod.Post)
@@ -459,6 +561,7 @@ internal static class OptionsDialog
             if (!optionen.ContainsKey(eintrag)) return new HttpResponseMessage(HttpStatusCode.NotFound);
             var id = Guid.NewGuid().ToString("N");
             dialoge[id] = eintrag;
+            verhalten.BeimOeffnen?.Invoke();
             return Formular(id, optionen[eintrag]);
         }
 
@@ -476,14 +579,23 @@ internal static class OptionsDialog
         var o = optionen[e];
         var art = o["template_type"]!.ToString();
         var erlaubt = Felder[art].Select(f => f.Name).Append("additional_options").ToHashSet();
+
+        // Ein Schemafehler: 400 mit {"errors": {"base": [...]}} (helpers/data_entry_flow.py),
+        // und der Dialog bleibt offen (data_entry_flow.py entfernt ihn nur bei Abschluss oder Abbruch).
         if (eingabe.Select(p => p.Key).FirstOrDefault(k => !erlaubt.Contains(k)) is { } fremd)
         {
-            return RecordingHttpHandler.Json($$"""{"message":"extra keys not allowed @ data['{{fremd}}']"}""", HttpStatusCode.BadRequest);
+            return Fehler400($"extra keys not allowed @ data['{fremd}']");
         }
+        if (verhalten.LehntAb) return Fehler400("expected str for dictionary value @ data['state']");
 
         // values.update(user_input); fehlende optionale Schlüssel werden gelöscht.
         foreach (var p in eingabe) o[p.Key] = p.Value?.DeepClone();
         foreach (var k in erlaubt.Where(k => k != "state" && !eingabe.ContainsKey(k))) o.Remove(k);
+        if (verhalten.VerliertEinheit)
+        {
+            o.Remove("unit_of_measurement");
+            verhalten.VerliertEinheit = false;
+        }
         dialoge.Remove(flow);
         return RecordingHttpHandler.Json("""{"type":"create_entry","version":1}""");
     }

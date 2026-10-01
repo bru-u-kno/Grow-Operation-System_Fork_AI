@@ -69,7 +69,21 @@ public sealed class Co2RechenwerteTests
     public void EinAndererFuehler_IstNichtDieAlteFassungDiesesFuehlers()
     {
         var andere = new Dictionary<string, string> { ["co2_sensor"] = "sensor.anderer_fuehler" };
-        Assert.Equal(Stand.Angepasst, Co2Rechenwerte.Beurteilen(Bedarf, EchteFormel(Bedarf), andere).Stand);
+        Assert.Equal(Stand.AndererFuehler, Co2Rechenwerte.Beurteilen(Bedarf, EchteFormel(Bedarf), andere).Stand);
+        Assert.Equal("sensor.big_co2_light_sensor_co2", Co2Rechenwerte.FuehlerInFormel(Bedarf, EchteFormel(Bedarf)));
+
+        // Auch die aktuelle Fassung mit anderem Fühler, und beim Impuls-Bedarf.
+        Assert.Equal(Stand.AndererFuehler,
+            Co2Rechenwerte.Beurteilen(Impuls, Co2Rechenwerte.Aktuelle(Impuls, Rollen)!, andere).Stand);
+    }
+
+    [Fact]
+    public void EineAngepassteFormel_NenntKeinenFuehler()
+    {
+        var angepasst = EchteFormel(Bedarf).Replace("float(100)", "float(80)");
+        Assert.Null(Co2Rechenwerte.FuehlerInFormel(Bedarf, angepasst));
+        Assert.Equal(Stand.Angepasst, Co2Rechenwerte.Beurteilen(Bedarf, angepasst,
+            new Dictionary<string, string> { ["co2_sensor"] = "sensor.anderer_fuehler" }).Stand);
     }
 
     [Fact]
@@ -79,8 +93,12 @@ public sealed class Co2RechenwerteTests
     // ------------------------------------------------------------ Dialog
 
     /// <summary>
-    /// Ein Formular, wie Home Assistant 2026.9 es für einen Template-Sensor
-    /// schickt (voluptuous_serialize, Abschnitt als „expandable“).
+    /// Ein Formular für einen Template-Sensor, wie Home Assistant 2026.9 es
+    /// vermutlich schickt: Felder und Abschnitt aus template/config_flow.py,
+    /// die Vorbelegung aus data_entry_flow.py. Die Serialisierung selbst
+    /// (probatio.to_field_list, Abschnitt als „expandable“) lag beim Bau nicht
+    /// im Quelltext vor — deshalb vergleicht der Dienst nach dem Schreiben
+    /// alle übrigen Werte und schreibt bei einer Abweichung zurück.
     /// </summary>
     private static JsonArray Formular() => (JsonArray)JsonNode.Parse("""
         [

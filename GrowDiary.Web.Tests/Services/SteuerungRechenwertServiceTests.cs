@@ -63,6 +63,23 @@ public class SteuerungRechenwertServiceTests
     }
 
     [Fact]
+    public void DieVerfuegbarkeitStehtImAbschnittZusaetzlicheOptionen()
+    {
+        // Home Assistant 2026.9 (template/config_flow.py): availability gibt es nur
+        // im Abschnitt „additional_options“ — oben lehnt der Dialog sie ab.
+        var mitVerfuegbarkeit = SteuerungBauteile.Alle.First(b => b.Verfuegbarkeit is not null);
+        var felder = SteuerungRechenwertService.Felder(mitVerfuegbarkeit, "{{ 1 }}", "{{ has_value('sensor.x') }}");
+
+        Assert.False(felder.ContainsKey("availability"));
+        var abschnitt = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(felder["additional_options"]);
+        Assert.Equal("{{ has_value('sensor.x') }}", abschnitt["availability"]);
+    }
+
+    [Fact]
+    public void OhneVerfuegbarkeit_KeinLeererAbschnitt()
+        => Assert.False(SteuerungRechenwertService.Felder(Suche("sensor.co2_ziel_effektiv"), "{{ 1 }}").ContainsKey("additional_options"));
+
+    [Fact]
     public void EinJaNeinWertBringtWederEinheitNochZustandsklasseMit()
     {
         // binary_sensor kennt beides nicht - der Dialog lehnt die Felder ab.

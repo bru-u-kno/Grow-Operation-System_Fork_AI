@@ -16,9 +16,9 @@ namespace GrowDiary.Web.Services;
 /// wählen, Felder abschicken.</para>
 /// <para><b>Was dabei schiefgehen kann.</b> Der Dialog lebt zwischen den
 /// Aufrufen im Speicher von Home Assistant. Bricht einer ab, bleibt ein halb
-/// offener Dialog zurück; er verfällt von selbst, aber bis dahin steht er in der
-/// Oberfläche herum. Deshalb wird nach einem Fehlschlag nicht weitergemacht,
-/// sondern abgebrochen und gemeldet.</para>
+/// offener Dialog zurück — er verfällt nicht von selbst, sondern bleibt bis zum
+/// nächsten Neustart von Home Assistant. Deshalb wird er nach einem Fehlschlag
+/// ausdrücklich geschlossen, nicht weitergemacht, und gemeldet.</para>
 /// <para><b>Die Reihenfolge ist nicht beliebig.</b> Die Impulslänge liest das
 /// Ziel, der Bedarf liest ebenfalls das Ziel. Entsteht das Ziel zuletzt, stehen
 /// die anderen kurz auf „nicht verfügbar" — harmlos, aber verwirrend. Der
@@ -164,7 +164,12 @@ public sealed class SteuerungRechenwertService
 
             if (!abgeschickt.IsSuccessStatusCode)
             {
-                return (false, Text(antwort, "message") ?? $"Abgelehnt ({(int)abgeschickt.StatusCode}).");
+                // Schemafehler kommen als {"errors": {"base": [...]}}, und der
+                // Dialog bleibt dabei offen.
+                await SchliessenAsync(client, dialog, ct);
+                var grund = antwort.ValueKind == JsonValueKind.Object
+                    && antwort.TryGetProperty("errors", out var fehlerListe) ? fehlerListe.ToString() : Text(antwort, "message");
+                return (false, $"Abgelehnt ({(int)abgeschickt.StatusCode}){(grund is null ? "." : $": {grund}")}");
             }
 
             // Bei fehlerhaften Feldern antwortet HA mit 200 und einem erneuten
@@ -181,6 +186,19 @@ public sealed class SteuerungRechenwertService
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             return (false, ex.Message);
+        }
+    }
+
+    /// <summary>Einen offenen Dialog abbrechen — ein halber bliebe bis zum Neustart stehen.</summary>
+    private static async Task SchliessenAsync(HttpClient client, string dialog, CancellationToken ct)
+    {
+        try
+        {
+            using var _ = await client.DeleteAsync($"{DialogPfad}/{dialog}", ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // Mehr lässt sich nicht tun; gemeldet wird der eigentliche Fehler.
         }
     }
 
@@ -202,7 +220,14 @@ public sealed class SteuerungRechenwertService
         // Ohne Verfügbarkeit rechnet ein Rechenwert bei fehlendem Fühler mit dem
         // Vorgabewert weiter, statt sich abzumelden. Bei der Zuluft entstünde so
         // eine Differenz aus 0 °C und 0 %, nach der der Lüfter dann schaltet.
-        if (!string.IsNullOrWhiteSpace(verfuegbarkeit)) felder["availability"] = verfuegbarkeit;
+        // Fork AI (forkai.156): Sie steht im Abschnitt „additional_options“
+        // (template/config_flow.py, Home Assistant 2026.9). Auf oberster Ebene
+        // lehnt der Dialog sie als fremdes Feld ab — und mit ihm den ganzen
+        // Rechenwert und alle folgenden.
+        if (!string.IsNullOrWhiteSpace(verfuegbarkeit))
+        {
+            felder["additional_options"] = new Dictionary<string, object?> { ["availability"] = verfuegbarkeit };
+        }
 
         return felder;
     }

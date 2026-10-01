@@ -33,6 +33,11 @@ public static class Co2Rechenwerte
         Veraltet,
         /// <summary>Weder alt noch neu: von Hand angepasst. Wird nur angezeigt.</summary>
         Angepasst,
+        /// <summary>
+        /// Eine bekannte Fassung, aber mit einem anderen Fühler als dem
+        /// zugeordneten. Wird nur angezeigt: welcher stimmt, weiß der Bediener.
+        /// </summary>
+        AndererFuehler,
         /// <summary>Ohne zugeordneten CO₂-Fühler lässt sich keine Fassung bilden.</summary>
         OhneFuehler,
     }
@@ -84,7 +89,28 @@ public static class Co2Rechenwerte
                 return (Stand.Veraltet, f);
             }
         }
-        return (Stand.Angepasst, null);
+        return (FuehlerInFormel(entityId, formel) is not null ? Stand.AndererFuehler : Stand.Angepasst, null);
+    }
+
+    /// <summary>
+    /// Der Fühler, wenn die Formel eine bekannte Fassung (alt oder aktuell) mit
+    /// irgendeinem Fühler ist — sonst null.
+    /// </summary>
+    public static string? FuehlerInFormel(string entityId, string formel)
+    {
+        var vorlagen = Aeltere.Where(f => f.EntityId == entityId).Select(f => f.Vorlage)
+            .Append(SteuerungBauteile.Alle.SingleOrDefault(b => b.EntityId == entityId)?.Vorlage)
+            .OfType<string>();
+
+        foreach (var vorlage in vorlagen)
+        {
+            var teile = Normal(vorlage).Split("[[co2_sensor]]");
+            if (teile.Length < 2) continue;
+            var muster = "^" + Regex.Escape(teile[0]) + @"(?<f>[a-z_]+\.[a-z0-9_]+)"
+                + string.Concat(teile.Skip(1).Select((t, i) => (i == 0 ? "" : @"\k<f>") + Regex.Escape(t))) + "$";
+            if (Regex.Match(Normal(formel), muster) is { Success: true } treffer) return treffer.Groups["f"].Value;
+        }
+        return null;
     }
 
     /// <summary>

@@ -40,7 +40,7 @@ type AbsicherungsLage = {
   rechenwerte: Array<{
     entityId: string
     name: string
-    /** Aktuell · Veraltet · Angepasst · OhneFuehler · NichtLesbar */
+    /** Aktuell · Veraltet · Angepasst · AndererFuehler · OhneFuehler · NichtLesbar */
     stand: string
     heute: string | null
     danach: string | null
@@ -844,7 +844,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       )}
 
       {absicherung?.erreichbar && (
-        <V1Section title="Sicherheit der CO₂-Automationen">
+        <V1Section title="Sicherheit der CO₂-Regelung">
           <V1Card>
             {absicherung.automationen.length === 0 ? (
               <p className="st-hinweis">In Home Assistant ist keine CO₂-Automation zu finden.</p>
@@ -871,6 +871,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                     {r.stand === 'Aktuell' ? 'Aktuelle Formel — schweigt der Fühler, wird nicht dosiert.'
                       : r.stand === 'Veraltet' ? 'Rechenwert mit älterer Formel'
                       : r.stand === 'Angepasst' ? 'Von Hand angepasste Formel'
+                      : r.stand === 'AndererFuehler' ? 'Formel mit anderem Fühler als zugeordnet'
                       : 'Formel nicht geprüft'}
                   </small>
                 </span>
@@ -897,8 +898,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             {absicherung.behebbar > 0 && (
               <>
                 <p className="st-hinweis">
-                  Geändert wird nur die schwache Stelle — alles andere in deinen Automationen bleibt, wie es ist.
-                  Vorher wird jede Automation gesichert, danach aus Home Assistant nachgelesen.
+                  Geändert wird nur die schwache Stelle — alles andere in deinen Automationen und Rechenwerten
+                  bleibt, wie es ist. Vorher wird alles gesichert, danach aus Home Assistant nachgelesen.
                 </p>
                 {/* Nach einer Ablehnung steht derselbe Grund schon in der Meldung darüber. */}
                 {absicherung.dosiertGerade && !absicherMeldung && (
