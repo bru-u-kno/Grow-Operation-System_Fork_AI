@@ -36,9 +36,10 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungHelferService _helfer;
     private readonly SteuerungRechenwertService _rechenwerte;
     private readonly SteuerungAutomationService _automationen;
+    private readonly SteuerungAbsicherungService _absicherung;
     private readonly SteuerungProbeService _probe;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, EntfeuchterSteuerungService entfeuchter, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungProbeService probe)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, EntfeuchterSteuerungService entfeuchter, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungAbsicherungService absicherung, SteuerungProbeService probe)
     {
         _co2 = co2;
         _licht = licht;
@@ -54,6 +55,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         _helfer = helfer;
         _rechenwerte = rechenwerte;
         _automationen = automationen;
+        _absicherung = absicherung;
         _probe = probe;
     }
 
@@ -455,6 +457,39 @@ public sealed class SteuerungApiController : ApiControllerBase
 
         return Ok(await _automationen.AnlegenAsync(modul, zuordnung, settings, vorschau, ct));
     }
+
+    /// <summary>Die vorhandenen CO₂-Automationen auf Schwachstellen prüfen. Ändert nichts.</summary>
+    /// <remarks>
+    /// Fork AI: Die Absicherungen aus forkai.153 erreichten nur Automationen,
+    /// die der Fork selbst anlegt. Hier sieht der Bediener, was in seinen
+    /// vorhandenen — auch handgebauten — Automationen im Zweifel offen bleibt.
+    /// </remarks>
+    [HttpGet("{modul}/absicherung")]
+    public async Task<ActionResult<SteuerungAbsicherungService.Lage>> AbsicherungPruefen(
+        string modul, CancellationToken ct)
+    {
+        if (modul != "co2") return NotFound();
+        return Ok(await _absicherung.PruefenAsync(Zuordnung(modul), _haSettings.GetEffectiveHomeAssistantSettings(), ct));
+    }
+
+    /// <summary>Die behebbaren Schwachstellen beheben — auf ausdrückliche Freigabe auf der CO₂-Seite.</summary>
+    /// <remarks>
+    /// Vorher wird jede Automation gesichert (wie beim Anlegen), nachher aus
+    /// Home Assistant nachgelesen. Läuft gerade eine Dosierung, wird nichts
+    /// geschrieben: neu schreiben bricht sie ab, mitten im Impuls.
+    /// </remarks>
+    [HttpPost("{modul}/absicherung")]
+    public async Task<ActionResult<SteuerungAbsicherungService.Bilanz>> Absichern(
+        string modul, CancellationToken ct)
+    {
+        if (modul != "co2") return NotFound();
+        return Ok(await _absicherung.AbsichernAsync(Zuordnung(modul), _haSettings.GetEffectiveHomeAssistantSettings(), ct));
+    }
+
+    private Dictionary<string, string> Zuordnung(string modul)
+        => _geraete.EntitiesFuerModul(modul)
+            .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+            .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
 
     [HttpPost("{modul}/rechenwerte")]
     public async Task<ActionResult<SteuerungRechenwertService.Bilanz>> RechenwerteAnlegen(

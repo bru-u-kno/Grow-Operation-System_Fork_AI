@@ -14,6 +14,9 @@
     <Content Include="..\GrowDiary.Web\Vorlagen\**\*.json"
              Link="Vorlagen\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" />
+    <!-- Fork AI: Echte, von Hand gebaute CO2-Automationen (Stand 30.09.2026) -
+         die Absicherung wird gegen den wirklichen Bestand geprueft. -->
+    <Content Include="Services\Daten\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.155
+
+**Fork AI.** CO₂: vorhandene Automationen lassen sich jetzt absichern — auch von Hand gebaute.
+
+- Neu — **„Sicherheit der CO₂-Automationen" auf der CO₂-Seite.** Die Absicherungen aus forkai.153 kamen nur in
+  Automationen an, die Fork AI selbst anlegt. Wer seine CO₂-Regelung vorher eingerichtet oder von Hand gebaut
+  hatte, behielt die alten Schwachstellen. Die Seite prüft jetzt die vorhandenen Automationen und zeigt in
+  Klartext, was im Zweifel offen bleibt: eine Dosier-Schleife, die bei „nicht verfügbar" weiterläuft; ein
+  Ventil, das ohne CO₂-Messwert öffnet; ein Wächter, der einen vor dem Neustart offenen Port übersieht; eine
+  Licht-aus-Sicherung, die einen Not-Aus jeden Abend wieder zurücknimmt. Auch Automationen, die nur die
+  Dosierung ein- und ausschalten, werden gefunden — Home Assistant sagt, welche das sind.
+- **Geändert wird erst auf Knopfdruck, und nur die schwache Stelle.** Alles andere in den Automationen bleibt,
+  wie es ist — Reconnect-Schutz, Dosierfenster, Push-Meldungen, Autokalibrierung. Es kommen keine neuen
+  Einstellwerte dazu: der Wächter sieht mit derselben Wartezeit nach, die er schon hat. Vorher wird jede
+  Automation gesichert, danach aus Home Assistant nachgelesen. Läuft gerade eine Dosierung oder steht das
+  Ventil offen, wird nichts geschrieben — neu schreiben bräche den Impuls ab.
+- Geändert — **Die Vorlage der Dosierung prüft den CO₂-Fühler jetzt selbst** (Fassung 3): kein Messwert, kein
+  Gas, auch wenn ein Rechenwert noch einen alten Stand hat. Dieselbe Sperre bekommen abgesicherte Automationen.
+- Für die Sperre braucht es einen zugeordneten CO₂-Sensor (unter „Rollen bearbeiten"). Fehlt er, sagt die
+  Seite das, statt einen Fühler zu raten.
+
 ## 2.0.0-forkai.154
 
 **Fork AI.** Grenzwerte: die erlaubte Abweichung der Lufttemperatur wirkt sofort sichtbar.

@@ -268,7 +268,8 @@ public sealed class SteuerungAutomationService
     }
 
     /// <summary>Den vorhandenen Stand wegschreiben, damit ein Zurück existiert.</summary>
-    private async Task SichernAsync(HttpClient client, string kennung, CancellationToken ct)
+    /// <remarks>Auch die Absicherung (<see cref="SteuerungAbsicherungService"/>) sichert hierüber.</remarks>
+    public async Task SichernAsync(HttpClient client, string kennung, CancellationToken ct)
     {
         try
         {
@@ -288,7 +289,7 @@ public sealed class SteuerungAutomationService
     }
 
     /// <summary>Schreiben und nachsehen, ob es angekommen ist.</summary>
-    private static async Task<string?> SchreibenAsync(
+    public static async Task<string?> SchreibenAsync(
         HttpClient client, string kennung, JsonObject config, CancellationToken ct)
     {
         try

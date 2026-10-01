@@ -21,6 +21,30 @@ type AutoBilanz = {
 }
 
 /**
+ * Fork AI: Was die Prüfung der vorhandenen CO₂-Automationen meldet.
+ *
+ * Gilt auch für von Hand gebaute Automationen — die Vorlagen erreichen sie
+ * nicht, die Schwachstellen haben sie trotzdem.
+ */
+type AbsicherungsLage = {
+  erreichbar: boolean
+  dosiertGerade: boolean
+  behebbar: number
+  hinweis: string | null
+  automationen: Array<{
+    entityId: string
+    name: string
+    befunde: Array<{ art: string; titel: string; erklaerung: string; behebbar: boolean; hinweis: string | null }>
+  }>
+}
+
+type AbsicherungsBilanz = {
+  abgelehnt: string | null
+  einzeln: Array<{ entityId: string; name: string; geschrieben: boolean; fehler: string | null }>
+  nachher: AbsicherungsLage
+}
+
+/**
  * Fork AI (forkai.45): Die Bauteil-Arten in Klartext.
  *
  * Die Namen aus dem Katalog sind die Namen der Helfer in Home Assistant — gut
@@ -171,6 +195,9 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const [anlegeMeldung, setAnlegeMeldung] = useState<string | null>(null)
   const [vorschau, setVorschau] = useState<AutoBilanz | null>(null)
   const [probe, setProbe] = useState<string | null>(null)
+  const [absicherung, setAbsicherung] = useState<AbsicherungsLage | null>(null)
+  const [sichertAb, setSichertAb] = useState(false)
+  const [absicherMeldung, setAbsicherMeldung] = useState<{ ton: 'ok' | 'warn'; text: string } | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
   const [meldung, setMeldung] = useState<string | null>(null)
@@ -210,6 +237,44 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
     void pruefen()
     return () => controller.abort()
   }, [])
+
+  // Fork AI: Die vorhandenen CO₂-Automationen auf Schwachstellen prüfen. Nur
+  // lesen — geändert wird erst, wenn der Bediener auf „Absichern“ tippt.
+  useEffect(() => {
+    const controller = new AbortController()
+    const pruefen = async () => {
+      try {
+        const geladen = await apiFetch<AbsicherungsLage>('/api/steuerung/co2/absicherung', { signal: controller.signal })
+        if (!controller.signal.aborted) setAbsicherung(geladen)
+      } catch {
+        if (!controller.signal.aborted) setAbsicherung(null)
+      }
+    }
+    void pruefen()
+    return () => controller.abort()
+  }, [])
+
+  const absichern = async () => {
+    setSichertAb(true)
+    setAbsicherMeldung(null)
+    try {
+      const bilanz = await apiFetch<AbsicherungsBilanz>('/api/steuerung/co2/absicherung', { method: 'POST' })
+      setAbsicherung(bilanz.nachher)
+      if (bilanz.abgelehnt) {
+        setAbsicherMeldung({ ton: 'warn', text: bilanz.abgelehnt })
+      } else {
+        const gut = bilanz.einzeln.filter((e) => e.geschrieben)
+        const schlecht = bilanz.einzeln.filter((e) => !e.geschrieben)
+        const teile = [`${gut.length} ${gut.length === 1 ? 'Automation' : 'Automationen'} abgesichert`]
+        for (const e of schlecht) teile.push(`${e.name}: ${e.fehler ?? 'nicht geschrieben'}`)
+        setAbsicherMeldung({ ton: schlecht.length > 0 ? 'warn' : 'ok', text: `${teile.join('. ')}.` })
+      }
+    } catch (caught) {
+      setAbsicherMeldung({ ton: 'warn', text: formatApiError(caught, 'Absichern fehlgeschlagen.') })
+    } finally {
+      setSichertAb(false)
+    }
+  }
 
   const geaendert = useMemo(
     () => Boolean(seite && entwurf) && JSON.stringify(seite?.einstellungen) !== JSON.stringify(entwurf),
@@ -756,6 +821,50 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             </div>
             {probe && <p className="st-hinweis">{probe}</p>}
             <V1Button variant="ghost" onClick={ventilProbieren}>Ventil kurz öffnen</V1Button>
+          </V1Card>
+        </V1Section>
+      )}
+
+      {absicherung?.erreichbar && (
+        <V1Section title="Sicherheit der CO₂-Automationen">
+          <V1Card>
+            {absicherung.automationen.length === 0 ? (
+              <p className="st-hinweis">In Home Assistant ist keine CO₂-Automation zu finden.</p>
+            ) : absicherung.automationen.map((a) => (
+              <div className="st-feldzeile is-gestapelt" key={a.entityId}>
+                <span className="st-etikett">
+                  {a.name}
+                  {a.befunde.length === 0 && <small>In Ordnung — schließt im Zweifel.</small>}
+                </span>
+                {a.befunde.map((b) => (
+                  <p className="st-befund" key={b.art}>
+                    <b>{b.titel}</b>
+                    {b.erklaerung}
+                    {b.hinweis && <em>{b.hinweis}</em>}
+                  </p>
+                ))}
+              </div>
+            ))}
+            {absicherung.hinweis && <p className="st-hinweis">{absicherung.hinweis}</p>}
+            {absicherMeldung && <V1Alert tone={absicherMeldung.ton} message={absicherMeldung.text} />}
+            {absicherung.behebbar > 0 && (
+              <>
+                <p className="st-hinweis">
+                  Geändert wird nur die schwache Stelle — alles andere in deinen Automationen bleibt, wie es ist.
+                  Vorher wird jede Automation gesichert, danach aus Home Assistant nachgelesen.
+                </p>
+                {/* Nach einer Ablehnung steht derselbe Grund schon in der Meldung darüber. */}
+                {absicherung.dosiertGerade && !absicherMeldung && (
+                  <p className="st-hinweis">
+                    Gerade läuft eine Dosierung oder das Ventil steht offen. Neu schreiben würde sie mitten im
+                    Impuls abbrechen — absichern geht in einer Pause oder bei Licht aus.
+                  </p>
+                )}
+                <V1Button variant="primary" onClick={absichern} disabled={sichertAb || absicherung.dosiertGerade}>
+                  {sichertAb ? 'Sichert ab …' : `Absichern (${absicherung.behebbar} ${absicherung.behebbar === 1 ? 'Stelle' : 'Stellen'})`}
+                </V1Button>
+              </>
+            )}
           </V1Card>
         </V1Section>
       )}

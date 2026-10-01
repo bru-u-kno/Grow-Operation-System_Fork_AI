@@ -90,6 +90,10 @@
   .st-nurlesen { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
   .st-hinweis { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); color: var(--faint); line-height: 1.5; }
+  /* Fork AI: Ein Befund der Absicherung — Titel, Erklärung, ggf. was fehlt. */
+  .st-befund { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); line-height: 1.5; color: var(--faint); overflow-wrap: anywhere; }
+  .st-befund b { display: block; color: var(--warn-text); font-weight: 600; }
+  .st-befund em { display: block; margin-top: 2px; font-style: normal; color: var(--ink); }
   .st-fehler { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--danger-text); }
 
   .st-fuss { margin-top: var(--s-3); font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); text-align: center; }
