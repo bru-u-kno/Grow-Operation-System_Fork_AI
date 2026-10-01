@@ -1,6 +1,6 @@
 {
   "alias": "CO2 Dosierung",
-  "description": "Bedarfsgerechte Impuls-Dosierung. Je Impuls: Ventil auf, Impulsdauer aus sensor.co2_impuls_bedarf, Ventil zu, 20 s spaeter Nachpruefung (noch einmal zu, falls der Befehl verworfen wurde), Rest der Wartezeit. Zaehler, Zeitstempel und Flaschenrest werden je Impuls fortgeschrieben. Die Schleife endet, sobald der Bedarf weg ist, das Licht aus geht, das Klima sperrt, die Abluft nicht mehr gedrosselt ist oder die Hoechstzahl erreicht ist. Zuletzt wird das Ventil in jedem Fall geschlossen. Autokalibrierung: bei erteilter Freigabe und gedrosselter Abluft wird der ppm-Anstieg je Impuls gemessen und der Durchfluss als gleitender Mittelwert (80/20) nachgefuehrt - ein Netto-Wert nach Abluftverlust, fuer die Impulslaenge richtig, fuer den Flaschenverbrauch eine Untergrenze. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/dosierung/3. Abweichung zur handgebauten Fassung: Dort endet das Dosierfenster rechnerisch vor der geplanten Aus-Zeit des Licht-Controllers. Ohne eine Rolle fuer diese Zeit laesst sich das nicht allgemeingueltig ableiten; die Vorlage dosiert daher bis Licht-aus. co2_ende_vor_licht_aus bleibt wirkungslos, bis es diese Rolle gibt - die Seite sagt das. Bloecke mit dem Schluessel 'wenn' entfallen, wenn die genannte Rolle frei ist: Wer keinen Abluft-Regler hat, bekommt die Drosselungs-Bedingungen nicht - dosiert wird trotzdem. Seit Fassung 2 (29.09.2026) endet die Schleife, sobald eine Freigabe NICHT MEHR 'on' meldet - vorher nur bei 'off', ein unavailable hielt sie am Laufen. Ohne gueltigen Impuls-Bedarf (0 s oder nicht lesbar) wird nicht geoeffnet. Seit Fassung 3 (30.09.2026) prueft die Schleife vor jedem Oeffnen den CO2-Fuehler selbst und endet, sobald er keinen Wert liefert - dieselbe Sperre, die die Absicherung in handgebaute Dosierungen einbaut (Co2Absicherung).",
+  "description": "Bedarfsgerechte Impuls-Dosierung. Je Impuls: Ventil auf, Impulsdauer aus sensor.co2_impuls_bedarf, Ventil zu, 20 s spaeter Nachpruefung (noch einmal zu, falls der Befehl verworfen wurde), Rest der Wartezeit. Zaehler, Zeitstempel und Flaschenrest werden je Impuls fortgeschrieben. Die Schleife endet, sobald der Bedarf weg ist, das Licht aus geht, das Klima sperrt, die Abluft nicht mehr gedrosselt ist oder die Hoechstzahl erreicht ist. Zuletzt wird das Ventil in jedem Fall geschlossen. Autokalibrierung: bei erteilter Freigabe und gedrosselter Abluft wird der ppm-Anstieg je Impuls gemessen und der Durchfluss als gleitender Mittelwert (80/20) nachgefuehrt - ein Netto-Wert nach Abluftverlust, fuer die Impulslaenge richtig, fuer den Flaschenverbrauch eine Untergrenze. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/dosierung/4. Abweichung zur handgebauten Fassung: Dort endet das Dosierfenster rechnerisch vor der geplanten Aus-Zeit des Licht-Controllers. Ohne eine Rolle fuer diese Zeit laesst sich das nicht allgemeingueltig ableiten; die Vorlage dosiert daher bis Licht-aus. co2_ende_vor_licht_aus bleibt wirkungslos, bis es diese Rolle gibt - die Seite sagt das. Bloecke mit dem Schluessel 'wenn' entfallen, wenn die genannte Rolle frei ist: Wer keinen Abluft-Regler hat, bekommt die Drosselungs-Bedingungen nicht - dosiert wird trotzdem. Seit Fassung 2 (29.09.2026) endet die Schleife, sobald eine Freigabe NICHT MEHR 'on' meldet - vorher nur bei 'off', ein unavailable hielt sie am Laufen. Ohne gueltigen Impuls-Bedarf (0 s oder nicht lesbar) wird nicht geoeffnet. Seit Fassung 3 (30.09.2026) prueft die Schleife vor jedem Oeffnen den CO2-Fuehler selbst und endet, sobald er keinen Wert liefert - dieselbe Sperre, die die Absicherung in handgebaute Dosierungen einbaut (Co2Absicherung). Seit Fassung 4 (01.10.2026) prueft die Startbedingung, ob der Port online ist (Rolle port_status, optional) - vorher pruefte sie den Ventil-Zustand auf 'on', und der ist vor dem Oeffnen nie 'on': die Dosierung startete nie. Ausserdem haengen die Drosselungs-Bedingungen jetzt als ganzer Block an der Abluft-Rolle; vorher blieb ohne Abluft-Regler die Pruefung auf input_boolean.co2_abluft_drosseln stehen, einen Helfer, der ohne Abluft-Regler nicht angelegt wird - die Dosierung startete auch dann nie. Ein Ventil an einem switch oder input_boolean wird mit turn_on/turn_off geschaltet, nicht mit select_option.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [
@@ -23,9 +23,11 @@
       "value_template": "{% set lz = states.[[licht]] %}{% set min_an = states('input_number.co2_start_nach_licht_an') | float(15) %}{{ lz is not none and lz.state == 'on' and (as_timestamp(now()) - as_timestamp(lz.last_changed)) / 60 >= min_an }}"
     },
     {
+      "alias": "Port online - nicht: Ventil offen. Vor dem Oeffnen ist das Ventil zu.",
       "condition": "state",
-      "entity_id": "[[port_zustand]]",
-      "state": "on"
+      "entity_id": "[[port_status]]",
+      "state": "on",
+      "wenn": "port_status"
     },
     {
       "condition": "state",
@@ -39,6 +41,7 @@
     },
     {
       "condition": "or",
+      "wenn": "abluft_stufe",
       "conditions": [
         {
           "condition": "state",
@@ -47,8 +50,7 @@
         },
         {
           "condition": "template",
-          "value_template": "{{ states('[[abluft_stufe]]') | int(99) <= states('input_number.co2_t6_stufe_dosierung') | int(5) }}",
-          "wenn": "abluft_stufe"
+          "value_template": "{{ states('[[abluft_stufe]]') | int(99) <= states('input_number.co2_t6_stufe_dosierung') | int(5) }}"
         }
       ]
     }
@@ -166,6 +168,7 @@
               },
               {
                 "condition": "or",
+                "wenn": "abluft_stufe",
                 "conditions": [
                   {
                     "condition": "state",
@@ -174,8 +177,7 @@
                   },
                   {
                     "condition": "template",
-                    "value_template": "{{ states('[[abluft_stufe]]') | int(99) <= states('input_number.co2_t6_stufe_dosierung') | int(5) }}",
-                    "wenn": "abluft_stufe"
+                    "value_template": "{{ states('[[abluft_stufe]]') | int(99) <= states('input_number.co2_t6_stufe_dosierung') | int(5) }}"
                   }
                 ]
               },
@@ -247,6 +249,7 @@
               },
               {
                 "condition": "and",
+                "wenn": "abluft_stufe",
                 "conditions": [
                   {
                     "condition": "state",
@@ -255,8 +258,7 @@
                   },
                   {
                     "condition": "template",
-                    "value_template": "{{ states('[[abluft_stufe]]') | int(99) > states('input_number.co2_t6_stufe_dosierung') | int(5) }}",
-                    "wenn": "abluft_stufe"
+                    "value_template": "{{ states('[[abluft_stufe]]') | int(99) > states('input_number.co2_t6_stufe_dosierung') | int(5) }}"
                   }
                 ]
               },

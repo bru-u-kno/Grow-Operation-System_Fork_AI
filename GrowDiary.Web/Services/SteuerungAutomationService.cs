@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using GrowDiary.Web.Models;
 
 namespace GrowDiary.Web.Services;
@@ -31,6 +32,16 @@ public sealed class SteuerungAutomationService
 
     private const string ConfigPfad = "api/config/automation/config";
 
+    /// <summary>Wo die Vorlagen liegen — je Modul ein Ordner.</summary>
+    public static string VorlagenWurzel => Path.Combine(AppContext.BaseDirectory, "Vorlagen");
+
+    /// <summary>
+    /// Die Herkunftsmarke samt Fassung, etwa <c>Herkunft: fork-ai/co2/dosierung/4</c>.
+    /// </summary>
+    private static readonly Regex FassungMuster = new(
+        @"Herkunft: fork-ai/(?<modul>[a-z0-9_]+)/(?<vorlage>[a-z0-9_]+)/(?<fassung>\d+)",
+        RegexOptions.CultureInvariant);
+
     private readonly HomeAssistantService _ha;
     private readonly ILogger<SteuerungAutomationService> _log;
     private readonly string _vorlagenWurzel;
@@ -39,7 +50,7 @@ public sealed class SteuerungAutomationService
     {
         _ha = ha;
         _log = log;
-        _vorlagenWurzel = Path.Combine(AppContext.BaseDirectory, "Vorlagen");
+        _vorlagenWurzel = VorlagenWurzel;
     }
 
     /// <summary>Was mit einer einzelnen Automation geschehen ist.</summary>
@@ -84,10 +95,16 @@ public sealed class SteuerungAutomationService
         using var client = _ha.CreateClient(settings);
         var einzeln = new List<Ergebnis>();
 
+        // Fork AI (01.10.2026): Die handgebauten Automationen stehen unter den
+        // Katalog-Kennungen, die vom Fork angelegten unter einer anderen. Ohne
+        // diesen Blick legte der Fork neben eine handgebaute Dosierung eine
+        // zweite — zwei Schleifen an einem Gasventil.
+        var vorhandeneEntitaeten = await _ha.GetEntitiesAsync(settings, ct);
+
         foreach (var datei in Directory.EnumerateFiles(ordner, "*.json").OrderBy(d => d, StringComparer.Ordinal))
         {
             var name = Path.GetFileNameWithoutExtension(datei);
-            var kennung = $"fork_ai_{modul}_{name}";
+            var kennung = SteuerungBauteile.AutomationsKennung(modul, name);
 
             JsonObject? vorlage;
             try
@@ -121,6 +138,13 @@ public sealed class SteuerungAutomationService
             {
                 einzeln.Add(new Ergebnis(kennung, name, Stand.OhneGeraet,
                     "Eine gebrauchte Rolle ist nicht zugeordnet."));
+                continue;
+            }
+
+            if (HandgebauteDaneben(modul, name, vorhandeneEntitaeten) is { } handgebaut)
+            {
+                einzeln.Add(new Ergebnis(kennung, name, Stand.Fremd,
+                    $"Unter {handgebaut} läuft schon eine handgebaute Automation für diese Aufgabe. Eine zweite daneben würde doppelt schalten — es wird keine angelegt."));
                 continue;
             }
 
@@ -177,7 +201,131 @@ public sealed class SteuerungAutomationService
 
         var text = rumpf.ToJsonString();
         var fertig = SteuerungBauteile.VorlageFuellen(text, belegt);
-        return fertig is null ? null : JsonNode.Parse(fertig) as JsonObject;
+        if (fertig is null || JsonNode.Parse(fertig) is not JsonObject ergebnis) return null;
+
+        SchaltbefehleAnpassen(ergebnis);
+        return ergebnis;
+    }
+
+    /// <summary>
+    /// Die Domänen, die statt <c>select.select_option</c> mit „On"/„Off" ein
+    /// <c>turn_on</c>/<c>turn_off</c> brauchen — dieselben, die die Schalt-Rollen
+    /// neben <c>select</c> zulassen (<see cref="SteuerungGeraeteRollen"/>).
+    /// </summary>
+    private static readonly HashSet<string> EinAusDomaenen = new(StringComparer.Ordinal) { "switch", "input_boolean" };
+
+    /// <summary>
+    /// Fork AI (01.10.2026): Schaltbefehle an die Domäne des zugeordneten Geräts anpassen.
+    /// </summary>
+    /// <remarks>
+    /// <para>Die Vorlagen sind für einen AC-Infinity-Port geschrieben: ein
+    /// <c>select</c> mit den Optionen „On" und „Off". Die Schalt-Rolle lässt aber
+    /// auch <c>switch</c> und <c>input_boolean</c> zu. An die ging bisher ein
+    /// <c>select.select_option</c> — Home Assistant lehnt ihn für diese Domäne ab,
+    /// das Ventil blieb zu, und die Zwangsschließung des Wächters ging genauso
+    /// ins Leere.</para>
+    /// <para>Umgeschrieben werden nur Befehle und Zustandsprüfungen, deren Ziel
+    /// wirklich ein <c>switch</c> oder <c>input_boolean</c> ist. Ein <c>select</c>
+    /// bleibt, wie er ist.</para>
+    /// </remarks>
+    private static void SchaltbefehleAnpassen(JsonNode? knoten)
+    {
+        switch (knoten)
+        {
+            case JsonObject o:
+                if (Text(o["action"]) == "select.select_option"
+                    && Domaene(Text(o["target"]?["entity_id"])) is { } domaene
+                    && EinAusDomaenen.Contains(domaene)
+                    && Text(o["data"]?["option"]) is "On" or "Off")
+                {
+                    o["action"] = $"{domaene}.{(Text(o["data"]?["option"]) == "On" ? "turn_on" : "turn_off")}";
+                    o.Remove("data");
+                }
+
+                // Zustand: ein select meldet „On"/„Off", ein switch „on"/„off".
+                if (Domaene(Text(o["entity_id"])) is { } eigene && EinAusDomaenen.Contains(eigene))
+                {
+                    foreach (var feld in new[] { "state", "to", "from" })
+                    {
+                        if (Text(o[feld]) is "On" or "Off") o[feld] = Text(o[feld])!.ToLowerInvariant();
+                    }
+                }
+
+                foreach (var (_, kind) in o.ToList()) SchaltbefehleAnpassen(kind);
+                break;
+
+            case JsonArray a:
+                foreach (var kind in a.ToList()) SchaltbefehleAnpassen(kind);
+                break;
+        }
+    }
+
+    private static string? Text(JsonNode? knoten)
+        => knoten is JsonValue v && v.TryGetValue<string>(out var text) ? text : null;
+
+    private static string? Domaene(string? entityId)
+        => entityId is not null && entityId.Contains('.') ? entityId.Split('.', 2)[0] : null;
+
+    /// <summary>
+    /// Die Entity-ID einer handgebauten Automation, die dieselbe Aufgabe hat wie
+    /// diese Vorlage — oder null.
+    /// </summary>
+    /// <remarks>
+    /// Handgebaut heißt: sie steht unter der Katalog-Kennung und trägt NICHT die
+    /// Konfigurations-Kennung, unter der der Fork anlegt. Beim Kühler leitet Home
+    /// Assistant aus dem Alias genau die Katalog-Kennung ab — die eigene
+    /// Automation des Fork ist dort also kein Fremdkörper.
+    /// </remarks>
+    public static string? HandgebauteDaneben(string modul, string vorlage, IEnumerable<HomeAssistantEntity> vorhanden)
+    {
+        var bauteil = SteuerungBauteile.FuerModul(modul)
+            .FirstOrDefault(b => b.Art == BauteilArt.Automation && b.VorlagenDatei == vorlage);
+        if (bauteil?.KonfigKennung is not { } kennung) return null;
+
+        return vorhanden.FirstOrDefault(e
+                => string.Equals(e.EntityId, bauteil.EntityId, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(e.KonfigKennung, kennung, StringComparison.Ordinal))
+            ?.EntityId;
+    }
+
+    /// <summary>Die Fassung aus einer Beschreibung mit Herkunftsmarke, oder null.</summary>
+    public static int? Fassung(string? beschreibung)
+        => beschreibung is not null && FassungMuster.Match(beschreibung) is { Success: true } m
+            ? int.Parse(m.Groups["fassung"].Value, System.Globalization.CultureInfo.InvariantCulture)
+            : null;
+
+    /// <summary>Die Fassung der mitgelieferten Vorlage, oder null, wenn es sie nicht gibt.</summary>
+    public static int? VorlagenFassung(string modul, string vorlage)
+    {
+        var datei = Path.Combine(VorlagenWurzel, modul, vorlage + ".json");
+        if (!File.Exists(datei)) return null;
+        try
+        {
+            return Fassung((JsonNode.Parse(File.ReadAllText(datei)) as JsonObject)?["description"]?.GetValue<string>());
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Die Fassung, in der eine vom Fork angelegte Automation in Home Assistant
+    /// steht — null, wenn sie nicht zu lesen ist oder keine Marke trägt.
+    /// </summary>
+    public static async Task<int?> FassungInHaAsync(HttpClient client, string kennung, CancellationToken ct)
+    {
+        try
+        {
+            using var antwort = await client.GetAsync($"{ConfigPfad}/{Uri.EscapeDataString(kennung)}", ct);
+            if (!antwort.IsSuccessStatusCode) return null;
+            var config = JsonNode.Parse(await antwort.Content.ReadAsStringAsync(ct)) as JsonObject;
+            return Fassung(Text(config?["description"]));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

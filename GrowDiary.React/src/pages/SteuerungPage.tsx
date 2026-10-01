@@ -764,28 +764,32 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         </V1Section>
       )}
 
-      {bestand && bestand.fehlt > 0 && (
-        <V1Section title="Was in Home Assistant fehlt">
-          <V1Card>
-            {bestand.bauteile.filter((b) => b.stand === 'Fehlt').map((b) => (
-              <div className="st-feldzeile" key={b.entityId}>
-                <span className="st-etikett">
-                  {b.zweck}
-                  <small>
-                    {ART_LESBAR[b.art] ?? b.art} · {b.pflicht ? 'wird gebraucht' : (b.ohneDas ?? 'optional')}
-                  </small>
-                </span>
-              </div>
-            ))}
-            <p className="st-hinweis">
-              Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Einstellwerte, Schalter,
-              Zeitstempel, Zähler und Rechenwerte legt der Fork an; die Automationen folgen.
-            </p>
-            {anlegeMeldung && <p className="st-hinweis">{anlegeMeldung}</p>}
-            <V1Button variant="primary" onClick={helferAnlegen} disabled={legtAn}>
-              {legtAn ? 'Legt an …' : 'Fehlende anlegen'}
-            </V1Button>
-          </V1Card>
+      {/* Fork AI (01.10.2026): auch bei einer veralteten Fassung — sonst bekäme eine
+          bestehende Installation eine reparierte Vorlage nie angeboten. */}
+      {bestand && (bestand.fehlt > 0 || bestand.veraltet > 0) && (
+        <V1Section title={bestand.fehlt > 0 ? 'Was in Home Assistant fehlt' : 'Neue Fassung der Automationen'}>
+          {bestand.fehlt > 0 && (
+            <V1Card>
+              {bestand.bauteile.filter((b) => b.stand === 'Fehlt').map((b) => (
+                <div className="st-feldzeile" key={b.entityId}>
+                  <span className="st-etikett">
+                    {b.zweck}
+                    <small>
+                      {ART_LESBAR[b.art] ?? b.art} · {b.pflicht ? 'wird gebraucht' : (b.ohneDas ?? 'optional')}
+                    </small>
+                  </span>
+                </div>
+              ))}
+              <p className="st-hinweis">
+                Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Einstellwerte, Schalter,
+                Zeitstempel, Zähler und Rechenwerte legt der Fork an; die Automationen folgen.
+              </p>
+              {anlegeMeldung && <p className="st-hinweis">{anlegeMeldung}</p>}
+              <V1Button variant="primary" onClick={helferAnlegen} disabled={legtAn}>
+                {legtAn ? 'Legt an …' : 'Fehlende anlegen'}
+              </V1Button>
+            </V1Card>
+          )}
 
           <V1Card>
             <div className="st-feldzeile">
@@ -797,6 +801,14 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                 </small>
               </span>
             </div>
+            {bestand.bauteile.filter((b) => b.stand === 'Veraltet').map((b) => (
+              <div className="st-feldzeile" key={b.entityId}>
+                <span className="st-etikett">
+                  {b.zweck}
+                  <small>Von Fork AI angelegt, aber in einer älteren Fassung. Neu anlegen ersetzt sie.</small>
+                </span>
+              </div>
+            ))}
 
             {vorschau ? (
               <>

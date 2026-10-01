@@ -34,6 +34,9 @@ public sealed class Co2NotAusBleibtTests : IDisposable
     private readonly AppPaths _pfade;
     private readonly RecordingHttpHandler _ha;
 
+    /// <summary>Was <c>GET /api/states</c> liefert — ohne Angabe eine leere Liste.</summary>
+    private string _zustaende = "[]";
+
     public Co2NotAusBleibtTests()
     {
         _wurzel = Path.Combine(Path.GetTempPath(), "Co2NotAus_" + Guid.NewGuid().ToString("N"));
@@ -46,7 +49,7 @@ public sealed class Co2NotAusBleibtTests : IDisposable
             BaseUrl = "http://ha.local:8123", AccessToken = "token", Enabled = true,
         });
         _ha = new RecordingHttpHandler((anfrage, _) => anfrage.Method == HttpMethod.Get
-            ? RecordingHttpHandler.Json(anfrage.RequestUri!.AbsolutePath.EndsWith("/api/states") ? "[]" : "{}",
+            ? RecordingHttpHandler.Json(anfrage.RequestUri!.AbsolutePath.EndsWith("/api/states") ? _zustaende : "{}",
                 anfrage.RequestUri!.AbsolutePath.EndsWith("/api/states") ? HttpStatusCode.OK : HttpStatusCode.NotFound)
             : RecordingHttpHandler.Json("[]"));
     }
@@ -121,6 +124,73 @@ public sealed class Co2NotAusBleibtTests : IDisposable
         await dienst.SpeichernAsync(Einstellungen(automatik: false), CancellationToken.None);
 
         Assert.Equal(1, AutomationsAufrufe());
+    }
+
+    // ---------- Fork AI (01.10.2026): die Automation dort schalten, wo sie steht ----------
+
+    private static string Automation(string entity, string kennung, string zustand = "on")
+        => $$$"""{"entity_id":"{{{entity}}}","state":"{{{zustand}}}","attributes":{"id":"{{{kennung}}}","friendly_name":"{{{entity}}}"}}""";
+
+    private const string Fuehler = """{"entity_id":"sensor.co2","state":"800","attributes":{}}""";
+
+    private List<string> GeschalteteAutomationen()
+        => _ha.Requests
+            .Where(r => r.Method == HttpMethod.Post && r.Uri.AbsolutePath.Contains("/api/services/automation/", StringComparison.Ordinal))
+            .Select(r => System.Text.Json.JsonDocument.Parse(r.Body!).RootElement.GetProperty("entity_id").GetString()!)
+            .ToList();
+
+    [Fact]
+    public async Task SpeichernMitUmlegen_SchaltetDieVomForkAngelegteDosierung()
+    {
+        // Home Assistant leitet die Entity-ID aus dem Alias der Vorlage ab.
+        _zustaende = $"[{Fuehler},{Automation("automation.co2_dosierung", "fork_ai_co2_dosierung")}]";
+        var dienst = Dienst();
+        new SteuerungRepository(_pfade).SetEinstellungen(Co2SteuerungService.Modul, Einstellungen(automatik: true));
+
+        var (_, _, erreicht) = await dienst.SpeichernAsync(Einstellungen(automatik: false), CancellationToken.None);
+
+        Assert.Equal(["automation.co2_dosierung"], GeschalteteAutomationen());
+        Assert.True(erreicht);
+    }
+
+    [Fact]
+    public async Task SpeichernMitUmlegen_DieHandgebauteDosierungBleibtErreichbar()
+    {
+        _zustaende = $"[{Fuehler},{Automation(Co2SteuerungService.Entitaeten.Automatik, "1788411041559")}]";
+        var dienst = Dienst();
+        new SteuerungRepository(_pfade).SetEinstellungen(Co2SteuerungService.Modul, Einstellungen(automatik: true));
+
+        await dienst.SpeichernAsync(Einstellungen(automatik: false), CancellationToken.None);
+
+        Assert.Equal([Co2SteuerungService.Entitaeten.Automatik], GeschalteteAutomationen());
+    }
+
+    [Fact]
+    public async Task SpeichernMitUmlegen_OhneDosierungMeldetEsKeinenErfolg()
+    {
+        // Vorher: turn_off an eine Entität, die es nicht gibt — Home Assistant
+        // antwortet mit 200, die Seite meldete „geschrieben".
+        _zustaende = $"[{Fuehler}]";
+        var dienst = Dienst();
+        new SteuerungRepository(_pfade).SetEinstellungen(Co2SteuerungService.Modul, Einstellungen(automatik: true));
+
+        var (gespeichert, _, erreicht) = await dienst.SpeichernAsync(Einstellungen(automatik: false), CancellationToken.None);
+
+        Assert.NotNull(gespeichert);
+        Assert.Empty(GeschalteteAutomationen());
+        Assert.False(erreicht);
+        Assert.True(SchalterAufrufe() >= 2, "Speichern hat nichts geschrieben — der Test sieht es nicht.");
+    }
+
+    [Fact]
+    public async Task Livebild_ZeigtDenZustandDerVomForkAngelegtenDosierung()
+    {
+        _zustaende = $"[{Fuehler},{Automation("automation.co2_dosierung", "fork_ai_co2_dosierung", "off")}]";
+
+        var live = await Dienst().LiveAsync(CancellationToken.None);
+
+        Assert.True(live.HaErreichbar);
+        Assert.False(live.AutomatikAn);
     }
 
     private static string ProjektWurzel()

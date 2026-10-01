@@ -71,6 +71,11 @@ public sealed class Co2SteuerungService
         public const string AbluftDrosseln = "input_boolean.co2_abluft_drosseln";
         public const string StartNachLichtAn = "input_number.co2_start_nach_licht_an";
         public const string EndeVorLichtAus = "input_number.co2_ende_vor_licht_aus";
+        /// <summary>
+        /// Die Dosierung, wie sie in Brus Anlage handgebaut heißt. Eine vom Fork
+        /// angelegte heißt anders — geschaltet und gelesen wird deshalb über
+        /// <see cref="AutomatikKennungen"/>, nicht direkt über diese Konstante.
+        /// </summary>
         public const string Automatik = "automation.co2_dosierung_rdwc_port_5";
 
         /// <summary>
@@ -79,7 +84,10 @@ public sealed class Co2SteuerungService
         /// </summary>
         public const string PortSchaltenInAutomation = PortModus;
 
-        /// <summary>Der Port-Status, auf den die Automation als Bedingung prüft (online, nicht „läuft").</summary>
+        /// <summary>
+        /// Der Port-Status, auf den die handgebaute Automation als Bedingung prüft
+        /// (online, nicht „läuft"). In der Vorlage ist das die Rolle <c>port_status</c>.
+        /// </summary>
         public const string PortStatusInAutomation = "binary_sensor.big_port_5_status";
 
         public const string ZielEffektiv = "sensor.co2_ziel_effektiv";
@@ -413,7 +421,12 @@ public sealed class Co2SteuerungService
     /// als Liste, damit prüfbar ist, was wann angefasst wird.
     /// </summary>
     /// <param name="mitAutomatik">Auch die Automation selbst schalten? Nur beim Speichern.</param>
-    public static IReadOnlyList<(string Domain, string Dienst, string Entity)> Schalterliste(Co2Einstellungen e, bool mitAutomatik)
+    /// <param name="automatiken">
+    /// Die Dosier-Automationen, die es in Home Assistant wirklich gibt
+    /// (<see cref="AutomatikKennungen"/>). Ohne Angabe die Katalog-Kennung.
+    /// </param>
+    public static IReadOnlyList<(string Domain, string Dienst, string Entity)> Schalterliste(
+        Co2Einstellungen e, bool mitAutomatik, IReadOnlyList<string>? automatiken = null)
     {
         var liste = new List<(string, string, string)>
         {
@@ -422,9 +435,30 @@ public sealed class Co2SteuerungService
         };
         if (mitAutomatik)
         {
-            liste.Add(("automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik));
+            foreach (var automatik in automatiken ?? [Entitaeten.Automatik])
+            {
+                liste.Add(("automation", e.AutomatikAktiv ? "turn_on" : "turn_off", automatik));
+            }
         }
         return liste;
+    }
+
+    /// <summary>
+    /// Fork AI (01.10.2026): Unter welchen Entity-IDs die Dosierung in Home
+    /// Assistant steht — handgebaut (<see cref="Entitaeten.Automatik"/>) oder vom
+    /// Fork angelegt (Entity-ID aus dem Alias der Vorlage).
+    /// </summary>
+    /// <param name="alle">Die Entitäten aus Home Assistant.</param>
+    /// <returns>
+    /// Ohne Entitätenliste (Home Assistant antwortet nicht) die Katalog-Kennung —
+    /// wie bisher. Mit Liste nur, was es wirklich gibt; leer, wenn es keine
+    /// Dosierung gibt.
+    /// </returns>
+    public static IReadOnlyList<string> AutomatikKennungen(IReadOnlyCollection<HomeAssistantEntity> alle)
+    {
+        if (alle.Count == 0) return [Entitaeten.Automatik];
+        var dosierung = SteuerungBauteile.FuerModul(Modul).Single(b => b.EntityId == Entitaeten.Automatik);
+        return SteuerungBauteile.AutomationFinden(dosierung, alle);
     }
 
     /// <summary>Alle Sollwerte in die HA-Helfer schreiben. false, wenn HA nicht erreichbar oder ein Schreiben scheiterte.</summary>
@@ -449,7 +483,22 @@ public sealed class Co2SteuerungService
                 new Dictionary<string, object> { ["value"] = wert });
             alles &= ok;
         }
-        foreach (var (domain, dienst, entity) in Schalterliste(e, mitAutomatik))
+
+        // Fork AI (01.10.2026): Die Automation unter der Kennung schalten, unter
+        // der sie wirklich steht. Gibt es keine, meldet das Speichern das — vorher
+        // ging ein turn_off an eine Entität, die es nicht gab, und Home Assistant
+        // antwortete mit Erfolg.
+        IReadOnlyList<string>? automatiken = null;
+        if (mitAutomatik)
+        {
+            automatiken = AutomatikKennungen(await _ha.GetEntitiesAsync(settings, ct));
+            if (automatiken.Count == 0)
+            {
+                _logger.LogWarning("CO₂-Automatik: In Home Assistant gibt es keine Dosier-Automation — nichts geschaltet.");
+                alles = false;
+            }
+        }
+        foreach (var (domain, dienst, entity) in Schalterliste(e, mitAutomatik, automatiken))
         {
             alles &= await _ha.CallEntityServiceAsync(settings, domain, dienst, entity, ct);
         }
@@ -542,7 +591,9 @@ public sealed class Co2SteuerungService
             Bedarf: An(Entitaeten.Bedarf),
             KlimaOk: An(Entitaeten.KlimaOk),
             VentilOffen: AnRolle("port_zustand"),
-            AutomatikAn: An(Entitaeten.Automatik),
+            AutomatikAn: AutomatikKennungen(entities).Select(An).OfType<bool>().ToList() is { Count: > 0 } an
+                ? an.Any(x => x)
+                : null,
             LichtAn: AnRolle("licht"),
             T6Stufe: ZahlRolle("abluft_stufe") is { } t6 ? (int)t6 : null,
             TiefAktiv: An(Entitaeten.StufeTiefSinnvoll),

@@ -104,6 +104,19 @@ public enum BauteilArt
 /// nach einer Differenz, die aus 0 °C und 0 % entstanden ist.
 /// </para>
 /// </param>
+/// <param name="VorlagenDatei">
+/// Bei einer <see cref="BauteilArt.Automation"/>: der Name der Vorlage unter
+/// <c>Vorlagen/&lt;modul&gt;/</c> ohne Endung, aus der der Fork sie anlegt — oder
+/// null, wenn es keine gibt.
+/// <para>
+/// Fork AI (01.10.2026): <see cref="EntityId"/> ist bei Automationen die Kennung
+/// der <b>handgebauten</b> Fassung in Brus Anlage. Eine vom Fork angelegte heißt
+/// anders, weil Home Assistant die Entity-ID aus dem Alias der Vorlage ableitet
+/// („CO2 Dosierung" → <c>automation.co2_dosierung</c>). Wiedergefunden wird sie
+/// über ihre Konfigurations-Kennung (<see cref="KonfigKennung"/>), siehe
+/// <see cref="SteuerungBauteile.AutomationFinden"/>.
+/// </para>
+/// </param>
 public sealed record Bauteil(
     string Modul,
     string EntityId,
@@ -119,13 +132,20 @@ public sealed record Bauteil(
     string? Einheit = null,
     string? Vorlage = null,
     string? Zustandsklasse = null,
-    string? Verfuegbarkeit = null)
+    string? Verfuegbarkeit = null,
+    string? VorlagenDatei = null)
 {
     /// <summary>Die Domäne der Entität — <c>input_number</c>, <c>sensor</c>, …</summary>
     public string Domaene => EntityId.Split('.', 2)[0];
 
     /// <summary>Der Teil hinter dem Punkt, den Home Assistant aus dem Namen ableitet.</summary>
     public string Objektkennung => EntityId.Split('.', 2).Length > 1 ? EntityId.Split('.', 2)[1] : EntityId;
+
+    /// <summary>
+    /// Die Konfigurations-Kennung, unter der der Fork diese Automation anlegt
+    /// (<c>fork_ai_&lt;modul&gt;_&lt;vorlage&gt;</c>) — null ohne Vorlage.
+    /// </summary>
+    public string? KonfigKennung => VorlagenDatei is null ? null : SteuerungBauteile.AutomationsKennung(Modul, VorlagenDatei);
 }
 
 /// <summary>Der Katalog aller Steuerungen an einer Stelle.</summary>
@@ -288,12 +308,12 @@ public static class SteuerungBauteile
 
         // --- Automationen -------------------------------------------------
         new(Co2, "automation.co2_dosierung_rdwc_port_5", "CO2 Dosierung", BauteilArt.Automation,
-            "Die eigentliche Regelung: Impuls, Prüfen, Warten."),
+            "Die eigentliche Regelung: Impuls, Prüfen, Warten.", VorlagenDatei: "dosierung"),
         new(Co2, "automation.co2_wachter_rdwc_port_5", "CO2 Wächter", BauteilArt.Automation,
-            "Schließt das Ventil zwangsweise, wenn es zu lange offen steht. Wird immer angelegt."),
+            "Schließt das Ventil zwangsweise, wenn es zu lange offen steht. Wird immer angelegt.", VorlagenDatei: "waechter"),
         new(Co2, "automation.co2_abluft_drosselung_t6_rdwc_port_1", "CO2 Abluft-Drosselung", BauteilArt.Automation,
             "Senkt die Abluft während des Dosierens.", Pflicht: false, HaengtAn: BrauchtAbluft,
-            OhneDas: "Ohne Abluft-Regler entfällt die Drosselung."),
+            OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", VorlagenDatei: "abluft"),
 
         // ====================================================================
         // Zuluft Keller — Außenluft ansaugen, solange sie trockener ist als die
@@ -360,7 +380,7 @@ public static class SteuerungBauteile
 
         // --- Automation -----------------------------------------------------
         new(Zuluft, "automation.zuluft_keller_regelung", "Zuluft Keller Regelung", BauteilArt.Automation,
-            "Schaltet den Lüfter-Port und führt die Stufe nach."),
+            "Schaltet den Lüfter-Port und führt die Stufe nach.", VorlagenDatei: "regelung"),
 
         // ====================================================================
         // Water Chiller — Wassertemperatur auf zwei Zielen halten, Tag und Nacht.
@@ -412,15 +432,16 @@ public static class SteuerungBauteile
         new(Chiller, "automation.water_chiller_regelung", "Water Chiller Regelung", BauteilArt.Automation,
             "Schaltet die Steckdose nach Kühlbedarf, gegen Mindestlaufzeit und -pause.",
             Pflicht: false, HaengtAn: new[] { "steckdose" },
-            OhneDas: "Nur nötig, wenn der Kühler über eine Steckdose geschaltet wird und kein Sollwert-Gerät hat."),
+            OhneDas: "Nur nötig, wenn der Kühler über eine Steckdose geschaltet wird und kein Sollwert-Gerät hat.",
+            VorlagenDatei: "regelung"),
         new(Chiller, "automation.water_chiller_sollwert", "Water Chiller Sollwert", BauteilArt.Automation,
             "Schreibt das Tag- oder Nachtziel in einen Kühler mit eigenem Thermostat.",
             Pflicht: false, HaengtAn: new[] { "kuehler_sollwert" },
-            OhneDas: "Nur nötig, wenn der Kühler einen eigenen Sollwert-Eingang hat."),
+            OhneDas: "Nur nötig, wenn der Kühler einen eigenen Sollwert-Eingang hat.", VorlagenDatei: "sollwert"),
         new(Chiller, "automation.water_chiller_wachter", "Water Chiller Wachter", BauteilArt.Automation,
             "Schaltet ab, wenn der Wasserfühler ausfällt, und warnt bei zu warmem Wasser.",
             Pflicht: false,
-            OhneDas: "Ohne Wächter läuft der Kühler weiter, wenn der Fühler stumm wird."),
+            OhneDas: "Ohne Wächter läuft der Kühler weiter, wenn der Fühler stumm wird.", VorlagenDatei: "waechter"),
 
 
         // ====================================================================
@@ -512,6 +533,47 @@ public static class SteuerungBauteile
             var name = rest.Slice(auf + 2, zu - 2).ToString();
             if (!gefunden.Contains(name, StringComparer.Ordinal)) gefunden.Add(name);
             rest = rest[(auf + zu + 2)..];
+        }
+
+        return gefunden;
+    }
+
+    /// <summary>
+    /// Die Konfigurations-Kennung einer vom Fork angelegten Automation. Eine
+    /// Stelle für <see cref="Bauteil.KonfigKennung"/> und das Anlegen selbst.
+    /// </summary>
+    public static string AutomationsKennung(string modul, string vorlagenDatei) => $"fork_ai_{modul}_{vorlagenDatei}";
+
+    /// <summary>
+    /// Fork AI (01.10.2026): Unter welchen Entity-IDs eine Automation des Katalogs
+    /// in Home Assistant wirklich steht.
+    /// </summary>
+    /// <remarks>
+    /// <para>Zwei Wege, beide gelten: die handgebaute Fassung unter
+    /// <see cref="Bauteil.EntityId"/> (so läuft sie in Brus Anlage) und die vom
+    /// Fork angelegte, gefunden über ihre Konfigurations-Kennung — deren Entity-ID
+    /// leitet Home Assistant aus dem Alias ab, und die kennt der Katalog nicht.</para>
+    /// <para>Vorher wurde nur die Katalog-Kennung angesprochen. „Automatik aus" schaltete
+    /// bei jeder Neuanlage eine Entität, die es nicht gibt — Home Assistant nimmt
+    /// das ohne Fehler an —, und der Bestand meldete die angelegten Automationen
+    /// für immer als fehlend.</para>
+    /// </remarks>
+    /// <returns>Die vorhandenen Entity-IDs, die handgebaute zuerst; leer, wenn keine da ist.</returns>
+    public static IReadOnlyList<string> AutomationFinden(Bauteil bauteil, IEnumerable<HomeAssistantEntity> alle)
+    {
+        var liste = alle as IReadOnlyCollection<HomeAssistantEntity> ?? alle.ToList();
+        var gefunden = new List<string>();
+        if (liste.Any(e => string.Equals(e.EntityId, bauteil.EntityId, StringComparison.OrdinalIgnoreCase)))
+        {
+            gefunden.Add(bauteil.EntityId);
+        }
+
+        if (bauteil.KonfigKennung is { } kennung)
+        {
+            gefunden.AddRange(liste
+                .Where(e => string.Equals(e.KonfigKennung, kennung, StringComparison.Ordinal))
+                .Select(e => e.EntityId)
+                .Where(id => !gefunden.Contains(id, StringComparer.OrdinalIgnoreCase)));
         }
 
         return gefunden;

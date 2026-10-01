@@ -333,12 +333,18 @@ public sealed class HomeAssistantService
                     continue;
                 }
 
-                string? friendlyName = null, unit = null, deviceClass = null;
+                string? friendlyName = null, unit = null, deviceClass = null, konfigKennung = null;
                 if (element.TryGetProperty("attributes", out var attrs))
                 {
                     if (attrs.TryGetProperty("friendly_name", out var f)) friendlyName = f.GetString();
                     if (attrs.TryGetProperty("unit_of_measurement", out var u)) unit = u.GetString();
                     if (attrs.TryGetProperty("device_class", out var d)) deviceClass = d.GetString();
+                    // Nur bei Automationen: dort ist "id" die Kennung der Konfiguration.
+                    if (entityId.StartsWith("automation.", StringComparison.Ordinal)
+                        && attrs.TryGetProperty("id", out var k) && k.ValueKind == JsonValueKind.String)
+                    {
+                        konfigKennung = k.GetString();
+                    }
                 }
 
                 entities.Add(new HomeAssistantEntity
@@ -348,6 +354,7 @@ public sealed class HomeAssistantService
                     State = element.TryGetProperty("state", out var stateEl) ? stateEl.GetString() : null,
                     UnitOfMeasurement = unit,
                     DeviceClass = deviceClass,
+                    KonfigKennung = konfigKennung,
                     Domain = entityId.Split('.', 2)[0],
                 });
             }

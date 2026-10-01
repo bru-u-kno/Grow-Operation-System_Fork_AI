@@ -13,6 +13,14 @@ public sealed class HomeAssistantEntity
     public string? UnitOfMeasurement { get; init; }
     public string? DeviceClass { get; init; }
 
+    /// <summary>
+    /// Fork AI (01.10.2026): Bei einer Automation die Kennung ihrer Konfiguration
+    /// (<c>attributes.id</c>, zugleich ihre <c>unique_id</c>). Home Assistant leitet
+    /// die Entity-ID aus dem Namen ab, nicht aus dieser Kennung — wer eine vom Fork
+    /// angelegte Automation wiederfinden will, sucht deshalb hiernach.
+    /// </summary>
+    public string? KonfigKennung { get; init; }
+
     /// <summary>The entity domain (the part before the first dot, e.g. "sensor").</summary>
     public string Domain { get; init; } = string.Empty;
 }
