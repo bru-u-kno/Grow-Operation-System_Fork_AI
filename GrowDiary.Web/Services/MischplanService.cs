@@ -273,37 +273,36 @@ public sealed class MischplanService
     /// wird kein Phasenbeginn gerechnet. Bis zum 02.10.2026 zählte diese
     /// Klasse die Vegi-Wochen selbst ab dem Startdatum, also samt Anzucht.</para>
     ///
-    /// <para>Wochen über das Chart hinaus halten die letzte Spalte der Phase —
-    /// Woche 6 einer 4-Wochen-Veg mischt weiter wie Woche 4, statt ins Leere zu
-    /// laufen. Die Woche selbst hat keine Obergrenze (<see cref="WocheInPhase(GrowRun, string, DateTime)"/>);
-    /// eigene Spalten für Woche 5, 6 … sind der nächste Schritt.</para>
+    /// <para><b>Wochen hinter dem Plan.</b> Läuft eine Phase länger als der
+    /// Plan, hängt <see cref="GrowPlan.GrowPlanService.WochenNachziehen"/> dem
+    /// Plan des Grows eigene Wochen an — Woche 10 der Blüte ist dann eine eigene
+    /// Spalte „Blütewoche 10" (verlängert), und diese Methode findet sie wie jede
+    /// andere. Welche Spalte für welche Woche steht, sagt
+    /// <see cref="GrowPlan.Planwochen.Wochen"/>: in der Anzucht zählt die letzte
+    /// Sonderspalte als Woche 1.</para>
+    ///
+    /// <para>Gehalten wird die letzte Spalte nur noch, wo es keine eigene Woche
+    /// gibt: bei einem eingefrorenen Plan, bei einem Programm ohne Grow-Plan und
+    /// in den Minuten zwischen Wochenwechsel und dem nächsten Nachziehen. Alle
+    /// Leser fragen hier — sie zeigen also auch dann dieselbe Woche.</para>
     /// </remarks>
     public static FeedChartColumn? SpalteFuer(FeedChartDefinition chart, GrowRun grow, DateTime stichtag)
     {
         var stand = Phasenanker.Fuer(grow, stichtag);
-
-        string chartStage = stand.Stufe switch
-        {
-            GrowStage.Seedling or GrowStage.Clone => "Clone",
-            GrowStage.Veg => "Veg",
-            GrowStage.Transition or GrowStage.Flower => "Flower",
-            GrowStage.Finish => "Finish",
-            _ => "Finish",
-        };
+        var chartStage = GrowPlan.Planwochen.ChartPhase(stand.Stufe);
 
         var kandidaten = chart.Columns.Where(c => string.Equals(c.Stage, chartStage, StringComparison.OrdinalIgnoreCase)).ToList();
         if (kandidaten.Count == 0) return null;
 
-        var wochenSpalten = kandidaten.Where(c => c.Week is not null).OrderBy(c => c.Week).ToList();
-        if (wochenSpalten.Count == 0)
+        var wochen = GrowPlan.Planwochen.Wochen(kandidaten, chartStage);
+        if (wochen.Count == 0)
         {
-            // Sonderspalten (Vorweichen/Anfüttern/Flush): die letzte ist der
-            // Normalfall — beim Klon ist das „Anfüttern".
+            // Sonderspalten (Flush): die letzte ist der Normalfall.
             return kandidaten[^1];
         }
 
         var woche = stand.WocheIn(chartStage);
-        return wochenSpalten.LastOrDefault(c => c.Week <= woche) ?? wochenSpalten[0];
+        return wochen.LastOrDefault(w => w.Woche <= woche).Spalte ?? wochen[0].Spalte;
     }
 
     /// <summary>Woche innerhalb der Chart-Phase heute, ab 1.</summary>

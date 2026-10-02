@@ -591,6 +591,9 @@ public sealed class GrowPlanTests : IDisposable
         Assert.Equal(new DateTime(2026, 7, 10), grow.VegStartedAt);
         var plan = _dienst.Anlegen(grow)!;
 
+        // Fork AI (02.10.2026): ein NICHT nachgezogener Plan (eingefroren, aus der Zeit
+        // davor). Nachgezogen hätte er Vegiwoche 5–7 mit eigenen Zeiträumen
+        // (MitwachsendeWochenTests.EineAbgeschlosseneVegiBekommtIhreWochenNachtraeglich).
         var zeit = PlanAuswertung.Zeitraeume(grow, plan.Inhalt.Chart.Columns, new DateTime(2026, 9, 16));
 
         Assert.Equal((new DateTime(2026, 6, 26), new DateTime(2026, 7, 10)), zeit["root"]);

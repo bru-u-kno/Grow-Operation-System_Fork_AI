@@ -5,7 +5,7 @@ import { V1Sheet } from '../../components/V1Sheet'
 import { V1Alert } from '../../components/v1'
 import { classNames } from '../../utils'
 import '../wochenplan/wochenplan.css'
-import { anker, waehlePlan, wochenKurz, type WochenPlan } from './wochen-zeile'
+import { anker, laufendVerlaengert, waehlePlan, wochenKurz, type WochenPlan } from './wochen-zeile'
 import { PhasenErinnerung } from '../grows/PhasenErinnerung'
 
 /**
@@ -65,6 +65,7 @@ export function WochenZeile() {
       <button type="button" className="zw-woche-kopf" onClick={() => setOffen(true)} aria-haspopup="dialog" data-audit="wochen-zeile-oeffnen">
         <span className="zw-woche-titel">
           <b>{plan.jetztLabel ?? 'keine passende Woche'}</b>
+          {laufendVerlaengert(plan) && <span className="wp-leise" data-audit="wochen-zeile-verlaengert"> · verlängert</span>}
           {plan.sorte && <span className="wp-leise"> · {plan.sorte}</span>}
         </span>
         <span className="zw-woche-alle">Alle Wochen</span>
@@ -102,6 +103,7 @@ export function WochenZeile() {
               <span className="wp-zeile-l">
                 {w.label}
                 {w.wirdGehalten && <span className="wp-leise"> · gehalten</span>}
+                {w.verlaengert && <span className="wp-leise zw-marke" data-audit="wochen-blatt-verlaengert">verlängert</span>}
               </span>
               <span className="wp-zeile-w">{wochenKurz(w)}</span>
             </button>

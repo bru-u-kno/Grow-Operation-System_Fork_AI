@@ -123,7 +123,10 @@ export function PlanAuswertung({ growId }: { growId: number }) {
           <tbody>
             {liste.map((z) => (
               <tr key={z.id}>
-                <td>{z.label}</td>
+                <td>
+                  {z.label}
+                  {z.verlaengert && <small className="pa-verlaengert">verlängert</small>}
+                </td>
                 <td>{z.start}</td>
                 <td className={classNames(z.geaendert && 'ist-geaendert')}>{z.ende}</td>
                 {groesse !== 'dosierung' && <td className={classNames(z.abweichung && 'ist-ab')}>{z.gemessen}</td>}
@@ -144,7 +147,7 @@ export function PlanAuswertung({ growId }: { growId: number }) {
             <div key={e.id}>
               <b>{new Date(e.zeitUtc).toLocaleDateString('de-DE')}</b>
               <span>
-                {e.spalteId && `${wochenName(e.spalteId)} · `}{buchText(e, feldName)}
+                {e.spalteId && `${wochenName(e.spalteId)} · `}{buchText(e, feldName, wochenName)}
                 {e.grund && ` · „${e.grund}“`}
               </span>
             </div>

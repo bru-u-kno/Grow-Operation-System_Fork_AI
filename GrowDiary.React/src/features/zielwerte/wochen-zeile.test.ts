@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anker, waehlePlan, wochenIndex, wochenKurz, type PlanWoche, type WochenPlan } from './wochen-zeile'
+import { anker, laufendVerlaengert, waehlePlan, wochenIndex, wochenKurz, type PlanWoche, type WochenPlan } from './wochen-zeile'
 
 const woche = (teil: Partial<PlanWoche>): PlanWoche => ({
   id: 'flower-w4', label: 'Flores · Woche 4', stage: 'Flower', istJetzt: true, wirdGehalten: false,
@@ -38,5 +38,11 @@ describe('Wochenzeile', () => {
     expect(wochenIndex(spalten, 'flower-w4')).toBe(1)
     expect(wochenIndex(spalten, 'gibt-es-nicht')).toBeNull()
     expect(wochenIndex(spalten, null)).toBeNull()
+  })
+
+  it('meldet, wenn die laufende Woche angehängt ist — nur die laufende zählt', () => {
+    expect(laufendVerlaengert(plan({ wochen: [woche({ istJetzt: true, verlaengert: true })] }))).toBe(true)
+    expect(laufendVerlaengert(plan({ wochen: [woche({ istJetzt: false, verlaengert: true }), woche({ istJetzt: true })] }))).toBe(false)
+    expect(laufendVerlaengert(plan({ wochen: [] }))).toBe(false)
   })
 })

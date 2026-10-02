@@ -27,6 +27,20 @@ export type PlanStand = {
   nachtWieTagJeWoche?: Record<string, boolean> | null
   /** Spalten-Id → Feld → Herkunft (programm, standard, eigen, fehlt). */
   herkunft?: Record<string, Record<string, string>>
+  /** Fork AI (02.10.2026): angehängte Wochen → Woche, deren Werte sie übernommen haben. */
+  verlaengert?: Record<string, string> | null
+}
+
+/**
+ * Die Programmwoche einer Woche: sie selbst, oder bei einer angehängten Woche
+ * die letzte Woche der Phase aus dem Programm — dort steht ihr Startwert
+ * (wie `GrowPlanInhalt.Programmwoche` im Backend).
+ */
+export function programmwoche(stand: Pick<PlanStand, 'verlaengert'>, spalteId: string): string {
+  const kette = stand.verlaengert ?? {}
+  let id = spalteId
+  for (let schritt = 0; schritt < 200 && kette[id] !== undefined; schritt++) id = kette[id]
+  return id
 }
 
 /** Fork AI (forkai.130): Gelten in dieser Woche nachts die Tageswerte? */
@@ -177,8 +191,13 @@ export function aenderungsZeilen(
   return zeilen
 }
 
-/** Ein Eintrag des Änderungsbuchs als Satz. */
-export function buchText(e: BuchEintrag, feldName: (feld: string) => string): string {
+/**
+ * Ein Eintrag des Änderungsbuchs als Satz.
+ *
+ * @param wochenName Name einer Woche zu ihrer Id — für Einträge, die eine
+ *   zweite Woche nennen (angehängte Woche: woher die Werte stammen).
+ */
+export function buchText(e: BuchEintrag, feldName: (feld: string) => string, wochenName: (id: string) => string = (id) => id): string {
   const zahl = (t: string | null) => (t == null ? null : alsText(Number(t)))
   switch (e.art) {
     case 'angelegt':
@@ -199,6 +218,9 @@ export function buchText(e: BuchEintrag, feldName: (feld: string) => string): st
       return `Startstand korrigiert · ${feldName(e.feld ?? '')} ${zahl(e.alt) ?? '–'} → ${zahl(e.neu) ?? '–'}`
     case 'alsprogramm':
       return `Als Programm gespeichert · ${e.neu ?? ''}`
+    case 'verlaengert':
+      // Die Phase läuft länger als der Plan — Woche angehängt (Fork AI, 02.10.2026).
+      return `Woche angehängt · Werte aus ${e.alt ? wochenName(e.alt) : 'der Woche davor'} übernommen`
     default:
       return e.art
   }

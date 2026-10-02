@@ -27,6 +27,8 @@ export type WochenwertSpalte = {
   woche: number | null
   istJetzt: boolean
   felder: WochenwertFeld[]
+  /** Fork AI (02.10.2026): angehängt, weil die Phase länger läuft als das Programm. */
+  verlaengert?: boolean
 }
 
 export type Wochenwerte = {

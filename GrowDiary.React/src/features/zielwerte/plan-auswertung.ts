@@ -21,6 +21,8 @@ export type AuswertungWoche = {
   messungen: number
   dosierungStart: Zutat[]
   dosierungEnde: Zutat[]
+  /** Fork AI (02.10.2026): angehängt, weil die Phase länger lief als das Programm. */
+  verlaengert?: boolean
 }
 
 export type Auswertung = {
@@ -87,6 +89,7 @@ export const GROESSEN: readonly Groesse[] = [
 export type Zeile = {
   id: string
   label: string
+  verlaengert: boolean
   start: string
   ende: string
   geaendert: boolean
@@ -108,6 +111,7 @@ export function zeilen(auswertung: Auswertung, key: string): Zeile[] {
     return {
       id: w.id,
       label: w.label,
+      verlaengert: Boolean(w.verlaengert),
       start,
       ende,
       geaendert: start !== ende,
@@ -127,7 +131,7 @@ export function dosierungZeilen(auswertung: Auswertung): Zeile[] {
   return auswertung.wochen.map((w) => {
     const start = dosierungText(w.dosierungStart)
     const ende = dosierungText(w.dosierungEnde)
-    return { id: w.id, label: w.label, start, ende, geaendert: start !== ende, gemessen: '', abweichung: false }
+    return { id: w.id, label: w.label, verlaengert: Boolean(w.verlaengert), start, ende, geaendert: start !== ende, gemessen: '', abweichung: false }
   })
 }
 

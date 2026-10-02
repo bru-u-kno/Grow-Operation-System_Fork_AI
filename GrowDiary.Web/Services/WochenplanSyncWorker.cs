@@ -10,6 +10,11 @@ namespace GrowDiary.Web.Services;
 /// Muster, das beim Water Chiller schon einmal zur Doppelsteuerung führte. 06:00
 /// liegt vor Licht-an, Änderungen greifen also zum Tagesbeginn.</para>
 ///
+/// <para><b>Wochen nachziehen.</b> Derselbe Takt hängt den Grow-Plänen die
+/// Wochen an, die eine Phase über den Plan hinaus erreicht hat
+/// (<see cref="GrowPlan.GrowPlanService.WochenNachziehen"/>) — höchstens fünf
+/// Minuten nach Mitternacht steht die neue Woche überall.</para>
+///
 /// <para><b>Der Takt selbst ist eng, die Arbeit selten.</b> Alle fünf Minuten wird
 /// nur geprüft, ob einer der beiden Anlässe vorliegt; der Wochenwechsel soll nicht
 /// bis zum nächsten Morgen warten.</para>
@@ -62,6 +67,18 @@ public sealed class WochenplanSyncWorker : BackgroundService
         var dienst = scope.ServiceProvider.GetRequiredService<WochenplanSyncService>();
 
         var jetzt = DateTime.Now;
+
+        // Fork AI (02.10.2026): läuft eine Phase über den Plan hinaus, bekommt er
+        // zuerst die neue Woche — sonst bliebe die letzte Spalte gehalten, und der
+        // Wochenwechsel unten sähe nichts. Mit ihr wechselt die Spalten-Id, und
+        // die Übergabe läuft sofort (nicht erst um 06:00).
+        var angehaengt = _serviceProvider.GetRequiredService<GrowPlan.GrowPlanService>()
+            .AlleNachziehen(scope.ServiceProvider.GetRequiredService<Infrastructure.GrowRepository>().GetActiveGrows(), jetzt.Date);
+        if (angehaengt > 0)
+        {
+            _logger.LogInformation("Wochenplan: {Anzahl} Woche(n) an Grow-Pläne angehängt.", angehaengt);
+        }
+
         var tageslaufFaellig = jetzt.Hour >= TagesstundeLokal && _letzterTageslauf.Date < jetzt.Date;
         var wochenwechsel = dienst.Wochenwechsel();
 

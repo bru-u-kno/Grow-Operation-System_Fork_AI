@@ -229,6 +229,12 @@ try
     var uebernommen = growPlaene.FehlendePlaeneAnlegen(laufende);
     var nachgetragen = growPlaene.FehlendeFelderNachtragen(laufende);
     var abgeglichen = growPlaene.AlleAbgleichen(app.Services.GetRequiredService<GrowRepository>().GetGrow);
+    // Fork AI (02.10.2026): Phasen, die länger laufen als ihr Plan, bekommen ihre Wochen.
+    var angehaengt = growPlaene.AlleNachziehen(laufende, DateTime.Today);
+    if (angehaengt > 0)
+    {
+        app.Logger.LogInformation("Grow-Plan: {Anzahl} Woche(n) angehängt — Phasen länger als der Plan.", angehaengt);
+    }
     if (abgeglichen > 0)
     {
         app.Logger.LogInformation("Grow-Plan: {Anzahl} Pläne mit dem Grow-Status abgeglichen.", abgeglichen);
@@ -290,12 +296,13 @@ if (DemoData.IsEnabled)
             var demoLaufende = growsRepo.GetActiveGrows();
             foreach (var g in demoLaufende.Where(g => string.IsNullOrWhiteSpace(g.FeedProgramId)))
             {
-                g.FeedProgramId = "skx-canna-aqua";
+                g.FeedProgramId = Demobestand.Programm;
                 growsRepo.UpdateGrow(g);
             }
             var planDienst = demoScope.ServiceProvider.GetRequiredService<GrowDiary.Web.Services.GrowPlan.GrowPlanService>();
             var demoPlaene = planDienst.FehlendePlaeneAnlegen(demoLaufende);
-            demoLogger.LogInformation("Testdaten: {Anzahl} Grow-Plan angelegt.", demoPlaene);
+            var demoWochen = planDienst.AlleNachziehen(demoLaufende, DateTime.Today);
+            demoLogger.LogInformation("Testdaten: {Anzahl} Grow-Plan angelegt, {Wochen} Woche(n) angehängt.", demoPlaene, demoWochen);
         }
 
         // ERST der Bestand, DANN die Zelte lesen. Andersherum stand hier

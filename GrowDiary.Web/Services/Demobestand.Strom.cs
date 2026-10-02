@@ -90,8 +90,12 @@ public static partial class Demobestand
         // die CRUD-Rundweg-Prüfung). Wäre dieser hier der neueste, stünde auf
         // /zielwerte das leere zweite Zelt. Das ist ein Befund über die App, nicht
         // über die Kosten — der Bestand hält den Haupt-Grow dort, wo er war.
-        // Flip vor 50 Tagen: über den zehn Übergangstagen, vor dem Finish (bei
-        // 11 Wochen Blüte ab Tag 63 nach dem Flip).
+        // Flip vor 57 Tagen: über den zehn Übergangstagen, vor dem Finish (bei
+        // 11 Wochen Blüte ab Tag 63 nach dem Flip) — und in Blütewoche 9. Das
+        // Programm des Testbestands (Demobestand.Programm) führt acht Blütewochen:
+        // dieser Lauf blüht länger als sein Programm, sein Plan bekommt eine
+        // angehängte Woche (Planwochen.Anhaengen). Ohne diesen Fall stünde die
+        // verlängerte laufende Woche nirgends im Bestand (bis 02.10.2026: Tag 50).
         var grow = new GrowRun
         {
             TentId = zelt.Id,
@@ -113,7 +117,7 @@ public static partial class Demobestand
             StartDate = Tag(85),
             GerminatedAt = Tag(85),
             VegStartedAt = Tag(78),
-            FlipDate = Tag(50),
+            FlipDate = Tag(57),
             BreederFlowerWeeksMin = 9,
             BreederFlowerWeeksMax = 11,
             Light = $"LED {DemoData.LedZelt2W} W",

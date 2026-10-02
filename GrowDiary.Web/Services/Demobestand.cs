@@ -49,6 +49,18 @@ public static partial class Demobestand
     private static DateTime Tag(int vorTagen)
         => DateTime.Today.AddDays(-vorTagen).AddHours(12);
 
+    /// <summary>
+    /// Das Düngeprogramm, das die Testdaten-App ihren laufenden Grows gibt
+    /// (<c>Program.cs</c>, nach dem Anlegen) — acht Blütewochen, vier Vegi-Wochen.
+    /// </summary>
+    /// <remarks>
+    /// Eine Stelle, weil die Prüfungen damit rechnen: die White Widow (Anzucht 9
+    /// Tage, Vegi 29) und die Gorilla Glue in Zelt 2 (Blütewoche 9) laufen länger
+    /// als dieses Programm und bekommen angehängte Wochen
+    /// (<c>DemobestandStimmigTests</c>).
+    /// </remarks>
+    public const string Programm = "skx-canna-aqua";
+
     /// <summary>Läuft der Bestand? Nur in eine Datenbank ganz ohne Grows.</summary>
     public static bool IstNoetig(GrowRepository grows) => grows.GetAllGrows().Count == 0;
 
