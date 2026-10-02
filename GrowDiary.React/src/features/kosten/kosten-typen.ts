@@ -50,6 +50,27 @@ export type KostenStrom = {
   letzterStandUtc: string | null
   hinweis: string
   phasen: KostenPhase[]
+  /** Der Grow misst am eigenen Zähler seines Zelts, nicht am gemeinsamen. */
+  eigenerZaehler: boolean
+  /** Tage (mit Zählerdaten), an denen der Zähler mit anderen Grows geteilt war. */
+  geteiltTage: number
+  /** Mit wem geteilt wurde, je Grow die gemeinsamen Tage. */
+  geteiltMit: KostenTeilung[] | null
+  /** Der Satz dazu, vom Backend formuliert — null, wenn nie geteilt. */
+  teilungHinweis: string | null
+}
+
+/** Ein Grow, der an einigen Tagen am selben Zähler lief (Backend: `KostenTeilung`). */
+export type KostenTeilung = {
+  growId: number
+  name: string
+  tage: number
+}
+
+/** Ein Zelt für die Zähler-Einstellung (Backend: `KostenZelt`). */
+export type KostenZelt = {
+  id: number
+  name: string
 }
 
 export type KostenFuellungAktuell = {
@@ -147,6 +168,8 @@ export type KostenDurchgang = {
   artikelEur: number
   anschaffungenEur: number
   gesamtEur: number | null
+  /** Tage, an denen der Strom mit einem anderen Grow geteilt war. */
+  stromGeteiltTage: number
 }
 
 export type KostenSeite = {
@@ -163,6 +186,10 @@ export type KostenSeite = {
   hersteller: string[]
   /** Bekannte Produkte mit Hersteller — für den Vorschlag beim Tippen */
   produkte: Array<{ hersteller: string | null; produkt: string }>
+  /** Die eingestellten Zähler — die Quelle fürs Formular, nicht der Zähler des gezeigten Grows. */
+  quelle: StromQuelle | null
+  /** Die aktiven Zelte, falls eines einen eigenen Zähler bekommen soll. */
+  zelte: KostenZelt[] | null
 }
 
 /** „Lager" — ausdrücklich keinem Grow zugeordnet. Als Select-Wert, weil ein <option> keinen null-Wert tragen kann. */
@@ -175,8 +202,17 @@ export function growOptionen(seite: KostenSeite): Array<{ value: string; label: 
 }
 
 export type StromQuelle = {
+  /** Der gemeinsame Zähler — gilt für jedes Zelt ohne eigenen. */
   zaehlerEntityId: string | null
   leistungEntityId: string | null
+  /** Zelte mit eigenem kWh-Zähler. Weglassen heißt beim Speichern „unverändert". */
+  zelte?: ZeltZaehler[] | null
+}
+
+/** Ein Zelt mit eigenem kWh-Zähler (Backend: `ZeltZaehler`). */
+export type ZeltZaehler = {
+  tentId: number
+  zaehlerEntityId: string | null
 }
 
 export type Zaehlerstand = {
@@ -186,6 +222,8 @@ export type Zaehlerstand = {
   anlass: 'Tag' | 'GrowStart' | 'Phase' | 'Manuell'
   growId: number | null
   phase: string | null
+  /** Von welchem Zähler; null bei Altständen (= gemeinsamer Zähler). */
+  zaehlerEntityId: string | null
 }
 
 export type EntitaetTest = {

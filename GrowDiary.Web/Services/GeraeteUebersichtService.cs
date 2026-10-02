@@ -124,6 +124,12 @@ public sealed class GeraeteUebersichtService
         var strom = _kosten.StromQuelle;
         Merken(strom?.ZaehlerEntityId, "Stromzähler", GeraetQuellen.Strom);
         Merken(strom?.LeistungEntityId, "Leistungsmessung", GeraetQuellen.Strom);
+        var zeltNamen = _zelte.GetTents(includeArchived: true).ToDictionary(z => z.Id, z => z.Name);
+        foreach (var zelt in strom?.Zelte ?? [])
+        {
+            Merken(zelt.ZaehlerEntityId,
+                $"Stromzähler {zeltNamen.GetValueOrDefault(zelt.TentId) ?? $"Zelt {zelt.TentId}"}", GeraetQuellen.Strom);
+        }
 
         return treffer;
     }

@@ -85,36 +85,64 @@ public sealed class KostenSeiteTests
         Assert.Equal(245, KostenSeiteService.KwhZwischen(staende, 0, 2), precision: 3);
     }
 
+    /// <remarks>
+    /// Seit 02.10.2026 kommt die Phase eines Tages aus dem Grow
+    /// (<see cref="GrowStageResolver"/>), nicht aus dem Namen am Stand — der
+    /// gehört bei zwei Grows am selben Zähler nur einem. Deshalb stehen die
+    /// Stände hier in Ortszeit, und der Grow ist so angelegt, wie der Resolver
+    /// ihn liest: ein bewurzelter Steckling (ab Tag 1 Wachstum), Flip am 23.08.,
+    /// die ersten zehn Tage danach Übergang. Die alte Fassung trug „Veg" am
+    /// ersten Tag eines Samen-Grows und „Flower" am Flip-Tag — beides hätte der
+    /// Worker so nie geschrieben.
+    /// </remarks>
     [Fact]
     public void PhasenWerdenAnDenPhasenwechselnGeschnitten()
     {
         var staende = new[]
         {
-            Stand(1, "2026-08-01T00:00:00", 1000, "Veg", anlass: ZaehlerAnlass.GrowStart),
-            Stand(2, "2026-08-11T00:00:00", 1200, "Veg"),
-            Stand(3, "2026-08-23T00:00:00", 1440, "Flower", anlass: ZaehlerAnlass.Phase),
-            Stand(4, "2026-09-08T00:00:00", 1760, "Flower"),
+            StandLokal(1, new DateTime(2026, 8, 1), 1000, ZaehlerAnlass.GrowStart),
+            StandLokal(2, new DateTime(2026, 8, 11), 1200),
+            StandLokal(3, new DateTime(2026, 8, 23), 1440, ZaehlerAnlass.Phase),
+            StandLokal(4, new DateTime(2026, 9, 8), 1760),
         };
+        var grow = Grow(start: new DateTime(2026, 8, 1));
+        grow.StartMaterial = StartMaterial.Clone;
+        grow.CloneIsRooted = true;
 
-        var strom = KostenSeiteService.StromBerechnen(Grow(start: new DateTime(2026, 8, 1)), Quelle, 32, null, staende, Jetzt);
+        var strom = KostenSeiteService.StromBerechnen(grow, Quelle, 32, null, staende, Jetzt);
 
-        Assert.True(strom.Phasen.Count >= 2, "Mengenwächter: zwei Phasen erwartet");
-        Assert.Equal(2, strom.Phasen.Count);
+        Assert.True(strom.Phasen.Count >= 3, "Mengenwächter: drei Phasen erwartet");
+        Assert.Equal(3, strom.Phasen.Count);
 
         var veg = strom.Phasen[0];
         Assert.Equal("Wachstum", veg.Label);
-        Assert.Equal(440, veg.Kwh, precision: 3); // 1000 → 1440, bis zum Wechsel-Stand
+        Assert.Equal(440, veg.Kwh, precision: 3); // 1000 → 1440, bis zum Flip
         Assert.Equal(22, veg.Tage, precision: 3);
         Assert.False(veg.Laeuft);
 
-        var bluete = strom.Phasen[1];
+        // 1440 → 1760 über 16 Tage = 20 kWh/Tag: zehn Tage Übergang, sechs Blüte.
+        var uebergang = strom.Phasen[1];
+        Assert.Equal("Übergang", uebergang.Label);
+        Assert.Equal(200, uebergang.Kwh, precision: 3);
+        Assert.Equal(10, uebergang.Tage, precision: 3);
+
+        var bluete = strom.Phasen[2];
         Assert.Equal("Blüte", bluete.Label);
-        Assert.Equal(320, bluete.Kwh, precision: 3);
-        Assert.Equal(102.40, bluete.Eur!.Value, precision: 2);
+        Assert.Equal(120, bluete.Kwh, precision: 3);
+        Assert.Equal(38.40, bluete.Eur!.Value, precision: 2);
         Assert.True(bluete.Laeuft);
 
         Assert.Equal(760, strom.KwhSeitStart!.Value, precision: 3);
     }
+
+    private static Zaehlerstand StandLokal(int id, DateTime ortszeit, double kwh, ZaehlerAnlass anlass = ZaehlerAnlass.Tag) => new()
+    {
+        Id = id,
+        ZeitpunktUtc = DateTime.SpecifyKind(ortszeit, DateTimeKind.Local).ToUniversalTime(),
+        Kwh = kwh,
+        GrowId = 1,
+        Anlass = anlass,
+    };
 
     [Fact]
     public void DieFlaschePrognostiziertAusDerLetztenLaufzeit()

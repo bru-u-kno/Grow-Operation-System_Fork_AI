@@ -65,9 +65,17 @@ public sealed class KostenApiController : ApiControllerBase
         _seite.StromQuelle = request;
         // Sofort einen Stand holen: sonst wartet die Seite bis zu 10 Minuten
         // auf den Worker und zeigt derweil „noch kein Zählerstand".
-        await _seite.ZaehlerstandFesthaltenAsync(ZaehlerAnlass.Manuell, ct);
+        await _seite.AlleZaehlerFesthaltenAsync(ZaehlerAnlass.Manuell, ct);
         return Ok(_seite.StromQuelle);
     }
+
+    /// <summary>
+    /// Die Durchgänge mit ihren Kosten — dieselbe Rechnung wie die Tabelle der
+    /// Kostenseite. Das Archiv nimmt diese Zahl, statt eine zweite zu schätzen.
+    /// </summary>
+    [HttpGet("durchgaenge")]
+    [ProducesResponseType(typeof(IReadOnlyList<KostenDurchgang>), StatusCodes.Status200OK)]
+    public ActionResult<IReadOnlyList<KostenDurchgang>> GetDurchgaenge() => Ok(_seite.Durchgaenge());
 
     public sealed record EntitaetTest(string EntityId, bool Gefunden, string? State, double? Wert, string? Einheit, string? Name);
 
@@ -86,7 +94,9 @@ public sealed class KostenApiController : ApiControllerBase
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Zaehlerstand>> ZaehlerstandJetzt(CancellationToken ct)
     {
-        var stand = await _seite.ZaehlerstandFesthaltenAsync(ZaehlerAnlass.Manuell, ct);
+        // Jeder eingerichtete Zähler bekommt seinen Stand; zurück geht der erste
+        // (der gemeinsame, falls eingerichtet) — die Seite meldet seinen Wert.
+        var stand = (await _seite.AlleZaehlerFesthaltenAsync(ZaehlerAnlass.Manuell, ct)).FirstOrDefault();
         return stand is null
             ? BadRequestError("meter_unavailable", "Kein Zählerstand: Strom-Quelle fehlt oder Home Assistant liefert keinen Zahlenwert.")
             : Ok(stand);
@@ -133,13 +143,17 @@ public sealed class KostenApiController : ApiControllerBase
     /// sein Stand steht in der Steuerung.</para>
     /// <para><c>spanne</c>: <c>SiebenTage</c>, <c>DreissigTage</c>,
     /// <c>DieserGrow</c>, <c>Alles</c> oder <c>Eigen</c> mit <c>von</c>/<c>bis</c>.</para>
+    /// <para><c>growId</c>: der Grow, den die Seite gerade zeigt — für
+    /// <c>DieserGrow</c>. Ohne ihn gilt der älteste laufende. Vorher kam hier immer
+    /// der laufende an, auch wenn oben ein anderer Durchgang gewählt war.</para>
     /// </remarks>
     [HttpGet("artikel/{id:int}/verbrauch")]
     public ActionResult<VerbrauchsansichtService.Ansicht> Verbrauch(
         int id,
         [FromQuery] string spanne = "DreissigTage",
         [FromQuery] DateTime? von = null,
-        [FromQuery] DateTime? bis = null)
+        [FromQuery] DateTime? bis = null,
+        [FromQuery] int? growId = null)
     {
         if (_repo.GetArtikel(id) is null) return NotFoundError("artikel_unbekannt", "Diesen Artikel gibt es nicht.");
 
@@ -153,7 +167,7 @@ public sealed class KostenApiController : ApiControllerBase
             return BadRequestError("zeitraum_fehlt", "Für einen eigenen Zeitraum braucht es von und/oder bis.");
         }
 
-        return Ok(_verbrauch.Zusammenstellen(id, gewaehlt, von, bis, _seite.LaufenderGrow(DateTime.Today).GrowId));
+        return Ok(_verbrauch.Zusammenstellen(id, gewaehlt, von, bis, growId ?? _seite.LaufenderGrow(DateTime.Today).GrowId));
     }
 
     [HttpPost("artikel")]

@@ -35,7 +35,21 @@ public sealed record KostenStrom(
     DateTime? ErsterStandUtc,
     DateTime? LetzterStandUtc,
     string Hinweis,
-    IReadOnlyList<KostenPhase> Phasen);
+    IReadOnlyList<KostenPhase> Phasen,
+    /// <summary>Der Grow misst am eigenen Zähler seines Zelts, nicht am gemeinsamen.</summary>
+    bool EigenerZaehler = false,
+    /// <summary>An wie vielen Tagen (mit Zählerdaten) der Zähler mit anderen Grows geteilt war.</summary>
+    int GeteiltTage = 0,
+    /// <summary>Mit wem geteilt wurde, je Grow die Zahl der gemeinsamen Tage.</summary>
+    IReadOnlyList<KostenTeilung>? GeteiltMit = null,
+    /// <summary>Der Satz dazu für die Seite — null, wenn nie geteilt.</summary>
+    string? TeilungHinweis = null);
+
+/// <summary>Ein Grow, der an einigen Tagen am selben Zähler lief.</summary>
+public sealed record KostenTeilung(int GrowId, string Name, int Tage);
+
+/// <summary>Ein Zelt für die Zähler-Einstellung.</summary>
+public sealed record KostenZelt(int Id, string Name);
 
 public sealed record KostenFuellungAktuell(
     int Id,
@@ -101,7 +115,18 @@ public sealed record KostenAnschaffung(
     int Id, string Name, string? Hersteller, string? Produkt, DateTime DatumUtc, int Stueck, double EinzelpreisEur, double GesamtEur,
     int? GrowId, string? GrowName, string? Notiz, int? HardwareItemId);
 
-public sealed record KostenDurchgang(int GrowId, string Name, DateTime StartDate, DateTime? EndDate, bool Laeuft, double? StromEur, double ArtikelEur, double AnschaffungenEur, double? GesamtEur);
+public sealed record KostenDurchgang(
+    int GrowId,
+    string Name,
+    DateTime StartDate,
+    DateTime? EndDate,
+    bool Laeuft,
+    double? StromEur,
+    double ArtikelEur,
+    double AnschaffungenEur,
+    double? GesamtEur,
+    /// <summary>Tage, an denen der Strom mit einem anderen Grow geteilt war.</summary>
+    int StromGeteiltTage = 0);
 
 public sealed record KostenSeite(
     KostenGrowInfo? Grow,
@@ -113,7 +138,11 @@ public sealed record KostenSeite(
     IReadOnlyList<KostenDurchgang> Durchgaenge,
     IReadOnlyList<string> Einheiten,
     IReadOnlyList<string> Hersteller,
-    IReadOnlyList<KostenProdukt> Produkte);
+    IReadOnlyList<KostenProdukt> Produkte,
+    /// <summary>Die eingestellten Zähler — die Quelle fürs Formular, nicht der Zähler des gezeigten Grows.</summary>
+    StromQuelle? Quelle = null,
+    /// <summary>Die aktiven Zelte, falls ein Zelt einen eigenen Zähler bekommen soll.</summary>
+    IReadOnlyList<KostenZelt>? Zelte = null);
 
 /// <summary>Ein bekanntes Produkt mit seinem Hersteller — für den Vorschlag im Formular.</summary>
 public sealed record KostenProdukt(string? Hersteller, string Produkt);
@@ -168,41 +197,86 @@ public sealed class KostenSeiteService
 
     public StromQuelle StromQuelle
     {
-        get
-        {
-            var raw = _settings.GetValue(StromQuelleKey);
-            if (string.IsNullOrWhiteSpace(raw)) return new StromQuelle();
-            try { return JsonSerializer.Deserialize<StromQuelle>(raw, Json) ?? new StromQuelle(); }
-            catch (JsonException) { return new StromQuelle(); }
-        }
-        set => _settings.SetValue(StromQuelleKey, JsonSerializer.Serialize(new StromQuelle
+        get => StromQuelleLesen(_settings);
+        set => StromQuelleSchreiben(_settings, value);
+    }
+
+    /// <summary>Die Zähler-Einstellung lesen — auch für den Demobestand, darum statisch.</summary>
+    public static StromQuelle StromQuelleLesen(AppSettingsRepository settings)
+    {
+        var raw = settings.GetValue(StromQuelleKey);
+        if (string.IsNullOrWhiteSpace(raw)) return new StromQuelle();
+        try { return JsonSerializer.Deserialize<StromQuelle>(raw, Json) ?? new StromQuelle(); }
+        catch (JsonException) { return new StromQuelle(); }
+    }
+
+    /// <summary>
+    /// Die Zähler-Einstellung schreiben. <see cref="StromQuelle.Zelte"/> = null
+    /// lässt die Zelt-Zähler stehen, eine leere Liste entfernt sie.
+    /// </summary>
+    public static void StromQuelleSchreiben(AppSettingsRepository settings, StromQuelle value)
+    {
+        var zelte = value.Zelte is null
+            ? StromQuelleLesen(settings).Zelte ?? []
+            : value.Zelte
+                .Where(z => z.TentId > 0 && !string.IsNullOrWhiteSpace(z.ZaehlerEntityId))
+                .GroupBy(z => z.TentId)
+                .Select(g => new ZeltZaehler { TentId = g.Key, ZaehlerEntityId = g.Last().ZaehlerEntityId!.Trim() })
+                .OrderBy(z => z.TentId)
+                .ToList();
+
+        settings.SetValue(StromQuelleKey, JsonSerializer.Serialize(new StromQuelle
         {
             ZaehlerEntityId = Leer(value.ZaehlerEntityId),
             LeistungEntityId = Leer(value.LeistungEntityId),
+            Zelte = zelte,
         }, Json));
     }
 
     private static string? Leer(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
-    /// <summary>Liest den Zähler in HA und hält ihn fest. Null, wenn keine Quelle oder kein Wert.</summary>
-    public async Task<Zaehlerstand?> ZaehlerstandFesthaltenAsync(ZaehlerAnlass anlass, CancellationToken ct = default)
+    /// <summary>Jeden eingerichteten Zähler lesen und festhalten. Leer, wenn keine Quelle oder kein Wert.</summary>
+    public async Task<IReadOnlyList<Zaehlerstand>> AlleZaehlerFesthaltenAsync(ZaehlerAnlass anlass, CancellationToken ct = default)
     {
-        var quelle = StromQuelle;
-        if (string.IsNullOrWhiteSpace(quelle.ZaehlerEntityId)) return null;
-        var state = await _ha.GetEntityStateAsync(_haSettings.GetEffectiveHomeAssistantSettings(), quelle.ZaehlerEntityId, ct);
+        var gehalten = new List<Zaehlerstand>();
+        foreach (var zaehler in StromQuelle.AlleZaehler())
+        {
+            if (await ZaehlerstandFesthaltenAsync(zaehler, anlass, ct) is { } stand) gehalten.Add(stand);
+        }
+        return gehalten;
+    }
+
+    /// <summary>Einen Zähler in HA lesen und festhalten. Null, wenn HA keinen Zahlenwert liefert.</summary>
+    public async Task<Zaehlerstand?> ZaehlerstandFesthaltenAsync(string zaehler, ZaehlerAnlass anlass, CancellationToken ct = default)
+    {
+        var state = await _ha.GetEntityStateAsync(_haSettings.GetEffectiveHomeAssistantSettings(), zaehler, ct);
         if (state?.NumericValue is not { } kwh) return null;
 
-        var (growId, phase) = LaufenderGrow(DateTime.Today);
-        var stand = new Zaehlerstand { ZeitpunktUtc = DateTime.UtcNow, Kwh = kwh, Anlass = anlass, GrowId = growId, Phase = phase };
+        // GrowId und Phase sind eine Notiz für die Tabelle der Stände; gerechnet
+        // wird über den Zähler (StromAufteilung).
+        var (growId, phase) = LaufenderGrow(DateTime.Today, zaehler);
+        var stand = new Zaehlerstand
+        {
+            ZeitpunktUtc = DateTime.UtcNow, Kwh = kwh, Anlass = anlass, GrowId = growId, Phase = phase, ZaehlerEntityId = zaehler,
+        };
         stand.Id = _kosten.CreateZaehlerstand(stand);
         return stand;
     }
 
-    /// <summary>Der Grow, dem ein Zählerstand zugeordnet wird: der älteste laufende.</summary>
-    public (int? GrowId, string? Phase) LaufenderGrow(DateTime heute)
+    /// <summary>
+    /// Der älteste laufende Grow — mit <paramref name="zaehler"/> nur unter denen,
+    /// die an diesem Zähler messen.
+    /// </summary>
+    /// <remarks>
+    /// Ohne Zähler ist das die Voreinstellung für neue Nachfüllungen und
+    /// Anschaffungen, wenn das Formular keinen Grow nennt.
+    /// </remarks>
+    public (int? GrowId, string? Phase) LaufenderGrow(DateTime heute, string? zaehler = null)
     {
+        var quelle = zaehler is null ? null : StromQuelle;
         var grow = _grows.GetActiveGrows()
             .Where(g => g.Status == GrowStatus.Running)
+            .Where(g => quelle is null || string.Equals(quelle.ZaehlerFuerZelt(g.TentId), zaehler, StringComparison.OrdinalIgnoreCase))
             .OrderBy(g => g.StartDate)
             .FirstOrDefault();
         return grow is null ? (null, null) : (grow.Id, GrowStageResolver.Resolve(grow, heute).ToString());
@@ -223,7 +297,7 @@ public sealed class KostenSeiteService
             leistung = state?.NumericValue;
         }
 
-        return Berechnen(
+        var seite = Berechnen(
             grow, alle, quelle, preis, leistung,
             _kosten.GetZaehlerstaende(),
             _kosten.GetArtikel(),
@@ -232,7 +306,24 @@ public sealed class KostenSeiteService
             DateTime.UtcNow,
             _hardware.GetHardwareItems(),
             _kosten.GetVerbraeuche());
+
+        var zelte = _grows.GetTents()
+            .Where(t => t.Status == TentStatus.Active)
+            .OrderBy(t => t.DisplayOrder).ThenBy(t => t.Id)
+            .Select(t => new KostenZelt(t.Id, t.Name))
+            .ToList();
+        return seite with { Quelle = quelle, Zelte = zelte };
     }
+
+    /// <summary>
+    /// Die Durchgänge mit ihren Kosten — dieselbe Rechnung wie die Tabelle auf
+    /// der Kostenseite. Das Archiv übernimmt diese Zahl, statt eine zweite zu schätzen.
+    /// </summary>
+    public IReadOnlyList<KostenDurchgang> Durchgaenge()
+        => DurchgaengeBerechnen(
+            _grows.GetAllGrows(), StromQuelle, _original.StrompreisCentProKwh,
+            _kosten.GetZaehlerstaende(), _kosten.GetArtikel(), _kosten.GetNachfuellungen(),
+            _kosten.GetAnschaffungen(), _kosten.GetVerbraeuche(), DateTime.UtcNow);
 
     // ------------------------------------------------------------ Rechnung
 
@@ -267,7 +358,13 @@ public sealed class KostenSeiteService
         var artikelNachId = artikel.ToDictionary(a => a.Id);
         var growNachId = alleGrows.ToDictionary(g => g.Id);
 
-        var strom = StromBerechnen(grow, quelle, preisCent, leistungW, staende, jetztUtc);
+        // Der gezeigte Grow muss in der Aufteilung stehen, auch wenn ein Aufrufer
+        // ihn nicht in der Liste aller Grows mitgibt.
+        var growsMitGezeigtem = grow is null || alleGrows.Any(g => g.Id == grow.Id)
+            ? alleGrows
+            : alleGrows.Append(grow).ToList();
+        var aufteilung = StromAufteilung.Aufteilen(growsMitGezeigtem, quelle, staende, jetztUtc);
+        var strom = StromAusAnteil(grow, growsMitGezeigtem, quelle, preisCent, leistungW, aufteilung);
         var artikelListe = artikel.Select(a => ArtikelBerechnen(a, fuellungen, verbraeuche ?? Array.Empty<Verbrauch>(), grow?.Id, jetztUtc)).ToList();
         var fuellungenListe = fuellungen
             .OrderByDescending(f => f.ZeitpunktUtc)
@@ -282,34 +379,7 @@ public sealed class KostenSeiteService
             })
             .ToList();
 
-        // forkai.90: Zwei Buchungsziele, je Artikel gewaehlt.
-        //  * AufGrowBuchen = false (Voreinstellung, bisheriges Verhalten):
-        //    die Nachfuellung zaehlt voll in dem Durchgang, dem sie zugeordnet ist.
-        //  * AufGrowBuchen = true: die Nachfuellung ist lagerneutral, und nur der
-        //    gebuchte Verbrauch trifft den Durchgang — bewertet ueber
-        //    VerbrauchsansichtService.PreisJeEinheit, also mit dem Preis der
-        //    Fuellung, aus der die Menge stammt.
-        // Ohne die Trennung zaehlte ein 10-L-Kanister voll auf den Lauf, in dem
-        // er gekauft wurde, obwohl er drei Laeufe haelt.
-        var aufGrow = artikel.Where(a => a.AufGrowBuchen).Select(a => a.Id).ToHashSet();
-
-        var fuellungenEur = grow is null
-            ? 0
-            : fuellungen.Where(f => f.GrowId == grow.Id && !aufGrow.Contains(f.ArtikelId)).Sum(f => f.KostenEur ?? 0);
-
-        var verbrauchEur = grow is null || verbraeuche is null
-            ? 0
-            : verbraeuche
-                .Where(v => v.GrowId == grow.Id && aufGrow.Contains(v.ArtikelId))
-                .Sum(v =>
-                {
-                    artikelNachId.TryGetValue(v.ArtikelId, out var a);
-                    var preis = VerbrauchsansichtService.PreisJeEinheit(
-                        fuellungen.Where(f => f.ArtikelId == v.ArtikelId).ToList(), v.ZeitpunktUtc, a);
-                    return preis is { } p ? v.Menge * p : 0;
-                });
-
-        var artikelEur = fuellungenEur + verbrauchEur;
+        var artikelEur = grow is null ? 0 : ArtikelEurJeGrow(grow.Id, artikel, fuellungen, verbraeuche ?? []);
         var anschaffungenEur = grow is null ? 0 : anschaffungen.Where(a => a.GrowId == grow.Id).Sum(a => a.GesamtEur);
         var gesamt = (strom.EurSeitStart ?? 0) + artikelEur + anschaffungenEur;
 
@@ -342,17 +412,7 @@ public sealed class KostenSeiteService
                 prognose, hinweis);
         }
 
-        var durchgaenge = alleGrows
-            .OrderByDescending(g => g.StartDate)
-            .Select(g =>
-            {
-                var s = StromBerechnen(g, quelle, preisCent, null, staende, jetztUtc);
-                var a = fuellungen.Where(f => f.GrowId == g.Id).Sum(f => f.KostenEur ?? 0);
-                var an = anschaffungen.Where(x => x.GrowId == g.Id).Sum(x => x.GesamtEur);
-                var summeEur = s.EurSeitStart is { } se ? se + a + an : (a + an > 0 ? a + an : (double?)null);
-                return new KostenDurchgang(g.Id, g.Name, g.StartDate, g.EndDate, g.Status == GrowStatus.Running, s.EurSeitStart, a, an, summeEur);
-            })
-            .ToList();
+        var durchgaenge = DurchgaengeAusAufteilung(alleGrows, quelle, preisCent, aufteilung, artikel, fuellungen, anschaffungen, verbraeuche ?? []);
 
         return new KostenSeite(info, summe, strom, artikelListe, fuellungenListe, anschaffungenListe, durchgaenge, VerbrauchsEinheiten.Alle, hersteller, produkte);
     }
@@ -374,56 +434,169 @@ public sealed class KostenSeiteService
         return (bisher + rest * proTag, $"bei {wochen} Wochen Blüte, Ernte ≈ {ernte:dd.MM.yyyy}");
     }
 
-    /// <summary>Strom eines Grows aus den Zählerständen, die in seine Laufzeit fallen.</summary>
+    /// <summary>
+    /// Was ein Artikel einen Grow kostet — die EINE Regel für die Summe oben,
+    /// die Zeile am Artikel und die Tabelle der Durchgänge.
+    /// </summary>
+    /// <remarks>
+    /// <para>forkai.90: Zwei Buchungsziele, je Artikel gewählt.
+    /// <c>AufGrowBuchen = false</c> (Voreinstellung): die Nachfüllung zählt voll
+    /// in dem Durchgang, dem sie zugeordnet ist. <c>AufGrowBuchen = true</c>: die
+    /// Nachfüllung ist lagerneutral, nur der gebuchte Verbrauch trifft den
+    /// Durchgang — bewertet über <see cref="VerbrauchsansichtService.PreisJeEinheit"/>,
+    /// also mit dem Preis der Füllung, aus der die Menge stammt. Ohne die
+    /// Trennung zählte ein 10-L-Kanister voll auf den Lauf, in dem er gekauft
+    /// wurde, obwohl er drei Läufe hält.</para>
+    /// <para><b>Warum hier und nur hier (02.10.2026).</b> Die Durchgänge-Tabelle
+    /// summierte jede Nachfüllung, die Summe oben rechnete nach dieser Regel. Ein
+    /// 50-€-Kanister, von dem 10 € verbraucht waren, stand oben mit 10 € und
+    /// in der Tabelle darunter mit 50 € — derselbe Grow, zwei Beträge.</para>
+    /// </remarks>
+    public static double ArtikelEurImGrow(
+        Verbrauchsartikel artikel, int growId, IReadOnlyList<Nachfuellung> fuellungen, IReadOnlyList<Verbrauch> verbraeuche)
+    {
+        var eigene = fuellungen.Where(f => f.ArtikelId == artikel.Id).ToList();
+        return artikel.AufGrowBuchen
+            ? verbraeuche
+                .Where(v => v.ArtikelId == artikel.Id && v.GrowId == growId)
+                .Sum(v => VerbrauchsansichtService.PreisJeEinheit(eigene, v.ZeitpunktUtc, artikel) is { } preis ? v.Menge * preis : 0)
+            : eigene.Where(f => f.GrowId == growId).Sum(f => f.KostenEur ?? 0);
+    }
+
+    /// <summary>Alle Artikel eines Grows — die Summe von <see cref="ArtikelEurImGrow"/>.</summary>
+    public static double ArtikelEurJeGrow(
+        int growId, IReadOnlyList<Verbrauchsartikel> artikel, IReadOnlyList<Nachfuellung> fuellungen, IReadOnlyList<Verbrauch> verbraeuche)
+        => artikel.Sum(a => ArtikelEurImGrow(a, growId, fuellungen, verbraeuche));
+
+    /// <summary>Die Durchgänge-Tabelle — für die Kostenseite und das Archiv.</summary>
+    public static IReadOnlyList<KostenDurchgang> DurchgaengeBerechnen(
+        IReadOnlyList<GrowRun> alleGrows, StromQuelle quelle, double? preisCent,
+        IReadOnlyList<Zaehlerstand> staende, IReadOnlyList<Verbrauchsartikel> artikel,
+        IReadOnlyList<Nachfuellung> fuellungen, IReadOnlyList<Anschaffung> anschaffungen,
+        IReadOnlyList<Verbrauch> verbraeuche, DateTime jetztUtc)
+        => DurchgaengeAusAufteilung(
+            alleGrows, quelle, preisCent, StromAufteilung.Aufteilen(alleGrows, quelle, staende, jetztUtc),
+            artikel, fuellungen, anschaffungen, verbraeuche);
+
+    private static List<KostenDurchgang> DurchgaengeAusAufteilung(
+        IReadOnlyList<GrowRun> alleGrows, StromQuelle quelle, double? preisCent,
+        IReadOnlyDictionary<int, StromAnteil> aufteilung, IReadOnlyList<Verbrauchsartikel> artikel,
+        IReadOnlyList<Nachfuellung> fuellungen, IReadOnlyList<Anschaffung> anschaffungen,
+        IReadOnlyList<Verbrauch> verbraeuche)
+        => alleGrows
+            .OrderByDescending(g => g.StartDate)
+            .Select(g =>
+            {
+                var s = StromAusAnteil(g, alleGrows, quelle, preisCent, null, aufteilung);
+                var a = ArtikelEurJeGrow(g.Id, artikel, fuellungen, verbraeuche);
+                var an = anschaffungen.Where(x => x.GrowId == g.Id).Sum(x => x.GesamtEur);
+                var summeEur = s.EurSeitStart is { } se ? se + a + an : (a + an > 0 ? a + an : (double?)null);
+                return new KostenDurchgang(g.Id, g.Name, g.StartDate, g.EndDate, g.Status == GrowStatus.Running,
+                    s.EurSeitStart, a, an, summeEur, s.GeteiltTage);
+            })
+            .ToList();
+
+    /// <summary>Strom eines einzelnen Grows — so, als liefe kein anderer.</summary>
     public static KostenStrom StromBerechnen(
         GrowRun? grow, StromQuelle quelle, double? preisCent, double? leistungW,
         IReadOnlyList<Zaehlerstand> staende, DateTime jetztUtc)
+        => StromBerechnen(grow, grow is null ? [] : [grow], quelle, preisCent, leistungW, staende, jetztUtc);
+
+    /// <summary>Strom eines Grows — sein Anteil am Verbrauch seines Zählers, neben allen anderen Grows.</summary>
+    public static KostenStrom StromBerechnen(
+        GrowRun? grow, IReadOnlyList<GrowRun> alleGrows, StromQuelle quelle, double? preisCent, double? leistungW,
+        IReadOnlyList<Zaehlerstand> staende, DateTime jetztUtc)
     {
-        var eingerichtet = !string.IsNullOrWhiteSpace(quelle.ZaehlerEntityId);
-        var leer = new KostenStrom(eingerichtet, quelle.ZaehlerEntityId, quelle.LeistungEntityId, preisCent, leistungW,
-            null, null, null, null, null, null, null, null, string.Empty, []);
+        var grows = grow is null || alleGrows.Any(g => g.Id == grow.Id) ? alleGrows : alleGrows.Append(grow).ToList();
+        return StromAusAnteil(grow, grows, quelle, preisCent, leistungW, StromAufteilung.Aufteilen(grows, quelle, staende, jetztUtc));
+    }
+
+    private static KostenStrom StromAusAnteil(
+        GrowRun? grow, IReadOnlyList<GrowRun> alleGrows, StromQuelle quelle, double? preisCent, double? leistungW,
+        IReadOnlyDictionary<int, StromAnteil> aufteilung)
+    {
+        var zaehler = quelle.ZaehlerFuerZelt(grow?.TentId);
+        var eingerichtet = zaehler is not null;
+        var eigener = grow is not null && quelle.HatEigenenZaehler(grow.TentId);
+        var leer = new KostenStrom(eingerichtet, zaehler, quelle.LeistungEntityId, preisCent, leistungW,
+            null, null, null, null, null, null, null, null, string.Empty, [], eigener);
 
         if (!eingerichtet) return leer with { Hinweis = "Keine Strom-Quelle eingerichtet — kWh-Zähler in den Einstellungen unten wählen." };
         if (grow is null) return leer with { Hinweis = "Kein laufender Grow." };
 
-        // Nur Stände, die zu diesem Grow gehören ODER in seine Laufzeit fallen:
-        // die GrowId sitzt am Stand, seit der Worker läuft; ältere Stände
-        // (oder ein anderer laufender Grow im selben Zelt) fallen über die Zeit.
-        var vonUtc = grow.StartDate.Date.ToUniversalTime();
-        var bisUtc = grow.EndDate is { } ende ? ende.Date.AddDays(1).ToUniversalTime() : jetztUtc;
-        var relevant = staende
-            .Where(s => s.GrowId == grow.Id || (s.GrowId is null && s.ZeitpunktUtc >= vonUtc && s.ZeitpunktUtc <= bisUtc))
-            .Where(s => s.ZeitpunktUtc <= bisUtc)
-            .OrderBy(s => s.ZeitpunktUtc).ThenBy(s => s.Id)
-            .ToList();
+        var anteil = aufteilung.GetValueOrDefault(grow.Id);
+        var preisEur = preisCent is { } p ? p / 100.0 : (double?)null;
 
-        if (relevant.Count == 0)
+        if (anteil is null || anteil.Stuecke.Count == 0)
         {
-            return leer with { Hinweis = "Noch kein Zählerstand für diesen Grow festgehalten — der Worker holt ihn innerhalb von 10 Minuten, oder unten „Zählerstand jetzt festhalten“." };
+            var imFenster = anteil?.StaendeImFenster ?? [];
+            if (imFenster.Count == 0)
+            {
+                return leer with { Hinweis = "Noch kein Zählerstand für diesen Grow festgehalten — der Worker holt ihn innerhalb von 10 Minuten, oder unten „Zählerstand jetzt festhalten“." };
+            }
+
+            // Ein einziger Stand: noch kein Verbrauch, aber ein Anfang.
+            return leer with
+            {
+                KwhSeitStart = 0,
+                EurSeitStart = preisEur is null ? null : 0,
+                ZaehlerStart = imFenster[0].Kwh,
+                ZaehlerAktuell = imFenster[^1].Kwh,
+                ErsterStandUtc = imFenster[0].ZeitpunktUtc,
+                LetzterStandUtc = imFenster[^1].ZeitpunktUtc,
+                Hinweis = "Erst ein Zählerstand — Verbrauch ergibt sich ab dem zweiten.",
+            };
         }
 
-        var erster = relevant[0];
-        var letzter = relevant[^1];
-        var kwh = KwhZwischen(relevant, 0, relevant.Count - 1);
-        var tage = Math.Max((letzter.ZeitpunktUtc - erster.ZeitpunktUtc).TotalDays, 0);
-        var preisEur = preisCent is { } p ? p / 100.0 : (double?)null;
+        var erster = anteil.Erster!;
+        var letzter = anteil.Letzter!;
+        var kwh = anteil.Kwh;
+        var tage = anteil.Stuecke.Sum(x => x.Tage);
         double? eur = preisEur is { } pe ? kwh * pe : null;
         var kwhProTag = tage >= 0.5 ? kwh / tage : (double?)null;
 
-        var phasen = PhasenBerechnen(relevant, preisEur, grow.EndDate is null);
+        var phasen = PhasenAusStuecken(grow, anteil.Stuecke, preisEur, grow.EndDate is null);
 
-        var hinweis = relevant.Count == 1
-            ? "Erst ein Zählerstand — Verbrauch ergibt sich ab dem zweiten."
-            : erster.ZeitpunktUtc.Date > grow.StartDate.Date.AddDays(1)
-                ? $"Zähler erst seit {erster.ZeitpunktUtc.ToLocalTime():dd.MM.yyyy} erfasst — davor fehlt der Strom dieses Grows."
-                : preisEur is null
-                    ? "Kein Strompreis hinterlegt — nur kWh, keine Euro."
-                    : "Gemessen am kWh-Zähler, Preis aus den Kosten-Einstellungen.";
+        var hinweis = erster.ZeitpunktUtc.ToLocalTime().Date > grow.StartDate.Date.AddDays(1)
+            ? $"Zähler erst seit {erster.ZeitpunktUtc.ToLocalTime():dd.MM.yyyy} erfasst — davor fehlt der Strom dieses Grows."
+            : preisEur is null
+                ? "Kein Strompreis hinterlegt — nur kWh, keine Euro."
+                : "Gemessen am kWh-Zähler, Preis aus den Kosten-Einstellungen.";
+
+        var (geteiltTage, geteiltMit, teilungHinweis) = Teilung(anteil.Stuecke, alleGrows);
 
         return new KostenStrom(
-            true, quelle.ZaehlerEntityId, quelle.LeistungEntityId, preisCent, leistungW,
+            true, zaehler, quelle.LeistungEntityId, preisCent, leistungW,
             kwh, eur, kwhProTag, kwhProTag is { } k && preisEur is { } pr ? k * pr : null,
-            erster.Kwh, letzter.Kwh, erster.ZeitpunktUtc, letzter.ZeitpunktUtc, hinweis, phasen);
+            erster.Kwh, letzter.Kwh, erster.ZeitpunktUtc, letzter.ZeitpunktUtc, hinweis, phasen,
+            eigener, geteiltTage, geteiltMit, teilungHinweis);
+    }
+
+    /// <summary>An welchen Tagen und mit wem der Zähler geteilt war — samt dem Satz für die Seite.</summary>
+    private static (int Tage, IReadOnlyList<KostenTeilung> Mit, string? Hinweis) Teilung(
+        IReadOnlyList<StromStueck> stuecke, IReadOnlyList<GrowRun> alleGrows)
+    {
+        var tage = stuecke.Where(s => s.GeteiltDurch > 1).Select(s => s.Tag).Distinct().Count();
+        if (tage == 0) return (0, [], null);
+
+        var namen = alleGrows.ToDictionary(g => g.Id, g => g.Name);
+        var mit = stuecke
+            .SelectMany(s => s.MitGrows.Select(id => (Id: id, s.Tag)))
+            .Distinct()
+            .GroupBy(x => x.Id)
+            .Select(g => new KostenTeilung(g.Key, namen.GetValueOrDefault(g.Key) ?? $"Grow {g.Key}", g.Count()))
+            .OrderByDescending(t => t.Tage).ThenBy(t => t.Name, StringComparer.CurrentCulture)
+            .ToList();
+
+        static string TageText(int n) => n == 1 ? "1 Tag" : $"{n} Tagen";
+        var wer = mit.Count == 1
+            ? $"„{mit[0].Name}“"
+            : string.Join(", ", mit.Take(mit.Count - 1).Select(t => $"„{t.Name}“ ({TageText(t.Tage)})"))
+              + $" und „{mit[^1].Name}“ ({TageText(mit[^1].Tage)})";
+
+        var hinweis = $"Zähler geteilt mit {wer} an {TageText(tage)} — an diesen Tagen ist sein Verbrauch "
+            + "zu gleichen Teilen auf die Grows verteilt, die dort liefen.";
+        return (tage, mit, hinweis);
     }
 
     /// <summary>kWh zwischen zwei Ständen — ein Sprung nach unten gilt als Zähler-Reset.</summary>
@@ -432,37 +605,35 @@ public sealed class KostenSeiteService
         double summe = 0;
         for (var i = von + 1; i <= bis; i++)
         {
-            var delta = staende[i].Kwh - staende[i - 1].Kwh;
-            summe += delta >= 0 ? delta : staende[i].Kwh;
+            summe += StromAufteilung.Differenz(staende[i - 1], staende[i]);
         }
         return summe;
     }
 
-    private static IReadOnlyList<KostenPhase> PhasenBerechnen(IReadOnlyList<Zaehlerstand> staende, double? preisEur, bool growLaeuft)
+    /// <summary>
+    /// Die Phasen eines Grows aus seinen Verbrauchsstücken. Die Phase eines
+    /// Tages sagt der Grow selbst (<see cref="GrowStageResolver"/>), nicht der
+    /// Name am Zählerstand: läuft ein zweiter Grow am selben Zähler, gehört
+    /// dieser Name nur einem von beiden.
+    /// </summary>
+    private static IReadOnlyList<KostenPhase> PhasenAusStuecken(
+        GrowRun grow, IReadOnlyList<StromStueck> stuecke, double? preisEur, bool growLaeuft)
     {
         var phasen = new List<KostenPhase>();
-        if (staende.Count < 2) return phasen;
-
-        var start = 0;
-        for (var i = 1; i <= staende.Count; i++)
+        var i = 0;
+        while (i < stuecke.Count)
         {
-            var ende = i == staende.Count;
-            var wechsel = !ende && !string.Equals(staende[i].Phase, staende[start].Phase, StringComparison.Ordinal);
-            if (!ende && !wechsel) continue;
+            var phase = GrowStageResolver.Resolve(grow, stuecke[i].Tag).ToString();
+            var j = i;
+            while (j + 1 < stuecke.Count && GrowStageResolver.Resolve(grow, stuecke[j + 1].Tag).ToString() == phase) j++;
 
-            var bisIndex = ende ? staende.Count - 1 : i;
-            if (bisIndex > start)
-            {
-                var kwh = KwhZwischen(staende, start, bisIndex);
-                var phase = staende[start].Phase ?? "?";
-                phasen.Add(new KostenPhase(
-                    phase, PhaseLabel(phase),
-                    staende[start].ZeitpunktUtc, staende[bisIndex].ZeitpunktUtc,
-                    (staende[bisIndex].ZeitpunktUtc - staende[start].ZeitpunktUtc).TotalDays,
-                    kwh, preisEur is { } p ? kwh * p : null,
-                    ende && growLaeuft));
-            }
-            start = i;
+            var gruppe = stuecke.Skip(i).Take(j - i + 1).ToList();
+            var kwh = gruppe.Sum(x => x.Kwh);
+            var letzte = j == stuecke.Count - 1;
+            phasen.Add(new KostenPhase(
+                phase, PhaseLabel(phase), gruppe[0].VonUtc, gruppe[^1].BisUtc, gruppe.Sum(x => x.Tage),
+                kwh, preisEur is { } p ? kwh * p : null, letzte && growLaeuft));
+            i = j + 1;
         }
         return phasen;
     }
@@ -555,15 +726,7 @@ public sealed class KostenSeiteService
         // Fuellungen. Vorher kannte diese Zeile nur Fuellungen — Purolyt stand
         // deshalb auf 0 EUR, obwohl 2,93 EUR gebucht waren und in der
         // Gesamtsumme auch auftauchten.
-        double summeImGrow = 0;
-        if (growId is { } g)
-        {
-            summeImGrow = a.AufGrowBuchen
-                ? verbraeuche
-                    .Where(v => v.ArtikelId == a.Id && v.GrowId == g)
-                    .Sum(v => VerbrauchsansichtService.PreisJeEinheit(eigene, v.ZeitpunktUtc, a) is { } preis ? v.Menge * preis : 0)
-                : eigene.Where(f => f.GrowId == g).Sum(f => f.KostenEur ?? 0);
-        }
+        var summeImGrow = growId is { } g ? ArtikelEurImGrow(a, g, eigene, verbraeuche) : 0;
 
         return new KostenArtikel(
             a.Id, a.Name, a.Hersteller, a.Produkt, a.PreisEur, a.Einheit, a.Gebinde, a.TentId, a.Notiz, a.Aktiv,

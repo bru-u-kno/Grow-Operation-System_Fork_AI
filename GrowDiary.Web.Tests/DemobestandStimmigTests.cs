@@ -80,11 +80,25 @@ public sealed class DemobestandStimmigTests : IDisposable
         try { Directory.Delete(_wurzel, recursive: true); } catch (IOException) { }
     }
 
+    /// <summary>Der Haupt-Grow: der älteste laufende im ersten Zelt (White Widow).</summary>
+    /// <remarks>
+    /// Seit 02.10.2026 laufen ZWEI Grows gleichzeitig — der zweite im zweiten
+    /// Blütezelt, damit die Kostenseite den Fall „mehrere Grows" überhaupt zeigt.
+    /// Die Prüfungen hier gelten dem ersten, an dem Messungen, Pflanzen und
+    /// Wasserwechsel hängen.
+    /// </remarks>
     private GrowRun LaufenderGrow()
     {
+        var laufend = Laufende();
+        var erstesZelt = _grows.GetTents()[0];
+        return laufend.Where(g => g.TentId == erstesZelt.Id).OrderBy(g => g.StartDate).First();
+    }
+
+    private List<GrowRun> Laufende()
+    {
         var laufend = _grows.GetAllGrows().Where(g => g.Status == GrowStatus.Running).ToList();
-        Assert.Single(laufend);
-        return laufend[0];
+        Assert.Equal(2, laufend.Count);
+        return laufend;
     }
 
     /// <summary>Der Bestand legt überhaupt etwas an.</summary>
@@ -557,6 +571,70 @@ public sealed class DemobestandStimmigTests : IDisposable
     /// derselben Rechnung, die <c>GET /api/kosten</c> ausliefert. Eine eigene
     /// Nachrechnung hier prüfte nur sich selbst.</para>
     /// </remarks>
+    /// <summary>
+    /// Zwei Grows laufen gleichzeitig am selben Zähler — und die Kostenseite
+    /// teilt ihn, statt alles dem älteren zu geben.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (02.10.2026).</b> Der Bestand hatte einen laufenden
+    /// Grow und keine Strom-Quelle. Dass ein zweiter laufender Grow nie Strom
+    /// bekam, war gegen ihn unsichtbar.</para>
+    /// <para>Die Kennungen kommen aus der gespeicherten Einstellung, nicht aus
+    /// <see cref="DemoData"/> abgetippt — sonst prüfte der Test seine eigene
+    /// Annahme.</para>
+    /// </remarks>
+    [Fact]
+    public void Zwei_laufende_Grows_teilen_sich_den_Zaehler()
+    {
+        var einstellungen = _dienste.GetRequiredService<AppSettingsRepository>();
+        var kosten = _dienste.GetRequiredService<KostenRepository>();
+        var quelle = KostenSeiteService.StromQuelleLesen(einstellungen);
+        var jetzt = DateTime.UtcNow;
+
+        // Die eingetragenen Entitäten antworten auf dem Betriebsweg.
+        Assert.False(string.IsNullOrWhiteSpace(quelle.ZaehlerEntityId), "Keine Strom-Quelle im Bestand.");
+        var zaehler = DemoData.EntityState(quelle.ZaehlerEntityId!, jetzt);
+        Assert.True(zaehler?.NumericValue is not null, $"{quelle.ZaehlerEntityId} meldet keinen Zahlenwert.");
+        Assert.True(quelle.LeistungEntityId is null || DemoData.EntityState(quelle.LeistungEntityId, jetzt)?.NumericValue is not null,
+            $"{quelle.LeistungEntityId} meldet keinen Zahlenwert.");
+
+        var staende = kosten.GetZaehlerstaende();
+        Assert.True(staende.Count >= 100, $"Nur {staende.Count} Zählerstände — die Kostenseite hätte kaum etwas zu rechnen.");
+
+        // Der Zähler läuft nie rückwärts — auch nicht zwischen dem letzten
+        // abgelegten Stand und dem, was der Worker gleich liest. Ein Rücksprung
+        // zählte als Zählerwechsel mit vollem Stand.
+        var reihe = staende.OrderBy(s => s.ZeitpunktUtc).Select(s => s.Kwh).Append(zaehler!.NumericValue!.Value).ToList();
+        Assert.All(reihe.Zip(reihe.Skip(1)), p => Assert.True(p.Second >= p.First, $"Rücksprung {p.First} → {p.Second} kWh."));
+
+        var alle = _grows.GetAllGrows();
+        var laufend = Laufende();
+        foreach (var grow in laufend)
+        {
+            var strom = KostenSeiteService.StromBerechnen(grow, alle, quelle, null, null, staende, jetzt);
+            var andere = laufend.Single(g => g.Id != grow.Id);
+
+            Assert.True(strom.KwhSeitStart is > 0, $"{grow.Name}: kein Strom — {strom.Hinweis}");
+            Assert.True(strom.GeteiltTage >= 30, $"{grow.Name}: nur {strom.GeteiltTage} geteilte Tage.");
+            // Geteilt NUR mit dem anderen laufenden — ein abgeschlossener Lauf,
+            // der noch in die Laufzeit ragt, wäre ein Fehler im Bestand.
+            var mit = Assert.Single(strom.GeteiltMit!);
+            Assert.Equal(andere.Id, mit.GrowId);
+            Assert.Contains(andere.Name, strom.TeilungHinweis);
+        }
+
+        // Kein Lauf im Archiv überlappt einen anderen im selben Zelt.
+        var abgeschlossen = alle.Where(g => g.EndDate is not null).ToList();
+        Assert.True(abgeschlossen.Count >= 2, "Mengenwächter: zwei Läufe im Archiv erwartet.");
+        foreach (var lauf in abgeschlossen)
+        {
+            var ueberlappt = alle.Where(g => g.Id != lauf.Id && g.TentId == lauf.TentId
+                && g.StartDate.Date <= lauf.EndDate!.Value.Date
+                && (g.EndDate ?? DateTime.Today).Date >= lauf.StartDate.Date).Select(g => g.Name).ToList();
+            Assert.True(ueberlappt.Count == 0, $"„{lauf.Name}“ läuft gleichzeitig mit {string.Join(", ", ueberlappt)} im selben Zelt.");
+        }
+    }
+
     [Fact]
     public void Ein_Artikel_hat_gemessenen_Fuellstand_mit_Prognose()
     {

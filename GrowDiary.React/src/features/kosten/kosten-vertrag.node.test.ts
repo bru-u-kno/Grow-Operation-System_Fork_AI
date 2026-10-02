@@ -45,3 +45,31 @@ describe('KostenFuellungAktuell', () => {
     expect(frontend.filter((f) => !backend.includes(f))).toEqual([])
   })
 })
+
+/**
+ * Die Records der Mehr-Grow-Rechnung (02.10.2026): Teilung, Zelt-Zähler, die
+ * Durchgänge fürs Archiv. Dieselbe Falle wie oben — ein Feld, das hier anders
+ * heißt als im Backend, kommt nie an, und die Seite zeigt still nichts.
+ * Geprüft in BEIDE Richtungen: was das Backend neu schickt, muss die Oberfläche
+ * auch kennen, sonst ist es ein Feld ohne Anzeige.
+ */
+describe.each([
+  ['KostenStrom', 15],
+  ['KostenTeilung', 3],
+  ['KostenZelt', 2],
+  ['KostenDurchgang', 10],
+  ['KostenSeite', 12],
+])('%s', (name, mindestens) => {
+  const backend = recordFelder(csharp, name)
+  const frontend = typFelder(ts, name)
+
+  it('sieht beide Seiten (Mengenwächter)', () => {
+    expect(backend.length).toBeGreaterThanOrEqual(mindestens)
+    expect(frontend.length).toBeGreaterThanOrEqual(mindestens)
+  })
+
+  it('beide Seiten nennen dieselben Felder', () => {
+    expect(frontend.filter((f) => !backend.includes(f))).toEqual([])
+    expect(backend.filter((f) => !frontend.includes(f))).toEqual([])
+  })
+})

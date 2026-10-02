@@ -76,8 +76,12 @@ public sealed class GrowCostService
                 return null;
             }
         }
-        set => _settings.SetValue(PreisKey, JsonSerializer.Serialize(new KostenEinstellungen { StrompreisCentProKwh = value }, Json));
+        set => StrompreisSchreiben(_settings, value);
     }
+
+    /// <summary>Den Strompreis schreiben — statisch, damit der Demobestand denselben Weg nimmt.</summary>
+    public static void StrompreisSchreiben(AppSettingsRepository settings, double? centProKwh)
+        => settings.SetValue(PreisKey, JsonSerializer.Serialize(new KostenEinstellungen { StrompreisCentProKwh = centProKwh }, Json));
 
     public GrowKosten? FuerGrow(int growId)
     {

@@ -111,6 +111,10 @@ public sealed class KostenRepository : RepositoryBase
         {
             ("ForkVerbrauchsartikel", "AufGrowBuchen", "INTEGER NOT NULL DEFAULT 0"),
             ("ForkVerbraeuche", "MessungId", "INTEGER NULL"),
+            // Mehrere Zaehler (je Zelt einer): der Stand traegt, von welchem er
+            // stammt. Altstaende bleiben NULL und zaehlen zum gemeinsamen
+            // Zaehler — einen anderen gab es vorher nicht (StromQuelle.ZaehlerVonStand).
+            ("ForkZaehlerstaende", "ZaehlerEntityId", "TEXT NULL"),
         })
         {
             if (!SpalteVorhanden(connection, tabelle, spalte))
@@ -484,15 +488,6 @@ public sealed class KostenRepository : RepositoryBase
         return list;
     }
 
-    public Zaehlerstand? GetLetzterZaehlerstand()
-    {
-        using var connection = Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM ForkZaehlerstaende ORDER BY ZeitpunktUtc DESC, Id DESC LIMIT 1;";
-        using var reader = command.ExecuteReader();
-        return reader.Read() ? MapZaehlerstand(reader) : null;
-    }
-
     /// <summary>forkai.97: Einen Zaehlerstand entfernen.</summary>
     public void DeleteZaehlerstand(int id)
     {
@@ -508,8 +503,8 @@ public sealed class KostenRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkZaehlerstaende (ZeitpunktUtc, Kwh, Anlass, GrowId, Phase)
-            VALUES ($zeitpunktUtc, $kwh, $anlass, $growId, $phase);
+            INSERT INTO ForkZaehlerstaende (ZeitpunktUtc, Kwh, Anlass, GrowId, Phase, ZaehlerEntityId)
+            VALUES ($zeitpunktUtc, $kwh, $anlass, $growId, $phase, $zaehler);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$zeitpunktUtc", ToStorageUtc(stand.ZeitpunktUtc));
@@ -517,6 +512,7 @@ public sealed class KostenRepository : RepositoryBase
         command.Parameters.AddWithValue("$anlass", stand.Anlass.ToString());
         command.Parameters.AddWithValue("$growId", (object?)stand.GrowId ?? DBNull.Value);
         command.Parameters.AddWithValue("$phase", (object?)NormalizeOptional(stand.Phase) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$zaehler", (object?)NormalizeOptional(stand.ZaehlerEntityId) ?? DBNull.Value);
         return Convert.ToInt32((long)command.ExecuteScalar()!);
     }
 
@@ -528,5 +524,6 @@ public sealed class KostenRepository : RepositoryBase
         Anlass = ParseEnum(reader["Anlass"].ToString(), ZaehlerAnlass.Tag),
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
         Phase = NullString(reader["Phase"]),
+        ZaehlerEntityId = NullString(reader["ZaehlerEntityId"]),
     };
 }

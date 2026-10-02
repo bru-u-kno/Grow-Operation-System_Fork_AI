@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import type { GrowDetail, GrowSummary, HarvestDto } from '../types'
+import type { KostenDurchgang } from '../features/kosten/kosten-typen'
 
 type GrowKosten = {
   stromEur: number | null
@@ -27,6 +28,7 @@ function ArchivePage() {
   const [grows, setGrows] = useState<GrowSummary[]>([])
   const [harvestByGrow, setHarvestByGrow] = useState<Map<number, HarvestDto>>(new Map())
   const [kostenByGrow, setKostenByGrow] = useState<Map<number, GrowKosten>>(new Map())
+  const [durchgangByGrow, setDurchgangByGrow] = useState<Map<number, KostenDurchgang>>(new Map())
   const [compareIds, setCompareIds] = useState<number[]>([])
   const [compareDetails, setCompareDetails] = useState<GrowDetail[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,12 +48,21 @@ function ArchivePage() {
         const map = new Map<number, HarvestDto>()
         data.forEach((grow, index) => { const harvest = harvests[index]; if (harvest) map.set(grow.id, harvest) })
         setHarvestByGrow(map)
-        const kosten = await Promise.all(data.map((grow) =>
+        // Erst die Zahl der Kostenseite (Zähler, Nachfüllungen, Anschaffungen) —
+        // die Schätzung nur für Läufe ohne Zählerdaten. Vorher stand hier für
+        // jeden Lauf die Schätzung, und derselbe Grow kostete im Archiv etwas
+        // anderes als auf der Kostenseite.
+        const durchgaenge = await apiFetch<KostenDurchgang[]>('/api/kosten/durchgaenge', { signal: controller.signal }).catch(() => [])
+        if (controller.signal.aborted) return
+        const durchgangMap = new Map(durchgaenge.map((d) => [d.growId, d]))
+        setDurchgangByGrow(durchgangMap)
+        const ohneZaehler = data.filter((grow) => !gemessen(durchgangMap.get(grow.id)))
+        const kosten = await Promise.all(ohneZaehler.map((grow) =>
           apiFetch<GrowKosten>(`/api/grows/${grow.id}/costs`, { signal: controller.signal }).catch(() => null),
         ))
         if (controller.signal.aborted) return
         const kostenMap = new Map<number, GrowKosten>()
-        data.forEach((grow, index) => { const k = kosten[index]; if (k) kostenMap.set(grow.id, k) })
+        ohneZaehler.forEach((grow, index) => { const k = kosten[index]; if (k) kostenMap.set(grow.id, k) })
         setKostenByGrow(kostenMap)
       } catch (caught) {
         if (!controller.signal.aborted) setError(caught instanceof ApiRequestError ? caught.message : 'Archiv konnte nicht geladen werden.')
@@ -106,19 +117,23 @@ function ArchivePage() {
                 und weil `.co-td.is-muted` seit dem 18.08. bewusst NICHT mitten
                 im Wort umbricht (sonst stand da „Fe/mi/ni/si/er/t"), lief das
                 Datum ohne jedes Anzeichen in die Nachbarspalte. Am Telefon
-                stand dort „21.05.202688 T". */}
+                stand dort „21.05.202688 T".
+                Seit 02.10.2026 700 px und eine breitere Kosten-Spalte: „≈ 153 € ·
+                1,59 €/g geschätzt" lief bei 0.9fr aus der Zelle (Textinhalt
+                gemessen, archiv-Gegenprobe). */}
             <div
               className="co-table"
-              style={{ gridTemplateColumns: '1.2fr 1.2fr .6fr .7fr .6fr .9fr 1fr', minWidth: 620 }}
+              style={{ gridTemplateColumns: '1.2fr 1.2fr .6fr .7fr .6fr 1.4fr 1fr', minWidth: 700 }}
             >
               <div className="co-th">Grow</div>
               <div className="co-th">Geerntet</div>
               <div className="co-th">Dauer</div>
               <div className="co-th">Trocken</div>
               <div className="co-th">g/Pflanze</div>
-              {/* Berechnete Kosten — Strom aus Watt x Lichtstunden, Duenger aus dem
-                  Protokoll. Der Titel sagt es, die Zelle bleibt eine Zahl. */}
-              <div className="co-th" title="berechnet: Licht-Strom + Dünger aus dem Dosier-Protokoll">Kosten ~</div>
+              {/* Gemessen wie auf der Kostenseite; ohne Zaehlerdaten die Schaetzung
+                  (Watt x Lichtstunden, Duenger aus dem Protokoll) — dann steht
+                  „geschätzt" in der Zelle, nicht nur im Titel. */}
+              <div className="co-th" title="wie auf der Kostenseite: Strom vom kWh-Zähler, Verbrauchsartikel, Anschaffungen — ohne Zählerdaten geschätzt">Kosten</div>
               <div className="co-th">Aktion</div>
               {grows.map((grow) => {
                 const harvest = harvestByGrow.get(grow.id)
@@ -131,7 +146,7 @@ function ArchivePage() {
                     <div className="co-td">{durationDays(grow) ?? '—'}</div>
                     <div className="co-td">{harvest?.dryWeightG != null ? `${formatNumber(harvest.dryWeightG, 0)} g` : '—'}</div>
                     <div className={perPlant != null ? 'co-td is-good' : 'co-td'}>{perPlant != null ? formatNumber(perPlant, 0) : '—'}</div>
-                    <div className="co-td" title={kostenTitel(kostenByGrow.get(grow.id))}>{kostenZelle(kostenByGrow.get(grow.id))}</div>
+                    <ArchivKosten durchgang={durchgangByGrow.get(grow.id)} schaetzung={kostenByGrow.get(grow.id)} trockenGramm={harvest?.dryWeightG ?? null} />
                     <div className="co-td">
                       <button type="button" className={`ls-btn is-small${selected ? ' is-primary' : ''}`} style={{ marginLeft: 0 }} onClick={() => toggleCompare(grow.id)}>
                         {selected ? 'Gewählt' : 'Vergleichen'}
@@ -173,16 +188,33 @@ function RowCells({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-/** „128 € · 0,42 €/g" — oder ein ehrliches Minus, wenn Preise fehlen. */
-function kostenZelle(kosten: GrowKosten | undefined) {
-  if (!kosten || kosten.summeEur == null) return '—'
-  const summe = `${formatNumber(kosten.summeEur, 0)} €`
-  return kosten.eurProGramm != null ? `${summe} · ${formatNumber(kosten.eurProGramm, 2)} €/g` : summe
+/** Hat der Lauf Zählerdaten? Dann gilt die Zahl der Kostenseite. */
+function gemessen(durchgang: KostenDurchgang | undefined): durchgang is KostenDurchgang & { gesamtEur: number } {
+  return durchgang?.stromEur != null && durchgang.gesamtEur != null
 }
 
-function kostenTitel(kosten: GrowKosten | undefined) {
-  if (!kosten) return undefined
-  return [kosten.stromHerkunft, kosten.duengerHerkunft].filter(Boolean).join(' · ') || undefined
+/**
+ * Die Kosten-Zelle: „128 € · 0,42 €/g" aus der Kostenseite, sonst
+ * „≈ 96 € geschätzt" — oder ein ehrliches Minus, wenn auch dafür Preise fehlen.
+ */
+function ArchivKosten({ durchgang, schaetzung, trockenGramm }: { durchgang: KostenDurchgang | undefined; schaetzung: GrowKosten | undefined; trockenGramm: number | null }) {
+  const jeGramm = (summe: number) => (trockenGramm != null && trockenGramm > 0 ? ` · ${formatNumber(summe / trockenGramm, 2)}\u00a0€/g` : '')
+  if (gemessen(durchgang)) {
+    return (
+      <div className="co-td" data-kosten="gemessen" title="wie auf der Kostenseite: Strom vom kWh-Zähler, Verbrauchsartikel und Anschaffungen dieses Durchgangs">
+        {`${formatNumber(durchgang.gesamtEur, 0)}\u00a0€${jeGramm(durchgang.gesamtEur)}`}
+      </div>
+    )
+  }
+  if (!schaetzung || schaetzung.summeEur == null) return <div className="co-td">—</div>
+  const titel = ['geschätzt — keine Zählerstände für diesen Lauf', schaetzung.stromHerkunft, schaetzung.duengerHerkunft].filter(Boolean).join(' · ')
+  return (
+    // Ganz in der gedämpften Farbe, und .is-muted bricht nicht mitten im Wort
+    // (conventions.css) — sonst stand „gesch/ätzt" auf zwei Zeilen.
+    <div className="co-td is-muted" data-kosten="geschaetzt" title={titel}>
+      {`≈\u00a0${formatNumber(schaetzung.summeEur, 0)}\u00a0€${jeGramm(schaetzung.summeEur)} geschätzt`}
+    </div>
+  )
 }
 
 function sortByHarvest(items: GrowSummary[]) {

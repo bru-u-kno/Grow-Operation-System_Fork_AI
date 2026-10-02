@@ -106,9 +106,73 @@ public class VerbrauchsansichtServiceTests
         // Sieben Tage heisst heute plus sechs davor - nicht sieben davor.
         var (von, bis) = VerbrauchsansichtService.Grenzen(VerbrauchsansichtService.Spanne.SiebenTage, null, null);
 
+        // Ortstage: Mitternacht des Add-ons, nicht Mitternacht UTC.
         Assert.NotNull(von);
-        Assert.Equal(DateTime.UtcNow.Date.AddDays(-6), von);
+        Assert.Equal(DateTime.SpecifyKind(DateTime.Today.AddDays(-6), DateTimeKind.Local).ToUniversalTime(), von);
         Assert.Null(bis);
+    }
+
+    private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
+    private static Verbrauch Buchung(int id, DateTime utc, double menge, int? growId) => new()
+    {
+        Id = id, ArtikelId = 1, ZeitpunktUtc = DateTime.SpecifyKind(utc, DateTimeKind.Utc), Menge = menge, GrowId = growId,
+    };
+
+    /// <summary>
+    /// Eine Buchung um 00:30 Ortszeit gehört auf den Ortstag, nicht auf den
+    /// UTC-Vortag — und „7 Tage" beginnt um Mitternacht Ortszeit.
+    /// </summary>
+    /// <remarks>
+    /// Die Zone steht ausdrücklich im Aufruf: ein Rechner in UTC (das Tor) sähe
+    /// den Fehler sonst nie, weil dort Orts- und UTC-Tag zusammenfallen.
+    /// </remarks>
+    [Fact]
+    public void TageSindOrtstage()
+    {
+        // 09.09.2026 00:30 in Berlin (Sommerzeit) = 08.09.2026 22:30 UTC.
+        var nachMitternacht = Buchung(1, new DateTime(2026, 9, 8, 22, 30, 0), 1.0, 7);
+        // 02.09.2026 23:30 in Berlin = 02.09.2026 21:30 UTC — vor dem 7-Tage-Fenster.
+        var zuFrueh = Buchung(2, new DateTime(2026, 9, 2, 21, 30, 0), 1.0, 7);
+        // 03.09.2026 00:30 in Berlin = 02.09.2026 22:30 UTC — erster Tag des Fensters.
+        var ersterTag = Buchung(3, new DateTime(2026, 9, 2, 22, 30, 0), 1.0, 7);
+        var jetzt = new DateTime(2026, 9, 9, 10, 0, 0, DateTimeKind.Utc);
+        var artikel = new Verbrauchsartikel { Id = 1, Name = "CO₂", Einheit = "kg", PreisEur = 40, Gebinde = 10 };
+
+        var ansicht = VerbrauchsansichtService.Zusammenstellen(
+            1, artikel, [], [zuFrueh, ersterTag, nachMitternacht],
+            VerbrauchsansichtService.Spanne.SiebenTage, null, null, null, jetzt, Berlin);
+
+        Assert.Equal(new DateTime(2026, 9, 2, 22, 0, 0, DateTimeKind.Utc).ToString("o"), ansicht.VonIso);
+        Assert.Equal([3, 1], ansicht.Zeilen.Select(z => z.Id));
+        Assert.Equal("2026-09-03", ansicht.Zeilen[0].Datum);
+        Assert.Equal("2026-09-09", ansicht.Zeilen[1].Datum);
+    }
+
+    /// <summary>„Dieser Grow" zeigt nur die Buchungen des gezeigten Grows — und ohne Grow keine.</summary>
+    [Fact]
+    public void DieserGrowFiltertAufDenGezeigtenGrow()
+    {
+        var jetzt = new DateTime(2026, 9, 9, 10, 0, 0, DateTimeKind.Utc);
+        var buchungen = new[]
+        {
+            Buchung(1, jetzt.AddDays(-3), 1.0, 7),
+            Buchung(2, jetzt.AddDays(-2), 2.0, 8),
+            Buchung(3, jetzt.AddDays(-1), 4.0, null),
+        };
+
+        var fuer8 = VerbrauchsansichtService.Zusammenstellen(
+            1, null, [], buchungen, VerbrauchsansichtService.Spanne.DieserGrow, null, null, 8, jetzt, Berlin);
+        Assert.Equal([2], fuer8.Zeilen.Select(z => z.Id));
+
+        var ohneGrow = VerbrauchsansichtService.Zusammenstellen(
+            1, null, [], buchungen, VerbrauchsansichtService.Spanne.DieserGrow, null, null, null, jetzt, Berlin);
+        Assert.Empty(ohneGrow.Zeilen);
+
+        // Gegenprobe: „Alles" sieht alle drei — der Filter oben ist kein leerer Bestand.
+        var alles = VerbrauchsansichtService.Zusammenstellen(
+            1, null, [], buchungen, VerbrauchsansichtService.Spanne.Alles, null, null, null, jetzt, Berlin);
+        Assert.Equal(3, alles.Zeilen.Count);
     }
 
     [Fact]
