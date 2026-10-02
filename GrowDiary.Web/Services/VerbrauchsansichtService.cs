@@ -66,22 +66,38 @@ public sealed class VerbrauchsansichtService
     /// <summary>Den Verbrauch eines Artikels zusammenstellen.</summary>
     /// <param name="von">Untergrenze (UTC, einschließlich) — null für „von Anfang an".</param>
     /// <param name="bis">Obergrenze (UTC, ausschließlich) — null für „bis jetzt".</param>
+    /// <param name="growId">Der Grow, den die Seite zeigt — nur für <see cref="Spanne.DieserGrow"/>.</param>
     public Ansicht Zusammenstellen(
         int artikelId, Spanne spanne, DateTime? von, DateTime? bis, int? growId)
+        => Zusammenstellen(
+            artikelId, _kosten.GetArtikel(artikelId), _kosten.GetNachfuellungen(artikelId), _kosten.GetVerbraeuche(artikelId),
+            spanne, von, bis, growId, DateTime.UtcNow, TimeZoneInfo.Local);
+
+    /// <summary>Die reine Rechnung — ohne Datenbank und mit ausdrücklicher Zeitzone, damit sie prüfbar ist.</summary>
+    /// <remarks>
+    /// <para><b>Tage sind Ortstage (02.10.2026).</b> Die 7- und 30-Tage-Grenze
+    /// und das Datum der Zeile waren UTC-Tage: eine Buchung um 00:30 Ortszeit
+    /// stand am Vortag, und „7 Tage" begann um 02:00 statt um Mitternacht. Die
+    /// CO₂-Steuerung bucht abends nach Licht aus — im Sommer liegt das in Berlin
+    /// zwei Stunden vor dem UTC-Tageswechsel, im Winter eine.</para>
+    /// <para><b>„Dieser Grow" ohne Grow zeigt nichts.</b> Vorher fiel der Filter
+    /// weg, und die Zeile hieß „Dieser Grow", zeigte aber jede Buchung.</para>
+    /// </remarks>
+    public static Ansicht Zusammenstellen(
+        int artikelId, Verbrauchsartikel? artikel, IReadOnlyList<Nachfuellung> fuellungenRoh, IReadOnlyList<Verbrauch> alle,
+        Spanne spanne, DateTime? von, DateTime? bis, int? growId, DateTime jetztUtc, TimeZoneInfo zone)
     {
-        var artikel = _kosten.GetArtikel(artikelId);
         var name = artikel?.Name ?? $"Artikel {artikelId}";
         var einheit = artikel?.Einheit ?? string.Empty;
 
-        var (start, ende) = Grenzen(spanne, von, bis);
+        var (start, ende) = Grenzen(spanne, von, bis, jetztUtc, zone);
 
         // Preis je Einheit aus den Füllungen: die jüngste Füllung vor der
         // Buchung hat sie bezahlt. Der Artikelpreis ist nur der Rückfall.
-        var fuellungen = _kosten.GetNachfuellungen(artikelId)
+        var fuellungen = fuellungenRoh
             .OrderBy(n => n.ZeitpunktUtc)
             .ToList();
 
-        var alle = _kosten.GetVerbraeuche(artikelId);
         var zeilen = new List<Zeile>();
         var fehlenderPreis = false;
 
@@ -89,14 +105,14 @@ public sealed class VerbrauchsansichtService
         {
             if (start is { } s && v.ZeitpunktUtc < s) continue;
             if (ende is { } e && v.ZeitpunktUtc >= e) continue;
-            if (spanne == Spanne.DieserGrow && growId is { } g && v.GrowId != g) continue;
+            if (spanne == Spanne.DieserGrow && (growId is null || v.GrowId != growId)) continue;
 
             var preis = PreisJeEinheit(fuellungen, v.ZeitpunktUtc, artikel);
             if (preis is null) fehlenderPreis = true;
 
             zeilen.Add(new Zeile(
                 v.Id,
-                v.ZeitpunktUtc.ToString("yyyy-MM-dd"),
+                Ortsdatum(v.ZeitpunktUtc, zone).ToString("yyyy-MM-dd"),
                 v.Menge,
                 preis is { } p ? Math.Round(v.Menge * p, 2) : null,
                 v.Quelle,
@@ -118,17 +134,30 @@ public sealed class VerbrauchsansichtService
             zeilen);
     }
 
-    /// <summary>Die Grenzen einer Spanne, in UTC.</summary>
+    /// <summary>Die Grenzen einer Spanne, in UTC — Tage sind Ortstage des Add-ons.</summary>
     public static (DateTime? Von, DateTime? Bis) Grenzen(Spanne spanne, DateTime? von, DateTime? bis)
-        => spanne switch
+        => Grenzen(spanne, von, bis, DateTime.UtcNow, TimeZoneInfo.Local);
+
+    /// <summary>Die Grenzen einer Spanne, in UTC, gerechnet in <paramref name="zone"/>.</summary>
+    public static (DateTime? Von, DateTime? Bis) Grenzen(Spanne spanne, DateTime? von, DateTime? bis, DateTime jetztUtc, TimeZoneInfo zone)
+    {
+        var heute = Ortsdatum(jetztUtc, zone);
+        return spanne switch
         {
-            Spanne.SiebenTage => (DateTime.UtcNow.Date.AddDays(-6), null),
-            Spanne.DreissigTage => (DateTime.UtcNow.Date.AddDays(-29), null),
+            Spanne.SiebenTage => (TagesbeginnUtc(heute.AddDays(-6), zone), null),
+            Spanne.DreissigTage => (TagesbeginnUtc(heute.AddDays(-29), zone), null),
             Spanne.DieserGrow => (null, null),
             Spanne.Alles => (null, null),
             Spanne.Eigen => (von, bis),
             _ => (null, null),
         };
+    }
+
+    private static DateTime Ortsdatum(DateTime utc, TimeZoneInfo zone)
+        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone).Date;
+
+    private static DateTime TagesbeginnUtc(DateTime ortsdatum, TimeZoneInfo zone)
+        => TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(ortsdatum.Date, DateTimeKind.Unspecified), zone);
 
     /// <summary>
     /// Was eine Einheit zum Zeitpunkt der Buchung gekostet hat.

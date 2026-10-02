@@ -5,7 +5,7 @@ import { apiFetch, formatApiError } from '../api'
 import { spaeterInsBild } from '../components/reiter-ins-bild'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Stat, V1Tabs } from '../components/v1'
 import { LAGER, euro, growOptionen, tage } from '../features/kosten/kosten-typen'
-import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung, KostenSeite, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
+import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung, KostenSeite, KostenZelt, StromQuelle, Zaehlerstand } from '../features/kosten/kosten-typen'
 import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../utils'
 import { feldText, istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import { phaseName } from '../deutsche-woerter'
@@ -126,7 +126,7 @@ function KostenPage() {
         <V1Skeleton tiles={4} label="Lade Kosten" />
       ) : (
         <>
-          <Zusammenfassung seite={seite} />
+          <Zusammenfassung seite={seite} onWahl={setGrowId} />
 
           <V1Tabs
             items={[
@@ -229,7 +229,27 @@ function FormularHuelle({ titel, sprung, onClose, children }: { titel: string; s
 
 // ------------------------------------------------------------- Kopf
 
-function Zusammenfassung({ seite }: { seite: KostenSeite }) {
+/**
+ * Laufen mehrere Grows gleichzeitig, wählt diese Auswahl, welcher oben steht.
+ * Vorher ging das nur über den Reiter „Durchgänge" — wer zwei Zelte hat, sah
+ * oben immer den älteren und kam auf die Idee nicht, dass der zweite eine
+ * eigene Rechnung hat.
+ */
+function GrowWahl({ seite, onWahl }: { seite: KostenSeite; onWahl: (growId: number | null) => void }) {
+  const laufende = seite.durchgaenge.filter((d) => d.laeuft)
+  if (laufende.length < 2) return null
+  const gezeigt = seite.grow ? seite.durchgaenge.find((d) => d.growId === seite.grow!.id) : undefined
+  const wahl = gezeigt && !gezeigt.laeuft ? [...laufende, gezeigt] : laufende
+  return (
+    <V1Field label="Grow wählen" hint={`${laufende.length} Grows laufen gleichzeitig — jeder hat seine eigene Rechnung.`}>
+      <select value={seite.grow?.id ?? ''} onChange={(e) => onWahl(Number(e.target.value))} data-audit="kosten-grow-wahl">
+        {wahl.map((d) => <option key={d.growId} value={d.growId}>{d.name}{d.laeuft ? '' : ' (abgeschlossen)'}</option>)}
+      </select>
+    </V1Field>
+  )
+}
+
+function Zusammenfassung({ seite, onWahl }: { seite: KostenSeite; onWahl: (growId: number | null) => void }) {
   const { grow, summe } = seite
   const strom = summe.stromEur ?? 0
   const artikel = summe.artikelEur
@@ -243,6 +263,7 @@ function Zusammenfassung({ seite }: { seite: KostenSeite }) {
     <>
       <V1Section title={grow ? `Durchgang ${grow.name}` : 'Kein laufender Grow'}>
         <V1Card className="ko-hero">
+          <GrowWahl seite={seite} onWahl={onWahl} />
           {grow ? (
             <p>
               <Link to={`/grows/${grow.id}`}>{grow.name}</Link> · {grow.phase} · Tag {grow.tag} · seit {formatDate(grow.startDate)}
@@ -330,12 +351,16 @@ function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onC
       <div className="ko-stapel">
         <section className="v1-kpi-grid" data-audit="kosten-strom">
           <V1Stat label="Leistung jetzt" value={strom.leistungW != null ? formatNumber(strom.leistungW, 0) : '–'} unit="W" hint={strom.leistungEntityId ? (strom.leistungW != null ? 'aus Home Assistant' : 'kein Wert von Home Assistant') : 'keine Leistungs-Entität gewählt'} />
-          <V1Stat label="Verbrauch" value={strom.kwhSeitStart != null ? formatNumber(strom.kwhSeitStart, 0) : '–'} unit="kWh" hint="seit Start des Grows" />
+          <V1Stat label="Verbrauch" value={strom.kwhSeitStart != null ? formatNumber(strom.kwhSeitStart, 0) : '–'} unit="kWh" hint={strom.geteiltTage > 0 ? 'Anteil seit Start des Grows' : 'seit Start des Grows'} />
           <V1Stat label="Ø je Tag" value={strom.kwhProTag != null ? formatNumber(strom.kwhProTag, 1) : '–'} unit="kWh" hint={strom.eurProTag != null ? `${euro(strom.eurProTag)} je Tag` : null} />
           <V1Stat label="Preis" value={strom.preisCentProKwh != null ? formatNumber(strom.preisCentProKwh / 100, 2) : '–'} unit="€/kWh" hint={strom.preisCentProKwh != null ? 'aus den Einstellungen' : 'in den Einstellungen hinterlegen'} />
         </section>
 
         <p className="ko-hint">{strom.hinweis}{strom.preisCentProKwh == null && <> <Link to="/einstellungen">Zu den Einstellungen.</Link></>}</p>
+        {/* Zwei Grows an einem Zähler: der Satz kommt vom Backend, das auch teilt —
+            eine zweite Formulierung hier liefe irgendwann an der Rechnung vorbei. */}
+        {strom.teilungHinweis && <p className="ko-hint" data-audit="kosten-strom-teilung">{strom.teilungHinweis}</p>}
+        {strom.eigenerZaehler && <p className="ko-hint">Gemessen am eigenen Zähler dieses Zelts: {strom.zaehlerEntityId}.</p>}
 
         {strom.phasen.length > 0 && (
           <div className="ko-tabelle-huelle">
@@ -379,7 +404,9 @@ function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onC
           </p>
         )}
 
-        {quelleOffen && <StromQuelleForm quelle={{ zaehlerEntityId: strom.zaehlerEntityId, leistungEntityId: strom.leistungEntityId }} onChanged={(text) => { setQuelleOffen(false); onChanged(text) }} onError={onError} />}
+        {/* Die Einstellung, nicht der Zähler des gezeigten Grows: misst er an
+            einem Zelt-Zähler, stünde der sonst im Feld für den gemeinsamen. */}
+        {quelleOffen && <StromQuelleForm quelle={seite.quelle ?? { zaehlerEntityId: strom.zaehlerEntityId, leistungEntityId: strom.leistungEntityId }} zelte={seite.zelte ?? []} onChanged={(text) => { setQuelleOffen(false); onChanged(text) }} onError={onError} />}
       </div>
     </V1Section>
   )
@@ -391,12 +418,21 @@ function StromAbschnitt({ seite, onChanged, onError }: { seite: KostenSeite; onC
  * Gerät. Stattdessen „Prüfen“ — der Wert, den HA gerade meldet, sagt mehr als
  * jede Liste.
  */
-function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; onChanged: (text: string) => void; onError: (text: string) => void }) {
+function StromQuelleForm({ quelle, zelte, onChanged, onError }: { quelle: StromQuelle; zelte: KostenZelt[]; onChanged: (text: string) => void; onError: (text: string) => void }) {
   const [zaehler, setZaehler] = useState(quelle.zaehlerEntityId ?? '')
   const [leistung, setLeistung] = useState(quelle.leistungEntityId ?? '')
+  // Eigene Zähler je Zelt — alle gespeicherten, auch die von Zelten, die hier
+  // nicht stehen (archiviert): sie gehen unverändert mit zurück.
+  const [zeltZaehler, setZeltZaehler] = useState<Record<number, string>>(
+    () => Object.fromEntries((quelle.zelte ?? []).map((z) => [z.tentId, z.zaehlerEntityId ?? ''])),
+  )
+  // Mit einem Zelt ist der gemeinsame Zähler sein Zähler — dann bleibt das
+  // Formular, wie es war.
+  const zeltFelder = zelte.length > 1
   const [befund, setBefund] = useState<Record<string, EntitaetTest>>({})
   const [busy, setBusy] = useState(false)
   const [staende, setStaende] = useState<Zaehlerstand[] | null>(null)
+  const mehrereZaehler = new Set((staende ?? []).map((z) => z.zaehlerEntityId ?? quelle.zaehlerEntityId)).size > 1
 
   /**
    * forkai.104: Einen Zaehlerstand entfernen.
@@ -455,9 +491,17 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
   async function speichern() {
     setBusy(true)
     try {
+      const body: StromQuelle = { zaehlerEntityId: zaehler.trim() || null, leistungEntityId: leistung.trim() || null }
+      // Ohne Zelt-Felder geht `zelte` gar nicht mit — das Backend lässt die
+      // gespeicherten dann stehen, statt sie mit einer leeren Liste zu löschen.
+      if (zeltFelder) {
+        body.zelte = Object.entries(zeltZaehler)
+          .map(([tentId, entity]) => ({ tentId: Number(tentId), zaehlerEntityId: entity.trim() || null }))
+          .filter((z) => z.zaehlerEntityId != null)
+      }
       await apiFetch<StromQuelle>('/api/kosten/strom-quelle', {
         method: 'PUT',
-        body: JSON.stringify({ zaehlerEntityId: zaehler.trim() || null, leistungEntityId: leistung.trim() || null }),
+        body: JSON.stringify(body),
       })
       onChanged(zaehler.trim() ? 'Strom-Quelle gespeichert — der erste Zählerstand ist festgehalten.' : 'Strom-Quelle entfernt.')
     } catch (caught) {
@@ -485,8 +529,37 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
           <input type="text" value={leistung} onChange={(e) => setLeistung(e.target.value)} placeholder="sensor.fritz_dect_210_1_power_consumption" spellCheck={false} />
         </V1Field>
       </div>
+      {zeltFelder && (
+        <div className="ko-stapel" data-audit="kosten-zelt-zaehler">
+          <p className="ko-hint">
+            Eigener Zähler je Zelt, optional. Ein Zelt mit eigenem Zähler rechnet nur mit diesem. Ohne Eintrag misst es am
+            gemeinsamen Zähler oben — laufen dort mehrere Grows gleichzeitig, teilen sie sich den Tagesverbrauch zu gleichen Teilen.
+          </p>
+          <div className="v1-form-grid">
+            {zelte.map((zelt) => {
+              const wert = zeltZaehler[zelt.id] ?? ''
+              return (
+                <V1Field key={zelt.id} label={`kWh-Zähler ${zelt.name}`} hint={befundText(wert) ?? 'Leer = gemeinsamer Zähler.'} wide>
+                  <input
+                    type="text"
+                    value={wert}
+                    onChange={(e) => setZeltZaehler((alt) => ({ ...alt, [zelt.id]: e.target.value }))}
+                    placeholder="leer = gemeinsamer Zähler"
+                    spellCheck={false}
+                  />
+                </V1Field>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <div className="v1-form-actions">
-        <V1Button onClick={() => { void pruefen(zaehler); void pruefen(leistung) }} disabled={busy || (!zaehler.trim() && !leistung.trim())}>Prüfen</V1Button>
+        <V1Button
+          onClick={() => { for (const id of [zaehler, leistung, ...Object.values(zeltZaehler)]) void pruefen(id) }}
+          disabled={busy || [zaehler, leistung, ...Object.values(zeltZaehler)].every((id) => !id.trim())}
+        >
+          Prüfen
+        </V1Button>
         <V1Button variant="primary" onClick={() => void speichern()} disabled={busy} audit="kosten-strom-quelle-speichern">Speichern</V1Button>
         {quelle.zaehlerEntityId && <V1Button onClick={() => void jetztFesthalten()} disabled={busy} audit="kosten-zaehlerstand-jetzt">Zählerstand jetzt festhalten</V1Button>}
         {quelle.zaehlerEntityId && <V1Button variant="ghost" onClick={() => void staendeLaden()} disabled={busy}>Zählerstände anzeigen</V1Button>}
@@ -495,11 +568,14 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
       {staende && (
         <div className="ko-tabelle-huelle">
           <table className="ko-tabelle" data-audit="kosten-zaehlerstaende">
-            <thead><tr><th scope="col">Zeitpunkt</th><th scope="col">kWh</th><th scope="col">Anlass</th><th scope="col">Phase</th><th scope="col"><span className="v1-sr-only">Entfernen</span></th></tr></thead>
+            <thead><tr><th scope="col">Zeitpunkt</th>{mehrereZaehler && <th scope="col">Zähler</th>}<th scope="col">kWh</th><th scope="col">Anlass</th><th scope="col">Phase</th><th scope="col"><span className="v1-sr-only">Entfernen</span></th></tr></thead>
             <tbody>
               {[...staende].reverse().slice(0, 30).map((z) => (
                 <tr key={z.id}>
                   <td>{formatDateTime(z.zeitpunktUtc)}</td>
+                  {/* Mehrere Zähler in einer Tabelle: ohne Angabe sähe jeder
+                      Wechsel zwischen ihnen wie ein Sprung des Zählers aus. */}
+                  {mehrereZaehler && <td>{z.zaehlerEntityId ?? quelle.zaehlerEntityId ?? '–'}</td>}
                   <td>{formatNumber(z.kwh, 1)}</td>
                   <th scope="row">{anlassText(z.anlass)}</th>
                   <td>{z.phase ? phaseName(z.phase) : '–'}</td>
@@ -517,7 +593,7 @@ function StromQuelleForm({ quelle, onChanged, onError }: { quelle: StromQuelle; 
                   </td>
                 </tr>
               ))}
-              {staende.length === 0 && <tr><td colSpan={5}>Noch kein Stand festgehalten.</td></tr>}
+              {staende.length === 0 && <tr><td colSpan={mehrereZaehler ? 6 : 5}>Noch kein Stand festgehalten.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -634,7 +710,7 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
         </p>
       )}
 
-      <VerbrauchBlock artikel={artikel} />
+      <VerbrauchBlock artikel={artikel} growId={seite.grow?.id ?? null} />
 
       {/*
         Fork AI (forkai.78): Textlinks statt vier gleich grosser Knoepfe. Die
@@ -821,6 +897,15 @@ const SPANNEN: Array<{ wert: string; label: string }> = [
   { wert: 'Alles', label: 'Alles' },
 ]
 
+/**
+ * Die Adresse der Verbrauchsansicht. „Dieser Grow" ist der, den die Seite
+ * gerade zeigt — vorher nahm das Backend immer den laufenden, auch wenn oben ein
+ * anderer Durchgang gewählt war.
+ */
+function verbrauchAdresse(artikelId: number, spanne: string, growId: number | null): string {
+  return `/api/kosten/artikel/${artikelId}/verbrauch?spanne=${spanne}${growId != null ? `&growId=${growId}` : ''}`
+}
+
 type VerbrauchsAnsicht = {
   einheit: string
   summeMenge: number
@@ -842,7 +927,7 @@ type VerbrauchsAnsicht = {
  * für jeden ungefragt eine Abfrage zu fahren kostet Zeit für etwas, das
  * vielleicht niemand ansieht.
  */
-function VerbrauchBlock({ artikel, onChanged }: { artikel: KostenArtikel; onChanged?: (text?: string) => void }) {
+function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel; growId: number | null; onChanged?: (text?: string) => void }) {
   const [offen, setOffen] = useState(false)
   const [spanne, setSpanne] = useState('DreissigTage')
   const [ansicht, setAnsicht] = useState<VerbrauchsAnsicht | null>(null)
@@ -855,10 +940,7 @@ function VerbrauchBlock({ artikel, onChanged }: { artikel: KostenArtikel; onChan
     const laden = async () => {
       setLaedt(true)
       try {
-        const geladen = await apiFetch<VerbrauchsAnsicht>(
-          `/api/kosten/artikel/${artikel.id}/verbrauch?spanne=${spanne}`,
-          { signal: controller.signal },
-        )
+        const geladen = await apiFetch<VerbrauchsAnsicht>(verbrauchAdresse(artikel.id, spanne, growId), { signal: controller.signal })
         if (!controller.signal.aborted) { setAnsicht(geladen); setFehler(null) }
       } catch (caught) {
         if (!controller.signal.aborted) setFehler(formatApiError(caught, 'Verbrauch konnte nicht geladen werden.'))
@@ -868,7 +950,7 @@ function VerbrauchBlock({ artikel, onChanged }: { artikel: KostenArtikel; onChan
     }
     void laden()
     return () => controller.abort()
-  }, [offen, spanne, artikel.id])
+  }, [offen, spanne, artikel.id, growId])
 
   /**
    * forkai.104: Eine Buchung wieder entfernen.
@@ -880,7 +962,7 @@ function VerbrauchBlock({ artikel, onChanged }: { artikel: KostenArtikel; onChan
   async function entferneBuchung(id: number) {
     try {
       await apiFetch(`/api/kosten/verbrauch/${id}`, { method: 'DELETE' })
-      setAnsicht(await apiFetch<VerbrauchsAnsicht>(`/api/kosten/artikel/${artikel.id}/verbrauch?spanne=${spanne}`))
+      setAnsicht(await apiFetch<VerbrauchsAnsicht>(verbrauchAdresse(artikel.id, spanne, growId)))
       setFehler(null)
       onChanged?.('Buchung entfernt.')
     } catch (caught) {
@@ -1467,7 +1549,7 @@ function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: numb
                 <tr key={d.growId} className={d.growId === gezeigt ? 'is-aktuell' : undefined}>
                   <th scope="row"><button type="button" className="ko-link" onClick={() => onWahl(d.growId)}>{d.name}</button>{d.laeuft && <span className="ls-pill">läuft</span>}</th>
                   <td>{formatDate(d.startDate)} – {d.endDate ? formatDate(d.endDate) : 'heute'}</td>
-                  <td>{euro(d.stromEur)}</td>
+                  <td>{euro(d.stromEur)}{d.stromGeteiltTage > 0 && <span className="ls-pill" title={`An ${d.stromGeteiltTage} Tagen mit anderen Grows am selben Zähler geteilt`}>geteilt</span>}</td>
                   <td>{euro(d.artikelEur)}</td>
                   <td>{euro(d.anschaffungenEur)}</td>
                   <td>{euro(d.gesamtEur)}</td>
@@ -1477,6 +1559,9 @@ function Durchgaenge({ seite, aktiv, onWahl }: { seite: KostenSeite; aktiv: numb
           </table>
         </div>
         <p className="ko-hint">Strom gibt es nur für Durchgänge, in deren Laufzeit Zählerstände fallen — also ab dem Tag, an dem die Quelle eingerichtet wurde.</p>
+        {liste.some((d) => d.stromGeteiltTage > 0) && (
+          <p className="ko-hint">„geteilt“: an diesen Tagen liefen mehrere Grows am selben Zähler; jeder trägt den gleichen Teil des Tagesverbrauchs.</p>
+        )}
       </V1Card>
     </V1Section>
   )

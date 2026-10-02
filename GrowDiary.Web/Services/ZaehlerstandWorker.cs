@@ -63,19 +63,30 @@ public sealed class ZaehlerstandWorker : BackgroundService
         var dienst = scope.ServiceProvider.GetRequiredService<KostenSeiteService>();
         var repo = scope.ServiceProvider.GetRequiredService<KostenRepository>();
 
-        if (string.IsNullOrWhiteSpace(dienst.StromQuelle.ZaehlerEntityId)) return;
+        // Je Zähler eine Entscheidung: hat ein Zelt einen eigenen Zähler, braucht
+        // er seine eigenen Stände. Vorher gab es genau eine Reihe, und sie trug
+        // die Id des ältesten laufenden Grows — ein zweiter bekam nie einen Stand.
+        var quelle = dienst.StromQuelle;
+        var zaehlerListe = quelle.AlleZaehler();
+        if (zaehlerListe.Count == 0) return;
 
-        var letzter = repo.GetLetzterZaehlerstand();
-        var (growId, phase) = dienst.LaufenderGrow(DateTime.Today);
-
-        var anlass = Entscheiden(letzter, growId, phase, DateTime.UtcNow);
-        if (anlass is null) return;
-
-        var stand = await dienst.ZaehlerstandFesthaltenAsync(anlass.Value, ct);
-        if (stand is not null)
+        var staende = repo.GetZaehlerstaende();
+        foreach (var zaehler in zaehlerListe)
         {
-            _logger.LogInformation("Zählerstand festgehalten: {Kwh} kWh ({Anlass}, Grow {GrowId}, Phase {Phase}).",
-                stand.Kwh, stand.Anlass, stand.GrowId, stand.Phase);
+            var letzter = staende
+                .Where(s => string.Equals(quelle.ZaehlerVonStand(s), zaehler, StringComparison.OrdinalIgnoreCase))
+                .LastOrDefault();
+            var (growId, phase) = dienst.LaufenderGrow(DateTime.Today, zaehler);
+
+            var anlass = Entscheiden(letzter, growId, phase, DateTime.UtcNow);
+            if (anlass is null) continue;
+
+            var stand = await dienst.ZaehlerstandFesthaltenAsync(zaehler, anlass.Value, ct);
+            if (stand is not null)
+            {
+                _logger.LogInformation("Zählerstand festgehalten: {Zaehler} {Kwh} kWh ({Anlass}, Grow {GrowId}, Phase {Phase}).",
+                    zaehler, stand.Kwh, stand.Anlass, stand.GrowId, stand.Phase);
+            }
         }
     }
 

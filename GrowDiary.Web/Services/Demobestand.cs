@@ -21,7 +21,8 @@ namespace GrowDiary.Web.Services;
 /// Journal, fällige Aufgaben, ein kalibriertes Messgerät mit Historie, eine
 /// Alarmregel, ein offenes Risiko-Ereignis, ein Aushärte-Glas mit Ablesungen —
 /// und zwei abgeschlossene Läufe mit Ernte, damit Archiv und Kostenrechnung
-/// etwas zu zeigen haben.</para>
+/// etwas zu zeigen haben. Dazu ein zweites Blütezelt mit einem zweiten
+/// laufenden Grow am selben Stromzähler (Demobestand.Strom.cs).</para>
 ///
 /// <para><b>Warum er fremde Daten nicht anfassen kann.</b> Er läuft nur, wenn in
 /// der Datenbank <b>überhaupt kein Grow</b> steht. Wer schon einen hat, hat
@@ -112,6 +113,13 @@ public static partial class Demobestand
         Co2FlascheAnlegen(dienste.GetRequiredService<KostenRepository>(), journal,
             zelt.Id, laufend.Id, growGorillaGlue);
 
+        // Ein zweiter laufender Grow in einem zweiten Zelt am selben Zaehler, dazu
+        // Strom-Quelle, Preis und Zaehlerstaende (Demobestand.Strom.cs) — sonst
+        // stand die Kostenseite auf „Keine Strom-Quelle".
+        ZweitesZeltAnlegen(grows, hydro, setups, zweiteSorte.Id);
+        var staende = StromAnlegen(dienste.GetRequiredService<AppSettingsRepository>(),
+            dienste.GetRequiredService<KostenRepository>(), grows);
+
         // Der Versuchsaufbau „Zelt (AC-Test)" bekommt ein Geraet, damit die
         // Seite im Testbestand etwas zeigt statt nur „noch nichts eingetragen".
         // Die Entitaet liefert DemoData.EntityState — ueber dieselbe
@@ -121,7 +129,8 @@ public static partial class Demobestand
             new AcGeraet("LED Top (Testdaten)", DemoData.LichtLeistung, null,
                 DemoData.LichtEinZeit, DemoData.LichtAusZeit),
         ]);
-        return $"3 Zelte (Blüte, Mutter, Quarantäne), 1 RDWC-Aufbau, 3 Grows (1 laufend, 2 im Archiv), {anzahl} Messungen";
+        return $"4 Zelte (2 × Blüte, Mutter, Quarantäne), 3 Hydro-Systeme, 4 Grows (2 laufend, 2 im Archiv), "
+            + $"{anzahl} Messungen, {staende} Zählerstände";
     }
 
     private static Tent ZeltAnlegen(GrowRepository grows)
@@ -142,7 +151,7 @@ public static partial class Demobestand
             DepthCm = 120,
             TentHeightCm = 200,
             LightType = "LED",
-            LightWatt = 480,
+            LightWatt = DemoData.LedBluetezeltW,
             Notes = "Testdaten — dieses Zelt gibt es nicht.",
             // Die Kuehler-Steuerung ist im Testbestand AN. Sonst waere die
             // Karte auf der Live-Seite unsichtbar und niemand — ich

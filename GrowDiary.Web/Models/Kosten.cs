@@ -148,17 +148,84 @@ public sealed class Zaehlerstand
     public int? GrowId { get; set; }
 
     /// <summary>Phasenname (GrowStage) zum Zeitpunkt des Stands; null ohne laufenden Grow.</summary>
+    /// <remarks>
+    /// Wie <see cref="GrowId"/> nur eine Notiz für die Tabelle der Stände. Die
+    /// Rechnung nimmt die Phase aus dem Grow selbst
+    /// (<see cref="Services.GrowStageResolver"/>) — laufen zwei Grows am selben
+    /// Zähler, gehört dieser Name ohnehin nur einem von beiden.
+    /// </remarks>
     public string? Phase { get; set; }
+
+    /// <summary>
+    /// Der Zähler (HA-Entität), von dem der Stand stammt. Null bei Ständen von
+    /// vor der Mehr-Zähler-Fassung: die gehören zum gemeinsamen Zähler
+    /// (<see cref="StromQuelle.ZaehlerEntityId"/>), denn einen anderen gab es
+    /// damals nicht.
+    /// </summary>
+    public string? ZaehlerEntityId { get; set; }
 }
 
 /// <summary>Welche HA-Entitäten den Strom liefern. Der Preis liegt weiter in den Kosten-Einstellungen.</summary>
+/// <remarks>
+/// <para><b>Zählerstände gehören zu einem Zähler, nicht zu einem Grow.</b> Es gibt
+/// einen gemeinsamen Zähler (<see cref="ZaehlerEntityId"/>, die bisherige
+/// Einstellung) und optional je Zelt einen eigenen (<see cref="Zelte"/>). Ein
+/// Grow misst an dem Zähler seines Zelts; hat das Zelt keinen eigenen, am
+/// gemeinsamen. Wer ein Zelt hat, trägt nichts weiter ein und rechnet wie
+/// bisher.</para>
+/// </remarks>
 public sealed class StromQuelle
 {
-    /// <summary>kWh-Gesamtzähler (state_class total_increasing), z. B. der DECT-Steckdose.</summary>
+    /// <summary>Der gemeinsame kWh-Gesamtzähler (state_class total_increasing), z. B. der DECT-Steckdose.</summary>
     public string? ZaehlerEntityId { get; set; }
 
     /// <summary>Aktuelle Leistung in W — nur für die Anzeige.</summary>
     public string? LeistungEntityId { get; set; }
+
+    /// <summary>
+    /// Zelte mit eigenem kWh-Zähler. Null in einer Anfrage heißt „unverändert
+    /// lassen" — ältere Aufrufer kennen das Feld nicht und sollen die
+    /// Zelt-Zähler nicht still löschen.
+    /// </summary>
+    public List<ZeltZaehler>? Zelte { get; set; }
+
+    /// <summary>Der Zähler, an dem ein Zelt misst: sein eigener, sonst der gemeinsame.</summary>
+    public string? ZaehlerFuerZelt(int? tentId)
+    {
+        if (tentId is { } id && Zelte?.FirstOrDefault(z => z.TentId == id) is { } eigener
+            && !string.IsNullOrWhiteSpace(eigener.ZaehlerEntityId))
+        {
+            return eigener.ZaehlerEntityId.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(ZaehlerEntityId) ? null : ZaehlerEntityId.Trim();
+    }
+
+    /// <summary>Ob das Zelt einen eigenen Zähler hat.</summary>
+    public bool HatEigenenZaehler(int? tentId)
+        => tentId is { } id && Zelte?.Any(z => z.TentId == id && !string.IsNullOrWhiteSpace(z.ZaehlerEntityId)) == true;
+
+    /// <summary>Alle eingerichteten Zähler, jeder einmal — der gemeinsame zuerst.</summary>
+    public IReadOnlyList<string> AlleZaehler()
+        => new[] { ZaehlerEntityId }
+            .Concat((Zelte ?? []).Select(z => z.ZaehlerEntityId))
+            .Where(z => !string.IsNullOrWhiteSpace(z))
+            .Select(z => z!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    /// <summary>Der Zähler, zu dem ein Stand gehört — Altstände ohne Angabe gehören zum gemeinsamen.</summary>
+    public string? ZaehlerVonStand(Zaehlerstand stand)
+        => !string.IsNullOrWhiteSpace(stand.ZaehlerEntityId)
+            ? stand.ZaehlerEntityId.Trim()
+            : string.IsNullOrWhiteSpace(ZaehlerEntityId) ? null : ZaehlerEntityId.Trim();
+}
+
+/// <summary>Ein Zelt mit eigenem kWh-Zähler.</summary>
+public sealed class ZeltZaehler
+{
+    public int TentId { get; set; }
+    public string? ZaehlerEntityId { get; set; }
 }
 
 /// <summary>

@@ -86,6 +86,60 @@ public static class DemoData
     /// <inheritdoc cref="LichtEinZeit"/>
     public const string LichtAusZeit = "time.demo_licht_aus";
 
+    /// <summary>Der gemeinsame kWh-Zähler im Testbestand — die Steckdosenleiste vor beiden Blütezelten.</summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (02.10.2026).</b> Der Testbestand hatte keine
+    /// Strom-Quelle und keinen Zählerstand. Die Kostenseite stand im Testbetrieb
+    /// auf „Keine Strom-Quelle eingerichtet", und weder der Strom eines Grows noch
+    /// die Teilung zwischen zwei gleichzeitigen Grows war je zu sehen.</para>
+    /// <para>Der Stand ist eine reine Funktion der Zeit (<see cref="StromZaehlerKwh"/>):
+    /// die Stände, die der Bestand ablegt, und der Wert, den der Worker später
+    /// liest, kommen aus derselben Rechnung und laufen nie rückwärts.</para>
+    /// </remarks>
+    public const string StromZaehler = "sensor.demo_strom_energie";
+
+    /// <summary>Die Leistung an derselben Steckdosenleiste, in W.</summary>
+    public const string StromLeistung = "sensor.demo_strom_leistung";
+
+    /// <summary>LED im Blütezelt des Testbestands, in W.</summary>
+    public const int LedBluetezeltW = 480;
+
+    /// <summary>LED im zweiten Blütezelt des Testbestands, in W.</summary>
+    public const int LedZelt2W = 240;
+
+    /// <summary>Was ohne Licht läuft — Umwälzpumpe, Luftpumpen, Lüfter, Kühler im Mittel.</summary>
+    private const double StromGrundlastW = 160;
+
+    /// <summary>Ab hier zählt der Testzähler; davor steht er auf <see cref="StromZaehlerStart"/>.</summary>
+    private static readonly DateTime StromAnker = new(2025, 1, 1);
+
+    private const double StromZaehlerStart = 1250;
+
+    /// <summary>Die Leistung jetzt: Grundlast, und bei Licht beide LED.</summary>
+    public static double StromLeistungW(DateTime nowUtc)
+        => StromGrundlastW + (Demoverlauf.LichtBrennt(nowUtc.ToLocalTime()) ? LedBluetezeltW + LedZelt2W : 0);
+
+    /// <summary>
+    /// Der Zählerstand zu einem Zeitpunkt — das Integral von <see cref="StromLeistungW"/>
+    /// seit <see cref="StromAnker"/>. Rein und mit fester Basis, damit derselbe
+    /// Zeitpunkt nach einem Neustart oder über Mitternacht denselben Wert hat.
+    /// </summary>
+    public static double StromZaehlerKwh(DateTime nowUtc)
+    {
+        var ort = nowUtc.ToLocalTime();
+        var ankerUtc = DateTime.SpecifyKind(StromAnker, DateTimeKind.Local).ToUniversalTime();
+        var stunden = Math.Max(0, (nowUtc - ankerUtc).TotalHours);
+        var tage = Math.Max(0, (ort.Date - StromAnker).Days);
+        var lichtJeTag = Enumerable.Range(0, 24).Count(h => Demoverlauf.LichtBrennt(StromAnker.AddHours(h)));
+        var lichtHeute = tage == 0 && ort < StromAnker
+            ? 0
+            : Enumerable.Range(0, 24).Sum(h => Demoverlauf.LichtBrennt(ort.Date.AddHours(h))
+                ? Math.Clamp((ort - ort.Date.AddHours(h)).TotalHours, 0, 1)
+                : 0);
+        var lichtStunden = tage * lichtJeTag + lichtHeute;
+        return StromZaehlerStart + (stunden * StromGrundlastW + lichtStunden * (LedBluetezeltW + LedZelt2W)) / 1000.0;
+    }
+
     /// <summary>
     /// Ein Wert je Messgröße: Mittelwert, Schwankung, Periode in Stunden und
     /// eine langsame Drift pro Stunde.
@@ -297,6 +351,26 @@ public static class DemoData
             };
         }
 
+        foreach (var (kennung, wert, einheit, name) in new[]
+                 {
+                     (StromZaehler, Math.Round(StromZaehlerKwh(nowUtc), 3), "kWh", "Demo Steckdosenleiste · Energie"),
+                     (StromLeistung, Math.Round(StromLeistungW(nowUtc), 0), "W", "Demo Steckdosenleiste · Leistung"),
+                 })
+        {
+            if (!string.Equals(entityId, kennung, StringComparison.OrdinalIgnoreCase)) continue;
+
+            return new HomeAssistantState
+            {
+                EntityId = kennung,
+                State = wert.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                NumericValue = wert,
+                UnitOfMeasurement = einheit,
+                FriendlyName = name,
+                LastChanged = nowUtc,
+                LastUpdated = nowUtc,
+            };
+        }
+
         if (string.Equals(entityId, LichtLeistung, StringComparison.OrdinalIgnoreCase))
         {
             return new HomeAssistantState
@@ -365,7 +439,7 @@ public static class DemoData
         // Die benannten Geraete: ohne sie steht im Testbetrieb keine Steckdose
         // und kein Dimmfeld in der Auswahl — und dann laesst sich weder der
         // Kuehler noch der AC-Versuch ueberhaupt einrichten.
-        foreach (var kennung in new[] { LichtLeistung, LichtEinZeit, LichtAusZeit })
+        foreach (var kennung in new[] { LichtLeistung, LichtEinZeit, LichtAusZeit, StromZaehler, StromLeistung })
         {
             var zustand = EntityState(kennung, nowUtc);
             if (zustand is null) continue;
@@ -375,6 +449,7 @@ public static class DemoData
                 EntityId = kennung,
                 FriendlyName = zustand.FriendlyName,
                 State = zustand.State,
+                UnitOfMeasurement = zustand.UnitOfMeasurement,
                 Domain = kennung.Split('.', 2)[0],
             });
         }

@@ -17,9 +17,10 @@ namespace GrowDiary.Web.Services;
 /// <para>Home Assistant behaelt die Statistik dauerhaft, mit Tagesaufloesung.
 /// Dieser Dienst liest sie ueber <c>recorder/statistics_during_period</c> und
 /// legt je Tag einen <see cref="Zaehlerstand"/> mit
-/// <see cref="ZaehlerAnlass.Tag"/> an. Damit rechnet
-/// <c>KostenSeiteService.StromBerechnen</c> unveraendert weiter — es sammelt
-/// ohnehin nur die Staende, die in die Laufzeit des Grows fallen.</para>
+/// <see cref="ZaehlerAnlass.Tag"/> an — fuer den Zaehler, an dem der Grow
+/// misst (eigener Zaehler seines Zelts oder der gemeinsame). Die Staende gehoeren
+/// dem Zaehler; <see cref="StromAufteilung"/> verteilt sie auf alle Grows, die
+/// an ihm laufen.</para>
 /// <para><b>Bestehende Staende werden nie ueberschrieben.</b> Ein Tag, fuer den
 /// schon ein Stand existiert, wird uebersprungen. Der Import ist damit
 /// wiederholbar, ohne Dubletten zu erzeugen.</para>
@@ -48,6 +49,7 @@ public sealed class ZaehlerstandImportService
     /// <param name="VonUtc">Erster importierter Tag, null wenn nichts kam.</param>
     /// <param name="BisUtc">Letzter importierter Tag, null wenn nichts kam.</param>
     /// <param name="Hinweis">Was passiert ist, in einem Satz — auch im Erfolgsfall.</param>
+    /// <param name="Unstimmig">Tageswerte, die zwischen vorhandenen Staenden rueckwaerts gesprungen waeren.</param>
     public sealed record Ergebnis(
         bool Erfolg,
         int Angelegt,
@@ -55,18 +57,21 @@ public sealed class ZaehlerstandImportService
         int Geloescht,
         DateTime? VonUtc,
         DateTime? BisUtc,
-        string Hinweis);
+        string Hinweis,
+        int Unstimmig = 0);
+
+    /// <summary>Ein Tageswert aus der Statistik: der Zaehlerstand am ENDE des Tages.</summary>
+    public sealed record Tageswert(DateTime EndeUtc, double Kwh);
+
+    /// <summary>Was ein Import tun wuerde — rein, ohne Datenbank und ohne Home Assistant.</summary>
+    public sealed record Plan(
+        IReadOnlyList<Zaehlerstand> Neu, IReadOnlyList<int> Loeschen, int Uebersprungen, int Unstimmig);
 
     /// <summary>Die Staende eines Grows aus der HA-Statistik nachziehen.</summary>
     /// <param name="neuAufbauen">
-    /// Die Reihe dieses Grows verwerfen und komplett aus der Statistik neu
-    /// aufbauen. Gebraucht, wenn sich Staende aus verschiedenen Quellen
-    /// gemischt haben: der Worker misst um 22 Uhr, der Import um Mitternacht.
-    /// Liegen beide in derselben Reihe, springt der Zaehlerwert zwischen den
-    /// Tagen vor und zurueck, und jeder Sprung zaehlt als Verbrauch — genau so
-    /// entstanden aus 1.585 kWh einmal 10.024. Ein Neuaufbau stellt sicher,
-    /// dass alle Staende eines Grows von derselben Quelle zur selben Tageszeit
-    /// stammen.
+    /// Die Reihe des Zaehlers im Zeitraum dieses Grows verwerfen und komplett aus
+    /// der Statistik neu aufbauen. Gebraucht, wenn sich Staende aus verschiedenen
+    /// Quellen gemischt haben — so entstanden aus 1.585 kWh einmal 10.024.
     /// </param>
     public async Task<Ergebnis> NachziehenAsync(int growId, bool neuAufbauen = false, CancellationToken ct = default)
     {
@@ -76,18 +81,16 @@ public sealed class ZaehlerstandImportService
             return new Ergebnis(false, 0, 0, 0, null, null, $"Grow {growId} existiert nicht.");
         }
 
-        var entityId = _seite.StromQuelle.ZaehlerEntityId;
+        var quelle = _seite.StromQuelle;
+        var entityId = quelle.ZaehlerFuerZelt(grow.TentId);
         if (string.IsNullOrWhiteSpace(entityId))
         {
             return new Ergebnis(false, 0, 0, 0, null, null,
                 "Keine Strom-Quelle eingerichtet — kWh-Zaehler in den Kosten-Einstellungen waehlen.");
         }
 
-        // Einen Tag vor dem Start mitnehmen: der Verbrauch des ersten Tages ist
-        // die Differenz zum Stand davor. Ohne ihn faengt die Rechnung erst am
-        // zweiten Tag an.
-        var von = grow.StartDate.Date.AddDays(-1).ToUniversalTime();
-        var bis = (grow.EndDate?.Date.AddDays(1) ?? DateTime.UtcNow.Date.AddDays(1)).ToUniversalTime();
+        var jetzt = DateTime.UtcNow;
+        var (vonUtc, bisUtc) = Zeitraum(grow, jetzt);
 
         await using var socket = await HomeAssistantSocket.OeffnenAsync(
             _haSettings.GetEffectiveHomeAssistantSettings(), ct);
@@ -97,10 +100,12 @@ public sealed class ZaehlerstandImportService
                 "Keine Verbindung zu Home Assistant — Adresse und Token in den Einstellungen pruefen.");
         }
 
+        // Ein Tag VOR dem Start mit abfragen: dessen Wert gilt am Ende jenes
+        // Tages, also genau zu Beginn des ersten Grow-Tags.
         var antwort = await socket.BefehlAsync("recorder/statistics_during_period", new Dictionary<string, object?>
         {
-            ["start_time"] = von.ToString("o", CultureInfo.InvariantCulture),
-            ["end_time"] = bis.ToString("o", CultureInfo.InvariantCulture),
+            ["start_time"] = vonUtc.AddDays(-1).ToString("o", CultureInfo.InvariantCulture),
+            ["end_time"] = bisUtc.ToString("o", CultureInfo.InvariantCulture),
             ["statistic_ids"] = new[] { entityId },
             ["period"] = "day",
             ["types"] = new[] { "state" },
@@ -119,116 +124,164 @@ public sealed class ZaehlerstandImportService
                 + "(total oder total_increasing), sonst legt Home Assistant keine an.");
         }
 
-        // forkai.97: Die Dublettenpruefung laeuft ueber das ORTSDATUM, nicht ueber
-        // das UTC-Datum. Home Assistant beginnt seine Tagesbuckets um lokale
-        // Mitternacht — in Europe/Berlin also 22:00 oder 23:00 UTC des Vortags.
-        // Wer in UTC vergleicht, liegt systematisch einen Tag daneben, laesst
-        // Ueberlappungen durch und mischt die Reihe.
-        //
-        // Und eine durchmischte Reihe ist hier nicht nur unschoen: KwhZwischen
-        // deutet einen Rueckwaertssprung als Zaehlerwechsel und addiert dann den
-        // VOLLEN Zaehlerstand. Ein einziger falsch einsortierter Stand hebt die
-        // Summe damit um mehrere tausend kWh.
-        var alle = _kosten.GetZaehlerstaende();
-
-        // forkai.98: Neuaufbau. Alles, was im Zeitraum dieses Grows liegt, wird
-        // verworfen und danach vollstaendig aus der Statistik geschrieben.
-        // Absichtlich OHNE Ruecksicht auf den Anlass: gerade die Mischung aus
-        // Worker-Staenden (22 Uhr) und Importwerten (Mitternacht) ist der
-        // Fehler, den der Neuaufbau beheben soll. Eine Reihe aus einer Quelle
-        // zu einer Tageszeit ist das Ziel.
-        var geloescht = 0;
-        if (neuAufbauen)
-        {
-            var imZeitraum = alle
-                .Where(z => z.ZeitpunktUtc >= von && z.ZeitpunktUtc <= bis)
-                .ToList();
-
-            foreach (var z in imZeitraum)
-            {
-                _kosten.DeleteZaehlerstand(z.Id);
-                geloescht++;
-            }
-
-            alle = _kosten.GetZaehlerstaende();
-        }
-
-        var vorhanden = alle
-            .Select(s => s.ZeitpunktUtc.ToLocalTime().Date)
-            .ToHashSet();
-
-        // Nur VOR dem ersten vorhandenen Stand nachtragen. Innerhalb eines
-        // Zeitraums, den der Worker schon abdeckt, wird nichts eingefuegt — dort
-        // liegen die echten Messzeitpunkte, und ein Importwert daneben erzeugt
-        // genau den Rueckwaertssprung, den KwhZwischen falsch deutet.
-        var ersterVorhandener = alle
-            .Where(s => s.GrowId == grow.Id || s.GrowId is null)
-            .OrderBy(s => s.ZeitpunktUtc)
-            .Select(s => (DateTime?)s.ZeitpunktUtc)
-            .FirstOrDefault();
-
-        var angelegt = 0;
-        var uebersprungen = 0;
-        DateTime? ersterTag = null;
-        DateTime? letzterTag = null;
-
+        var werte = new List<Tageswert>();
         foreach (var eintrag in reihe.EnumerateArray())
         {
-            if (Zeitpunkt(eintrag) is not { } zeitpunkt) continue;
+            if (Ende(eintrag) is not { } ende) continue;
             if (Zahl(eintrag, "state") is not { } kwh) continue;
-            if (zeitpunkt.Date < von.Date || zeitpunkt.Date > bis.Date) continue;
-
-            if (ersterVorhandener is { } grenze && zeitpunkt >= grenze)
-            {
-                uebersprungen++;
-                continue;
-            }
-
-            if (!vorhanden.Add(zeitpunkt.ToLocalTime().Date))
-            {
-                uebersprungen++;
-                continue;
-            }
-
-            // Die Phase kommt aus dem Grow selbst, nicht aus einem HA-Helfer:
-            // GrowStageResolver leitet sie aus StartDate und FlipDate ab und ist
-            // damit auch rueckwirkend richtig.
-            var phase = GrowStageResolver.Resolve(grow, zeitpunkt);
-
-            _kosten.CreateZaehlerstand(new Zaehlerstand
-            {
-                ZeitpunktUtc = zeitpunkt,
-                Kwh = kwh,
-                Anlass = ZaehlerAnlass.Tag,
-                GrowId = grow.Id,
-                Phase = phase.ToString(),
-            });
-
-            angelegt++;
-            ersterTag ??= zeitpunkt;
-            letzterTag = zeitpunkt;
+            werte.Add(new Tageswert(ende, kwh));
         }
 
+        var plan = Planen(grow, entityId, quelle, _kosten.GetZaehlerstaende(), werte, neuAufbauen, jetzt);
+
+        foreach (var id in plan.Loeschen) _kosten.DeleteZaehlerstand(id);
+        foreach (var stand in plan.Neu) stand.Id = _kosten.CreateZaehlerstand(stand);
+
+        var angelegt = plan.Neu.Count;
         var hinweis = angelegt == 0
-            ? uebersprungen > 0
-                ? $"Nichts nachzutragen — fuer alle {uebersprungen} Tage lag bereits ein Stand vor."
-                : "Home Assistant hat fuer den Zeitraum keine Tageswerte geliefert."
+            ? plan.Uebersprungen > 0
+                ? $"Nichts nachzutragen — fuer alle {plan.Uebersprungen} Tage lag bereits ein Stand vor."
+                : plan.Unstimmig > 0
+                    ? "Nichts nachgetragen."
+                    : "Home Assistant hat fuer den Zeitraum keine Tageswerte geliefert."
             : $"{angelegt} Zaehlerstaende nachgetragen"
-                + (uebersprungen > 0 ? $", {uebersprungen} Tage waren schon vorhanden" : string.Empty)
+                + (plan.Uebersprungen > 0 ? $", {plan.Uebersprungen} Tage waren schon vorhanden" : string.Empty)
                 + ".";
 
-        if (geloescht > 0)
+        if (plan.Unstimmig > 0)
         {
-            hinweis = $"Reihe neu aufgebaut: {geloescht} alte Staende verworfen, " + hinweis;
+            hinweis += $" {plan.Unstimmig} Tageswerte passten nicht zwischen die vorhandenen Staende "
+                + "(der Zaehler waere rueckwaerts gelaufen) und wurden ausgelassen.";
         }
 
-        return new Ergebnis(true, angelegt, uebersprungen, geloescht, ersterTag, letzterTag, hinweis);
+        if (plan.Loeschen.Count > 0)
+        {
+            hinweis = $"Reihe neu aufgebaut: {plan.Loeschen.Count} alte Staende verworfen, " + hinweis;
+        }
+
+        return new Ergebnis(true, angelegt, plan.Uebersprungen, plan.Loeschen.Count,
+            plan.Neu.FirstOrDefault()?.ZeitpunktUtc, plan.Neu.LastOrDefault()?.ZeitpunktUtc, hinweis, plan.Unstimmig);
     }
 
-    /// <summary>Der Zeitstempel einer Statistikzeile — HA liefert ms seit Epoche oder ISO-Text.</summary>
-    private static DateTime? Zeitpunkt(JsonElement eintrag)
+    /// <summary>
+    /// Der Zeitraum eines Grows in UTC: vom Beginn seines ersten bis zum Ende
+    /// seines letzten Ortstags (laufend: bis heute einschließlich).
+    /// </summary>
+    public static (DateTime VonUtc, DateTime BisUtc) Zeitraum(GrowRun grow, DateTime jetztUtc)
     {
-        if (!eintrag.TryGetProperty("start", out var start)) return null;
+        var heute = jetztUtc.ToLocalTime().Date;
+        var letzterTag = grow.EndDate?.Date ?? heute;
+        return (StromAufteilung.TagesbeginnUtc(grow.StartDate.Date), StromAufteilung.TagesbeginnUtc(letzterTag.AddDays(1)));
+    }
+
+    /// <summary>Plant den Import — welche Staende neu kommen, welche weichen.</summary>
+    /// <remarks>
+    /// <para><b>Nur der Zaehler dieses Grows (02.10.2026).</b> Vorher zaehlte jeder
+    /// Stand ohne Grow aus jeder Zeit als „schon vorhanden". Der Worker schreibt
+    /// solche Staende taeglich, solange kein Grow laeuft — beim zweiten Grow lag
+    /// der erste vorhandene Stand deshalb Monate zurueck, und jeder HA-Tageswert
+    /// wurde uebersprungen („Nichts nachzutragen"). Und der Neuaufbau loeschte
+    /// alles im Zeitraum, auch die Staende eines anderen Zaehlers.</para>
+    ///
+    /// <para><b>Ein Stand je Ortstag.</b> Liegt fuer einen Tag schon ein Stand
+    /// dieses Zaehlers vor (Worker, Grow-Start, Phasenwechsel), bleibt er. Fuer
+    /// alle anderen Tage im Zeitraum kommt der HA-Wert dazu — nicht mehr nur VOR
+    /// dem ersten vorhandenen Stand.</para>
+    ///
+    /// <para><b>Der Zeitpunkt ist das Tagesende.</b> Home Assistant liefert je
+    /// Tag den Stand am ENDE des Zeitraums (letzte Stunde des Tages), bezeichnet
+    /// mit dessen Beginn. Bis forkai.98 wurde der Wert mit dem Beginn abgelegt —
+    /// einen Tag zu frueh. Ein Wert, der neben einen echten Worker-Stand fiel,
+    /// lag dadurch VOR einem kleineren Stand, und <c>KwhZwischen</c> las den
+    /// Ruecksprung als Zaehlerwechsel. Genau so entstanden einmal 10.024 statt
+    /// 1.585 kWh. Abgelegt wird deshalb das Ende; was trotzdem rueckwaerts
+    /// springen wuerde, bleibt draussen und wird gemeldet.</para>
+    ///
+    /// <para><b>Der Neuaufbau verwirft nur Staende dieses Zaehlers im Zeitraum
+    /// dieses Grows</b> — nicht den Tag davor (das Ende des Vorgaengers) und
+    /// nichts von einem anderen Zaehler.</para>
+    /// </remarks>
+    public static Plan Planen(
+        GrowRun grow, string zaehler, StromQuelle quelle, IReadOnlyList<Zaehlerstand> alle,
+        IReadOnlyList<Tageswert> werte, bool neuAufbauen, DateTime jetztUtc)
+    {
+        var (vonUtc, bisUtc) = Zeitraum(grow, jetztUtc);
+        var reihe = alle
+            .Where(s => string.Equals(quelle.ZaehlerVonStand(s), zaehler, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var loeschen = neuAufbauen
+            ? reihe.Where(s => s.ZeitpunktUtc >= vonUtc && s.ZeitpunktUtc <= bisUtc).Select(s => s.Id).ToList()
+            : [];
+
+        var bleibt = reihe
+            .Where(s => !loeschen.Contains(s.Id))
+            .OrderBy(s => s.ZeitpunktUtc).ThenBy(s => s.Id)
+            .ToList();
+        var belegteTage = bleibt.Select(s => s.ZeitpunktUtc.ToLocalTime().Date).ToHashSet();
+
+        var neu = new List<Zaehlerstand>();
+        var uebersprungen = 0;
+        var unstimmig = 0;
+
+        foreach (var wert in werte.OrderBy(w => w.EndeUtc))
+        {
+            if (wert.EndeUtc < vonUtc || wert.EndeUtc > bisUtc) continue;
+            // Der laufende Tag ist noch nicht zu Ende — sein „Endstand" laege in
+            // der Zukunft. Den Stand von heute haelt der Worker.
+            if (wert.EndeUtc > jetztUtc) continue;
+
+            var tag = wert.EndeUtc.ToLocalTime().Date;
+            if (belegteTage.Contains(tag))
+            {
+                uebersprungen++;
+                continue;
+            }
+
+            var vorher = bleibt.LastOrDefault(s => s.ZeitpunktUtc < wert.EndeUtc);
+            var nachher = bleibt.FirstOrDefault(s => s.ZeitpunktUtc > wert.EndeUtc);
+            if ((vorher is not null && vorher.Kwh > wert.Kwh) || (nachher is not null && nachher.Kwh < wert.Kwh))
+            {
+                unstimmig++;
+                continue;
+            }
+
+            var stand = new Zaehlerstand
+            {
+                ZeitpunktUtc = wert.EndeUtc,
+                Kwh = wert.Kwh,
+                Anlass = ZaehlerAnlass.Tag,
+                // Notiz fuer die Tabelle; gerechnet wird ueber den Zaehler.
+                GrowId = grow.Id,
+                // Die Phase des Tages, den dieser Stand abschliesst.
+                Phase = GrowStageResolver.Resolve(grow, tag.AddDays(-1)).ToString(),
+                ZaehlerEntityId = zaehler,
+            };
+
+            neu.Add(stand);
+            belegteTage.Add(tag);
+            var stelle = bleibt.FindIndex(s => s.ZeitpunktUtc > wert.EndeUtc);
+            bleibt.Insert(stelle < 0 ? bleibt.Count : stelle, stand);
+        }
+
+        return new Plan(neu, loeschen, uebersprungen, unstimmig);
+    }
+
+    /// <summary>
+    /// Das Ende eines Statistik-Zeitraums — HA liefert ms seit Epoche oder ISO-Text.
+    /// Fehlt <c>end</c>, gilt Beginn plus ein Ortstag.
+    /// </summary>
+    private static DateTime? Ende(JsonElement eintrag)
+    {
+        if (Zeitpunkt(eintrag, "end") is { } ende) return ende;
+        return Zeitpunkt(eintrag, "start") is { } start
+            ? StromAufteilung.TagesbeginnUtc(start.ToLocalTime().Date.AddDays(1))
+            : null;
+    }
+
+    private static DateTime? Zeitpunkt(JsonElement eintrag, string feld)
+    {
+        if (!eintrag.TryGetProperty(feld, out var start)) return null;
 
         if (start.ValueKind == JsonValueKind.Number && start.TryGetInt64(out var ms))
         {
