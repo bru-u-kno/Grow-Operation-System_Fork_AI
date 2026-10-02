@@ -88,7 +88,9 @@ public sealed class MeasurementSanityService
     };
 
     /// <summary>Meldet einen Wert, der die physikalische Grenze verlässt.</summary>
-    private static void PhysikGrenze(ModelStateDictionary modelState, string feld, string groesse, double? wert, string bezeichnung)
+    /// <summary>Ein Feldfehler, wenn der Wert für diese Größe physikalisch nicht vorkommen kann.</summary>
+    /// <remarks>Öffentlich, damit Wasserwechsel, Addback und Alarm-Grenzen dieselbe Tabelle lesen (Fork AI, 02.10.2026).</remarks>
+    public static void PhysikGrenze(ModelStateDictionary modelState, string feld, string groesse, double? wert, string bezeichnung)
     {
         if (wert is not { } v || IstPhysikalischMoeglich(groesse, v)) return;
         var g = PhysikalischeGrenzen[groesse];
@@ -113,13 +115,9 @@ public sealed class MeasurementSanityService
         ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.HeightCm), measurement.HeightCm, "Höhe");
         ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.WaterAmountMl), measurement.WaterAmountMl, "Gießmenge");
         ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.RunoffAmountMl), measurement.RunoffAmountMl, "Runoff");
-        ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.IrrigationEc), measurement.IrrigationEc, "Gießwasser-EC");
-        ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.DrainEc), measurement.DrainEc, "Drain-EC");
-        ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.ReservoirEc), measurement.ReservoirEc, "Reservoir-EC");
         ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.ReservoirLevelCm), measurement.ReservoirLevelCm, "Wasserstand cm");
         ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.ReservoirLevelLiters), measurement.ReservoirLevelLiters, "Wasserstand Liter");
         ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.TopOffLiters), measurement.TopOffLiters, "Top-Off Liter");
-        ValidateNonNegative(modelState, nameof(MeasurementFormViewModel.AddbackEc), measurement.AddbackEc, "Addback-EC");
 
         // Ab hier liest die Sperre die TABELLE, statt die Zahlen ein zweites Mal
         // hinzuschreiben.
@@ -128,6 +126,15 @@ public sealed class MeasurementSanityService
         // zwei Leser" — und die Sperre zwanzig Zeilen darunter tippte die Zahlen
         // trotzdem ab. Sie hatte damit genau einen fremden Leser
         // (MeasurementAssessmentService) und war für ihren eigenen Nachbarn tot.
+        // Fork AI (02.10.2026): EC nach oben begrenzt. Seit Zahlen deutsch gelesen
+        // werden, ist „1.250" tausendzweihundertfünfzig — vorher kam das als 1,25
+        // an. Ohne Obergrenze stand dann still EC 1250 in der Datenbank. Die
+        // Tabelle sperrt auch negative Werte (EC 0–10), das ValidateNonNegative
+        // davor entfällt.
+        PhysikGrenze(modelState, nameof(MeasurementFormViewModel.IrrigationEc), "ec", measurement.IrrigationEc, "Die Gießwasser-EC");
+        PhysikGrenze(modelState, nameof(MeasurementFormViewModel.DrainEc), "ec", measurement.DrainEc, "Die Drain-EC");
+        PhysikGrenze(modelState, nameof(MeasurementFormViewModel.ReservoirEc), "ec", measurement.ReservoirEc, "Die Reservoir-EC");
+        PhysikGrenze(modelState, nameof(MeasurementFormViewModel.AddbackEc), "ec", measurement.AddbackEc, "Die Addback-EC");
         PhysikGrenze(modelState, nameof(MeasurementFormViewModel.DissolvedOxygenMgL), "do", measurement.DissolvedOxygenMgL, "Der Sauerstoffwert");
         PhysikGrenze(modelState, nameof(MeasurementFormViewModel.OrpMv), "orp", measurement.OrpMv, "Der ORP-Wert");
         PhysikGrenze(modelState, nameof(MeasurementFormViewModel.AirTemperatureC), "air-temp", measurement.AirTemperatureC, "Die Lufttemperatur");

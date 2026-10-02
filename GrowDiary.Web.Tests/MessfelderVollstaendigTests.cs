@@ -50,10 +50,6 @@ public sealed class MessfelderVollstaendigTests
         [nameof(Measurement.ReservoirLevelLiters)] = "Nach oben offen — Tankgrößen reichen von 20 bis über 1000 Liter; nach unten gesperrt",
         [nameof(Measurement.ReservoirLevelCm)] = "Nach oben offen; nach unten gesperrt",
         [nameof(Measurement.TopOffLiters)] = "Nach oben offen; nach unten gesperrt",
-        [nameof(Measurement.IrrigationEc)] = "Nach oben offen — ein Messfehler zeigt sich hier als Hinweis, nicht als Sperre; nach unten gesperrt",
-        [nameof(Measurement.DrainEc)] = "Nach oben offen; nach unten gesperrt",
-        [nameof(Measurement.ReservoirEc)] = "Nach oben offen; nach unten gesperrt, dazu ein Hinweis ab 3,2",
-        [nameof(Measurement.AddbackEc)] = "Nach oben offen; nach unten gesperrt",
     };
 
     /// <summary>

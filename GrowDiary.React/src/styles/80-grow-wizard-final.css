@@ -117,6 +117,13 @@ GROW-2 · Grow Wizard final
   max-width: 620px;
 }
 
+/* Fork AI (02.10.2026): bei einem Grow mit Plan ist das Feld gesperrt
+   (GrowSetupPage) — vorher sah es aus wie ein offenes Feld (Prüfer). */
+.grow-custom-program input:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .grow-summary-card {
   display: grid;
   gap: 14px;

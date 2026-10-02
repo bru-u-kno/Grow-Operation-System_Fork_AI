@@ -63,9 +63,14 @@ const TAUSENDER_GRUPPIERT = /^[+-]?[1-9]\d{0,2}(\.\d{3})+$/
  *
  * **Der Preis dieser Regel:** wer englisch denkt und „1.200" für eins-komma-zwei
  * meint, bekommt 1200. Das ist die Entscheidung des Nutzers, und sie ist
- * sicherer als die alte: ein EC von 1200 oder ein pH von 5800 fängt die Sperre
- * je Messfeld ab (`MessfelderVollstaendigTests`) — ein Preis von 1,20 € statt
+ * sicherer als die alte: ein EC von 1250 oder ein pH von 5800 lehnt das Backend
+ * ab — die Messfelder über `MeasurementSanityService.PhysikalischeGrenzen`
+ * (`MessfelderVollstaendigTests`), Wasserwechsel, Addback und feste
+ * Alarm-Grenzen über dieselbe Tabelle (`EcObergrenzeTests`, seit 02.10.2026;
+ * vorher war EC nach oben offen, Befund des Prüfers). Ein Preis von 1,20 € statt
  * 1200 € oder ein CO₂-Grenzwert von 1,2 ppm statt 1200 ppm fiel niemandem auf.
+ * Nicht begrenzt sind Kosten, Gewichte und die Sollwerte von Kalibrierlösungen
+ * (12,88 mS/cm ist eine übliche Lösung — über der EC-Grenze von 10).
  */
 export function zahlOderNull(text: string): number | null {
   if (istLeer(text)) return null

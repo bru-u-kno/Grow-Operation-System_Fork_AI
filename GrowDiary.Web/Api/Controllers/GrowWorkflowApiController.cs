@@ -167,6 +167,11 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             ModelState.AddModelError(nameof(request.EcStock), "Addback-EC ist erforderlich.");
         }
 
+        ValidateEc(
+            (request.EcIst, nameof(request.EcIst)),
+            (request.EcZiel, nameof(request.EcZiel)),
+            (request.EcStock, nameof(request.EcStock)));
+
         var reservoirLiters = request.ReservoirLiters ?? ResolveAddbackReservoirLiters(grow);
         if (!reservoirLiters.HasValue)
         {
@@ -220,6 +225,11 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             (request.EcAfter, nameof(request.EcAfter)),
             (request.LitersAdded, nameof(request.LitersAdded)),
             (request.NewReservoirVolumeLiters, nameof(request.NewReservoirVolumeLiters)));
+        ValidateEc(
+            (request.EcBefore, nameof(request.EcBefore)),
+            (request.EcTarget, nameof(request.EcTarget)),
+            (request.EcStock, nameof(request.EcStock)),
+            (request.EcAfter, nameof(request.EcAfter)));
         ValidatePh(request.PhBefore, nameof(request.PhBefore));
         ValidatePh(request.PhAfter, nameof(request.PhAfter));
 
@@ -309,6 +319,9 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         ValidateOperationLogValues(
             (request.VolumeChangedLiters, nameof(request.VolumeChangedLiters)),
             (request.PercentChanged, nameof(request.PercentChanged)),
+            (request.EcBefore, nameof(request.EcBefore)),
+            (request.EcAfter, nameof(request.EcAfter)));
+        ValidateEc(
             (request.EcBefore, nameof(request.EcBefore)),
             (request.EcAfter, nameof(request.EcAfter)));
         ValidatePh(request.PhBefore, nameof(request.PhBefore));
@@ -680,6 +693,19 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
 
         return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(),
             autoflower ? "Blütebeginn eingetragen." : "Flip zu 12/12 eingetragen."));
+    }
+
+    /// <summary>
+    /// EC-Werte von Wasserwechsel und Addback gegen dieselbe Tabelle wie die Messung.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): seit Zahlen deutsch gelesen werden, wird „1.250" zu
+    /// 1250 — vorher 1,25. Ohne Obergrenze landete das still im Protokoll.
+    /// </remarks>
+    private void ValidateEc(params (double? Value, string FieldName)[] values)
+    {
+        foreach (var (value, fieldName) in values)
+            MeasurementSanityService.PhysikGrenze(ModelState, fieldName, "ec", value, "Der EC-Wert");
     }
 
     private void ValidateOperationLogValues(params (double? Value, string FieldName)[] values)

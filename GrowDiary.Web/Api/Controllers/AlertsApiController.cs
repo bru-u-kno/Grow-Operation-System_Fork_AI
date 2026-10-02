@@ -128,6 +128,19 @@ public sealed class AlertsApiController : ApiControllerBase
          *
          * Gefunden bei der Gesamtdurchsicht am 01.09.2026: der Endpunkt nahm
          * das Paar an und antwortete HTTP 200. */
+        /* Feste Grenzen nur innerhalb dessen, was physikalisch vorkommen kann —
+           dieselbe Tabelle wie die Messung (MeasurementSanityService). Fork AI,
+           02.10.2026: seit Zahlen deutsch gelesen werden, wird „1.200" als EC zu
+           1200; eine solche Grenze meldete nie etwas. */
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest))
+        {
+            if (MeasurementSanityService.PhysikSchluesselFuerMetrik(regel.MetricKey) is not { } groesse) continue;
+            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.MinValue), groesse, regel.MinValue, $"Die Untergrenze ({regel.MetricKey})");
+            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.MaxValue), groesse, regel.MaxValue, $"Die Obergrenze ({regel.MetricKey})");
+            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.NightMinValue), groesse, regel.NightMinValue, $"Die naechtliche Untergrenze ({regel.MetricKey})");
+            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.NightMaxValue), groesse, regel.NightMaxValue, $"Die naechtliche Obergrenze ({regel.MetricKey})");
+        }
+
         foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest && r.TagVertauscht))
         {
             ModelState.AddModelError(nameof(AlertRuleDto.MinValue),

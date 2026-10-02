@@ -55,7 +55,9 @@ public sealed class GrowOsLocatorTests
         Assert.NotNull(wurzel);
         var zeile = File.ReadLines(Path.Combine(wurzel!, "grow-os", "config.yaml"))
             .Single(z => z.StartsWith("slug:", StringComparison.Ordinal));
-        Assert.Equal(zeile["slug:".Length..].Trim().Trim('"'), GrowOsLocator.Slug);
+        var slugAusDatei = zeile["slug:".Length..].Trim().Trim('"');
+        Assert.True(slugAusDatei == GrowOsLocator.Slug,
+            $"GrowOsLocator.Slug ist '{GrowOsLocator.Slug}', grow-os/config.yaml sagt '{slugAusDatei}'.");
     }
 
     [Fact]

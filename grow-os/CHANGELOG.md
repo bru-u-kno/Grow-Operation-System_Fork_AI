@@ -13,8 +13,11 @@
 - Geändert — **Zahlen werden überall deutsch gelesen.** „1.200" ist 1200, „1.200,5" ist 1200,5. Bisher
   wurde aus „1.200" still 1,2 — ein Preis von 1.200 € wurde zu 1,20 €, ein CO₂-Wert zu 1,2 ppm. Ein Punkt,
   der kein Tausendertrenner sein kann, bleibt ein Dezimalpunkt: „5.8" ist weiter pH 5,8. Gelesen wird an
-  einer Stelle für die ganze App (vorher gut 20 eigene Fassungen); Unlesbares meldet jetzt überall einen
-  Fehler, statt still leer zu bleiben.
+  einer Stelle für die ganze App (vorher gut 20 eigene Fassungen); Unlesbares meldet an den meisten
+  Stellen jetzt einen Fehler, statt still leer zu bleiben.
+- Neu — **EC hat eine Obergrenze (10 mS/cm)** in Messung, Wasserwechsel, Addback und festen
+  Alarm-Grenzen. Vorher war EC nach oben offen; mit der deutschen Lesung wäre ein englisch gemeintes
+  „1.250" still als 1250 gespeichert worden. Jetzt kommt eine Meldung.
 - Behoben — **Phäno-Bogen:** aus getippten „22,5" wurde 225, THC 22,5 % ließ sich gar nicht eintragen.
 - Geändert — **die Anzucht im Plan heißt nach dem Startmaterial:** beim Steckling „Bewurzelung",
   „Bewurzelung 2" …, beim Samen „Anzucht", „Anzucht 2" … — wie überall sonst in Grow OS. Gespeicherte
