@@ -251,6 +251,31 @@ Beide sind nachgewiesen: Fehler eingebaut, Hook wurde rot. **Sie ersetzen die
 fünf Prüfungen nicht** — sie fangen Tippfehler und rotes CI, nicht ein
 doppeltes Formular oder eine Seite, die niemand liest.
 
+### Welche E2E-Fälle lokal laufen
+
+Die volle E2E-Mappe (über 860 Fälle) läuft im Tor bei **jedem Push** mit
+Backend, Demobestand und `E2E_STRENG=1` (`ci.yml`, drei Teile), und ein Release
+wartet auf genau diesen Lauf für genau diesen Commit. Lokal ist sie deshalb
+eine Doppelung, die bei zwei Browsern rund 20 Minuten kostet. Seit dem
+02.10.2026 mit dem Nutzer vereinbart:
+
+- **Kleine, abgegrenzte Änderung** (eine Seite, ein Dienst, ein Name): lokal nur
+  die betroffenen Spezifikationen — die, die die geänderte Seite, den
+  geänderten Text oder die geänderte Route lesen, dazu die Querschnitte, die
+  jede Seite messen und die Änderung berühren können (`worttrennung`,
+  `rohe-enums`, `handy-zuschnitt`, `zellen-kollision`, `deutsche-zahlen`).
+  Welche das sind, per Suche nach Route, `data-audit` und Text ermitteln.
+- **Voll lokal** nach dem Zusammenführen mehrerer Arbeitsstränge, bei Umbauten
+  über viele Seiten und bei allem, was Layout, Thema oder Navigation global
+  ändert.
+- **Immer:** vor dem Release-Branch das Tor am Arbeitsbranch grün ansehen. Ein
+  rotes Tor ist kein „nur E2E" — es ist der volle Lauf, den man lokal gespart
+  hat.
+
+Belegt am selben Tag: der lokale volle Lauf fand einen Wortbruch in der
+Plan-Tabelle, den die gezielten Fälle nicht abdeckten (`worttrennung`). Deshalb
+gehören die Querschnitte oben in jede Auswahl.
+
 ### Vor „fertig": den Prüfer laufen lassen
 
 `.claude/agents/pruefer.md` — ein Agent in eigenem Kontext, der die Änderung
