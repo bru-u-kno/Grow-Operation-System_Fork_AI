@@ -9,9 +9,14 @@
 
 **Fork AI.** Namen und Anzeige nach der großen Durchsicht angeglichen.
 
-- Geändert — **angehängte Anzucht-Wochen heißen „Bewurzelung 2", „Bewurzelung 3" …** Bisher stand
-  neben der Spalte „Bewurzelung" die Woche „Anzuchtwoche 2" — zwei Namen für dieselbe Phase.
-  Gespeicherte Pläne werden beim Start der App umbenannt, du musst nichts tun.
+- Geändert — **die Anzucht im Plan heißt nach dem Startmaterial:** beim Steckling „Bewurzelung",
+  „Bewurzelung 2", „Bewurzelung 3" …, beim Samen „Anzucht", „Anzucht 2" … — wie überall sonst in
+  Grow OS. Bisher stand neben der Spalte „Bewurzelung" die Woche „Anzuchtwoche 2" — zwei Namen für
+  dieselbe Phase, und beim Samen-Grow passte keiner. Gespeicherte Pläne laufender Grows werden beim
+  Start der App umbenannt, du musst nichts tun; ein schon abgeschlossener (eingefrorener) Plan
+  bleibt, wie er war. Änderst du das Startmaterial im Formular, folgt der Name sofort.
+- Behoben — **Startprotokoll:** die Zeile „Planstände um das EC-Band ergänzt" erschien auch, wenn
+  nur Wochen umbenannt wurden. Jetzt eine Zeile je Art (EC-Band, „Luft Nacht", Wochennamen).
 - Behoben — **Wochenliste am Telefon:** bei schmalem Bildschirm stand die Wochennummer allein in
   einer zweiten Zeile („Blütewoche" / „3"). Jetzt bleibt der Name zusammen; die Werte rücken bei
   Platzmangel darunter.

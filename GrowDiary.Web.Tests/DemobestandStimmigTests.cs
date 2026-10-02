@@ -700,12 +700,15 @@ public sealed class DemobestandStimmigTests : IDisposable
 
         var laufendeWocheVerlaengert = new List<string>();
         var mehrereVerlaengert = new List<string>();
+        var anzuchtNamen = new List<string>();
         foreach (var grow in laufend)
         {
             var inhalt = GrowDiary.Web.Services.GrowPlan.GrowPlanBauer.AusProgramm(
                 programm, stufe => ziele.GetTargets(TargetValueService.ProfileIdFor(grow.HydroStyle), stufe),
-                GrowDiary.Web.Services.GrowPlan.GrowPlanService.VegiWochen(grow), GrowDiary.Web.Services.GrowPlan.GrowPlanService.Bluetewochen(grow));
-            var neu = GrowDiary.Web.Services.GrowPlan.Planwochen.Anhaengen(inhalt, Phasenanker.Fuer(grow, DateTime.Today));
+                GrowDiary.Web.Services.GrowPlan.GrowPlanService.VegiWochen(grow), GrowDiary.Web.Services.GrowPlan.GrowPlanService.Bluetewochen(grow),
+                grow.StartMaterial);
+            var neu = GrowDiary.Web.Services.GrowPlan.Planwochen.Anhaengen(inhalt, Phasenanker.Fuer(grow, DateTime.Today), grow.StartMaterial);
+            anzuchtNamen.AddRange(neu.Where(n => n.Neu.Stage == "Clone").Select(n => $"{grow.Name}: {n.Neu.Label}"));
 
             var jetzt = MischplanService.SpalteFuer(inhalt.Chart, grow, DateTime.Today);
             if (jetzt is not null && inhalt.IstVerlaengert(jetzt.Id)) laufendeWocheVerlaengert.Add($"{grow.Name}: {jetzt.Label}");
@@ -717,6 +720,10 @@ public sealed class DemobestandStimmigTests : IDisposable
             + "wäre im Testbestand nie zu sehen.");
         Assert.True(mehrereVerlaengert.Count >= 1,
             "Kein laufender Grow hat zwei verlängerte Wochen — der Rundweg an der ersten und letzten fiele zusammen.");
+        // Fork AI (02.10.2026): die angehängte Anzucht-Woche der White Widow (Samen)
+        // heißt „Anzucht 2" — „Bewurzelung" gehört dem Steckling (GrowPlanBauer.Anzuchtname).
+        // Die E2E-Prüfung der Wochennamen (verlaengerte-woche.spec) rechnet damit.
+        Assert.Contains("White Widow (Testdaten): Anzucht 2", anzuchtNamen);
     }
 
     private static GrowDiary.Web.Services.Knowledge.Schema.NutrientProgramDefinition MitgeliefertesProgramm(string id)

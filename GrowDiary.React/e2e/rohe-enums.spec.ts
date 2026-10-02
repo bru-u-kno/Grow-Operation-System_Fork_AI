@@ -54,7 +54,11 @@ const ERLAUBT: Record<string, string> = {
   // gewöhnliche Wörter, die auch anderswo stehen.
   Anzucht: 'Ankerphase — und der Zeltzweck „Anzucht“ heißt genauso',
   Keimung: 'Anzuchtart — das deutsche Wort selbst',
-  Bewurzelung: 'Anzuchtart — das deutsche Wort selbst, auch Spaltenname im Plan',
+  // „Bewurzelung" stand hier bis 02.10.2026 als „auch Spaltenname im Plan" —
+  // belegt nur durch die Plan-Spalte des Samen-Grows, und dort war das Wort
+  // fachlich falsch. Seitdem heißt die Anzucht beim Samen „Anzucht"; das Wort
+  // gehört dem Steckling, und der Demobestand hat keinen. Wer einen Steckling
+  // in den Bestand bringt, trägt die Ausnahme mit diesem Grund wieder ein.
   Ende: 'Ankerphase — deutsches Wort, steht in normalen Sätzen („Ende der Blüte“)',
 }
 

@@ -19,9 +19,9 @@ namespace GrowDiary.Web.Services.GrowPlan;
 /// <para><b>Die Anzucht.</b> Programme führen dort keine Wochen, sondern
 /// Sonderspalten („Bewurzelung", Athena: „Vorweichen" und „Anfüttern"). Die
 /// letzte davon ist die, die der Mischplan in der Anzucht immer gewählt hat; sie
-/// zählt als Woche 1. Ab Woche 2 wird sie fortgeschrieben („Bewurzelung 2" —
-/// passend zur Spalte „Bewurzelung" davor und zum Knopf „Bewurzelung
-/// abgeschlossen"). Die übrigen Sonderspalten (Vorweichen, Flush) wachsen nicht: sie
+/// zählt als Woche 1. Ab Woche 2 wird sie fortgeschrieben — beim Steckling
+/// „Bewurzelung 2", beim Samen „Anzucht 2", passend zur Spalte davor
+/// (<see cref="GrowPlanBauer.Anzuchtname"/>). Die übrigen Sonderspalten (Vorweichen, Flush) wachsen nicht: sie
 /// sind Schritte, keine Wochen.</para>
 ///
 /// <para>Rein und ohne Datenbank — das Speichern und das Änderungsbuch macht
@@ -97,8 +97,11 @@ public static class Planwochen
     /// <para>Nie wieder entfernt: auch wenn ein Phasenbeginn später verschoben
     /// wird, bleibt die Woche samt etwaiger Änderungen stehen — sie hat dann nur
     /// keinen Zeitraum mehr (<see cref="PlanAuswertung.Zeitraeume"/>).</para>
+    /// <para>Den Namen der neuen Woche gibt <see cref="GrowPlanBauer.Wochenname"/> —
+    /// in der Anzucht nach dem <paramref name="startMaterial"/> des Grows.</para>
     /// </remarks>
-    public static List<(FeedChartColumn Neu, FeedChartColumn Vorlage)> Anhaengen(GrowPlanInhalt inhalt, Phasenstand stand)
+    public static List<(FeedChartColumn Neu, FeedChartColumn Vorlage)> Anhaengen(
+        GrowPlanInhalt inhalt, Phasenstand stand, StartMaterial startMaterial)
     {
         var neu = new List<(FeedChartColumn, FeedChartColumn)>();
         foreach (var (phase, bedarf) in Bedarf(stand))
@@ -114,7 +117,7 @@ public static class Planwochen
                 spalte.Stage = vorlage.Stage;
                 spalte.Week = letzte;
                 spalte.Id = FreieId(inhalt, phase, letzte);
-                spalte.Label = GrowPlanBauer.Wochenname(spalte);
+                spalte.Label = GrowPlanBauer.Wochenname(spalte, startMaterial);
 
                 var position = inhalt.Chart.Columns.IndexOf(vorlage);
                 inhalt.Chart.Columns.Insert(position + 1, spalte);

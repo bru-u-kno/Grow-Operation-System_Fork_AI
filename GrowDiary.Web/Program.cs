@@ -239,9 +239,11 @@ try
     {
         app.Logger.LogInformation("Grow-Plan: {Anzahl} Pläne mit dem Grow-Status abgeglichen.", abgeglichen);
     }
-    if (nachgetragen > 0)
+    // Fork AI (02.10.2026): je Art eine Zeile — vorher hieß jede Umbenennung
+    // „um das EC-Band ergänzt" (PlanNachtrag.Meldungen).
+    foreach (var meldung in nachgetragen.Meldungen())
     {
-        app.Logger.LogInformation("Grow-Plan: {Anzahl} Planstände um das EC-Band ergänzt.", nachgetragen);
+        app.Logger.LogInformation("{Meldung}", meldung);
     }
     if (uebernommen > 0)
     {

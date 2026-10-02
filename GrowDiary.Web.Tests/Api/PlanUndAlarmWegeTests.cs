@@ -196,6 +196,43 @@ public sealed class PlanUndAlarmWegeTests
         Assert.Equal(HttpStatusCode.BadRequest, anderes.StatusCode);
     }
 
+    // ---- Name der Anzucht nach dem Startmaterial (02.10.2026) ----
+
+    private static async Task<string?> AnzuchtName(HttpClient client, int id, string stand = "arbeit")
+    {
+        var plan = await client.GetFromJsonAsync<JsonElement>($"/api/grows/{id}/plan?stand={stand}");
+        return plan.GetProperty("chart").GetProperty("columns").EnumerateArray()
+            .Single(c => c.GetProperty("id").GetString() == "root").GetProperty("label").GetString();
+    }
+
+    /// <summary>
+    /// Ändert das Formular das Startmaterial, heißt die Anzucht im Plan sofort
+    /// passend — nicht erst nach dem nächsten Start der App. Der Abschluss im
+    /// selben Speichern friert den angeglichenen Stand ein.
+    /// </summary>
+    [Fact]
+    public async Task EinGeaendertesStartmaterialBenenntDieAnzuchtImPlanUm()
+    {
+        var (id, tentId) = GrowMitPlan();
+        var client = _app.IngressClient();
+        Assert.Equal("Anzucht", await AnzuchtName(client, id)); // Samen ist die Vorgabe
+
+        var antwort = await client.PutAsJsonAsync($"/api/grows/{id}", new
+        {
+            name = "Plan-Weg",
+            tentId,
+            startDate = DateTime.Today.AddDays(-60).ToString("yyyy-MM-dd"),
+            status = "Completed",
+            hydroStyle = "RDWC",
+            feedProgramId = "skx-canna-aqua",
+            startMaterial = "Clone",
+        });
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+
+        Assert.Equal("Bewurzelung", await AnzuchtName(client, id));
+        Assert.Equal("Bewurzelung", await AnzuchtName(client, id, "ende"));
+    }
+
     // ---- Befund 6: Toleranz einer Plan-Regel ----
 
     [Theory]

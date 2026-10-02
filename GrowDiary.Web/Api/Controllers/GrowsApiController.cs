@@ -329,6 +329,15 @@ public sealed class GrowsApiController : ApiControllerBase
             {
                 _plaene.Anlegen(gespeichert);
             }
+            // Fork AI (02.10.2026): der Name der Anzucht im Plan folgt dem Startmaterial
+            // (Steckling „Bewurzelung", Samen „Anzucht"). Ändert das Formular es, gleich
+            // hier angleichen — nicht erst beim nächsten Start. Vor dem Abgleichen, damit
+            // ein Abschluss im selben Speichern den angeglichenen Stand einfriert; einen
+            // schon eingefrorenen Endstand fasst das Nachtragen nicht an.
+            if (gespeichert.StartMaterial != existing.StartMaterial)
+            {
+                _plaene.FehlendeFelderNachtragen([gespeichert]);
+            }
             _plaene.Abgleichen(gespeichert);
         }
 

@@ -205,7 +205,8 @@ public sealed class MitwachsendeWochenTests : IDisposable
     [Fact]
     public void DieAnzuchtSpalteIstWoche1UndWirdAbWoche2Fortgeschrieben()
     {
-        // Samen, Tag 16 der Anzucht, Vegi nicht bestätigt: Bewurzelung 3.
+        // Samen, Tag 16 der Anzucht, Vegi nicht bestätigt: Anzucht 3 (beim Samen
+        // heißt die Phase „Anzucht", GrowPlanBauer.Anzuchtname).
         _benutzt.Add(Basis + 7);
         var grow = new GrowRun
         {
@@ -221,15 +222,65 @@ public sealed class MitwachsendeWochenTests : IDisposable
         var arbeit = Arbeit(grow.Id);
         var anzucht = arbeit.Chart.Columns.Take(3).ToList();
         Assert.Equal(["root", "clone-w2", "clone-w3"], anzucht.Select(c => c.Id));
-        Assert.Equal(["Bewurzelung", "Bewurzelung 2", "Bewurzelung 3"], anzucht.Select(c => c.Label));
+        Assert.Equal(["Anzucht", "Anzucht 2", "Anzucht 3"], anzucht.Select(c => c.Label));
         Assert.All(anzucht.Skip(1), c => Assert.Equal("Clone", c.Stage));
         Assert.Equal(bewurzelung.EcTarget, anzucht[2].EcTarget);
         Assert.Equal("root", arbeit.Programmwoche("clone-w3"));
 
-        // Woche für Woche: die Bewurzelung in Woche 1, danach die angehängten.
+        // Woche für Woche: die Anzucht-Spalte in Woche 1, danach die angehängten.
         Assert.Equal("root", MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms, Heute.AddDays(-10))?.Spalte.Id);
         Assert.Equal("clone-w2", MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms, Heute.AddDays(-5))?.Spalte.Id);
         Assert.Equal("clone-w3", MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms, Heute)?.Spalte.Id);
+    }
+
+    /// <summary>
+    /// Fork AI (02.10.2026): gespeicherte Pläne heißen nach dem Start so, wie ein
+    /// neuer Plan hieße — Samen „Anzucht"/„Anzucht 2", Steckling
+    /// „Bewurzelung"/„Bewurzelung 2". Der eingefrorene Endstand bleibt, wie er war
+    /// (Begründung an <see cref="GrowPlanService.FehlendeFelderNachtragen"/>).
+    /// </summary>
+    [Theory]
+    [InlineData(StartMaterial.Seed, "Bewurzelung", "Bewurzelung 2", "Anzucht", "Anzucht 2")]
+    [InlineData(StartMaterial.Seed, "Bewurzelung", "Anzuchtwoche 2", "Anzucht", "Anzucht 2")]
+    [InlineData(StartMaterial.Clone, "Bewurzelung", "Anzuchtwoche 2", "Bewurzelung", "Bewurzelung 2")]
+    public void GespeichertePlaeneHeissenNachDemStartWieIhrStartmaterial(
+        StartMaterial material, string altSpalte, string altWoche, string neuSpalte, string neuWoche)
+    {
+        _benutzt.Add(Basis + 20);
+        var grow = new GrowRun
+        {
+            Id = Basis + 20, Name = "Angleichen", FeedProgramId = "skx-canna-aqua", HydroStyle = HydroStyle.RDWC,
+            Status = GrowStatus.Running, StartMaterial = material, EntryPoint = GrowEntryPoint.Germination,
+            StartDate = Heute.AddDays(-9), GerminatedAt = material == StartMaterial.Seed ? Heute.AddDays(-9) : null,
+        };
+        _dienst.Anlegen(grow);
+        Assert.Equal(1, _dienst.WochenNachziehen(grow, Heute));
+
+        // So lag der Plan aus einer früheren Version in der Datenbank.
+        foreach (var name in new[] { GrowPlanStaende.Start, GrowPlanStaende.Arbeit })
+        {
+            var stand = _repo.Laden(grow.Id, name)!;
+            Spalte(stand.Inhalt, "root").Label = altSpalte;
+            if (stand.Inhalt.Chart.Columns.FirstOrDefault(c => c.Id == "clone-w2") is { } woche) woche.Label = altWoche;
+            _repo.Nachtragen(stand);
+        }
+        var alt = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
+        _repo.Speichern([alt with { Stand = GrowPlanStaende.Ende }], []);
+
+        var nachtrag = _dienst.FehlendeFelderNachtragen([grow]);
+
+        // Start und Arbeit beim Samen; beim Steckling stimmte die Spalte im Startstand schon.
+        Assert.Equal(material == StartMaterial.Seed ? 2 : 1, nachtrag.Wochennamen);
+        Assert.Equal(nachtrag.Wochennamen, nachtrag.Planstaende);
+        Assert.Equal(0, nachtrag.EcBand);
+        Assert.Equal([neuSpalte, neuWoche], Arbeit(grow.Id).Chart.Columns.Take(2).Select(c => c.Label));
+        Assert.Equal(neuSpalte, Spalte(_repo.Laden(grow.Id, GrowPlanStaende.Start)!.Inhalt, "root").Label);
+        // Alle Leser sehen den neuen Namen sofort, nicht erst nach dem nächsten Laden.
+        Assert.Equal([neuSpalte, neuWoche], GrowPlanRegister.Inhalt(grow.Id)!.Chart.Columns.Take(2).Select(c => c.Label));
+        // Der Endstand ist eingefroren — auch beim Namen.
+        Assert.Equal([altSpalte, altWoche], _repo.Laden(grow.Id, GrowPlanStaende.Ende)!.Inhalt.Chart.Columns.Take(2).Select(c => c.Label));
+
+        Assert.Equal(0, _dienst.FehlendeFelderNachtragen([grow]).Planstaende);
     }
 
     [Fact]
@@ -249,6 +300,9 @@ public sealed class MitwachsendeWochenTests : IDisposable
         var arbeit = Arbeit(grow.Id);
         Assert.Equal(["clone-presoak", "clone-feed", "clone-w2"], arbeit.Chart.Columns.Take(3).Select(c => c.Id));
         Assert.Equal("clone-feed", arbeit.Verlaengert["clone-w2"]);
+        // Steckling: die angehängte Woche heißt „Bewurzelung 2"; die benannten
+        // Klon-Schritte davor behalten ihre Namen.
+        Assert.Equal(["Klon · Vorweichen", "Klon · Anfüttern", "Bewurzelung 2"], arbeit.Chart.Columns.Take(3).Select(c => c.Label));
     }
 
     [Fact]

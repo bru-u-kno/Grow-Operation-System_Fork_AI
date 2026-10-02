@@ -23,7 +23,7 @@ async function speichern(page: Page) {
  * <b>Der Anlass (02.10.2026).</b> Läuft eine Phase länger als das Programm,
  * bekommt der Plan des Grows eigene Wochen (Entscheidung des Nutzers: „erstreckt
  * sich die Blüte über zehn Wochen, zeigt das Schema auch zehn Wochen"). Der
- * Demobestand hat sie für die White Widow — Bewurzelung 2 und Vegiwoche 5
+ * Demobestand hat sie für die White Widow — Anzucht 2 und Vegiwoche 5
  * (<c>DemobestandStimmigTests.Ein_Lauf_dauert_laenger_als_sein_Programm</c>).
  *
  * <b>Der Rundweg</b> laut CLAUDE.md: ausfüllen, speichern, neu laden, Wert
@@ -103,21 +103,29 @@ test('verlängerte Wochen: markiert, ändern, speichern, neu laden — erste und
  *
  * <b>Der Anlass (02.10.2026).</b> Die angehängte Anzucht-Woche hieß „Anzuchtwoche 2"
  * neben der Spalte „Bewurzelung" — zwei Namen für dieselbe Phase. Jetzt heißt sie
- * „Bewurzelung 2". Im Wochen-Blatt stand bei 360 px die Wochennummer allein in der
+ * wie die Spalte davor, und beide nach dem Startmaterial (Entscheidung des Nutzers,
+ * 02.10.2026): Steckling „Bewurzelung 2", Samen „Anzucht 2". Erwartet wird der Name,
+ * der zum Startmaterial des Demo-Grows passt — nicht ein fest eingetragener.
+ * Im Wochen-Blatt stand bei 360 px die Wochennummer allein in der
  * zweiten Zeile („Blütewoche / 3" bis „8"; beim Zwischenstand „Bewurzelungswoche 2"
  * auch dort). Gemessen wird der Text, nicht der Kasten (`Range.getClientRects()`):
  * zerfällt ein Wochenname auf zwei Zeilenhöhen, ragt er über den Rand?
  */
-test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoche"', async ({ page, request }) => {
+test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, die Anzucht heißt nach dem Startmaterial', async ({ page, request }) => {
   darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend — ohne Plan gibt es kein Wochen-Blatt.')
   const ziel = await (await request.get('/api/zielwerte')).json() as { growId: number | null; eigenerPlan?: boolean }
   darfUeberspringen(ziel.growId == null || !ziel.eigenerPlan, 'Kein laufender Grow mit eigenem Plan im Bestand.')
 
+  const grow = await (await request.get(`/api/grows/${ziel.growId}`)).json() as { startMaterial: string }
+  const anzucht = grow.startMaterial === 'Clone' ? 'Bewurzelung' : 'Anzucht'
+  const fremd = anzucht === 'Bewurzelung' ? 'Anzucht' : 'Bewurzelung'
+  const angehaengt = new RegExp(`^${anzucht} \\d+$`)
   const werte = await (await request.get(`/api/wochenplan/werte/${ziel.growId}`)).json() as { spalten: Spalte[] }
   const namen = werte.spalten.map((s) => s.label)
-  expect(namen.filter((n) => n.startsWith('Anzuchtwoche')), 'Angehängte Anzucht-Wochen heißen „Bewurzelung N".').toEqual([])
-  // Mengenwächter: ohne eine angehängte Bewurzelungs-Woche prüft der Name nichts.
-  expect(namen.some((n) => /^Bewurzelung \d+$/.test(n)), 'Der Demobestand sollte eine angehängte Bewurzelungs-Woche haben.').toBe(true)
+  expect(namen.filter((n) => n.startsWith('Anzuchtwoche') || n.startsWith(fremd)),
+    `Startmaterial ${grow.startMaterial}: die Anzucht heißt „${anzucht}", angehängte Wochen „${anzucht} N".`).toEqual([])
+  // Mengenwächter: ohne eine angehängte Anzucht-Woche prüft der Name nichts.
+  expect(namen.some((n) => angehaengt.test(n)), `Der Demobestand sollte eine angehängte Woche „${anzucht} N" haben.`).toBe(true)
 
   for (const breite of [320, 360]) {
     await page.setViewportSize({ width: breite, height: 800 })
@@ -151,7 +159,8 @@ test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoc
 
   // Derselbe Name steht in der Plan-Tabelle am Grow (PlanAuswertung). Dort brach
   // „Bewurzelungswoche 2" bei 390 px mitten im Wort („Bewurzelungswoc / he 2") —
-  // Befund des Prüfers, 02.10.2026. Deshalb heißt die Woche „Bewurzelung 2".
+  // Befund des Prüfers, 02.10.2026. Deshalb heißt die Woche „Bewurzelung 2" bzw.
+  // „Anzucht 2", ohne „-woche".
   await page.setViewportSize({ width: 390, height: 800 })
   await page.goto(`/grows/${ziel.growId}`, { waitUntil: 'networkidle' })
   const tabelle = page.locator('[data-audit="plan-auswertung"] .pa-tabelle')
@@ -165,6 +174,8 @@ test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoc
     return { text: (name.textContent ?? '').trim(), zeilen: new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size }
   }))
   expect(namen390.length, 'Die Plan-Tabelle am Grow ist leer.').toBeGreaterThanOrEqual(10)
-  expect(namen390.some((n) => n.text.startsWith('Bewurzelung ')), 'Die angehängte Bewurzelungs-Woche fehlt in der Tabelle.').toBe(true)
+  expect(namen390.some((n) => angehaengt.test(n.text)), `Die angehängte Woche „${anzucht} N" fehlt in der Tabelle.`).toBe(true)
+  expect(namen390.filter((n) => n.text.startsWith(fremd)).map((n) => n.text),
+    `Startmaterial ${grow.startMaterial}: in der Plan-Tabelle steht „${fremd}".`).toEqual([])
   expect(namen390.filter((n) => n.zeilen > 1).map((n) => n.text), '390 px: diese Wochennamen brechen in der Plan-Tabelle um.').toEqual([])
 })
