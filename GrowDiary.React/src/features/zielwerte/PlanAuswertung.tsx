@@ -14,27 +14,46 @@ import './zielwerte.css'
  * aktueller Stand) und gemessener Mittelwert, darunter die Zeitleiste der
  * Änderungen. Abgeschlossene Grows ohne Plan sagen das ehrlich.
  */
+type Meldung = { text: string; ton: 'ok' | 'critical' }
+type Stand = { growId: number; daten: Auswertung | null; keinPlan: boolean; meldung: Meldung | null }
+
 export function PlanAuswertung({ growId }: { growId: number }) {
-  const [daten, setDaten] = useState<Auswertung | null>(null)
-  const [keinPlan, setKeinPlan] = useState(false)
+  // Was geladen ist, gehört zu EINEM Grow — es trägt dessen Kennung. Beim
+  // Wechsel des Grows gilt es nicht mehr. Vorher blieb „kein Plan gespeichert"
+  // (oder die Wochen des vorigen Grows) stehen, und kam die neue Antwort mit
+  // Plan, blieb `keinPlan` sogar für immer wahr.
+  const [stand, setStand] = useState<Stand | null>(null)
+  const aktuell = stand?.growId === growId ? stand : null
+  const daten = aktuell?.daten ?? null
+  const keinPlan = aktuell?.keinPlan ?? false
+  const meldung = aktuell?.meldung ?? null
+  const aendern = (teil: Partial<Omit<Stand, 'growId'>>) => setStand((vorher) => ({
+    ...(vorher?.growId === growId ? vorher : { daten: null, keinPlan: false, meldung: null }),
+    ...teil,
+    growId,
+  }))
+  const setMeldung = (neu: Meldung | null) => aendern({ meldung: neu })
   const [groesse, setGroesse] = useState('ec')
   const [blatt, setBlatt] = useState(false)
   const [name, setName] = useState('')
-  const [meldung, setMeldung] = useState<{ text: string; ton: 'ok' | 'critical' } | null>(null)
   const [speichert, setSpeichert] = useState(false)
 
   useEffect(() => {
+    const abbruch = new AbortController()
     async function laden() {
       try {
         // 204 (kein Plan gespeichert) kommt als leere Antwort an.
-        const antwort = await apiFetch<Auswertung | undefined>(`/api/grows/${growId}/plan/auswertung`)
-        if (antwort) setDaten(antwort)
-        else setKeinPlan(true)
+        const antwort = await apiFetch<Auswertung | undefined>(`/api/grows/${growId}/plan/auswertung`, { signal: abbruch.signal })
+        if (abbruch.signal.aborted) return
+        setStand({ growId, daten: antwort ?? null, keinPlan: !antwort, meldung: null })
       } catch (caught) {
-        setMeldung({ ton: 'critical', text: formatApiError(caught, 'Die Auswertung konnte nicht geladen werden.') })
+        if (!abbruch.signal.aborted) {
+          setStand({ growId, daten: null, keinPlan: false, meldung: { ton: 'critical', text: formatApiError(caught, 'Die Auswertung konnte nicht geladen werden.') } })
+        }
       }
     }
     void laden()
+    return () => abbruch.abort()
   }, [growId])
 
   if (keinPlan) {
@@ -61,7 +80,7 @@ export function PlanAuswertung({ growId }: { growId: number }) {
       })
       setBlatt(false)
       setMeldung({ ton: 'ok', text: `Gespeichert als Programm „${antwort.programmName}“ — beim nächsten Grow unter „Eigene Programme“.` })
-      setDaten(await apiFetch<Auswertung>(`/api/grows/${growId}/plan/auswertung`))
+      aendern({ daten: await apiFetch<Auswertung>(`/api/grows/${growId}/plan/auswertung`) })
     } catch (caught) {
       setMeldung({ ton: 'critical', text: formatApiError(caught, 'Das Programm konnte nicht gespeichert werden.') })
     } finally {

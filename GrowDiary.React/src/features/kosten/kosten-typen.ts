@@ -189,10 +189,15 @@ export type EntitaetTest = {
   name: string | null
 }
 
-/** Euro mit zwei Nachkommastellen, deutsch. `null` → Gedankenstrich. */
+/**
+ * Euro mit zwei Nachkommastellen, deutsch. `null` → Gedankenstrich.
+ *
+ * Zwischen Betrag und „€" steht ein geschütztes Leerzeichen: bei 320 px brach
+ * „0,61 € je Tag" sonst als „0,61" | „€ je Tag" um (Durchsicht 02.10.2026).
+ */
 export function euro(wert: number | null | undefined): string {
   if (wert == null || Number.isNaN(wert)) return '–'
-  return `${new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(wert)} €`
+  return `${new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(wert)}\u00a0€`
 }
 
 /** Tage als ganze Zahl — „42 d“, nie „41,98 d“. */

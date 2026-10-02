@@ -75,6 +75,11 @@
   .ko-artikel-fakten, .ko-artikel-prognose { margin: 0; font-size: var(--fs-text); color: var(--muted); line-height: 1.5; }
   .ko-balken { height: 8px; border-radius: var(--r-pill); overflow: hidden; border: 1px solid var(--hair); background: var(--sunk); }
   .ko-balken i { display: block; height: 100%; background: var(--accent); border-radius: var(--r-pill); }
+  /* Balken und Prozentzahl in einer Zeile — die Zahl stand vorher nur im
+     aria-label, zu sehen war allein der Balken. */
+  .ko-fuellstand { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+  .ko-fuellstand .ko-balken { flex: 1 1 auto; min-width: 0; }
+  .ko-fuellstand span { flex: 0 0 auto; font-size: var(--fs-text); color: var(--muted); font-variant-numeric: tabular-nums; }
   .ko-artikel-aktionen {
     display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
     margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair);

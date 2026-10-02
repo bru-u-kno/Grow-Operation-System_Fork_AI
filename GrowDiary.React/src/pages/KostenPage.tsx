@@ -586,7 +586,8 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
       {(artikel.hersteller || artikel.produkt || artikel.preisEur != null) && (
         <p className="ko-artikel-fakten">
           {[artikel.hersteller, artikel.produkt].filter(Boolean).join(' · ')}
-          {artikel.preisEur != null && <>{(artikel.hersteller || artikel.produkt) ? ' · ' : ''}{euro(artikel.preisEur)} je {artikel.gebinde != null ? `${formatNumber(artikel.gebinde, 2)} ${artikel.einheit}` : 'Packung'}</>}
+          {/* Geschützte Leerzeichen: „39,00 € je 10 kg" brach sonst zwischen Zahl und Einheit um. */}
+          {artikel.preisEur != null && <>{(artikel.hersteller || artikel.produkt) ? ' · ' : ''}{euro(artikel.preisEur)}{'\u00a0'}je{'\u00a0'}{artikel.gebinde != null ? `${formatNumber(artikel.gebinde, 2)}\u00a0${artikel.einheit}` : 'Packung'}</>}
         </p>
       )}
 
@@ -595,11 +596,15 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
           <p className="ko-artikel-fakten">
             {formatNumber(a.menge, 2)} {artikel.einheit} seit {formatDate(a.zeitpunktUtc)}
             {a.kostenEur != null && <> · {euro(a.kostenEur)}</>}
-            {a.eurProTag != null && <> · {euro(a.eurProTag)} je Tag</>}
+            {a.eurProTag != null && <> · {euro(a.eurProTag)}{'\u00a0'}je{'\u00a0'}Tag</>}
           </p>
           {a.fuellstandProzent != null ? (
             <>
-              <div className="ko-balken" role="img" aria-label={`${a.fuellstandQuelle === 'gemessen' ? 'Noch' : 'Geschätzt noch'} ${formatNumber(a.fuellstandProzent, 0)} %`}><i style={{ width: `${a.fuellstandProzent}%` }} /></div>
+              {/* Die Prozentzahl steht sichtbar daneben — vorher nur im aria-label, sehen konnte man den Balken allein. */}
+              <div className="ko-fuellstand" data-audit="kosten-fuellstand">
+                <div className="ko-balken" aria-hidden="true"><i style={{ width: `${a.fuellstandProzent}%` }} /></div>
+                <span>{a.fuellstandQuelle === 'gemessen' ? 'noch' : 'geschätzt noch'}{'\u00a0'}{formatNumber(a.fuellstandProzent, 0)}{'\u00a0'}%</span>
+              </div>
               {/*
                 Fork AI (forkai.84): Ohne Prognose kein Datum. Die Flasche stand
                 nach sechs Tagen bei 0,8 % Verbrauch — daraus „leer am

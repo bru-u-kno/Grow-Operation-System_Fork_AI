@@ -5,6 +5,7 @@
  * Seite und spätere Steuerungen (Entfeuchter, Chiller, Abluft, Licht) dieselbe
  * Form teilen und nicht jede ihre eigene Abschrift mitbringt.
  */
+import { haZustandName } from '../../deutsche-woerter'
 
 /** Eine Zeile auf der Übersicht — je Steuerung eine. */
 export type SteuerungModul = {
@@ -179,6 +180,42 @@ export function wirksameZiele(e: Co2Einstellungen, planPpm: number | null): { wa
 /** Sekunden als Minuten, wie sie in der Tagesliste stehen. */
 export function minuten(sekunden: number): string {
   return `${Math.round(sekunden / 60)} min`
+}
+
+/**
+ * Ein Kalendertag der Tagesliste — „2026-09-30" wird „Mi 30.09.".
+ *
+ * Bewusst ohne `new Date("2026-09-30")`: das liest den Tag als Mitternacht UTC,
+ * westlich von Greenwich stünde dann der Vortag da.
+ */
+export function tagKurz(datum: string): string {
+  const treffer = /^(\d{4})-(\d{2})-(\d{2})/.exec(datum)
+  if (!treffer) return datum
+  const tag = new Date(Number(treffer[1]), Number(treffer[2]) - 1, Number(treffer[3]))
+  const wochentag = new Intl.DateTimeFormat('de-DE', { weekday: 'short' }).format(tag).replace('.', '')
+  return `${wochentag} ${treffer[3]}.${treffer[2]}.`
+}
+
+/**
+ * Was die Probeschaltung über den CO₂-Fühler sagt.
+ *
+ * Home Assistant liefert den Zustand roh: „812.0" oder „unavailable". Auf dem
+ * Schirm stand genau das. Zwei Zahlen werden zu „CO₂ 812 → 845 ppm", sonst
+ * steht da, was mit dem Fühler ist.
+ */
+export function probeWerte(vorher: string | null, nachher: string | null): string {
+  const zahl = (wert: string | null) => {
+    if (wert == null || wert.trim() === '') return null
+    const n = Number(wert)
+    return Number.isFinite(n) ? n : null
+  }
+  const a = zahl(vorher)
+  const b = zahl(nachher)
+  const ppm = (n: number) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(n)
+  if (a != null && b != null) return ` CO₂ ${ppm(a)} → ${ppm(b)} ppm.`
+  const roh = [vorher, nachher].find((w) => w != null && w.trim() !== '' && zahl(w) == null)
+  if (roh) return ` CO₂-Fühler: ${haZustandName(roh)}.`
+  return ''
 }
 
 // ------------------------------------------------------------------- Licht

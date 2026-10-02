@@ -6,6 +6,7 @@ import type { ChillerEinstellungen, ChillerReiter, ChillerSeite, SteuerungModul 
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
+import { haZustandName } from '../../deutsche-woerter'
 
 /**
  * Fork AI: Steuerung › Water Chiller — der Wasserkühler, der bisher als Kachel
@@ -283,7 +284,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
                 <div className="st-feldzeile">
                   <span className="st-etikett">
                     Kühler
-                    <small>Gerät mit eigenem Thermostat · {live.kuehlerZustand ?? 'kein Zustand'}</small>
+                    <small>Gerät mit eigenem Thermostat · {live.kuehlerZustand ? haZustandName(live.kuehlerZustand) : 'kein Zustand'}</small>
                   </span>
                   <span className="st-nurlesen">{live.kuehlerEntity ?? '–'}</span>
                 </div>

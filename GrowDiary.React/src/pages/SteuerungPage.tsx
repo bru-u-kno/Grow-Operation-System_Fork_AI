@@ -6,11 +6,12 @@ import LichtDetail from '../features/steuerung/LichtDetail'
 import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
 import EntfeuchterDetail from '../features/steuerung/EntfeuchterDetail'
-import { CO2_REITER, minuten, wirksameZiele } from '../features/steuerung/steuerung-typen'
+import { CO2_REITER, minuten, probeWerte, tagKurz, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 import { rollenPfad } from '../features/geraete/rollenPfad'
+import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from '../features/steuerung/feld-fehler'
 
 /** Was der Vorschau-Lauf über die Automationen meldet. */
 type AutoBilanz = {
@@ -301,6 +302,11 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 
   const speichern = async () => {
     if (!entwurf) return
+    // Ein geleertes Feld ist NaN, im JSON `null` — das Backend kann es nicht
+    // binden und meldete „Es wurde nichts übergeben.". Vorher sperren und das
+    // Feld markieren (wie bei Chiller, Entfeuchter und Zuluft).
+    const leer = leereZahlenfelder(entwurf)
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
     setSpeichert(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<Co2Seite>('/api/steuerung/co2', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -309,7 +315,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         ? 'Gespeichert — aber Home Assistant hat nicht alle Sollwerte angenommen. Die Regelung läuft mit den alten Werten weiter.'
         : 'Gespeichert und nach Home Assistant geschrieben.')
     } catch (caught) {
-      const felder = (caught as { fields?: Record<string, string> })?.fields
+      const felder = feldFehlerAus(caught)
       if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
@@ -396,8 +402,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       const e = await apiFetch<{ urteil: string; co2Vorher: string | null; co2Nachher: string | null }>(
         '/api/steuerung/co2/probe', { method: 'POST' },
       )
-      const werte = e.co2Vorher && e.co2Nachher ? ` CO₂ ${e.co2Vorher} → ${e.co2Nachher} ppm.` : ''
-      setProbe(e.urteil + werte)
+      setProbe(e.urteil + probeWerte(e.co2Vorher, e.co2Nachher))
     } catch (caught) {
       setProbe(formatApiError(caught, 'Probeschaltung fehlgeschlagen.'))
     }
@@ -748,7 +753,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                   {seite.tage.map((t) => (
                     <tr key={t.datum}>
                       <th scope="row">
-                        {t.datum}
+                        {tagKurz(t.datum)}
                         {t.flaschenwechsel && <small>Flasche gewechselt</small>}
                       </th>
                       <td>{t.impulse}</td>
@@ -981,7 +986,8 @@ function PlanGrenze({ label, hinweis, einheit, abstandEinheit, modus, onModus, a
             aria-label={modus === 'plan' ? `${label}, Abstand zum Plan` : label}
             aria-invalid={fehler ? true : undefined}
             onChange={(e) => {
-              const v = e.target.value === '' ? Number.NaN : Number(e.target.value)
+              const v = zahlAusFeld(e.target.value)
+              if (v == null) return
               if (modus === 'plan') onAbstand(v)
               else onFest(v)
             }}
@@ -1018,7 +1024,10 @@ function Zahl({ label, hinweis, einheit, wert, onChange, fehler, schritt = 1 }: 
           value={Number.isFinite(wert) ? wert : ''}
           aria-label={label}
           aria-invalid={fehler ? true : undefined}
-          onChange={(e) => onChange(e.target.value === '' ? Number.NaN : Number(e.target.value))}
+          onChange={(e) => {
+            const neu = zahlAusFeld(e.target.value)
+            if (neu != null) onChange(neu)
+          }}
         />
         {einheit && <span className="st-einheit">{einheit}</span>}
       </span>

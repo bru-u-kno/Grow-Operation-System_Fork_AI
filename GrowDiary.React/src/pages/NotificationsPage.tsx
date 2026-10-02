@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import type { NotificationSettingsDto } from '../types/notification'
 import { V1Section, V1Card, V1Field, V1Switch, V1Button, V1Alert } from '../components/v1'
+import { ruhezeitAusFeldern } from '../features/meldungen/ruhezeit'
 
 function errorMessage(caught: unknown, fallback: string): string {
   return caught instanceof Error ? caught.message : fallback
@@ -26,11 +27,11 @@ function hourToInput(value: number | null): string {
   return value == null ? '' : String(value)
 }
 
-function parseHour(value: string): number | null {
-  const trimmed = value.trim()
-  if (trimmed === '') return null
-  const parsed = Number(trimmed)
-  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 23 ? parsed : null
+/** Unlesbare Ruhezeit: gespeichert wird nichts, die Meldung je Feld steht unter den Feldern. */
+class RuhezeitFehler extends Error {
+  constructor() {
+    super('Nicht gespeichert — die Ruhezeit lässt sich so nicht lesen. Bitte die Felder unter „Ruhezeiten" prüfen.')
+  }
 }
 
 const DEFAULT_SETTINGS: NotificationSettingsDto = {
@@ -58,6 +59,7 @@ function NotificationsPage() {
   const [notifyOptions, setNotifyOptions] = useState<string[]>([])
   const [quietStart, setQuietStart] = useState('')
   const [quietEnd, setQuietEnd] = useState('')
+  const [quietFehler, setQuietFehler] = useState<{ von?: string; bis?: string }>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -96,14 +98,26 @@ function NotificationsPage() {
   }
 
   async function persist(): Promise<boolean> {
+    // Vor dem Speichern lesen: eine unlesbare Ruhezeit wurde früher still zu
+    // `null` — gelöscht, und die Seite sagte „Gespeichert.".
+    const ruhe = ruhezeitAusFeldern(quietStart, quietEnd)
+    if (ruhe.fehler) {
+      setQuietFehler(ruhe.fehler)
+      throw new RuhezeitFehler()
+    }
+    setQuietFehler({})
     const payload: NotificationSettingsDto = {
       ...settings,
       notifyService: settings.notifyService?.trim() || null,
-      quietHoursStartHour: parseHour(quietStart),
-      quietHoursEndHour: parseHour(quietEnd),
+      quietHoursStartHour: ruhe.start,
+      quietHoursEndHour: ruhe.ende,
     }
     const saved = await apiFetch<NotificationSettingsDto>('/api/notifications/settings', { method: 'PUT', body: JSON.stringify(payload) })
     setSettings({ ...saved, notifyService: saved.notifyService ?? '' })
+    // Zurückschreiben, was gespeichert ist: aus „22 Uhr" wird „22" — so sieht
+    // man, dass es angekommen ist.
+    setQuietStart(hourToInput(saved.quietHoursStartHour))
+    setQuietEnd(hourToInput(saved.quietHoursEndHour))
     return true
   }
 
@@ -220,9 +234,26 @@ function NotificationsPage() {
         <V1Card>
           <p style={{ marginTop: 0, color: 'var(--ix-muted, #8a988e)', fontSize: 'var(--fs-text)' }}>In diesem Zeitfenster (Stunde 0–23) schickt Grow OS keine Push-Nachrichten. Beide Felder leer = immer erlaubt.</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <V1Field label="Von (Uhr)"><input inputMode="numeric" value={quietStart} onChange={(event) => setQuietStart(event.target.value)} placeholder="z. B. 22" /></V1Field>
-            <V1Field label="Bis (Uhr)"><input inputMode="numeric" value={quietEnd} onChange={(event) => setQuietEnd(event.target.value)} placeholder="z. B. 7" /></V1Field>
+            <V1Field label="Von (Uhr)">
+              <input
+                value={quietStart}
+                onChange={(event) => setQuietStart(event.target.value)}
+                placeholder="z. B. 22"
+                aria-invalid={quietFehler.von ? true : undefined}
+              />
+            </V1Field>
+            <V1Field label="Bis (Uhr)">
+              <input
+                value={quietEnd}
+                onChange={(event) => setQuietEnd(event.target.value)}
+                placeholder="z. B. 7"
+                aria-invalid={quietFehler.bis ? true : undefined}
+              />
+            </V1Field>
           </div>
+          {(quietFehler.von || quietFehler.bis) && (
+            <V1Alert tone="critical" message={[quietFehler.von, quietFehler.bis].filter(Boolean).join(' ')} />
+          )}
         </V1Card>
       </V1Section>
 

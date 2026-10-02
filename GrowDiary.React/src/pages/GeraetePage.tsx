@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -112,7 +112,13 @@ type SpeichernRequest = {
 
 export default function GeraetePage() {
   const [seite, setSeite] = useState<Seite | null>(null)
-  const [fehler, setFehler] = useState<string | null>(null)
+  // Zwei Arten Fehler: ohne geladene Seite gibt es nichts zu zeigen
+  // (`ladeFehler`); ein misslungenes Umbenennen, Verschieben oder Anlegen
+  // dagegen ist eine Meldung ÜBER der Seite (`aktionsFehler`). Bis zum
+  // 02.10.2026 teilten sich beide einen Zustand — und ein einziger
+  // Speicherfehler ersetzte die ganze Geräteliste durch eine rote Zeile.
+  const [ladeFehler, setLadeFehler] = useState<string | null>(null)
+  const [aktionsFehler, setAktionsFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
   const [bearbeitet, setBearbeitet] = useState<string | null>(null)
@@ -142,6 +148,12 @@ export default function GeraetePage() {
   // Aufgeklappte Controller. Die Liste startet eingeklappt: bei acht Ports am
   // RDWC ist die kurze Uebersicht der Zweck der Seite, nicht die lange Liste.
   const [auf, setAuf] = useState<Set<string>>(new Set())
+  // Ein Fehler beim Verschieben passiert oft weit unten in der Liste — die
+  // Meldung steht oben. Ohne Hinrollen sähe man nur, dass nichts geschah.
+  const fehlerAnker = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (aktionsFehler) fehlerAnker.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+  }, [aktionsFehler])
 
   useEffect(() => {
     const abbruch = new AbortController()
@@ -149,7 +161,7 @@ export default function GeraetePage() {
       try {
         setSeite(await apiFetch<Seite>('/api/geraete', { signal: abbruch.signal }))
       } catch (caught) {
-        if (!abbruch.signal.aborted) setFehler(formatApiError(caught, 'Die Geräte konnten nicht geladen werden.'))
+        if (!abbruch.signal.aborted) setLadeFehler(formatApiError(caught, 'Die Geräte konnten nicht geladen werden.'))
       } finally {
         if (!abbruch.signal.aborted) setLaedt(false)
       }
@@ -171,17 +183,20 @@ export default function GeraetePage() {
     return () => abbruch.abort()
   }, [])
 
-  async function schreiben(pfad: string, methode: 'PUT', koerper?: unknown) {
+  /** Schreibt und sagt, ob es geklappt hat — die Aufrufer melden nur Erfolg, wenn er stimmt. */
+  async function schreiben(pfad: string, methode: 'PUT', koerper?: unknown): Promise<boolean> {
     setSpeichert(true)
     try {
       setSeite(await apiFetch<Seite>(pfad, {
         method: methode,
         ...(koerper ? { body: JSON.stringify(koerper) } : {}),
       }))
-      setFehler(null)
+      setAktionsFehler(null)
       setBearbeitet(null)
+      return true
     } catch (caught) {
-      setFehler(formatApiError(caught, 'Das Speichern hat nicht geklappt.'))
+      setAktionsFehler(formatApiError(caught, 'Das Speichern hat nicht geklappt.'))
+      return false
     } finally {
       setSpeichert(false)
     }
@@ -233,8 +248,10 @@ export default function GeraetePage() {
     try {
       setSeite(await apiFetch<Seite>('/api/geraete/rubrik', { method: 'POST', body: JSON.stringify({ name }) }))
       setRubrikName(null)
+      setAktionsFehler(null)
     } catch (caught) {
-      setFehler(formatApiError(caught, 'Die Rubrik konnte nicht angelegt werden.'))
+      // Das Blatt bleibt offen, samt Name — die Meldung steht darin.
+      setAktionsFehler(formatApiError(caught, 'Die Rubrik konnte nicht angelegt werden.'))
     } finally {
       setSpeichert(false)
     }
@@ -242,15 +259,19 @@ export default function GeraetePage() {
 
   async function entitaetVerschieben(entityId: string, vonGeraet: Geraet, zielSchluessel: string) {
     const ziel = (seite?.geraete ?? []).find((g) => g.schluessel === zielSchluessel)
-    await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: zielSchluessel })
+    // Nur nach Erfolg „steht jetzt bei …" — vorher stand das auch dann da,
+    // wenn das Backend abgelehnt hatte.
+    if (!await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: zielSchluessel })) {
+      setLetzte(null)
+      return
+    }
     setLetzte({
       text: zielSchluessel === ''
         ? `${entityId} steht wieder dort, wo Home Assistant sie zählt.`
         : `${entityId} steht jetzt bei „${ziel?.name ?? zielSchluessel}".`,
       // Zurueck heisst: wieder dem Geraet zuschlagen, aus dem sie kam.
       zurueck: async () => {
-        await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: vonGeraet.schluessel })
-        setLetzte(null)
+        if (await schreiben('/api/geraete/entitaet', 'PUT', { entityId, schluessel: vonGeraet.schluessel })) setLetzte(null)
       },
     })
   }
@@ -259,10 +280,10 @@ export default function GeraetePage() {
     setSpeichert(true)
     try {
       setSeite(await apiFetch<Seite>(`/api/geraete/${encodeURIComponent(geraet.schluessel)}/korrektur`, { method: 'DELETE' }))
-      setFehler(null)
+      setAktionsFehler(null)
       setBearbeitet(null)
     } catch (caught) {
-      setFehler(formatApiError(caught, 'Das Zurücksetzen hat nicht geklappt.'))
+      setAktionsFehler(formatApiError(caught, 'Das Zurücksetzen hat nicht geklappt.'))
     } finally {
       setSpeichert(false)
     }
@@ -294,10 +315,10 @@ export default function GeraetePage() {
 
   if (laedt) return <V1Page eyebrow="Betrieb" title="Geräte & Entitäten"><V1Skeleton rows={6} label="Geräte werden geladen" /></V1Page>
 
-  if (fehler) {
+  if (ladeFehler && !seite) {
     return (
       <V1Page eyebrow="Betrieb" title="Geräte & Entitäten">
-        <V1Alert tone="critical" message={fehler} />
+        <V1Alert tone="critical" message={ladeFehler} />
       </V1Page>
     )
   }
@@ -416,6 +437,12 @@ export default function GeraetePage() {
         <V1Alert key={hinweis} tone="warn" message={hinweis} />
       ))}
 
+      {aktionsFehler && rubrikName === null && (
+        <div ref={fehlerAnker} data-audit="geraete-aktionsfehler">
+          <V1Alert tone="critical" message={aktionsFehler} />
+        </div>
+      )}
+
       {reiter === 'rollen' ? <RollenReiter modulVorwahl={modulParam} onModul={setModul} />
         : reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} />
         : reiter === 'wartung' ? <WartungReiter geraeteNamen={geraeteNamen} /> : <>
@@ -491,7 +518,7 @@ export default function GeraetePage() {
           </>
         )}
         <div className="gr-knoepfe">
-          <V1Button onClick={() => setRubrikName('')}>Rubrik anlegen</V1Button>
+          <V1Button onClick={() => { setAktionsFehler(null); setRubrikName('') }}>Rubrik anlegen</V1Button>
         </div>
       </V1Card>
 
@@ -556,12 +583,12 @@ export default function GeraetePage() {
 
       <V1Sheet
         open={rubrikName !== null}
-        onClose={() => setRubrikName(null)}
+        onClose={() => { setAktionsFehler(null); setRubrikName(null) }}
         title="Rubrik anlegen"
         subtitle="Ein Fach für Geräte, die zusammengehören — etwa alle Kameras."
         footer={
           <div className="gr-knoepfe">
-            <V1Button onClick={() => setRubrikName(null)}>Abbrechen</V1Button>
+            <V1Button onClick={() => { setAktionsFehler(null); setRubrikName(null) }}>Abbrechen</V1Button>
             <V1Button
               variant="primary"
               disabled={speichert || (rubrikName ?? '').trim() === ''}
@@ -572,6 +599,7 @@ export default function GeraetePage() {
           </div>
         }
       >
+        {aktionsFehler && <V1Alert tone="critical" message={aktionsFehler} />}
         <label className="v1-field">
           <span>Name</span>
           <input

@@ -9,6 +9,7 @@ import { useTentSparklines } from '../features/live/useTentSparklines'
 import { layoutIsEmpty, seedLayout, type DashboardLayout } from '../features/live/dashboard-layout'
 import { buildPhaseTimeline, currentPhaseLabel } from '../features/grows/phase-timeline'
 import { decimalsForMetric, kachelUrteil } from '../features/live/metric-tile-model'
+import { messZeitpunkt } from '../features/live/mess-zeitpunkt'
 import '../features/live/live-screen.css'
 import { V1Skeleton } from '../components/v1'
 import {
@@ -200,7 +201,7 @@ function LiveDashboardPage() {
   const timeline = buildPhaseTimeline(primaryGrow)
 
   const lastMeasurement = primaryGrow?.latestMeasurementAt
-    ? formatTime(primaryGrow.latestMeasurementAt)
+    ? messZeitpunkt(primaryGrow.latestMeasurementAt) || null
     : null
   // Aus dem Zeitstrahl, nicht selbst gerechnet: die eigene Fassung zählte ab
   // Startdatum (Keimzeit inklusive) und nannte jede Phase so, wie die letzte
@@ -432,12 +433,6 @@ function LiveDashboardPage() {
 }
 
 
-/** „09:30" — die Uhrzeit reicht, das Datum steht im Journal. */
-function formatTime(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(date)
-}
 
 /** „Tag 26" seit dem Start. */
 

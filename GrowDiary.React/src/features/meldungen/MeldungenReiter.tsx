@@ -17,7 +17,10 @@ type Zielwerte = { werte: Array<{ name: string; meldet: boolean; regel: { aktiv:
  * sie gerade dann melden sollen, wenn Grow OS steht.
  */
 export function MeldungenReiter() {
-  const [waechter, setWaechter] = useState<HaWaechter[] | null>(null)
+  // `undefined` = lädt noch, `null` = Home Assistant hat nicht geantwortet.
+  // Vorher hieß beides `null`, und während des Ladens stand schon „nicht
+  // erreichbar" da.
+  const [waechter, setWaechter] = useState<HaWaechter[] | null | undefined>(undefined)
   const [ziele, setZiele] = useState<Zielwerte | null>(null)
 
   useEffect(() => {
@@ -57,7 +60,8 @@ export function MeldungenReiter() {
       <NotificationsPage />
 
       <V1Section title="Aus Home Assistant · nur Ansicht">
-        {waechter == null && <V1Card>Home Assistant ist gerade nicht erreichbar.</V1Card>}
+        {waechter === undefined && <V1Card>Wächter werden aus Home Assistant gelesen …</V1Card>}
+        {waechter === null && <V1Card>Home Assistant ist gerade nicht erreichbar.</V1Card>}
         {waechter?.length === 0 && <V1Card>In Home Assistant gibt es keine Wächter-Automation.</V1Card>}
         <div style={{ display: 'grid', gap: 12 }} data-audit="ha-waechter">
           {waechter?.map((w) => (
