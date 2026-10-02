@@ -369,3 +369,33 @@ export const WOERTERBUECHER = {
   mutterzustand: MUTTERZUSTAND_NAMEN,
   quarantaene: QUARANTAENE_NAMEN,
 }
+
+/**
+ * Zustände, wie Home Assistant sie liefert — allgemein und für Klimageräte
+ * (`climate.*`: `cool`, `heat_cool` …).
+ *
+ * Bis zum 02.10.2026 standen sie roh auf der Steuerungsseite: bei der
+ * Probeschaltung „unavailable", beim Kühler „heat_cool". Zahlen gehören nicht
+ * hierher, die formatiert `haWert()`.
+ */
+const HA_ZUSTAND_NAMEN: Record<string, string> = {
+  on: 'an',
+  off: 'aus',
+  unavailable: 'nicht erreichbar',
+  unknown: 'unbekannt',
+  cool: 'kühlt',
+  heat: 'heizt',
+  heat_cool: 'heizt und kühlt',
+  auto: 'automatisch',
+  dry: 'entfeuchtet',
+  fan_only: 'nur Lüfter',
+  idle: 'bereit',
+  cooling: 'kühlt',
+  heating: 'heizt',
+}
+
+/** „unavailable" wird „nicht erreichbar", „heat_cool" wird „heizt und kühlt". */
+export function haZustandName(wert: string | null | undefined): string {
+  if (!wert) return '–'
+  return ohneSchreibweise(HA_ZUSTAND_NAMEN, wert.trim())
+}

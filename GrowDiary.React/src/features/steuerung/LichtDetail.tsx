@@ -6,6 +6,8 @@ import type { LichtEinstellungen, LichtReiter, LichtSeite, SteuerungModul } from
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { befehlsMeldung, speicherMeldung } from './licht-meldungen'
+import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
+import { entwurfAbgleichen, stufeAusFeld } from './licht-bedienung'
 
 /**
  * Fork AI: Steuerung › Licht — die Bedienung der LED, die bisher als eigene
@@ -35,6 +37,9 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
   const [meldung, setMeldung] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [arbeitet, setArbeitet] = useState(false)
+  // Was gerade im Stufenfeld steht, solange jemand tippt — `null` heißt: das
+  // Feld zeigt den Livewert. Gesendet wird erst beim Verlassen oder mit Enter.
+  const [stufeText, setStufeText] = useState<string | null>(null)
 
   /** Nachladen im Takt — hier steht nur das Auffrischen, nicht der erste Abruf. */
   const auffrischen = useCallback(async () => {
@@ -82,13 +87,17 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
 
   const speichern = async () => {
     if (!entwurf) return
+    // Ein geleertes Zahlenfeld wäre NaN, im JSON `null` — das Backend kann es
+    // nicht binden und meldet „Es wurde nichts übergeben.". Vorher sperren.
+    const leer = leereZahlenfelder(entwurf)
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<LichtSeite>('/api/steuerung/licht', { method: 'PUT', body: JSON.stringify(entwurf) })
       setSeite(zurueck); setEntwurf(zurueck.einstellungen); setFehler(null)
       setMeldung(speicherMeldung(zurueck.haAngenommen))
     } catch (caught) {
-      const felder = (caught as { fields?: Record<string, string> })?.fields
+      const felder = feldFehlerAus(caught)
       if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
@@ -103,7 +112,12 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
         method: 'POST',
         body: JSON.stringify({ art, preset: daten?.preset ?? null, stufe: daten?.stufe ?? null }),
       })
-      setSeite(zurueck); setEntwurf(zurueck.einstellungen); setFehler(null)
+      // Ein ungespeicherter Entwurf bleibt — aus der Antwort kommt nur, was
+      // der Befehl geändert und niemand angefasst hat.
+      const alt = seite?.einstellungen
+      setSeite(zurueck)
+      setEntwurf((vorher) => (vorher && alt ? entwurfAbgleichen(vorher, alt, zurueck.einstellungen) : zurueck.einstellungen))
+      setFehler(null)
       setMeldung(befehlsMeldung(art, zurueck.haAngenommen))
     } catch (caught) {
       setFehler(formatApiError(caught, 'Der Befehl konnte nicht gesendet werden.'))
@@ -119,6 +133,18 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
 
   const live = seite.live
   const setz = <K extends keyof LichtEinstellungen>(feld: K, wert: LichtEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
+  const stufeJetzt = live.stufe ?? entwurf.stufe
+  const stufeSenden = () => {
+    if (stufeText == null) return
+    const wert = stufeAusFeld(stufeText)
+    if (wert == null) {
+      setFeldFehler((bisher) => ({ ...bisher, Stufe: 'Bitte eine ganze Zahl von 1 bis 10 eintragen.' }))
+      return
+    }
+    setFeldFehler((bisher) => Object.fromEntries(Object.entries(bisher).filter(([name]) => name !== 'Stufe')))
+    setStufeText(null)
+    if (wert !== stufeJetzt) void befehl('stufe', { stufe: wert })
+  }
   const offen = live.unbestaetigt.length > 0
   const gescheitert = live.fehlgeschlagen.length > 0
 
@@ -244,10 +270,11 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
             <div className="st-feldzeile is-gestapelt">
               <span className="st-etikett">
                 Leistungsstufe
-                <small>1 bis 10. Wirkt sofort, unabhängig von der Betriebsart.</small>
+                <small>1 bis 10. Wirkt, sobald du das Feld verlässt oder Enter drückst — unabhängig von der Betriebsart.</small>
+                {feldFehler.Stufe && <span className="st-fehler">{feldFehler.Stufe}</span>}
               </span>
               <span className="st-eingaben">
-                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: Math.max(1, (live.stufe ?? entwurf.stufe) - 1) })} disabled={arbeitet}>−</V1Button>
+                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: Math.max(1, stufeJetzt - 1) })} disabled={arbeitet}>−</V1Button>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -255,13 +282,18 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
                   max={10}
                   step={1}
                   aria-label="Leistungsstufe"
-                  value={live.stufe ?? entwurf.stufe}
-                  onChange={(e) => {
-                    const wert = Number(e.target.value)
-                    if (Number.isFinite(wert) && wert >= 1 && wert <= 10) void befehl('stufe', { stufe: wert })
+                  aria-invalid={feldFehler.Stufe ? true : undefined}
+                  value={stufeText ?? stufeJetzt}
+                  onChange={(e) => setStufeText(e.target.value)}
+                  onBlur={stufeSenden}
+                  onKeyDown={(e) => {
+                    // Enter schickt über das Verlassen des Felds — so geht der
+                    // Befehl genau einmal hinaus, nicht bei Enter UND Blur.
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                    if (e.key === 'Escape') { setStufeText(null); e.currentTarget.blur() }
                   }}
                 />
-                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: Math.min(10, (live.stufe ?? entwurf.stufe) + 1) })} disabled={arbeitet}>+</V1Button>
+                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: Math.min(10, stufeJetzt + 1) })} disabled={arbeitet}>+</V1Button>
               </span>
             </div>
           </V1Card>
@@ -376,7 +408,10 @@ function Zahl({ label, hinweis, einheit, wert, onChange, fehler, schritt = 1 }: 
           value={Number.isFinite(wert) ? wert : ''}
           aria-label={label}
           aria-invalid={fehler ? true : undefined}
-          onChange={(e) => onChange(e.target.value === '' ? Number.NaN : Number(e.target.value))}
+          onChange={(e) => {
+            const neu = zahlAusFeld(e.target.value)
+            if (neu != null) onChange(neu)
+          }}
         />
         {einheit && <span className="st-einheit">{einheit}</span>}
       </span>
