@@ -95,9 +95,10 @@ function GrowSetupPage() {
             ? apiFetch<PlantInstanceDto[]>(`/api/plants?growId=${growId}`, { signal: controller.signal })
                 .catch(() => [] as PlantInstanceDto[])
             : Promise.resolve([] as PlantInstanceDto[]),
-          // 404 heisst „kein Plan" — kein Fehler.
+          // „kein Plan" kommt als 204 (leerErlaubt) — kein Fehler, auch nicht in der Konsole.
           isEditing && growId
-            ? apiFetch<PlanStand>(`/api/grows/${growId}/plan`, { signal: controller.signal }).catch(() => null)
+            ? apiFetch<PlanStand | undefined>(`/api/grows/${growId}/plan?leerErlaubt=true`, { signal: controller.signal })
+                .then((p) => p ?? null).catch(() => null)
             : Promise.resolve(null),
         ])
         if (controller.signal.aborted) return
@@ -205,7 +206,7 @@ function GrowSetupPage() {
       // speichern — dann ist das Programm dort schon gleich.
       const neuesProgramm = selectedProgram?.key ?? null
       if (isEditing && growId && neuesProgramm && wechselNoetig(programmVorher, neuesProgramm, true)) {
-        const plan = await apiFetch<{ eigeneAenderungen: number }>(`/api/grows/${growId}/plan`).catch(() => null)
+        const plan = await apiFetch<{ eigeneAenderungen: number } | undefined>(`/api/grows/${growId}/plan?leerErlaubt=true`).catch(() => null)
         if (plan) {
           if (aenderungenBehalten === undefined && plan.eigeneAenderungen > 0) {
             setWechsel({ anzahl: plan.eigeneAenderungen, name: selectedProgram?.name ?? neuesProgramm })

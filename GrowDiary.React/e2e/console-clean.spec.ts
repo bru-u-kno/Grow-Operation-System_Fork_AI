@@ -18,7 +18,10 @@ import { test, expect } from '@playwright/test'
  */
 const ROUTEN = [
   '/', '/messung', '/addback', '/aufgaben',
-  '/grows', '/grows/1', '/grows/new', '/diagnose', '/journal', '/sorten', '/archiv',
+  '/grows', '/grows/1', '/grows/new',
+  // Das Formular fragt bei jedem Grow nach dem Plan: einmal mit (1), einmal
+  // ohne (2) — „kein Plan" darf keinen 404 in die Konsole schreiben (02.10.2026).
+  '/grows/1/setup', '/grows/2/setup', '/diagnose', '/journal', '/sorten', '/archiv',
   '/zelte', '/zelte/1', '/hydro', '/sensoren', '/regeln', '/home-assistant',
   '/wissen', '/settings', '/start', '/release',
   '/regeln?tab=automatik', '/regeln?tab=ki',

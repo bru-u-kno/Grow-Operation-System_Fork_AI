@@ -151,9 +151,18 @@ public sealed class GrowPlanApiController : ApiControllerBase
     }
 
     /// <summary>Ein Stand des Plans: <c>arbeit</c> (Standard), <c>start</c> oder <c>ende</c>.</summary>
+    /// <param name="growId">Der Grow.</param>
+    /// <param name="stand">Welcher Stand.</param>
+    /// <param name="leerErlaubt">
+    /// Fork AI (02.10.2026): „kein Plan" ist für den Aufrufer eine erwartete Antwort
+    /// (das Grow-Formular fragt bei jedem Grow) — dann 204 statt 404. Ein 404
+    /// steht im Browser als Fehler in der Konsole, und <c>console-clean</c> zählt
+    /// ihn zu Recht.
+    /// </param>
     [HttpGet]
     [ProducesResponseType(typeof(GrowPlanStandDto), StatusCodes.Status200OK)]
-    public ActionResult<GrowPlanStandDto> Get(int growId, [FromQuery] string stand = GrowPlanStaende.Arbeit)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public ActionResult<GrowPlanStandDto> Get(int growId, [FromQuery] string stand = GrowPlanStaende.Arbeit, [FromQuery] bool leerErlaubt = false)
     {
         if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
         if (stand is not (GrowPlanStaende.Start or GrowPlanStaende.Arbeit or GrowPlanStaende.Ende or GrowPlanStaende.Basis))
@@ -162,7 +171,9 @@ public sealed class GrowPlanApiController : ApiControllerBase
         // Fork AI (02.10.2026): die Woche, die die Phase schon erreicht hat, steht sofort im Plan.
         if (stand == GrowPlanStaende.Arbeit) _plaene.WochenNachziehen(grow, DateTime.Today);
         if (_plaene.Stand(growId, stand) is not { } gefunden)
-            return NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan in diesem Stand.");
+            return leerErlaubt
+                ? NoContent()
+                : NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan in diesem Stand.");
 
         return Ok(Dto(gefunden));
     }
