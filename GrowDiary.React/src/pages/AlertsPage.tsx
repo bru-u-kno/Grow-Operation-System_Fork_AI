@@ -167,8 +167,8 @@ function AlertsPage() {
         const ziel = ziele.get(metric.key)
         if (!ziel) continue
         const zeile = next[metric.key]
-        const min = zeile.min === '' && ziel.targetMin != null ? String(ziel.targetMin) : zeile.min
-        const max = zeile.max === '' && ziel.targetMax != null ? String(ziel.targetMax) : zeile.max
+        const min = zeile.min === '' && ziel.targetMin != null ? feldText(ziel.targetMin) : zeile.min
+        const max = zeile.max === '' && ziel.targetMax != null ? feldText(ziel.targetMax) : zeile.max
         next[metric.key] = { ...zeile, min, max, enabled: zeile.enabled || min !== '' || max !== '' }
       }
       return next

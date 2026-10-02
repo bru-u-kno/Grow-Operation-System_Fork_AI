@@ -6,6 +6,7 @@ import type { CreateTentRequest, GrowSummary, HydroSetupDto, TentDependencyError
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1LinkButton, V1Page, V1Section, V1Switch } from '../components/v1'
 import { toNullableInt, toNullableString } from '../components/v1-utils'
 import { classNames } from '../utils'
+import { maschinenZahl } from '../zahlenfeld'
 
 const tentTypes: TentType[] = ['Production', 'Mother', 'Propagation', 'Quarantine', 'MultiPurpose']
 
@@ -581,10 +582,18 @@ function getGrowsForTent(items: GrowSummary[], tentId: number) { return items.fi
 function mapSensors(tent: TentDto): UpdateTentSensorRequest[] { return tent.sensors.map((sensor) => ({ id: sensor.id, metricType: sensor.metricType, haEntityId: sensor.haEntityId, displayLabel: sensor.displayLabel, isActive: sensor.isActive })) }
 function createDraft(displayOrder = 1): TentDraft { return { name: '', kind: 'Grow Tent', tentType: 'Production', notes: '', displayOrder: String(displayOrder), widthCm: '', depthCm: '', tentHeightCm: '', lightType: '', lightWatt: '', exhaustFanCount: '', exhaustM3h: '', circulationFanCount: '', co2Available: false, hasCo2Enrichment: false, leafTempOffsetC: '-2', leafOffsetSyncService: '', leafOffsetSyncPort: '2' } }
 function createDraftFromTent(tent: TentDto): TentDraft { return { name: tent.name, kind: tent.kind, tentType: tent.tentType, notes: tent.notes ?? '', displayOrder: String(tent.displayOrder), widthCm: String(tent.widthCm ?? ''), depthCm: String(tent.depthCm ?? ''), tentHeightCm: String(tent.tentHeightCm ?? ''), lightType: tent.lightType ?? '', lightWatt: String(tent.lightWatt ?? ''), exhaustFanCount: String(tent.exhaustFanCount ?? ''), exhaustM3h: String(tent.exhaustM3h ?? ''), circulationFanCount: String(tent.circulationFanCount ?? ''), co2Available: tent.co2Available, hasCo2Enrichment: tent.hasCo2Enrichment, leafTempOffsetC: String(tent.leafTempOffsetC ?? 0), leafOffsetSyncService: tent.leafOffsetSyncService ?? '', leafOffsetSyncPort: String(tent.leafOffsetSyncPort ?? 2) } }
-// The leaf offset is a decimal (e.g. 2.5 °C), so it must not go through the int helper.
+/**
+ * Der Blatt-Versatz ist eine Dezimalzahl (z. B. −2,5 °C) und darf deshalb nicht
+ * durch den Ganzzahl-Helfer.
+ *
+ * Gelesen mit der MASCHINEN-Regel, nicht der deutschen: das Feld ist ein
+ * `<input type="number">`, und der Browser liefert dessen Wert immer in der
+ * technischen Form („-2.5"), gleich was auf dem Schirm steht. Leer oder unlesbar
+ * ergibt wie bisher 0 — kein Versatz.
+ */
 function parseOffset(value: string): number {
-  const parsed = Number.parseFloat(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? Math.min(0, Math.max(-10, parsed)) : 0
+  const parsed = maschinenZahl(value)
+  return parsed != null ? Math.min(0, Math.max(-10, parsed)) : 0
 }
 
 function draftToRequest(draft: TentDraft) { return { name: draft.name.trim(), kind: draft.kind.trim() || 'Grow Tent', tentType: draft.tentType, notes: toNullableString(draft.notes), displayOrder: toNullableInt(draft.displayOrder) ?? 0, accentColor: '#22c55e', widthCm: toNullableInt(draft.widthCm), depthCm: toNullableInt(draft.depthCm), tentHeightCm: toNullableInt(draft.tentHeightCm), lightType: toNullableString(draft.lightType), lightWatt: toNullableInt(draft.lightWatt), lightController: null, lightControllerEntityId: null, exhaustFanCount: toNullableInt(draft.exhaustFanCount), exhaustM3h: toNullableInt(draft.exhaustM3h), circulationFanCount: toNullableInt(draft.circulationFanCount), hvacController: null, hvacControllerEntityId: null, co2Available: draft.co2Available, hasCo2Enrichment: draft.hasCo2Enrichment, cameraEntityId: null, leafTempOffsetC: parseOffset(draft.leafTempOffsetC), leafOffsetSyncService: draft.leafOffsetSyncService.trim(), leafOffsetSyncPort: toNullableInt(draft.leafOffsetSyncPort) ?? 2 } }

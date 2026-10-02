@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
 import type { CreateHydroSetupRequest, HydroSetupDto, ReservoirPosition, SelectableHydroStyle } from '../../types'
 import { V1Alert, V1Button, V1Field } from '../../components/v1'
+import { istUnlesbar, zahlOderNull } from '../../zahlenfeld'
 import { SystemPlan } from './SystemPlan'
 import { buildSystemPlan, layoutTypeFromRows, rowsFromLayoutType } from './system-plan-model'
 import { useHydroSetups } from './useHydroSetups'
@@ -106,6 +107,9 @@ export default function HydroEditorPage() {
 
   async function save() {
     if (problems.length > 0) { setError(problems[0]); return }
+    // Bisher wurde Unlesbares still zu `null` — die Luftpumpe stand danach ohne
+    // Leistung da, mit Erfolgsmeldung.
+    if (istUnlesbar(draft.airPumpLitersPerHour)) { setError('„Luftpumpe (L/h)" ist keine Zahl. Bitte korrigieren oder das Feld leeren.'); return }
     setSaving(true)
     setError(null)
     try {
@@ -121,7 +125,8 @@ export default function HydroEditorPage() {
         reservoirPosition: isRdwc ? draft.reservoirPosition : 'None',
         hasCirculationPump: draft.hasCirculationPump,
         hasAirPump: draft.hasAirPump,
-        airPumpLitersPerHour: draft.airPumpLitersPerHour.trim() === '' ? null : Number(draft.airPumpLitersPerHour.replace(',', '.')) || null,
+        // `|| null`: eine getippte 0 heisst „keine Angabe", wie bisher.
+        airPumpLitersPerHour: zahlOderNull(draft.airPumpLitersPerHour) || null,
         airStoneCount: draft.airStoneCount,
         hasChiller: draft.hasChiller,
         hasUvSterilizer: draft.hasUvSterilizer,

@@ -27,13 +27,17 @@ public sealed record AcGeraet(
 
 /// <summary>Was der Test-Bereich über ein Gerät weiss.</summary>
 /// <param name="Stufe">Die eingestellte Stufe 0–10, oder <c>null</c> wenn nicht lesbar.</param>
-/// <param name="Modus">Der aktive Modus als Text, oder <c>null</c>.</param>
+/// <param name="Modus">Der aktive Modus als Kennung (<see cref="AcModi"/>), oder <c>null</c>.</param>
 /// <param name="EinZeit">Die Ein-Zeit, die der Controller MELDET — nicht die gewuenschte.</param>
 /// <param name="AusZeit">Dasselbe fuer die Aus-Zeit.</param>
 /// <param name="Fehler">Warum nichts gelesen werden konnte.</param>
 public sealed record AcGeraetStand(
     AcGeraet Geraet, double? Stufe, string? Modus,
-    string? EinZeit, string? AusZeit, string? Fehler);
+    string? EinZeit, string? AusZeit, string? Fehler)
+{
+    /// <summary>Der Modus auf Deutsch, oder <c>null</c>, wenn keiner gelesen wurde.</summary>
+    public string? ModusName => Modus is null ? null : AcModi.Name(Modus);
+}
 
 /// <summary>Was Grow OS ueber die Lichtzeiten dieses Zelts schon weiss.</summary>
 /// <remarks>

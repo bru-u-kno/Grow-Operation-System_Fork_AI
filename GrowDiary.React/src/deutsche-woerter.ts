@@ -434,34 +434,10 @@ export function haZustandName(wert: string | null | undefined): string {
   return ohneSchreibweise(HA_ZUSTAND_NAMEN, wert.trim())
 }
 
-/**
- * Die Modi eines AC-Infinity-Geräts, wie die Home-Assistant-Integration sie im
- * `select.*_aktiver_modus` anbietet.
- *
- * Die Liste ist die `options`-Liste von `select.rdwc_fan3_aktiver_modus` in der
- * Anlage des Nutzers (02.10.2026) — nicht aus dem Kopf. Bis dahin stand auf der
- * Seite „Zelt (AC-Test)" roh „On" neben „Stufe 5".
+/*
+ * Die Modi eines AC-Infinity-Geräts („On", „Timer to Off" …) stehen NICHT hier,
+ * sondern in `GrowDiary.Web/Services/AcModi.cs`: das Backend braucht die Namen
+ * selbst (Kurzzeile der Steuerungs-Übersicht) und schickt sie als `modusName`
+ * mit. Bis zum 02.10.2026 stand hier eine zweite Tabelle (`AC_MODUS_NAMEN`) —
+ * und auf der Übersicht trotzdem „Modus Auto", weil das Backend sie nicht kannte.
  */
-const AC_MODUS_NAMEN: Record<string, string> = {
-  'Off': 'aus',
-  'On': 'an',
-  'Auto': 'automatisch',
-  'Timer to On': 'Countdown bis an',
-  'Timer to Off': 'Countdown bis aus',
-  'Cycle': 'Zyklus',
-  'Schedule': 'Zeitplan',
-  'VPD': 'VPD',
-  'CO2': 'CO₂',
-  'CO2 Fan': 'CO₂-Lüfter',
-  'Moisture': 'Bodenfeuchte',
-  'Water Temp': 'Wassertemperatur',
-  'pH': 'pH',
-  'EC': 'EC',
-  'Water Detect': 'Wassermelder',
-}
-
-/** „On" wird „an", „Timer to Off" wird „Countdown bis aus". Unbekanntes bleibt stehen. */
-export function acModusName(wert: string | null | undefined): string {
-  if (!wert) return '–'
-  return ohneSchreibweise(AC_MODUS_NAMEN, wert.trim())
-}

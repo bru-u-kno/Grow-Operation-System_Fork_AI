@@ -1,4 +1,5 @@
 import type { MetricPayload } from '../../types'
+import { zahlOderNull } from '../../zahlenfeld'
 
 /**
  * Prüft die eingetippten Werte gegen die Zielbereiche — während man tippt.
@@ -70,13 +71,6 @@ const HINTS: Record<string, string> = {
   reservoirWaterTempC: 'Warmes Wasser hält weniger Sauerstoff',
 }
 
-function parse(value: string): number | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  // Deutsche Eingabe: 6,02 ist dasselbe wie 6.02.
-  const parsed = Number(trimmed.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 function format(value: number): string {
   return String(Math.round(value * 100) / 100).replace('.', ',')
@@ -119,7 +113,7 @@ export function checkDraft(draft: Record<string, string>, metrics: MetricPayload
   for (const [field, metricKey] of Object.entries(FIELD_TO_METRIC)) {
     const raw = draft[field]
     if (raw == null) continue
-    const value = parse(raw)
+    const value = zahlOderNull(raw)
     if (value == null) continue
 
     const label = LABELS[field] ?? field

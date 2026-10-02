@@ -6,6 +6,7 @@ import type { PhenoHuntDto, PhenoPlantDto, PhenoWeightsDto } from '../types/phen
 import { PhenoSheetEditor } from '../features/pheno/PhenoSheetEditor'
 import type { SheetDraft } from '../features/pheno/pheno-sheet-model'
 import { formatNumber } from '../utils'
+import { feldText, unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 import { V1Page, V1Card, V1Field, V1Button, V1Alert, V1Empty, V1Skeleton } from '../components/v1'
 
 type StrainDraft = {
@@ -54,32 +55,33 @@ function draftFrom(strain: StrainDto): StrainDraft {
     name: strain.name,
     breeder: strain.breeder ?? '',
     dominance: strain.dominance,
-    flowerWeeksMin: strain.flowerWeeksMin != null ? String(strain.flowerWeeksMin) : '',
-    flowerWeeksMax: strain.flowerWeeksMax != null ? String(strain.flowerWeeksMax) : '',
-    nutrientDemandFactor: strain.nutrientDemandFactor != null ? String(strain.nutrientDemandFactor) : '',
-    stretchFactor: strain.stretchFactor != null ? String(strain.stretchFactor) : '',
-    vpdPreferenceShift: strain.vpdPreferenceShift != null ? String(strain.vpdPreferenceShift) : '',
+    flowerWeeksMin: feldText(strain.flowerWeeksMin),
+    flowerWeeksMax: feldText(strain.flowerWeeksMax),
+    nutrientDemandFactor: feldText(strain.nutrientDemandFactor),
+    stretchFactor: feldText(strain.stretchFactor),
+    vpdPreferenceShift: feldText(strain.vpdPreferenceShift),
     notes: strain.notes ?? '',
     seedKind: strain.seedKind ?? '',
-    thcPercent: strain.thcPercent != null ? String(strain.thcPercent).replace('.', ',') : '',
-    cbdPercent: strain.cbdPercent != null ? String(strain.cbdPercent).replace('.', ',') : '',
-    sativaPercent: strain.sativaPercent != null ? String(strain.sativaPercent) : '',
+    thcPercent: feldText(strain.thcPercent),
+    cbdPercent: feldText(strain.cbdPercent),
+    sativaPercent: feldText(strain.sativaPercent),
     taste: strain.taste ?? '',
     effect: strain.effect ?? '',
     aroma: strain.aroma ?? '',
-    yieldIndoorGm2: strain.yieldIndoorGm2 != null ? String(strain.yieldIndoorGm2) : '',
-    heightIndoorCm: strain.heightIndoorCm != null ? String(strain.heightIndoorCm) : '',
+    yieldIndoorGm2: feldText(strain.yieldIndoorGm2),
+    heightIndoorCm: feldText(strain.heightIndoorCm),
   }
 }
 
-function num(value: string): number | null {
-  const parsed = Number.parseFloat(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
-}
-
+/**
+ * Eine ganze Zahl — nach derselben Leseregel wie alle anderen Felder.
+ *
+ * Hier stand `parseInt`: „1.200" g/m² wurde zu 1, weil `parseInt` am Punkt
+ * aufhört. Nachkommastellen werden wie bisher abgeschnitten („12,5" → 12).
+ */
 function int(value: string): number | null {
-  const parsed = Number.parseInt(value, 10)
-  return Number.isFinite(parsed) ? parsed : null
+  const zahl = zahlOderNull(value)
+  return zahl == null ? null : Math.trunc(zahl)
 }
 
 function draftToRequest(draft: StrainDraft): CreateStrainRequest {
@@ -89,13 +91,13 @@ function draftToRequest(draft: StrainDraft): CreateStrainRequest {
     dominance: draft.dominance,
     flowerWeeksMin: int(draft.flowerWeeksMin),
     flowerWeeksMax: int(draft.flowerWeeksMax),
-    nutrientDemandFactor: num(draft.nutrientDemandFactor),
-    stretchFactor: num(draft.stretchFactor),
-    vpdPreferenceShift: num(draft.vpdPreferenceShift),
+    nutrientDemandFactor: zahlOderNull(draft.nutrientDemandFactor),
+    stretchFactor: zahlOderNull(draft.stretchFactor),
+    vpdPreferenceShift: zahlOderNull(draft.vpdPreferenceShift),
     notes: draft.notes.trim() || null,
     seedKind: draft.seedKind || null,
-    thcPercent: num(draft.thcPercent),
-    cbdPercent: num(draft.cbdPercent),
+    thcPercent: zahlOderNull(draft.thcPercent),
+    cbdPercent: zahlOderNull(draft.cbdPercent),
     sativaPercent: int(draft.sativaPercent),
     taste: draft.taste.trim() || null,
     effect: draft.effect.trim() || null,
@@ -371,6 +373,18 @@ function StrainsPage() {
   async function save() {
     if (draft.name.trim() === '') {
       setError('Bitte einen Sortennamen eingeben.')
+      return
+    }
+    // `parseFloat` las „22,5 %" bisher als 22,5 und „6,2x" als 6,2 — der Rest
+    // verschwand ohne Meldung.
+    const unlesbar = unlesbarMeldung(unlesbareFelder([
+      [draft.flowerWeeksMin, 'Blüte von (Wochen)'], [draft.flowerWeeksMax, 'Blüte bis (Wochen)'],
+      [draft.thcPercent, 'THC (%)'], [draft.cbdPercent, 'CBD (%)'], [draft.sativaPercent, 'Sativa-Anteil (%)'],
+      [draft.yieldIndoorGm2, 'Ertrag innen (g/m²)'], [draft.heightIndoorCm, 'Höhe innen (cm)'],
+      [draft.nutrientDemandFactor, 'Nährstoffbedarf'], [draft.stretchFactor, 'Streckung'], [draft.vpdPreferenceShift, 'VPD-Vorliebe (kPa)'],
+    ]))
+    if (unlesbar) {
+      setError(unlesbar)
       return
     }
     setSaving(true)

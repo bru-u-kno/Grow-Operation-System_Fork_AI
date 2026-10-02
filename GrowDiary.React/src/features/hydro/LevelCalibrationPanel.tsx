@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../../api'
 import { V1Alert, V1Button, V1Card, V1Field } from '../../components/v1'
+import { zahlOderNull } from '../../zahlenfeld'
 import './level-calibration.css'
 
 /**
@@ -100,8 +101,9 @@ export function LevelCalibrationPanel(
   }
 
   async function bestaetigen() {
-    const menge = Number(liters.replace(',', '.'))
-    if (!Number.isFinite(menge) || menge <= 0) {
+    // Leer, unlesbar und „0" landen alle in derselben Meldung — wie bisher.
+    const menge = zahlOderNull(liters)
+    if (menge == null || menge <= 0) {
       setError('Trag ein, wie viel Wasser wirklich hineingegangen ist.')
       return
     }

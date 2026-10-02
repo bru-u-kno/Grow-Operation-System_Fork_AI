@@ -6,6 +6,7 @@ import { PumpGraphic } from '../features/dosing/PumpGraphic'
 import { MAX_CALIBRATION_SECONDS, runSecondsForPump, secondsForTarget, targetForPump } from '../features/dosing/calibration'
 import '../features/dosing/dosing.css'
 import { classNames } from '../utils'
+import { zahlOderNull } from '../zahlenfeld'
 
 /**
  * Dosierpumpen — Stufe 1: nichts läuft von allein.
@@ -156,8 +157,9 @@ function DosingPage() {
   }, [refresh])
 
   async function dosieren(pump: Pump) {
-    const ml = Number((doseMl[pump.id] ?? '').replace(',', '.'))
-    if (!Number.isFinite(ml) || ml <= 0) {
+    // Leer, unlesbar und 0 landen in derselben Meldung — wie bisher.
+    const ml = zahlOderNull(doseMl[pump.id] ?? '')
+    if (ml == null || ml <= 0) {
       setError('Trag eine Menge in Millilitern ein.')
       return
     }
@@ -236,8 +238,8 @@ function DosingPage() {
   }
 
   async function kalibrierungSpeichern(pump: Pump, seconds: number) {
-    const measuredMl = Number(calibMl.replace(',', '.'))
-    if (!Number.isFinite(measuredMl) || measuredMl <= 0) {
+    const measuredMl = zahlOderNull(calibMl)
+    if (measuredMl == null || measuredMl <= 0) {
       setError('Trag ein, was im Becher steht.')
       return
     }

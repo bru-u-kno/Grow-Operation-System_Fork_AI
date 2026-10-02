@@ -369,12 +369,18 @@ public sealed class SteuerungApiController : ApiControllerBase
         return seite;
     }
 
-    private static string LichtKurz(LichtLive licht)
+    /// <summary>Die Kurzzeile der Licht-Kachel auf der Steuerungs-Übersicht.</summary>
+    /// <remarks>
+    /// Seltene Modi stehen mit ihrem deutschen Namen da (<see cref="AcModi.Name"/>).
+    /// Bis zum 02.10.2026 stand hier <c>licht.Modus</c> selbst — „Modus Auto",
+    /// roh, weil die Übersetzung nur die Oberfläche kannte.
+    /// </remarks>
+    public static string LichtKurz(LichtLive licht)
     {
         var stufe = licht.Stufe?.ToString(CultureInfo.InvariantCulture) ?? "–";
-        if (licht.Modus == LichtSteuerungService.Modi.Aus) return $"Aus · Stufe {stufe}";
-        if (licht.Modus == LichtSteuerungService.Modi.An) return $"Dauerlicht · Stufe {stufe}";
-        if (licht.Modus != LichtSteuerungService.Modi.Zeitplan) return $"Modus {licht.Modus ?? "–"} · Stufe {stufe}";
+        if (licht.Modus == AcModi.Aus) return $"Aus · Stufe {stufe}";
+        if (licht.Modus == AcModi.An) return $"Dauerlicht · Stufe {stufe}";
+        if (licht.Modus != AcModi.Zeitplan) return $"Modus {licht.ModusName} · Stufe {stufe}";
 
         var preset = licht.AktivesPreset switch
         {

@@ -3,6 +3,7 @@ import type { Dispatch, FormEvent, SetStateAction } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../../api'
 import { TASKS_CHANGED_EVENT } from '../../useNavCounts'
+import { zahlOderNull } from '../../zahlenfeld'
 import type {
   GrowActionResultDto,
   GrowDetail,
@@ -21,7 +22,6 @@ import {
   emptyPhotoForm,
   emptyTaskForm,
   isNotFound,
-  toNullableNumber,
 } from './grow-detail-model'
 
 type UseGrowDetailMutationsArgs = {
@@ -74,11 +74,11 @@ export function useGrowDetailMutations({
           takenAtLocal: measurementForm.takenAtLocal,
           stage: measurementForm.stage,
           source: measurementForm.source,
-          airTemperatureC: toNullableNumber(measurementForm.airTemperatureC),
-          humidityPercent: toNullableNumber(measurementForm.humidityPercent),
-          reservoirPh: toNullableNumber(measurementForm.reservoirPh),
-          reservoirEc: toNullableNumber(measurementForm.reservoirEc),
-          reservoirWaterTempC: toNullableNumber(measurementForm.reservoirWaterTempC),
+          airTemperatureC: zahlOderNull(measurementForm.airTemperatureC),
+          humidityPercent: zahlOderNull(measurementForm.humidityPercent),
+          reservoirPh: zahlOderNull(measurementForm.reservoirPh),
+          reservoirEc: zahlOderNull(measurementForm.reservoirEc),
+          reservoirWaterTempC: zahlOderNull(measurementForm.reservoirWaterTempC),
           notes: measurementForm.notes || null,
         }),
       })

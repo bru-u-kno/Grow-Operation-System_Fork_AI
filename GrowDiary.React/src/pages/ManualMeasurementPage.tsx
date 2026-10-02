@@ -13,7 +13,7 @@ import { checkDraft, type CheckSeverity } from '../features/measurement/live-che
 import '../features/measurement/measurement-edit.css'
 import { formatNumber, toLocalInputValue } from '../utils'
 import { FOTO_TAGS, PHASEN, fotoTagName, phaseName } from '../deutsche-woerter'
-import { istUnlesbar, zahlOderNull } from '../zahlenfeld'
+import { feldText, istUnlesbar, maschinenZahl, zahlOderNull } from '../zahlenfeld'
 
 type NumericKey = Exclude<keyof MeasurementDraft, 'takenAtLocal' | 'stage' | 'source' | 'notes' | 'solutionChange'>
 
@@ -126,13 +126,14 @@ const LIVE_TO_DRAFT: Partial<Record<string, NumericKey>> = {
  * der Punkt ins Feld geschrieben. Unter der Zeile „Aus Home Assistant
  * vorbefuellt" standen dann „5.82" und „19.2" — direkt neben Feldern, in die
  * der Nutzer „5,82" tippt. Gerechnet wird beim Absenden ohnehin mit
- * <code>parseNullableNumber</code>, das beides liest; der Punkt war nur auf
+ * <code>zahlOderNull</code>, das beides liest; der Punkt war nur auf
  * dem Schirm.
  */
 function normalizeLiveValue(value: string): string | null {
-  const cleaned = value.trim().replace(',', '.')
-  if (cleaned === '' || cleaned === '–' || cleaned === '-') return null
-  return Number.isFinite(Number(cleaned)) ? cleaned.replace('.', ',') : null
+  // Der Live-Wert ist ein Maschinenwert (Punkt = Dezimalpunkt) — gelesen mit
+  // der Maschinen-Regel, geschrieben mit Komma. „–" und „-" sind keine Zahl.
+  const zahl = maschinenZahl(value)
+  return zahl == null ? null : feldText(zahl)
 }
 
 /** forkai.99: Ein Verbrauchsartikel, so weit ihn das Messformular braucht. */
@@ -814,28 +815,28 @@ function toPayload(draft: MeasurementDraft): MeasurementUpsertPayload {
     stage: draft.stage,
     source: draft.source,
     notes: trimToNull(draft.notes),
-    airTemperatureC: parseNullableNumber(draft.airTemperatureC),
-    humidityPercent: parseNullableNumber(draft.humidityPercent),
-    heightCm: parseNullableNumber(draft.heightCm),
-    waterAmountMl: parseNullableNumber(draft.waterAmountMl),
-    runoffAmountMl: parseNullableNumber(draft.runoffAmountMl),
-    irrigationPh: parseNullableNumber(draft.irrigationPh),
-    irrigationEc: parseNullableNumber(draft.irrigationEc),
-    drainPh: parseNullableNumber(draft.drainPh),
-    drainEc: parseNullableNumber(draft.drainEc),
-    reservoirPh: parseNullableNumber(draft.reservoirPh),
-    reservoirEc: parseNullableNumber(draft.reservoirEc),
-    reservoirWaterTempC: parseNullableNumber(draft.reservoirWaterTempC),
-    reservoirLevelCm: parseNullableNumber(draft.reservoirLevelCm),
-    reservoirLevelLiters: parseNullableNumber(draft.reservoirLevelLiters),
-    dissolvedOxygenMgL: parseNullableNumber(draft.dissolvedOxygenMgL),
-    orpMv: parseNullableNumber(draft.orpMv),
-    topOffLiters: parseNullableNumber(draft.topOffLiters),
-    addbackEc: parseNullableNumber(draft.addbackEc),
+    airTemperatureC: zahlOderNull(draft.airTemperatureC),
+    humidityPercent: zahlOderNull(draft.humidityPercent),
+    heightCm: zahlOderNull(draft.heightCm),
+    waterAmountMl: zahlOderNull(draft.waterAmountMl),
+    runoffAmountMl: zahlOderNull(draft.runoffAmountMl),
+    irrigationPh: zahlOderNull(draft.irrigationPh),
+    irrigationEc: zahlOderNull(draft.irrigationEc),
+    drainPh: zahlOderNull(draft.drainPh),
+    drainEc: zahlOderNull(draft.drainEc),
+    reservoirPh: zahlOderNull(draft.reservoirPh),
+    reservoirEc: zahlOderNull(draft.reservoirEc),
+    reservoirWaterTempC: zahlOderNull(draft.reservoirWaterTempC),
+    reservoirLevelCm: zahlOderNull(draft.reservoirLevelCm),
+    reservoirLevelLiters: zahlOderNull(draft.reservoirLevelLiters),
+    dissolvedOxygenMgL: zahlOderNull(draft.dissolvedOxygenMgL),
+    orpMv: zahlOderNull(draft.orpMv),
+    topOffLiters: zahlOderNull(draft.topOffLiters),
+    addbackEc: zahlOderNull(draft.addbackEc),
     solutionChange: draft.solutionChange,
-    ppfdMol: parseNullableNumber(draft.ppfdMol),
-    co2Ppm: parseNullableNumber(draft.co2Ppm),
-    airflowAtLeafMPerMin: parseNullableNumber(draft.airflowAtLeafMPerMin),
+    ppfdMol: zahlOderNull(draft.ppfdMol),
+    co2Ppm: zahlOderNull(draft.co2Ppm),
+    airflowAtLeafMPerMin: zahlOderNull(draft.airflowAtLeafMPerMin),
     waterFlow: draft.waterFlow || null,
   }
 }
@@ -867,8 +868,8 @@ function saturationKpa(temperatureC: number) {
 }
 
 function calculateVpd(temperatureValue: string, humidityValue: string, leafOffsetC = 0) {
-  const temperature = parseNullableNumber(temperatureValue)
-  const humidity = parseNullableNumber(humidityValue)
+  const temperature = zahlOderNull(temperatureValue)
+  const humidity = zahlOderNull(humidityValue)
   if (temperature == null || humidity == null || humidity < 0 || humidity > 100) return null
   const actual = saturationKpa(temperature) * (humidity / 100)
   const leaf = saturationKpa(temperature + leafOffsetC)
@@ -913,7 +914,7 @@ const ZAHLENFELDER: Array<[keyof MeasurementDraft, string]> = [
 /**
  * Felder, in denen etwas steht, das keine Zahl ist.
  *
- * <b>Warum es diese Prüfung braucht.</b> `parseNullableNumber` macht aus „leer"
+ * <b>Warum es diese Prüfung braucht.</b> `zahlOderNull` macht aus „leer"
  * und aus „unlesbar" dasselbe Ergebnis: `null`. Wer sich beim pH vertippt und
  * „6,2x" stehen lässt, speichert eine Messung ohne pH — und die App meldet
  * Erfolg. Der Wert ist weg, niemand hat es gesagt, und beim nächsten Blick auf
@@ -923,17 +924,11 @@ function unlesbareFelder(draft: MeasurementDraft): string[] {
   return ZAHLENFELDER
     .filter(([feld]) => {
       const roh = String(draft[feld] ?? '').trim()
-      return roh !== '' && parseNullableNumber(roh) === null
+      return roh !== '' && zahlOderNull(roh) === null
     })
     .map(([, label]) => label)
 }
 
-function parseNullableNumber(value: string) {
-  const trimmed = value.trim().replace(',', '.')
-  if (!trimmed) return null
-  const parsed = Number(trimmed)
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 function trimToNull(value: string) {
   const trimmed = value.trim()

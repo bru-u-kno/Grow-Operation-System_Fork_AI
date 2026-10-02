@@ -234,8 +234,13 @@ export type LichtEinstellungen = {
 
 export type LichtLive = {
   haErreichbar: boolean
-  /** `Off` | `On` | `Schedule` | … — die Betriebsart am Controller. */
+  /**
+   * `Off` | `On` | `Schedule` | … — die Betriebsart am Controller als KENNUNG.
+   * Zum Vergleichen mit {@link LICHT_MODI}, nie zum Anzeigen.
+   */
   modus: string | null
+  /** Der Modus auf Deutsch („automatisch", „Zyklus") — kommt aus `AcModi.Name` im Backend. */
+  modusName: string
   stufe: number | null
   einZeit: string | null
   ausZeit: string | null
@@ -259,7 +264,15 @@ export type LichtSeite = {
   geraeteGesamt: number
 }
 
-/** Die Modus-Werte des AC-Infinity-Selects. */
+/**
+ * Die drei Modus-KENNUNGEN, gegen die die Licht-Seite vergleicht — Werte, die
+ * Home Assistant im `select.*_aktiver_modus` meldet, nie übersetzt.
+ *
+ * Die eine Wahrheit steht im Backend (`GrowDiary.Web/Services/AcModi.cs`), samt
+ * der deutschen Namen aller fünfzehn Modi; angezeigt wird `modusName`, den das
+ * Backend mitschickt. Diese drei Werte sind die einzige Kopie in der Oberfläche,
+ * und `licht-modi-vertrag.node.test.ts` hält sie gegen die C#-Datei.
+ */
 export const LICHT_MODI = { aus: 'Off', an: 'On', zeitplan: 'Schedule' } as const
 
 export type LichtReiter = 'betrieb' | 'zeitplan' | 'erweitert'

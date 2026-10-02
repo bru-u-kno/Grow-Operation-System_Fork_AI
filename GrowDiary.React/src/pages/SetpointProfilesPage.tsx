@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../api'
 import { V1Alert, V1Button, V1Card, V1Field, V1Section, V1Skeleton } from '../components/v1'
 import { classNames } from '../utils'
+import { zahlOderNull } from '../zahlenfeld'
 import '../features/setpoints/setpoints.css'
 
 /**
@@ -46,10 +47,6 @@ function zahl(value: number | undefined): string {
   return value == null ? '' : String(value).replace('.', ',')
 }
 
-function parse(value: string): number | null {
-  const parsed = Number(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 /**
  * „6–6,2" statt zweier Zahlen nebeneinander.
@@ -180,7 +177,7 @@ function SetpointProfilesPage() {
     const overrides: Record<string, Record<string, number>> = {}
     for (const [stage, felder] of Object.entries(draft)) {
       for (const [feld, wert] of Object.entries(felder)) {
-        const zahlWert = parse(wert)
+        const zahlWert = zahlOderNull(wert)
         if (zahlWert == null) continue
         overrides[stage] ??= {}
         overrides[stage][feld] = zahlWert

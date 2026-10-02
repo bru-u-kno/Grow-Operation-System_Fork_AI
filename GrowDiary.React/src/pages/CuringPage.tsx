@@ -4,6 +4,7 @@ import { apiFetch, ApiRequestError } from '../api'
 import type { CuringJar } from '../features/curing/curing-typen'
 import { faelligText, feuchteTon } from '../features/curing/curing-typen'
 import { V1Alert, V1Card, V1Empty, V1Page, V1Section, V1Skeleton } from '../components/v1'
+import { istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import '../features/curing/curing.css'
 
 /**
@@ -111,13 +112,19 @@ function JarCard({ jar, onDone, onError }: {
   const [busy, setBusy] = useState(false)
 
   async function eintragen() {
+    // Bisher wurde Unlesbares still zu NaN und im JSON zu `null` — mit
+    // Erfolgsmeldung „eingetragen".
+    if (istUnlesbar(feuchte) || istUnlesbar(minuten)) {
+      onError(`${jar.label}: Feuchte oder Minuten sind keine Zahl. Bitte korrigieren oder das Feld leeren.`)
+      return
+    }
     setBusy(true)
     try {
       await apiFetch(`/api/curing/jars/${jar.id}/readings`, {
         method: 'POST',
         body: JSON.stringify({
-          humidityPercent: feuchte.trim() ? Number(feuchte.replace(',', '.')) : null,
-          burpedMinutes: minuten.trim() ? Number(minuten) : null,
+          humidityPercent: zahlOderNull(feuchte),
+          burpedMinutes: zahlOderNull(minuten),
         }),
       })
       setFeuchte('')

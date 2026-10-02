@@ -4,7 +4,7 @@ import { apiFetch } from '../api'
 import type { TentDto } from '../types'
 import { V1Alert, V1Button, V1Card, V1Field, V1Page, V1Section, V1Skeleton, V1Switch } from '../components/v1'
 import '../features/dosing/dosing.css'
-import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
+import { feldText, unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
 /**
  * Eine Pumpe einrichten: was sie tut, was drin ist, wen sie in Home Assistant
@@ -92,13 +92,13 @@ function DosingPumpSetupPage() {
             name: (pump.name as string) ?? '',
             purpose: (pump.purpose as string) ?? 'Custom',
             agent: (pump.agent as string) ?? '',
-            concentrationPercent: pump.concentrationPercent != null ? String(pump.concentrationPercent) : '',
+            concentrationPercent: feldText(pump.concentrationPercent as number | null | undefined),
             costPerLiterEur: pump.costPerLiterEur != null ? String(pump.costPerLiterEur).replace('.', ',') : '',
             haEntityId: (pump.haEntityId as string) ?? '',
-            maxSingleDoseMl: String(pump.maxSingleDoseMl ?? 5),
+            maxSingleDoseMl: feldText((pump.maxSingleDoseMl as number | null | undefined) ?? 5),
             minIntervalMinutes: String(pump.minIntervalMinutes ?? 18),
             maxDosesPerDay: String(pump.maxDosesPerDay ?? 6),
-            maxMlPerDay: String(pump.maxMlPerDay ?? 25),
+            maxMlPerDay: feldText((pump.maxMlPerDay as number | null | undefined) ?? 25),
             hasHomeAssistantAutoOff: Boolean(pump.hasHomeAssistantAutoOff),
             automationEnabled: Boolean(pump.automationEnabled),
             maxReadingAgeMinutes: String(pump.maxReadingAgeMinutes ?? 10),
@@ -165,10 +165,13 @@ function DosingPumpSetupPage() {
       maxDosesPerDay: zahlOderNull(form.maxDosesPerDay),
       maxMlPerDay: zahlOderNull(form.maxMlPerDay),
       automationEnabled: form.automationEnabled,
-      maxReadingAgeMinutes: Number(form.maxReadingAgeMinutes) || 10,
+      // Ersatzwerte wie bisher, wenn leer oder 0 — aber mit derselben Leseregel
+      // wie die Pruefung oben: `Number('7,5')` war NaN und wurde still zum
+      // Ersatzwert, waehrend `unlesbareFelder` das Feld fuer lesbar hielt.
+      maxReadingAgeMinutes: zahlOderNull(form.maxReadingAgeMinutes) || 10,
       partnerPumpId: form.partnerPumpId ? Number(form.partnerPumpId) : null,
-      partnerRatio: Number(form.partnerRatio.replace(',', '.')) || 1,
-      partnerDelayMinutes: Number(form.partnerDelayMinutes) || 5,
+      partnerRatio: zahlOderNull(form.partnerRatio) || 1,
+      partnerDelayMinutes: zahlOderNull(form.partnerDelayMinutes) || 5,
       hasHomeAssistantAutoOff: form.hasHomeAssistantAutoOff,
       simulationMode: form.simulationMode,
       tubeChangedNow: form.tubeChangedNow,

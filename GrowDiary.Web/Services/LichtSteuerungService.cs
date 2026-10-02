@@ -47,13 +47,8 @@ public sealed class LichtSteuerungService
 {
     public const string Modul = "licht";
 
-    /// <summary>Die Modus-Werte des AC-Infinity-Selects.</summary>
-    public static class Modi
-    {
-        public const string Aus = "Off";
-        public const string An = "On";
-        public const string Zeitplan = "Schedule";
-    }
+    // Die Modus-Werte des AC-Infinity-Selects stehen in AcModi — bis zum
+    // 02.10.2026 stand hier eine eigene Abschrift von dreien davon.
 
     /// <summary>Die Rollen dieses Moduls — aufgelöst über die Geräteseite.</summary>
     public static class Rollen
@@ -212,10 +207,10 @@ public sealed class LichtSteuerungService
         switch (art)
         {
             case "aus":
-                return await SchreibenAsync(new[] { (Rollen.Modus, Modi.Aus) }, e, ct);
+                return await SchreibenAsync(new[] { (Rollen.Modus, AcModi.Aus) }, e, ct);
 
             case "an":
-                return await SchreibenAsync(new[] { (Rollen.Modus, Modi.An) }, e, ct);
+                return await SchreibenAsync(new[] { (Rollen.Modus, AcModi.An) }, e, ct);
 
             case "stufe":
             {
@@ -236,7 +231,7 @@ public sealed class LichtSteuerungService
                 {
                     (Rollen.EinZeit, ein + ":00"),
                     (Rollen.AusZeit, aus + ":00"),
-                    (Rollen.Modus, Modi.Zeitplan),
+                    (Rollen.Modus, AcModi.Zeitplan),
                 }, e, ct);
             }
 
@@ -512,7 +507,7 @@ public sealed class LichtSteuerungService
     /// </summary>
     internal static string? AktivesPreset(LichtEinstellungen e, string? ein, string? aus, string? modus)
     {
-        if (modus != Modi.Zeitplan || ein is null || aus is null) return null;
+        if (modus != AcModi.Zeitplan || ein is null || aus is null) return null;
         if (ein == e.VeggieEin && aus == e.VeggieAus) return "veggie";
         if (ein == e.BlueteEin && aus == e.BlueteAus) return "bluete";
         return null;
@@ -525,7 +520,7 @@ public sealed class LichtSteuerungService
     /// </summary>
     internal static string? NaechsterWechsel(string? modus, string? ein, string? aus, bool? an)
     {
-        if (modus != Modi.Zeitplan) return null;
+        if (modus != AcModi.Zeitplan) return null;
         if (Zeit(ein) is not { } einZeit || Zeit(aus) is not { } ausZeit) return null;
         if (einZeit == ausZeit) return null;
 
@@ -564,7 +559,7 @@ public sealed class LichtSteuerungService
 }
 
 /// <summary>Das Livebild der Licht-Steuerung.</summary>
-/// <param name="Modus">Der Modus des Controllers: <c>Off</c>, <c>On</c>, <c>Schedule</c>, …</param>
+/// <param name="Modus">Der Modus des Controllers als Kennung (<see cref="AcModi"/>): <c>Off</c>, <c>On</c>, <c>Schedule</c>, … — zum Vergleichen, nicht zum Anzeigen.</param>
 /// <param name="AktivesPreset"><c>veggie</c>, <c>bluete</c> oder null, wenn die Zeiten zu keinem passen.</param>
 /// <param name="Unbestaetigt">Entitäten, deren Befehl der Controller noch nicht übernommen hat.</param>
 /// <param name="Fehlgeschlagen">Entitäten, bei denen auch die Wiederholungen nichts gebracht haben.</param>
@@ -580,4 +575,8 @@ public sealed record LichtLive(
     string? NaechsterWechsel,
     IReadOnlyList<string> Unbestaetigt,
     IReadOnlyList<string> Fehlgeschlagen,
-    DateTime StandUtc);
+    DateTime StandUtc)
+{
+    /// <summary>Der Modus auf Deutsch — das, was auf dem Schirm steht (<see cref="AcModi.Name"/>).</summary>
+    public string ModusName => AcModi.Name(Modus);
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { InternodeSpacing, PhenoPlantDto } from '../../types/pheno'
-import { V1Field, V1Button, V1Switch } from '../../components/v1'
+import { V1Alert, V1Field, V1Button, V1Switch } from '../../components/v1'
+import { feldText, istUnlesbar, unlesbarMeldung, zahlOderNull } from '../../zahlenfeld'
 import { TRAINING_METHODS, sheetFrom, type SheetDraft } from './pheno-sheet-model'
 
 const SPACING: Array<{ value: InternodeSpacing; label: string }> = [
@@ -10,9 +11,37 @@ const SPACING: Array<{ value: InternodeSpacing; label: string }> = [
   { value: 'Wide', label: 'weit' },
 ]
 
-function num(value: string): number | null {
-  const parsed = Number.parseFloat(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
+/**
+ * Ein Zahlenfeld, das den getippten TEXT hält — nicht die Zahl.
+ *
+ * <b>Der Anlass (02.10.2026).</b> Bis dahin hing jedes Zahlenfeld dieses Bogens
+ * direkt an der Zahl, gelesen mit `parseFloat`. Aus „22," wurde beim Tippen 22,
+ * das Komma verschwand, und die nächste Ziffer machte 225 daraus: THC 22,5 %
+ * liess sich nicht eintragen. Derselbe Fehler war auf der Ernte-Seite am
+ * 01.09.2026 behoben worden. Und `parseFloat('6,2x')` ist 6,2 — der Rest des
+ * Getippten verschwand ohne Meldung.
+ *
+ * Gelesen wird mit {@link zahlOderNull} — der einen deutschen Leseregel der App.
+ */
+function Dezimalfeld({ wert, onWert, ganzzahlig = false, placeholder }: {
+  wert: number | null
+  onWert: (wert: number | null, unlesbar: boolean) => void
+  ganzzahlig?: boolean
+  placeholder?: string
+}) {
+  const [text, setText] = useState(() => feldText(wert))
+  return (
+    <input
+      inputMode={ganzzahlig ? 'numeric' : 'decimal'}
+      value={text}
+      placeholder={placeholder}
+      aria-invalid={istUnlesbar(text) || undefined}
+      onChange={(event) => {
+        setText(event.target.value)
+        onWert(zahlOderNull(event.target.value), istUnlesbar(event.target.value))
+      }}
+    />
+  )
 }
 
 /** A 1–10 rating as a slider, because typing numbers for twelve traits is a chore. */
@@ -64,6 +93,21 @@ export function PhenoSheetEditor({
   const [draft, setDraft] = useState<SheetDraft>(() => sheetFrom(plant))
   const [saving, setSaving] = useState(false)
   const set = (patch: Partial<SheetDraft>) => setDraft((current) => ({ ...current, ...patch }))
+  // Welche Zahlenfelder gerade Unlesbares enthalten — nach ihrer Beschriftung.
+  const [unlesbar, setUnlesbar] = useState<Record<string, boolean>>({})
+  const [fehler, setFehler] = useState<string | null>(null)
+  const zahlFeld = (feld: keyof SheetDraft, beschriftung: string) => (wert: number | null, kaputt: boolean) => {
+    set({ [feld]: wert } as Partial<SheetDraft>)
+    setUnlesbar((alt) => ({ ...alt, [beschriftung]: kaputt }))
+  }
+
+  function speichern() {
+    const meldung = unlesbarMeldung(Object.entries(unlesbar).filter(([, kaputt]) => kaputt).map(([beschriftung]) => beschriftung))
+    setFehler(meldung)
+    if (meldung) return
+    setSaving(true)
+    void onSave(draft).finally(() => setSaving(false))
+  }
 
   const toggleMethod = (method: string) => set({
     trainingMethods: draft.trainingMethods.includes(method)
@@ -87,7 +131,7 @@ export function PhenoSheetEditor({
           </select>
         </V1Field>
         <V1Field label="Höhe beim Flip (cm)">
-          <input inputMode="decimal" value={draft.heightAtFlipCm ?? ''} onChange={(event) => set({ heightAtFlipCm: num(event.target.value) })} />
+          <Dezimalfeld wert={draft.heightAtFlipCm} onWert={zahlFeld('heightAtFlipCm', 'Höhe beim Flip (cm)')} />
         </V1Field>
       </Group>
 
@@ -107,12 +151,12 @@ export function PhenoSheetEditor({
       </Group>
 
       <Group title="Blüte & Ernte" when="bei der Ernte">
-        <V1Field label="Blütetage"><input inputMode="numeric" value={draft.floweringDays ?? ''} onChange={(event) => set({ floweringDays: num(event.target.value) })} /></V1Field>
+        <V1Field label="Blütetage"><Dezimalfeld ganzzahlig wert={draft.floweringDays} onWert={zahlFeld('floweringDays', 'Blütetage')} /></V1Field>
         <V1Field label="Höhe bei Ernte (cm)" hint={stretch ? `Streckung ×${stretch}` : 'Zusammen mit der Flip-Höhe ergibt das die Streckung.'}>
-          <input inputMode="decimal" value={draft.heightAtHarvestCm ?? ''} onChange={(event) => set({ heightAtHarvestCm: num(event.target.value) })} />
+          <Dezimalfeld wert={draft.heightAtHarvestCm} onWert={zahlFeld('heightAtHarvestCm', 'Höhe bei Ernte (cm)')} />
         </V1Field>
-        <V1Field label="Ertrag frisch (g)"><input inputMode="decimal" value={draft.wetYieldG ?? ''} onChange={(event) => set({ wetYieldG: num(event.target.value) })} /></V1Field>
-        <V1Field label="Ertrag trocken (g)" hint="Zählt für die Note — verglichen mit den Geschwistern."><input inputMode="decimal" value={draft.dryYieldG ?? ''} onChange={(event) => set({ dryYieldG: num(event.target.value) })} /></V1Field>
+        <V1Field label="Ertrag frisch (g)"><Dezimalfeld wert={draft.wetYieldG} onWert={zahlFeld('wetYieldG', 'Ertrag frisch (g)')} /></V1Field>
+        <V1Field label="Ertrag trocken (g)" hint="Zählt für die Note — verglichen mit den Geschwistern."><Dezimalfeld wert={draft.dryYieldG} onWert={zahlFeld('dryYieldG', 'Ertrag trocken (g)')} /></V1Field>
         <Rating label="Blütendichte" value={draft.budDensityScore} onChange={(v) => set({ budDensityScore: v })} />
         <Rating label="Harz / Trichome" value={draft.resinScore} onChange={(v) => set({ resinScore: v })} />
         <Rating label="Schnitt-Aufwand" hint="Hoch = angenehm zu schneiden." value={draft.trimEaseScore} onChange={(v) => set({ trimEaseScore: v })} />
@@ -122,8 +166,8 @@ export function PhenoSheetEditor({
         <Rating label="Geruch" value={draft.aromaScore} onChange={(v) => set({ aromaScore: v })} />
         <Rating label="Geschmack" value={draft.flavorScore} onChange={(v) => set({ flavorScore: v })} />
         <Rating label="Wirkung" value={draft.effectScore} onChange={(v) => set({ effectScore: v })} />
-        <V1Field label="THC (%)"><input inputMode="decimal" value={draft.thcPercent ?? ''} onChange={(event) => set({ thcPercent: num(event.target.value) })} /></V1Field>
-        <V1Field label="CBD (%)"><input inputMode="decimal" value={draft.cbdPercent ?? ''} onChange={(event) => set({ cbdPercent: num(event.target.value) })} /></V1Field>
+        <V1Field label="THC (%)"><Dezimalfeld wert={draft.thcPercent} onWert={zahlFeld('thcPercent', 'THC (%)')} /></V1Field>
+        <V1Field label="CBD (%)"><Dezimalfeld wert={draft.cbdPercent} onWert={zahlFeld('cbdPercent', 'CBD (%)')} /></V1Field>
         <V1Field label="Geruchs-Notiz" wide><input value={draft.aromaNotes ?? ''} onChange={(event) => set({ aromaNotes: event.target.value || null })} placeholder="z. B. Zitrone, Diesel, erdig" /></V1Field>
         <V1Field label="Wirkungs-Notiz" wide><input value={draft.effectNotes ?? ''} onChange={(event) => set({ effectNotes: event.target.value || null })} placeholder="z. B. klar, körperlich, abends" /></V1Field>
         <V1Field label="Terpene" wide><input value={draft.terpeneNotes ?? ''} onChange={(event) => set({ terpeneNotes: event.target.value || null })} placeholder="z. B. Limonen, Myrcen" /></V1Field>
@@ -131,7 +175,7 @@ export function PhenoSheetEditor({
 
       <Group title="Entscheidung" when="am Ende">
         <V1Field label="Gesamtnote von Hand" hint="Leer lassen = Grow OS rechnet sie aus deinen Bewertungen.">
-          <input inputMode="decimal" value={draft.manualOverallScore ?? ''} onChange={(event) => set({ manualOverallScore: num(event.target.value) })} placeholder="—" />
+          <Dezimalfeld wert={draft.manualOverallScore} onWert={zahlFeld('manualOverallScore', 'Gesamtnote von Hand')} placeholder="—" />
         </V1Field>
         <V1Field label="Notizen" wide>
           <textarea rows={3} value={draft.notes ?? ''} onChange={(event) => set({ notes: event.target.value || null })} />
@@ -143,8 +187,9 @@ export function PhenoSheetEditor({
         <V1Switch label="Im zweiten Lauf bestätigt" hint="Ein Phäno ist erst nach einer Wiederholung wirklich beurteilt." checked={draft.confirmedInSecondRun} onChange={(checked) => set({ confirmedInSecondRun: checked })} />
       </div>
 
+      {fehler && <div style={{ marginTop: 12 }}><V1Alert tone="critical" message={fehler} /></div>}
       <div className="v1-action-row" style={{ marginTop: 14 }}>
-        <V1Button variant="primary" disabled={saving} onClick={() => { setSaving(true); void onSave(draft).finally(() => setSaving(false)) }}>
+        <V1Button variant="primary" disabled={saving} onClick={speichern}>
           {saving ? 'Speichert…' : 'Bogen speichern'}
         </V1Button>
         <V1Button variant="ghost" onClick={onCancel}>Schließen</V1Button>
