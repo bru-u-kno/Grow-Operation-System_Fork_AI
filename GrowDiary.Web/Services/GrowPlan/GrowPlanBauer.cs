@@ -30,7 +30,8 @@ public static class GrowPlanBauer
         NutrientProgramDefinition programm,
         Func<GrowStage, HydroTargetValues?> standard,
         int vegiWochen,
-        int bluetewochen)
+        int bluetewochen,
+        StartMaterial startMaterial)
     {
         var inhalt = new GrowPlanInhalt
         {
@@ -44,59 +45,97 @@ public static class GrowPlanBauer
         foreach (var spalte in inhalt.Chart.Columns)
         {
             LueckenFuellen(inhalt, spalte, standard(Phase(spalte.Stage)));
-            spalte.Label = Wochenname(spalte);
+            spalte.Label = Wochenname(spalte, startMaterial);
         }
 
         return inhalt;
     }
 
     /// <summary>
+    /// Fork AI (02.10.2026): der Name der Anzucht im Plan des Grows — die EINE
+    /// Stelle, an der er entsteht. Steckling: „Bewurzelung", Samen: „Anzucht".
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Entscheidung des Nutzers (02.10.2026).</b> Der Name richtet sich
+    /// nach dem Startmaterial. Ein Steckling bewurzelt sich (Knopf „Bewurzelung
+    /// abgeschlossen"); ein Samen keimt und wächst als Sämling — dieselbe Phase
+    /// heißt in der ganzen Oberfläche „Anzucht" (Zeitstrahl „9 T Anzucht",
+    /// Erinnerung „Anzucht Tag N — Vegi-Beginn bestätigen?" in
+    /// <see cref="Phasenanker"/>). Maßgeblich ist das Startmaterial, nicht der
+    /// Einstieg: ein Steckling mit Einstieg „Sämling" bleibt ein Steckling.</para>
+    /// <para><b>Alles außer <see cref="StartMaterial.Clone"/> heißt „Anzucht".</b>
+    /// Dieselbe Grenze zieht <see cref="Phasenanker"/> (nur der Steckling hat die
+    /// Anzuchtart Bewurzelung), und ein fehlendes oder unlesbares Startmaterial
+    /// liest die Datenbank als <see cref="StartMaterial.Seed"/>
+    /// (<c>GrowCoreRepository</c>, Spaltenvorgabe <c>'Seed'</c>). „Bewurzelung"
+    /// an einem Grow, von dem niemand weiß, dass er ein Steckling ist, wäre eine
+    /// Behauptung; „Anzucht" stimmt für beide.</para>
+    /// </remarks>
+    public static string Anzuchtname(StartMaterial startMaterial)
+        => startMaterial == StartMaterial.Clone ? "Bewurzelung" : "Anzucht";
+
+    /// <summary>
     /// Fork AI (forkai.132): Der Name einer Woche im Plan des Grows — einheitlich,
-    /// egal wie der Hersteller sie nennt: „Bewurzelung", „Vegiwoche 2",
-    /// „Blütewoche 5", „Flush".
+    /// egal wie der Hersteller sie nennt: „Bewurzelung" bzw. „Anzucht",
+    /// „Vegiwoche 2", „Blütewoche 5", „Flush".
     /// </summary>
     /// <remarks>
     /// <para><b>Nur im Plan des Grows.</b> Die Herstellertabelle im Programm (Wissen)
     /// behält ihre Begriffe — „Vega", „Flores" sind die Namen des Düngers, und die
     /// bleiben unangetastet (Bru, 21.09.2026). Der Grow-Plan ist eine Kopie; nur
     /// dort wird umbenannt.</para>
-    /// <para><b>Angehängte Wochen</b> (Fork AI, 02.10.2026) heißen wie ihre Phase:
-    /// „Vegiwoche 5", „Blütewoche 10", in der Anzucht „Bewurzelung 2" — so heißt sie
-    /// neben der Spalte „Bewurzelung" davor. Bis zum 02.10.2026 stand dort
+    /// <para><b>Die Anzucht</b> heißt nach dem Startmaterial
+    /// (<see cref="Anzuchtname"/>) — die Sonderspalte „Bewurzelung" bzw.
+    /// „Anzucht", angehängte Wochen (Fork AI, 02.10.2026) „Bewurzelung 2" bzw.
+    /// „Anzucht 2", passend zur Spalte davor. Bis zum 02.10.2026 stand dort
     /// „Anzuchtwoche 2"; der Nutzer sah zwei Namen für dieselbe Phase. Nicht
     /// „Bewurzelungswoche 2": das brach in der Plan-Tabelle am Grow bei 390 px mitten
     /// im Wort (Prüfer, 02.10.2026). <see cref="WochennamenAngleichen"/> benennt
     /// gespeicherte Pläne beim Start um.</para>
+    /// <para><b>Angehängte Vegi- und Blütewochen</b> heißen wie ihre Phase:
+    /// „Vegiwoche 5", „Blütewoche 10".</para>
     /// <para><b>Mehrere Schritte einer Phase</b> ohne Wochennummer (Athena: „Klon ·
     /// Vorweichen" / „Klon · Anfüttern") behalten ihren Namen — sie wären sonst nicht
     /// mehr zu unterscheiden.</para>
     /// </remarks>
-    public static string Wochenname(FeedChartColumn spalte)
+    public static string Wochenname(FeedChartColumn spalte, StartMaterial startMaterial)
     {
         var label = spalte.Label ?? string.Empty;
+        var anzucht = Anzuchtname(startMaterial);
         return Phase(spalte.Stage) switch
         {
             GrowStage.Veg when spalte.Week is { } w => $"Vegiwoche {w}",
             GrowStage.Flower when spalte.Week is { } w => $"Blütewoche {w}",
             // Fork AI (02.10.2026): angehängte Anzucht-Wochen (Planwochen.Anhaengen) —
             // die Sonderspalte davor ist Woche 1 und behält ihren Namen.
-            GrowStage.Clone or GrowStage.Seedling when spalte.Week is { } w => $"Bewurzelung {w}",
+            GrowStage.Clone or GrowStage.Seedling when spalte.Week is { } w => $"{anzucht} {w}",
+            // Die Sonderspalte: der Herstellername („Root · Bewurzelung"), das eigene
+            // Raster und beide Namen, die sie im Plan schon trug — ein Grow, dessen
+            // Startmaterial geändert wurde, wechselt so auch zurück.
             GrowStage.Clone or GrowStage.Seedling when label.Contains("Root", StringComparison.OrdinalIgnoreCase)
                 || label.Contains("Bewurzel", StringComparison.OrdinalIgnoreCase)
-                || string.IsNullOrWhiteSpace(label) => "Bewurzelung",
+                || label.Contains("Anzucht", StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrWhiteSpace(label) => anzucht,
             GrowStage.Finish when label.Contains("Flush", StringComparison.OrdinalIgnoreCase)
                 || string.IsNullOrWhiteSpace(label) => "Flush",
             _ => string.IsNullOrWhiteSpace(label) ? spalte.Id : label,
         };
     }
 
-    /// <summary>Fork AI (forkai.132): Wochennamen eines bestehenden Plans angleichen; true, wenn sich etwas geändert hat.</summary>
-    public static bool WochennamenAngleichen(GrowPlanInhalt inhalt)
+    /// <summary>
+    /// Fork AI (forkai.132): Wochennamen eines bestehenden Plans angleichen; true, wenn sich etwas geändert hat.
+    /// </summary>
+    /// <remarks>
+    /// Seit 02.10.2026 mit dem Startmaterial des Grows: ein Samen-Grow bekommt
+    /// „Anzucht"/„Anzucht 2" statt „Bewurzelung"/„Bewurzelung 2"/„Anzuchtwoche 2",
+    /// ein Steckling „Bewurzelung 2" statt „Anzuchtwoche 2".
+    /// </remarks>
+    public static bool WochennamenAngleichen(GrowPlanInhalt inhalt, StartMaterial startMaterial)
     {
         var geaendert = false;
         foreach (var spalte in inhalt.Chart.Columns)
         {
-            var neu = Wochenname(spalte);
+            var neu = Wochenname(spalte, startMaterial);
             if (string.Equals(neu, spalte.Label, StringComparison.Ordinal)) continue;
             spalte.Label = neu;
             geaendert = true;
@@ -127,6 +166,11 @@ public static class GrowPlanBauer
         _ => GrowStage.Finish,
     };
 
+    /// <remarks>
+    /// Der Name der Anzucht-Spalte ist hier nur ein Platzhalter — den Namen nach
+    /// dem Startmaterial gibt ihr erst <see cref="Wochenname"/> in
+    /// <see cref="AusProgramm"/>, wie jeder Spalte aus einem Programm.
+    /// </remarks>
     private static FeedChartDefinition Raster(string programmName, int vegiWochen, int bluetewochen)
     {
         var chart = new FeedChartDefinition

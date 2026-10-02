@@ -384,10 +384,13 @@ public sealed class GrowPlanTests : IDisposable
             _repo.Nachtragen(stand);
         }
 
-        Assert.Equal(2, _dienst.FehlendeFelderNachtragen([grow]));
+        var nachtrag = _dienst.FehlendeFelderNachtragen([grow]);
+        Assert.Equal(2, nachtrag.Planstaende);
+        Assert.Equal(2, nachtrag.EcBand);
+        Assert.Equal(0, nachtrag.Wochennamen); // nur das Band fehlte — so meldet es auch der Start
         Assert.NotNull(Woche(_repo.Laden(grow.Id, GrowPlanStaende.Start)!, "flower-w4").C.EcMin);
         Assert.NotNull(Woche(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w4").C.EcMax);
-        Assert.Equal(0, _dienst.FehlendeFelderNachtragen([grow]));
+        Assert.Equal(0, _dienst.FehlendeFelderNachtragen([grow]).Planstaende);
         Assert.Single(_repo.Buch(grow.Id)); // Nachtrag ist keine Änderung am Ziel.
     }
 
@@ -735,7 +738,7 @@ public sealed class GrowPlanTests : IDisposable
 
         var neu = new GrowPlanService(_repo, _wissen, new TargetValueService(_wissen), NullLogger<GrowPlanService>.Instance, _eigene);
         neu.RegisterLaden();
-        Assert.True(neu.FehlendeFelderNachtragen([grow]) >= 1);
+        Assert.True(neu.FehlendeFelderNachtragen([grow]).Planstaende >= 1);
 
         Assert.Equal(athena, neu.Startwert(grow.Id, "flower-w5", ecZiel));
         // „Zurück auf Plan" führt auf Athena, nicht auf SKX.

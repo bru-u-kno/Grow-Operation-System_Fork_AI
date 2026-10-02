@@ -163,7 +163,8 @@ public sealed class GrowPlanService
                 programm,
                 stage => _ziele.GetTargets(profilId, stage),
                 VegiWochen(grow),
-                Bluetewochen(grow));
+                Bluetewochen(grow),
+                grow.StartMaterial);
 
             var zeit = jetztUtc ?? DateTime.UtcNow;
             var start = new GrowPlanStand(grow.Id, GrowPlanStaende.Start, inhalt, vermerk, zeit, zeit);
@@ -235,7 +236,7 @@ public sealed class GrowPlanService
             if (_repo.Laden(grow.Id, GrowPlanStaende.Ende) is not null) return 0;
             if (_repo.Laden(grow.Id, GrowPlanStaende.Arbeit) is not { } arbeit) return 0;
 
-            var neu = Planwochen.Anhaengen(arbeit.Inhalt, stand);
+            var neu = Planwochen.Anhaengen(arbeit.Inhalt, stand, grow.StartMaterial);
             if (neu.Count == 0) return 0;
 
             var zeit = jetztUtc ?? DateTime.UtcNow;
@@ -625,7 +626,7 @@ public sealed class GrowPlanService
 
             var profilId = TargetValueService.ProfileIdFor(grow.HydroStyle);
             var basis = GrowPlanBauer.AusProgramm(
-                programm, stage => _ziele.GetTargets(profilId, stage), VegiWochen(grow), Bluetewochen(grow));
+                programm, stage => _ziele.GetTargets(profilId, stage), VegiWochen(grow), Bluetewochen(grow), grow.StartMaterial);
             var neu = GrowPlanBauer.Kopie(basis);
             neu.EigenesProgrammId = EigeneProgramme.IstEigen(programm.Id) ? programm.Id : null;
             var zeit = jetztUtc ?? DateTime.UtcNow;
@@ -633,7 +634,7 @@ public sealed class GrowPlanService
             // Programm, bekommt auch sein Plan die Wochen — VOR dem Übernehmen, damit
             // Änderungen an verlängerten Wochen ihre Woche wiederfinden. Die Basis
             // bleibt das Programm, wie es ist.
-            var angehaengt = Planwochen.Anhaengen(neu, Phasenanker.Fuer(grow, heute ?? DateTime.Today));
+            var angehaengt = Planwochen.Anhaengen(neu, Phasenanker.Fuer(grow, heute ?? DateTime.Today), grow.StartMaterial);
 
             var uebernommen = 0;
             var entfallen = 0;
@@ -786,12 +787,31 @@ public sealed class GrowPlanService
 
     /// <summary>
     /// Trägt in bestehende Pläne nach, was spätere Versionen neu im Plan führen
-    /// (das EC-Band, seit forkai.130 „Luft Nacht"). Kein Eintrag im Änderungsbuch: das ist Technik, keine Änderung
-    /// am Ziel — das Band entspricht dem, was bisher aus dem Standard kam.
+    /// (das EC-Band, seit forkai.130 „Luft Nacht") und gleicht die Wochennamen an
+    /// (seit forkai.132; die Anzucht seit 02.10.2026 nach dem Startmaterial). Kein
+    /// Eintrag im Änderungsbuch: das ist Technik, keine Änderung am Ziel — das Band
+    /// entspricht dem, was bisher aus dem Standard kam.
     /// </summary>
-    public int FehlendeFelderNachtragen(IEnumerable<GrowRun> grows)
+    /// <remarks>
+    /// <para><b>Getrennt gezählt (02.10.2026).</b> Bis dahin kam eine Zahl zurück,
+    /// und der Start meldete sie als „N Planstände um das EC-Band ergänzt" — auch
+    /// wenn nur Wochen umbenannt wurden. <see cref="PlanNachtrag"/> zählt je Art.</para>
+    /// <para><b>Der eingefrorene Endstand bleibt, wie er ist</b> — auch beim Namen.
+    /// Er ist eine Kopie des Arbeitsstands im Moment des Abschlusses
+    /// (<see cref="Abgleichen"/>) und das, worauf sich Auswertung und „als Programm
+    /// speichern" berufen; jeder schreibende Weg prüft <see cref="EndstandSperre"/>.
+    /// Ein Nachtrag beim Start, der dort trotzdem schriebe, wäre eine Ausnahme ohne
+    /// Eintrag im Änderungsbuch. Die früheren Nachträge (EC-Band, Luft Nacht,
+    /// „Blütewoche 5" statt „Flores · Woche 5") haben ihn ebenso nie angefasst;
+    /// nur die Anzucht umzubenennen, ergäbe einen Endstand aus zwei Zeiten. Und
+    /// hierher kommen ohnehin nur laufende Grows (<c>Program.cs</c>:
+    /// <c>GetActiveGrows</c>) — ein abgeschlossener hat seinen Plan schon
+    /// eingefroren. Wird er wieder geöffnet, entfällt der Endstand, und sein
+    /// Arbeitsstand wird beim nächsten Start hier angeglichen.</para>
+    /// </remarks>
+    public PlanNachtrag FehlendeFelderNachtragen(IEnumerable<GrowRun> grows)
     {
-        var angepasst = 0;
+        var ergebnis = new PlanNachtrag(0, 0, 0, 0);
         lock (_lock)
         {
             foreach (var grow in grows)
@@ -804,17 +824,19 @@ public sealed class GrowPlanService
                 foreach (var name in new[] { GrowPlanStaende.Start, GrowPlanStaende.Basis, GrowPlanStaende.Arbeit })
                 {
                     if (_repo.Laden(grow.Id, name) is not { } stand) continue;
-                    var geaendert = false;
+                    var ecBand = false;
+                    var nachtLuft = false;
                     foreach (var spalte in stand.Inhalt.Chart.Columns)
                     {
-                        geaendert |= GrowPlanBauer.EcBandFuellen(
+                        ecBand |= GrowPlanBauer.EcBandFuellen(
                             stand.Inhalt, spalte, _ziele.GetTargets(profilId, GrowPlanBauer.Phase(spalte.Stage)));
                         // Fork AI (forkai.130): Luft Nacht als Planwert nachtragen.
-                        geaendert |= GrowPlanBauer.NachtLuftFuellen(stand.Inhalt, spalte);
+                        nachtLuft |= GrowPlanBauer.NachtLuftFuellen(stand.Inhalt, spalte);
                     }
-                    // Fork AI (forkai.132): Wochennamen einheitlich (Blütewoche 5 statt Flores · Woche 5).
-                    geaendert |= GrowPlanBauer.WochennamenAngleichen(stand.Inhalt);
-                    if (!geaendert) continue;
+                    // Fork AI (forkai.132): Wochennamen einheitlich (Blütewoche 5 statt Flores · Woche 5);
+                    // seit 02.10.2026 die Anzucht nach dem Startmaterial (Anzucht 2 / Bewurzelung 2).
+                    var namen = GrowPlanBauer.WochennamenAngleichen(stand.Inhalt, grow.StartMaterial);
+                    if (!(ecBand || nachtLuft || namen)) continue;
 
                     _repo.Nachtragen(stand);
                     if (name == GrowPlanStaende.Arbeit) GrowPlanRegister.Setzen(grow.Id, stand.Inhalt);
@@ -822,11 +844,15 @@ public sealed class GrowPlanService
                     // Ein nachgetragener Startstand ersetzt sie nicht.
                     else if (name == GrowPlanStaende.Basis || _repo.Laden(grow.Id, GrowPlanStaende.Basis) is null)
                         _startstaende[grow.Id] = stand.Inhalt;
-                    angepasst++;
+                    ergebnis = new PlanNachtrag(
+                        ergebnis.Planstaende + 1,
+                        ergebnis.EcBand + (ecBand ? 1 : 0),
+                        ergebnis.NachtLuft + (nachtLuft ? 1 : 0),
+                        ergebnis.Wochennamen + (namen ? 1 : 0));
                 }
             }
         }
-        return angepasst;
+        return ergebnis;
     }
 
     /// <summary>Wirft, wenn der Plan eingefroren ist — von JEDEM schreibenden Weg aufgerufen.</summary>
@@ -878,4 +904,27 @@ public sealed class GrowPlanService
         => grow.BreederFlowerWeeksMax is int wochen && wochen > 0
             ? wochen
             : GrowPlanBauer.StandardBluetewochen;
+}
+
+/// <summary>
+/// Fork AI (02.10.2026): was <see cref="GrowPlanService.FehlendeFelderNachtragen"/>
+/// beim Start an gespeicherten Plänen angeglichen hat — je Art die Zahl der
+/// Planstände, in denen sich etwas geändert hat. Ein Planstand kann in mehreren
+/// Arten zählen; <see cref="Planstaende"/> zählt jeden einmal.
+/// </summary>
+public sealed record PlanNachtrag(int Planstaende, int EcBand, int NachtLuft, int Wochennamen)
+{
+    /// <summary>
+    /// Die Zeilen fürs Startprotokoll — eine je Art, die vorkam. Nur, was wirklich
+    /// geschah: bis 02.10.2026 stand dort für jede Umbenennung „um das EC-Band ergänzt".
+    /// </summary>
+    public IEnumerable<string> Meldungen()
+    {
+        if (EcBand > 0) yield return $"Grow-Plan: {Staende(EcBand)} um das EC-Band ergänzt.";
+        if (NachtLuft > 0) yield return $"Grow-Plan: {Staende(NachtLuft)} um „Luft Nacht“ ergänzt.";
+        if (Wochennamen > 0) yield return $"Grow-Plan: Wochennamen in {Staende(Wochennamen, dativ: true)} angeglichen.";
+    }
+
+    private static string Staende(int n, bool dativ = false)
+        => n == 1 ? "1 Planstand" : $"{n} {(dativ ? "Planständen" : "Planstände")}";
 }
