@@ -52,6 +52,32 @@ public static class Planzielgrenzen
     };
 
     /// <summary>
+    /// Fork AI (02.10.2026): ab welcher Toleranz eine Plan-Regel nie mehr melden
+    /// kann — die Spannweite dessen, was fuer die Messgroesse physikalisch
+    /// vorkommt. Null, wenn die Tabelle die Groesse nicht kennt.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Woher die Zahl kommt.</b> Nicht ausgedacht, sondern aus
+    /// <see cref="MeasurementSanityService.PhysikalischeGrenzen"/> abgeleitet
+    /// (pH 0–14 ⇒ 14, EC 0–10 ⇒ 10, …). Ist die Toleranz mindestens so gross,
+    /// reicht das Band Ziel ± Toleranz bei JEDEM Zielwert innerhalb der Tabelle
+    /// ueber beide Enden hinaus — kein moeglicher Messwert liegt dann ausserhalb.
+    /// Die Regel ist eingeschaltet und schweigt fuer immer; genau das wurde mit
+    /// 1e6 angenommen.</para>
+    /// <para><b>Warum nicht 15 wie bei festen Regeln.</b> Die 15 begrenzt die
+    /// „Erlaubte Abweichung" der Lufttemperatur in Kelvin (Oberflaeche und
+    /// <c>WochenplanSyncService.ErlaubteAbweichung</c>). Plan-Regeln laufen auch
+    /// auf CO₂ (Standard ±200 ppm) und ORP (±50 mV) — 15 waere dort enger als
+    /// der eigene Standard. Die Oberflaeche verlangt fuer Plan-Regeln nur „groesser
+    /// als null".</para>
+    /// </remarks>
+    public static double? ToleranzOhneWirkung(string metricKey)
+        => MeasurementSanityService.PhysikSchluesselFuerMetrik(metricKey) is { } groesse
+           && MeasurementSanityService.PhysikalischeGrenzen.TryGetValue(groesse, out var g)
+            ? g.Max - g.Min
+            : null;
+
+    /// <summary>
     /// Die Messgroessen, fuer die der Plan ueberhaupt etwas hergibt.
     /// </summary>
     /// <remarks>

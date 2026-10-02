@@ -60,6 +60,33 @@ public sealed class MeasurementSanityService
             ["airflow"] = (0, 300),
         };
 
+    /// <summary>
+    /// Der Name, unter dem eine Live-Messgroesse (Kachel- und Alarm-Schluessel wie
+    /// <c>reservoir-ph</c>) in <see cref="PhysikalischeGrenzen"/> steht — oder null.
+    /// </summary>
+    /// <remarks>
+    /// Die beiden Seiten heissen verschieden — dort Kachel-Schluessel, hier die
+    /// Namen der Tabelle. Unbekannte Groessen gelten in der Tabelle ABSICHTLICH
+    /// als plausibel; ohne diese Uebersetzung liefe eine Pruefung bei fuenf von
+    /// zehn Groessen ins Leere und meldete trotzdem nichts. Stand bis 02.10.2026
+    /// als lokale Funktion im <c>GrowDashboardComposer</c>; jetzt hier, weil auch
+    /// die Toleranz der Plan-Alarme sie braucht (eine Uebersetzung, nicht zwei).
+    /// </remarks>
+    public static string? PhysikSchluesselFuerMetrik(string metrikSchluessel) => metrikSchluessel switch
+    {
+        "temperature" => "air-temp",
+        "humidity" => "humidity",
+        "reservoir-ph" => "ph",
+        "reservoir-ec" => "ec",
+        "reservoir-temp" => "water-temp",
+        "dissolved-oxygen" => "do",
+        "orp" => "orp",
+        "co2" => "co2",
+        "ppfd" => "ppfd",
+        "vpd" => "vpd",
+        _ => null,
+    };
+
     /// <summary>Meldet einen Wert, der die physikalische Grenze verlässt.</summary>
     private static void PhysikGrenze(ModelStateDictionary modelState, string feld, string groesse, double? wert, string bezeichnung)
     {

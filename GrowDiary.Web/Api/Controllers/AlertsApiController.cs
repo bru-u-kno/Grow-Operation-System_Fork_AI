@@ -102,6 +102,21 @@ public sealed class AlertsApiController : ApiControllerBase
                 + "braucht feste Grenzen.");
         }
 
+        /* Fork AI (02.10.2026): eine Plan-Regel mit einer Toleranz, bei der sie nie
+           melden kann, wird abgelehnt statt still angenommen (vorher ging 1e6
+           durch). Die Grenze ist die Spannweite der physikalischen Tabelle —
+           Herleitung an Planzielgrenzen.ToleranzOhneWirkung. Feste Regeln
+           behalten ihre Grenze von 15 (oben). */
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Plan && r.Toleranz is not null))
+        {
+            if (Planzielgrenzen.ToleranzOhneWirkung(regel.MetricKey) is { } grenze && regel.Toleranz >= grenze)
+            {
+                ModelState.AddModelError(nameof(AlertRuleDto.Toleranz),
+                    $"Bei der Messgroesse {regel.MetricKey} ist die Toleranz ({regel.Toleranz}) so gross, "
+                    + $"dass die Regel nie melden koennte — sie muss unter {grenze} liegen.");
+            }
+        }
+
         /* Ein vertauschtes Paar wird abgelehnt.
          *
          * `AlertEvaluationService.Decide` rechnet `wert < min ? unten : wert >
@@ -113,8 +128,7 @@ public sealed class AlertsApiController : ApiControllerBase
          *
          * Gefunden bei der Gesamtdurchsicht am 01.09.2026: der Endpunkt nahm
          * das Paar an und antwortete HTTP 200. */
-        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest
-                                               && r.MinValue is { } min && r.MaxValue is { } max && min > max))
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest && r.TagVertauscht))
         {
             ModelState.AddModelError(nameof(AlertRuleDto.MinValue),
                 $"Bei der Messgroesse {regel.MetricKey} liegt die Untergrenze "
@@ -127,16 +141,13 @@ public sealed class AlertsApiController : ApiControllerBase
            auf die Tagwerte: wer nur die Untergrenze auf 26 setzt und tagsueber
            eine Obergrenze von 24 hat, baut sich sonst genau die Regel, die
            jede Nacht dauerhaft warnt. */
-        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest && r.HatNachtband))
+        foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest && r.NachtVertauscht))
         {
-            var (min, max) = regel.GrenzenFuer(LightsNow.Off);
-            if (min is { } untere && max is { } obere && untere > obere)
-            {
-                ModelState.AddModelError(nameof(AlertRuleDto.NightMinValue),
-                    $"Bei der Messgroesse {regel.MetricKey} liegt die naechtliche Untergrenze "
-                    + $"({untere}) ueber der naechtlichen Obergrenze ({obere}). "
-                    + "So gemeldet wuerde die Regel jede Nacht dauerhaft warnen.");
-            }
+            var (untere, obere) = regel.GrenzenFuer(LightsNow.Off);
+            ModelState.AddModelError(nameof(AlertRuleDto.NightMinValue),
+                $"Bei der Messgroesse {regel.MetricKey} liegt die naechtliche Untergrenze "
+                + $"({untere}) ueber der naechtlichen Obergrenze ({obere}). "
+                + "So gemeldet wuerde die Regel jede Nacht dauerhaft warnen.");
         }
 
         if (!ModelState.IsValid)
@@ -152,7 +163,8 @@ public sealed class AlertsApiController : ApiControllerBase
 
         // Immediate feedback: evaluate the freshly saved rules against current values right
         // away, so if something is already out of range the user gets a push now instead of
-        // waiting for the next check. Fresh rules have no notify state, so this fires at once.
+        // waiting for the next check. Neue oder geänderte Regeln haben keinen Zustand und melden
+        // sofort; unveränderte behalten ihn (ReplaceForTent) und melden nicht ein zweites Mal.
         var tent = _repository.GetTents(includeArchived: true).FirstOrDefault(item => item.Id == tentId);
         var haSettings = _repository.GetEffectiveHomeAssistantSettings();
         if (tent is not null && haSettings.IsConfigured)

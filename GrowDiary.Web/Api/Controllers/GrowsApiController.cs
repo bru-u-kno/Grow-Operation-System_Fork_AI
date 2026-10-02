@@ -226,6 +226,29 @@ public sealed class GrowsApiController : ApiControllerBase
             return ValidationError();
         }
 
+        /* Fork AI (02.10.2026): ein Programmwechsel bei einem Grow MIT Plan geht nur
+           über POST /api/grows/{id}/plan/programm — hier wird er abgelehnt.
+
+           Der Plan gewinnt beim Lesen (MischplanService.ProgrammFuerGrow fragt
+           zuerst das Register). Nahm dieser Weg eine neue FeedProgramId an, stand
+           am Grow Programm B, während Zielwerte, Alarme und HA-Übergabe weiter
+           Programm A folgten. Durchreichen an GrowPlanService.ProgrammWechseln
+           ginge nicht ehrlich: der Wechsel braucht die Entscheidung „eigene
+           Änderungen behalten oder verwerfen", und dieses Formular trägt sie
+           nicht. Raten hieße im einen Fall Datenverlust, im anderen Werte aus
+           einem Programm, das niemand mehr gewählt hat. Die Oberfläche ruft den
+           Planweg vorher auf; danach ist die Id hier dieselbe und es gibt
+           nichts abzulehnen. */
+        if (Services.GrowPlan.GrowPlanService.HatPlan(id)
+            && grow.FeedProgramId is { } neuesProgramm
+            && !string.Equals(neuesProgramm, existing.FeedProgramId, StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError(nameof(request.FeedProgramId),
+                "Dieser Grow hat einen Plan — das Programm wechselt über „Programm wechseln“ "
+                + "(POST /api/grows/{id}/plan/programm), damit klar ist, ob eigene Änderungen mitgehen.");
+            return ValidationError();
+        }
+
         grow.Id = id;
         grow.CreatedAtUtc = existing.CreatedAtUtc;
 

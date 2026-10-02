@@ -207,7 +207,8 @@ public sealed class GrowPlanTests : IDisposable
         var grow = Grow(12, "skx-canna-aqua");
         _dienst.Anlegen(grow);
 
-        Assert.Equal(1, _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.4)], grund: "Spitzen hell"));
+        // 3 = Ziel + die beiden Bandgrenzen, die mitwandern (seit 02.10.2026 mit Buch-Eintrag).
+        Assert.Equal(3, _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.4)], grund: "Spitzen hell"));
         var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
         Assert.Equal(1.4, arbeit.Inhalt.Chart.Columns.Single(c => c.Id == "flower-w5").EcTarget);
         Assert.Equal(GrowPlanHerkunft.Eigen, arbeit.Inhalt.HerkunftVon("flower-w5", "ecTarget"));
@@ -219,12 +220,13 @@ public sealed class GrowPlanTests : IDisposable
         // Gleicher Wert noch einmal: keine Änderung, kein Eintrag.
         Assert.Equal(0, _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.4)]));
 
-        // Zurück auf den Startwert.
-        Assert.Equal(1, _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", null)]));
+        // Zurück auf den Startwert — das Band wandert mit zurück.
+        Assert.Equal(3, _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", null)]));
         arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
         Assert.Equal(1.5, arbeit.Inhalt.Chart.Columns.Single(c => c.Id == "flower-w5").EcTarget);
         Assert.Equal(GrowPlanHerkunft.Programm, arbeit.Inhalt.HerkunftVon("flower-w5", "ecTarget"));
-        Assert.Equal(3, _repo.Buch(grow.Id).Count);
+        Assert.Equal(GrowPlanHerkunft.Standard, arbeit.Inhalt.HerkunftVon("flower-w5", "ecMin"));
+        Assert.Equal(1 + 3 + 3, _repo.Buch(grow.Id).Count);
 
         // Der Startstand bleibt unberührt.
         Assert.Equal(1.5, _repo.Laden(grow.Id, GrowPlanStaende.Start)!.Inhalt.Chart.Columns.Single(c => c.Id == "flower-w5").EcTarget);
@@ -366,7 +368,7 @@ public sealed class GrowPlanTests : IDisposable
         var plan = _dienst.Anlegen(grow)!;
         _repo.Speichern([plan with { Stand = GrowPlanStaende.Ende }], []);
 
-        Assert.Throws<InvalidOperationException>(() => _dienst.Speichern(grow.Id,
+        Assert.Throws<PlanEingefrorenException>(() => _dienst.Speichern(grow.Id,
             new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.2)], null, false, null, null)));
     }
 
@@ -395,7 +397,7 @@ public sealed class GrowPlanTests : IDisposable
         var grow = Grow(30, "skx-canna-aqua");
         _dienst.Anlegen(grow);
         _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.3)]);
-        Assert.Equal(1, _dienst.EigeneAenderungen(grow.Id));
+        Assert.Equal(3, _dienst.EigeneAenderungen(grow.Id)); // Ziel + mitgewandertes Band
 
         var ergebnis = _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: false);
 
@@ -422,18 +424,19 @@ public sealed class GrowPlanTests : IDisposable
             .Select(i => new PlanDosis(i.Component, i.MinMlPerLiter)).ToList();
         _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.3)], dosis, false, null, null));
         _dienst.WerteSetzen(grow.Id, [("root", "ecTarget", 0.5)]);   // Woche, die Athena nicht kennt
-        Assert.Equal(3, _dienst.EigeneAenderungen(grow.Id));
+        // Je EC-Änderung drei Felder (Ziel + mitgewandertes Band, seit 02.10.2026 „eigen") + Dosierung.
+        Assert.Equal(3 + 3 + 1, _dienst.EigeneAenderungen(grow.Id));
 
         var ergebnis = _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: true);
 
-        Assert.Equal(2, ergebnis.Uebernommen);   // EC + Dosierung in flower-w5
-        Assert.Equal(1, ergebnis.Entfallen);     // root gibt es bei Athena nicht
+        Assert.Equal(4, ergebnis.Uebernommen);   // EC, EC von, EC bis + Dosierung in flower-w5
+        Assert.Equal(3, ergebnis.Entfallen);     // root gibt es bei Athena nicht
         var w5 = Woche(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5").C;
         Assert.Equal(1.3, w5.EcTarget);
         Assert.DoesNotContain(w5.Items, i => i.Component == "Cannaboost");
         Assert.Contains(w5.Items, i => i.Component == "Aqua Flores A");
         Assert.Equal(GrowPlanHerkunft.Eigen, _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt.HerkunftVon("flower-w5", "ecTarget"));
-        Assert.Contains("übernommen (2, 1 entfallen)", _repo.Buch(grow.Id)[0].Grund);
+        Assert.Contains("übernommen (4, 3 entfallen)", _repo.Buch(grow.Id)[0].Grund);
 
         // Vergleichswert ist jetzt Athena, nicht mehr SKX.
         var athena = _wissen.NutrientPrograms.Single(p => p.Id == "athena").FeedChart!.Columns.Single(c => c.Id == "flower-w5");
@@ -461,7 +464,7 @@ public sealed class GrowPlanTests : IDisposable
         var plan = _dienst.Anlegen(grow)!;
         Assert.Throws<ArgumentException>(() => _dienst.ProgrammWechseln(grow, "gibt-es-nicht", false));
         _repo.Speichern([plan with { Stand = GrowPlanStaende.Ende }], []);
-        Assert.Throws<InvalidOperationException>(() => _dienst.ProgrammWechseln(grow, "athena", false));
+        Assert.Throws<PlanEingefrorenException>(() => _dienst.ProgrammWechseln(grow, "athena", false));
     }
 
     [Fact]
@@ -478,7 +481,7 @@ public sealed class GrowPlanTests : IDisposable
         Assert.Equal(1.3, Woche(ende, "flower-w5").C.EcTarget);
         Assert.Equal("abgeschlossen", ende.Vermerk);
         Assert.Null(_dienst.Abgleichen(grow));   // zweites Mal: nichts
-        Assert.Throws<InvalidOperationException>(() => _dienst.Speichern(grow.Id,
+        Assert.Throws<PlanEingefrorenException>(() => _dienst.Speichern(grow.Id,
             new PlanSpeichernAnfrage("flower-w5", [("ecTarget", 1.2)], null, false, null, null)));
 
         grow.Status = GrowStatus.Running;
@@ -619,6 +622,133 @@ public sealed class GrowPlanTests : IDisposable
         Assert.Equal((null, null), zeit["flower-w1"]);
         Assert.Equal((null, null), zeit["flush"]);
     }
+
+    // ---- Fork AI (02.10.2026): Plan-Logik aus der Durchsicht ----
+
+    private static GrowDiary.Web.Services.Knowledge.Schema.FeedChartColumn Spalte(GrowPlanStand stand, string id)
+        => stand.Inhalt.Chart.Columns.Single(c => c.Id == id);
+
+    [Fact]
+    public void DasMitwanderndeEcBandStehtImBuchUndIstEigen()
+    {
+        var grow = Grow(60, "skx-canna-aqua");
+        var vorher = Spalte(_dienst.Anlegen(grow)!, "flower-w5");
+
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.3)], grund: "Spitzen");
+
+        var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
+        Assert.Equal(GrowPlanHerkunft.Eigen, arbeit.Inhalt.HerkunftVon("flower-w5", "ecMin"));
+        Assert.Equal(GrowPlanHerkunft.Eigen, arbeit.Inhalt.HerkunftVon("flower-w5", "ecMax"));
+        var buch = _repo.Buch(grow.Id);
+        Assert.Contains(buch, e => e.Feld == "ecMin" && e.Alt == Zahl(vorher.EcMin) && e.Neu == Zahl(Spalte(arbeit, "flower-w5").EcMin));
+        Assert.Contains(buch, e => e.Feld == "ecMax" && e.Grund!.Contains("folgt dem EC-Ziel"));
+    }
+
+    [Fact]
+    public void DasMitwanderndeEcBandWirdGeklemmtUndSchliesstDasZielEin()
+    {
+        var grow = Grow(61, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        // Ein breites Band um 1,5 — wie im Befund: Ziel 0,1 schob EC von unter null.
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecMin", 1.0), ("flower-w5", "ecMax", 2.0)]);
+
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 0.1)]);
+
+        var w5 = Spalte(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5");
+        var grenze = Wochenwertfelder.Finden("ecMin")!;
+        Assert.True(w5.EcMin >= grenze.Min, $"EC von {w5.EcMin} liegt unter {grenze.Min}.");
+        Assert.True(w5.EcMin <= 0.1 && 0.1 <= w5.EcMax, $"Ziel 0,1 liegt nicht in {w5.EcMin}–{w5.EcMax}.");
+    }
+
+    [Fact]
+    public void BeimProgrammwechselNimmtEinEigenesEcZielDasNeueBandMit()
+    {
+        // Zustand alter Pläne (vor 02.10.2026): Ziel eigen, Band nicht als eigen markiert.
+        var grow = Grow(62, "skx-canna-aqua");
+        var w5 = Spalte(_dienst.Anlegen(grow)!, "flower-w5");
+        _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.2), ("flower-w5", "ecMin", w5.EcMin), ("flower-w5", "ecMax", w5.EcMax)]);
+        var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!;
+        Assert.Equal(GrowPlanHerkunft.Eigen, arbeit.Inhalt.HerkunftVon("flower-w5", "ecTarget"));
+        Assert.NotEqual(GrowPlanHerkunft.Eigen, arbeit.Inhalt.HerkunftVon("flower-w5", "ecMin"));
+
+        _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: true);
+
+        // Athena nennt in W5 EC 2,4 — ihr Band liegt darum, das eigene Ziel 1,2 weit darunter.
+        var athena = _wissen.NutrientPrograms.Single(p => p.Id == "athena").FeedChart!.Columns.Single(c => c.Id == "flower-w5");
+        Assert.True(athena.EcTarget > 2.0, "Der Fall braucht ein Athena-Ziel weit über 1,2.");
+        var neu = Spalte(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5");
+        Assert.Equal(1.2, neu.EcTarget);
+        Assert.True(neu.EcMin <= 1.2 && 1.2 <= neu.EcMax, $"Ziel 1,2 liegt nicht im Band {neu.EcMin}–{neu.EcMax}.");
+    }
+
+    [Fact]
+    public void EinEingefrorenerPlanSperrtAuchWerteSetzenUndStartkorrektur()
+    {
+        var grow = Grow(63, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        _repo.Speichern([plan with { Stand = GrowPlanStaende.Ende }], []);
+
+        Assert.Throws<PlanEingefrorenException>(() => _dienst.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.2)]));
+        Assert.Throws<PlanEingefrorenException>(() => _dienst.StartstandKorrigieren(grow.Id, [("flower-w5", "ecTarget")], null));
+        Assert.Equal(1.5, Spalte(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5").EcTarget);
+        Assert.Single(_repo.Buch(grow.Id)); // nur „angelegt"
+    }
+
+    [Fact]
+    public void DasNachtragenErsetztDieBasisNachEinemProgrammwechselNicht()
+    {
+        var grow = Grow(64, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: false);
+        var ecZiel = Wochenwertfelder.Finden("ecTarget")!;
+        var athena = _wissen.NutrientPrograms.Single(p => p.Id == "athena").FeedChart!.Columns.Single(c => c.Id == "flower-w5").EcTarget;
+        Assert.NotEqual(1.5, athena); // sonst unterscheidet der Fall die Programme nicht
+
+        // Ein Startstand aus einer Version ohne „Luft Nacht": er bekommt sie nachgetragen.
+        var start = _repo.Laden(grow.Id, GrowPlanStaende.Start)!;
+        foreach (var spalte in start.Inhalt.Chart.Columns) spalte.AirTempNightC = null;
+        _repo.Nachtragen(start);
+
+        var neu = new GrowPlanService(_repo, _wissen, new TargetValueService(_wissen), NullLogger<GrowPlanService>.Instance, _eigene);
+        neu.RegisterLaden();
+        Assert.True(neu.FehlendeFelderNachtragen([grow]) >= 1);
+
+        Assert.Equal(athena, neu.Startwert(grow.Id, "flower-w5", ecZiel));
+        // „Zurück auf Plan" führt auf Athena, nicht auf SKX.
+        neu.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", 1.9)]);
+        neu.WerteSetzen(grow.Id, [("flower-w5", "ecTarget", null)]);
+        Assert.Equal(athena, Spalte(_repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!, "flower-w5").EcTarget);
+    }
+
+    [Fact]
+    public void WiederoeffnenLoeschtDenEndstandNurMitBuchEintrag()
+    {
+        var grow = Grow(65, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(grow)!;
+        _repo.Speichern([plan with { Stand = GrowPlanStaende.Ende }], []);
+
+        // Ein Eintrag, den die Datenbank ablehnt (Art ist NOT NULL).
+        var kaputt = new GrowPlanEintrag(0, grow.Id, DateTime.UtcNow, null!, null, null, null, null, null, null);
+        Assert.ThrowsAny<Exception>(() => _repo.StandEntfernen(grow.Id, GrowPlanStaende.Ende, kaputt));
+
+        Assert.NotNull(_repo.Laden(grow.Id, GrowPlanStaende.Ende));
+    }
+
+    [Fact]
+    public void StartkorrekturUndBuchGehenGemeinsamOderGarNicht()
+    {
+        var grow = Grow(66, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        var start = _repo.Laden(grow.Id, GrowPlanStaende.Start)!;
+        Spalte(start, "flower-w5").EcTarget = 1.9;
+
+        var kaputt = new GrowPlanEintrag(0, grow.Id, DateTime.UtcNow, null!, null, null, null, null, null, null);
+        Assert.ThrowsAny<Exception>(() => _repo.Speichern([], [kaputt], nachtraege: [start]));
+
+        Assert.Equal(1.5, Spalte(_repo.Laden(grow.Id, GrowPlanStaende.Start)!, "flower-w5").EcTarget);
+    }
+
+    private static string? Zahl(double? wert) => wert?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
     [Theory]
     [InlineData("SKX Canna Aqua (eigen)", "skx-canna-aqua-eigen")]

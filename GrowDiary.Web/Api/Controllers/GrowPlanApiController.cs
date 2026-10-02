@@ -295,6 +295,10 @@ public sealed class GrowPlanApiController : ApiControllerBase
             if (von is { } v && bis is { } z && v > z + 1e-9)
                 return ValidationError($"{spalte.Label}: {feld.Bezeichnung} ({Zahl(v)}) liegt über {partner.Bezeichnung} ({Zahl(z)}).");
         }
+        // Das EC-Ziel hat kein Paar — es gehört ins Band (der Plan führt das Band mit,
+        // wenn nur das Ziel kommt).
+        if (Wochenwertfelder.EcPruefen(spalte.Label, spalte, danach, bandWandertMit: true) is { } ecFehler)
+            return ValidationError(ecFehler);
 
         List<PlanDosis>? dosierung = null;
         if (anfrage.Dosierung is { } liste)
@@ -411,6 +415,11 @@ public sealed class GrowPlanApiController : ApiControllerBase
                 anfrage.Felder.Select(f => (f.SpalteId, f.Feld)),
                 string.IsNullOrWhiteSpace(anfrage.Grund) ? null : anfrage.Grund.Trim());
             return Ok(new StartstandKorrigiertDto(anzahl));
+        }
+        catch (PlanEingefrorenException fehler)
+        {
+            // Die Sperre sitzt im Dienst; hier wird sie nur übersetzt (vorher fehlte sie ganz).
+            return ValidationError(fehler.Message);
         }
         catch (ArgumentException fehler)
         {

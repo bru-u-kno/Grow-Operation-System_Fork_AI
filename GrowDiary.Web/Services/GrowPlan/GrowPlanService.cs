@@ -70,6 +70,21 @@ public sealed record PlanSpeichernErgebnis(int Aenderungen, string? ProgrammId, 
 public sealed record ProgrammwechselErgebnis(string ProgrammId, string ProgrammName, int Uebernommen, int Entfallen);
 
 /// <summary>
+/// Fork AI (02.10.2026): der Grow ist abgeschlossen, sein Plan eingefroren.
+/// </summary>
+/// <remarks>
+/// Eigener Typ, damit die Endpunkte genau diesen Fall in eine Ablehnung
+/// übersetzen können, ohne jede andere <see cref="InvalidOperationException"/>
+/// mitzufangen.
+/// </remarks>
+public sealed class PlanEingefrorenException : InvalidOperationException
+{
+    public PlanEingefrorenException() : base(Meldung) { }
+
+    public const string Meldung = "Der Grow ist abgeschlossen — sein Plan ist eingefroren.";
+}
+
+/// <summary>
 /// Fork AI (Grow-Plan, 16.09.2026): legt Pläne an und hält das Register aktuell.
 /// </summary>
 public sealed class GrowPlanService
@@ -183,7 +198,10 @@ public sealed class GrowPlanService
     /// <remarks>
     /// Geprüft (Bereiche, Paare) wird vorher vom Aufrufer — hier wird nur
     /// geschrieben. Ein abgeschlossener Grow hat keinen Arbeitsstand im Sinne
-    /// des Bearbeitens mehr; das sperrt Schritt 6.
+    /// des Bearbeitens mehr: die Sperre sitzt hier im Dienst
+    /// (<see cref="EndstandSperre"/>), nicht beim Aufrufer — bis 02.10.2026
+    /// prüfte nur ein Teil der Endpunkte, und <c>/api/wochenplan/werte</c>
+    /// schrieb in eingefrorene Pläne.
     /// </remarks>
     /// <returns>Anzahl der Felder, die sich wirklich geändert haben.</returns>
     public int WerteSetzen(
@@ -195,6 +213,7 @@ public sealed class GrowPlanService
     {
         lock (_lock)
         {
+            EndstandSperre(growId);
             var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
                 ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
             var zeit = jetztUtc ?? DateTime.UtcNow;
@@ -232,14 +251,28 @@ public sealed class GrowPlanService
                 var alt = feld.Lesen(spalte);
                 if (Gleich(alt, neu)) continue;
 
-                // Wandert das EC-Ziel und fasst niemand das Band an, wandert das Band mit.
+                // Wandert das EC-Ziel und fasst niemand das Band an, wandert das Band mit
+                // (Begründung an Wochenwertfelder.EcBandMitfuehren). Seit 02.10.2026 mit
+                // Klemmen, Buch-Eintrag und Herkunft — vorher änderte sich das Band
+                // still, und die Woche zeigte es weiter als Programmwert an.
                 if (feld.Name == "ecTarget" && alt is { } altZiel && neu is { } neuZiel
-                    && !liste.Any(a => a.SpalteId == spalteId && a.Feld is "ecMin" or "ecMax")
+                    && !liste.Any(a => string.Equals(a.SpalteId, spalteId, StringComparison.OrdinalIgnoreCase)
+                                       && Wochenwertfelder.IstEcBand(a.Feld))
                     && spalte.EcMin is { } von && spalte.EcMax is { } bis)
                 {
-                    var delta = neuZiel - altZiel;
-                    spalte.EcMin = Math.Round(von + delta, 3);
-                    spalte.EcMax = Math.Round(bis + delta, 3);
+                    var (neuVon, neuBis) = Wochenwertfelder.EcBandMitfuehren(altZiel, neuZiel, von, bis);
+                    var bandGrund = grund is null ? "folgt dem EC-Ziel" : $"{grund} (folgt dem EC-Ziel)";
+                    foreach (var (bandName, bandAlt, bandNeu) in new[] { ("ecMin", von, neuVon), ("ecMax", bis, neuBis) })
+                    {
+                        if (Gleich(bandAlt, bandNeu)) continue;
+                        var bandFeld = Wochenwertfelder.Finden(bandName)!;
+                        bandFeld.Schreiben(spalte, bandNeu);
+                        inhalt.HerkunftSetzen(spalte.Id, bandName, Gleich(bandNeu, Startwert(growId, spalte.Id, bandFeld))
+                            ? StartHerkunft(growId, spalte.Id, bandName)
+                            : GrowPlanHerkunft.Eigen);
+                        eintraege.Add(new GrowPlanEintrag(0, growId, zeit, GrowPlanArten.Wert, spalte.Id, bandName,
+                            Text(bandAlt), Text(bandNeu), ziel, bandGrund));
+                    }
                 }
 
                 feld.Schreiben(spalte, neu);
@@ -314,6 +347,7 @@ public sealed class GrowPlanService
     {
         lock (_lock)
         {
+            EndstandSperre(growId);
             var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
                 ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
             var vergleich = _repo.Laden(growId, GrowPlanStaende.Basis)
@@ -343,8 +377,9 @@ public sealed class GrowPlanService
 
             if (eintraege.Count == 0) return 0;
 
-            _repo.Nachtragen(vergleich);
-            _repo.Speichern([arbeit with { GeaendertUtc = zeit }], eintraege);
+            // Eine Transaktion: Startstand ohne Buch-Eintrag (oder umgekehrt) wäre
+            // eine Korrektur, die niemand nachvollziehen kann.
+            _repo.Speichern([arbeit with { GeaendertUtc = zeit }], eintraege, nachtraege: [vergleich]);
             _startstaende[growId] = vergleich.Inhalt;
             GrowPlanRegister.Setzen(growId, arbeit.Inhalt);
             return eintraege.Count;
@@ -361,8 +396,7 @@ public sealed class GrowPlanService
     {
         lock (_lock)
         {
-            if (_repo.Laden(growId, GrowPlanStaende.Ende) is not null)
-                throw new InvalidOperationException("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+            EndstandSperre(growId);
             var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
                 ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
             var spalte = arbeit.Inhalt.Chart.Columns.FirstOrDefault(
@@ -408,8 +442,7 @@ public sealed class GrowPlanService
     {
         lock (_lock)
         {
-            if (_repo.Laden(growId, GrowPlanStaende.Ende) is not null)
-                throw new InvalidOperationException("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+            EndstandSperre(growId);
             var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
                 ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
             var inhalt = arbeit.Inhalt;
@@ -515,8 +548,7 @@ public sealed class GrowPlanService
     {
         lock (_lock)
         {
-            if (_repo.Laden(grow.Id, GrowPlanStaende.Ende) is not null)
-                throw new InvalidOperationException("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+            EndstandSperre(grow.Id);
             var arbeit = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)
                 ?? throw new InvalidOperationException($"Grow {grow.Id} hat keinen Plan.");
             var programm = _wissen.NutrientPrograms.FirstOrDefault(
@@ -546,6 +578,18 @@ public sealed class GrowPlanService
                     {
                         entfallen += eigeneFelder.Count + (dosisGeaendert ? 1 : 0);
                         continue;
+                    }
+
+                    // Fork AI (02.10.2026): ein eigenes EC-Ziel ohne eigenes Band nimmt das
+                    // Band des NEUEN Programms mit — sonst landete das Ziel außerhalb davon
+                    // (eigenes Ziel 1,2, neues Band 1,8–2,2). Dieselbe Regel wie beim
+                    // Bearbeiten: Band verschiebt sich um den Abstand zum neuen Programmziel.
+                    if (eigeneFelder.Contains("ecTarget") && !eigeneFelder.Any(Wochenwertfelder.IstEcBand)
+                        && alt.EcTarget is { } eigenesZiel && ziel.EcMin is { } von && ziel.EcMax is { } bis)
+                    {
+                        var (neuVon, neuBis) = Wochenwertfelder.EcBandMitfuehren(ziel.EcTarget ?? eigenesZiel, eigenesZiel, von, bis);
+                        if (!Gleich(neuVon, von)) { ziel.EcMin = neuVon; neu.HerkunftSetzen(ziel.Id, "ecMin", GrowPlanHerkunft.Eigen); }
+                        if (!Gleich(neuBis, bis)) { ziel.EcMax = neuBis; neu.HerkunftSetzen(ziel.Id, "ecMax", GrowPlanHerkunft.Eigen); }
                     }
 
                     foreach (var name in eigeneFelder)
@@ -680,7 +724,11 @@ public sealed class GrowPlanService
             foreach (var grow in grows)
             {
                 var profilId = TargetValueService.ProfileIdFor(grow.HydroStyle);
-                foreach (var name in new[] { GrowPlanStaende.Start, GrowPlanStaende.Arbeit })
+                // Fork AI (02.10.2026): auch die Basis — sie ist nach einem Programmwechsel
+                // der Vergleichswert. Vorher wurde nur der Startstand nachgetragen und als
+                // Vergleichswert eingesetzt; „Zurück auf Plan" setzte danach Werte des
+                // ALTEN Programms (siehe unten).
+                foreach (var name in new[] { GrowPlanStaende.Start, GrowPlanStaende.Basis, GrowPlanStaende.Arbeit })
                 {
                     if (_repo.Laden(grow.Id, name) is not { } stand) continue;
                     var geaendert = false;
@@ -697,12 +745,21 @@ public sealed class GrowPlanService
 
                     _repo.Nachtragen(stand);
                     if (name == GrowPlanStaende.Arbeit) GrowPlanRegister.Setzen(grow.Id, stand.Inhalt);
-                    else _startstaende[grow.Id] = stand.Inhalt;
+                    // Der Vergleichswert ist die Basis, wenn es eine gibt — wie in RegisterLaden.
+                    // Ein nachgetragener Startstand ersetzt sie nicht.
+                    else if (name == GrowPlanStaende.Basis || _repo.Laden(grow.Id, GrowPlanStaende.Basis) is null)
+                        _startstaende[grow.Id] = stand.Inhalt;
                     angepasst++;
                 }
             }
         }
         return angepasst;
+    }
+
+    /// <summary>Wirft, wenn der Plan eingefroren ist — von JEDEM schreibenden Weg aufgerufen.</summary>
+    private void EndstandSperre(int growId)
+    {
+        if (_repo.Laden(growId, GrowPlanStaende.Ende) is not null) throw new PlanEingefrorenException();
     }
 
     private string StartHerkunft(int growId, string spalteId, string feld)
