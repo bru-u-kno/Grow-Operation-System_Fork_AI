@@ -93,9 +93,30 @@ Dem Workflow glauben reicht nicht:
 - Den Release-Lauf bis `veroeffentlichen` grün ansehen.
 - `git fetch origin main && git show origin/main:grow-os/config.yaml | head -2`
   — steht dort `<X>`?
-- In Home Assistant den Add-on-Store neu einlesen lassen („Nach Updates
-  suchen"), sonst erscheint das Update erst beim nächsten Abgleich des
-  Supervisors (alle paar Stunden).
+## Schritt 4 — selbst installieren
 
-Nenne der Nutzerin oder dem Nutzer die Lauf-Nummer — dann ist die Reihenfolge
-belegt und nicht behauptet.
+**Das Update spielt Claude selbst ein, nicht der Nutzer.** Der Nutzer hat das
+am 02.10.2026 ausdrücklich so festgelegt: „Warum soll ich denn den Add-on
+Store noch einlesen und das Update installieren? Das kannst du doch selber."
+
+Über den Home-Assistant-MCP, in dieser Reihenfolge:
+
+1. `ha_manage_app(action='check_updates')` — liest den Store neu ein. Sonst
+   erscheint das Update erst beim nächsten Abgleich des Supervisors (alle
+   paar Stunden). In der Antwort muss `d48160c2_grow_os_fork_ai` mit
+   `version_after` = `<X>` stehen.
+2. `ha_manage_app(slug='d48160c2_grow_os_fork_ai', action='update')`.
+3. `ha_get_app(slug='d48160c2_grow_os_fork_ai')` — `version` = `<X>` und
+   `state` = `started`. Die Meldung „update completed" allein ist kein Beleg.
+4. `ha_get_logs(source='supervisor', slug='d48160c2_grow_os_fork_ai')` —
+   der Start bis „Application started" ohne Fehler, Migrationen gelesen.
+5. Eine Anfrage an die laufende App über den Ingress
+   (`ha_manage_app(slug=…, path='/api/grows')`) — antwortet sie mit 200 und
+   echten Daten, ist die Zugriffssperre durchlässig für die Oberfläche.
+
+Andere Apps werden dabei **nicht** mit aktualisiert, auch wenn der Store
+weitere Updates meldet. Ein Update von Home Assistant Core oder OS braucht
+immer die ausdrückliche Zustimmung des Nutzers.
+
+Nenne der Nutzerin oder dem Nutzer die Lauf-Nummer und die installierte
+Version — dann ist die Reihenfolge belegt und nicht behauptet.

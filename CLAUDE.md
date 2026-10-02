@@ -318,3 +318,8 @@ Image laufen gleichzeitig; **erst wenn beides grün ist**, wird das Manifest
 anonym geprüft (HTTP 200, drei Architekturen), `config.yaml` hochgezählt und
 nach `main` vorgespult. Der Docker-Build führt keine Tests aus — deshalb zählt
 nie ein Mensch von Hand hoch. Ablauf: `/release`.
+
+**Nach dem Release installiert Claude das Update selbst** in der Anlage des
+Nutzers — Store neu einlesen, App aktualisieren, Version, Zustand und Startlog
+ansehen (Home-Assistant-MCP, Schritt 4 in `/release`). Nicht dem Nutzer
+auftragen; so festgelegt am 02.10.2026. Andere Apps, Core und OS nicht.
