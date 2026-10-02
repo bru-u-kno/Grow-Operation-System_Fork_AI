@@ -6,7 +6,7 @@ import type { EntfeuchterEinstellungen, EntfeuchterReiter, EntfeuchterSeite, Ste
 import { HYSTERESE_STUFEN, bandBerechnen, hystereseStufe, tempMax, zahl } from './entfeuchter-band'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
-import { feldFehlerAus, leereZahlenfelder, ohneLuecken, zahlAusFeld } from './feld-fehler'
+import { feldFehlerAus, leereZahlenfelder, modusFehler, ohneLuecken, zahlAusFeld } from './feld-fehler'
 import { useFehlerZeigen } from './fehler-reiter'
 
 /**
@@ -311,7 +311,8 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
                 onModus={(m) => setz('tempMaxTagModus', m)}
                 onAbstand={(v) => setz('tempMaxTagAbstandK', v)}
                 onFest={(v) => setz('tempMaxTagFestC', v)}
-                fehler={feldFehler.TempMaxTagAbstandK ?? feldFehler.TempMaxTagFestC}
+                fehlerAbstand={feldFehler.TempMaxTagAbstandK}
+                fehlerFest={feldFehler.TempMaxTagFestC}
               />
               <TempMaxBlock
                 titel="Nacht"
@@ -324,7 +325,8 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
                 onModus={(m) => setz('tempMaxNachtModus', m)}
                 onAbstand={(v) => setz('tempMaxNachtAbstandK', v)}
                 onFest={(v) => setz('tempMaxNachtFestC', v)}
-                fehler={feldFehler.TempMaxNachtAbstandK ?? feldFehler.TempMaxNachtFestC}
+                fehlerAbstand={feldFehler.TempMaxNachtAbstandK}
+                fehlerFest={feldFehler.TempMaxNachtFestC}
               />
               {ueberCo2 && (
                 <V1Alert tone="warn" message={`Liegt über der CO₂-Grenze von ${zahl(grenze)} °C — dann steigt der Entfeuchter erst nach der CO₂-Klimasperre aus.`} />
@@ -408,7 +410,7 @@ function Lesen({ label, hinweis, herkunft, wert }: { label: string; hinweis?: st
 }
 
 /** Temperatur max. für Tag oder Nacht: „Plan +" Abstand oder „Fest". */
-function TempMaxBlock({ titel, planText, modus, abstand, fest, plan, ergebnis, onModus, onAbstand, onFest, fehler }: {
+function TempMaxBlock({ titel, planText, modus, abstand, fest, plan, ergebnis, onModus, onAbstand, onFest, fehlerAbstand, fehlerFest }: {
   titel: string
   planText: string
   modus: TempMaxModus
@@ -419,8 +421,14 @@ function TempMaxBlock({ titel, planText, modus, abstand, fest, plan, ergebnis, o
   onModus: (m: TempMaxModus) => void
   onAbstand: (v: number) => void
   onFest: (v: number) => void
-  fehler?: string
+  fehlerAbstand?: string
+  fehlerFest?: string
 }) {
+  // Ein Fehler am Feld, das der Modus ausblendet, nennt Feld und Modus.
+  const fehler = modusFehler(modus, {
+    plan: { feld: 'Abstand zum Plan', modus: 'Plan +', fehler: fehlerAbstand },
+    fest: { feld: 'Fester Wert', modus: 'Fest', fehler: fehlerFest },
+  })
   return (
     <div className="ef-tempmax">
       <div className="st-feldzeile">

@@ -27,13 +27,24 @@ export function auslaufZuruecksetzen(): void {
  * Gemessene Unterkante der festen Leisten am Handy plus kleiner Abstand. Der
  * feste Wert `--mobil-kopf` stimmt nicht mehr, sobald die Schrift am Telefon
  * groesser gestellt ist — dann waechst die Leiste, die Zahl nicht.
+ *
+ * Fork AI (02.10.2026): Gezaehlt wird jede feste Leiste, die oben am Stapel
+ * anschliesst — nicht nur die, deren Oberkante bei 0 liegt. Die
+ * Navigationsreihe haengt UNTER der Kopfzeile (Oberkante 52 px) und fiel
+ * vorher heraus; wuchs sie mit der Schrift ueber `--mobil-kopf` hinaus, landete
+ * ein eingerolltes Ziel unter ihr. Der Stapel endet an der ersten Luecke: eine
+ * feste Leiste weiter unten ist keine Kopfflaeche.
  */
 function kopfUnterkante(): number {
+  const leisten = [...document.querySelectorAll<HTMLElement>('.v1-mobile-topbar, .v1-mobile-nav')]
+    .filter((el) => getComputedStyle(el).position === 'fixed')
+    .map((el) => el.getBoundingClientRect())
+    .filter((r) => r.height > 0)
+    .sort((a, b) => a.top - b.top)
   let unten = 0
-  for (const el of document.querySelectorAll<HTMLElement>('.v1-mobile-topbar, .v1-mobile-nav')) {
-    if (getComputedStyle(el).position !== 'fixed') continue
-    const r = el.getBoundingClientRect()
-    if (r.height > 0 && r.top < 4) unten = Math.max(unten, r.bottom)
+  for (const r of leisten) {
+    if (r.top >= unten + 4) break
+    unten = Math.max(unten, r.bottom)
   }
   return unten > 0 ? Math.ceil(unten) + 8 : 0
 }

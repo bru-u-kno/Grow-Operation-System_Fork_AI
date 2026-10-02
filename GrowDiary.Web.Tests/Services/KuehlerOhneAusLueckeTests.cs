@@ -60,6 +60,42 @@ public sealed class KuehlerOhneAusLueckeTests
         Assert.DoesNotContain(bestand.AusgefalleneFunktionen, f => f.Contains(Satz, StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Fork AI (02.10.2026): Seit die Kühler-Seite den Bestand zeigt, standen dort
+    /// die Hinweise der Automation, die zur ANDEREN Ansteuerung gehört („Nur
+    /// nötig, wenn …"), als ausgefallene Funktion. Eine der beiden entfällt immer.
+    /// </summary>
+    [Theory]
+    [InlineData("switch.kuehler", null)]
+    [InlineData(null, "climate.kuehler")]
+    [InlineData(null, null)]
+    public async Task DieAndereAnsteuerung_IstKeineAusgefalleneFunktion(string? steckdose, string? sollwert)
+    {
+        var nurAnsteuerung = SteuerungBauteile.FuerModul(ChillerSteuerungService.Modul)
+            .Where(b => b.HaengtAn is { Count: > 0 } r && r.All(x => x is ChillerSteuerungService.Rollen.Steckdose or ChillerSteuerungService.Rollen.KuehlerSollwert))
+            .Select(b => b.OhneDas)
+            .OfType<string>()
+            .ToList();
+        Assert.True(nurAnsteuerung.Count >= 2, "Selbsttest: die Automationen der beiden Ansteuerungen fehlen im Katalog.");
+
+        var bestand = await Bestand(Zuordnung(steckdose, sollwert));
+
+        var entfallen = bestand.Bauteile
+            .Where(b => b.Stand == SteuerungBestandService.Stand.Entfaellt && b.OhneDas is not null && nurAnsteuerung.Contains(b.OhneDas))
+            .Select(b => b.OhneDas!)
+            .ToList();
+        Assert.True(entfallen.Count > 0, "Selbsttest: keine Automation der anderen Ansteuerung entfällt — dann prüft der Fall nichts.");
+        foreach (var text in entfallen) Assert.DoesNotContain(text, bestand.AusgefalleneFunktionen);
+    }
+
+    [Fact]
+    public async Task Selbsttest_EinEntfallenerWaechterBleibtEineAusgefalleneFunktion()
+    {
+        // Der Wächter hängt an keiner Ansteuerung — fehlt er, fehlt ein Schutz.
+        var bestand = await Bestand(Zuordnung("switch.kuehler", null));
+        Assert.Contains(bestand.AusgefalleneFunktionen, f => f.Contains("Wächter", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void AndereModule_BleibenUnberuehrt()
         => Assert.Empty(SteuerungBestandService.Luecken("co2", Zuordnung(null, "number.kuehler_soll")));

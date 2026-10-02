@@ -28,6 +28,9 @@ public sealed class WartungDueTests
             InspectionIntervalDays = pruefintervall,
         };
 
+    /// <summary>Keine Fristen — für die Fälle, in denen es nur um Lebensdauer oder Sicherung geht.</summary>
+    private static readonly IReadOnlyList<WartungsFrist> Keine = [];
+
     /// <summary>Eine frische Sicherung, damit sie den Tests nicht dazwischenfunkt.</summary>
     private static readonly DateTime FrischGesichert = Jetzt.AddDays(-1);
 
@@ -35,7 +38,7 @@ public sealed class WartungDueTests
     public void APartPastItsLifespanIsDueForReplacement()
     {
         var punkte = WartungDueService.Beurteilen(
-            [Geraet(lebensdauer: 180, einbauVorTagen: 200)], new Dictionary<int, DateTime>(), FrischGesichert, Jetzt);
+            [Geraet(lebensdauer: 180, einbauVorTagen: 200)], Keine, FrischGesichert, Jetzt);
 
         var verschleiss = punkte.Single(p => p.Bereich == "Verschleiß");
         Assert.Equal("kritisch", verschleiss.Stufe);
@@ -51,7 +54,7 @@ public sealed class WartungDueTests
         // 165 von 180 Tagen: 91 % — die Vorwarnung soll kommen, solange Zeit
         // zum Bestellen bleibt, nicht erst wenn das Teil schon durch ist.
         var punkte = WartungDueService.Beurteilen(
-            [Geraet(lebensdauer: 180, einbauVorTagen: 165)], new Dictionary<int, DateTime>(), FrischGesichert, Jetzt);
+            [Geraet(lebensdauer: 180, einbauVorTagen: 165)], Keine, FrischGesichert, Jetzt);
 
         var verschleiss = punkte.Single(p => p.Bereich == "Verschleiß");
         Assert.Equal("warnung", verschleiss.Stufe);
@@ -62,7 +65,7 @@ public sealed class WartungDueTests
     public void AFreshPartSaysNothing()
     {
         var punkte = WartungDueService.Beurteilen(
-            [Geraet(lebensdauer: 180, einbauVorTagen: 20)], new Dictionary<int, DateTime>(), FrischGesichert, Jetzt);
+            [Geraet(lebensdauer: 180, einbauVorTagen: 20)], Keine, FrischGesichert, Jetzt);
 
         Assert.Empty(punkte);
     }
@@ -73,7 +76,7 @@ public sealed class WartungDueTests
         // Kein Lebensdauer-, kein Pruefintervall-Eintrag: dann gibt es dazu auch
         // nichts zu sagen. Eine erfundene Standard-Lebensdauer waere geraten.
         var punkte = WartungDueService.Beurteilen(
-            [Geraet(einbauVorTagen: 900)], new Dictionary<int, DateTime>(), FrischGesichert, Jetzt);
+            [Geraet(einbauVorTagen: 900)], Keine, FrischGesichert, Jetzt);
 
         Assert.Empty(punkte);
     }
@@ -84,21 +87,67 @@ public sealed class WartungDueTests
         var geraet = Geraet(id: 7, name: "pH-Sonde", pruefintervall: 30, einbauVorTagen: 100);
 
         // Nie geprueft: es zaehlt der Einbau, und der Text sagt das auch.
-        var ohne = WartungDueService.Beurteilen([geraet], new Dictionary<int, DateTime>(), FrischGesichert, Jetzt);
+        var ohne = WartungDueService.Beurteilen(
+            [geraet], WartungDueService.FristenRechnen([geraet], [], []), FrischGesichert, Jetzt);
         var punkt = ohne.Single(p => p.Bereich == "Prüfung");
         Assert.Contains("seit dem Einbau vor 100 Tagen", punkt.Meldung);
         Assert.Contains("ohne Prüfeintrag zählt das Einbaudatum", punkt.Herkunft);
 
         // Vor zehn Tagen gewartet: die Uhr beginnt neu, also nichts faellig.
+        var gewartet = new MaintenanceEvent
+        {
+            Id = 1, HardwareItemId = 7, Status = MaintenanceEventStatus.Completed, PerformedAtUtc = Jetzt.AddDays(-10),
+        };
         var mit = WartungDueService.Beurteilen(
-            [geraet], new Dictionary<int, DateTime> { [7] = Jetzt.AddDays(-10) }, FrischGesichert, Jetzt);
+            [geraet], WartungDueService.FristenRechnen([geraet], [gewartet], []), FrischGesichert, Jetzt);
         Assert.DoesNotContain(mit, p => p.Bereich == "Prüfung");
+    }
+
+    /// <summary>
+    /// Fork AI (02.10.2026): Erinnerung und Wartungs-Reiter lesen dieselbe Frist.
+    /// Vorher kannte die Erinnerung weder den Folgetermin einer Kalibrierung noch
+    /// einen geplanten Termin.
+    /// </summary>
+    [Fact]
+    public void DieErinnerungLiestDieselbeFristWieDerReiter()
+    {
+        var sonde = Geraet(id: 3, name: "pH-Sonde", einbauVorTagen: 120);
+        sonde.CalibrationIntervalDays = 14;
+
+        // Nie kalibriert: Einbau + 14 Tage liegt lange zurück — die Erinnerung kommt.
+        var nie = WartungDueService.Beurteilen(
+            [sonde], WartungDueService.FristenRechnen([sonde], [], []), FrischGesichert, Jetzt);
+        var punkt = nie.Single(p => p.Bereich == "Kalibrierung");
+        Assert.Equal("kritisch", punkt.Stufe);
+
+        // Vor drei Tagen kalibriert, Folgetermin in elf Tagen: nichts fällig.
+        var kalibriert = new CalibrationEvent
+        {
+            Id = 1, HardwareItemId = 3, Status = CalibrationEventStatus.Completed,
+            PerformedAtUtc = Jetzt.AddDays(-3), NextDueAtUtc = Jetzt.AddDays(11),
+        };
+        var frisch = WartungDueService.Beurteilen(
+            [sonde], WartungDueService.FristenRechnen([sonde], [], [kalibriert]), FrischGesichert, Jetzt);
+        Assert.DoesNotContain(frisch, p => p.Bereich == "Kalibrierung");
+
+        // Ein geplanter, überfälliger Termin steht auf der Aktionsseite schon als
+        // Termin — die Erinnerung nennt ihn nicht ein zweites Mal.
+        var geplant = new CalibrationEvent
+        {
+            Id = 2, HardwareItemId = 3, Status = CalibrationEventStatus.Planned, DueAtUtc = Jetzt.AddDays(-5),
+        };
+        var fristen = WartungDueService.FristenRechnen([sonde], [], [geplant]);
+        Assert.Single(fristen);
+        Assert.Equal(WartungsFristQuelle.Geplant, fristen[0].Quelle);
+        Assert.DoesNotContain(
+            WartungDueService.Beurteilen([sonde], fristen, FrischGesichert, Jetzt),
+            p => p.Bereich == "Kalibrierung");
     }
 
     [Fact]
     public void NoBackupAtAllIsTheLoudestOfThemAll()
     {
-        var punkte = WartungDueService.Beurteilen([], new Dictionary<int, DateTime>(), letzteSicherung: null, Jetzt);
+        var punkte = WartungDueService.Beurteilen([], Keine, letzteSicherung: null, Jetzt);
 
         var sicherung = punkte.Single();
         Assert.Equal("kritisch", sicherung.Stufe);
@@ -109,7 +158,7 @@ public sealed class WartungDueTests
     public void AnAgingBackupWarnsAndSaysWhatIsAtStake()
     {
         var punkte = WartungDueService.Beurteilen(
-            [], new Dictionary<int, DateTime>(), Jetzt.AddDays(-40), Jetzt);
+            [], Keine, Jetzt.AddDays(-40), Jetzt);
 
         var sicherung = punkte.Single();
         Assert.Equal("warnung", sicherung.Stufe);
@@ -125,7 +174,7 @@ public sealed class WartungDueTests
         alt.Status = HardwareItemStatus.Retired;
 
         var punkte = WartungDueService.Beurteilen(
-            [alt], new Dictionary<int, DateTime>(), FrischGesichert, Jetzt);
+            [alt], Keine, FrischGesichert, Jetzt);
 
         // Beurteilen filtert nicht selbst — das tut Offen(). Hier zaehlt nur,
         // dass die Rechnung stimmt; der Status-Filter hat seinen eigenen Weg.

@@ -109,6 +109,20 @@ public sealed class Co2Tag
     public string Datum { get; set; } = string.Empty;
     public int? GrowId { get; set; }
     public int Impulse { get; set; }
+    /// <summary>
+    /// Stand von <c>counter.co2_impulse_heute</c>, als der Tag begann — nur bei
+    /// Dauerlicht gesetzt, sonst <c>null</c>.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Der Zähler wird nur bei <i>Licht an</i>
+    /// zurückgesetzt. Bei Dauerlicht (24/0) geschieht das nie; ein Tag, der dann
+    /// beginnt, übernimmt den Stand des Vortags und bucht nur die Differenz
+    /// (<see cref="GrowDiary.Web.Services.Co2SteuerungService.ZyklusFortsetzen"/>).
+    /// <c>null</c> heißt: der Zähler zählt ab dem Licht-an dieses Tags, sein Stand
+    /// ist die Zahl des Tags. Ein gesetzter Wert heißt zugleich: dieser Tag ist
+    /// ein Kalendertag bei Dauerlicht und endet um Mitternacht.
+    /// </remarks>
+    public int? ImpulseStart { get; set; }
     public double VentilSekunden { get; set; }
     public double Gramm { get; set; }
     /// <summary>HH:mm, wann das Ziel erstmals erreicht wurde — null, wenn nie.</summary>

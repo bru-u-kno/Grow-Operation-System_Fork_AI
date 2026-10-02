@@ -73,7 +73,18 @@ public sealed class SteuerungAutomationService
         Fehlgeschlagen,
     }
 
-    public sealed record Ergebnis(string Kennung, string Name, Stand Stand, string? Hinweis);
+    public sealed record Ergebnis(string Kennung, string Name, Stand Stand, string? Hinweis)
+    {
+        /// <summary>
+        /// Der Name aus der Vorlage (<c>alias</c>), etwa „Water Chiller Wächter".
+        /// </summary>
+        /// <remarks>
+        /// Fork AI (02.10.2026): <see cref="Name"/> ist der Dateiname der Vorlage
+        /// und dient dem Abgleich; in der Vorschau stand er roh auf dem Schirm
+        /// („waechter", „dosierung").
+        /// </remarks>
+        public string? Titel { get; init; }
+    }
 
     public sealed record Bilanz(bool Erreichbar, IReadOnlyList<Ergebnis> Einzeln)
     {
@@ -101,6 +112,8 @@ public sealed class SteuerungAutomationService
         // Speichern alle Automationen neu, das dauert auf einem kleinen Rechner.
         using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
         var einzeln = new List<Ergebnis>();
+        // Kennung → Alias der Vorlage, für die Anzeige (Ergebnis.Titel).
+        var titel = new Dictionary<string, string>(StringComparer.Ordinal);
 
         // Fork AI (01.10.2026): Die handgebauten Automationen stehen unter den
         // Katalog-Kennungen, die vom Fork angelegten unter einer anderen. Ohne
@@ -129,6 +142,7 @@ public sealed class SteuerungAutomationService
                 einzeln.Add(new Ergebnis(kennung, name, Stand.Fehlgeschlagen, "Die Vorlage ist kein Objekt."));
                 continue;
             }
+            if (vorlage["alias"] is JsonValue alias && alias.TryGetValue<string>(out var lesbar)) titel[kennung] = lesbar;
 
             // Fork AI (Chiller-Ansteuerung): Eine Vorlage kann entfallen, weil ein
             // Gerät da IST — die Steckdosen-Regelung, sobald der Kühler einen
@@ -190,7 +204,7 @@ public sealed class SteuerungAutomationService
             }
         }
 
-        return new Bilanz(true, einzeln);
+        return new Bilanz(true, einzeln.Select(e => titel.TryGetValue(e.Kennung, out var t) ? e with { Titel = t } : e).ToList());
     }
 
     /// <summary>

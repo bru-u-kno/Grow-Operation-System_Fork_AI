@@ -17,6 +17,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// <list type="bullet">
 /// <item>Ein kurzes „unavailable" des Licht-Sensors schließt den Tag nicht ab.</item>
 /// <item>Ein Lichtzyklus über Mitternacht bucht seine Impulse einmal, nicht doppelt.</item>
+/// <item>Dauerlicht (24/0) bucht über mehrere Mitternächte jeden Impuls genau einmal.</item>
 /// <item>Ein gescheitertes Mittelungsfenster wird beim nächsten Speichern erneut versucht.</item>
 /// <item>Ein gescheiterter Sollwertlauf wartet keine volle Stunde.</item>
 /// </list>
@@ -70,7 +71,7 @@ public sealed class Co2TageslaufTests : IDisposable
         try { Directory.Delete(_wurzel, recursive: true); } catch { /* Windows haelt manchmal fest */ }
     }
 
-    private Co2SteuerungService Dienst()
+    private Co2SteuerungService Dienst(Func<DateTime>? jetzt = null)
     {
         var ha = new HomeAssistantService(new StubHttpClientFactory(_ha), NullLogger<HomeAssistantService>.Instance);
         var haSettings = new HomeAssistantSettingsRepository(_pfade);
@@ -84,7 +85,7 @@ public sealed class Co2TageslaufTests : IDisposable
             new WochenplanSyncService(grows, wissen, _steuerung, new AlertRuleRepository(_pfade), ha, haSettings,
                 NullLogger<WochenplanSyncService>.Instance),
             new SteuerungMittelwertService(ha, haSettings, NullLogger<SteuerungMittelwertService>.Instance),
-            NullLogger<Co2SteuerungService>.Instance);
+            NullLogger<Co2SteuerungService>.Instance) { JetztOrt = jetzt ?? (() => DateTime.Now) };
     }
 
     private static string Datum(int tageZurueck)
@@ -160,6 +161,78 @@ public sealed class Co2TageslaufTests : IDisposable
         Assert.True(gestern.Abgeschlossen);
         Assert.Equal(30, gestern.Impulse);
         Assert.Equal(3, _steuerung.GetCo2Tag(Datum(0))!.Impulse);
+    }
+
+    // ---------- Dauerlicht (24/0) ----------
+
+    /// <summary>
+    /// Vier Tage Dauerlicht, stündlich ein Takt und ein Impuls. Der Zähler wird
+    /// nur bei Licht-an zurückgesetzt — hier also nie nach dem Start.
+    /// </summary>
+    private async Task<(int Zaehler, DateTime Uhr)> DauerlichtLaufen(DateTime beginn, int stunden, int zaehler)
+    {
+        var uhr = beginn;
+        _lichtZustand = "on";
+        for (var i = 0; i < stunden; i++)
+        {
+            _impulse = zaehler;
+            await Dienst(() => uhr).TaktAsync(CancellationToken.None);
+            zaehler++;
+            uhr = uhr.AddHours(1);
+        }
+        return (zaehler, uhr);
+    }
+
+    [Fact]
+    public async Task Dauerlicht_BuchtUeberMehrereMitternaechteJedenImpulsEinmal()
+    {
+        // Licht an am 05.10. um 14:00, der Zähler wird dabei auf 0 gesetzt.
+        // Danach bleibt es an — drei Mitternächte, ohne einen Zyklusbeginn.
+        var beginn = new DateTime(2026, 10, 5, 14, 0, 0, DateTimeKind.Local);
+        var (zaehler, _) = await DauerlichtLaufen(beginn, stunden: 82, zaehler: 0);
+        var letzterStand = zaehler - 1;
+
+        var tage = _steuerung.GetCo2Tage(20).OrderBy(t => t.Datum, StringComparer.Ordinal).ToList();
+        Assert.True(tage.Count >= 3, $"Selbsttest: nur {tage.Count} Tage angelegt — der Lauf hat keine Mitternacht überquert.");
+        Assert.Equal(letzterStand, tage.Sum(t => t.Impulse));
+
+        // Ab dem zweiten Tag ist jeder Tag ein Kalendertag mit seinem eigenen Startwert.
+        Assert.Equal(new[] { "2026-10-05", "2026-10-07", "2026-10-08" }, tage.Select(t => t.Datum).ToArray());
+        Assert.Null(tage[0].ImpulseStart);
+        Assert.All(tage.Skip(1), t => Assert.NotNull(t.ImpulseStart));
+        Assert.Equal(24, tage[1].Impulse);
+        Assert.All(tage.SkipLast(1), t => Assert.True(t.Abgeschlossen, $"{t.Datum} ist nicht abgeschlossen."));
+        Assert.False(tage[^1].Abgeschlossen);
+    }
+
+    [Fact]
+    public async Task Dauerlicht_DanachWiederLichtzyklus_ZaehltAbDemLichtAn()
+    {
+        // Zwei Tage Dauerlicht, dann wieder 18/6: Licht aus am 08.10. um 12:00,
+        // an um 18:00 — Home Assistant setzt den Zähler dabei zurück.
+        var beginn = new DateTime(2026, 10, 6, 0, 30, 0, DateTimeKind.Local);
+        var (zaehler, uhr) = await DauerlichtLaufen(beginn, stunden: 59, zaehler: 0);
+        Assert.Equal(new DateTime(2026, 10, 8, 11, 30, 0, DateTimeKind.Local), uhr);
+
+        _lichtZustand = "off";
+        _impulse = zaehler - 1;
+        await Dienst(() => uhr).TaktAsync(CancellationToken.None);
+        var gebuchtVorher = _steuerung.GetCo2Tage(20).Sum(t => t.Impulse);
+        Assert.Equal(zaehler - 1, gebuchtVorher);
+
+        uhr = new DateTime(2026, 10, 8, 18, 30, 0, DateTimeKind.Local);
+        _lichtZustand = "on";
+        _impulse = 4;
+        // Der 08.10. ist schon abgeschlossen — der Abend des 08.10. gehört zum
+        // nächsten Zyklus; der beginnt erst nach Mitternacht als neuer Tag.
+        await Dienst(() => uhr).TaktAsync(CancellationToken.None);
+        uhr = new DateTime(2026, 10, 9, 0, 30, 0, DateTimeKind.Local);
+        _impulse = 9;
+        await Dienst(() => uhr).TaktAsync(CancellationToken.None);
+
+        var neu = _steuerung.GetCo2Tag("2026-10-09")!;
+        Assert.Null(neu.ImpulseStart);
+        Assert.Equal(9, neu.Impulse);
     }
 
     [Theory]

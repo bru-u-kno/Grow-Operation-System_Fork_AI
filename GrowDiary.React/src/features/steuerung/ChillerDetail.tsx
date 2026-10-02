@@ -8,6 +8,8 @@ import { rollenPfad } from '../geraete/rollenPfad'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
 import { useFehlerZeigen } from './fehler-reiter'
 import { haZustandName } from '../../deutsche-woerter'
+import { BestandAbschnitt, BestandHinweis } from './Bestand'
+import { useBestand } from './bestand-laden'
 
 /**
  * Fork AI: Steuerung › Water Chiller — der Wasserkühler, der bisher als Kachel
@@ -43,6 +45,9 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
   const [meldung, setMeldung] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [arbeitet, setArbeitet] = useState(false)
+  // Fork AI (02.10.2026): Bestand wie auf der CO₂-Seite — vorher zeigte diese
+  // Seite ihn nicht, auch nicht die Lücke „Kühler ohne Aus".
+  const { bestand, neuLaden: bestandNeuLaden } = useBestand('chiller')
 
   const auffrischen = useCallback(async () => {
     try {
@@ -180,6 +185,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           message="Fällt der Wasserfühler aus, schaltet niemand mehr ab. Der Wächter gehört eingeschaltet."
         />
       )}
+      <BestandHinweis bestand={bestand} />
 
       <section className="v1-kpi-grid">
         <V1Stat
@@ -374,6 +380,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
           </V1Card>
         </V1Section>
       )}
+
+      <BestandAbschnitt modul="chiller" schaltet="den Kühler" bestand={bestand} neuLaden={bestandNeuLaden} />
 
       <div className="st-geraete-zeile">
         <span>

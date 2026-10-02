@@ -76,6 +76,7 @@ public sealed class SteuerungRepository : RepositoryBase
                     Datum TEXT NOT NULL UNIQUE,
                     GrowId INTEGER NULL,
                     Impulse INTEGER NOT NULL DEFAULT 0,
+                    ImpulseStart INTEGER NULL,
                     VentilSekunden REAL NOT NULL DEFAULT 0,
                     Gramm REAL NOT NULL DEFAULT 0,
                     ZielErreichtUm TEXT NULL,
@@ -100,6 +101,8 @@ public sealed class SteuerungRepository : RepositoryBase
                      {
                          "ALTER TABLE ForkCo2Tage ADD COLUMN GrammVorher REAL NOT NULL DEFAULT 0;",
                          "ALTER TABLE ForkCo2Tage ADD COLUMN Flaschenwechsel INTEGER NOT NULL DEFAULT 0;",
+                         // Fork AI (02.10.2026): Startwert des Zählers bei Dauerlicht (Co2Tag.ImpulseStart).
+                         "ALTER TABLE ForkCo2Tage ADD COLUMN ImpulseStart INTEGER NULL;",
                      })
             {
                 try
@@ -254,8 +257,8 @@ public sealed class SteuerungRepository : RepositoryBase
         using var connection = Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO ForkCo2Tage (Datum, GrowId, Impulse, VentilSekunden, Gramm, ZielErreichtUm, FlascheStartKg, FlascheEndeKg, GrammVorher, Flaschenwechsel, Abgeschlossen, JournalEntryId, VerbrauchId, CreatedAtUtc, AbgeschlossenUtc)
-            VALUES ($datum, $growId, $impulse, $ventil, $gramm, $ziel, $start, $ende, $grammVorher, $wechsel, $abg, $journal, $verbrauch, $created, $abgUtc);
+            INSERT INTO ForkCo2Tage (Datum, GrowId, Impulse, ImpulseStart, VentilSekunden, Gramm, ZielErreichtUm, FlascheStartKg, FlascheEndeKg, GrammVorher, Flaschenwechsel, Abgeschlossen, JournalEntryId, VerbrauchId, CreatedAtUtc, AbgeschlossenUtc)
+            VALUES ($datum, $growId, $impulse, $impulseStart, $ventil, $gramm, $ziel, $start, $ende, $grammVorher, $wechsel, $abg, $journal, $verbrauch, $created, $abgUtc);
             SELECT last_insert_rowid();
             """;
         Bind(command, tag);
@@ -269,7 +272,7 @@ public sealed class SteuerungRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE ForkCo2Tage SET
-                GrowId = $growId, Impulse = $impulse, VentilSekunden = $ventil, Gramm = $gramm,
+                GrowId = $growId, Impulse = $impulse, ImpulseStart = $impulseStart, VentilSekunden = $ventil, Gramm = $gramm,
                 ZielErreichtUm = $ziel, FlascheStartKg = $start, FlascheEndeKg = $ende,
                 GrammVorher = $grammVorher, Flaschenwechsel = $wechsel,
                 Abgeschlossen = $abg, JournalEntryId = $journal, VerbrauchId = $verbrauch, AbgeschlossenUtc = $abgUtc
@@ -285,6 +288,7 @@ public sealed class SteuerungRepository : RepositoryBase
         command.Parameters.AddWithValue("$datum", t.Datum);
         command.Parameters.AddWithValue("$growId", (object?)t.GrowId ?? DBNull.Value);
         command.Parameters.AddWithValue("$impulse", t.Impulse);
+        command.Parameters.AddWithValue("$impulseStart", (object?)t.ImpulseStart ?? DBNull.Value);
         command.Parameters.AddWithValue("$ventil", t.VentilSekunden);
         command.Parameters.AddWithValue("$gramm", t.Gramm);
         command.Parameters.AddWithValue("$ziel", (object?)t.ZielErreichtUm ?? DBNull.Value);
@@ -304,6 +308,7 @@ public sealed class SteuerungRepository : RepositoryBase
         Datum = reader["Datum"].ToString() ?? string.Empty,
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
         Impulse = Convert.ToInt32(reader["Impulse"], CultureInfo.InvariantCulture),
+        ImpulseStart = reader["ImpulseStart"] is DBNull ? null : Convert.ToInt32(reader["ImpulseStart"], CultureInfo.InvariantCulture),
         VentilSekunden = Convert.ToDouble(reader["VentilSekunden"], CultureInfo.InvariantCulture),
         Gramm = Convert.ToDouble(reader["Gramm"], CultureInfo.InvariantCulture),
         ZielErreichtUm = NullString(reader["ZielErreichtUm"]),

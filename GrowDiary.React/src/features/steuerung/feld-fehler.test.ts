@@ -1,6 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import { ApiRequestError } from '../../api'
-import { feldFehlerAus, leereZahlenfelder, ohneLuecken, zahlAusFeld } from './feld-fehler'
+import { feldFehlerAus, leereZahlenfelder, modusFehler, ohneLuecken, zahlAusFeld } from './feld-fehler'
+
+describe('modusFehler', () => {
+  const felder = (abstand?: string, fest?: string) => ({
+    plan: { feld: 'Abstand zum Plan', modus: 'Plan +', fehler: abstand },
+    fest: { feld: 'Fester Wert', modus: 'Fest', fehler: fest },
+  })
+  it('ein Fehler am sichtbaren Feld bleibt, wie er ist', () => {
+    expect(modusFehler('fest', felder(undefined, 'Bitte eine Zahl eintragen.'))).toBe('Bitte eine Zahl eintragen.')
+  })
+  it('ein Fehler am ausgeblendeten Feld nennt Feld und Modus', () => {
+    expect(modusFehler('plan', felder(undefined, 'Bitte eine Zahl eintragen.')))
+      .toBe('Fester Wert: Bitte eine Zahl eintragen — steht unter „Fest" und ist ausgeblendet, solange „Plan +" gewählt ist.')
+    expect(modusFehler('fest', felder('Höchstens 15 K.', undefined)))
+      .toBe('Abstand zum Plan: Höchstens 15 K — steht unter „Plan +" und ist ausgeblendet, solange „Fest" gewählt ist.')
+  })
+  it('ohne Fehler nichts', () => {
+    expect(modusFehler('plan', felder())).toBeUndefined()
+  })
+})
 
 describe('zahlAusFeld', () => {
   it('leer wird NaN — nie 0', () => {
