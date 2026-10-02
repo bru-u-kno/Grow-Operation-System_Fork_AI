@@ -218,7 +218,6 @@ public sealed class Co2SteuerungService
 
     // Vorbelegung neuer Klima-Werte, wenn weder Fork noch Home Assistant einen kennen.
     public const int StandardToleranzMinuten = 7;
-    public const double StandardNotbremseProzent = 65;
     public const int StandardT6StufeKlima = 6;
 
     /// <summary>
@@ -231,7 +230,14 @@ public sealed class Co2SteuerungService
     {
         var kopie = System.Text.Json.JsonSerializer.Deserialize<Co2Einstellungen>(System.Text.Json.JsonSerializer.Serialize(e))!;
         kopie.KlimaToleranzMinuten ??= live.HaKlimaToleranzMinuten is { } tol ? (int)Math.Round(tol) : StandardToleranzMinuten;
-        kopie.RhNotbremseFestProzent ??= live.HaRhNotbremseProzent ?? StandardNotbremseProzent;
+        // Ohne Wert in Fork und HA: Obergrenze + Abstand, dieselbe Rechnung wie
+        // im Plan-Modus (WirksameNotbremse). Bis zum 02.10.2026 stand hier eine
+        // feste 65 — gleich der Obergrenze ab Werk (65). Pruefen verlangt
+        // „Notbremse über der Obergrenze", also lehnte das Backend auf einer
+        // frischen Installation JEDES Speichern der CO₂-Seite ab, auch für
+        // Felder, die mit der Feuchte nichts zu tun haben.
+        kopie.RhNotbremseFestProzent ??= live.HaRhNotbremseProzent
+            ?? Math.Clamp(kopie.RhObergrenzeProzent + kopie.RhNotbremseAbstandProzent, NotbremseMin, NotbremseMax);
         kopie.T6StufeKlima ??= live.HaT6StufeKlima is { } stufe ? (int)Math.Round(stufe) : StandardT6StufeKlima;
         kopie.RhMittelMinuten ??= SteuerungRechenwertService.StandardMittelMinuten;
         return kopie;

@@ -239,9 +239,14 @@ public sealed class GrowsApiController : ApiControllerBase
            einem Programm, das niemand mehr gewählt hat. Die Oberfläche ruft den
            Planweg vorher auf; danach ist die Id hier dieselbe und es gibt
            nichts abzulehnen. */
-        if (Services.GrowPlan.GrowPlanService.HatPlan(id)
+        // Verglichen wird mit dem Programm des PLANS, nicht mit dem Feld am Grow:
+        // wer im Formular auf eigene Nährstoffe umstellt, leert das Feld am Grow,
+        // der Plan bleibt. Wer danach dasselbe Programm wieder einträgt, wechselt
+        // nichts — bis zum 02.10.2026 lehnte die Sperre genau das ab (gefunden
+        // vom E2E-Rundweg formularfelder-kommen-an, der so nicht aufräumen konnte).
+        if (Services.GrowPlan.GrowPlanRegister.Programm(id) is { } planProgramm
             && grow.FeedProgramId is { } neuesProgramm
-            && !string.Equals(neuesProgramm, existing.FeedProgramId, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(neuesProgramm, planProgramm.Id, StringComparison.OrdinalIgnoreCase))
         {
             ModelState.AddModelError(nameof(request.FeedProgramId),
                 "Dieser Grow hat einen Plan — das Programm wechselt über „Programm wechseln“ "

@@ -145,7 +145,7 @@ public sealed class PlanUndAlarmWegeTests
 
     // ---- Befund 8: Programmwechsel über PUT /api/grows/{id} ----
 
-    private static object Formular(int? tentId, string programm) => new
+    private static object Formular(int? tentId, string? programm) => new
     {
         name = "Plan-Weg",
         tentId,
@@ -171,6 +171,29 @@ public sealed class PlanUndAlarmWegeTests
         // Dasselbe Programm (so schickt es die Oberfläche nach dem Planweg): angenommen.
         var gleich = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, "skx-canna-aqua"));
         Assert.Equal(HttpStatusCode.OK, gleich.StatusCode);
+    }
+
+    /// <summary>
+    /// Eigene Nährstoffe leeren das Programm am Grow, der Plan bleibt. Dasselbe
+    /// Programm danach wieder einzutragen ist kein Wechsel — bis zum 02.10.2026
+    /// lehnte die Sperre es ab, weil sie gegen das Feld am Grow verglich statt
+    /// gegen den Plan (E2E: formularfelder-kommen-an konnte nicht aufräumen).
+    /// </summary>
+    [Fact]
+    public async Task DasProgrammDesPlansDarfWiederEingetragenWerden()
+    {
+        var (id, tentId) = GrowMitPlan();
+        var client = _app.IngressClient();
+
+        var eigene = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, null));
+        Assert.Equal(HttpStatusCode.OK, eigene.StatusCode);
+
+        var zurueck = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, "skx-canna-aqua"));
+        Assert.Equal(HttpStatusCode.OK, zurueck.StatusCode);
+
+        // Ein anderes Programm bleibt gesperrt.
+        var anderes = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, "athena"));
+        Assert.Equal(HttpStatusCode.BadRequest, anderes.StatusCode);
     }
 
     // ---- Befund 6: Toleranz einer Plan-Regel ----

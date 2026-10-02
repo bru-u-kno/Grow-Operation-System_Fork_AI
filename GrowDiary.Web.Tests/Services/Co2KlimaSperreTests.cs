@@ -174,4 +174,23 @@ public sealed class Co2KlimaSperreTests
         Assert.Equal(6, anzeige.T6StufeKlima);
         Assert.Equal(4, gespeichert.KlimaToleranzMinuten);
     }
+
+    /// <summary>
+    /// Frische Installation, kein Notbremse-Helfer in Home Assistant: die Seite
+    /// muss sich speichern lassen. Bis zum 02.10.2026 war die Vorgabe der
+    /// Notbremse 65 — gleich der Obergrenze ab Werk —, und <c>Pruefen</c> lehnte
+    /// damit jedes Speichern der CO₂-Seite ab, egal welches Feld man änderte.
+    /// </summary>
+    [Fact]
+    public void OhneWerteAusHomeAssistantLaesstSichDieSeiteSpeichern()
+    {
+        var live = new Co2Live(true, 800, 960, "plan", 1200, null, 960, 840, 660, 50, 910, true, true, false, true, true, 5, false,
+            29, 53, 27, 51, 1.5, 10, 0.05, 0.07, 8.3, 7, null);
+
+        var anzeige = Co2SteuerungService.MitWertenAusHomeAssistant(new Co2Einstellungen(), live);
+
+        Assert.True(anzeige.RhNotbremseFestProzent > anzeige.RhObergrenzeProzent);
+        Assert.Empty(Co2SteuerungService.Pruefen(anzeige));
+    }
 }
+
