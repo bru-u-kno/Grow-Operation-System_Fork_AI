@@ -105,7 +105,7 @@ public sealed class GrowCostService
         var ernte = _harvest.GetForGrow(growId);
 
         return Berechnen(
-            von, bis, grow.FlipDate,
+            von, bis, Phasenanker.Fuer(grow, bis).BlueteAb,
             tent?.LightWatt,
             lichtplan is null ? null : Lichtstunden(lichtplan),
             StrompreisCentProKwh,

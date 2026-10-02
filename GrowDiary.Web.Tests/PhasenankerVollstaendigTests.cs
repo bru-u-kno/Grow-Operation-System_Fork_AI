@@ -43,8 +43,7 @@ public sealed class PhasenankerVollstaendigTests
         ["Api/Controllers/GrowWorkflowApiController.cs"] = "Die Bestätigungen selbst: setzt die Anker, prüft nur „schon gesetzt?“.",
         ["Api/Controllers/GrowExportsApiController.Import.cs"] = "Kopiert die Anker eines importierten Laufs.",
         ["Services/Demobestand.cs"] = "Legt die Testdaten mit bestätigten Ankern an.",
-        ["Services/KostenSeiteService.cs"] = "Kostenseite — wird parallel umgebaut und darf hier nicht angefasst werden; liest FlipDate für das Erntefenster. Nachziehen, sobald das Kostenpaket steht.",
-        ["Services/GrowCostService.cs"] = "Kostenseite — wird parallel umgebaut; reicht FlipDate an die Kostenaufteilung. Nachziehen, sobald das Kostenpaket steht.",
+        ["Services/Demobestand.Strom.cs"] = "Legt den zweiten Test-Grow (Blütezelt 2) mit bestätigten Ankern an — schreibt, rechnet nicht.",
     };
 
     [Fact]

@@ -427,8 +427,10 @@ public sealed class KostenSeiteService
             (null, { } max) => max,
             _ => null,
         };
-        if (wochen is null || grow.FlipDate is null) return (null, null);
-        var ernte = grow.FlipDate.Value.Date.AddDays(wochen.Value * 7);
+        // Blütebeginn aus dem Phasenanker, nicht aus dem Flipdatum: so zählen
+        // auch die bestätigte Autoflower-Blüte und ein Einstieg „Blüte" ohne Flip.
+        if (wochen is null || Phasenanker.Fuer(grow, heute).BlueteAb is not { } bluete) return (null, null);
+        var ernte = bluete.Date.AddDays(wochen.Value * 7);
         var rest = (ernte - heute).Days;
         if (rest <= 0) return (bisher, $"Ernte laut Züchter-Angabe ({wochen} Wochen Blüte) erreicht");
         return (bisher + rest * proTag, $"bei {wochen} Wochen Blüte, Ernte ≈ {ernte:dd.MM.yyyy}");
