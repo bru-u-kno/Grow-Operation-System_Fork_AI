@@ -20,9 +20,21 @@ public sealed class Co2SyncWorker : BackgroundService
     private static readonly TimeSpan Takt = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan Sollwerttakt = TimeSpan.FromHours(1);
 
+    /// <summary>Nach einem gescheiterten Sollwertlauf: so bald der nächste Versuch.</summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Vorher wurde der Zeitstempel VOR dem Schreiben
+    /// gesetzt — ein Fehlschlag (Home Assistant kurz weg) wartete eine volle
+    /// Stunde, und bei Ziel-Quelle „plan" galt so lange das alte Wochenziel.
+    /// Nicht jeden Takt (2 min), weil jeder Lauf rund zwanzig Helfer schreibt.
+    /// </remarks>
+    private static readonly TimeSpan Wiederholtakt = TimeSpan.FromMinutes(10);
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<Co2SyncWorker> _logger;
-    private DateTime _letzterSollwertlauf = DateTime.MinValue;
+    private DateTime _naechsterSollwertlauf = DateTime.MinValue;
+
+    /// <summary>Die Uhr — im Test eine, die man vorstellen kann.</summary>
+    public Func<DateTime> JetztUtc { get; init; } = () => DateTime.UtcNow;
 
     public Co2SyncWorker(IServiceProvider serviceProvider, ILogger<Co2SyncWorker> logger)
     {
@@ -67,12 +79,17 @@ public sealed class Co2SyncWorker : BackgroundService
         var gespeichert = repo.GetEinstellungen<Models.Co2Einstellungen>(Co2SteuerungService.Modul);
         if (gespeichert is null) return;
 
-        if (DateTime.UtcNow - _letzterSollwertlauf >= Sollwerttakt)
+        var jetzt = JetztUtc();
+        if (jetzt >= _naechsterSollwertlauf)
         {
-            _letzterSollwertlauf = DateTime.UtcNow;
+            // Erst einmal den Wiederholtakt vormerken: wirft der Lauf, wird
+            // trotzdem bald wieder versucht — und nicht in jedem Takt.
+            _naechsterSollwertlauf = jetzt + Wiederholtakt;
             // Ohne die Automation selbst: wer sie in HA ausgeschaltet hat, meint das so.
             var ok = await dienst.StuendlichAbgleichenAsync(gespeichert, ct);
-            _logger.LogInformation("CO₂-Sollwerte nach Home Assistant geschrieben: {Ergebnis}.", ok ? "vollständig" : "unvollständig");
+            if (ok) _naechsterSollwertlauf = jetzt + Sollwerttakt;
+            _logger.LogInformation("CO₂-Sollwerte nach Home Assistant geschrieben: {Ergebnis}.",
+                ok ? "vollständig" : $"unvollständig — neuer Versuch in {(int)Wiederholtakt.TotalMinutes} min");
         }
     }
 }

@@ -86,7 +86,8 @@ public sealed class AutomationKennungTests
                 .AufnehmenAsync("co2", Rollen.Keys.ToList(), Einstellungen);
 
         public Task<SteuerungAutomationService.Bilanz> AnlegenAsync()
-            => new SteuerungAutomationService(Ha(), NullLogger<SteuerungAutomationService>.Instance)
+            => new SteuerungAutomationService(Ha(), NullLogger<SteuerungAutomationService>.Instance,
+                new GrowDiary.Web.Infrastructure.AppPaths(Path.Combine(Path.GetTempPath(), "AutomationKennung_" + Guid.NewGuid().ToString("N"))))
                 .AnlegenAsync("co2", Rollen, Einstellungen, nurVorschau: false);
 
         public List<string> Geschrieben => Handler.Requests

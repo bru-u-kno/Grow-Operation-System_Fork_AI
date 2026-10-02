@@ -44,7 +44,7 @@ public sealed class SteuerungAbsicherungService
         _ha = ha;
         _automationen = automationen;
         _log = log;
-        Rechenwerte = new SteuerungRechenwertAbsicherung(ha, log);
+        Rechenwerte = new SteuerungRechenwertAbsicherung(ha, log, automationen.SicherungsOrdner);
     }
 
     /// <summary>Die Rechenwerte (Formeln der Template-Helfer) — eigener Weg über den Einstellungsdialog.</summary>
@@ -91,12 +91,14 @@ public sealed class SteuerungAbsicherungService
         if (vorher.Lage.DosiertGerade)
         {
             return new Bilanz(
-                "Gerade läuft eine Dosierung oder das Ventil steht offen. Eine Automation neu zu schreiben bricht sie ab — "
-                + "mitten im Impuls bliebe das Ventil offen. Bitte in einer Pause oder bei Licht aus noch einmal.",
+                "Gerade läuft eine Dosierung, das Ventil steht offen, oder sein Zustand ist nicht lesbar. Eine Automation "
+                + "neu zu schreiben bricht sie ab — mitten im Impuls bliebe das Ventil offen. Bitte in einer Pause oder bei "
+                + "Licht aus noch einmal.",
                 [], vorher.Lage);
         }
 
-        using var client = _ha.CreateClient(settings);
+        // Schreibt Automationen und Rechenwerte: die lange Frist.
+        using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
         var einzeln = new List<Ergebnis>();
 
         foreach (var a in vorher.Gelesen)
@@ -237,8 +239,14 @@ public sealed class SteuerungAbsicherungService
         }
 
         var rahmen = new Co2Absicherung.Rahmen(fuehler, dosierungen, Ports(zuordnung));
-        var laeuft = dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft)
-            || await PortOffenAsync(zuordnung, settings, ct);
+        var port = await PortLageAsync(zuordnung, settings, ct);
+        var laeuft = dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft) || port != PortLage.Zu;
+        if (port == PortLage.Unbekannt)
+        {
+            const string unlesbar = "Der Zustand der Dosier-Steckdose ist gerade nicht lesbar — solange wird nichts neu "
+                + "geschrieben, denn ein offenes Ventil bliebe beim Neuschreiben offen.";
+            hinweis = hinweis is null ? unlesbar : $"{hinweis} {unlesbar}";
+        }
 
         var automationen = gelesen
             .Select(g => new Automation(g.EntityId, g.Name, Co2Absicherung.Pruefen(g.Config, rahmen)))
@@ -257,13 +265,46 @@ public sealed class SteuerungAbsicherungService
             .OfType<string>()
             .ToHashSet(StringComparer.Ordinal);
 
-    private async Task<bool> PortOffenAsync(
-        IReadOnlyDictionary<string, string> zuordnung, HomeAssistantSettings settings, CancellationToken ct)
-        => zuordnung.TryGetValue("port_zustand", out var port)
-           && await _ha.GetEntityStateAsync(settings, port, ct) is { } zustand
-           && string.Equals(zustand.State, "on", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Was über das Dosierventil bekannt ist.</summary>
+    internal enum PortLage
+    {
+        /// <summary>Meldet ausdrücklich „aus" — oder es ist keine Zustands-Rolle zugeordnet.</summary>
+        Zu,
+        /// <summary>Meldet „an".</summary>
+        Offen,
+        /// <summary>Nicht lesbar: unavailable, unknown, Home Assistant antwortet nicht.</summary>
+        Unbekannt,
+    }
 
-    /// <summary>Läuft eine Dosierung oder steht der Port offen? Antwortet HA nicht, zählt das als ja.</summary>
+    /// <summary>
+    /// Steht das Ventil offen? Nur ein ausdrückliches „off" zählt als zu.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Was hier auf dem Spiel steht.</b> „Schreiben" heißt hier: eine
+    /// laufende CO₂-Automation in Home Assistant neu speichern. Home Assistant
+    /// bricht dabei jeden laufenden Durchgang ab — fällt das mitten in einen
+    /// Impuls, kommt der Schritt „Ventil zu" nie, und das Ventil bleibt offen,
+    /// bis der Wächter es schließt.</para>
+    /// <para><b>Deshalb die Richtung.</b> Bis 02.10.2026 galt ein nicht lesbarer
+    /// Zustand (Steckdose offline, Schutzschalter offen, Home Assistant hängt)
+    /// als „zu", und die Absicherung schrieb. Ein unnötig verschobenes Absichern
+    /// kostet nichts — der Bediener versucht es später noch einmal. Ein Abbruch
+    /// mitten im Impuls kostet Gas und im schlimmsten Fall die Pflanzen. Im
+    /// Zweifel wird also nicht geschrieben, und die Seite sagt warum.</para>
+    /// <para>Ohne zugeordnete Zustands-Rolle gibt es nichts zu lesen; dann
+    /// entscheidet allein, ob eine Dosier-Automation läuft — wie bisher.</para>
+    /// </remarks>
+    internal async Task<PortLage> PortLageAsync(
+        IReadOnlyDictionary<string, string> zuordnung, HomeAssistantSettings settings, CancellationToken ct)
+    {
+        if (!zuordnung.TryGetValue("port_zustand", out var port) || string.IsNullOrWhiteSpace(port)) return PortLage.Zu;
+        var zustand = (await _ha.GetEntityStateAsync(settings, port, ct))?.State;
+        if (string.Equals(zustand, "off", StringComparison.OrdinalIgnoreCase)) return PortLage.Zu;
+        if (string.Equals(zustand, "on", StringComparison.OrdinalIgnoreCase)) return PortLage.Offen;
+        return PortLage.Unbekannt;
+    }
+
+    /// <summary>Läuft eine Dosierung, steht der Port offen oder ist er nicht lesbar? Antwortet HA nicht, zählt das als ja.</summary>
     private async Task<bool> DosiertGeradeAsync(
         HttpClient client, IReadOnlyDictionary<string, string> zuordnung, IReadOnlySet<string> dosierungen,
         HomeAssistantSettings settings, CancellationToken ct)
@@ -271,7 +312,7 @@ public sealed class SteuerungAbsicherungService
         var zustaende = await AutomationenAsync(client, ct);
         if (zustaende is null) return true;
         return dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft)
-            || await PortOffenAsync(zuordnung, settings, ct);
+            || await PortLageAsync(zuordnung, settings, ct) != PortLage.Zu;
     }
 
     private sealed record Zustand(string EntityId, string Name, string ConfigId, bool Laeuft);

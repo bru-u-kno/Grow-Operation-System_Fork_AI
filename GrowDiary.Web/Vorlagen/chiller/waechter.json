@@ -1,6 +1,6 @@
 {
   "alias": "Water Chiller Wächter",
-  "description": "Sicherheitsnetz der Kuehler-Regelung. (1) Faellt der Wasserfuehler fuenf Minuten aus, weiss niemand mehr, wie warm das Wasser ist - dann werden Steckdose und Kuehler-Geraet zwangsweise ausgeschaltet (was zugeordnet ist), bewusst ohne Mindestlaufzeit-Gate: Sicherheit geht vor Kompressorschutz. (2) Steht das Wasser trotz laufender Regelung eine Viertelstunde ueber 24 Grad, kuehlt der Kuehler nicht mehr nach - das meldet der Waechter, ohne selbst einzugreifen. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/waechter/2.",
+  "description": "Sicherheitsnetz der Kuehler-Regelung. (1) Faellt der Wasserfuehler fuenf Minuten aus, weiss niemand mehr, wie warm das Wasser ist - dann werden Steckdose und Kuehler-Geraet zwangsweise ausgeschaltet (was zugeordnet ist), bewusst ohne Mindestlaufzeit-Gate: Sicherheit geht vor Kompressorschutz. (2) Steht das Wasser trotz laufender Regelung eine Viertelstunde ueber 24 Grad, kuehlt der Kuehler nicht mehr nach - das meldet der Waechter, ohne selbst einzugreifen. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/waechter/3. Seit Fassung 3 (02.10.2026) wird ein climate-Kuehler mit climate.turn_off abgeschaltet. Ein Kuehler, der nur einen Sollwert-Eingang (number) hat, kennt kein Aus: vorher ging homeassistant.turn_off an ihn, scheiterte und wurde wegen continue_on_error still uebergangen. Jetzt nimmt der Waechter dafuer die Steckdose, wenn eine zugeordnet ist; ohne Steckdose schreibt er ins Logbuch, dass er den Kuehler nicht abschalten konnte.",
   "mode": "queued",
   "max": 5,
   "triggers": [
@@ -43,11 +43,45 @@
             },
             {
               "wenn": "kuehler_sollwert",
-              "action": "homeassistant.turn_off",
-              "continue_on_error": true,
-              "target": {
-                "entity_id": "[[kuehler_sollwert]]"
-              }
+              "alias": "Kühler mit eigenem Thermostat: nur climate lässt sich ausschalten",
+              "choose": [
+                {
+                  "conditions": [
+                    {
+                      "condition": "template",
+                      "value_template": "{{ '[[kuehler_sollwert]]'.startswith('climate.') }}"
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "action": "climate.turn_off",
+                      "continue_on_error": true,
+                      "target": {
+                        "entity_id": "[[kuehler_sollwert]]"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "wennNicht": "steckdose",
+                  "conditions": [
+                    {
+                      "condition": "template",
+                      "value_template": "{{ not '[[kuehler_sollwert]]'.startswith('climate.') }}"
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "action": "logbook.log",
+                      "data": {
+                        "name": "Water Chiller Wächter",
+                        "message": "Der Kühler hat nur einen Sollwert-Eingang und keine Steckdose — abschalten lässt er sich nicht. Er kühlt auf den letzten Sollwert weiter.",
+                        "entity_id": "[[kuehler_sollwert]]"
+                      }
+                    }
+                  ]
+                }
+              ]
             },
             {
               "action": "input_datetime.set_datetime",

@@ -235,4 +235,111 @@ public sealed class LichtNachschreibenTests : IDisposable
         // Die Prüffrist: 7 Nachfragen im Sekundentakt nach dem einen Versuch.
         Assert.Equal(7, wartezeiten.Count(w => w == AcSchreiber.Nachfragetakt) - 1);
     }
+
+    // ---------- Fork AI (02.10.2026): ein neuer Befehl ersetzt den offenen ----------
+
+    /// <summary>Die offenen Sollwerte des Dienstes — statisch und privat, deshalb über Reflexion.</summary>
+    private static System.Collections.Concurrent.ConcurrentDictionary<string, LichtOffen> Offene()
+        => (System.Collections.Concurrent.ConcurrentDictionary<string, LichtOffen>)typeof(LichtSteuerungService)
+            .GetField("Offene", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .GetValue(null)!;
+
+    /// <summary>
+    /// Licht an, „aus" gesendet und verworfen, dann „an" — das stand schon so.
+    /// </summary>
+    /// <remarks>
+    /// Vorher kehrte „an" sofort zurück, ohne den offenen „aus"-Eintrag zu
+    /// entfernen. Das nächste Öffnen der Seite hätte „aus" nachgeschrieben —
+    /// das Licht ging mitten in der Lichtphase aus, obwohl der letzte Befehl
+    /// „an" war. Hier sichtbar daran, dass der Modus noch als „unbestätigt"
+    /// gilt: genau der Eintrag, aus dem das Nachschreiben folgt.
+    /// </remarks>
+    [Fact]
+    public async Task NeuerBefehl_AufDemSchonStehendenSoll_RaeumtDenVeraltetenAuf()
+    {
+        Offene().TryRemove(Modus, out _);
+        var wolke = new Wolke();
+        wolke.Setzen(Modus, LichtSteuerungService.Modi.An);
+        wolke.Verwirft.Add(Modus);
+        var licht = Licht(wolke);
+
+        await licht.BefehlAsync("aus", null, null, CancellationToken.None);
+        Assert.True(Offene().ContainsKey(Modus), "Selbsttest: das verworfene „aus\" muss offen sein.");
+
+        wolke.Verwirft.Clear();
+        var ok = await licht.BefehlAsync("an", null, null, CancellationToken.None);
+        var live = await licht.LiveAsync(CancellationToken.None);
+
+        Assert.True(ok);
+        Assert.False(Offene().ContainsKey(Modus), "Der veraltete „aus\"-Befehl liegt noch zum Nachschreiben bereit.");
+        Assert.DoesNotContain(Modus, live.Unbestaetigt);
+    }
+
+    /// <summary>
+    /// Kommt während des Nachschreibens ein neuer Befehl, gewinnt der neue.
+    /// </summary>
+    /// <remarks>
+    /// Vorher schrieb die Nachprüfung ihren Eintrag nach dem Senden blind
+    /// zurück und überschrieb damit einen parallel gesetzten neuen — der alte
+    /// Soll lebte weiter.
+    /// </remarks>
+    [Fact]
+    public async Task NeuerBefehlWaehrendDesNachschreibens_WirdNichtUeberschrieben()
+    {
+        var offene = Offene();
+        offene.TryRemove(Modus, out _);
+        var vor30s = DateTime.UtcNow - TimeSpan.FromSeconds(30);
+        var alt = new LichtOffen(Modus, LichtSteuerungService.Modi.Aus, vor30s, 1, vor30s, LichtSteuerungService.Modi.An);
+        offene[Modus] = alt;
+
+        var neu = new LichtOffen(Modus, LichtSteuerungService.Modi.An, DateTime.UtcNow, 1, DateTime.UtcNow, LichtSteuerungService.Modi.An);
+        var wolke = new NachschreibWolke(() => offene[Modus] = neu);
+
+        // Home Assistant ist im Test nicht erreichbar: der Ist-Stand ist
+        // unbekannt, die Prüffrist ist um — die Nachprüfung schreibt nach.
+        await LichtMit(wolke).LiveAsync(CancellationToken.None);
+
+        Assert.Equal(1, wolke.Gesendet);
+        Assert.True(offene.TryGetValue(Modus, out var danach));
+        Assert.Equal(neu, danach);
+        offene.TryRemove(Modus, out _);
+    }
+
+    /// <summary>Eine Wolke, die beim Senden einen parallelen Befehl auslöst.</summary>
+    private sealed class NachschreibWolke : IAcFunk
+    {
+        private readonly Action _beimSenden;
+        public int Gesendet { get; private set; }
+
+        public NachschreibWolke(Action beimSenden) => _beimSenden = beimSenden;
+
+        public Task<HomeAssistantState?> ZustandAsync(HomeAssistantSettings einstellungen, string entityId, CancellationToken ct)
+            => Task.FromResult<HomeAssistantState?>(null);
+
+        public Task<bool> SchickenAsync(HomeAssistantSettings einstellungen, string domain, string dienst, string entityId,
+            IReadOnlyDictionary<string, object> daten, CancellationToken ct)
+        {
+            Gesendet++;
+            _beimSenden();
+            return Task.FromResult(true);
+        }
+    }
+
+    private LichtSteuerungService LichtMit(IAcFunk funk)
+    {
+        var steuerung = new SteuerungRepository(_pfade);
+        steuerung.SetGeraet(LichtSteuerungService.Modul, LichtSteuerungService.Rollen.Modus, Modus);
+        var haSettings = new HomeAssistantSettingsRepository(_pfade);
+        haSettings.SaveHomeAssistantSettings(new HomeAssistantSettings
+        {
+            BaseUrl = "http://ha.local:8123", AccessToken = "token", Enabled = true,
+        });
+        var keinNetz = new HomeAssistantService(
+            new StubHttpClientFactory(new RecordingHttpHandler((_, _) => throw new InvalidOperationException("Kein Netz im Test."))),
+            NullLogger<HomeAssistantService>.Instance);
+        return new LichtSteuerungService(
+            steuerung, keinNetz, funk, new AcSchreiber(funk, NullLogger<AcSchreiber>.Instance),
+            haSettings, new SteuerungGeraeteService(steuerung), NullLogger<LichtSteuerungService>.Instance,
+            (_, _) => Task.CompletedTask);
+    }
 }

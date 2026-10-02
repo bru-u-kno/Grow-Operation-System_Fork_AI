@@ -40,6 +40,21 @@ public interface IAcFunk
     Task<bool> SchickenAsync(
         HomeAssistantSettings einstellungen, string domain, string dienst, string entityId,
         IReadOnlyDictionary<string, object> daten, CancellationToken ct);
+
+    /// <summary>
+    /// Einen Dienst aufrufen und sagen, ob Home Assistant abgelehnt hat oder
+    /// nur die Antwort ausblieb (<see cref="HaDienstAntwort.Unbestaetigt"/>).
+    /// </summary>
+    /// <remarks>
+    /// Mit Vorgabe, damit jeder Funkweg, der nur <see cref="SchickenAsync"/>
+    /// kennt, weiter funktioniert — er kennt dann eben keine Zeitüberschreitung.
+    /// </remarks>
+    async Task<HaDienstAntwort> SchickenMitAntwortAsync(
+        HomeAssistantSettings einstellungen, string domain, string dienst, string entityId,
+        IReadOnlyDictionary<string, object> daten, CancellationToken ct)
+        => await SchickenAsync(einstellungen, domain, dienst, entityId, daten, ct)
+            ? HaDienstAntwort.Angenommen
+            : HaDienstAntwort.Abgelehnt;
 }
 
 /// <summary>Der Funkweg im Betrieb — über Home Assistant.</summary>
@@ -57,6 +72,11 @@ public sealed class HomeAssistantFunk : IAcFunk
         HomeAssistantSettings einstellungen, string domain, string dienst, string entityId,
         IReadOnlyDictionary<string, object> daten, CancellationToken ct)
         => _homeAssistant.CallEntityServiceAsync(einstellungen, domain, dienst, entityId, ct, daten);
+
+    public Task<HaDienstAntwort> SchickenMitAntwortAsync(
+        HomeAssistantSettings einstellungen, string domain, string dienst, string entityId,
+        IReadOnlyDictionary<string, object> daten, CancellationToken ct)
+        => _homeAssistant.RufeEntitaetsDienstAsync(einstellungen, domain, dienst, entityId, ct, daten);
 }
 
 /// <summary>Abstand, Prüffrist und Versuche eines Schreibvorgangs.</summary>
@@ -207,13 +227,24 @@ public sealed class AcSchreiber
 
         for (var versuch = 1; versuch <= takt.Versuche; versuch++)
         {
-            var gesendet = await _funk.SchickenAsync(
+            var antwort = await _funk.SchickenMitAntwortAsync(
                 einstellungen, schritt.Domain, schritt.Dienst, schritt.EntityId, schritt.Daten, ct);
 
-            if (!gesendet)
+            if (antwort == HaDienstAntwort.Abgelehnt)
             {
                 return new AcSchrittErgebnis(schritt.EntityId, false, false, versuch, null,
                     "Home Assistant hat den Aufruf nicht angenommen.", Angenommen: false);
+            }
+
+            // Zeitüberschreitung ist keine Ablehnung: der Auftrag war unterwegs,
+            // und die Wolke schaltet oft erst nach der Frist. Ob er ankam, sagt
+            // die Nachkontrolle unten — genau wie bei einem angenommenen Auftrag,
+            // den die Wolke still verwirft.
+            if (antwort == HaDienstAntwort.Unbestaetigt)
+            {
+                _logger.LogInformation(
+                    "AC-Schreiber: {Entity} — Home Assistant antwortete nicht rechtzeitig, der Zustand wird nachgelesen.",
+                    schritt.EntityId);
             }
 
             // So lange nachfragen, bis es steht — längstens die Wartezeit.

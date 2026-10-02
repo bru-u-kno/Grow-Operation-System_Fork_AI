@@ -25,19 +25,42 @@ public sealed class HomeAssistantSocket : IAsyncDisposable
 {
     private const int PuffergroesseBytes = 64 * 1024;
 
+    /// <summary>
+    /// Wie lange längstens auf Verbindung samt Anmeldung oder auf die Antwort
+    /// eines Befehls gewartet wird, wenn der Aufrufer nichts anderes sagt.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (02.10.2026).</b> Der WebSocket hatte keine eigene
+    /// Frist — anders als die REST-Aufrufe, deren Client eine trägt. Antwortete
+    /// Home Assistant nicht (halboffene Verbindung, HA beim Neustart), hingen das
+    /// Anlegen der Helfer, das Setzen des Mittelungsfensters und die
+    /// CO₂-Absicherung, bis der Bediener die Seite schloss — und Aufrufer ohne
+    /// Abbruchsignal für immer.</para>
+    /// <para>15 s wie die Frist für Dienstaufrufe
+    /// (<see cref="HomeAssistantService.Dienstfrist"/>): Befehle wie
+    /// <c>input_number/create</c> schreiben, und Home Assistant lädt danach neu.
+    /// Faustregel, keine dokumentierte Angabe.</para>
+    /// </remarks>
+    public static readonly TimeSpan Standardfrist = TimeSpan.FromSeconds(15);
+
     private readonly ClientWebSocket _socket;
     private int _naechsteNummer = 1;
 
     private HomeAssistantSocket(ClientWebSocket socket) => _socket = socket;
 
     /// <summary>Verbinden und anmelden. Gibt null zurück, wenn beides nicht klappt.</summary>
+    /// <param name="frist">Längste Dauer für beides; ohne Angabe <see cref="Standardfrist"/>.</param>
     public static async Task<HomeAssistantSocket?> OeffnenAsync(
-        HomeAssistantSettings settings, CancellationToken ct)
+        HomeAssistantSettings settings, CancellationToken ct, TimeSpan? frist = null)
     {
         if (string.IsNullOrWhiteSpace(settings.BaseUrl) || string.IsNullOrWhiteSpace(settings.AccessToken))
         {
             return null;
         }
+
+        using var begrenzt = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        begrenzt.CancelAfter(frist ?? Standardfrist);
+        ct = begrenzt.Token;
 
         var socket = new ClientWebSocket();
         try
@@ -70,9 +93,18 @@ public sealed class HomeAssistantSocket : IAsyncDisposable
     /// <summary>Einen Befehl schicken und auf seine Antwort warten.</summary>
     /// <param name="typ">Der Befehlsname, etwa <c>input_number/create</c>.</param>
     /// <param name="felder">Die weiteren Felder des Befehls.</param>
+    /// <param name="frist">
+    /// Längste Wartezeit auf die Antwort; ohne Angabe <see cref="Standardfrist"/>.
+    /// Läuft sie ab, ist die Verbindung danach nicht mehr zu gebrauchen —
+    /// <see cref="ClientWebSocket"/> bricht sie beim Abbruch eines Lesens ab.
+    /// </param>
     public async Task<Antwort> BefehlAsync(
-        string typ, IReadOnlyDictionary<string, object?> felder, CancellationToken ct)
+        string typ, IReadOnlyDictionary<string, object?> felder, CancellationToken ct, TimeSpan? frist = null)
     {
+        using var begrenzt = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        begrenzt.CancelAfter(frist ?? Standardfrist);
+        ct = begrenzt.Token;
+
         var nummer = _naechsteNummer++;
         var nachricht = new Dictionary<string, object?>(felder, StringComparer.Ordinal)
         {
@@ -104,7 +136,11 @@ public sealed class HomeAssistantSocket : IAsyncDisposable
 
             return new Antwort(false, null, "Keine Antwort von Home Assistant.");
         }
-        catch (Exception ex) when (ex is WebSocketException or OperationCanceledException or JsonException)
+        catch (OperationCanceledException)
+        {
+            return new Antwort(false, null, "Home Assistant hat am WebSocket nicht rechtzeitig geantwortet.");
+        }
+        catch (Exception ex) when (ex is WebSocketException or JsonException)
         {
             return new Antwort(false, null, ex.Message);
         }

@@ -192,6 +192,19 @@ public sealed class EntfeuchterSteuerungService
     public static double TempMax(string? modus, double abstandK, double festC, double? planLuftC)
         => modus == TempMaxModus.Plan && planLuftC is { } plan ? Math.Round(plan + abstandK, 1) : festC;
 
+    /// <summary>
+    /// <see cref="TempMax"/>, begrenzt auf die Spanne des Helfers, in den sie geschrieben wird.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Plan-Luft + Abstand (bis 15 K) kann über das Ende
+    /// des Helfers (35 °C) hinausgehen. Home Assistant lehnte dann jedes
+    /// <c>set_value</c> ab — bei jedem Abgleich und jedem Wochenwechsel wieder,
+    /// und die Seite zeigte eine Grenze, die nie galt. Anzeige, Schreiben und
+    /// Nachziehen gehen deshalb alle hierüber.
+    /// </remarks>
+    public static double TempMaxFuer(string helfer, string? modus, double abstandK, double festC, double? planLuftC)
+        => SteuerungBauteile.AufSpanne(helfer, TempMax(modus, abstandK, festC, planLuftC));
+
     /// <summary>Prüft, speichert und schreibt nach Home Assistant.</summary>
     public async Task<(EntfeuchterEinstellungen? Gespeichert, Dictionary<string, string> Fehler, bool HaErreicht)> SpeichernAsync(
         EntfeuchterEinstellungen e, CancellationToken ct)
@@ -216,8 +229,8 @@ public sealed class EntfeuchterSteuerungService
             (Entitaeten.Mindestlaufzeit, e.MindestlaufzeitMin),
             (Entitaeten.Einschaltverzoegerung, e.EinschaltverzoegerungMin),
             (Entitaeten.WartezeitAussenluft, e.WartezeitAussenluftMin),
-            (Entitaeten.TempMaxTag, TempMax(e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC)),
-            (Entitaeten.TempMaxNacht, TempMax(e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC)),
+            (Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC)),
+            (Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC)),
             (Entitaeten.FeuchteEinTag, e.FeuchteEinTag),
             (Entitaeten.FeuchteAusTag, e.FeuchteAusTag),
             (Entitaeten.FeuchteEinNacht, e.FeuchteEinNacht),
@@ -227,8 +240,10 @@ public sealed class EntfeuchterSteuerungService
         var alles = true;
         foreach (var (entity, wert) in zahlen)
         {
+            // Jeder Wert auf die Spanne seines Helfers — ein Wert außerhalb lehnt
+            // Home Assistant ab (SteuerungBauteile.AufSpanne).
             alles &= await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
-                new Dictionary<string, object> { ["value"] = wert });
+                new Dictionary<string, object> { ["value"] = SteuerungBauteile.AufSpanne(entity, wert) });
         }
 
         alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.VpdRegelung ? "turn_on" : "turn_off", Entitaeten.VpdRegelung, ct);
@@ -260,8 +275,8 @@ public sealed class EntfeuchterSteuerungService
         var geschrieben = 0;
         foreach (var (modus, entity, soll) in new[]
                  {
-                     (e.TempMaxTagModus, Entitaeten.TempMaxTag, TempMax(e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan.LuftTagC)),
-                     (e.TempMaxNachtModus, Entitaeten.TempMaxNacht, TempMax(e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan.LuftNachtC)),
+                     (e.TempMaxTagModus, Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan.LuftTagC)),
+                     (e.TempMaxNachtModus, Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan.LuftNachtC)),
                  })
         {
             if (modus != TempMaxModus.Plan) continue;
@@ -328,8 +343,8 @@ public sealed class EntfeuchterSteuerungService
             PlanWoche: plan?.Woche,
             PlanLuftTagC: plan?.LuftTagC,
             PlanLuftNachtC: plan?.LuftNachtC,
-            TempMaxTagC: TempMax(e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC),
-            TempMaxNachtC: TempMax(e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC),
+            TempMaxTagC: TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC),
+            TempMaxNachtC: TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC),
             Co2CanopyGrenzeC: Zahl(Entitaeten.CanopyObergrenze),
             PortAn: portAn,
             PortOnline: AnRolle(Rollen.PortStatus),

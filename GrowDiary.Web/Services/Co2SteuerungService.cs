@@ -166,7 +166,17 @@ public sealed class Co2SteuerungService
         // wirklich geändert hat, nie im stündlichen Lauf.
         if (e.RhMittelMinuten is { } minuten && minuten != vorher?.RhMittelMinuten)
         {
-            erreicht &= await _mittel.FensterSetzenAsync(Entitaeten.RhMittel, minuten, ct);
+            var fensterGesetzt = await _mittel.FensterSetzenAsync(Entitaeten.RhMittel, minuten, ct);
+            if (!fensterGesetzt)
+            {
+                // Gespeichert bleibt, was in Home Assistant wirklich gilt. Vorher
+                // stand der neue Wert trotzdem im Fork — das nächste Speichern
+                // sah „unverändert" und versuchte es nie wieder, während die Seite
+                // ein Fenster zeigte, das es nicht gab.
+                e.RhMittelMinuten = vorher?.RhMittelMinuten;
+                _repo.SetEinstellungen(Modul, e);
+            }
+            erreicht &= fensterGesetzt;
         }
 
         return (e, fehler, erreicht);
@@ -175,10 +185,14 @@ public sealed class Co2SteuerungService
     // Wertebereiche der Helfer in Home Assistant. Ein Wert ausserhalb nimmt
     // input_number.set_value nicht an — deshalb wird ein aus dem Plan
     // abgeleiteter Wert auf diese Spanne begrenzt, statt still zu scheitern.
-    public const double CanopyMin = 15;
-    public const double CanopyMax = 34;
-    public const double NotbremseMin = 30;
-    public const double NotbremseMax = 90;
+    // Fork AI (02.10.2026): aus dem Katalog gelesen, nicht abgetippt — eine
+    // Wahrheit je Zahl (SteuerungBauteile.Spanne).
+    public static double CanopyMin => SteuerungBauteile.Spanne(Entitaeten.CanopyObergrenze).Min;
+    public static double CanopyMax => SteuerungBauteile.Spanne(Entitaeten.CanopyObergrenze).Max;
+    public static double NotbremseMin => SteuerungBauteile.Spanne(Entitaeten.RhNotbremse).Min;
+    public static double NotbremseMax => SteuerungBauteile.Spanne(Entitaeten.RhNotbremse).Max;
+    public static double RhObergrenzeMin => SteuerungBauteile.Spanne(Entitaeten.RhObergrenze).Min;
+    public static double RhObergrenzeMax => SteuerungBauteile.Spanne(Entitaeten.RhObergrenze).Max;
 
     /// <summary>
     /// Fork AI (forkai.150): Die Notbremse, wie sie gerade gilt. Im Modus
@@ -242,14 +256,19 @@ public sealed class Co2SteuerungService
         if (e.WartezeitSekunden is < 10 or > 600) f[nameof(e.WartezeitSekunden)] = "Wartezeit muss zwischen 10 und 600 s liegen.";
         if (e.MaxImpulseJeZyklus is < 1 or > 50) f[nameof(e.MaxImpulseJeZyklus)] = "Höchstens 50 Impulse je Zyklus.";
         if (e.ZeltvolumenM3 is < 1 or > 20) f[nameof(e.ZeltvolumenM3)] = "Zeltvolumen muss zwischen 1 und 20 m³ liegen.";
-        if (e.RhObergrenzeProzent is < 40 or > 90) f[nameof(e.RhObergrenzeProzent)] = "Feuchte-Obergrenze muss zwischen 40 und 90 % liegen.";
+        // Fork AI (02.10.2026): Vorher bis 90 % erlaubt — der Helfer endet bei
+        // 80, und Home Assistant lehnte jeden Wert darüber bei jedem Abgleich ab.
+        if (e.RhObergrenzeProzent < RhObergrenzeMin || e.RhObergrenzeProzent > RhObergrenzeMax)
+        {
+            f[nameof(e.RhObergrenzeProzent)] = $"Feuchte-Obergrenze muss zwischen {RhObergrenzeMin} und {RhObergrenzeMax} % liegen.";
+        }
         if (e.KlimaHystereseProzent is < 0 or > 10) f[nameof(e.KlimaHystereseProzent)] = "Klima-Hysterese muss zwischen 0 und 10 % liegen.";
-        if (e.CanopyObergrenzeC is < CanopyMin or > CanopyMax) f[nameof(e.CanopyObergrenzeC)] = $"Canopy-Obergrenze muss zwischen {CanopyMin} und {CanopyMax} °C liegen.";
+        if (e.CanopyObergrenzeC < CanopyMin || e.CanopyObergrenzeC > CanopyMax) f[nameof(e.CanopyObergrenzeC)] = $"Canopy-Obergrenze muss zwischen {CanopyMin} und {CanopyMax} °C liegen.";
         if (e.CanopyObergrenzeModus is not (GrenzModus.Fest or GrenzModus.Plan)) f[nameof(e.CanopyObergrenzeModus)] = "Canopy-Obergrenze: „fest“ oder „plan“.";
         if (e.CanopyObergrenzeAbstandK is < 0 or > 15) f[nameof(e.CanopyObergrenzeAbstandK)] = "Abstand zur Plan-Luft muss zwischen 0 und 15 K liegen.";
         if (e.KlimaToleranzMinuten is < 0 or > 30) f[nameof(e.KlimaToleranzMinuten)] = "Sperrt nach: 0 bis 30 Minuten.";
         if (e.RhNotbremseModus is not (GrenzModus.Fest or GrenzModus.Plan)) f[nameof(e.RhNotbremseModus)] = "Notbremse: „fest“ oder „plan“.";
-        if (e.RhNotbremseFestProzent is < NotbremseMin or > NotbremseMax) f[nameof(e.RhNotbremseFestProzent)] = $"Notbremse muss zwischen {NotbremseMin} und {NotbremseMax} % liegen.";
+        if (e.RhNotbremseFestProzent is { } fest && (fest < NotbremseMin || fest > NotbremseMax)) f[nameof(e.RhNotbremseFestProzent)] = $"Notbremse muss zwischen {NotbremseMin} und {NotbremseMax} % liegen.";
         if (e.RhNotbremseAbstandProzent is < 1 or > 30) f[nameof(e.RhNotbremseAbstandProzent)] = "Abstand der Notbremse: 1 bis 30 %.";
         if (e.RhNotbremseModus == GrenzModus.Fest && e.RhNotbremseFestProzent is { } nb && nb <= e.RhObergrenzeProzent)
         {
@@ -325,18 +344,26 @@ public sealed class Co2SteuerungService
     }
 
     /// <summary>Die drei wirksamen Ziele (warm / mittel / kühl) — bei Plan skaliert, sonst die festen Werte.</summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Plan × Anteil wird auf die Spanne des Helfers
+    /// begrenzt. 800 ppm × 45 % ergaben 360 — unter den 400 des Helfers, Home
+    /// Assistant lehnte das Schreiben bei jedem Abgleich ab, und die Seite
+    /// zeigte ein Ziel, das nie galt. Begrenzt wird HIER, damit Anzeige und
+    /// geschriebener Wert dieselbe Zahl sind.
+    /// </remarks>
     public static (int Warm, int Mittel, int Kuehl) WirksameZiele(Co2Einstellungen e, int? planPpm)
     {
         if (e.ZielQuelle == "plan" && planPpm is { } p)
         {
             return (
-                Runden(p * e.AnteilWarmProzent / 100.0),
-                Runden(p * e.AnteilMittelProzent / 100.0),
-                Runden(p * e.AnteilKuehlProzent / 100.0));
+                Runden(Entitaeten.ZielWarm, p * e.AnteilWarmProzent / 100.0),
+                Runden(Entitaeten.ZielMittel, p * e.AnteilMittelProzent / 100.0),
+                Runden(Entitaeten.ZielKuehl, p * e.AnteilKuehlProzent / 100.0));
         }
         return (e.ZielWarmPpm, e.ZielMittelPpm, e.ZielKuehlPpm);
 
-        static int Runden(double v) => (int)(Math.Round(v / 10.0) * 10);
+        static int Runden(string helfer, double v)
+            => (int)SteuerungBauteile.AufSpanne(helfer, Math.Round(v / 10.0) * 10);
     }
 
     // ------------------------------------------------- Abgleich mit der Automation
@@ -545,7 +572,14 @@ public sealed class Co2SteuerungService
             (Entitaeten.EndeVorLichtAus, e.EndeVorLichtAusMinuten),
         };
 
-        return zahlen.Concat(optional).Where(z => !gefuehrt.Contains(z.Entity)).ToList();
+        // Fork AI (02.10.2026): Jeder Wert auf die Spanne seines Helfers — ein
+        // Wert außerhalb lehnt input_number.set_value ab, und zwar bei jedem
+        // stündlichen Abgleich wieder. Die Formularprüfung fängt die festen
+        // Werte; aus dem Plan abgeleitete kann sie nicht sehen.
+        return zahlen.Concat(optional)
+            .Where(z => !gefuehrt.Contains(z.Entity))
+            .Select(z => (z.Entity, SteuerungBauteile.AufSpanne(z.Entity, z.Wert)))
+            .ToList();
     }
 
     // --------------------------------------------------------------- Livebild
@@ -561,7 +595,15 @@ public sealed class Co2SteuerungService
 
         double? Zahl(string id) => nachId.TryGetValue(id, out var s) && double.TryParse(s.State, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
-        bool? An(string id) => Text(id) is { } t ? t is "on" or "On" : null;
+        // Fork AI (02.10.2026): Nur „on" und „off" sind eine Aussage. Vorher
+        // wurde jeder andere Text zu „aus" — ein kurzes „unavailable" des
+        // Licht-Sensors mittags schloss den CO₂-Tag ab (siehe TaktAsync).
+        bool? An(string id) => Text(id) switch
+        {
+            "on" or "On" => true,
+            "off" or "Off" => false,
+            _ => null,
+        };
 
         // Fork AI (forkai.21): Geräte kommen aus der Zuordnung, nicht aus dem Code.
         // Eine Rolle ohne Gerät liefert null — dann steht in der Kachel ein „–",
@@ -642,6 +684,23 @@ public sealed class Co2SteuerungService
 
         if (live.LichtAn == true)
         {
+            // Fork AI (02.10.2026): Der Tag gehört zum Lichtzyklus, nicht zum
+            // Kalenderdatum (siehe ZyklusFortsetzen).
+            if (_repo.GetOffenerCo2Tag() is { Abgeschlossen: false } laufend && laufend.Datum != heute)
+            {
+                if (ZyklusFortsetzen(laufend, heute, live.ImpulseHeute))
+                {
+                    tag = laufend;
+                }
+                else
+                {
+                    // Das Licht-aus dazwischen wurde verschlafen: den alten
+                    // Zyklus mit seinem letzten Stand abschließen.
+                    Abschliessen(laufend);
+                    _repo.UpdateCo2Tag(laufend);
+                }
+            }
+
             if (tag is null)
             {
                 var (grow, _) = LaufenderGrow();
@@ -666,6 +725,12 @@ public sealed class Co2SteuerungService
             return tag;
         }
 
+        // Fork AI (02.10.2026): Nur ein ausdrückliches „aus" schließt ab.
+        // Vorher genügte jeder andere Zustand — ein kurzes „unavailable" des
+        // Licht-Sensors mittags schloss den Tag mit Teilwerten ab, und der Rest
+        // des Tages fehlte in Journal und Kosten. Ohne Aussage: nichts tun.
+        if (live.LichtAn is null) return tag;
+
         // Licht aus: den jüngsten offenen Tag abschließen — auch, wenn das
         // Add-on den Abend verschlafen hat und erst am nächsten Morgen wieder da ist.
         var offen = _repo.GetOffenerCo2Tag();
@@ -677,6 +742,44 @@ public sealed class Co2SteuerungService
             return offen;
         }
         return tag;
+    }
+
+    /// <summary>
+    /// Gehört ein offener Tag von einem früheren Datum noch zum laufenden Lichtzyklus?
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (02.10.2026).</b> Der Tag war nach dem Kalenderdatum
+    /// geschlüsselt, der Impulszähler <c>counter.co2_impulse_heute</c> wird aber
+    /// bei <i>Licht an</i> zurückgesetzt. Bei einem Lichtzyklus über Mitternacht
+    /// (an 18:00, aus 12:00) legte der Takt um 00:00 einen neuen Tag an — und der
+    /// übernahm den vollen Zählerstand. Abends waren die Impulse vor Mitternacht
+    /// doppelt gebucht.</para>
+    /// <para><b>Warum an den Zyklus binden und nicht die Differenz buchen.</b>
+    /// Der Zähler zählt je Lichtzyklus. Gehört der Tag zum selben Zyklus, ist
+    /// der Zählerstand von selbst die richtige Zahl — ohne einen zweiten
+    /// gespeicherten Startwert, der seinerseits auseinanderlaufen kann. Und ein
+    /// Lichtzyklus bleibt ein Eintrag in Journal und Kosten, statt um Mitternacht
+    /// in zwei halbe zu zerfallen. Der Tag trägt das Datum, an dem das Licht
+    /// anging.</para>
+    /// <para><b>Wann nicht.</b> Ist der Zähler kleiner als der gebuchte Stand,
+    /// wurde er zurückgesetzt — es gab ein Licht-an, das der Takt nicht gesehen
+    /// hat (Add-on war über das Licht-aus hinweg weg). Und ein Zyklus ist nie
+    /// länger als ein Tag: ein offener Tag von vorgestern gehört nicht mehr
+    /// dazu.</para>
+    /// <para><b>Offen.</b> Bei Dauerlicht (24/0) setzt der Zähler nie zurück.
+    /// Dann schließt der Tag nach zwei Kalendertagen, und der nächste übernimmt
+    /// den vollen Stand — so ungenau wie vor dieser Änderung. Richtig wäre dort
+    /// nur eine Differenzbuchung mit gespeichertem Startwert.</para>
+    /// </remarks>
+    public static bool ZyklusFortsetzen(Co2Tag offen, string heute, int? impulseJetzt)
+    {
+        if (impulseJetzt is { } n && n < offen.Impulse) return false;
+        if (!DateTime.TryParseExact(offen.Datum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var begonnen)
+            || !DateTime.TryParseExact(heute, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var jetzt))
+        {
+            return false;
+        }
+        return (jetzt - begonnen).TotalDays is >= 0 and <= 1;
     }
 
     /// <summary>

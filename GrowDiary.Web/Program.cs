@@ -233,6 +233,14 @@ HaConfigLoader.Apply(
     app.Services.GetRequiredService<AppPaths>(),
     app.Services.GetRequiredService<GrowRepository>());
 
+// Sicherungen der Automationen lagen bis 02.10.2026 im Programmordner — im
+// Add-on also nicht im Volume /data. Was seit dem letzten Update dort
+// entstanden ist, wird übernommen, bevor das nächste Update es löscht.
+SteuerungSicherungsOrdner.AlteUebernehmen(
+    SteuerungSicherungsOrdner.AlterOrt,
+    SteuerungSicherungsOrdner.Fuer(app.Services.GetRequiredService<AppPaths>()),
+    app.Logger);
+
 // Testdatenmodus: einmal 24 Stunden Verlauf nachtragen, damit Kurven und
 // Verlaufsseite sofort etwas zeigen. Nur, wenn fuer das Zelt noch nichts da
 // ist — sonst waechst die Historie bei jedem Neustart doppelt.
