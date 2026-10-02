@@ -393,16 +393,14 @@ app.Use(async (context, next) =>
 // proxy under a dynamic base path (e.g. /api/hassio_ingress/<token>). Home
 // Assistant already strips that prefix, so we only need to record it as PathBase
 // so any server-generated URLs point back through the ingress.
+// Den Kopf kann jeder setzen — deshalb zählt nur ein Wert, der wie ein echter
+// Ingress-Pfad aussieht (IngressPfad). Alles andere: kein PathBase.
 app.Use(async (context, next) =>
 {
-    if (context.Request.Headers.TryGetValue(AdminAccessPolicy.IngressPathHeaderName, out var ingressPath))
+    if (context.Request.Headers.TryGetValue(AdminAccessPolicy.IngressPathHeaderName, out var ingressPath)
+        && IngressPfad.Pruefen(ingressPath.ToString()) is { } basis)
     {
-        var value = ingressPath.ToString().TrimEnd('/');
-        // PathString requires a leading slash; guard against a malformed header.
-        if (value.StartsWith('/'))
-        {
-            context.Request.PathBase = new PathString(value);
-        }
+        context.Request.PathBase = new PathString(basis);
     }
 
     await next();
@@ -520,14 +518,11 @@ app.MapFallback(async context =>
     context.Response.ContentType = "text/html; charset=utf-8";
 
     var html = await File.ReadAllTextAsync(Path.Combine(app.Environment.WebRootPath, "index.html"));
-    var pathBase = context.Request.PathBase.HasValue ? context.Request.PathBase.Value! : string.Empty;
-    var baseHref = string.IsNullOrEmpty(pathBase) ? "/" : pathBase + "/";
-    await context.Response.WriteAsync(InjectBaseHref(html, baseHref));
+    await context.Response.WriteAsync(InjectBaseHref(html, IngressPfad.BaseTag(context.Request.PathBase)));
 });
 
-static string InjectBaseHref(string html, string baseHref)
+static string InjectBaseHref(string html, string tag)
 {
-    var tag = $"<base href=\"{baseHref}\" />";
     var headIndex = html.IndexOf("<head>", StringComparison.OrdinalIgnoreCase);
     if (headIndex < 0)
     {

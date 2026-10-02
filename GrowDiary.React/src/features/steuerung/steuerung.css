@@ -65,6 +65,11 @@
   /* --- Zeilen in den Reitern --- */
   .st-feldzeile { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--hair); }
   .st-feldzeile:first-of-type { border-top: 0; }
+  /* Ziel des Rollens nach einem gesperrten Speichern (fehler-reiter.ts): wie
+     `.scroll-ziel` die feste Kopfflaeche am Handy ueberspringen. Ohne Media
+     Query: `--mobil-kopf` gibt es nur am Handy (shell.css), sonst ist der
+     Ausdruck ungueltig und der Rand faellt auf 0 — das ist der Schreibtisch. */
+  .st-feldzeile { scroll-margin-top: calc(var(--mobil-kopf) + var(--s-2)); }
   .st-feldzeile > .st-etikett { min-width: 0; }
   /* Fork AI (forkai.138, F-033): Die rechte Spalte (Link, Nur-Lesen-Wert)
      schrumpft nicht und bricht nicht um — am Handy stand sonst „Rolle/n ›"

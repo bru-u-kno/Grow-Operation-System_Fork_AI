@@ -12,6 +12,7 @@ import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 import { rollenPfad } from '../features/geraete/rollenPfad'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from '../features/steuerung/feld-fehler'
+import { useFehlerZeigen } from '../features/steuerung/fehler-reiter'
 
 /** Was der Vorschau-Lauf über die Automationen meldet. */
 type AutoBilanz = {
@@ -213,6 +214,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const [absicherMeldung, setAbsicherMeldung] = useState<{ ton: 'ok' | 'warn'; text: string } | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
+  // Gesperrtes Speichern: auf den Reiter des markierten Felds wechseln und hinrollen.
+  const fehlerZeigen = useFehlerZeigen(reiter, setReiter, CO2_REITER)
   const [meldung, setMeldung] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [speichert, setSpeichert] = useState(false)
@@ -306,7 +309,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
     // binden und meldete „Es wurde nichts übergeben.". Vorher sperren und das
     // Feld markieren (wie bei Chiller, Entfeuchter und Zuluft).
     const leer = leereZahlenfelder(entwurf)
-    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen(); return }
     setSpeichert(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<Co2Seite>('/api/steuerung/co2', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -316,7 +319,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         : 'Gespeichert und nach Home Assistant geschrieben.')
     } catch (caught) {
       const felder = feldFehlerAus(caught)
-      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
+      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen() }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
       setSpeichert(false)

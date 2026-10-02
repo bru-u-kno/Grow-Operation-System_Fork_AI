@@ -14,7 +14,9 @@ using GrowOsAccess;
 //
 // Zwei Tueren, mit Absicht getrennt:
 //   Port 5078  Ingress. Die Seite, auf der der Schluessel steht. Home Assistant
-//              besitzt hier die Anmeldung, nach draussen ist der Port zu.
+//              besitzt hier die Anmeldung, nach draussen ist der Port zu. Im
+//              internen Add-on-Netz ist er offen — deshalb antwortet die Seite nur
+//              dem Ingress-Proxy 172.30.32.2 und Loopback (Tueren.Pruefen).
 //   Port 5079  Das WLAN. Nur die MCP-Schnittstelle, nur mit Schluessel. Wer hier
 //              anklopft, sieht die Seite mit dem Schluessel NICHT — sonst haette
 //              das Absichern keinen Sinn.
@@ -54,7 +56,8 @@ app.Use(async (kontext, weiter) =>
     var zutritt = Tueren.Pruefen(
         kontext.Connection.LocalPort,
         kontext.Request.Path.Value ?? "/",
-        speicher.Stimmt(Mitgeschickt(kontext.Request)));
+        speicher.Stimmt(Mitgeschickt(kontext.Request)),
+        kontext.Connection.RemoteIpAddress);
 
     switch (zutritt)
     {
@@ -68,8 +71,20 @@ app.Use(async (kontext, weiter) =>
             await kontext.Response.WriteAsync("Kein oder falscher Zugriffsschluessel.");
             return;
 
-        default:
+        case Zutritt.Verboten:
+            // Die Einrichtungsseite zeigt den Schluessel. Ein anderes Add-on im
+            // internen Netz soll ihn nicht abholen koennen — siehe Tueren.IngressProxy.
+            kontext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            await kontext.Response.WriteAsync("Nur ueber Home Assistant (Ingress) erreichbar.");
+            return;
+
+        case Zutritt.Erlaubt:
             await weiter();
+            return;
+
+        default:
+            // Ein neuer Fall, den hier niemand behandelt, sperrt — er oeffnet nicht.
+            kontext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             return;
     }
 });
