@@ -37,9 +37,25 @@ public sealed class GrowOsLocatorTests
         var namen = GrowOsLocator.Kandidaten($"a1b2c3d4_{eigener}", eigener);
 
         // Erst der abgeleitete Name — dasselbe Repository, derselbe Vorsatz.
-        Assert.Equal("a1b2c3d4_grow_os", namen[0]);
-        Assert.Equal("a1b2c3d4-grow-os", GrowOsLocator.Hostname(namen[0]));
-        Assert.Equal("http://a1b2c3d4-grow-os:5076", GrowOsLocator.BaseUrl(GrowOsLocator.Hostname(namen[0])));
+        Assert.Equal("a1b2c3d4_grow_os_fork_ai", namen[0]);
+        Assert.Equal("a1b2c3d4-grow-os-fork-ai", GrowOsLocator.Hostname(namen[0]));
+        Assert.Equal("http://a1b2c3d4-grow-os-fork-ai:5076", GrowOsLocator.BaseUrl(GrowOsLocator.Hostname(namen[0])));
+    }
+
+    [Fact]
+    public void DerSlugIstDerAusDerConfigYamlVonGrowOs()
+    {
+        // Fork AI (02.10.2026): hier stand der Slug des Originals („grow_os"), der
+        // Fork heißt „grow_os_fork_ai". Der Fork-MCP hätte im eigenen Store ein
+        // Grow OS gesucht, das es dort nicht gibt. Gelesen wird die Datei, die
+        // Home Assistant liest — nicht abgetippt.
+        var wurzel = AppContext.BaseDirectory;
+        while (wurzel is not null && !File.Exists(Path.Combine(wurzel, "grow-os", "config.yaml")))
+            wurzel = Path.GetDirectoryName(wurzel);
+        Assert.NotNull(wurzel);
+        var zeile = File.ReadLines(Path.Combine(wurzel!, "grow-os", "config.yaml"))
+            .Single(z => z.StartsWith("slug:", StringComparison.Ordinal));
+        Assert.Equal(zeile["slug:".Length..].Trim().Trim('"'), GrowOsLocator.Slug);
     }
 
     [Fact]
@@ -51,8 +67,8 @@ public sealed class GrowOsLocatorTests
         // Installation aus dem Store nicht.
         var namen = GrowOsLocator.Kandidaten("a1b2c3d4_grow_mcp", eigenerBasisSlug: "grow_anderes");
 
-        Assert.DoesNotContain("a1b2c3d4_grow_os", namen);
-        Assert.Equal(["local_grow_os", "grow_os"], namen);
+        Assert.DoesNotContain("a1b2c3d4_grow_os_fork_ai", namen);
+        Assert.Equal(["local_grow_os_fork_ai", "grow_os_fork_ai"], namen);
     }
 
     [Fact]
@@ -62,8 +78,8 @@ public sealed class GrowOsLocatorTests
         // ohne dass der Supervisor etwas herausrücken muss.
         var namen = GrowOsLocator.Kandidaten(vollerSlug: null, eigenerBasisSlug: "grow_mcp");
 
-        Assert.Contains("local_grow_os", namen);
-        Assert.Equal("local-grow-os", GrowOsLocator.Hostname("local_grow_os"));
+        Assert.Contains("local_grow_os_fork_ai", namen);
+        Assert.Equal("local-grow-os-fork-ai", GrowOsLocator.Hostname("local_grow_os_fork_ai"));
     }
 
     [Theory]
@@ -73,7 +89,7 @@ public sealed class GrowOsLocatorTests
         var namen = GrowOsLocator.Kandidaten($"a1b2c3d4_{eigener}", eigener);
 
         // Sonst antwortete bei zwei Installationen die falsche zuerst.
-        Assert.Equal(["a1b2c3d4_grow_os", "local_grow_os", "grow_os"], namen);
+        Assert.Equal(["a1b2c3d4_grow_os_fork_ai", "local_grow_os_fork_ai", "grow_os_fork_ai"], namen);
     }
 
     [Theory]
@@ -84,7 +100,7 @@ public sealed class GrowOsLocatorTests
         // schon auf der Liste. Doppelt anklopfen wäre nur Wartezeit.
         var namen = GrowOsLocator.Kandidaten($"local_{eigener}", eigener);
 
-        Assert.Equal(["local_grow_os", "grow_os"], namen);
+        Assert.Equal(["local_grow_os_fork_ai", "grow_os_fork_ai"], namen);
     }
 
     [Fact]
@@ -92,7 +108,7 @@ public sealed class GrowOsLocatorTests
     {
         var namen = GrowOsLocator.Kandidaten("irgendwas_anderes", "grow_mcp");
 
-        Assert.Equal(["local_grow_os", "grow_os"], namen);
+        Assert.Equal(["local_grow_os_fork_ai", "grow_os_fork_ai"], namen);
     }
 
     [Fact]

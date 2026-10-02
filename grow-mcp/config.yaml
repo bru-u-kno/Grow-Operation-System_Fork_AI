@@ -1,9 +1,12 @@
-name: Grow MCP
-version: "0.1.8"
+name: Grow MCP Fork AI
+version: "0.1.9-forkai.1"
 slug: grow_mcp
-description: Grow OS als Werkzeugkasten fuer Claude und andere MCP-Klienten im eigenen Netz
-url: https://github.com/Nerdstreak/Grow-Operation-System
-image: ghcr.io/nerdstreak/grow-operation-system-mcp
+description: Grow OS Fork AI als Werkzeugkasten fuer Claude und andere MCP-Klienten im eigenen Netz
+url: https://github.com/bru-u-kno/Grow-Operation-System_Fork_AI
+# Das Image des Forks — gebaut von .github/workflows/docker-publish-mcp.yml unter
+# ghcr.io/<repository>-mcp. Bis 0.1.8 stand hier das Image des Originals: der
+# Fork-MCP lief also nie mit Fork-Code (Befund 02.10.2026).
+image: ghcr.io/bru-u-kno/grow-operation-system_fork_ai-mcp
 arch:
   - aarch64
   - armv7
@@ -14,15 +17,18 @@ init: false
 ingress: true
 ingress_port: 5078
 panel_icon: mdi:tools
-panel_title: Grow MCP
+panel_title: Grow MCP Fork AI
 # Die EINZIGE Tuer ins Heimnetz. Dahinter liegt nur die MCP-Schnittstelle, und
 # die verlangt den Schluessel, der auf der Ingress-Seite steht. Die Seite selbst
 # ist ueber diesen Port bewusst NICHT erreichbar — sonst koennte sich jeder im
 # Netz den Schluessel abholen.
+# Port 5080, nicht 5079: der Grow MCP des Originals belegt 5079, und beide
+# sollen nebeneinander laufen koennen. Muss zu Tueren.NetzPort passen
+# (GrowMcp.Tests/ForkAusstattungTests.cs).
 ports:
-  5079/tcp: 5079
+  5080/tcp: 5080
 ports_description:
-  5079/tcp: MCP-Schnittstelle fuer Claude Code und Claude Desktop (Schluessel noetig)
+  5080/tcp: MCP-Schnittstelle fuer Claude Code und Claude Desktop (Schluessel noetig)
 # Nur fuer eine einzige Frage: wie heisse ich selbst? Aus dem eigenen Namen folgt
 # der von Grow OS. Bewusst KEIN `hassio_role: manager` — das erlaubte, jedes
 # andere Add-on zu starten, zu stoppen und zu deinstallieren.

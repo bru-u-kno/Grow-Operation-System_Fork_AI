@@ -11,7 +11,7 @@ namespace GrowMcp.Services;
 /// Namen aus der laufenden Anfrage — die Annahme: „unter dem Namen, unter dem
 /// der Betreiber Home Assistant gerade offen hat, erreicht er es auch vom
 /// selben Rechner". Für die Seite selbst stimmt das, denn die läuft über
-/// Ingress. Für die MCP-Tür stimmt es nicht: die hängt an Port 5079, und der
+/// Ingress. Für die MCP-Tür stimmt es nicht: die hängt an Tueren.NetzPort (5080), und der
 /// ist absichtlich <i>nur</i> im Heimnetz offen.</para>
 ///
 /// <para>Wer Home Assistant über eine eigene Domain aufruft

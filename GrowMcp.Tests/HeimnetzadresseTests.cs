@@ -66,8 +66,8 @@ public sealed class HeimnetzadresseTests
     {
         var befehl = Einrichtungsseite.Befehl("192.168.1.50", "geheim123");
 
-        Assert.Contains("http://192.168.1.50:5079/mcp", befehl);
+        Assert.Contains($"http://192.168.1.50:{Tueren.NetzPort}/mcp", befehl);
         Assert.Contains("Authorization: Bearer geheim123", befehl);
-        Assert.StartsWith("claude mcp add --transport http grow-os ", befehl);
+        Assert.StartsWith("claude mcp add --transport http grow-os-fork-ai ", befehl);
     }
 }

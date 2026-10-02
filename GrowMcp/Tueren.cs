@@ -34,7 +34,13 @@ public static class Tueren
     public const int IngressPort = 5078;
 
     /// <summary>Der einzige Port, der ins Heimnetz veröffentlicht wird.</summary>
-    public const int NetzPort = 5079;
+    /// <remarks>
+    /// Fork AI (02.10.2026): 5080 statt 5079. Der Grow MCP des Originals belegt
+    /// 5079 auf dem Rechner, und beide sollen nebeneinander laufen können. Steht
+    /// genauso in <c>grow-mcp/config.yaml</c> (<c>ports</c>) und im Dockerfile
+    /// (<c>EXPOSE</c>) — <c>ForkAusstattungTests</c> hält die drei zusammen.
+    /// </remarks>
+    public const int NetzPort = 5080;
 
     /// <summary>Wo die MCP-Schnittstelle liegt.</summary>
     public const string McpPfad = "/mcp";

@@ -1,5 +1,22 @@
 # Änderungen — Grow MCP
 
+## 0.1.9-forkai.1
+
+**Der Grow MCP des Forks ist jetzt wirklich der des Forks.** Bis 0.1.8 zog er
+das Image des Originals und suchte ein Grow OS mit dem Namen des Originals
+(`grow_os`) — der Fork heißt `grow_os_fork_ai`. Installiert lief also das
+Original, und es fand Grow OS Fork AI nicht.
+
+- Eigenes Image (`ghcr.io/bru-u-kno/grow-operation-system_fork_ai-mcp`) und
+  eigener Name: **Grow MCP Fork AI**.
+- Findet **Grow OS Fork AI** im eigenen Store von selbst.
+- **Port 5080** statt 5079, damit er neben dem Grow MCP des Originals starten
+  kann. Der Befehl auf der Einrichtungsseite nennt den neuen Port.
+- Beim Klienten heißt er `grow-os-fork-ai` statt `grow-os` — wer beide
+  einrichtet, bekommt zwei getrennte Einträge.
+- Die Einrichtungsseite mit dem Schlüssel antwortet nur dem Ingress-Proxy von
+  Home Assistant (war im Fork schon so, kam aber wegen des fremden Images nie an).
+
 ## 0.1.8
 
 **Die Einrichtungsseite nannte eine Adresse, unter der der Server nie erreichbar

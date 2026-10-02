@@ -22,5 +22,5 @@ COPY --from=publish /app/publish .
 # darf, ist eine Sicherheitsfrage und keine Umgebungsvariable.
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-EXPOSE 5078 5079
+EXPOSE 5078 5080
 ENTRYPOINT ["dotnet", "GrowMcp.dll"]

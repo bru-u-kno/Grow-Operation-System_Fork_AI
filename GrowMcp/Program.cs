@@ -4,7 +4,7 @@ using GrowMcp.Services;
 using GrowMcp.Tools;
 using GrowOsAccess;
 
-// Grow MCP: Grow OS als Werkzeugkasten fuer einen beliebigen MCP-Klienten —
+// Grow MCP Fork AI: Grow OS Fork AI als Werkzeugkasten fuer einen beliebigen MCP-Klienten —
 // Claude Code, Claude Desktop, was auch immer im eigenen Netz laeuft.
 //
 // Der Unterschied zur Berater-Mappe, die Grow OS zum Herunterladen anbietet: die
@@ -17,7 +17,7 @@ using GrowOsAccess;
 //              besitzt hier die Anmeldung, nach draussen ist der Port zu. Im
 //              internen Add-on-Netz ist er offen — deshalb antwortet die Seite nur
 //              dem Ingress-Proxy 172.30.32.2 und Loopback (Tueren.Pruefen).
-//   Port 5079  Das WLAN. Nur die MCP-Schnittstelle, nur mit Schluessel. Wer hier
+//   Port 5080  Das WLAN. Nur die MCP-Schnittstelle, nur mit Schluessel. Wer hier
 //              anklopft, sieht die Seite mit dem Schluessel NICHT — sonst haette
 //              das Absichern keinen Sinn.
 

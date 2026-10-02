@@ -29,9 +29,17 @@ public static class Einrichtungsseite
     /// unten eintippt, bekommt genau den Befehl, den der Server auch selbst
     /// gebaut hätte.
     /// </remarks>
+    /// <remarks>
+    /// Fork AI (02.10.2026): der Server heißt beim Klienten „grow-os-fork-ai",
+    /// nicht „grow-os" — wer auch den Grow MCP des Originals eingerichtet hat,
+    /// bekäme sonst zwei Einträge mit demselben Namen.
+    /// </remarks>
     public static string Befehl(string adresse, string token)
-        => $"claude mcp add --transport http grow-os http://{adresse}:{Tueren.NetzPort}{Tueren.McpPfad} "
+        => $"claude mcp add --transport http {KlientenName} http://{adresse}:{Tueren.NetzPort}{Tueren.McpPfad} "
          + $"--header \"Authorization: Bearer {token}\"";
+
+    /// <summary>Unter diesem Namen trägt sich der Server beim Klienten ein.</summary>
+    public const string KlientenName = "grow-os-fork-ai";
 
     public static async Task<IResult> RendernAsync(
         HttpRequest anfrage, TokenSpeicher speicher, GrowOsDiscovery suche, CancellationToken cancellationToken)
@@ -41,7 +49,7 @@ public static class Einrichtungsseite
         // Der Name aus der Anfrage taugt nur, wenn er ins Heimnetz zeigt. Diese
         // Seite laeuft ueber Ingress und ist damit unter JEDER Adresse offen,
         // unter der Home Assistant offen ist — auch unter einer Domain aus dem
-        // Internet. Die MCP-Tuer haengt aber an Port 5079, und der ist
+        // Internet. Die MCP-Tuer haengt aber an Tueren.NetzPort, und der ist
         // absichtlich nur im eigenen Netz erreichbar.
         var host = anfrage.Host.Host;
         var hostTaugt = Heimnetzadresse.IstLokal(host);
@@ -104,7 +112,7 @@ public static class Einrichtungsseite
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Grow MCP</title>
+              <title>Grow MCP Fork AI</title>
               <style>
                 :root {
                   color-scheme: light dark;
@@ -158,7 +166,7 @@ public static class Einrichtungsseite
             </head>
             <body>
             <main>
-              <h1>Grow MCP</h1>
+              <h1>Grow MCP Fork AI</h1>
               <p class="lead">Verbindet Claude auf deinem Rechner mit deiner Anlage.</p>
 
               <section>

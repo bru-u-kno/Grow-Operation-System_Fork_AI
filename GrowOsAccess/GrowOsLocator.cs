@@ -26,7 +26,14 @@ public sealed record GrowOsFund(string? Slug, string? Host, string Meldung, bool
 public static class GrowOsLocator
 {
     /// <summary>Der Slug von Grow OS, ohne den Repository-Teil davor.</summary>
-    public const string Slug = "grow_os";
+    /// <remarks>
+    /// Fork AI (02.10.2026): <c>grow_os_fork_ai</c>, wie in
+    /// <c>grow-os/config.yaml</c>. Bis dahin stand hier <c>grow_os</c> — der Slug
+    /// des Originals. Der Fork-MCP hätte dadurch im eigenen Store ein Grow OS
+    /// gesucht, das es dort nicht gibt. <c>GrowOsLocatorTests</c> liest die
+    /// config.yaml und hält beide gleich.
+    /// </remarks>
+    public const string Slug = "grow_os_fork_ai";
 
     /// <summary>Der Port, auf dem Grow OS im Container lauscht.</summary>
     public const int Port = 5076;
