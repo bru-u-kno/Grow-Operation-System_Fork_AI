@@ -8,7 +8,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
  * die Home-Assistant-Integration im `select.*_aktiver_modus` meldet. Die Zählung in
  * `rohe-enums.spec.ts` sieht das nicht: ihre Grundmenge sind die Typen der App,
  * dieser Wert kommt aus Home Assistant. Der Demobestand meldet seit demselben Tag
- * ebenfalls „On" (`DemoData.LichtModus`).
+ * „Schedule" (`DemoData.LichtModus`) — passend zu seinem 12/12-Lichtplan.
  */
 test('AC-Test: der Modus steht übersetzt neben der Stufe', async ({ page, request }) => {
   darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend — ohne Gerät gibt es keinen Modus.')
@@ -19,6 +19,6 @@ test('AC-Test: der Modus steht übersetzt neben der Stufe', async ({ page, reque
   await page.goto('/ac-test', { waitUntil: 'networkidle' })
   const kopf = page.locator('.ac-kopf').first()
   await expect(kopf).toBeVisible()
-  await expect(kopf).toContainText(/Modus an\b/)
-  await expect(kopf, 'Der Modus steht roh auf Englisch da.').not.toContainText(/\bOn\b/)
+  await expect(kopf).toContainText(/Modus Zeitplan\b/)
+  await expect(kopf, 'Der Modus steht roh auf Englisch da.').not.toContainText(/\bSchedule\b/)
 })

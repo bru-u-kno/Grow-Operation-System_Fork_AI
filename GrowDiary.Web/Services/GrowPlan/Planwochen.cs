@@ -19,7 +19,7 @@ namespace GrowDiary.Web.Services.GrowPlan;
 /// <para><b>Die Anzucht.</b> Programme führen dort keine Wochen, sondern
 /// Sonderspalten („Bewurzelung", Athena: „Vorweichen" und „Anfüttern"). Die
 /// letzte davon ist die, die der Mischplan in der Anzucht immer gewählt hat; sie
-/// zählt als Woche 1. Ab Woche 2 wird sie fortgeschrieben („Bewurzelungswoche 2" —
+/// zählt als Woche 1. Ab Woche 2 wird sie fortgeschrieben („Bewurzelung 2" —
 /// passend zur Spalte „Bewurzelung" davor und zum Knopf „Bewurzelung
 /// abgeschlossen"). Die übrigen Sonderspalten (Vorweichen, Flush) wachsen nicht: sie
 /// sind Schritte, keine Wochen.</para>

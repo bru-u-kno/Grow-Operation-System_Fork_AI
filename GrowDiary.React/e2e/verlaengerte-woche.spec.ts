@@ -23,7 +23,7 @@ async function speichern(page: Page) {
  * <b>Der Anlass (02.10.2026).</b> Läuft eine Phase länger als das Programm,
  * bekommt der Plan des Grows eigene Wochen (Entscheidung des Nutzers: „erstreckt
  * sich die Blüte über zehn Wochen, zeigt das Schema auch zehn Wochen"). Der
- * Demobestand hat sie für die White Widow — Bewurzelungswoche 2 und Vegiwoche 5
+ * Demobestand hat sie für die White Widow — Bewurzelung 2 und Vegiwoche 5
  * (<c>DemobestandStimmigTests.Ein_Lauf_dauert_laenger_als_sein_Programm</c>).
  *
  * <b>Der Rundweg</b> laut CLAUDE.md: ausfüllen, speichern, neu laden, Wert
@@ -102,10 +102,11 @@ test('verlängerte Wochen: markiert, ändern, speichern, neu laden — erste und
  * Wochennamen am Telefon: ein Name, eine Zeile — und überall dasselbe Wort.
  *
  * <b>Der Anlass (02.10.2026).</b> Die angehängte Anzucht-Woche hieß „Anzuchtwoche 2"
- * neben der Spalte „Bewurzelung" — zwei Namen für dieselbe Phase. Umbenannt in
- * „Bewurzelungswoche 2" stand bei 360 px die „2" allein in der zweiten Zeile, wie
- * schon vorher bei „Blütewoche 3" bis „8". Gemessen wird der Text, nicht der Kasten
- * (`Range.getClientRects()`): zerfällt ein Wochenname auf zwei Zeilenhöhen?
+ * neben der Spalte „Bewurzelung" — zwei Namen für dieselbe Phase. Jetzt heißt sie
+ * „Bewurzelung 2". Im Wochen-Blatt stand bei 360 px die Wochennummer allein in der
+ * zweiten Zeile („Blütewoche / 3" bis „8"; beim Zwischenstand „Bewurzelungswoche 2"
+ * auch dort). Gemessen wird der Text, nicht der Kasten (`Range.getClientRects()`):
+ * zerfällt ein Wochenname auf zwei Zeilenhöhen, ragt er über den Rand?
  */
 test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoche"', async ({ page, request }) => {
   darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend — ohne Plan gibt es kein Wochen-Blatt.')
@@ -114,9 +115,9 @@ test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoc
 
   const werte = await (await request.get(`/api/wochenplan/werte/${ziel.growId}`)).json() as { spalten: Spalte[] }
   const namen = werte.spalten.map((s) => s.label)
-  expect(namen.filter((n) => n.startsWith('Anzuchtwoche')), 'Angehängte Anzucht-Wochen heißen „Bewurzelungswoche".').toEqual([])
-  // Mengenwächter: ohne eine angehängte Bewurzelungswoche prüft der Name nichts.
-  expect(namen.some((n) => n.startsWith('Bewurzelungswoche ')), 'Der Demobestand sollte eine Bewurzelungswoche haben.').toBe(true)
+  expect(namen.filter((n) => n.startsWith('Anzuchtwoche')), 'Angehängte Anzucht-Wochen heißen „Bewurzelung N".').toEqual([])
+  // Mengenwächter: ohne eine angehängte Bewurzelungs-Woche prüft der Name nichts.
+  expect(namen.some((n) => /^Bewurzelung \d+$/.test(n)), 'Der Demobestand sollte eine angehängte Bewurzelungs-Woche haben.').toBe(true)
 
   for (const breite of [320, 360]) {
     await page.setViewportSize({ width: breite, height: 800 })
@@ -134,6 +135,36 @@ test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoc
       return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size > 1
     }).map((l) => l.firstChild?.textContent ?? ''))
     expect(zerbrochen, `${breite} px: diese Wochennamen brechen um.`).toEqual([])
+    // Die nowrap-Falle: ein Name, der nicht umbricht, kann an `.wp-liste`
+    // (overflow: hidden) abgeschnitten werden — gemessen am Text, nicht am Kasten.
+    const abgeschnitten = await blatt.evaluate((el) => {
+      const rand = el.getBoundingClientRect().right
+      return [...el.querySelectorAll('.wp-zeile-l, .wp-zeile-w')].filter((x) => {
+        const r = document.createRange()
+        r.selectNodeContents(x)
+        return [...r.getClientRects()].some((q) => q.right > rand + 0.5)
+      }).map((x) => x.textContent ?? '')
+    })
+    expect(abgeschnitten, `${breite} px: dieser Text ragt über den Rand des Wochen-Blatts.`).toEqual([])
     await page.keyboard.press('Escape')
   }
+
+  // Derselbe Name steht in der Plan-Tabelle am Grow (PlanAuswertung). Dort brach
+  // „Bewurzelungswoche 2" bei 390 px mitten im Wort („Bewurzelungswoc / he 2") —
+  // Befund des Prüfers, 02.10.2026. Deshalb heißt die Woche „Bewurzelung 2".
+  await page.setViewportSize({ width: 390, height: 800 })
+  await page.goto(`/grows/${ziel.growId}`, { waitUntil: 'networkidle' })
+  const tabelle = page.locator('[data-audit="plan-auswertung"] .pa-tabelle')
+  await expect(tabelle).toBeVisible()
+  // Nur der Name (der erste Textknoten): „verlängert" steht absichtlich darunter.
+  const namen390 = await tabelle.evaluate((el) => [...el.querySelectorAll('tbody td:first-child')].map((td) => {
+    const name = [...td.childNodes].find((k) => k.nodeType === Node.TEXT_NODE && (k.textContent ?? '').trim())
+    if (!name) return { text: '', zeilen: 0 }
+    const r = document.createRange()
+    r.selectNodeContents(name)
+    return { text: (name.textContent ?? '').trim(), zeilen: new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size }
+  }))
+  expect(namen390.length, 'Die Plan-Tabelle am Grow ist leer.').toBeGreaterThanOrEqual(10)
+  expect(namen390.some((n) => n.text.startsWith('Bewurzelung ')), 'Die angehängte Bewurzelungs-Woche fehlt in der Tabelle.').toBe(true)
+  expect(namen390.filter((n) => n.zeilen > 1).map((n) => n.text), '390 px: diese Wochennamen brechen in der Plan-Tabelle um.').toEqual([])
 })

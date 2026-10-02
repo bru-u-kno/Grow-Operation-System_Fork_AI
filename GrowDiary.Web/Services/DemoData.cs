@@ -78,8 +78,10 @@ public static class DemoData
     /// <remarks>
     /// Fork AI (02.10.2026): ohne ihn trug das Testgerät keinen Modus, und das
     /// Etikett „Modus …" auf „Zelt (AC-Test)" war im Testbestand nie zu sehen —
-    /// auch nicht, dass dort roh „On" stand. „On" ist der Wert, den die
-    /// Integration in der Anlage des Nutzers meldet (<c>select.rdwc_fan3_aktiver_modus</c>).
+    /// auch nicht, dass dort roh „On" stand. „Schedule", weil der Bestand für
+    /// dieses Licht einen 12/12-Lichtplan führt und die App beim Anwenden eines
+    /// Lichtplans genau diesen Modus setzt (<c>LichtSteuerungService.Modi.Zeitplan</c>).
+    /// „On" hieße Dauerlicht — im Blütezelt ein Widerspruch (Prüfer, 02.10.2026).
     /// </remarks>
     public const string LichtModus = "select.demo_licht_modus";
 
@@ -385,7 +387,7 @@ public static class DemoData
             return new HomeAssistantState
             {
                 EntityId = LichtModus,
-                State = "On",
+                State = LichtSteuerungService.Modi.Zeitplan,
                 FriendlyName = "Demo LED · Aktiver Modus",
                 LastChanged = nowUtc,
                 LastUpdated = nowUtc,

@@ -5,6 +5,22 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.158
+
+**Fork AI.** Namen und Anzeige nach der großen Durchsicht angeglichen.
+
+- Geändert — **angehängte Anzucht-Wochen heißen „Bewurzelung 2", „Bewurzelung 3" …** Bisher stand
+  neben der Spalte „Bewurzelung" die Woche „Anzuchtwoche 2" — zwei Namen für dieselbe Phase.
+  Gespeicherte Pläne werden beim Start der App umbenannt, du musst nichts tun.
+- Behoben — **Wochenliste am Telefon:** bei schmalem Bildschirm stand die Wochennummer allein in
+  einer zweiten Zeile („Blütewoche" / „3"). Jetzt bleibt der Name zusammen; die Werte rücken bei
+  Platzmangel darunter.
+- Behoben — **„Zelt (AC-Test)" zeigte den Modus roh auf Englisch** („On"). Jetzt „Modus an",
+  „Modus Zeitplan" usw. — für alle 15 Modi, die die AC-Infinity-Integration kennt. Dasselbe auf der
+  Licht-Seite der Steuerung, wo seltene Modi wie „Auto" oder „Cycle" bisher roh in Großbuchstaben
+  standen.
+- Nach jedem Release spielt Claude das Update jetzt selbst in Home Assistant ein.
+
 ## 2.0.0-forkai.157
 
 **Fork AI.** Große Durchsicht: Sicherheit, Phasen und Wochen, Steuerung, Kosten und viele Anzeigefehler.

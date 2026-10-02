@@ -8,6 +8,7 @@ import { rollenPfad } from '../geraete/rollenPfad'
 import { befehlsMeldung, speicherMeldung } from './licht-meldungen'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
 import { useFehlerZeigen } from './fehler-reiter'
+import { acModusName } from '../../deutsche-woerter'
 import { entwurfAbgleichen, stufeAusFeld } from './licht-bedienung'
 
 /**
@@ -155,7 +156,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
   const modusText = live.modus === LICHT_MODI.aus ? 'AUS'
     : live.modus === LICHT_MODI.an ? 'DAUERLICHT'
     : istZeitplan ? `ZEITPLAN${live.aktivesPreset === 'veggie' ? ' (VEGGIE)' : live.aktivesPreset === 'bluete' ? ' (BLÜTE)' : ' (EIGENE ZEITEN)'}`
-    : (live.modus ?? 'UNBEKANNT').toUpperCase()
+    : live.modus ? acModusName(live.modus).toUpperCase() : 'UNBEKANNT'
 
   return (
     <V1Page
