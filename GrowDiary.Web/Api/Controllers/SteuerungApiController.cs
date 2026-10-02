@@ -545,12 +545,13 @@ public sealed class SteuerungApiController : ApiControllerBase
         if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
 
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        var belegt = _geraete.EntitiesFuerModul(modul)
+        var zuordnung = _geraete.EntitiesFuerModul(modul);
+        var belegt = zuordnung
             .Where(p => !string.IsNullOrWhiteSpace(p.Value))
             .Select(p => p.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return Ok(await _bestand.AufnehmenAsync(modul, belegt, settings, ct));
+        return Ok(await _bestand.AufnehmenAsync(modul, belegt, settings, ct, zuordnung));
     }
 
     /// <summary>Fork AI (forkai.141, F-037): Stand der Übertragung ans Bluelab-Gerät.</summary>

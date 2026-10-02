@@ -70,14 +70,54 @@ public sealed class SteuerungBestandService
         IReadOnlyList<BauteilStand> Bauteile,
         int Veraltet = 0);
 
+    /// <summary>
+    /// Fork AI (02.10.2026): Lücken, die nicht an einem fehlenden Bauteil hängen,
+    /// sondern an der Art des zugeordneten Geräts.
+    /// </summary>
+    /// <param name="modul">Der Modul-Schlüssel.</param>
+    /// <param name="zuordnung">Rolle → zugeordnete Entität.</param>
+    /// <remarks>
+    /// <para><b>Kühler ohne Aus.</b> Der Wächter (<c>Vorlagen/chiller/waechter.json</c>,
+    /// Fassung 3) schaltet bei stummem Wasserfühler die Steckdose und ein
+    /// <c>climate</c>-Gerät ab. Ein Kühler, der nur einen Sollwert-Eingang
+    /// (<c>number</c>) hat und keine Steckdose, kennt kein Aus — dann schreibt der
+    /// Wächter nur einen Logbuch-Eintrag, und der Kühler kühlt blind auf den
+    /// letzten Sollwert weiter. Das stand bisher nirgends, wo man es vor dem
+    /// Ernstfall liest.</para>
+    /// </remarks>
+    public static IReadOnlyList<string> Luecken(string modul, IReadOnlyDictionary<string, string?>? zuordnung)
+    {
+        var luecken = new List<string>();
+        if (zuordnung is null) return luecken;
+
+        if (string.Equals(modul, ChillerSteuerungService.Modul, StringComparison.OrdinalIgnoreCase))
+        {
+            var steckdose = zuordnung.GetValueOrDefault(ChillerSteuerungService.Rollen.Steckdose);
+            var sollwert = zuordnung.GetValueOrDefault(ChillerSteuerungService.Rollen.KuehlerSollwert);
+            if (ChillerAnsteuerung.Aus(steckdose, sollwert) == ChillerAnsteuerung.Regelbar
+                && !sollwert!.StartsWith("climate.", StringComparison.OrdinalIgnoreCase))
+            {
+                luecken.Add(
+                    $"Der Wächter kann den Kühler nicht abschalten: {sollwert} ist nur ein Sollwert-Eingang "
+                    + "und es ist keine Steckdose zugeordnet. Fällt der Wasserfühler aus, kühlt er auf den "
+                    + "letzten Sollwert weiter — es gibt nur einen Logbuch-Eintrag. Eine Steckdose unter "
+                    + "„Kühler · schalten\" schließt die Lücke.");
+            }
+        }
+
+        return luecken;
+    }
+
     /// <summary>Den Bestand für eine Steuerung aufnehmen.</summary>
     /// <param name="modul">Der Modul-Schlüssel, etwa <c>co2</c>.</param>
     /// <param name="belegteRollen">Rollen-Schlüssel, denen eine Entität zugeordnet ist.</param>
+    /// <param name="zuordnung">Rolle → Entität, für <see cref="Luecken"/>; ohne sie entfallen diese.</param>
     public async Task<Bestandsaufnahme> AufnehmenAsync(
         string modul,
         IReadOnlyCollection<string> belegteRollen,
         HomeAssistantSettings settings,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IReadOnlyDictionary<string, string?>? zuordnung = null)
     {
         // GetEntitiesAsync statt GetStatesAsync: letzteres will ein Zelt und
         // liefert nur dessen Sensoren. Hier geht es um Helfer und Automationen,
@@ -151,6 +191,7 @@ public sealed class SteuerungBestandService
         var ausgefallen = liste
             .Where(s => s.Stand is Stand.Entfaellt or Stand.Fehlt && !string.IsNullOrWhiteSpace(s.OhneDas))
             .Select(s => s.OhneDas!)
+            .Concat(Luecken(modul, zuordnung))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
