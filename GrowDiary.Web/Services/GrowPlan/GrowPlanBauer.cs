@@ -61,7 +61,10 @@ public static class GrowPlanBauer
     /// bleiben unangetastet (Bru, 21.09.2026). Der Grow-Plan ist eine Kopie; nur
     /// dort wird umbenannt.</para>
     /// <para><b>Angehängte Wochen</b> (Fork AI, 02.10.2026) heißen wie ihre Phase:
-    /// „Vegiwoche 5", „Blütewoche 10", in der Anzucht „Anzuchtwoche 2".</para>
+    /// „Vegiwoche 5", „Blütewoche 10", in der Anzucht „Bewurzelungswoche 2" — so heißt
+    /// sie neben der Spalte „Bewurzelung" davor. Bis zum 02.10.2026 stand dort
+    /// „Anzuchtwoche 2"; der Nutzer sah zwei Namen für dieselbe Phase.
+    /// <see cref="WochennamenAngleichen"/> benennt gespeicherte Pläne beim Start um.</para>
     /// <para><b>Mehrere Schritte einer Phase</b> ohne Wochennummer (Athena: „Klon ·
     /// Vorweichen" / „Klon · Anfüttern") behalten ihren Namen — sie wären sonst nicht
     /// mehr zu unterscheiden.</para>
@@ -75,7 +78,7 @@ public static class GrowPlanBauer
             GrowStage.Flower when spalte.Week is { } w => $"Blütewoche {w}",
             // Fork AI (02.10.2026): angehängte Anzucht-Wochen (Planwochen.Anhaengen) —
             // die Sonderspalte davor ist Woche 1 und behält ihren Namen.
-            GrowStage.Clone or GrowStage.Seedling when spalte.Week is { } w => $"Anzuchtwoche {w}",
+            GrowStage.Clone or GrowStage.Seedling when spalte.Week is { } w => $"Bewurzelungswoche {w}",
             GrowStage.Clone or GrowStage.Seedling when label.Contains("Root", StringComparison.OrdinalIgnoreCase)
                 || label.Contains("Bewurzel", StringComparison.OrdinalIgnoreCase)
                 || string.IsNullOrWhiteSpace(label) => "Bewurzelung",

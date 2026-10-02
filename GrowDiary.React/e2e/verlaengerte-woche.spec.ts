@@ -23,7 +23,7 @@ async function speichern(page: Page) {
  * <b>Der Anlass (02.10.2026).</b> Läuft eine Phase länger als das Programm,
  * bekommt der Plan des Grows eigene Wochen (Entscheidung des Nutzers: „erstreckt
  * sich die Blüte über zehn Wochen, zeigt das Schema auch zehn Wochen"). Der
- * Demobestand hat sie für die White Widow — Anzuchtwoche 2 und Vegiwoche 5
+ * Demobestand hat sie für die White Widow — Bewurzelungswoche 2 und Vegiwoche 5
  * (<c>DemobestandStimmigTests.Ein_Lauf_dauert_laenger_als_sein_Programm</c>).
  *
  * <b>Der Rundweg</b> laut CLAUDE.md: ausfüllen, speichern, neu laden, Wert
@@ -95,5 +95,45 @@ test('verlängerte Wochen: markiert, ändern, speichern, neu laden — erste und
         data: { aenderungen: [{ spalteId: woche.id, feld: 'ecTarget', wert: null }] },
       })
     }
+  }
+})
+
+/**
+ * Wochennamen am Telefon: ein Name, eine Zeile — und überall dasselbe Wort.
+ *
+ * <b>Der Anlass (02.10.2026).</b> Die angehängte Anzucht-Woche hieß „Anzuchtwoche 2"
+ * neben der Spalte „Bewurzelung" — zwei Namen für dieselbe Phase. Umbenannt in
+ * „Bewurzelungswoche 2" stand bei 360 px die „2" allein in der zweiten Zeile, wie
+ * schon vorher bei „Blütewoche 3" bis „8". Gemessen wird der Text, nicht der Kasten
+ * (`Range.getClientRects()`): zerfällt ein Wochenname auf zwei Zeilenhöhen?
+ */
+test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, keine „Anzuchtwoche"', async ({ page, request }) => {
+  darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend — ohne Plan gibt es kein Wochen-Blatt.')
+  const ziel = await (await request.get('/api/zielwerte')).json() as { growId: number | null; eigenerPlan?: boolean }
+  darfUeberspringen(ziel.growId == null || !ziel.eigenerPlan, 'Kein laufender Grow mit eigenem Plan im Bestand.')
+
+  const werte = await (await request.get(`/api/wochenplan/werte/${ziel.growId}`)).json() as { spalten: Spalte[] }
+  const namen = werte.spalten.map((s) => s.label)
+  expect(namen.filter((n) => n.startsWith('Anzuchtwoche')), 'Angehängte Anzucht-Wochen heißen „Bewurzelungswoche".').toEqual([])
+  // Mengenwächter: ohne eine angehängte Bewurzelungswoche prüft der Name nichts.
+  expect(namen.some((n) => n.startsWith('Bewurzelungswoche ')), 'Der Demobestand sollte eine Bewurzelungswoche haben.').toBe(true)
+
+  for (const breite of [320, 360]) {
+    await page.setViewportSize({ width: breite, height: 800 })
+    await page.goto('/plan', { waitUntil: 'networkidle' })
+    await page.locator('[data-audit="wochen-zeile-oeffnen"]').click()
+    const blatt = page.locator('[data-audit="wochen-blatt"]')
+    await expect(blatt).toBeVisible()
+    const zeilen = await blatt.locator('.wp-zeile-l').count()
+    expect(zeilen, 'Das Wochen-Blatt ist leer.').toBeGreaterThanOrEqual(10)
+    const zerbrochen = await blatt.evaluate((el) => [...el.querySelectorAll('.wp-zeile-l')].filter((l) => {
+      const text = l.firstChild
+      if (!text) return false
+      const r = document.createRange()
+      r.selectNodeContents(text)
+      return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size > 1
+    }).map((l) => l.firstChild?.textContent ?? ''))
+    expect(zerbrochen, `${breite} px: diese Wochennamen brechen um.`).toEqual([])
+    await page.keyboard.press('Escape')
   }
 })

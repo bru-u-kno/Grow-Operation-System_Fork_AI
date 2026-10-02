@@ -41,6 +41,20 @@ public sealed class WochennamenTests
     }
 
     [Fact]
+    public void GespeicherteAnzuchtwochenHeissenNachDemStartBewurzelungswoche()
+    {
+        // Fork AI (02.10.2026): forkai.157 hat angehängte Anzucht-Wochen als
+        // „Anzuchtwoche 2" gespeichert — neben der Spalte „Bewurzelung" zwei Namen
+        // für dieselbe Phase. Der Start gleicht gespeicherte Pläne an.
+        var inhalt = new GrowPlanInhalt();
+        inhalt.Chart.Columns.Add(new FeedChartColumn { Id = "root", Stage = "Clone", Label = "Bewurzelung" });
+        inhalt.Chart.Columns.Add(new FeedChartColumn { Id = "clone-w2", Stage = "Clone", Week = 2, Label = "Anzuchtwoche 2" });
+
+        Assert.True(GrowPlanBauer.WochennamenAngleichen(inhalt));
+        Assert.Equal(["Bewurzelung", "Bewurzelungswoche 2"], inhalt.Chart.Columns.Select(c => c.Label));
+    }
+
+    [Fact]
     public void DasProgrammSelbstBleibtUnveraendert()
     {
         // Der Plan ist eine Kopie — die Herstellertabelle (Wissen) behält „Flores".

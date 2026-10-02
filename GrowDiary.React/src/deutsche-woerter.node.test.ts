@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { FOTO_TAGS, PHASEN, WOERTERBUECHER, fotoTagName, herkunftName, phaseName } from './deutsche-woerter'
+import { FOTO_TAGS, PHASEN, WOERTERBUECHER, acModusName, fotoTagName, herkunftName, phaseName } from './deutsche-woerter'
 
 /**
  * Kein Entwickler-Bezeichner steht roh auf dem Bildschirm.
@@ -102,5 +102,20 @@ describe('Deutsche Wörter', () => {
     // setzen. „Automatik“ waere also eine Behauptung ueber die Herkunft, die die
     // Daten nicht decken.
     expect(herkunftName('HomeAssistant')).not.toContain('Automatik')
+  })
+
+  it('übersetzt jeden Modus, den die AC-Infinity-Integration anbietet', () => {
+    // Die `options` von select.rdwc_fan3_aktiver_modus in der Anlage (02.10.2026).
+    // Gleich bleiben dürfen nur die Abkürzungen, die auch im Deutschen so heißen.
+    const optionen = ['Off', 'On', 'Auto', 'Timer to On', 'Timer to Off', 'Cycle', 'Schedule', 'VPD',
+      'CO2', 'CO2 Fan', 'Moisture', 'Water Temp', 'pH', 'EC', 'Water Detect']
+    const gleich = new Set(['VPD', 'pH', 'EC'])
+    expect(optionen.length).toBe(15)
+    for (const wert of optionen) {
+      if (gleich.has(wert)) expect(acModusName(wert)).toBe(wert)
+      else expect(acModusName(wert), wert).not.toBe(wert)
+    }
+    expect(acModusName('On')).toBe('an')
+    expect(acModusName(null)).toBe('–')
   })
 })

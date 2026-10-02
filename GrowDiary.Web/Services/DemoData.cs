@@ -74,6 +74,15 @@ public static class DemoData
     /// </remarks>
     public const string LichtLeistung = "number.demo_licht_leistung";
 
+    /// <summary>Der aktive Modus des Lichts im Testbestand — wie AC Infinity ihn als <c>select</c> meldet.</summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): ohne ihn trug das Testgerät keinen Modus, und das
+    /// Etikett „Modus …" auf „Zelt (AC-Test)" war im Testbestand nie zu sehen —
+    /// auch nicht, dass dort roh „On" stand. „On" ist der Wert, den die
+    /// Integration in der Anlage des Nutzers meldet (<c>select.rdwc_fan3_aktiver_modus</c>).
+    /// </remarks>
+    public const string LichtModus = "select.demo_licht_modus";
+
     /// <summary>Die geplante Ein-Zeit des Lichts im Testbestand.</summary>
     /// <remarks>
     /// Fuer den Zeitplan im Versuchsaufbau „Zelt (AC-Test)". Der Wert kommt aus
@@ -371,6 +380,18 @@ public static class DemoData
             };
         }
 
+        if (string.Equals(entityId, LichtModus, StringComparison.OrdinalIgnoreCase))
+        {
+            return new HomeAssistantState
+            {
+                EntityId = LichtModus,
+                State = "On",
+                FriendlyName = "Demo LED · Aktiver Modus",
+                LastChanged = nowUtc,
+                LastUpdated = nowUtc,
+            };
+        }
+
         if (string.Equals(entityId, LichtLeistung, StringComparison.OrdinalIgnoreCase))
         {
             return new HomeAssistantState
@@ -439,7 +460,7 @@ public static class DemoData
         // Die benannten Geraete: ohne sie steht im Testbetrieb keine Steckdose
         // und kein Dimmfeld in der Auswahl — und dann laesst sich weder der
         // Kuehler noch der AC-Versuch ueberhaupt einrichten.
-        foreach (var kennung in new[] { LichtLeistung, LichtEinZeit, LichtAusZeit, StromZaehler, StromLeistung })
+        foreach (var kennung in new[] { LichtLeistung, LichtModus, LichtEinZeit, LichtAusZeit, StromZaehler, StromLeistung })
         {
             var zustand = EntityState(kennung, nowUtc);
             if (zustand is null) continue;

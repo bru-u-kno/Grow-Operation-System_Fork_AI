@@ -205,7 +205,7 @@ public sealed class MitwachsendeWochenTests : IDisposable
     [Fact]
     public void DieAnzuchtSpalteIstWoche1UndWirdAbWoche2Fortgeschrieben()
     {
-        // Samen, Tag 16 der Anzucht, Vegi nicht bestätigt: Anzuchtwoche 3.
+        // Samen, Tag 16 der Anzucht, Vegi nicht bestätigt: Bewurzelungswoche 3.
         _benutzt.Add(Basis + 7);
         var grow = new GrowRun
         {
@@ -221,7 +221,7 @@ public sealed class MitwachsendeWochenTests : IDisposable
         var arbeit = Arbeit(grow.Id);
         var anzucht = arbeit.Chart.Columns.Take(3).ToList();
         Assert.Equal(["root", "clone-w2", "clone-w3"], anzucht.Select(c => c.Id));
-        Assert.Equal(["Bewurzelung", "Anzuchtwoche 2", "Anzuchtwoche 3"], anzucht.Select(c => c.Label));
+        Assert.Equal(["Bewurzelung", "Bewurzelungswoche 2", "Bewurzelungswoche 3"], anzucht.Select(c => c.Label));
         Assert.All(anzucht.Skip(1), c => Assert.Equal("Clone", c.Stage));
         Assert.Equal(bewurzelung.EcTarget, anzucht[2].EcTarget);
         Assert.Equal("root", arbeit.Programmwoche("clone-w3"));

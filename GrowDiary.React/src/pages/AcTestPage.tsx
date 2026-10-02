@@ -4,6 +4,7 @@ import {
   V1Alert, V1Badge, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton,
 } from '../components/v1'
 import type { TentDto } from '../types'
+import { acModusName } from '../deutsche-woerter'
 import '../features/actest/actest.css'
 
 /**
@@ -330,7 +331,7 @@ export function AcTestPage() {
                 <div className="ac-kopf">
                   <strong>{g.geraet.name}</strong>
                   {g.stufe != null && <V1Badge tone="accent">Stufe {g.stufe}</V1Badge>}
-                  {g.modus && <V1Badge>{g.modus}</V1Badge>}
+                  {g.modus && <V1Badge>Modus {acModusName(g.modus)}</V1Badge>}
                 </div>
                 <p className="ac-entity">{g.geraet.leistungEntityId}</p>
 

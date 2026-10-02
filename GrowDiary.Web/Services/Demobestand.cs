@@ -138,7 +138,7 @@ public static partial class Demobestand
         // Schnittstelle, die auch im Betrieb benutzt wird.
         AcTest.Speichern(dienste.GetRequiredService<AppSettingsRepository>(), zelt.Id,
         [
-            new AcGeraet("LED Top (Testdaten)", DemoData.LichtLeistung, null,
+            new AcGeraet("LED Top (Testdaten)", DemoData.LichtLeistung, DemoData.LichtModus,
                 DemoData.LichtEinZeit, DemoData.LichtAusZeit),
         ]);
         return $"4 Zelte (2 × Blüte, Mutter, Quarantäne), 3 Hydro-Systeme, 4 Grows (2 laufend, 2 im Archiv), "

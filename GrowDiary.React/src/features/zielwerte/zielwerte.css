@@ -251,6 +251,12 @@
     width: 100%; border-left: 0; border-right: 0; border-top: 0; background: transparent;
     text-align: left; cursor: pointer;
   }
+  /* Fork AI (02.10.2026): der Wochenname bricht nicht mehr — bei 360 px stand die
+     Wochennummer allein in der zweiten Zeile („Bewurzelungswoche / 2", „Blütewoche / 3").
+     Passt beides nicht nebeneinander, rücken die Werte rechtsbündig in die zweite Zeile. */
+  .zw-woche-zeile { flex-wrap: wrap; row-gap: var(--s-1); }
+  .zw-woche-zeile .wp-zeile-l { white-space: nowrap; }
+  .zw-woche-zeile .wp-zeile-w { margin-left: auto; }
 }
 
 /* Fork AI (forkai.130): „Nachts gelten die Tageswerte" im Plan-Reiter. Nur Token. */
