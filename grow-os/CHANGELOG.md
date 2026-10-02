@@ -5,6 +5,93 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.157
+
+**Fork AI.** Große Durchsicht: Sicherheit, Phasen und Wochen, Steuerung, Kosten und viele Anzeigefehler.
+Alle Befunde stehen in `docs/pruefung-2026-10-01.md`.
+
+**Bitte nach dem Update zuerst prüfen:** Öffnet sich Grow OS über die Seitenleiste von Home Assistant
+und lässt sich etwas speichern? Erscheint überall „403" oder „nur lokal oder über Home Assistant
+erreichbar", bitte melden — dann kommt der Ingress-Proxy bei dir von einer anderen Adresse (siehe unten).
+
+### Sicherheit
+- Behoben — **andere Add-ons konnten dosieren und schalten.** Geschützt war nur eine Liste von
+  Pfaden; offen lagen u. a. Pumpe dosieren, Licht schalten, Automationen anlegen. Jedes Add-on im
+  Netz von Home Assistant kam ohne Anmeldung heran, und der Ingress-Nachweis ließ sich mit einem
+  einzigen Kopf fälschen. Jetzt ist die ganze Schnittstelle geschützt, und der Kopf zählt nur noch
+  vom Ingress-Proxy des Supervisors (172.30.32.2). Nachbar-Add-ons wie Grow MCP lesen weiter, aber
+  keine Sicherungen, Einstellungen oder Exporte.
+- Behoben — **Entity-IDs gelangten roh in erzeugte Automationen.** Ein präparierter Wert konnte einer
+  Automation beliebige Aktionen anhängen. Entity-IDs werden jetzt streng geprüft.
+- Grow MCP: Die Einrichtungsseite mit dem Schlüssel antwortet nur noch über Ingress.
+
+### Phasen und Wochen
+- Neu — **Vegiwoche 1 beginnt erst mit deiner Bestätigung.** Bei Stecklingen mit „Bewurzelung
+  abgeschlossen", bei Samen mit „Vegi beginnt". Die Anzucht dauert so lange, wie sie dauert; ab dem
+  bisherigen Schätzwert erinnert die Wochenzeile mit dem passenden Knopf. Autoflower: „Blüte beginnt"
+  statt automatischer Umschaltung nach 28 Tagen.
+- Neu — **die Wochen wachsen mit.** Dauert eine Phase länger als das Programm, erscheint z. B.
+  Blütewoche 10 als eigene Woche mit den Werten von Woche 9 — markiert als „verlängert", im Plan
+  bearbeitbar, im Änderungsbuch. Gilt auch für Anzucht und Vegi. Vorher blieb die letzte Woche stumm
+  stehen.
+- Eine Stelle bestimmt jetzt Phase und Woche; vorher rechneten vier Stellen verschieden (Start,
+  Start + 7, Start + 14 Tage). Kachel, Grenzwerte, Alarme, Übergabe an Home Assistant und Auswertung
+  zeigen dieselbe Woche. Das Messprotokoll bewertet jede Messung gegen die Woche ihres Messtags.
+- **Bestehende Grows:** Wo der Vegi-Beginn nie bestätigt wurde, wird die bisherige Schätzung einmalig
+  übernommen (Journal-Eintrag). Ausnahme: ein Samen-Grow, der in der Vegi steht, rückt bis zu zwei
+  Wochen zurück — die alte Fassung sprang an Tag 14 direkt auf Vegiwoche 3.
+- Behoben — Einstieg „Blüte" ohne Flipdatum galt als Vegi.
+
+### Steuerung
+- Behoben — **die von Fork AI angelegte CO₂-Dosierung startete nie** (verlangte vor dem Öffnen ein
+  laufendes Ventil) und ohne Abluft-Regler ebenfalls nicht. Vom Fork angelegte Automationen werden jetzt
+  gefunden; „Automatik aus" meldet keinen Erfolg mehr ins Leere. Handgebaute Automationen bleiben, wie
+  sie sind; ältere Fassungen bietet die Seite als „veraltet" zum Erneuern an.
+- Behoben — **Zwei-Komponenten-Dünger:** die Automatik gab nur A, nie B. Jetzt plant sie B ein, B hält
+  die Tagesgrenzen der Pumpe ein, das Protokoll nennt die wirklich geflossene Menge, und bei
+  unerreichbarem Home Assistant wird B eine halbe Stunde lang erneut versucht statt verworfen.
+- Behoben — **„502, aber es schaltet":** Schaltbefehle haben jetzt 15 statt 4 s; bleibt die Antwort
+  aus, wird der Zustand nachgelesen statt ein Fehler gemeldet.
+- Behoben — **die CO₂-Seite ließ sich auf einer frischen Installation nicht speichern** (Notbremse und
+  Feuchte-Obergrenze ab Werk beide 65 %).
+- Behoben — ein geleertes Zahlenfeld (Chiller, Entfeuchter, Zuluft, CO₂, Licht) wurde still zu 0
+  gespeichert — bei der Mindestpause ohne Kompressorschutz. Jetzt wird markiert und nicht gespeichert;
+  liegt das Feld auf einem anderen Reiter, springt die Seite dorthin.
+- Behoben — die Leistungsstufe des Lichts ließ sich nicht eintippen; ein veralteter Licht-Befehl wurde
+  nachgeschrieben; der CO₂-Tag schloss bei kurzem Sensorausfall und zählte bei Licht über Mitternacht
+  bzw. Dauerlicht doppelt; Automations-Sicherungen lagen im Programmordner und gingen beim Update
+  verloren (jetzt unter `/data`); Werte über der Spanne eines Helfers lehnte Home Assistant dauerhaft ab.
+- Kühler: ein Gerät mit eigenem Thermostat bekommt `climate.turn_off`; die Lücke „Kühler ohne
+  Aus-Möglichkeit" steht im Bestand.
+
+### Pläne und Alarme
+- Behoben — **Grenzwerte ab 1000 (CO₂, PPFD):** „1500" erschien als „1.500", galt als 1,5 und meldete
+  eine Änderung, die niemand gemacht hatte.
+- Behoben — jedes Speichern der Grenzwerte schickte für jede verletzte Regel sofort erneut eine
+  Meldung; der Wochenplan konnte vertauschte Grenzen schreiben; das EC-Ziel konnte außerhalb des Bands
+  liegen; abgeschlossene Grows ließen sich noch ändern.
+- Behoben — das Risiko „Home Assistant nicht erreichbar" blieb für immer offen, wenn keine Meldung
+  rausging. Meldungen schreiben Zahlen jetzt deutsch („pH 5,5").
+- Trendwächter, Kachel und Diagnose nutzen dasselbe Band; Sollwertprofile prüfen einseitige Werte.
+
+### Kosten
+- Neu — **mehrere gleichzeitige Grows:** jedes Zelt kann einen eigenen Stromzähler bekommen; teilen
+  sich Grows einen Zähler, wird der Tagesverbrauch gleichmäßig verteilt und dazugeschrieben. Mit einem
+  Zelt ändert sich nichts.
+- Behoben — der Verbrauch wurde zum Preis der ältesten statt der jüngsten Füllung gerechnet; der
+  Füllstand hieß immer „geschätzt"; eine geschätzte Prognose hieß „aus dem gebuchten Verbrauch";
+  Archiv, Durchgänge und Kostenseite nennen jetzt dieselbe Zahl.
+
+### Anzeige und Bedienung
+- Behoben — **„Einstellungen" und der Hell/Dunkel-Knopf ragten aus der Seitenleiste** und waren
+  abgeschnitten.
+- Behoben — die Kostenseite war am Telefon breiter als der Schirm; Wörter brachen mitten durch;
+  englische Werte („Mother", „Active", „Veg"); Punkt statt Komma in Kacheln; letzte Messung ohne
+  Datum; Ruhezeiten wie „22:00" verschwanden still; die Wartungsfälligkeit ignorierte erledigte
+  Kalibrierungen; die Geräte-Seite verschwand bei einem Speicherfehler.
+- Behoben — Auto-Messungen legten rückwirkend und doppelt Messungen an; Grows aus gelöschten Zelten
+  landeten nach jedem Neustart im „Hauptzelt"; nach dem Zurückspielen einer Sicherung fehlten Tabellen.
+
 ## 2.0.0-forkai.156
 
 **Fork AI.** CO₂: auch die beiden Rechenwerte lassen sich jetzt absichern.
