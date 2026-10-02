@@ -5,6 +5,44 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.159
+
+**Fork AI.** Restliche Punkte aus der Durchsicht, deutsche Zahlen überall und ein eigener MCP.
+
+### Zahlen und Namen
+- Geändert — **Zahlen werden überall deutsch gelesen.** „1.200" ist 1200, „1.200,5" ist 1200,5. Bisher
+  wurde aus „1.200" still 1,2 — ein Preis von 1.200 € wurde zu 1,20 €, ein CO₂-Wert zu 1,2 ppm. Ein Punkt,
+  der kein Tausendertrenner sein kann, bleibt ein Dezimalpunkt: „5.8" ist weiter pH 5,8. Gelesen wird an
+  einer Stelle für die ganze App (vorher gut 20 eigene Fassungen); Unlesbares meldet jetzt überall einen
+  Fehler, statt still leer zu bleiben.
+- Behoben — **Phäno-Bogen:** aus getippten „22,5" wurde 225, THC 22,5 % ließ sich gar nicht eintragen.
+- Geändert — **die Anzucht im Plan heißt nach dem Startmaterial:** beim Steckling „Bewurzelung",
+  „Bewurzelung 2" …, beim Samen „Anzucht", „Anzucht 2" … — wie überall sonst in Grow OS. Gespeicherte
+  Pläne laufender Grows werden beim Start angeglichen; änderst du das Startmaterial, folgt der Name sofort.
+- Behoben — **Lichtmodi auf Deutsch, auch die seltenen:** auf der Steuerungs-Übersicht stand roh
+  „Modus Auto", auf der Licht-Seite „CYCLE". Die Namen kommen jetzt aus einer Tabelle für alle Seiten.
+- Behoben — **Startprotokoll:** „Planstände um das EC-Band ergänzt" erschien auch, wenn nur Wochen
+  umbenannt wurden. Jetzt eine Zeile je Art.
+
+### Plan und Steuerung
+- Behoben — **ein Grow mit Plan ließ sich auf „kein Programm" setzen.** Danach stand am Grow kein
+  Programm, Zielwerte und Alarme kamen aber weiter aus dem Plan. Das Feld ist bei einem Grow mit Plan
+  jetzt gesperrt; das Programm wechselst du über den Plan.
+- Behoben — **VPD-Ziel-Helfer wurden nicht auf ihre Spanne begrenzt.** Selbst angelegte Helfer
+  (`vpd_ziel_*`) bekamen jeden Wert; jetzt gilt ihr eigenes Minimum und Maximum aus Home Assistant.
+- Behoben — **nach dem Zurückspielen einer Sicherung** fehlten Datenbank-Ergänzungen bis zum nächsten
+  Neustart. Sie laufen jetzt sofort.
+
+### Anzeige
+- Behoben — **Plan-Tabelle am Grow am Telefon:** Wochennamen und Spaltenköpfe brachen bei 320 und 360 px
+  mitten im Wort („Blütewoche / 1", „Sta / rt"). Jetzt bleiben sie ganz.
+- Behoben — **Grow bearbeiten** schrieb bei einem Grow ohne Plan einen Fehler in die Browser-Konsole.
+
+### Grow MCP Fork AI
+- Neu — **der Fork hat seinen eigenen MCP.** Der bisherige „Grow MCP" aus diesem Store zog das Programm
+  des Originals und fand Grow OS Fork AI nicht. Jetzt: eigenes Image, findet den Fork von selbst, läuft auf
+  **Port 5080** neben dem Grow MCP des Originals (5079) und heißt bei Claude Code `grow-os-fork-ai`.
+
 ## 2.0.0-forkai.158
 
 **Fork AI.** Namen und Anzeige nach der großen Durchsicht angeglichen.
