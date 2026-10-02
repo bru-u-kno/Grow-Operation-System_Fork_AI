@@ -578,21 +578,41 @@ public sealed class GrowPlanTests : IDisposable
     }
 
     [Fact]
-    public void OhneVegiBeginnFolgtDieVegiDerBewurzelungUndDieLetzteWocheHaeltBisZumFlip()
+    public void DieVegiBeginntAmAnkerUndDieLetzteWocheHaeltBisZumFlip()
     {
-        // Wie 2026-01: Start 26.06., kein Vegi-Beginn eingetragen, lange Vegi (SCROG), Flip 23.08.
+        // Wie 2026-01: Start 26.06., lange Vegi (SCROG), Flip 23.08. Seit dem
+        // Phasenanker (02.10.2026) beginnt die Vegi nur bestätigt; die einmalige
+        // Übernahme trägt für diesen Lauf den alten Schätzwert ein: Start + 14.
         var grow = Grow(47, "skx-canna-aqua");
         grow.StartDate = new DateTime(2026, 6, 26);
-        grow.VegStartedAt = null;
         grow.RootedAt = null;
+        grow.FlipDate = new DateTime(2026, 8, 23);
+        grow.VegStartedAt = PhasenankerUebernahme.Vorschlag(grow, new DateTime(2026, 9, 16)).VegAb;
+        Assert.Equal(new DateTime(2026, 7, 10), grow.VegStartedAt);
+        var plan = _dienst.Anlegen(grow)!;
+
+        var zeit = PlanAuswertung.Zeitraeume(grow, plan.Inhalt.Chart.Columns, new DateTime(2026, 9, 16));
+
+        Assert.Equal((new DateTime(2026, 6, 26), new DateTime(2026, 7, 10)), zeit["root"]);
+        Assert.Equal((new DateTime(2026, 7, 10), new DateTime(2026, 7, 17)), zeit["veg-w1"]);
+        Assert.Equal((new DateTime(2026, 7, 31), new DateTime(2026, 8, 23)), zeit["veg-w4"]);   // gehalten bis zum Flip
+        Assert.Equal((new DateTime(2026, 8, 23), new DateTime(2026, 8, 30)), zeit["flower-w1"]);
+    }
+
+    [Fact]
+    public void OhneBestaetigtenVegiBeginnHabenVegiWochenKeinenZeitraum()
+    {
+        // Keine Schätzung mehr: die Anzucht läuft bis zum Flip, die Vegi-Wochen
+        // bleiben leer — statt Messungen einer erfundenen Woche zuzuordnen.
+        var grow = Grow(49, "skx-canna-aqua");
+        grow.StartDate = new DateTime(2026, 6, 26);
         grow.FlipDate = new DateTime(2026, 8, 23);
         var plan = _dienst.Anlegen(grow)!;
 
         var zeit = PlanAuswertung.Zeitraeume(grow, plan.Inhalt.Chart.Columns, new DateTime(2026, 9, 16));
 
-        Assert.Equal((new DateTime(2026, 6, 26), new DateTime(2026, 7, 3)), zeit["root"]);
-        Assert.Equal((new DateTime(2026, 7, 3), new DateTime(2026, 7, 10)), zeit["veg-w1"]);
-        Assert.Equal((new DateTime(2026, 7, 24), new DateTime(2026, 8, 23)), zeit["veg-w4"]);   // gehalten bis zum Flip
+        Assert.Equal((new DateTime(2026, 6, 26), new DateTime(2026, 8, 23)), zeit["root"]);
+        Assert.Equal((null, null), zeit["veg-w1"]);
         Assert.Equal((new DateTime(2026, 8, 23), new DateTime(2026, 8, 30)), zeit["flower-w1"]);
     }
 
@@ -601,6 +621,7 @@ public sealed class GrowPlanTests : IDisposable
     {
         // Wie 2026-01: RootedAt = Starttag.
         var grow = Grow(48, "skx-canna-aqua");
+        grow.StartMaterial = StartMaterial.Clone;
         grow.StartDate = new DateTime(2026, 6, 26);
         grow.RootedAt = new DateTime(2026, 6, 26);
         grow.FlipDate = new DateTime(2026, 8, 23);

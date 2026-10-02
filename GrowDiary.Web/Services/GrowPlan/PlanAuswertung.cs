@@ -23,10 +23,11 @@ public sealed record PlanAuswertungWoche(
 /// was geplant war (Start), was am Ende galt, was gemessen wurde.
 /// </summary>
 /// <remarks>
-/// <para><b>Zeiträume.</b> Bewurzelung vom Start bis zum Vegi-Beginn, Vegi-Wochen
-/// ab Vegi-Beginn (sonst Bewurzelung, sonst Start), Blütewochen ab Flip, Flush
-/// nach der letzten Blütewoche bis zum Ende. Ohne Flip haben Blütewochen keinen
-/// Zeitraum — dann steht dort nichts Gemessenes.</para>
+/// <para><b>Zeiträume.</b> Alle Beginne aus dem <see cref="Phasenanker"/>:
+/// Anzucht bis zum bestätigten Vegi-Beginn, Vegi-Wochen ab dort, Blütewochen ab
+/// dem Blütebeginn, Flush nach der letzten Blütewoche bis zum Ende. Ohne
+/// bestätigten Beginn hat eine Phase keinen Zeitraum — dann steht dort nichts
+/// Gemessenes.</para>
 /// <para><b>Gemessen</b> sind die Mittelwerte der gespeicherten Messungen
 /// (Hand und Auto). CO₂ und VPD stehen dort nicht — sie fehlen bewusst.</para>
 /// </remarks>
@@ -83,33 +84,34 @@ public static class PlanAuswertung
         GrowRun grow, IReadOnlyList<FeedChartColumn> spalten, DateTime heute)
     {
         var ergebnis = new Dictionary<string, (DateTime?, DateTime?)>(StringComparer.OrdinalIgnoreCase);
-        var start = grow.StartDate.Date;
-        // F-019: ohne eingetragenen Vegi-Beginn folgt die Vegi auf die Bewurzelungswoche —
-        // sonst lägen beide auf demselben Zeitraum.
-        var hatBewurzelung = spalten.Any(c => c.Stage.Equals("Clone", StringComparison.OrdinalIgnoreCase)
-                                              || c.Stage.Equals("Seedling", StringComparison.OrdinalIgnoreCase));
-        var vegiBeginn = (grow.VegStartedAt ?? grow.RootedAt)?.Date ?? (hatBewurzelung ? start.AddDays(7) : start);
-        // F-019: die letzte Vegi-Woche gilt bis zum Flip — wie im Mischplan wird sie gehalten.
+        // Alle Beginne aus dem Phasenanker — bis zum 02.10.2026 nahm diese
+        // Stelle „Vegi-Beginn, sonst Bewurzelung, sonst Start + 7" und lag
+        // damit neben Mischplan und Phase.
+        var anker = Phasenanker.Fuer(grow, heute);
+        var ende = (grow.EndDate?.Date ?? heute.Date).AddDays(1);
+        var anzuchtBis = anker.VegAb ?? anker.BlueteAb ?? ende;
+        var vegiBeginn = anker.VegAb;
+        var bluetenBeginn = anker.BlueteAb;
+        // F-019: die letzte Vegi-Woche gilt bis zum Blütebeginn — wie im Mischplan wird sie gehalten.
         var letzteVegiWoche = spalten
             .Where(c => c.Stage.Equals("Veg", StringComparison.OrdinalIgnoreCase) && c.Week is not null)
             .Select(c => c.Week!.Value)
             .DefaultIfEmpty(0)
             .Max();
-        var ende = (grow.EndDate?.Date ?? heute.Date).AddDays(1);
         DateTime? letzteBluete = null;
 
         foreach (var s in spalten)
         {
             (DateTime?, DateTime?) zeitraum = s.Stage.ToLowerInvariant() switch
             {
-                // F-019: begann die Vegi am Starttag (bewurzelter Steckling), gab es keine Bewurzelung.
-                "clone" or "seedling" => vegiBeginn > start ? (start, vegiBeginn) : (null, null),
-                "veg" when s.Week is { } w => (vegiBeginn.AddDays(7 * (w - 1)),
-                    w == letzteVegiWoche && grow.FlipDate is { } flipVegi && flipVegi.Date > vegiBeginn.AddDays(7 * w)
-                        ? flipVegi.Date
-                        : vegiBeginn.AddDays(7 * w)),
-                "flower" or "transition" when s.Week is { } w && grow.FlipDate is { } flip
-                    => (flip.Date.AddDays(7 * (w - 1)), flip.Date.AddDays(7 * w)),
+                // F-019: begann die Vegi am Starttag (bewurzelter Steckling), gab es keine Anzucht.
+                "clone" or "seedling" => anzuchtBis > anker.AnzuchtAb ? (anker.AnzuchtAb, anzuchtBis) : (null, null),
+                "veg" when s.Week is { } w && vegiBeginn is { } vegi => (vegi.AddDays(7 * (w - 1)),
+                    w == letzteVegiWoche && bluetenBeginn is { } flipVegi && flipVegi > vegi.AddDays(7 * w)
+                        ? flipVegi
+                        : vegi.AddDays(7 * w)),
+                "flower" or "transition" when s.Week is { } w && bluetenBeginn is { } flip
+                    => (flip.AddDays(7 * (w - 1)), flip.AddDays(7 * w)),
                 _ => (null, null),
             };
             if (s.Stage.Equals("Flower", StringComparison.OrdinalIgnoreCase) && zeitraum.Item2 is { } bis)

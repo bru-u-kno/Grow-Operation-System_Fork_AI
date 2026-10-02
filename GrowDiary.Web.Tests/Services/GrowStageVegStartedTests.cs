@@ -35,11 +35,18 @@ public sealed class GrowStageVegStartedTests
         };
 
     [Fact]
-    public void WithoutAnEntry_TheDaysDecide()
+    public void WithoutAnEntry_ItStaysInTheAnzucht_AndReminds()
     {
-        // Tag 8 von 14: die Schaetzung sagt Saemling.
+        // Seit 02.10.2026 entscheiden die Tage nicht mehr: ohne Eintrag bleibt
+        // es Anzucht. Ab dem alten Schätzwert (Tag 14) erinnert der Anker.
         Assert.Equal(GrowStage.Seedling, GrowStageResolver.Resolve(Grow(), Start.AddDays(7)));
-        Assert.Equal(GrowStage.Veg, GrowStageResolver.Resolve(Grow(), Start.AddDays(20)));
+        Assert.Null(Phasenanker.Fuer(Grow(), Start.AddDays(7)).Erinnerung);
+
+        Assert.Equal(GrowStage.Seedling, GrowStageResolver.Resolve(Grow(), Start.AddDays(20)));
+        var erinnerung = Phasenanker.Fuer(Grow(), Start.AddDays(20)).Erinnerung;
+        Assert.Equal("confirm-veg", erinnerung?.Aktion);
+        Assert.Equal(Start.AddDays(14), erinnerung!.Ab);
+        Assert.Equal("Anzucht Tag 21 — Vegi-Beginn bestätigen?", erinnerung.Text);
     }
 
     [Fact]
@@ -112,6 +119,7 @@ public sealed class GrowStageVegStartedTests
             StartMaterial = StartMaterial.Seed,
             SeedType = SeedType.Autoflower,
             VegStartedAt = Start.AddDays(5),
+            FlipDate = Start.AddDays(28), // „Blüte beginnt"
         };
 
         Assert.Equal(GrowStage.Veg, GrowStageResolver.Resolve(auto, Start.AddDays(10)));
@@ -120,15 +128,16 @@ public sealed class GrowStageVegStartedTests
     }
 
     [Fact]
-    public void ASeedGrowWithoutAGerminationDate_DoesNotStaySeedlingForever()
+    public void ASeedGrowWithoutConfirmation_IsRemindedInsteadOfSwitched()
     {
-        // Der Normalfall: Keimdatum nie eingetragen. Vorher gab der Auflöser
-        // dann fuer immer „Saemling" zurueck — nach drei Monaten haette eine
-        // ausgewachsene Pflanze noch Saemlings-EC bekommen.
+        // Der Normalfall: niemand trägt etwas ein. Früher schaltete die Rechnung
+        // nach 14 Tagen still auf Veg; heute bleibt es Anzucht, und die
+        // Erinnerung steht da — nach drei Monaten genauso wie nach drei Wochen.
         var grow = Grow();
 
         Assert.Equal(GrowStage.Seedling, GrowStageResolver.Resolve(grow, Start.AddDays(7)));
-        Assert.Equal(GrowStage.Veg, GrowStageResolver.Resolve(grow, Start.AddDays(90)));
+        Assert.Equal(GrowStage.Seedling, GrowStageResolver.Resolve(grow, Start.AddDays(90)));
+        Assert.NotNull(Phasenanker.Fuer(grow, Start.AddDays(90)).Erinnerung);
     }
 
     [Fact]

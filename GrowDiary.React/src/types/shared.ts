@@ -17,6 +17,10 @@ export type StartMaterial = 'Seed' | 'Clone'
 export type JournalEntryType = 'Note' | 'Observation' | 'Action' | 'Problem' | 'Solution' | 'Training' | 'Transplant' | 'Feeding' | 'ReservoirChange' | 'GerminationConfirmed' | 'CloneRooted' | 'FlipToFlower' | 'VegStarted' | 'FinishStarted'
 export type WaterSource = 'Tap' | 'RO' | 'Mixed'
 export type GrowEntryPoint = 'Germination' | 'Seedling' | 'Veg' | 'Flower' | 'Flush'
+/** Phase laut Phasenanker (Backend `Ankerphase`). */
+export type Ankerphase = 'Anzucht' | 'Veg' | 'Uebergang' | 'Bluete' | 'Finish' | 'Ende'
+/** Was in der Anzucht gerade passiert (Backend `Anzuchtart`). */
+export type Anzuchtart = 'Keimung' | 'Saemling' | 'Bewurzelung'
 export type GerminationMethod = 'PaperTowel' | 'Rockwool' | 'RapidRooter' | 'DirectInSystem'
 export type PropagationMedium = 'Rockwool' | 'Hydroton' | 'RapidRooter' | 'Neoprene'
 export type PhotoTag = 'Overview' | 'Canopy' | 'Leaf' | 'Root' | 'Training' | 'Flower' | 'Problem' | 'Comparison' | 'Other'

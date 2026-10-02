@@ -582,9 +582,10 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
         }
 
-        if (grow.FlipDate.HasValue)
+        // Die Phase sagt der Phasenanker — derselbe, der die Erinnerung ausgibt.
+        if (Phasenanker.Fuer(grow, DateTime.Today).Phase is not (Ankerphase.Anzucht or Ankerphase.Veg))
         {
-            return BadRequestError("invalid_action", "Dieser Grow ist bereits in der Bluete.");
+            return BadRequestError("invalid_action", "Dieser Grow ist bereits in der Blüte.");
         }
 
         if (!grow.VegStartedAt.HasValue)
@@ -600,12 +601,12 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             {
                 GrowId = id,
                 EntryType = JournalEntryType.VegStarted,
-                Body = "Saemling vorbei — echte Blaetter da, ab hier Veg.",
+                Body = "Vegi beginnt — ab hier zählt Vegi-Woche 1.",
                 OccurredAtUtc = DateTime.UtcNow
             });
         }
 
-        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Veg-Phase festgehalten."));
+        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Vegi-Beginn festgehalten."));
     }
 
     [HttpPost("{id:int}/actions/confirm-rooting")]
@@ -622,7 +623,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
 
         if (grow.StartMaterial != StartMaterial.Clone)
         {
-            return BadRequestError("invalid_action", "Bewurzelungsbestaetigung ist nur fuer Stecklinge moeglich.");
+            return BadRequestError("invalid_action", "„Bewurzelung abgeschlossen“ gibt es nur bei Stecklingen.");
         }
 
         if (!grow.RootedAt.HasValue)
@@ -639,12 +640,12 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             {
                 GrowId = id,
                 EntryType = JournalEntryType.CloneRooted,
-                Body = "Bewurzelung bestaetigt.",
+                Body = "Bewurzelung abgeschlossen — ab hier Vegi.",
                 OccurredAtUtc = DateTime.UtcNow
             });
         }
 
-        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Bewurzelung bestaetigt."));
+        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Bewurzelung abgeschlossen — ab hier Vegi."));
     }
 
     [HttpPost("{id:int}/actions/flip-to-flower")]
@@ -659,11 +660,11 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
         }
 
-        if (grow.SeedType == SeedType.Autoflower)
-        {
-            return BadRequestError("invalid_action", "Autoflower braucht keinen Flip.");
-        }
-
+        // Seit 02.10.2026 auch für Autoflower: sie schaltet nicht mehr nach
+        // 28 Tagen von selbst um, der Nutzer bestätigt „Blüte beginnt"
+        // (Phasenanker). Das Licht stellt dabei niemand um — deshalb ein
+        // anderer Satz im Journal.
+        var autoflower = grow.SeedType == SeedType.Autoflower;
         if (!grow.FlipDate.HasValue)
         {
             grow.FlipDate = DateTime.Today;
@@ -672,12 +673,13 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             {
                 GrowId = id,
                 EntryType = JournalEntryType.FlipToFlower,
-                Body = "Auf 12/12 geflippt.",
+                Body = autoflower ? "Blüte beginnt (Autoflower)." : "Auf 12/12 geflippt.",
                 OccurredAtUtc = DateTime.UtcNow
             });
         }
 
-        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Flip zu 12/12 eingetragen."));
+        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(),
+            autoflower ? "Blütebeginn eingetragen." : "Flip zu 12/12 eingetragen."));
     }
 
     private void ValidateOperationLogValues(params (double? Value, string FieldName)[] values)

@@ -130,15 +130,16 @@ public static class NachtabsenkungService
             aktuelle is null ? KettenSchluessel.PlanVorDemFlip : null);
     }
 
-    /// <summary>Die laufende Blütewoche ab 1, oder null vor dem Flip.</summary>
+    /// <summary>Die laufende Blütewoche ab 1, oder null vor dem Blütebeginn.</summary>
     /// <remarks>
-    /// Autoflower haben keinen Flip. Ohne Flipdatum gibt es hier bewusst keine
-    /// Schätzung: eine geratene Woche verstellt eine echte Kühlung.
+    /// Der Blütebeginn kommt aus dem <see cref="Phasenanker"/>: der Flip, bei
+    /// der Autoflower „Blüte beginnt". Ohne Bestätigung gibt es hier bewusst
+    /// keine Schätzung: eine geratene Woche verstellt eine echte Kühlung.
     /// </remarks>
     public static int? Bluetewoche(GrowRun grow, DateTime heute)
     {
-        if (grow.FlipDate is not { } flip) return null;
-        var tage = (heute.Date - flip.Date).Days;
+        if (Phasenanker.Fuer(grow, heute).BlueteAb is not { } bluete) return null;
+        var tage = (heute.Date - bluete).Days;
         return tage < 0 ? null : tage / 7 + 1;
     }
 

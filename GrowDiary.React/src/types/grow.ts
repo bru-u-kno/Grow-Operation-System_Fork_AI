@@ -1,4 +1,4 @@
-import type { ApiError, DeviationMetric, DeviationSeverity, DeviationSource, GerminationMethod, GrowEntryPoint, GrowEnvironment, GrowStage, GrowStatus, GrowTaskStatus, HydroStyle, JournalEntryType, PhotoTag, PropagationMedium, SeedType, SopInstanceStatus, SopStartSource, SopStepInstanceStatus, StartMaterial, TaskPriority, TreatmentRecommendationConfidence, ValueOrigin, WaterSource } from './shared'
+import type { Ankerphase, Anzuchtart, ApiError, DeviationMetric, DeviationSeverity, DeviationSource, GerminationMethod, GrowEntryPoint, GrowEnvironment, GrowStage, GrowStatus, GrowTaskStatus, HydroStyle, JournalEntryType, PhotoTag, PropagationMedium, SeedType, SopInstanceStatus, SopStartSource, SopStepInstanceStatus, StartMaterial, TaskPriority, TreatmentRecommendationConfidence, ValueOrigin, WaterSource } from './shared'
 
 export interface DependencyItemDto {
   id: number
@@ -18,6 +18,38 @@ export interface TentDependencySummaryDto {
 
 export interface TentDependencyError extends ApiError {
   dependencies: TentDependencySummaryDto
+}
+
+/**
+ * Eine offene Erinnerung an eine Phasen-Bestätigung — ab dem alten Schätzwert.
+ * `aktion` ist die vorhandene Grow-Aktion unter `/api/grows/{id}/actions/`.
+ */
+export interface PhasenerinnerungDto {
+  art: 'vegi-beginn' | 'bewurzelung' | 'bluete-beginn'
+  aktion: 'confirm-veg' | 'confirm-rooting' | 'flip-to-flower'
+  knopf: string
+  text: string
+  ab: string
+  tage: number
+}
+
+/**
+ * Phase, Beginne und Woche eines Laufs — aus dem Phasenanker im Backend.
+ * Die Oberfläche rechnet keine Phasenbeginne selbst; sie liest sie hier.
+ * Leere Felder fehlen im JSON (das Backend lässt null weg) — daher optional.
+ */
+export interface PhasenankerDto {
+  phase: Ankerphase
+  anzucht?: Anzuchtart | null
+  stufe: GrowStage
+  anzuchtAb: string
+  vegAb?: string | null
+  blueteAb?: string | null
+  finishAb?: string | null
+  endeAm?: string | null
+  tagInPhase: number
+  wocheInPhase: number
+  erinnerung?: PhasenerinnerungDto | null
 }
 
 export interface GrowSummary {
@@ -75,6 +107,8 @@ export interface GrowSummary {
    * `latestStage` — und drei Seiten nahmen deshalb die falsche Quelle.
    */
   currentStage: GrowStage
+  /** Phase, Beginne, Woche und offene Erinnerung — aus dem Phasenanker. */
+  phasenanker: PhasenankerDto
   measurementCount: number
   latestPhotoPath: string | null
   latestReservoirPh: number | null
@@ -268,6 +302,8 @@ export interface GrowDetail {
   vegStartedAt: string | null
   finishStartedAt: string | null
   currentStage: GrowStage
+  /** Phase, Beginne, Woche und offene Erinnerung — aus dem Phasenanker. */
+  phasenanker: PhasenankerDto
   nutrients: string | null
   /* Beide optional: das Backend laesst null-Felder im JSON ganz weg. */
   feedProgramId?: string | null

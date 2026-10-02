@@ -19,7 +19,6 @@ public sealed class GrowsApiController : ApiControllerBase
     private readonly GrowRepository _repository;
     private readonly AuditRepository _auditRepository;
     private readonly SystemAuditRepository _systemAudit;
-    private readonly WeekCounterService _weekCounter;
     private readonly SetupRepository _setups;
     private readonly HydroSetupRepository _hydro;
     private readonly DeviationAnalyzerService _deviationAnalyzer;
@@ -29,7 +28,6 @@ public sealed class GrowsApiController : ApiControllerBase
     public GrowsApiController(
         GrowRepository repository,
         AuditRepository auditRepository,
-        WeekCounterService weekCounter,
         DeviationAnalyzerService deviationAnalyzer,
         TreatmentRecommender treatmentRecommender,
         SetupRepository setups,
@@ -41,7 +39,6 @@ public sealed class GrowsApiController : ApiControllerBase
         _repository = repository;
         _auditRepository = auditRepository;
         _systemAudit = systemAudit;
-        _weekCounter = weekCounter;
         _setups = setups;
         _hydro = hydro;
         _deviationAnalyzer = deviationAnalyzer;
@@ -145,11 +142,11 @@ public sealed class GrowsApiController : ApiControllerBase
         var growId = _repository.CreateGrow(grow);
 
         var savedGrow = _repository.GetGrow(growId)!;
-        var weekInfo = _weekCounter.Calculate(savedGrow);
-        if (savedGrow.Status == GrowStatus.Planning &&
-            weekInfo.State != GrowCounterState.WaitingForGermination &&
-            weekInfo.State != GrowCounterState.WaitingForRooting &&
-            weekInfo.State != GrowCounterState.NoData)
+        // Läuft, sobald nichts mehr keimt oder bewurzelt — die Auskunft kommt
+        // aus dem Phasenanker (bis 02.10.2026 aus einem eigenen Wochenzähler).
+        var stand = Phasenanker.Fuer(savedGrow, DateTime.Today);
+        if (savedGrow.Status == GrowStatus.Planning
+            && stand.Anzucht is not (Anzuchtart.Keimung or Anzuchtart.Bewurzelung))
         {
             savedGrow.Status = GrowStatus.Running;
             _repository.UpdateGrow(savedGrow);
@@ -276,8 +273,9 @@ public sealed class GrowsApiController : ApiControllerBase
 
         // Der Flip, in drei Faellen:
         //
-        //   Autoflower          -> gibt es nicht, bewahren (sie geht nach Tagen
-        //                          in die Bluete, siehe GrowStageResolver)
+        //   Autoflower          -> das Formular kennt das Feld nicht, bewahren:
+        //                          ihr Bluetebeginn kommt aus „Bluete beginnt"
+        //                          (flip-to-flower, siehe Phasenanker)
         //   FlipDate == null    -> das Feld kam gar nicht mit, bewahren
         //   FlipDate == ""      -> ausdruecklich geleert, loeschen
         //   FlipDate == Datum   -> setzen

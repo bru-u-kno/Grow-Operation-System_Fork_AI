@@ -3,192 +3,25 @@ using GrowDiary.Web.Models;
 namespace GrowDiary.Web.Services;
 
 /// <summary>
-/// Welche Phase ein Grow HEUTE hat — aus dem Grow selbst, ohne dass jemand
-/// gemessen haben muss.
+/// Welche Phase ein Grow an einem Tag hat — aus dem Grow selbst, ohne dass
+/// jemand gemessen haben muss.
 /// </summary>
 /// <remarks>
-/// Vorher kam die Phase aus der letzten erfassten Messung. Wer noch nie von
-/// Hand gemessen hatte, bekam deshalb auf dem ganzen Live-Bildschirm keinen
-/// einzigen Zielbereich: keine Farbe, kein „im Ziel", kein „daneben" — obwohl
-/// die Sensoren live lieferten und der Grow seinen Stand genau kennt. Der
-/// Bildschirm zeigt oben „Veg · Tag 7" und darunter graue Kacheln; dieselbe
-/// Auskunft zweimal, einmal richtig und einmal gar nicht.
+/// <para>Vorher kam die Phase aus der letzten erfassten Messung. Wer noch nie
+/// von Hand gemessen hatte, bekam deshalb auf dem ganzen Live-Bildschirm keinen
+/// einzigen Zielbereich.</para>
 ///
-/// Die Reihenfolge folgt dem, was der Nutzer festgehalten hat, nicht dem
-/// Kalender: ein eingetragener Flip schlägt jede Rechnung, ein geplanter Flip
-/// schlägt den Einstiegspunkt. Geraten wird nichts — wo nichts feststeht,
-/// bleibt es beim Einstiegspunkt des Grows.
+/// <para><b>Seit dem 02.10.2026 nur noch die Kurzform des
+/// <see cref="Phasenanker"/>.</b> Hier stand bis dahin eine eigene Rechnung:
+/// 14 Tage Sämling ab Keimung, Autoflower nach 28 Tagen automatisch in die
+/// Blüte, der Einstiegspunkt nur ohne Keimdatum. Drei andere Stellen rechneten
+/// dieselben Beginne anders. Jetzt entstehen alle Phasenbeginne im Anker; diese
+/// Klasse bleibt, weil über fünfzehn Leser nur die <see cref="GrowStage"/>
+/// brauchen.</para>
 /// </remarks>
 public static class GrowStageResolver
 {
-    /// <summary>
-    /// Ab wann die Blüte als „Finish" gilt: die letzten zwei Wochen, in denen
-    /// gespült wird und die Zielwerte andere sind.
-    /// </summary>
-    public const int FinishDaysBeforeHarvest = 14;
-
-    /// <summary>Die ersten Tage nach dem Flip sind Übergang, noch nicht volle Blüte.</summary>
-    public const int TransitionDays = 10;
-
-    /// <summary>Solange eine Sämlingsphase dauert, wenn kein anderes Datum widerspricht.</summary>
-    public const int SeedlingDays = 14;
-
+    /// <summary>Die Phase an einem Tag — siehe <see cref="Phasenanker.Fuer"/>.</summary>
     public static GrowStage Resolve(GrowRun grow, DateTime today)
-    {
-        var heute = today.Date;
-
-        // 1. Geflippt ist geflippt — das Datum steht, da wird nichts gerechnet.
-        if (grow.FlipDate is { } flip && heute >= flip.Date)
-        {
-            return FlowerStageFor(grow, flip.Date, heute);
-        }
-
-        // 2. Autoflower kennt keinen Flip. Sie geht nach Tagen seit der Keimung
-        //    in die Blüte; der Richtwert steht im Grow, sonst 28 Tage.
-        if (grow.SeedType == SeedType.Autoflower)
-        {
-            // Mitgebrachte Keimtage (Mid-Grow-Einstieg) verschieben die
-            // gerechnete Keimung nach vorn. Schwelle UND Blüte-Anker müssen
-            // dieselbe Basis nutzen — zählten die Tage nur für die Schwelle,
-            // läge der Anker in der Zukunft und die Pflanze hinge wochenlang
-            // im Übergang, obwohl sie längst blüht.
-            var keim = AutoflowerKeimBasis(grow);
-            var tage = (heute - keim).Days;
-            if (tage >= 28) return FlowerStageFor(grow, keim.AddDays(28), heute);
-            return SeedlingOrVeg(grow, heute, tage);
-        }
-
-        // 3. Noch nicht geflippt: hat der Nutzer eine Veg-Dauer geplant, ist der
-        //    Flip-Termin bekannt — der Grow ist bis dahin vegetativ.
-        var vegStart = grow.RootedAt?.Date ?? grow.GerminatedAt?.Date ?? grow.StartDate.Date;
-
-        // 4. Vor Keimung/Bewurzelung: Sämling bzw. Klon.
-        if (grow.StartMaterial == StartMaterial.Clone && !grow.CloneIsRooted && grow.RootedAt is null)
-        {
-            return GrowStage.Clone;
-        }
-
-        // Ein bewurzelter Klon ist ab Tag 1 vegetativ. Er hat nie Keimblätter
-        // gehabt — die Sämlingsphase ist ein Kapitel, das nur Samen kennen.
-        // Vorher bekam er trotzdem 14 geschätzte Sämlingstage, weil der
-        // Startpunkt jedes neuen Grows auf „Keimung" steht.
-        if (grow.StartMaterial == StartMaterial.Clone)
-        {
-            return GrowStage.Veg;
-        }
-
-        if (grow.StartMaterial == StartMaterial.Seed && grow.GerminatedAt is null)
-        {
-            // Ohne Keimdatum zählt der Einstiegspunkt: wer mitten im Lauf
-            // einsteigt, hat nichts zu keimen.
-            //
-            // Für Keimung/Sämling wird NICHT einfach „Sämling" zurückgegeben:
-            // das galt sonst ewig. Wer das Keimdatum nie eingetragen hat — und
-            // das ist der Normalfall — steckte nach drei Monaten immer noch in
-            // Sämlings-Zielen, mit einem EC, den eine ausgewachsene Pflanze
-            // längst überholt hat. Stattdessen wird ab dem Startdatum
-            // geschätzt, genau wie mit Keimdatum; nur der Anker ist ein anderer.
-            switch (grow.EntryPoint)
-            {
-                case GrowEntryPoint.Veg:
-                    return GrowStage.Veg;
-                case GrowEntryPoint.Flower:
-                    return GrowStage.Flower;
-                case GrowEntryPoint.Flush:
-                    return GrowStage.Finish;
-            }
-        }
-
-        // 5. Die ersten Tage Sämling, danach Veg — eine Schätzung, kein Befund.
-        //    Der echte Übergang hängt am Aussehen (echte gezackte Blätter statt
-        //    Keimblättern, dickerer Stängel, regelmäßig neue Blattpaare), und
-        //    der steht oben in VegStartedAt, sobald jemand hingesehen hat.
-        //    Typisch sind ein bis drei Wochen; SeedlingDays liegt in der Mitte.
-        var seitStart = (heute - vegStart).Days + (grow.DaysAlreadyInPhase ?? 0);
-        return grow.EntryPoint is GrowEntryPoint.Germination or GrowEntryPoint.Seedling
-            ? SeedlingOrVeg(grow, heute, seitStart)
-            : GrowStage.Veg;
-    }
-
-    /// <summary>Keimung einer Autoflower, um mitgebrachte Tage vorverlegt.</summary>
-    private static DateTime AutoflowerKeimBasis(GrowRun grow)
-        => (grow.GerminatedAt?.Date ?? grow.StartDate.Date).AddDays(-(grow.AutoflowerDaysSinceGermination ?? 0));
-
-    /// <summary>
-    /// Blütebeginn einer Autoflower (Keimbasis + 28 Tage) — null für alles andere.
-    /// </summary>
-    /// <remarks>
-    /// Öffentlich, damit der Mischplan dieselbe Rechnung nutzt wie die
-    /// Phasenbestimmung: eine Autoflower hat kein FlipDate, und wer stattdessen
-    /// die Gesamtwoche seit Start als „Blütewoche" nimmt, greift im Feedchart
-    /// zwei bis vier Spalten zu weit rechts.
-    /// </remarks>
-    public static DateTime? AutoflowerBluetenStart(GrowRun grow)
-        => grow.SeedType == SeedType.Autoflower ? AutoflowerKeimBasis(grow).AddDays(28) : null;
-
-    /// <summary>
-    /// Sämling oder schon Veg — die einzige Stelle, an der das entschieden wird.
-    /// </summary>
-    /// <remarks>
-    /// <para>Hat jemand den Übergang festgehalten, gilt der, und zwar in beide
-    /// Richtungen: davor Sämling, ab dann Veg. Der Wechsel hängt nicht am
-    /// Kalender, sondern am Aussehen — echte gezackte Blätter statt der zwei
-    /// runden Keimblätter, dickerer Stängel, regelmäßig neue Blattpaare,
-    /// Seitentriebe an den Knoten, spürbar mehr Wasserverbrauch. Wer davorsteht,
-    /// weiss es besser als jede Tagesrechnung.</para>
-    ///
-    /// <para>Ohne Eintrag wird geschätzt. Typisch ist ein bis drei Wochen nach
-    /// der Keimung; <see cref="SeedlingDays"/> liegt in der Mitte.</para>
-    ///
-    /// <para>Bewusst NICHT ganz oben in <see cref="Resolve"/>: dort hätte der
-    /// Eintrag auch eine blühende Autoflower zurück in die Veg gezogen. Er
-    /// entscheidet nur dort, wo Sämling und Veg wirklich auseinandergehen.</para>
-    /// </remarks>
-    private static GrowStage SeedlingOrVeg(GrowRun grow, DateTime heute, int tageSeitStart)
-    {
-        if (grow.VegStartedAt is { } vegAb)
-        {
-            return heute >= vegAb.Date ? GrowStage.Veg : GrowStage.Seedling;
-        }
-
-        return tageSeitStart < SeedlingDays ? GrowStage.Seedling : GrowStage.Veg;
-    }
-
-    /// <summary>Übergang, Blüte oder Finish — je nachdem, wie weit nach dem Flip.</summary>
-    private static GrowStage FlowerStageFor(GrowRun grow, DateTime flip, DateTime heute)
-    {
-        var tageInBluete = (heute - flip).Days;
-
-        // Beobachtet schlaegt gerechnet — wie beim Saemling. Wer die Trichome
-        // gesehen und „Finish beginnt" gedrueckt hat, weiss es besser als die
-        // Breeder-Wochen auf der Packung.
-        if (grow.FinishStartedAt is { } finish && heute >= finish.Date)
-        {
-            return GrowStage.Finish;
-        }
-
-        if (tageInBluete < TransitionDays)
-        {
-            return GrowStage.Transition;
-        }
-
-        // Das Ende der Blüte kommt aus den Breeder-Wochen. Ohne sie wird nicht
-        // geraten — dann bleibt es bei „Flower", und Finish setzt der Nutzer
-        // selbst über „Finish beginnt" — das ist FinishStartedAt, zwanzig Zeilen
-        // weiter oben. Bis zum 02.09.2026 stand hier „per Messung"; das stimmte,
-        // solange die Aufschrift einer Messung die Zielbänder verschob. Seit
-        // die Phase nur noch aus dem Grow kommt, ist der Knopf der einzige Weg
-        // — und der einzige, der auch in der Kopfzeile ankommt.
-        var wochen = grow.BreederFlowerWeeksMax ?? grow.BreederFlowerWeeksMin;
-        if (wochen is { } w && w > 0)
-        {
-            var ernte = flip.AddDays(w * 7);
-            if (heute >= ernte.AddDays(-FinishDaysBeforeHarvest))
-            {
-                return GrowStage.Finish;
-            }
-        }
-
-        return GrowStage.Flower;
-    }
+        => Phasenanker.Fuer(grow, today).Stufe;
 }

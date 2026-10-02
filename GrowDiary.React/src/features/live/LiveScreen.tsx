@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { GrowSummary, KuehlerLivePayload, MetricPayload, RiskEventDto, TentDto } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
 import { SensorChart } from '../../components/SensorChart'
+import { PhasenErinnerung } from '../grows/PhasenErinnerung'
 import { V1Sheet } from '../../components/V1Sheet'
 import {
   KOPF_KNOEPFE, MAX_ANGEHEFTET, ladeKopfKnoepfe, speichereKopfKnoepfe, umschalten,
@@ -467,6 +468,8 @@ export function LiveScreen({
               <span>{timelineDates.harvest === '\u2014' ? 'Ernte offen' : `Ernte ~${timelineDates.harvest}`}</span>
             </div>
             </div>
+            {/* Die offene Frage des Phasenankers unter dem Strahl, der die Phase zeigt. */}
+            <PhasenErinnerung key={grow.id} growId={grow.id} erinnerung={grow.phasenanker?.erinnerung} onErledigt={onRefresh} />
           </div>
         </section>
       )}

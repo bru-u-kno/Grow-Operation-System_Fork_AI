@@ -50,6 +50,12 @@ const ERLAUBT: Record<string, string> = {
   Hybrid: 'dasselbe — ein deutsches Fremdwort, keine Uebersetzungsluecke',
   Normal: 'die Aufgaben-Stufe heisst auf Deutsch genauso (JournalStreamSection)',
   High: 'die Wirkung heisst auf Deutsch so — Feldbeschriftung „Effekt / High“ auf der Ernteseite',
+  // Der Phasenanker (02.10.2026) führt deutsche Kennungen; drei davon sind
+  // gewöhnliche Wörter, die auch anderswo stehen.
+  Anzucht: 'Ankerphase — und der Zeltzweck „Anzucht“ heißt genauso',
+  Keimung: 'Anzuchtart — das deutsche Wort selbst',
+  Bewurzelung: 'Anzuchtart — das deutsche Wort selbst, auch Spaltenname im Plan',
+  Ende: 'Ankerphase — deutsches Wort, steht in normalen Sätzen („Ende der Blüte“)',
 }
 
 

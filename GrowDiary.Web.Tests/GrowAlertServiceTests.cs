@@ -365,7 +365,9 @@ public sealed class GrowAlertServiceTests : IDisposable
             IrrigationType = IrrigationType.ActiveHydro,
             HydroStyle = HydroStyle.RDWC,
             Status = GrowStatus.Running,
-            StartDate = DateTime.Today.AddDays(-14)
+            StartDate = DateTime.Today.AddDays(-14),
+            // „Vegi beginnt" — seit dem Phasenanker schaltet nichts mehr nach Tagen.
+            VegStartedAt = DateTime.Today.AddDays(-1)
         };
         grow.Id = _repository.CreateGrow(grow);
         return _repository.GetGrow(grow.Id)!;

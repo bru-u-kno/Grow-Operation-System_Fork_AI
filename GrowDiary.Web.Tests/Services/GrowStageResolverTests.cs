@@ -3,6 +3,11 @@ using GrowDiary.Web.Services;
 
 namespace GrowDiary.Web.Tests.Services;
 
+/// <summary>
+/// Die Kurzform des Phasenankers. Seit dem 02.10.2026 schaltet nichts mehr
+/// nach Tagen um: Vegi und (bei der Autoflower) Blüte beginnen mit der
+/// Bestätigung, vorher erinnert der Anker.
+/// </summary>
 public sealed class GrowStageResolverTests
 {
     private static readonly DateTime Heute = new(2026, 7, 27);
@@ -40,10 +45,15 @@ public sealed class GrowStageResolverTests
     }
 
     [Fact]
-    public void AfterTheSeedlingWeeks_ItIsVeg()
+    public void AfterTheSeedlingWeeks_ItStaysInTheAnzuchtUntilConfirmed()
     {
+        // Entscheidung des Nutzers (02.10.2026): die Anzucht dauert eine, zwei
+        // oder mehr Wochen — Vegi-Woche 1 beginnt erst mit „Vegi beginnt".
         var grow = Grow(g => { g.StartDate = Heute.AddDays(-30); g.GerminatedAt = Heute.AddDays(-30); });
 
+        Assert.Equal(GrowStage.Seedling, GrowStageResolver.Resolve(grow, Heute));
+
+        grow.VegStartedAt = Heute.AddDays(-16);
         Assert.Equal(GrowStage.Veg, GrowStageResolver.Resolve(grow, Heute));
     }
 
@@ -91,6 +101,7 @@ public sealed class GrowStageResolverTests
         {
             g.StartDate = Heute.AddDays(-30);
             g.GerminatedAt = Heute.AddDays(-30);
+            g.VegStartedAt = Heute.AddDays(-16);
             g.FlipDate = Heute.AddDays(5);
         });
 
@@ -112,24 +123,35 @@ public sealed class GrowStageResolverTests
     }
 
     [Fact]
-    public void EnteringMidGrow_TrustsTheEntryPoint()
+    public void EnteringInBloom_TrustsTheEntryPoint_EvenWithTheFormsGerminationDate()
     {
-        // Wer mitten im Lauf einsteigt, hat kein Keimdatum — und keimt auch nicht.
-        var grow = Grow(g => { g.GerminatedAt = null; g.EntryPoint = GrowEntryPoint.Flower; });
+        // Der Fehler vom 02.10.2026: das Formular trägt bei jedem späteren
+        // Einstieg GerminatedAt = Start ein, und der alte Resolver sah den
+        // Einstieg nur OHNE Keimdatum — „Einstieg Blüte" galt so als Veg.
+        var grow = Grow(g => { g.EntryPoint = GrowEntryPoint.Flower; g.GerminatedAt = g.StartDate; });
 
+        // Sieben Tage in der Blüte: noch Übergang, wie nach einem Flip.
+        Assert.Equal(GrowStage.Transition, GrowStageResolver.Resolve(grow, Heute));
+
+        grow.DaysAlreadyInPhase = 20;
         Assert.Equal(GrowStage.Flower, GrowStageResolver.Resolve(grow, Heute));
     }
 
     [Fact]
-    public void Autoflower_GoesToFlowerByDaysInsteadOfAFlip()
+    public void Autoflower_BloomsOnlyWhenConfirmed()
     {
+        // Vorher schaltete sie nach 28 Tagen von selbst in die Blüte.
         var grow = Grow(g =>
         {
             g.SeedType = SeedType.Autoflower;
             g.StartDate = Heute.AddDays(-40);
             g.GerminatedAt = Heute.AddDays(-40);
+            g.VegStartedAt = Heute.AddDays(-26);
         });
 
+        Assert.Equal(GrowStage.Veg, GrowStageResolver.Resolve(grow, Heute));
+
+        grow.FlipDate = Heute.AddDays(-12); // „Blüte beginnt"
         Assert.Equal(GrowStage.Flower, GrowStageResolver.Resolve(grow, Heute));
     }
 
@@ -141,26 +163,30 @@ public sealed class GrowStageResolverTests
             g.SeedType = SeedType.Autoflower;
             g.StartDate = Heute.AddDays(-20);
             g.GerminatedAt = Heute.AddDays(-20);
+            g.VegStartedAt = Heute.AddDays(-6);
         });
 
         Assert.Equal(GrowStage.Veg, GrowStageResolver.Resolve(grow, Heute));
     }
 
     [Fact]
-    public void AutoflowerEnteringMidGrow_CountsTheBroughtDaysForTheAnchorToo()
+    public void AutoflowerEnteringMidGrow_CountsTheBroughtDaysForTheReminderToo()
     {
         // Einstieg mit 30 mitgebrachten Keimtagen, vor 10 Tagen angelegt: die
-        // Pflanze ist real an Tag 40, also 12 Tage in der Bluete. Vorher
-        // zaehlten die Extra-Tage nur fuer die 28-Tage-Schwelle, der Anker lag
-        // in der ZUKUNFT — und die Pflanze hing wochenlang im Uebergang.
+        // Pflanze ist real an Tag 40. Früher zählte das für die automatische
+        // Blüte; heute für die Erinnerung — ab Keimung + 28, also vor 12 Tagen.
         var grow = Grow(g =>
         {
             g.SeedType = SeedType.Autoflower;
             g.StartDate = Heute.AddDays(-10);
             g.GerminatedAt = null;
             g.AutoflowerDaysSinceGermination = 30;
+            g.VegStartedAt = Heute.AddDays(-10);
         });
 
-        Assert.Equal(GrowStage.Flower, GrowStageResolver.Resolve(grow, Heute));
+        var stand = Phasenanker.Fuer(grow, Heute);
+        Assert.Equal(GrowStage.Veg, stand.Stufe);
+        Assert.Equal("bluete-beginn", stand.Erinnerung?.Art);
+        Assert.Equal(Heute.AddDays(-12), stand.Erinnerung!.Ab);
     }
 }

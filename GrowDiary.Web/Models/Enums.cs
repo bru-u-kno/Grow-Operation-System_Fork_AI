@@ -87,16 +87,6 @@ public enum JournalEntryType
     FinishStarted
 }
 
-public enum GrowCounterState
-{
-    NoData,
-    WaitingForGermination,
-    WaitingForRooting,
-    Vegetating,
-    Flowering,
-    Autoflowering
-}
-
 public enum GrowTaskStatus
 {
     Open,

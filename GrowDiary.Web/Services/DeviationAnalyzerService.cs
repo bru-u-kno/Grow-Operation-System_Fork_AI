@@ -648,54 +648,6 @@ public sealed class DeviationAnalyzerService
             participants));
     }
 
-    public IReadOnlyList<GrowDeviation> CheckGerminationAndRooting(GrowRun grow, GrowWeekInfo weekInfo)
-    {
-        var deviations = new List<GrowDeviation>();
-
-        if (weekInfo.State == GrowCounterState.WaitingForGermination && weekInfo.DaysGerminating.HasValue)
-        {
-            var days = weekInfo.DaysGerminating.Value;
-            if (days >= 14)
-            {
-                deviations.Add(LifecycleDeviation(grow, DeviationSeverity.Critical, "Keimung nach 14 Tagen nicht bestaetigt.", days));
-            }
-            else if (days >= 7)
-            {
-                deviations.Add(LifecycleDeviation(grow, DeviationSeverity.Warning, "Samen keimt seit 7 Tagen noch nicht.", days));
-            }
-        }
-
-        if (weekInfo.State == GrowCounterState.WaitingForRooting && weekInfo.DaysRooting.HasValue)
-        {
-            var days = weekInfo.DaysRooting.Value;
-            if (days >= 14)
-            {
-                deviations.Add(LifecycleDeviation(grow, DeviationSeverity.Critical, "Bewurzelung nach 14 Tagen nicht bestaetigt.", days));
-            }
-            else if (days >= 7)
-            {
-                deviations.Add(LifecycleDeviation(grow, DeviationSeverity.Warning, "Steckling bewurzelt noch nicht nach 7 Tagen.", days));
-            }
-        }
-
-        return deviations;
-    }
-
-    private static GrowDeviation LifecycleDeviation(GrowRun grow, DeviationSeverity severity, string message, int days)
-        => new()
-        {
-            GrowId = grow.Id,
-            GrowName = grow.Name,
-            StableKey = "lifecycle.germination-rooting",
-            Metric = DeviationMetric.GerminationStatus,
-            Severity = severity,
-            Message = message,
-            Recommendation = message,
-            RecommendationHint = message,
-            ConsecutiveCount = days,
-            Source = DeviationSource.Unknown
-        };
-
     private static IReadOnlyList<Measurement> Consecutive(
         List<Measurement> sorted,
         Func<Measurement, double?> getValue,

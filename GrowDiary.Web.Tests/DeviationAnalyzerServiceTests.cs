@@ -83,6 +83,8 @@ public sealed class DeviationAnalyzerServiceTests : IDisposable
             HydroStyle = HydroStyle.RDWC,
             SeedType = SeedType.Feminized,
             StartDate = DateTime.Today.AddDays(-60),
+            // „Vegi beginnt" — seit dem Phasenanker schaltet nichts mehr nach Tagen.
+            VegStartedAt = DateTime.Today.AddDays(-50),
         };
 
         switch (stage)

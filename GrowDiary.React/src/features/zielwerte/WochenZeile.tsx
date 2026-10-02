@@ -6,6 +6,7 @@ import { V1Alert } from '../../components/v1'
 import { classNames } from '../../utils'
 import '../wochenplan/wochenplan.css'
 import { anker, waehlePlan, wochenKurz, type WochenPlan } from './wochen-zeile'
+import { PhasenErinnerung } from '../grows/PhasenErinnerung'
 
 /**
  * Fork AI (forkai.125): Die Woche des laufenden Grows als schmale Zeile über
@@ -22,6 +23,9 @@ export function WochenZeile() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
 
+  // Nach einer Bestätigung aus der Erinnerung neu laden — die Woche hat sich verschoben.
+  const [stand, setStand] = useState(0)
+
   useEffect(() => {
     let aktiv = true
     async function laden() {
@@ -37,7 +41,7 @@ export function WochenZeile() {
     }
     void laden()
     return () => { aktiv = false }
-  }, [])
+  }, [stand])
 
   if (!plan) return null
 
@@ -66,6 +70,9 @@ export function WochenZeile() {
         <span className="zw-woche-alle">Alle Wochen</span>
       </button>
       {plan.haltehinweis && <p className="wp-halt">{plan.haltehinweis}</p>}
+      {/* Die laufende Woche steht hier — also auch die Frage, ob die nächste
+          Phase schon begonnen hat (Phasenanker, 02.10.2026). */}
+      <PhasenErinnerung key={plan.growId} growId={plan.growId} erinnerung={plan.erinnerung} onErledigt={() => setStand((n) => n + 1)} />
       {punkte.length > 0 && (
         <div className="wp-anker">
           {punkte.map((a) => (

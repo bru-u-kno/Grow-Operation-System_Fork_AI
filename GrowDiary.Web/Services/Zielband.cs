@@ -38,13 +38,17 @@ public static class Zielband
     /// <param name="stage">Seine Phase.</param>
     /// <param name="systemProfileId">Das Profil des Hydro-Systems, falls es eins hat.</param>
     /// <param name="eigeneGrenzen">Die Grenzwert-Regeln des Zelts.</param>
+    /// <param name="stichtag">Für welchen Tag die Wochenspalte gilt; ohne Angabe heute.
+    /// Das Messprotokoll fragt je Messtag — eine Messung aus Vegi-Woche 2 wird
+    /// nicht gegen die Spalte von heute geprüft.</param>
     public static HydroTargetValues? FuerGrow(
         TargetValueService targetValues,
         KnowledgeBaseLoader? wissen,
         GrowRun grow,
         GrowStage stage,
         string? systemProfileId,
-        IReadOnlyList<TentAlertRule>? eigeneGrenzen)
+        IReadOnlyList<TentAlertRule>? eigeneGrenzen,
+        DateTime? stichtag = null)
     {
         var profil = SetpointProfileResolver.Resolve(
             grow.SetpointProfileId, systemProfileId, grow.HydroStyle);
@@ -55,7 +59,7 @@ public static class Zielband
         // Will der Grow die Wochen-Ziele seines Feedcharts, gelten sie — sonst
         // stuende beim Mischen EC 2,6 und auf dem Bildschirm etwas anderes.
         if (wissen is not null
-            && MischplanService.ZielSpalteFuerGrow(grow, wissen.NutrientPrograms) is { } chartZiel)
+            && MischplanService.ZielSpalteFuerGrow(grow, wissen.NutrientPrograms, stichtag ?? DateTime.Today) is { } chartZiel)
         {
             band = MischplanService.MitFeedchart(band, chartZiel.Spalte);
         }

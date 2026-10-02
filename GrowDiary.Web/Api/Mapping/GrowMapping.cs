@@ -42,7 +42,8 @@ public static class GrowMapping
         LatestReservoirEc: grow.LatestReservoirEc ?? grow.LatestMeasurement?.ReservoirEc,
         LatestMeasurementAt: grow.LatestMeasurement?.TakenAt,
         PflanzenSorten: grow.PflanzenSorten,
-        NurHauptsorte: grow.NurHauptsorte
+        NurHauptsorte: grow.NurHauptsorte,
+        Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today))
     );
 
     public static GrowDetailDto ToDetailDto(this GrowRun grow) => new(
@@ -102,6 +103,7 @@ public static class GrowMapping
         CreatedAtUtc: grow.CreatedAtUtc,
         UpdatedAtUtc: grow.UpdatedAtUtc,
         PflanzenSorten: grow.PflanzenSorten,
-        NurHauptsorte: grow.NurHauptsorte
+        NurHauptsorte: grow.NurHauptsorte,
+        Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today))
     );
 }

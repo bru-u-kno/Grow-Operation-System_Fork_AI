@@ -144,17 +144,22 @@ public sealed class MischplanTests
     {
         var chart = GeliefertesChart();
 
-        // 35 Tage seit Keimung, Bluete begann rechnerisch an Tag 28 — die
-        // Pflanze steht in Bluetewoche 2. Der alte Rechner nahm mangels
-        // FlipDate die GESAMTwoche 6 und griff im Chart zwei bis vier Spalten
-        // zu weit rechts: falsche Milliliter, falsches EC-Ziel.
+        // 35 Tage seit Keimung, „Blüte beginnt" an Tag 28 bestätigt — die
+        // Pflanze steht in Bluetewoche 2. Ein Rechner, der die GESAMTwoche 6
+        // nimmt, griffe im Chart zwei bis vier Spalten zu weit rechts.
         var auto = new GrowRun
         {
             SeedType = SeedType.Autoflower,
             StartDate = DateTime.Today.AddDays(-35),
             GerminatedAt = DateTime.Today.AddDays(-35),
+            VegStartedAt = DateTime.Today.AddDays(-21),
+            FlipDate = DateTime.Today.AddDays(-7),
         };
 
         Assert.Equal("flower-w2", MischplanService.SpalteFuer(chart, auto)!.Id);
+
+        // Ohne Bestätigung keine Blüte — die Vegi-Spalte bleibt, bis jemand drückt.
+        auto.FlipDate = null;
+        Assert.StartsWith("veg-", MischplanService.SpalteFuer(chart, auto)!.Id);
     }
 }

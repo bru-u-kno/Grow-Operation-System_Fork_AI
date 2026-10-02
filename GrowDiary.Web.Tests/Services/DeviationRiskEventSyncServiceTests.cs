@@ -156,7 +156,9 @@ public sealed class DeviationRiskEventSyncServiceTests : IDisposable
             MediumType = MediumType.Hydro,
             HydroStyle = HydroStyle.RDWC,
             IrrigationType = IrrigationType.ActiveHydro,
-            StartDate = Utc(2026, 5, 1)
+            StartDate = Utc(2026, 5, 1),
+            // „Vegi beginnt" — seit dem Phasenanker schaltet nichts mehr nach Tagen.
+            VegStartedAt = Utc(2026, 5, 15)
         });
     }
 
