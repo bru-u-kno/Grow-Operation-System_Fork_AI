@@ -46,9 +46,14 @@ public sealed partial class DatabaseInitializer
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_paths.DatabasePath)!);
         Directory.CreateDirectory(_paths.UploadRootPath);
+        // VOR EnsureSchema lesen: danach hat jede Datenbank die Spalte.
+        var growsVorDerZeltSpalte = GrowsHabenNochKeineZeltSpalte();
         DropLegacyTentSchemaIfNeeded();
         EnsureSchema();
-        AutoAssignExistingGrowsToTents();
+        if (growsVorDerZeltSpalte)
+        {
+            AutoAssignExistingGrowsToTents();
+        }
     }
 
 }

@@ -174,6 +174,71 @@ public sealed class KostenSeiteTests
         Assert.Equal(42, a.Aktuell!.PrognoseTage!.Value, precision: 3);
     }
 
+    /// <summary>
+    /// Gemessener Füllstand, geschätztes Datum — und die Seite muss das wissen.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Befund (02.10.2026).</b> Reicht der gebuchte Verbrauch nicht
+    /// für eine Hochrechnung (forkai.84: unter einem Zwanzigstel oder unter zwei
+    /// Wochen), kommt das Leer-Datum aus den früheren Laufzeiten. Die Quelle
+    /// blieb trotzdem „gemessen", und die Seite schrieb „leer ≈ … — aus dem
+    /// gebuchten Verbrauch" unter eine Schätzung.</para>
+    /// </remarks>
+    [Fact]
+    public void ZuWenigGebuchtDasDatumIstGeschaetzt()
+    {
+        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂-Flasche 10 kg", Einheit = "kg" };
+        var t0 = new DateTime(2026, 9, 7, 10, 0, 0, DateTimeKind.Utc);
+        var vorherige = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0.AddDays(-42), LeerAmUtc = t0 };
+        var laufend = new Nachfuellung { Id = 2, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0 };
+        // 0,2 kg von 10 kg in gut einem Tag: gebucht, aber keine Grundlage.
+        var buchung = new Verbrauch { Id = 1, ArtikelId = 1, GrowId = 1, Menge = 0.2, Quelle = "co2-steuerung", ZeitpunktUtc = t0.AddHours(20) };
+
+        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [vorherige, laufend], [], Jetzt, null, [buchung]);
+
+        var f = Assert.Single(seite.Artikel).Aktuell!;
+        Assert.Equal("gemessen", f.FuellstandQuelle);
+        Assert.Equal(98, f.FuellstandProzent!.Value, 0);
+        // Das Datum kommt aus der letzten Laufzeit (42 Tage) — nicht aus der Buchung.
+        Assert.Equal(t0.AddDays(42), f.PrognoseLeerAmUtc);
+        Assert.Equal("geschaetzt", f.PrognoseQuelle);
+    }
+
+    [Fact]
+    public void GenugGebuchtDasDatumIstGemessen()
+    {
+        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂-Flasche 10 kg", Einheit = "kg" };
+        var t0 = new DateTime(2026, 8, 1, 12, 0, 0, DateTimeKind.Utc);
+        var vorherige = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0.AddDays(-42), LeerAmUtc = t0 };
+        var laufend = new Nachfuellung { Id = 2, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0 };
+        // 2 kg in 38 Tagen: beide Schwellen aus forkai.84 erfüllt.
+        var buchung = new Verbrauch { Id = 1, ArtikelId = 1, GrowId = 1, Menge = 2, Quelle = "co2-steuerung", ZeitpunktUtc = t0.AddDays(20) };
+
+        var seite = KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [vorherige, laufend], [], Jetzt, null, [buchung]);
+
+        var f = Assert.Single(seite.Artikel).Aktuell!;
+        Assert.Equal("gemessen", f.FuellstandQuelle);
+        Assert.NotNull(f.PrognoseLeerAmUtc);
+        Assert.NotEqual(t0.AddDays(42), f.PrognoseLeerAmUtc); // nicht die alte Laufzeit
+        Assert.Equal("gemessen", f.PrognoseQuelle);
+    }
+
+    [Fact]
+    public void OhneBuchungIstDasDatumGeschaetztUndOhneDatumGibtEsKeineQuelle()
+    {
+        var co2 = new Verbrauchsartikel { Id = 1, Name = "CO₂", Einheit = "kg" };
+        var t0 = new DateTime(2026, 9, 7, 10, 0, 0, DateTimeKind.Utc);
+        var vorherige = new Nachfuellung { Id = 1, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0.AddDays(-42), LeerAmUtc = t0 };
+        var laufend = new Nachfuellung { Id = 2, ArtikelId = 1, Menge = 10, GrowId = 1, ZeitpunktUtc = t0 };
+
+        var mitLaufzeit = Assert.Single(KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [vorherige, laufend], [], Jetzt).Artikel).Aktuell!;
+        Assert.Equal("geschaetzt", mitLaufzeit.PrognoseQuelle);
+
+        var ohneLaufzeit = Assert.Single(KostenSeiteService.Berechnen(Grow(), [Grow()], Quelle, 32, null, [], [co2], [laufend], [], Jetzt).Artikel).Aktuell!;
+        Assert.Null(ohneLaufzeit.PrognoseLeerAmUtc);
+        Assert.Null(ohneLaufzeit.PrognoseQuelle);
+    }
+
     [Fact]
     public void OhneAbgeschlosseneFuellungGibtEsKeinePrognose()
     {

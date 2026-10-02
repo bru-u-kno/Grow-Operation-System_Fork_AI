@@ -89,9 +89,6 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
         var grows = bereich.ServiceProvider.GetRequiredService<GrowRepository>();
         if (Demobestand.IstNoetig(grows))
         {
-            // Eigene Datenbank, aber der Kosten-Schemamerker gilt je Prozess —
-            // siehe TestDatabase.KostenSchemaVergessen.
-            TestDatabase.KostenSchemaVergessen();
             Demobestand.Anlegen(bereich.ServiceProvider);
         }
 

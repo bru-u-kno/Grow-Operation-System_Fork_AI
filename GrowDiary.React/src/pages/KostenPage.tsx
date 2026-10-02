@@ -613,7 +613,7 @@ function ArtikelKarte({ artikel, seite, onErfassen, onChanged, onError }: { arti
               */}
               {a.prognoseLeerAmUtc != null ? (
                 <p className="ko-artikel-prognose">
-                  leer ≈ {formatDate(a.prognoseLeerAmUtc)} — {a.fuellstandQuelle === 'gemessen'
+                  leer ≈ {formatDate(a.prognoseLeerAmUtc)} — {a.prognoseQuelle === 'gemessen'
                     ? 'aus dem gebuchten Verbrauch'
                     : `geschätzt aus den letzten Laufzeiten (Ø ${tage(artikel.mittlereLaufzeitTage)})`}, nicht gewogen.
                 </p>

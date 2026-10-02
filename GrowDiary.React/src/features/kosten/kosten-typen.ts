@@ -70,6 +70,14 @@ export type KostenFuellungAktuell = {
    * Feld kam nie an, und die Seite schrieb immer „geschätzt".
    */
   fuellstandQuelle: string
+  /**
+   * Woher das Leer-Datum stammt: `gemessen` (Hochrechnung des gebuchten
+   * Verbrauchs), `geschaetzt` (frühere Laufzeiten), `null` ohne Prognose
+   * (Backend: `PrognoseQuelle`). Nicht dasselbe wie `fuellstandQuelle`: ein
+   * gemessener Füllstand mit zu wenig Verbrauch bekommt sein Datum aus den
+   * früheren Laufzeiten.
+   */
+  prognoseQuelle: string | null
 }
 
 export type KostenArtikel = {
