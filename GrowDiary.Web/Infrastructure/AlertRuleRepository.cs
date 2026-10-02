@@ -29,11 +29,30 @@ public sealed class AlertRuleRepository : RepositoryBase
     public List<TentAlertRule> GetEnabledForTent(int tentId)
         => GetForTent(tentId).Where(rule => rule.Enabled).ToList();
 
-    /// <summary>Replaces all rules for a tent with the supplied set (state is reset).</summary>
+    /// <summary>Ersetzt alle Regeln eines Zeltes durch die übergebenen.</summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): der Alarmzustand (<c>LastState</c>,
+    /// <c>LastNotifiedUtc</c>, <c>StateChangedUtc</c>) bleibt bei jeder Regel
+    /// erhalten, die sich nicht geändert hat (<see cref="GleicheRegel"/>). Vorher
+    /// fiel er bei jedem Speichern für ALLE Regeln auf NULL: wer nur eine Zeile
+    /// anfasste, bekam für jede gerade verletzte Regel sofort einen zweiten Push,
+    /// und „meldet seit" begann von vorn. Eine geänderte Regel startet weiter
+    /// frisch — ihr alter Zustand galt für andere Grenzen.
+    /// </remarks>
     public void ReplaceForTent(int tentId, IReadOnlyList<TentAlertRule> rules)
     {
         using var connection = OpenConnection();
         using var transaction = connection.BeginTransaction();
+
+        var vorher = new List<TentAlertRule>();
+        using (var lesen = connection.CreateCommand())
+        {
+            lesen.Transaction = transaction;
+            lesen.CommandText = "SELECT * FROM TentAlertRules WHERE TentId = $tentId;";
+            lesen.Parameters.AddWithValue("$tentId", tentId);
+            using var reader = lesen.ExecuteReader();
+            while (reader.Read()) vorher.Add(Map(reader));
+        }
 
         using (var delete = connection.CreateCommand())
         {
@@ -50,10 +69,16 @@ public sealed class AlertRuleRepository : RepositoryBase
             insert.Transaction = transaction;
             insert.CommandText = """
                 INSERT INTO TentAlertRules
-                    (TentId, MetricKey, MinValue, MaxValue, NightMinValue, NightMaxValue, NotifyService, Enabled, CooldownMinutes, Quelle, Toleranz, LastState, LastNotifiedUtc, CreatedAtUtc, UpdatedAtUtc)
+                    (TentId, MetricKey, MinValue, MaxValue, NightMinValue, NightMaxValue, NotifyService, Enabled, CooldownMinutes, Quelle, Toleranz, LastState, LastNotifiedUtc, StateChangedUtc, CreatedAtUtc, UpdatedAtUtc)
                 VALUES
-                    ($tentId, $metricKey, $minValue, $maxValue, $nightMinValue, $nightMaxValue, $notifyService, $enabled, $cooldown, $quelle, $toleranz, NULL, NULL, $now, $now);
+                    ($tentId, $metricKey, $minValue, $maxValue, $nightMinValue, $nightMaxValue, $notifyService, $enabled, $cooldown, $quelle, $toleranz, $lastState, $lastNotified, $stateChanged, $now, $now);
             """;
+            // Jede alte Zeile höchstens einmal: zwei gleiche neue Regeln erben nicht beide.
+            var gleich = vorher.FirstOrDefault(alt => GleicheRegel(alt, rule));
+            if (gleich is not null) vorher.Remove(gleich);
+            insert.Parameters.AddWithValue("$lastState", (object?)gleich?.LastState ?? DBNull.Value);
+            insert.Parameters.AddWithValue("$lastNotified", gleich?.LastNotifiedUtc is { } gemeldet ? ToStorageUtc(gemeldet) : DBNull.Value);
+            insert.Parameters.AddWithValue("$stateChanged", gleich?.StateChangedUtc is { } seit ? ToStorageUtc(seit) : DBNull.Value);
             insert.Parameters.AddWithValue("$tentId", tentId);
             insert.Parameters.AddWithValue("$metricKey", rule.MetricKey);
             AddNullable(insert, "$minValue", rule.MinValue);
@@ -71,6 +96,28 @@ public sealed class AlertRuleRepository : RepositoryBase
 
         transaction.Commit();
     }
+
+    /// <summary>
+    /// Hat sich an der Regel nichts geändert, was ihr Urteil beeinflusst?
+    /// Messgröße, Quelle, alle vier Grenzen, Toleranz und der Schalter.
+    /// </summary>
+    /// <remarks>
+    /// Abklingzeit und Benachrichtigungsdienst zählen nicht: sie ändern, wann und
+    /// wohin gemeldet wird, nicht ob der Wert verletzt ist. Eingeschaltet zählt:
+    /// eine ausgeschaltete Regel wird nicht ausgewertet, ihr Zustand ist veraltet.
+    /// </remarks>
+    public static bool GleicheRegel(TentAlertRule a, TentAlertRule b)
+        => string.Equals(a.MetricKey, b.MetricKey, StringComparison.OrdinalIgnoreCase)
+           && a.Quelle == b.Quelle
+           && a.Enabled == b.Enabled
+           && Gleich(a.MinValue, b.MinValue)
+           && Gleich(a.MaxValue, b.MaxValue)
+           && Gleich(a.NightMinValue, b.NightMinValue)
+           && Gleich(a.NightMaxValue, b.NightMaxValue)
+           && Gleich(a.Toleranz, b.Toleranz);
+
+    private static bool Gleich(double? a, double? b)
+        => a is null ? b is null : b is not null && Math.Abs(a.Value - b.Value) < 1e-9;
 
     /// <summary>
     /// Fork AI: zieht die Zahlen einer festen Regel nach, ohne sie neu anzulegen.

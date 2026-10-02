@@ -75,6 +75,32 @@ public sealed class TentAlertRule
             ? (NightMinValue ?? MinValue, NightMaxValue ?? MaxValue)
             : (MinValue, MaxValue);
 
+    /// <summary>
+    /// Liegt die Untergrenze über der Obergrenze? Dann meldet die Regel dauerhaft
+    /// (<c>AlertEvaluationService.Decide</c> prüft „unter min" zuerst).
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): eine Stelle für die Prüfung, die beim Speichern
+    /// (<c>AlertsApiController</c>) und beim Nachzug durch den Wochenplan
+    /// (<c>WochenplanSyncService</c>) gilt — vorher prüfte nur das Speichern.
+    /// </remarks>
+    public bool TagVertauscht => MinValue is { } min && MaxValue is { } max && min > max;
+
+    /// <summary>
+    /// Wie <see cref="TagVertauscht"/>, für das Paar, das nachts WIRKLICH gilt —
+    /// samt seitenweisem Rückfall auf die Tagwerte. Ohne Nachtband false: dann
+    /// gilt nachts das Tagpaar, und das prüft <see cref="TagVertauscht"/>.
+    /// </summary>
+    public bool NachtVertauscht
+    {
+        get
+        {
+            if (!HatNachtband) return false;
+            var (min, max) = GrenzenFuer(Services.LightsNow.Off);
+            return min is { } untere && max is { } obere && untere > obere;
+        }
+    }
+
     /// <summary>Last evaluated state: <c>InRange</c>, <c>Below</c> or <c>Above</c> (null = never evaluated).</summary>
     public string? LastState { get; set; }
 

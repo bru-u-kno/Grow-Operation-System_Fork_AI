@@ -79,27 +79,11 @@ public sealed class GrowDashboardComposer
         }
 
         // Der Name, unter dem eine Kachel-Groesse in der physikalischen Tabelle
-        // steht.
-        //
-        // Die beiden Seiten heissen verschieden — hier Kachel-Schluessel, dort
-        // die Namen aus MeasurementSanityService.PhysikalischeGrenzen. Unbekannte
-        // Groessen gelten dort ABSICHTLICH als plausibel; ohne diese Uebersetzung
-        // liefe die Pruefung bei fuenf von zehn Groessen ins Leere und meldete
-        // trotzdem nichts.
-        static string? PhysikSchluessel(string kachelSchluessel) => kachelSchluessel switch
-        {
-            "temperature" => "air-temp",
-            "humidity" => "humidity",
-            "reservoir-ph" => "ph",
-            "reservoir-ec" => "ec",
-            "reservoir-temp" => "water-temp",
-            "dissolved-oxygen" => "do",
-            "orp" => "orp",
-            "co2" => "co2",
-            "ppfd" => "ppfd",
-            "vpd" => "vpd",
-            _ => null,
-        };
+        // steht — seit 02.10.2026 an der Tabelle selbst
+        // (MeasurementSanityService.PhysikSchluesselFuerMetrik), weil auch die
+        // Plan-Alarme sie brauchen.
+        static string? PhysikSchluessel(string kachelSchluessel)
+            => MeasurementSanityService.PhysikSchluesselFuerMetrik(kachelSchluessel);
 
         // Sorte Ehrlichkeit, um die es hier geht. Also je Messgroesse einzeln
         // nachsehen, aus welcher Messung der Wert wirklich stammt.

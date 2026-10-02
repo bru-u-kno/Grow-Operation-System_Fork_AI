@@ -400,68 +400,118 @@ public sealed class WochenplanSyncService
                 continue;
             }
 
-            if (regel.Quelle != Grenzwertquelle.Fest) continue;
+            if (ZeltregelNachziehen(regel, zeltId, ziele, stand, ersterLauf, _logger) is not { } neu) continue;
 
-            var neuMin = regel.MinValue;
-            var neuMax = regel.MaxValue;
-            var neuNachtMin = regel.NightMinValue;
-            var neuNachtMax = regel.NightMaxValue;
-            var beruehrt = false;
-
-            foreach (var (rolle, metrikDerRolle) in Zeltregeln)
-            {
-                if (!string.Equals(metrikDerRolle, metrik, StringComparison.OrdinalIgnoreCase)) continue;
-                if (!ziele.TryGetValue(rolle, out var ziel)) continue;
-
-                var feld = Grenzfeld(rolle);
-                var schluessel = $"zelt:{zeltId}/{metrik}/{feld}";
-                var ist = feld switch
-                {
-                    "min" => regel.MinValue,
-                    "max" => regel.MaxValue,
-                    "nacht-min" => regel.NightMinValue,
-                    _ => regel.NightMaxValue,
-                };
-
-                if (stand.VonDir.Contains(schluessel, StringComparer.OrdinalIgnoreCase)) continue;
-
-                if (ersterLauf)
-                {
-                    if (ist is { } vorhanden) stand.Geschrieben[schluessel] = vorhanden;
-                    continue;
-                }
-
-                if (stand.Geschrieben.TryGetValue(schluessel, out var zuletzt)
-                    && ist is { } jetzt
-                    && Math.Abs(jetzt - zuletzt) > 0.001)
-                {
-                    stand.VonDir.Add(schluessel);
-                    _logger.LogInformation(
-                        "Wochenplan: Zelt-Grenze {Schluessel} wurde von Hand auf {Wert} gestellt — der Plan lässt sie in Ruhe.",
-                        schluessel, jetzt);
-                    continue;
-                }
-
-                if (ist is { } unveraendert && Math.Abs(unveraendert - ziel) < 0.001) continue;
-
-                switch (feld)
-                {
-                    case "min": neuMin = ziel; break;
-                    case "max": neuMax = ziel; break;
-                    case "nacht-min": neuNachtMin = ziel; break;
-                    default: neuNachtMax = ziel; break;
-                }
-                stand.Geschrieben[schluessel] = ziel;
-                beruehrt = true;
-            }
-
-            if (!beruehrt) continue;
-
-            _regeln.UpdateGrenzen(regel.Id, neuMin, neuMax, neuNachtMin, neuNachtMax);
+            _regeln.UpdateGrenzen(regel.Id, neu.MinValue, neu.MaxValue, neu.NightMinValue, neu.NightMaxValue);
             geschrieben++;
         }
 
         return geschrieben;
+    }
+
+    /// <summary>
+    /// Die neuen Grenzen EINER festen Zelt-Regel — oder null, wenn nichts zu
+    /// schreiben ist. Öffentlich und ohne Datenbank, damit der Nachzug prüfbar ist.
+    /// </summary>
+    /// <remarks>
+    /// <para>Schreibt in <paramref name="stand"/>, was gemerkt werden muss
+    /// (Ausgangslage, Handänderung, zuletzt geschrieben).</para>
+    /// <para><b>Kein vertauschtes Paar (Fork AI, 02.10.2026).</b> Der Nachzug geht
+    /// je Feld und lässt von Hand gesetzte Felder aus. Steht das Maximum von Hand
+    /// auf 24 °C und verlangt der Plan Luft 28 °C ± 3, entstand Min 25 &gt; Max 24
+    /// — die Regel meldete dauerhaft „zu kalt". Beim Speichern lehnt
+    /// <c>AlertsApiController</c> genau dieses Paar ab; hier galt die Prüfung
+    /// nicht. Jetzt wird das Ergebnis vor dem Schreiben gegen dieselbe Prüfung
+    /// gehalten (<see cref="TentAlertRule.TagVertauscht"/>,
+    /// <see cref="TentAlertRule.NachtVertauscht"/> samt Rückfall auf die
+    /// Tagwerte). Bei Widerspruch wird NICHTS geschrieben und nichts als
+    /// „geschrieben" gemerkt — sonst hielte der nächste Lauf die alte Grenze
+    /// für eine Handänderung. Protokolliert wird es als Warnung.</para>
+    /// </remarks>
+    public static TentAlertRule? ZeltregelNachziehen(
+        TentAlertRule regel,
+        int zeltId,
+        IReadOnlyDictionary<string, double> ziele,
+        WochenplanSyncStand stand,
+        bool ersterLauf,
+        ILogger logger)
+    {
+        if (regel.Quelle != Grenzwertquelle.Fest) return null;
+
+        var metrik = regel.MetricKey;
+        var neu = new TentAlertRule
+        {
+            Id = regel.Id,
+            TentId = regel.TentId,
+            MetricKey = regel.MetricKey,
+            MinValue = regel.MinValue,
+            MaxValue = regel.MaxValue,
+            NightMinValue = regel.NightMinValue,
+            NightMaxValue = regel.NightMaxValue,
+            Quelle = regel.Quelle,
+        };
+        var vorgemerkt = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (rolle, metrikDerRolle) in Zeltregeln)
+        {
+            if (!string.Equals(metrikDerRolle, metrik, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!ziele.TryGetValue(rolle, out var ziel)) continue;
+
+            var feld = Grenzfeld(rolle);
+            var schluessel = $"zelt:{zeltId}/{metrik}/{feld}";
+            var ist = feld switch
+            {
+                "min" => regel.MinValue,
+                "max" => regel.MaxValue,
+                "nacht-min" => regel.NightMinValue,
+                _ => regel.NightMaxValue,
+            };
+
+            if (stand.VonDir.Contains(schluessel, StringComparer.OrdinalIgnoreCase)) continue;
+
+            if (ersterLauf)
+            {
+                if (ist is { } vorhanden) stand.Geschrieben[schluessel] = vorhanden;
+                continue;
+            }
+
+            if (stand.Geschrieben.TryGetValue(schluessel, out var zuletzt)
+                && ist is { } jetzt
+                && Math.Abs(jetzt - zuletzt) > 0.001)
+            {
+                stand.VonDir.Add(schluessel);
+                logger.LogInformation(
+                    "Wochenplan: Zelt-Grenze {Schluessel} wurde von Hand auf {Wert} gestellt — der Plan lässt sie in Ruhe.",
+                    schluessel, jetzt);
+                continue;
+            }
+
+            if (ist is { } unveraendert && Math.Abs(unveraendert - ziel) < 0.001) continue;
+
+            switch (feld)
+            {
+                case "min": neu.MinValue = ziel; break;
+                case "max": neu.MaxValue = ziel; break;
+                case "nacht-min": neu.NightMinValue = ziel; break;
+                default: neu.NightMaxValue = ziel; break;
+            }
+            vorgemerkt[schluessel] = ziel;
+        }
+
+        if (vorgemerkt.Count == 0) return null;
+
+        if (neu.TagVertauscht || neu.NachtVertauscht)
+        {
+            logger.LogWarning(
+                "Wochenplan: Zelt-Regel {Metrik} (Zelt {Zelt}) nicht nachgezogen — der Planwert ergäbe ein vertauschtes Paar "
+                + "(tags {Min}–{Max}, nachts {NachtMin}–{NachtMax}). Eine Grenze ist von Hand gesetzt; bitte dort angleichen oder freigeben.",
+                metrik, zeltId, neu.MinValue, neu.MaxValue,
+                neu.NightMinValue ?? neu.MinValue, neu.NightMaxValue ?? neu.MaxValue);
+            return null;
+        }
+
+        foreach (var (schluessel, wert) in vorgemerkt) stand.Geschrieben[schluessel] = wert;
+        return neu;
     }
 
     /// <summary>

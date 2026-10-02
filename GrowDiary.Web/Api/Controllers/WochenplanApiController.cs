@@ -204,6 +204,13 @@ public sealed class WochenplanApiController : ApiControllerBase
                     return ValidationError(
                         $"{spalte.Label}: {feld.Bezeichnung} ({Zahl(v)}) liegt über {partner.Bezeichnung} ({Zahl(z)}).");
             }
+
+            // Das EC-Ziel hat kein Paar — es gehört ins Band. Nur der Grow-Plan führt
+            // das Band mit; die Programm-Abweichungen ohne Plan tun es nicht.
+            var dieseSpalte = danach.Where(d => d.Key.Spalte == spalte.Id)
+                .ToDictionary(d => d.Key.Feld, d => d.Value, StringComparer.OrdinalIgnoreCase);
+            if (Wochenwertfelder.EcPruefen(spalte.Label, spalte, dieseSpalte, bandWandertMit: GrowPlanService.HatPlan(grow.Id)) is { } ecFehler)
+                return ValidationError(ecFehler);
         }
 
         // Ein Wert, der dem Plan entspricht, ist keine Abweichung — dann wird
@@ -221,7 +228,15 @@ public sealed class WochenplanApiController : ApiControllerBase
         // den Plan — nicht ins Programm, das andere Grows mitbenutzen.
         if (GrowPlanService.HatPlan(grow.Id))
         {
-            _plaene.WerteSetzen(grow.Id, zuSchreiben);
+            try
+            {
+                _plaene.WerteSetzen(grow.Id, zuSchreiben);
+            }
+            catch (PlanEingefrorenException fehler)
+            {
+                // Die Sperre sitzt im Dienst; bis 02.10.2026 schrieb dieser Weg in eingefrorene Pläne.
+                return ValidationError(fehler.Message);
+            }
         }
         else
         {

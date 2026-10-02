@@ -97,11 +97,23 @@ public sealed class GrowPlanRepository : RepositoryBase
     /// </summary>
     /// <remarks>
     /// Der Startstand wird nie überschrieben: existiert er schon, bleibt er.
+    /// <paramref name="nachtraege"/> gehen ohne diese Sperre (wie
+    /// <see cref="Nachtragen"/>), aber in DERSELBEN Transaktion — für die
+    /// Startstand-Korrektur, die Startstand, Arbeitsstand und Buch zusammen
+    /// ändert (Fork AI, 02.10.2026; vorher zwei Transaktionen).
     /// </remarks>
-    public void Speichern(IEnumerable<GrowPlanStand> staende, IEnumerable<GrowPlanEintrag> eintraege)
+    public void Speichern(
+        IEnumerable<GrowPlanStand> staende,
+        IEnumerable<GrowPlanEintrag> eintraege,
+        IEnumerable<GrowPlanStand>? nachtraege = null)
     {
         using var connection = Open();
         using var tx = connection.BeginTransaction();
+
+        foreach (var stand in nachtraege ?? [])
+        {
+            NachtragSchreiben(connection, tx, stand);
+        }
 
         foreach (var stand in staende)
         {
@@ -124,6 +136,12 @@ public sealed class GrowPlanRepository : RepositoryBase
             command.ExecuteNonQuery();
         }
 
+        EintraegeSchreiben(connection, tx, eintraege);
+        tx.Commit();
+    }
+
+    private static void EintraegeSchreiben(SqliteConnection connection, SqliteTransaction tx, IEnumerable<GrowPlanEintrag> eintraege)
+    {
         foreach (var eintrag in eintraege)
         {
             using var command = connection.CreateCommand();
@@ -134,7 +152,7 @@ public sealed class GrowPlanRepository : RepositoryBase
                 """;
             command.Parameters.AddWithValue("$g", eintrag.GrowId);
             command.Parameters.AddWithValue("$z", ToStorageUtc(eintrag.ZeitUtc));
-            command.Parameters.AddWithValue("$art", eintrag.Art);
+            command.Parameters.AddWithValue("$art", (object?)eintrag.Art ?? DBNull.Value);
             command.Parameters.AddWithValue("$sp", (object?)eintrag.SpalteId ?? DBNull.Value);
             command.Parameters.AddWithValue("$f", (object?)eintrag.Feld ?? DBNull.Value);
             command.Parameters.AddWithValue("$alt", (object?)eintrag.Alt ?? DBNull.Value);
@@ -143,8 +161,17 @@ public sealed class GrowPlanRepository : RepositoryBase
             command.Parameters.AddWithValue("$grund", (object?)eintrag.Grund ?? DBNull.Value);
             command.ExecuteNonQuery();
         }
+    }
 
-        tx.Commit();
+    private static void NachtragSchreiben(SqliteConnection connection, SqliteTransaction? tx, GrowPlanStand stand)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = tx;
+        command.CommandText = "UPDATE ForkGrowPlan SET InhaltJson = $i WHERE GrowId = $g AND Stand = $s;";
+        command.Parameters.AddWithValue("$i", JsonSerializer.Serialize(stand.Inhalt, Json));
+        command.Parameters.AddWithValue("$g", stand.GrowId);
+        command.Parameters.AddWithValue("$s", stand.Stand);
+        command.ExecuteNonQuery();
     }
 
     /// <summary>
@@ -154,15 +181,15 @@ public sealed class GrowPlanRepository : RepositoryBase
     public void Nachtragen(GrowPlanStand stand)
     {
         using var connection = Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE ForkGrowPlan SET InhaltJson = $i WHERE GrowId = $g AND Stand = $s;";
-        command.Parameters.AddWithValue("$i", JsonSerializer.Serialize(stand.Inhalt, Json));
-        command.Parameters.AddWithValue("$g", stand.GrowId);
-        command.Parameters.AddWithValue("$s", stand.Stand);
-        command.ExecuteNonQuery();
+        NachtragSchreiben(connection, null, stand);
     }
 
     /// <summary>Entfernt einen Stand — nur für den Endstand beim Wiederöffnen gedacht.</summary>
+    /// <remarks>
+    /// Löschen und Buch-Eintrag in EINER Transaktion (Fork AI, 02.10.2026):
+    /// vorher war der Endstand schon weg, wenn der Eintrag scheiterte — der Plan
+    /// war wieder offen, und im Buch stand nichts davon.
+    /// </remarks>
     public void StandEntfernen(int growId, string stand, GrowPlanEintrag eintrag)
     {
         using var connection = Open();
@@ -175,8 +202,8 @@ public sealed class GrowPlanRepository : RepositoryBase
             command.Parameters.AddWithValue("$s", stand);
             command.ExecuteNonQuery();
         }
+        EintraegeSchreiben(connection, tx, [eintrag]);
         tx.Commit();
-        Speichern([], [eintrag]);
     }
 
     public IReadOnlyList<GrowPlanEintrag> Buch(int growId)
