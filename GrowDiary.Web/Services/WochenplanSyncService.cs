@@ -317,18 +317,74 @@ public sealed class WochenplanSyncService
         var geschrieben = 0;
         var co2Gespeichert = Co2Gespeichert();
 
+        var auftraege = new List<(string Entity, double Planwert)>();
         foreach (var (rolle, wert) in WerteMitZelt(grow, spalte))
         {
             if (Zeltregeln.ContainsKey(rolle)) continue; // eigener Durchgang unten
             if (RolleBeiCo2Steuerung(rolle, co2Gespeichert)) continue; // schreibt die CO₂-Steuerung
             if (HelferFuer(rolle) is not { } entity) continue;
+            auftraege.Add((entity, wert));
+        }
+
+        // Einzelabfrage je Helfer statt GetStatesAsync: dessen Wörterbuch
+        // ist nach METRIK-Kennungen geschlüsselt (chiller, reservoir-temp),
+        // nicht nach Entitäts-Kennungen — wer dort `input_number.…`
+        // nachschlägt, findet grundsätzlich nichts.
+        geschrieben += await HelferNachziehenAsync(
+            auftraege,
+            async entity => Zahl((await _ha.GetEntityStateAsync(settings, entity, ct))?.State),
+            (entity, wert) => _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
+                new Dictionary<string, object> { ["value"] = wert }),
+            stand,
+            ersterLauf,
+            _logger);
+
+        geschrieben += Zeltgrenzen(grow, spalte, stand, ersterLauf);
+
+        stand.LetzteSpalte = spalte.Id;
+        stand.LetzterLauf = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        _repo.SetEinstellungen(Modul, stand);
+        return geschrieben;
+    }
+
+    /// <summary>
+    /// Zieht die HA-Helfer auf die Planwerte nach — ohne Datenbank und ohne Home
+    /// Assistant prüfbar: gelesen und geschrieben wird über die beiden Rückrufe.
+    /// </summary>
+    /// <param name="auftraege">Helfer und der Wert, den die Woche für ihn vorsieht.</param>
+    /// <param name="lesen">Der Wert, der in Home Assistant steht (null: unlesbar).</param>
+    /// <param name="schreiben"><c>input_number.set_value</c>; false, wenn HA ablehnt.</param>
+    /// <returns>Wie viele Helfer geschrieben wurden.</returns>
+    /// <remarks>
+    /// <para><b>Auf die Spanne des Helfers (Fork AI, 02.10.2026).</b> Ein Planwert
+    /// kann ausserhalb dessen liegen, was der Helfer annimmt: der Plan nennt in
+    /// der Jungpflanzenphase RH 85 %, <c>input_number.co2_rh_obergrenze</c> reicht
+    /// bis 80. <c>set_value</c> lehnte das ab, und zwar bei JEDEM Lauf wieder —
+    /// der Helfer blieb wochenlang auf dem Wert einer frueheren Woche. Jetzt wird
+    /// der Wert vorher über <see cref="SteuerungBauteile.AufSpanne"/> begrenzt;
+    /// die Grenzen kommen aus dem Katalog, aus dem der Helfer angelegt wird.</para>
+    ///
+    /// <para><b>Und die Handerkennung bleibt ehrlich.</b> Sie vergleicht den Wert
+    /// in HA mit dem, den der Dienst zuletzt geschrieben hat. Gemerkt wird deshalb
+    /// der BEGRENZTE Wert — das, was wirklich in HA steht. Merkte er sich den
+    /// Planwert (85), stuende beim naechsten Lauf 80 gegen 85, und jeder begrenzte
+    /// Helfer galt fortan als „von dir gesetzt": der Plan liesse ihn fuer immer
+    /// in Ruhe, auch wenn die Woche laengst wieder in die Spanne passt.</para>
+    /// </remarks>
+    public static async Task<int> HelferNachziehenAsync(
+        IEnumerable<(string Entity, double Planwert)> auftraege,
+        Func<string, Task<double?>> lesen,
+        Func<string, double, Task<bool>> schreiben,
+        WochenplanSyncStand stand,
+        bool ersterLauf,
+        ILogger logger)
+    {
+        var geschrieben = 0;
+        foreach (var (entity, planwert) in auftraege)
+        {
             if (stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)) continue;
 
-            // Einzelabfrage je Helfer statt GetStatesAsync: dessen Wörterbuch
-            // ist nach METRIK-Kennungen geschlüsselt (chiller, reservoir-temp),
-            // nicht nach Entitäts-Kennungen — wer dort `input_number.…`
-            // nachschlägt, findet grundsätzlich nichts.
-            var istWert = Zahl((await _ha.GetEntityStateAsync(settings, entity, ct))?.State);
+            var istWert = await lesen(entity);
 
             // Beim ersten Lauf nur merken, nicht schreiben: was in HA steht, ist
             // die Ausgangslage, nicht ein Fremdeingriff.
@@ -343,20 +399,26 @@ public sealed class WochenplanSyncService
                 && Math.Abs(jetzt - zuletzt) > 0.001)
             {
                 stand.VonDir.Add(entity);
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Wochenplan: {Entity} wurde von Hand auf {Wert} gestellt — der Plan lässt ihn in Ruhe.",
                     entity, jetzt);
                 continue;
             }
 
+            // Was HA annehmen kann — und was ab jetzt als „zuletzt geschrieben" gilt.
+            var wert = SteuerungBauteile.AufSpanne(entity, planwert);
+            if (Math.Abs(wert - planwert) > 0.001)
+            {
+                logger.LogInformation(
+                    "Wochenplan: {Entity} nimmt {Plan} nicht an — auf {Wert} begrenzt (Spanne des Helfers).",
+                    entity, planwert, wert);
+            }
+
             if (istWert is { } unveraendert && Math.Abs(unveraendert - wert) < 0.001) continue;
 
-            var ok = await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
-                new Dictionary<string, object> { ["value"] = wert });
-
-            if (!ok)
+            if (!await schreiben(entity, wert))
             {
-                _logger.LogWarning("Wochenplan: {Entity} hat den Wert {Wert} nicht angenommen.", entity, wert);
+                logger.LogWarning("Wochenplan: {Entity} hat den Wert {Wert} nicht angenommen.", entity, wert);
                 continue;
             }
 
@@ -364,11 +426,6 @@ public sealed class WochenplanSyncService
             geschrieben++;
         }
 
-        geschrieben += Zeltgrenzen(grow, spalte, stand, ersterLauf);
-
-        stand.LetzteSpalte = spalte.Id;
-        stand.LetzterLauf = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
-        _repo.SetEinstellungen(Modul, stand);
         return geschrieben;
     }
 

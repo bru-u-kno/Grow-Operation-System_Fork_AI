@@ -217,7 +217,107 @@ public sealed class SollwertprofileSagenWasSieNichtSpeichernTests : IDisposable
             + "alte Name steht.");
     }
 
+    /// <summary>
+    /// Eine Hälfte allein darf das Paar nicht gegen die Basis verdrehen.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Fund (Fork AI, 02.10.2026).</b> Geprüft wurde ein Paar nur,
+    /// wenn beide Werte in den Abweichungen standen. <c>phMin 7</c> allein ging
+    /// durch; zusammengesetzt mit dem <c>phMax</c> der Basis war danach jede
+    /// pH-Messung „daneben".</para>
+    /// </remarks>
+    [Fact]
+    public void EineHaelfteGegenDieBasis_ErreichtDieAblageNicht()
+    {
+        var basis = WertungMitEigenen().GetTargets("rdwc-default", GrowStage.Flower)!;
+        Assert.True(basis.PhMax < 7, $"Vorbedingung: Basis-phMax {basis.PhMax} muss unter 7 liegen.");
+
+        var antwort = Endpunkt().Create(new SetpointProfileUpsertRequest
+        {
+            Name = "Nur Untergrenze",
+            BaseProfileId = "rdwc-default",
+            Overrides = new() { ["Flower"] = new() { ["phMin"] = 7.0 } },
+        });
+
+        Assert.True(antwort.Result is not CreatedAtActionResult,
+            $"phMin 7 allein wurde gespeichert. Mit dem phMax {basis.PhMax} der Basis ist danach "
+            + "JEDE pH-Messung „daneben\", egal welcher Wert.");
+    }
+
+    /// <summary>Die Gegenrichtung: eine passende Hälfte allein geht durch.</summary>
+    [Fact]
+    public void EinePassendeHaelfte_GehtDurch()
+    {
+        var antwort = Endpunkt().Create(new SetpointProfileUpsertRequest
+        {
+            Name = "Etwas tiefer",
+            BaseProfileId = "rdwc-default",
+            Overrides = new() { ["Flower"] = new() { ["phMin"] = 5.6 } },
+        });
+
+        Assert.IsType<CreatedAtActionResult>(antwort.Result);
+    }
+
+    /// <summary>
+    /// „flower" klein geschrieben wird angenommen — und WIRKT dann auch.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Fund (Fork AI, 02.10.2026).</b> Die Prüfung war
+    /// groß/klein-unabhängig, gespeichert wurde roh, <c>Apply</c> sucht genau
+    /// „Flower". Bestätigt, gespeichert, nie gewirkt.</para>
+    /// </remarks>
+    [Fact]
+    public void KleinGeschriebenePhase_WirktNachDemSpeichern()
+    {
+        var angelegt = Assert.IsType<CreatedAtActionResult>(Endpunkt().Create(new SetpointProfileUpsertRequest
+        {
+            Name = "Klein",
+            BaseProfileId = "rdwc-default",
+            Overrides = new() { ["flower"] = new() { ["phMin"] = 5.55, ["phMax"] = 6.05 } },
+        }).Result);
+        var profil = Assert.IsType<SetpointProfileDto>(angelegt.Value);
+
+        // Die Antwort selbst: gespeichert unter dem Namen, den Apply sucht.
+        var bluete = profil.Stages.Single(s => s.Stage == nameof(GrowStage.Flower));
+        Assert.True(bluete.Changed.Contains("phMin"),
+            "Die Antwort zeigt fuer Flower keine eigenen Werte — gespeichert wurde unter „flower\", "
+            + "einem Namen, den niemand sucht.");
+
+        var wirkt = WertungMitEigenen().GetTargets(profil.Id, GrowStage.Flower)!;
+        Assert.True(wirkt.PhMin == 5.55 && wirkt.PhMax == 6.05,
+            $"Gespeichert mit Phase „flower\", wirksam ist pH {wirkt.PhMin}–{wirkt.PhMax} statt "
+            + "5,55–6,05. Der Nutzer bekam eine Bestaetigung fuer Werte, die nie gelten.");
+    }
+
+    /// <summary>
+    /// Eine Ablage von vor der Reparatur („flower" steht schon drin) wird beim Lesen gefunden.
+    /// </summary>
+    [Fact]
+    public void AlteAblageMitKleinerPhase_WirdBeimLesenGefunden()
+    {
+        var ablage = new SetpointProfileRepository(_pfade);
+        var id = ablage.Insert(new SetpointProfile
+        {
+            Name = "Alt",
+            BaseProfileId = "rdwc-default",
+            Overrides = new() { ["flower"] = new() { ["ecMin"] = 1.33 } },
+        });
+
+        var wirkt = WertungMitEigenen().GetTargets(SetpointProfile.Reference(id), GrowStage.Flower)!;
+        Assert.True(wirkt.EcMin == 1.33,
+            $"In der Ablage steht „flower\" mit ecMin 1,33, wirksam ist {wirkt.EcMin}. "
+            + "Werte, die vor der Reparatur gespeichert wurden, bleiben sonst fuer immer wirkungslos.");
+    }
+
     // ------------------------------------------------------------------ Hilfe
+
+    /// <summary>Die Sollwert-Kette MIT den eigenen Profilen — so, wie die App sie liest.</summary>
+    private TargetValueService WertungMitEigenen()
+    {
+        var wissen = new KnowledgeBaseLoader(_pfade, NullLogger<KnowledgeBaseLoader>.Instance);
+        wissen.Initialize();
+        return new TargetValueService(wissen, new SetpointProfileRepository(_pfade));
+    }
 
     private SetpointProfilesApiController Endpunkt()
     {

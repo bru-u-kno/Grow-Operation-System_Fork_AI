@@ -63,7 +63,27 @@ public sealed class TrendWatchRunner
         // stand in der Diagnose und hat dort EC 0,6-0,8 gemeldet, waehrend die
         // Live-Kachel fuer denselben Grow 0,9-1,1 sagte.
         return TrendWatchService.Evaluate(
-            measurements, ZieleFuer(grow, stage), now, _repository.GetChangeoutsForGrow(growId));
+            measurements, ZieleFuer(grow, stage), now, _repository.GetChangeoutsForGrow(growId),
+            RampenBodenFuer(grow));
+    }
+
+    /// <summary>
+    /// Wohin die Nachtabsenkung faehrt — derselbe Aufruf wie in Kachel, Diagnose und
+    /// Alarmauswertung.
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Ohne ihn hielte der Waechter die eigene Regelung der App
+    /// fuer eine Abweichung — die Kachel zieht die Untergrenze der Wassertemperatur
+    /// mit der Rampe nach unten, der Waechter muss es auch.
+    /// </remarks>
+    private double? RampenBodenFuer(GrowRun grow)
+    {
+        var systemProfil = grow.SystemId is { } systemId ? _repository.GetSystem(systemId)?.SetpointProfileId : null;
+        var profil = SetpointProfileResolver.Resolve(grow.SetpointProfileId, systemProfil, grow.HydroStyle);
+        return Wasserband.RampenBodenC(
+            grow,
+            _targets.GetTargets(profil.ProfileId, GrowStage.Flower),
+            _targets.GetTargets(profil.ProfileId, GrowStage.Finish));
     }
 
     /// <summary>Die Sollwerte über die volle Profil-Kette.</summary>

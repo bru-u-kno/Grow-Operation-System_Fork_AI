@@ -57,7 +57,8 @@ public sealed class TrendWatchService
         IReadOnlyList<Measurement> measurements,
         HydroTargetValues? targets,
         DateTime now,
-        IReadOnlyList<ChangeoutEntry>? wechsel = null)
+        IReadOnlyList<ChangeoutEntry>? wechsel = null,
+        double? rampenBodenC = null)
     {
         var window = measurements
             .Where(measurement => measurement.TakenAt >= now.AddDays(-WindowDays))
@@ -66,23 +67,79 @@ public sealed class TrendWatchService
 
         var findings = new List<TrendFinding>();
 
-        // pH is judged by the growplan's comfort band, not by the narrower mixing target:
-        // drifting inside 5.8–6.2 is explicitly allowed, so warning about it would nag
-        // about the very thing the plan says to leave alone.
+        // Das Band je Messgroesse kommt aus BandFuer — derselben Lesart wie Kachel und
+        // Diagnose. Beim pH heisst das: Handlungsbereich, nicht das Anmischziel; ein
+        // Wandern innerhalb der Komfortzone ist ausdruecklich erlaubt.
+        var (phMin, phMax) = BandFuer("reservoir-ph", targets, rampenBodenC);
         AddDrift(findings, window, "ph", "pH", measurement => measurement.ReservoirPh, 0.25, "0.0#",
-            DeviationAnalyzerService.PhComfortMin, DeviationAnalyzerService.PhComfortMax, "ph-drift-band");
+            phMin, phMax, "ph-drift-band");
+        var (ecMin, ecMax) = BandFuer("reservoir-ec", targets, rampenBodenC);
         AddDrift(findings, window, "ec", "EC", measurement => measurement.ReservoirEc, 0.30, "0.0#",
-            targets?.EcMin, targets?.EcMax, "ec-keep-hungry");
+            ecMin, ecMax, "ec-keep-hungry");
+        var (orpMin, orpMax) = BandFuer("orp", targets, rampenBodenC);
         AddDrift(findings, window, "orp", "ORP", measurement => measurement.OrpMv, 60, "0",
-            targets?.OrpMin, targets?.OrpMax, "orp-rises-with-stage");
+            orpMin, orpMax, "orp-rises-with-stage");
+        var (wasserMin, wasserMax) = BandFuer("reservoir-temp", targets, rampenBodenC);
         AddDrift(findings, window, "watertemp", "Wassertemperatur", measurement => measurement.ReservoirWaterTempC, 2.0, "0.0",
-            targets?.WaterTempNightC, targets?.WaterTempDayC, null);
+            wasserMin, wasserMax, null);
 
         AddWaterChange(findings, measurements, wechsel, now);
         AddConsumption(findings, window);
         AddOrpTopUp(findings, measurements, now);
 
         return findings;
+    }
+
+    /// <summary>
+    /// Das Band, an dem der Waechter „noch im erlaubten Bereich" misst — eine Messgroesse,
+    /// eine Antwort.
+    /// </summary>
+    /// <param name="metrikSchluessel">Kennung wie auf der Kachel, z. B. <c>reservoir-temp</c>.</param>
+    /// <param name="targets">Zielband der Phase/Woche, <b>ohne</b> eigene Grenzen des Nutzers.</param>
+    /// <param name="rampenBodenC">Wohin die Nachtabsenkung faehrt (<see cref="Wasserband.RampenBodenC"/>).</param>
+    /// <remarks>
+    /// <para><b>Der Anlass (Fork AI, 02.10.2026).</b> Hier standen eigene Baender:
+    /// beim pH fest 5,8–6,2, bei der Wassertemperatur [Nacht, Tag] des Profils
+    /// (z. B. 18–20 °C — in der Veg-Phase ein einziger Punkt). Bei 20,5 °C, vier
+    /// Tage langsam steigend, meldete der Waechter „ausserhalb" und schickte eine
+    /// Push-Nachricht, waehrend Kachel und Diagnose fuer dieselbe Messung „im
+    /// Bereich" sagten. Ein Profil mit pH 5,6–6,0 hatte auf der Kachel den
+    /// Handlungsbereich 5,6–6,2, im Waechter 5,8–6,2.</para>
+    ///
+    /// <para><b>Die Rollen der drei Wassertemperatur-Zahlen:</b></para>
+    /// <list type="bullet">
+    ///   <item><b>Arbeitsbereich</b> (<see cref="Wasserband.Grenzen"/>, SOP-RDWC-CAN-N1,
+    ///   untere Grenze von der Nachtabsenkung mitgezogen) — die GRENZE, ab der
+    ///   beanstandet wird. Kachel-Ziel, Messprotokoll und Diagnose lesen sie.</item>
+    ///   <item><b>Tag-/Nachtwert</b> des Profils — das ZIEL, auf das der Kuehler
+    ///   regelt (Wochenplan-Sync, Nachtabsenkung).</item>
+    ///   <item><b>Alarm auf „Plan"</b> (<see cref="Planzielgrenzen.Wirksam"/>) —
+    ///   Ziel ± Toleranz je Lichtphase: eine vom Nutzer eingestellte Leine um das
+    ///   Ziel, keine fachliche Grenze.</item>
+    /// </list>
+    /// <para>Der Waechter sagt „noch im erlaubten Bereich" — das ist die Frage nach
+    /// der Grenze. Er folgt deshalb dem Arbeitsbereich, ueber
+    /// <see cref="Zielband.FuerMetrik"/> und nicht ueber eine Abschrift.</para>
+    ///
+    /// <para><b>Ohne Profil</b> gibt <see cref="Zielband.FuerMetrik"/> nichts her.
+    /// Dann gelten dieselben Formeln mit leerem Zielband — genau das, was die
+    /// Diagnose in diesem Fall rechnet: pH-Komfortzone, SOP-Arbeitsbereich, EC und
+    /// ORP ohne Band.</para>
+    /// </remarks>
+    public static (double? Min, double? Max) BandFuer(
+        string metrikSchluessel, HydroTargetValues? targets, double? rampenBodenC = null)
+    {
+        if (targets is not null)
+        {
+            return Zielband.FuerMetrik(metrikSchluessel, targets, rampenBodenC);
+        }
+
+        return metrikSchluessel switch
+        {
+            "reservoir-ph" => DeviationAnalyzerService.PhHandlungsbereich(null, null),
+            "reservoir-temp" => Wasserband.Grenzen(null, rampenBodenC, null),
+            _ => (null, null),
+        };
     }
 
     /// <summary>

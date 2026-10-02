@@ -98,6 +98,56 @@ public sealed class SollwertProfilNimmtKeinenUnsinnTests
     }
 
     /// <summary>
+    /// Eine Hälfte allein wird gegen die Basis geprüft (Fork AI, 02.10.2026).
+    /// </summary>
+    [Fact]
+    public void EineHaelfteAllein_WirdGegenDieBasisGeprueft()
+    {
+        var stufen = new Dictionary<string, Dictionary<string, double>>
+        {
+            ["Flower"] = new() { ["phMin"] = 7.0 },
+        };
+        IReadOnlyDictionary<string, double> Basis(string phase)
+            => new Dictionary<string, double> { ["phMin"] = 5.8, ["phMax"] = 6.2 };
+
+        var maengel = SetpointProfilGrenzen.Pruefe(stufen, Basis);
+
+        Assert.True(maengel.Count > 0,
+            "phMin 7 allein ging durch — zusammen mit phMax 6,2 der Basis ist danach JEDE "
+            + "pH-Messung „daneben\".");
+        Assert.Contains("Basisprofil", maengel[0].Meldung);
+
+        // Gegenrichtung: unangetastete Paare der Basis sind nicht Sache des Nutzers.
+        Assert.Empty(SetpointProfilGrenzen.Pruefe(
+            new Dictionary<string, Dictionary<string, double>> { ["Flower"] = new() { ["ecMin"] = 1.0 } },
+            phase => new Dictionary<string, double> { ["ecMax"] = 1.2, ["phMin"] = 9, ["phMax"] = 1 }));
+    }
+
+    /// <summary>
+    /// Phasennamen werden kanonisch; bei Doppelungen gewinnt der richtig geschriebene.
+    /// </summary>
+    [Fact]
+    public void Phasennamen_WerdenKanonisch()
+    {
+        var roh = new Dictionary<string, Dictionary<string, double>>
+        {
+            ["flower"] = new() { ["phMin"] = 5.5, ["ecMin"] = 1.4 },
+            ["Flower"] = new() { ["phMin"] = 5.7 },
+            ["FINISH"] = new() { ["ecMax"] = 0.9 },
+            ["4"] = new() { ["ecMax"] = 2.0 },
+        };
+
+        var sauber = SetpointProfile.PhasenNormalisiert(roh);
+
+        Assert.Equal(5.7, sauber["Flower"]["phMin"]);
+        Assert.Equal(1.4, sauber["Flower"]["ecMin"]);
+        Assert.Equal(0.9, sauber["Finish"]["ecMax"]);
+        Assert.False(sauber.ContainsKey("flower"));
+        // Eine Zahl ist kein Phasenname — Enum.TryParse naehme sie als Flower an.
+        Assert.True(sauber.ContainsKey("4"));
+    }
+
+    /// <summary>
     /// Ein gewöhnliches Profil geht durch.
     /// </summary>
     /// <remarks>

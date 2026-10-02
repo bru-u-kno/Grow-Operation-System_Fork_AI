@@ -104,9 +104,16 @@ public static class Planzielgrenzen
     /// statt gegen leere Grenzen zu melden.</para>
     ///
     /// <para>Das Band kommt aus <see cref="Zielband.FuerMetrik"/> und damit aus
-    /// derselben Lesart, die die Live-Kachel zeigt: Handlungsbereich beim pH,
-    /// Arbeitsbereich bei der Wassertemperatur. Sonst stuende auf dem Handy eine
-    /// vierte Zahl fuer denselben Messwert.</para>
+    /// derselben Lesart, die die Live-Kachel zeigt: Handlungsbereich beim pH.
+    /// Sonst stuende auf dem Handy eine vierte Zahl fuer denselben Messwert.</para>
+    ///
+    /// <para><b>Ausnahme Wassertemperatur — mit Absicht (F-043).</b> Hier ist der
+    /// Alarm eine Leine um das ZIEL (Tag- bzw. Nachtwert ± Toleranz), nicht die
+    /// GRENZE. Die Grenze — der Arbeitsbereich aus <see cref="Wasserband.Grenzen"/>
+    /// — gilt fuer Kachel-Ziel, Messprotokoll, Diagnose und Trendwaechter
+    /// (<see cref="TrendWatchService.BandFuer"/>). Zwei Rollen, zwei Zahlen: wer
+    /// den Alarm enger stellt als die Grenze, will frueher geweckt werden; die
+    /// Diagnose bewertet trotzdem fachlich.</para>
     /// </remarks>
     public static TentAlertRule? Wirksam(
         TentAlertRule regel, HydroTargetValues? band, double? rampenBodenC)

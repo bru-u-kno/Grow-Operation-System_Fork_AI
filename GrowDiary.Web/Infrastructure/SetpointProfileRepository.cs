@@ -127,7 +127,9 @@ public sealed class SetpointProfileRepository : RepositoryBase
             Id = Convert.ToInt32(reader["Id"]),
             Name = reader["Name"].ToString() ?? string.Empty,
             BaseProfileId = reader["BaseProfileId"].ToString() ?? "rdwc-default",
-            Overrides = overrides,
+            // Kanonische Phasennamen auch beim Lesen (Fork AI, 02.10.2026): vor diesem
+            // Tag konnte „flower" gespeichert werden — Apply sucht „Flower" und fand es nie.
+            Overrides = SetpointProfile.PhasenNormalisiert(overrides),
             CreatedAtUtc = ParseStoredUtcDateTime(NullString(reader["CreatedAtUtc"])) ?? DateTime.UtcNow,
             UpdatedAtUtc = ParseStoredUtcDateTime(NullString(reader["UpdatedAtUtc"])) ?? DateTime.UtcNow,
         };

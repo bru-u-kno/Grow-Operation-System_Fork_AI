@@ -165,7 +165,15 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
             return ValidationError("Das Profil laesst sich so nicht speichern.");
         }
 
-        var maengel = SetpointProfilGrenzen.Pruefe(request.Overrides);
+        // Gegen die Basis zusammengesetzt pruefen (Fork AI, 02.10.2026): phMin 7
+        // allein lag sonst ungesehen ueber dem phMax 6,2 des Basisprofils.
+        var basisProfil = request.BaseProfileId;
+        var maengel = SetpointProfilGrenzen.Pruefe(
+            SetpointProfile.PhasenNormalisiert(request.Overrides),
+            phase => Enum.TryParse<GrowStage>(phase, out var stufe)
+                     && _targets.GetTargets(basisProfil, stufe) is { } werte
+                ? SetpointProfile.WerteAus(werte)
+                : null);
         if (maengel.Count > 0)
         {
             foreach (var mangel in maengel)
@@ -183,9 +191,12 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
     /// Wirft weg, was nicht in die Tabelle gehört.
     /// </summary>
     /// <remarks>
-    /// Unbekannte Phasen oder Felder würden beim Anwenden still ignoriert — sie
+    /// <para>Unbekannte Phasen oder Felder würden beim Anwenden still ignoriert — sie
     /// aber zu speichern hiesse, dem Nutzer eine Änderung zu bestätigen, die
-    /// nie wirkt.
+    /// nie wirkt.</para>
+    /// <para>Dasselbe für die Schreibweise der Phase (Fork AI, 02.10.2026): die
+    /// Prüfung oben nimmt „flower" an, <c>Apply</c> sucht „Flower". Gespeichert
+    /// wird deshalb der kanonische Name.</para>
     /// </remarks>
     private static Dictionary<string, Dictionary<string, double>> Clean(
         Dictionary<string, Dictionary<string, double>>? raw)
@@ -193,9 +204,9 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
         var result = new Dictionary<string, Dictionary<string, double>>();
         if (raw is null) return result;
 
-        foreach (var (stageName, felder) in raw)
+        foreach (var (stageName, felder) in SetpointProfile.PhasenNormalisiert(raw))
         {
-            if (!Stages.Any(s => string.Equals(s.ToString(), stageName, StringComparison.OrdinalIgnoreCase))) continue;
+            if (!Stages.Any(s => string.Equals(s.ToString(), stageName, StringComparison.Ordinal))) continue;
 
             var sauber = felder
                 .Where(paar => SetpointProfile.Fields.Contains(paar.Key, StringComparer.Ordinal))
@@ -233,16 +244,7 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
             var geaendert = profile?.Overrides.TryGetValue(stage.ToString(), out var felder) == true
                 ? felder.Keys.ToList()
                 : [];
-            var werte = new Dictionary<string, double>
-            {
-                ["phMin"] = t.PhMin, ["phMax"] = t.PhMax,
-                ["ecMin"] = t.EcMin, ["ecMax"] = t.EcMax,
-                ["orpMin"] = t.OrpMin, ["orpMax"] = t.OrpMax,
-                ["waterTempDayC"] = t.WaterTempDayC, ["waterTempNightC"] = t.WaterTempNightC,
-                ["vpdMin"] = t.VpdMin, ["vpdMax"] = t.VpdMax,
-                ["ppfdMin"] = t.PpfdMin, ["ppfdMax"] = t.PpfdMax,
-                ["co2Min"] = t.Co2Min, ["co2Max"] = t.Co2Max,
-            };
+            var werte = SetpointProfile.WerteAus(t);
             result.Add(new StageValuesDto(stage.ToString(), werte, geaendert));
         }
         return result;
