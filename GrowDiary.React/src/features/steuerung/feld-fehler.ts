@@ -45,6 +45,38 @@ export function zahlAusFeld(text: string): number | null {
 }
 
 /**
+ * Der Fehlertext für eine Grenze mit zwei Modi („Plan +" Abstand oder „Fest").
+ *
+ * **Der Befund (Prüfbericht 01.10.2026):** Wer im Modus „Fest" den festen Wert
+ * leert und dann auf „Plan +" stellt, bekam beim Speichern „Bitte eine Zahl
+ * eintragen." an einer Zeile, deren sichtbares Feld gefüllt ist — das leere
+ * Feld blendet der gewählte Modus aus. Der Text sagt deshalb, welches Feld es
+ * ist und unter welchem Modus es steht.
+ *
+ * **Warum nicht einfach den Modus umschalten.** Der Modus ist eine Einstellung,
+ * die der Nutzer gewählt hat — die Seite stellte sie beim Speichern still um,
+ * und mit dem nächsten Speichern ginge sie so nach Home Assistant.
+ *
+ * @param gewaehlt Der gewählte Modus.
+ * @param felder Je Modus: der Name des Felds (wie es auf der Seite heißt), der
+ *   Name des Modus (wie auf seinem Knopf) und der Fehler aus `feldFehler`.
+ * @returns Der Text für die Markierung der Zeile — `undefined` ohne Fehler.
+ */
+export function modusFehler<M extends string>(
+  gewaehlt: M,
+  felder: Record<M, { feld: string; modus: string; fehler?: string }>,
+): string | undefined {
+  const hier = felder[gewaehlt]
+  if (hier.fehler) return hier.fehler
+  const dort = (Object.keys(felder) as M[])
+    .filter((m) => m !== gewaehlt)
+    .map((m) => felder[m])
+    .find((f) => f.fehler)
+  if (!dort?.fehler) return undefined
+  return `${dort.feld}: ${dort.fehler.replace(/\.$/, '')} — steht unter „${dort.modus}" und ist ausgeblendet, solange „${hier.modus}" gewählt ist.`
+}
+
+/**
  * Der Entwurf für Anzeigetexte: ein gerade geleertes Zahlenfeld (NaN) zeigt
  * dort den zuletzt gespeicherten Wert — sonst stünde „Schwelle NaN" oder
  * „3 von NaN" in einer Kachel. Die Eingabefelder selbst nehmen weiter den

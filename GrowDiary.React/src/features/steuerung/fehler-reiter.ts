@@ -49,8 +49,10 @@ export function useFehlerZeigen<R extends string>(
       }
       const [naechster, ...rest] = suche.rest
       if (naechster === undefined) {
-        // Kein Reiter zeigt eine Markierung (etwa ein Feld, das der gewählte
-        // Modus gerade ausblendet). Die Meldung oben bleibt stehen.
+        // Kein Reiter zeigt eine Markierung. Die Meldung oben bleibt stehen.
+        // Ein Feld, das der gewählte Modus ausblendet („Plan +"/„Fest"), landet
+        // hier nicht: seine Zeile bleibt markiert und nennt Feld und Modus
+        // (`modusFehler` in feld-fehler.ts).
         setSuche(null)
         return
       }

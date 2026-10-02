@@ -27,4 +27,15 @@ public sealed class MaintenanceDueApiController : ApiControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<WartungsPunkt>), StatusCodes.Status200OK)]
     public ActionResult<IReadOnlyList<WartungsPunkt>> Get()
         => Ok(_wartung.Offen(DateTime.UtcNow));
+
+    /// <summary>Die Frist je Gerät und Art — was der Wartungs-Reiter zeigt.</summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Vorher rechnete der Reiter die Fristen selbst aus
+    /// den Einträgen, und dieser Dienst dieselbe Frage anders. Jetzt gibt es eine
+    /// Rechnung (<see cref="WartungDueService.FristenRechnen"/>), aus der beide lesen.
+    /// </remarks>
+    [HttpGet("fristen")]
+    [ProducesResponseType(typeof(IReadOnlyList<WartungsFrist>), StatusCodes.Status200OK)]
+    public ActionResult<IReadOnlyList<WartungsFrist>> Fristen()
+        => Ok(_wartung.Fristen());
 }

@@ -28,7 +28,17 @@ const reiter = (page: Page, name: string) =>
 
 /** Liegt das Feld ganz im Fenster und nicht unter der festen Kopfleiste? */
 async function imBild(feld: Locator): Promise<string> {
-  return feld.evaluate((el) => {
+  return feld.evaluate(async (el) => {
+    // Erst messen, wenn das weiche Rollen steht — mitten im Rollen streift das
+    // Feld die richtige Stelle, und die Abfrage war schon grün (02.10.2026,
+    // gefunden an kopfleiste-einrollen.spec.ts).
+    let ruhig = 0
+    let zuletzt = window.scrollY
+    for (let bild = 0; bild < 300 && ruhig < 15; bild++) {
+      await new Promise((fertig) => requestAnimationFrame(fertig))
+      ruhig = window.scrollY === zuletzt ? ruhig + 1 : 0
+      zuletzt = window.scrollY
+    }
     let kopf = 0
     for (const leiste of document.querySelectorAll<HTMLElement>('.v1-mobile-topbar, .v1-mobile-nav')) {
       if (getComputedStyle(leiste).position === 'fixed') kopf = Math.max(kopf, leiste.getBoundingClientRect().bottom)
@@ -107,4 +117,80 @@ test('Entfeuchter: ein leeres Feld in den eingeklappten festen Schwellen wird ge
 
   await speichernUndPruefen(page, 'Regel', 'Nacht · AUS unter')
   await expect(klapp).toHaveAttribute('aria-expanded', 'true')
+})
+
+/**
+ * Ein leeres Feld, das der gewählte Modus ausblendet („Plan +"/„Fest").
+ *
+ * <b>Der Befund (Prüfbericht 01.10.2026, „Noch offen, klein").</b> Den festen
+ * Wert leeren, auf „Plan +" stellen, speichern: die Zeile wurde markiert, aber
+ * neben einem gefüllten Feld — das leere stand im ausgeblendeten Modus, und
+ * nichts sagte das. Jetzt nennt die Markierung Feld und Modus
+ * (`modusFehler` in feld-fehler.ts). Den Modus selbst stellt die Seite nicht um:
+ * das ist eine Einstellung des Nutzers.
+ */
+async function ausgeblendetPruefen(page: Page, zeile: Locator, erwarteterReiter: string, text: string): Promise<void> {
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  await expect(page.getByText('Bitte die markierten Felder prüfen.')).toBeVisible()
+  await expect(reiter(page, erwarteterReiter)).toHaveClass(/\bactive\b/)
+  const markierung = zeile.locator('.st-fehler')
+  await expect(markierung).toHaveText(text)
+  await expect.poll(() => imBild(markierung), { timeout: 5_000, message: 'die Markierung liegt nicht im Bild' })
+    .toBe('im Bild')
+}
+
+test('Entfeuchter: das leere Feld im ausgeblendeten Modus wird mit Feld und Modus genannt — zweimal', async ({ page }) => {
+  await seiteLaden(page, '/steuerung/entfeuchter', 'Schutz')
+  const block = (titel: string) => page.locator('.ef-tempmax')
+    .filter({ has: page.getByRole('radiogroup', { name: `Temperatur max. ${titel}` }) })
+  const chip = (titel: string, modus: string) =>
+    block(titel).getByRole('radio', { name: modus, exact: true })
+
+  // Durchgang 1: Tag — den festen Wert leeren, dann „Plan +" wählen.
+  await reiter(page, 'Schutz').click()
+  await chip('Tag', 'Fest').click()
+  const festTag = block('Tag').getByLabel('Fester Wert', { exact: true })
+  const festTagAlt = await festTag.inputValue()
+  expect(festTagAlt, 'Der feste Wert ist schon leer — dann prüft der Fall nichts.').not.toBe('')
+  await festTag.fill('')
+  await chip('Tag', 'Plan +').click()
+  await expect(festTag).toHaveCount(0)
+  await reiter(page, 'Betrieb').click()
+  await ausgeblendetPruefen(page, block('Tag').locator('.st-feldzeile').first(), 'Schutz',
+    'Fester Wert: Bitte eine Zahl eintragen — steht unter „Fest" und ist ausgeblendet, solange „Plan +" gewählt ist.')
+  // Der Modus bleibt, wie der Nutzer ihn gewählt hat.
+  await expect(chip('Tag', 'Plan +')).toHaveAttribute('aria-checked', 'true')
+
+  // Zurück auf Fest und wieder füllen.
+  await chip('Tag', 'Fest').click()
+  await block('Tag').getByLabel('Fester Wert', { exact: true }).fill(festTagAlt)
+
+  // Durchgang 2, ohne Neuladen und andersherum: Nacht — den Abstand leeren,
+  // zurück auf „Fest", ans Seitenende gerollt, auf einen anderen Reiter.
+  await chip('Nacht', 'Plan +').click()
+  const abstand = block('Nacht').getByLabel('Abstand zum Plan', { exact: true })
+  expect(await abstand.inputValue(), 'Der Abstand ist schon leer.').not.toBe('')
+  await abstand.fill('')
+  await chip('Nacht', 'Fest').click()
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await reiter(page, 'Regel').click()
+  await ausgeblendetPruefen(page, block('Nacht').locator('.st-feldzeile').first(), 'Schutz',
+    'Abstand zum Plan: Bitte eine Zahl eintragen — steht unter „Plan +" und ist ausgeblendet, solange „Fest" gewählt ist.')
+  // Die Tag-Zeile ist wieder gefüllt und trägt keine Markierung mehr.
+  await expect(block('Tag').locator('.st-fehler')).toHaveCount(0)
+})
+
+test('CO₂: das leere Feld im ausgeblendeten Modus wird mit Feld und Modus genannt', async ({ page }) => {
+  await seiteLaden(page, '/steuerung/co2', 'Klima')
+  await reiter(page, 'Klima').click()
+  const zeile = page.locator('.st-feldzeile', { hasText: 'Canopy-Obergrenze' })
+  await zeile.getByRole('button', { name: 'Fest', exact: true }).click()
+  const fest = page.getByLabel('Canopy-Obergrenze', { exact: true })
+  expect(await fest.inputValue(), 'Der feste Wert ist schon leer.').not.toBe('')
+  await fest.fill('')
+  await zeile.getByRole('button', { name: 'Plan +', exact: true }).click()
+  await expect(fest).toHaveCount(0)
+  await reiter(page, 'Ziel').click()
+  await ausgeblendetPruefen(page, zeile, 'Klima',
+    'Canopy-Obergrenze, fester Wert: Bitte eine Zahl eintragen — steht unter „Fest" und ist ausgeblendet, solange „Plan +" gewählt ist.')
 })

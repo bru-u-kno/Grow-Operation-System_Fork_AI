@@ -674,7 +674,10 @@ public sealed class Co2SteuerungService
 
     // -------------------------------------------------------------- Tageslauf
 
-    private static string HeuteKey() => DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    /// <summary>Die Uhr des Tageslaufs (Ortszeit) — in Tests vorstellbar, sonst <see cref="DateTime.Now"/>.</summary>
+    public Func<DateTime> JetztOrt { get; init; } = () => DateTime.Now;
+
+    private string HeuteKey() => JetztOrt().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Ein Takt: Tagesdatensatz anlegen, „Ziel erreicht" festhalten, nach Licht-aus abschließen.
@@ -692,6 +695,7 @@ public sealed class Co2SteuerungService
         {
             // Fork AI (02.10.2026): Der Tag gehört zum Lichtzyklus, nicht zum
             // Kalenderdatum (siehe ZyklusFortsetzen).
+            int? impulseStart = null;
             if (_repo.GetOffenerCo2Tag() is { Abgeschlossen: false } laufend && laufend.Datum != heute)
             {
                 if (ZyklusFortsetzen(laufend, heute, live.ImpulseHeute))
@@ -700,8 +704,11 @@ public sealed class Co2SteuerungService
                 }
                 else
                 {
-                    // Das Licht-aus dazwischen wurde verschlafen: den alten
-                    // Zyklus mit seinem letzten Stand abschließen.
+                    // Entweder wurde das Licht-aus dazwischen verschlafen, oder
+                    // es gab keins (Dauerlicht): den alten Tag mit seinem
+                    // letzten Stand abschließen. Bei Dauerlicht zählt der neue
+                    // ab dessen Zählerstand weiter (siehe DauerlichtStart).
+                    impulseStart = DauerlichtStart(laufend, heute, live.ImpulseHeute);
                     Abschliessen(laufend);
                     _repo.UpdateCo2Tag(laufend);
                 }
@@ -714,6 +721,7 @@ public sealed class Co2SteuerungService
                 {
                     Datum = heute,
                     GrowId = grow?.Id,
+                    ImpulseStart = impulseStart,
                     FlascheStartKg = live.FlascheRestKg ?? 0,
                 };
                 tag.Id = _repo.CreateCo2Tag(tag);
@@ -723,7 +731,7 @@ public sealed class Co2SteuerungService
             {
                 if (tag.ZielErreichtUm is null && live.Co2Ppm is { } c && live.ZielPpm is { } z && c >= z)
                 {
-                    tag.ZielErreichtUm = DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture);
+                    tag.ZielErreichtUm = JetztOrt().ToString("HH:mm", CultureInfo.InvariantCulture);
                 }
                 Zwischenstand(tag, live);
                 _repo.UpdateCo2Tag(tag);
@@ -772,21 +780,55 @@ public sealed class Co2SteuerungService
     /// hat (Add-on war über das Licht-aus hinweg weg). Und ein Zyklus ist nie
     /// länger als ein Tag: ein offener Tag von vorgestern gehört nicht mehr
     /// dazu.</para>
-    /// <para><b>Offen.</b> Bei Dauerlicht (24/0) setzt der Zähler nie zurück.
-    /// Dann schließt der Tag nach zwei Kalendertagen, und der nächste übernimmt
-    /// den vollen Stand — so ungenau wie vor dieser Änderung. Richtig wäre dort
-    /// nur eine Differenzbuchung mit gespeichertem Startwert.</para>
+    /// <para><b>Dauerlicht (24/0).</b> Dort setzt der Zähler nie zurück, und es
+    /// gibt keinen Zyklusbeginn, an den der Tag sich binden könnte. Der erste
+    /// Tag endet deshalb nach zwei Kalendertagen wie oben; jeder folgende ist
+    /// ein Kalendertag und zählt ab dem Zählerstand, mit dem er begann
+    /// (<see cref="Co2Tag.ImpulseStart"/>, <see cref="DauerlichtStart"/>).</para>
     /// </remarks>
     public static bool ZyklusFortsetzen(Co2Tag offen, string heute, int? impulseJetzt)
     {
-        if (impulseJetzt is { } n && n < offen.Impulse) return false;
-        if (!DateTime.TryParseExact(offen.Datum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var begonnen)
-            || !DateTime.TryParseExact(heute, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var jetzt))
-        {
-            return false;
-        }
-        return (jetzt - begonnen).TotalDays is >= 0 and <= 1;
+        if (impulseJetzt is { } n && n < ZaehlerZuletzt(offen)) return false;
+        // Ein Dauerlicht-Tag ist ein Kalendertag: er endet um Mitternacht.
+        if (offen.ImpulseStart is not null && offen.Datum != heute) return false;
+        return TageZwischen(offen.Datum, heute) is >= 0 and <= 1;
     }
+
+    /// <summary>
+    /// Mit welchem Zählerstand ein neuer Tag beginnt, wenn der alte ohne
+    /// Licht-aus endet: bei Dauerlicht der letzte Stand des alten, sonst
+    /// <c>null</c> (der Zähler zählt ab dem Licht-an des neuen Tags).
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Warum eine Differenzbuchung und nicht der Kalendertag allein.</b>
+    /// Den Tag um Mitternacht zu schneiden, hilft bei Dauerlicht nichts: der
+    /// Zähler läuft weiter, und der neue Tag übernähme seinen vollen Stand — das
+    /// ist genau die doppelte Buchung. Nur ein gespeicherter Startwert trennt die
+    /// Impulse von heute von denen von gestern. Er wird nur dort gespeichert, wo
+    /// es keinen Zyklusbeginn gibt; bei 18/6 und 20/4 bleibt der Zählerstand die
+    /// Zahl des Tags, wie in <see cref="ZyklusFortsetzen"/> begründet.</para>
+    /// <para><b>Woran Dauerlicht zu erkennen ist.</b> Der alte Tag wurde nicht
+    /// durch ein Licht-aus abgeschlossen (sonst stünde er nicht mehr offen), und
+    /// der Zähler ist nicht unter seinen letzten Stand gefallen (sonst gab es ein
+    /// Licht-an). Lag der alte Tag mehr als zwei Kalendertage zurück, war das
+    /// Add-on zu lange fort, um das zu wissen — dann wie bisher <c>null</c>.</para>
+    /// </remarks>
+    public static int? DauerlichtStart(Co2Tag vorher, string heute, int? impulseJetzt)
+    {
+        if (vorher.Abgeschlossen || impulseJetzt is not { } n) return null;
+        var zuletzt = ZaehlerZuletzt(vorher);
+        if (n < zuletzt) return null;
+        return TageZwischen(vorher.Datum, heute) is >= 1 and <= 2 ? zuletzt : null;
+    }
+
+    /// <summary>Der Zählerstand, bis zu dem der Tag gebucht hat.</summary>
+    private static int ZaehlerZuletzt(Co2Tag tag) => (tag.ImpulseStart ?? 0) + tag.Impulse;
+
+    private static int? TageZwischen(string von, string bis)
+        => DateTime.TryParseExact(von, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var a)
+           && DateTime.TryParseExact(bis, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var b)
+            ? (int)Math.Round((b - a).TotalDays)
+            : null;
 
     /// <summary>
     /// Den Tag fortschreiben. Zählt in Abschnitten, damit ein Flaschenwechsel
@@ -812,7 +854,8 @@ public sealed class Co2SteuerungService
     /// <summary>Dieselbe Rechnung ohne Livebild — so ist sie ohne Home Assistant prüfbar.</summary>
     public static void Fortschreiben(Co2Tag tag, int? impulseHeute, double? flascheRestKg, double? grammProSekunde)
     {
-        if (impulseHeute is { } n && n >= tag.Impulse) tag.Impulse = n;
+        // Bei Dauerlicht zählt der Tag ab seinem Startwert (Co2Tag.ImpulseStart).
+        if (impulseHeute is { } n && n - (tag.ImpulseStart ?? 0) >= tag.Impulse) tag.Impulse = n - (tag.ImpulseStart ?? 0);
         if (flascheRestKg is not { } rest) return;
 
         // Anstieg um mehr als 50 g = neue Flasche. Kleinere Sprünge sind

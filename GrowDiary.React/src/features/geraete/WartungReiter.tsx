@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Card, V1Empty, V1LinkButton, V1Skeleton } from '../../components/v1'
-import type { CalibrationEventDto, HardwareItemDto, MaintenanceEventDto } from '../../types'
-import { wartungsZeilen, type WartungsZeile } from './wartung-zeilen'
 
 /**
  * Fork AI (forkai.41): Wartung — nach Gerät statt nach Eintrag.
@@ -17,8 +15,25 @@ import { wartungsZeilen, type WartungsZeile } from './wartung-zeilen'
  * jede Zeile führt dorthin. Damit bleibt die Originalseite unberührt, und
  * Weiterentwicklungen des Originals kommen ohne Handarbeit an.
  *
- * <b>Woher die Fristen kommen</b> steht in `wartung-zeilen.ts`.
+ * <b>Woher die Fristen kommen.</b> Aus dem Backend
+ * (`WartungDueService.FristenRechnen`, `api/maintenance-due/fristen`) — dieselbe
+ * Rechnung, aus der auch die Wartungs-Erinnerung liest. Bis 02.10.2026 rechnete
+ * dieser Reiter selbst (`wartung-zeilen.ts`), und das Backend dieselbe Frage
+ * anders. Hier wird nur noch angezeigt, nichts gerechnet; auch die Reihenfolge
+ * kommt von dort.
  */
+
+/** Eine Frist aus `api/maintenance-due/fristen` (`WartungsFrist`). */
+type WartungsFrist = {
+  schluessel: string
+  art: 'wartung' | 'kalibrierung'
+  titel: string
+  hardwareItemId: number
+  geraet: string
+  faelligUtc: string | null
+  quelle: string
+  ohneFrist: boolean
+}
 
 const TAG = 24 * 60 * 60 * 1000
 
@@ -36,23 +51,14 @@ function frist(datum: Date | null): string {
 }
 
 export function WartungReiter({ geraeteNamen }: { geraeteNamen: Map<number, string> }) {
-  const [teile, setTeile] = useState<HardwareItemDto[] | null>(null)
-  const [wartungen, setWartungen] = useState<MaintenanceEventDto[]>([])
-  const [kalibrierungen, setKalibrierungen] = useState<CalibrationEventDto[]>([])
+  const [fristen, setFristen] = useState<WartungsFrist[] | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
 
   useEffect(() => {
     const abbruch = new AbortController()
     void (async () => {
       try {
-        const [geladeneTeile, geladeneWartungen, geladeneKalibrierungen] = await Promise.all([
-          apiFetch<HardwareItemDto[]>('/api/hardware-items', { signal: abbruch.signal }),
-          apiFetch<MaintenanceEventDto[]>('/api/maintenance-events', { signal: abbruch.signal }),
-          apiFetch<CalibrationEventDto[]>('/api/calibration-events', { signal: abbruch.signal }),
-        ])
-        setTeile(geladeneTeile)
-        setWartungen(geladeneWartungen)
-        setKalibrierungen(geladeneKalibrierungen)
+        setFristen(await apiFetch<WartungsFrist[]>('/api/maintenance-due/fristen', { signal: abbruch.signal }))
       } catch (caught) {
         if (!abbruch.signal.aborted) setFehler(formatApiError(caught, 'Die Wartung konnte nicht geladen werden.'))
       }
@@ -60,15 +66,10 @@ export function WartungReiter({ geraeteNamen }: { geraeteNamen: Map<number, stri
     return () => abbruch.abort()
   }, [])
 
-  const zeilen = useMemo<WartungsZeile[]>(
-    () => (teile ? wartungsZeilen(teile, wartungen, kalibrierungen, geraeteNamen) : []),
-    [teile, wartungen, kalibrierungen, geraeteNamen],
-  )
-
   if (fehler) return <V1Alert tone="critical" message={fehler} />
-  if (!teile) return <V1Skeleton rows={5} label="Wartung wird geladen" />
+  if (!fristen) return <V1Skeleton rows={5} label="Wartung wird geladen" />
 
-  if (zeilen.length === 0) {
+  if (fristen.length === 0) {
     return (
       <V1Empty
         title="Nichts zu tun"
@@ -77,6 +78,12 @@ export function WartungReiter({ geraeteNamen }: { geraeteNamen: Map<number, stri
     )
   }
 
+  const zeilen = fristen.map((f) => ({
+    ...f,
+    // Der Name, unter dem das Gerät auf dieser Seite steht — sonst der aus dem Geräte-Eintrag.
+    name: geraeteNamen.get(f.hardwareItemId) ?? f.geraet,
+    faellig: f.faelligUtc ? new Date(f.faelligUtc) : null,
+  }))
   const offen = zeilen.filter((zeile) => zeile.faellig != null && tageBis(zeile.faellig) <= 7)
   const spaeter = zeilen.filter((zeile) => !offen.includes(zeile))
 
@@ -93,7 +100,7 @@ export function WartungReiter({ geraeteNamen }: { geraeteNamen: Map<number, stri
                 <div key={zeile.schluessel} className="gr-wartung">
                   <span className="nm">
                     <b>{zeile.titel}</b>
-                    <small>{zeile.geraet}</small>
+                    <small>{zeile.name}</small>
                   </span>
                   <span className={tage != null && tage <= 7 ? 'gr-frist is-faellig' : 'gr-frist'}>
                     {frist(zeile.faellig)}

@@ -108,6 +108,21 @@ public sealed class SteuerungBestandService
         return luecken;
     }
 
+    /// <summary>
+    /// Entfällt dieses Bauteil nur, weil die Ansteuerung eine andere ist?
+    /// </summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): Beim Kühler hängt die Regelung an der Steckdose und
+    /// der Sollwert-Lauf am Sollwert-Gerät — eine der beiden entfällt immer, und
+    /// das ist richtig so. Seit die Kühler-Seite den Bestand zeigt, standen ihre
+    /// Hinweise („Nur nötig, wenn …") dort als ausgefallene Funktionen. Fehlen
+    /// beide Geräte, sagt die Seite das selbst („Kein Kühler zugeordnet").
+    /// </remarks>
+    private static bool NurAnsteuerung(string modul, Bauteil b)
+        => string.Equals(modul, ChillerSteuerungService.Modul, StringComparison.OrdinalIgnoreCase)
+           && b.HaengtAn is { Count: > 0 } rollen
+           && rollen.All(r => r is ChillerSteuerungService.Rollen.Steckdose or ChillerSteuerungService.Rollen.KuehlerSollwert);
+
     /// <summary>Den Bestand für eine Steuerung aufnehmen.</summary>
     /// <param name="modul">Der Modul-Schlüssel, etwa <c>co2</c>.</param>
     /// <param name="belegteRollen">Rollen-Schlüssel, denen eine Entität zugeordnet ist.</param>
@@ -135,6 +150,8 @@ public sealed class SteuerungBestandService
         var anwendbareIds = anwendbar.Select(b => b.EntityId).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var liste = new List<BauteilStand>();
+        // Entfallene Bauteile, deren Fehlen keine Funktion kostet (NurAnsteuerung).
+        var keinAusfall = new HashSet<BauteilStand>(ReferenceEqualityComparer.Instance);
         HttpClient? client = null;
         foreach (var b in SteuerungBauteile.FuerModul(modul))
         {
@@ -183,13 +200,16 @@ public sealed class SteuerungBestandService
                 }
             }
 
-            liste.Add(new BauteilStand(
-                entityId, b.Name, b.Art.ToString(), b.Zweck, stand, b.Pflicht, b.OhneDas));
+            var eintrag = new BauteilStand(
+                entityId, b.Name, b.Art.ToString(), b.Zweck, stand, b.Pflicht, b.OhneDas);
+            liste.Add(eintrag);
+            if (stand == Stand.Entfaellt && NurAnsteuerung(modul, b)) keinAusfall.Add(eintrag);
         }
         client?.Dispose();
 
         var ausgefallen = liste
             .Where(s => s.Stand is Stand.Entfaellt or Stand.Fehlt && !string.IsNullOrWhiteSpace(s.OhneDas))
+            .Where(s => !keinAusfall.Contains(s))
             .Select(s => s.OhneDas!)
             .Concat(Luecken(modul, zuordnung))
             .Distinct(StringComparer.Ordinal)

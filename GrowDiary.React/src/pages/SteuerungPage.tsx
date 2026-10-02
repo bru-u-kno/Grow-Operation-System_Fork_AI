@@ -7,20 +7,14 @@ import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
 import EntfeuchterDetail from '../features/steuerung/EntfeuchterDetail'
 import { CO2_REITER, minuten, probeWerte, tagKurz, wirksameZiele } from '../features/steuerung/steuerung-typen'
-import type { Bestandsaufnahme, Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
+import type { Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
 import '../features/steuerung/steuerung.css'
 import { rollenPfad } from '../features/geraete/rollenPfad'
-import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from '../features/steuerung/feld-fehler'
+import { feldFehlerAus, leereZahlenfelder, modusFehler, zahlAusFeld } from '../features/steuerung/feld-fehler'
 import { useFehlerZeigen } from '../features/steuerung/fehler-reiter'
-
-/** Was der Vorschau-Lauf über die Automationen meldet. */
-type AutoBilanz = {
-  angelegt: number
-  fremd: number
-  fehlgeschlagen: number
-  einzeln: Array<{ kennung: string; name: string; stand: string; hinweis: string | null }>
-}
+import { BestandAbschnitt, BestandHinweis } from '../features/steuerung/Bestand'
+import { useBestand } from '../features/steuerung/bestand-laden'
 
 /**
  * Fork AI: Was die Prüfung der vorhandenen CO₂-Automationen meldet.
@@ -56,32 +50,6 @@ type AbsicherungsBilanz = {
   abgelehnt: string | null
   einzeln: Array<{ entityId: string; name: string; geschrieben: boolean; fehler: string | null }>
   nachher: AbsicherungsLage
-}
-
-/**
- * Fork AI (forkai.45): Die Bauteil-Arten in Klartext.
- *
- * Die Namen aus dem Katalog sind die Namen der Helfer in Home Assistant — gut
- * zum Anlegen, aber nichts, was jemand lesen will. Auf der Seite steht deshalb
- * der Zweck, nicht der Bezeichner.
- */
-const STAND_LESBAR: Record<string, string> = {
-  Angelegt: 'wird angelegt',
-  Erneuert: 'wird erneuert',
-  Fremd: 'bleibt unangetastet',
-  OhneGeraet: 'entfällt',
-  Fehlgeschlagen: 'fehlgeschlagen',
-}
-
-const ART_LESBAR: Record<string, string> = {
-  Zahl: 'Einstellwert',  // steht in der breiten Zeile, nicht in einer engen Spalte
-  Schalter: 'Schalter',
-  Zeitpunkt: 'Zeitstempel',
-  Zaehler: 'Zähler',
-  RechenSensor: 'Rechenwert',
-  RechenSchalter: 'Rechenwert',
-  Mittelwert: 'Mittelwert',
-  Automation: 'Automation',
 }
 
 /**
@@ -204,10 +172,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
   const [seite, setSeite] = useState<Co2Seite | null>(null)
   const [entwurf, setEntwurf] = useState<Co2Einstellungen | null>(null)
   const [reiter, setReiter] = useState<Co2Reiter>('ziel')
-  const [bestand, setBestand] = useState<Bestandsaufnahme | null>(null)
-  const [legtAn, setLegtAn] = useState(false)
-  const [anlegeMeldung, setAnlegeMeldung] = useState<string | null>(null)
-  const [vorschau, setVorschau] = useState<AutoBilanz | null>(null)
+  // Fork AI (forkai.45): Was die Steuerung in Home Assistant braucht — siehe Bestand.tsx.
+  const { bestand, neuLaden: bestandNeuLaden } = useBestand('co2')
   const [probe, setProbe] = useState<string | null>(null)
   const [absicherung, setAbsicherung] = useState<AbsicherungsLage | null>(null)
   const [sichertAb, setSichertAb] = useState(false)
@@ -234,23 +200,6 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       }
     }
     void laden()
-    return () => controller.abort()
-  }, [])
-
-  // Fork AI (forkai.45): Was die Steuerung in Home Assistant braucht. Ein
-  // eigener Abruf, damit ein Fehler hier die Seite nicht mitnimmt - fehlende
-  // Bauteile sind ein Hinweis, kein Grund, die Werte zu verbergen.
-  useEffect(() => {
-    const controller = new AbortController()
-    const pruefen = async () => {
-      try {
-        const geladen = await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand', { signal: controller.signal })
-        if (!controller.signal.aborted) setBestand(geladen)
-      } catch {
-        if (!controller.signal.aborted) setBestand(null)
-      }
-    }
-    void pruefen()
     return () => controller.abort()
   }, [])
 
@@ -323,79 +272,6 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
       setSpeichert(false)
-    }
-  }
-
-  /**
-   * Die fehlenden Helfer anlegen lassen.
-   *
-   * Nur die einfachen Arten — Zahlen, Schalter, Zeitstempel, Zähler. Was danach
-   * noch fehlt, sind Rechen-Sensoren und Automationen; die brauchen andere Wege
-   * und bleiben in der Liste stehen, bis es sie gibt.
-   */
-  const helferAnlegen = async () => {
-    setLegtAn(true)
-    setAnlegeMeldung(null)
-    try {
-      // Erst die Helfer, dann die Rechenwerte: die Rechenwerte lesen die
-      // Helfer, und ein Rechenwert vor seinem Helfer stünde kurz auf „nicht
-      // verfügbar".
-      const helfer = await apiFetch<{ angelegt: number; fehlgeschlagen: number }>(
-        '/api/steuerung/co2/helfer', { method: 'POST' },
-      )
-      const rechen = await apiFetch<{ angelegt: number; fehlgeschlagen: number; ohneGeraet: string[] }>(
-        '/api/steuerung/co2/rechenwerte', { method: 'POST' },
-      )
-
-      const teile = [`${helfer.angelegt + rechen.angelegt} angelegt`]
-      const daneben = helfer.fehlgeschlagen + rechen.fehlgeschlagen
-      if (daneben > 0) teile.push(`${daneben} nicht — Einzelheiten stehen im Protokoll`)
-      if (rechen.ohneGeraet.length > 0) {
-        teile.push(`ohne zugeordnetes Gerät übersprungen: ${rechen.ohneGeraet.join(', ')}`)
-      }
-      setAnlegeMeldung(`${teile.join(', ')}.`)
-      setBestand(await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand'))
-    } catch (caught) {
-      setAnlegeMeldung(formatApiError(caught, 'Anlegen fehlgeschlagen.'))
-    } finally {
-      setLegtAn(false)
-    }
-  }
-
-  /**
-   * Erst zeigen, dann anlegen.
-   *
-   * Die Automationen bekommen einen eigenen Schritt mit eigener Zustimmung,
-   * weil an ihrem Ende ein Ventil an einer Gasflasche hängt. Der Vorschau-Lauf
-   * schreibt nichts.
-   */
-  const automationenZeigen = async () => {
-    setLegtAn(true)
-    setAnlegeMeldung(null)
-    try {
-      setVorschau(await apiFetch<AutoBilanz>('/api/steuerung/co2/automationen?vorschau=true', { method: 'POST' }))
-    } catch (caught) {
-      setAnlegeMeldung(formatApiError(caught, 'Vorschau fehlgeschlagen.'))
-    } finally {
-      setLegtAn(false)
-    }
-  }
-
-  const automationenAnlegen = async () => {
-    setLegtAn(true)
-    try {
-      const bilanz = await apiFetch<AutoBilanz>('/api/steuerung/co2/automationen', { method: 'POST' })
-      setVorschau(null)
-      setAnlegeMeldung(
-        `${bilanz.angelegt} Automationen geschrieben`
-        + (bilanz.fremd > 0 ? `, ${bilanz.fremd} von Hand gebaute blieben unangetastet` : '')
-        + (bilanz.fehlgeschlagen > 0 ? `, ${bilanz.fehlgeschlagen} nicht` : '') + '.',
-      )
-      setBestand(await apiFetch<Bestandsaufnahme>('/api/steuerung/co2/bestand'))
-    } catch (caught) {
-      setAnlegeMeldung(formatApiError(caught, 'Anlegen fehlgeschlagen.'))
-    } finally {
-      setLegtAn(false)
     }
   }
 
@@ -489,18 +365,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       {!live.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand." />}
 
 
-      {bestand && bestand.haErreichbar && (bestand.fehlt > 0 || bestand.fehlendeRollen.length > 0) && (
-        <V1Alert
-          tone="warn"
-          title={`Noch nicht vollständig eingerichtet — ${bestand.fehlt} von ${bestand.fehlt + bestand.da} Bauteilen fehlen`}
-          message={[
-            bestand.fehlendeRollen.length > 0
-              ? `Nicht zugeordnet: ${bestand.fehlendeRollen.join(', ')}.`
-              : null,
-            bestand.ausgefalleneFunktionen.join(' '),
-          ].filter(Boolean).join(' ')}
-        />
-      )}
+      <BestandHinweis bestand={bestand} />
       <V1Card>
         <div className="st-jetzt">
           <span className="st-gross">{live.co2Ppm != null ? formatNumber(live.co2Ppm, 0) : '–'}<span>ppm</span></span>
@@ -662,7 +527,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               onFest={(v) => setz('rhNotbremseFestProzent', v)}
               schritt={0.5}
               ergebnis={notbremseErgibt}
-              fehler={feldFehler.RhNotbremseAbstandProzent ?? feldFehler.RhNotbremseFestProzent}
+              fehlerAbstand={feldFehler.RhNotbremseAbstandProzent}
+              fehlerFest={feldFehler.RhNotbremseFestProzent}
             />
             <PlanGrenze
               label="Canopy-Obergrenze"
@@ -681,7 +547,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               onFest={(v) => setz('canopyObergrenzeC', v)}
               schritt={0.5}
               ergebnis={canopyErgibt}
-              fehler={feldFehler.CanopyObergrenzeAbstandK ?? feldFehler.CanopyObergrenzeC}
+              fehlerAbstand={feldFehler.CanopyObergrenzeAbstandK}
+              fehlerFest={feldFehler.CanopyObergrenzeC}
             />
 
             <h3 className="st-gruppe">Freigabe</h3>
@@ -772,96 +639,21 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         </V1Section>
       )}
 
-      {/* Fork AI (01.10.2026): auch bei einer veralteten Fassung — sonst bekäme eine
-          bestehende Installation eine reparierte Vorlage nie angeboten. */}
-      {bestand && (bestand.fehlt > 0 || bestand.veraltet > 0) && (
-        <V1Section title={bestand.fehlt > 0 ? 'Was in Home Assistant fehlt' : 'Neue Fassung der Automationen'}>
-          {bestand.fehlt > 0 && (
-            <V1Card>
-              {bestand.bauteile.filter((b) => b.stand === 'Fehlt').map((b) => (
-                <div className="st-feldzeile" key={b.entityId}>
-                  <span className="st-etikett">
-                    {b.zweck}
-                    <small>
-                      {ART_LESBAR[b.art] ?? b.art} · {b.pflicht ? 'wird gebraucht' : (b.ohneDas ?? 'optional')}
-                    </small>
-                  </span>
-                </div>
-              ))}
-              <p className="st-hinweis">
-                Diese Objekte gehören zur Steuerung selbst, nicht zu deinen Geräten. Einstellwerte, Schalter,
-                Zeitstempel, Zähler und Rechenwerte legt der Fork an; die Automationen folgen.
-              </p>
-              {anlegeMeldung && <p className="st-hinweis">{anlegeMeldung}</p>}
-              <V1Button variant="primary" onClick={helferAnlegen} disabled={legtAn}>
-                {legtAn ? 'Legt an …' : 'Fehlende anlegen'}
-              </V1Button>
-            </V1Card>
-          )}
-
-          <V1Card>
-            <div className="st-feldzeile">
-              <span className="st-etikett">
-                Automationen
-                <small>
-                  Sie schalten das Ventil. Deshalb ein eigener Schritt — erst zeigen, dann anlegen.
-                  Von Hand gebaute bleiben unangetastet.
-                </small>
-              </span>
-            </div>
-            {bestand.bauteile.filter((b) => b.stand === 'Veraltet').map((b) => (
-              <div className="st-feldzeile" key={b.entityId}>
-                <span className="st-etikett">
-                  {b.zweck}
-                  <small>Von Fork AI angelegt, aber in einer älteren Fassung. Neu anlegen ersetzt sie.</small>
-                </span>
-              </div>
-            ))}
-
-            {vorschau ? (
-              <>
-                {vorschau.einzeln.map((a) => (
-                  <div className="st-feldzeile" key={a.kennung}>
-                    <span className="st-etikett">
-                      {a.name}
-                      <small>{a.hinweis ?? STAND_LESBAR[a.stand] ?? a.stand}</small>
-                    </span>
-                    <span className="st-nurlesen">{STAND_LESBAR[a.stand] ?? a.stand}</span>
-                  </div>
-                ))}
-                <p className="st-hinweis">
-                  Der vorhandene Stand wird vorher gesichert. Danach wird nachgesehen, ob Home Assistant
-                  die Automationen wirklich geladen hat.
-                </p>
-                <V1Button variant="primary" onClick={automationenAnlegen} disabled={legtAn}>
-                  {legtAn ? 'Schreibt …' : 'Jetzt anlegen'}
-                </V1Button>
-                <V1Button variant="ghost" onClick={() => setVorschau(null)} disabled={legtAn}>
-                  Abbrechen
-                </V1Button>
-              </>
-            ) : (
-              <V1Button variant="ghost" onClick={automationenZeigen} disabled={legtAn}>
-                Zeigen, was angelegt würde
-              </V1Button>
-            )}
-          </V1Card>
-
-          <V1Card>
-            <div className="st-feldzeile">
-              <span className="st-etikett">
-                Probeschaltung
-                <small>
-                  Öffnet das Ventil zwei Sekunden und sieht nach, ob der Port reagiert. Zwei Sekunden CO₂
-                  sind harmlos — ein Ventil, das nur meldet zu schalten, ist es nicht.
-                </small>
-              </span>
-            </div>
-            {probe && <p className="st-hinweis">{probe}</p>}
-            <V1Button variant="ghost" onClick={ventilProbieren}>Ventil kurz öffnen</V1Button>
-          </V1Card>
-        </V1Section>
-      )}
+      <BestandAbschnitt modul="co2" schaltet="das Ventil" bestand={bestand} neuLaden={bestandNeuLaden}>
+        <V1Card>
+          <div className="st-feldzeile">
+            <span className="st-etikett">
+              Probeschaltung
+              <small>
+                Öffnet das Ventil zwei Sekunden und sieht nach, ob der Port reagiert. Zwei Sekunden CO₂
+                sind harmlos — ein Ventil, das nur meldet zu schalten, ist es nicht.
+              </small>
+            </span>
+          </div>
+          {probe && <p className="st-hinweis">{probe}</p>}
+          <V1Button variant="ghost" onClick={ventilProbieren}>Ventil kurz öffnen</V1Button>
+        </V1Card>
+      </BestandAbschnitt>
 
       {absicherung?.erreichbar && (
         <V1Section title="Sicherheit der CO₂-Regelung">
@@ -952,7 +744,7 @@ function fmtProzent(wert: number | null | undefined): string {
  * (Plan + Abstand) — wie „Temperatur max." beim Entfeuchter. Darunter steht,
  * was gerade gilt, damit niemand die Summe im Kopf bilden muss.
  */
-function PlanGrenze({ label, hinweis, einheit, abstandEinheit, modus, onModus, abstand, onAbstand, fest, onFest, schritt, ergebnis, fehler }: {
+function PlanGrenze({ label, hinweis, einheit, abstandEinheit, modus, onModus, abstand, onAbstand, fest, onFest, schritt, ergebnis, fehlerAbstand, fehlerFest }: {
   label: string
   hinweis: string
   einheit: string
@@ -965,9 +757,16 @@ function PlanGrenze({ label, hinweis, einheit, abstandEinheit, modus, onModus, a
   onFest: (wert: number) => void
   schritt: number
   ergebnis: number | null | undefined
-  fehler?: string
+  fehlerAbstand?: string
+  fehlerFest?: string
 }) {
   const wert = modus === 'plan' ? abstand : fest
+  // Ein Fehler am Feld, das der Modus ausblendet, nennt Feld und Modus —
+  // sonst stand die Markierung neben einem gefüllten Feld.
+  const fehler = modusFehler(modus, {
+    plan: { feld: `${label}, Abstand zum Plan`, modus: 'Plan +', fehler: fehlerAbstand },
+    fest: { feld: `${label}, fester Wert`, modus: 'Fest', fehler: fehlerFest },
+  })
   return (
     <div className="st-feldzeile">
       <span className="st-etikett">
