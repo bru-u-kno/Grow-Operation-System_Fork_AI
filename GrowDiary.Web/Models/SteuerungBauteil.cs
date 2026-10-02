@@ -501,13 +501,20 @@ public static class SteuerungBauteile
     /// (Plan × Anteil, Plan-Luft + Abstand) kann die Spanne verlassen, ohne dass
     /// ihn eine Formularprüfung je gesehen hat. Die Grenzen kommen aus dem
     /// Katalog, aus dem auch der Helfer angelegt wird — nicht abgetippt.
-    /// Ein Helfer ohne Katalogeintrag oder ohne Grenzen bleibt unverändert.
+    ///
+    /// <para><b>Helfer außerhalb des Katalogs</b> (Fork AI, 02.10.2026): etwa
+    /// <c>input_number.vpd_ziel_unten</c>, das der Nutzer selbst anlegt und der
+    /// Wochenplan nur beschreibt. Für sie ist die Spanne, die Home Assistant am
+    /// Helfer meldet (Attribute <c>min</c>/<c>max</c>), die einzige Quelle —
+    /// sie kommt als <paramref name="haMin"/>/<paramref name="haMax"/> herein.
+    /// Der Katalog geht vor: er ist die Vorlage, aus der der Fork seine Helfer
+    /// anlegt. Ohne beides bleibt der Wert unverändert.</para>
     /// </remarks>
-    public static double AufSpanne(string entityId, double wert)
+    public static double AufSpanne(string entityId, double wert, double? haMin = null, double? haMax = null)
     {
         var bauteil = Alle.FirstOrDefault(b => string.Equals(b.EntityId, entityId, StringComparison.OrdinalIgnoreCase));
-        if (bauteil?.Min is { } min && wert < min) return min;
-        if (bauteil?.Max is { } max && wert > max) return max;
+        if ((bauteil?.Min ?? haMin) is { } min && wert < min) return min;
+        if ((bauteil?.Max ?? haMax) is { } max && wert > max) return max;
         return wert;
     }
 

@@ -239,18 +239,27 @@ public sealed class GrowsApiController : ApiControllerBase
            einem Programm, das niemand mehr gewählt hat. Die Oberfläche ruft den
            Planweg vorher auf; danach ist die Id hier dieselbe und es gibt
            nichts abzulehnen. */
-        // Verglichen wird mit dem Programm des PLANS, nicht mit dem Feld am Grow:
-        // wer im Formular auf eigene Nährstoffe umstellt, leert das Feld am Grow,
-        // der Plan bleibt. Wer danach dasselbe Programm wieder einträgt, wechselt
-        // nichts — bis zum 02.10.2026 lehnte die Sperre genau das ab (gefunden
-        // vom E2E-Rundweg formularfelder-kommen-an, der so nicht aufräumen konnte).
+        // Verglichen wird mit dem Programm des PLANS, nicht mit dem Feld am Grow —
+        // wer dasselbe Programm einträgt, wechselt nichts.
+        //
+        // Ein LEERES Programm ist ebenfalls ein Wechsel (zum 02.10.2026 nachgezogen,
+        // Befund aus docs/pruefung-2026-10-01.md). Bis dahin rutschte null durch:
+        // am Grow stand „kein Programm", der Plan blieb und lieferte weiter
+        // Zielwerte, Alarme und HA-Übergabe aus Programm A — und der Wochenplan
+        // (WochenplanApiController.WerteDto) zählt Grows über genau dieses Feld,
+        // fand den Grow also nicht mehr. Einen Weg „Plan entfernen" gibt es nicht
+        // (Pläne werden nie gelöscht, siehe GrowPlanService.RegisterLaden), also
+        // kann der Grow sein Programm nicht loswerden — das Feld darf es dann auch
+        // nicht behaupten. Die Oberfläche sperrt das Namensfeld bei Grows mit Plan.
         if (Services.GrowPlan.GrowPlanRegister.Programm(id) is { } planProgramm
-            && grow.FeedProgramId is { } neuesProgramm
-            && !string.Equals(neuesProgramm, planProgramm.Id, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(grow.FeedProgramId, planProgramm.Id, StringComparison.OrdinalIgnoreCase))
         {
-            ModelState.AddModelError(nameof(request.FeedProgramId),
-                "Dieser Grow hat einen Plan — das Programm wechselt über „Programm wechseln“ "
-                + "(POST /api/grows/{id}/plan/programm), damit klar ist, ob eigene Änderungen mitgehen.");
+            ModelState.AddModelError(nameof(request.FeedProgramId), grow.FeedProgramId is null
+                ? $"Dieser Grow läuft nach seinem Plan („{(string.IsNullOrWhiteSpace(planProgramm.Name) ? planProgramm.Id : planProgramm.Name)}“) — ohne Programm "
+                  + "geht es nicht. Ein anderes Programm wählst du über „Programm wechseln“ "
+                  + "(POST /api/grows/{id}/plan/programm)."
+                : "Dieser Grow hat einen Plan — das Programm wechselt über „Programm wechseln“ "
+                  + "(POST /api/grows/{id}/plan/programm), damit klar ist, ob eigene Änderungen mitgehen.");
             return ValidationError();
         }
 

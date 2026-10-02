@@ -144,11 +144,13 @@ public sealed class WochenplanSyncService
     {
         [Rollen.WasserTag] = "input_number.chiller_zieltemperatur_tag",
         [Rollen.WasserNacht] = "input_number.chiller_zieltemperatur_nacht",
-        [Rollen.RhObergrenze] = "input_number.co2_rh_obergrenze",
+        [Rollen.RhObergrenze] = EntfeuchterSteuerungService.Entitaeten.RhObergrenze,
         [Rollen.Co2Ziel] = "input_number.co2_zielwert",
-        [Rollen.VpdUnten] = "input_number.vpd_ziel_unten",
-        [Rollen.VpdOben] = "input_number.vpd_ziel_abschaltung",
-        [Rollen.BlattOffset] = "input_number.vpd_blatt_offset",
+        // Verwiesen, nicht abgetippt: die Entfeuchter-Steuerung liest dieselben
+        // Helfer, und zwei Schreibweisen derselben Kennung laufen auseinander.
+        [Rollen.VpdUnten] = EntfeuchterSteuerungService.Entitaeten.VpdUnten,
+        [Rollen.VpdOben] = EntfeuchterSteuerungService.Entitaeten.VpdOben,
+        [Rollen.BlattOffset] = EntfeuchterSteuerungService.Entitaeten.BlattOffset,
     };
 
     private readonly GrowRepository _grows;
@@ -332,7 +334,7 @@ public sealed class WochenplanSyncService
         // nachschlägt, findet grundsätzlich nichts.
         geschrieben += await HelferNachziehenAsync(
             auftraege,
-            async entity => Zahl((await _ha.GetEntityStateAsync(settings, entity, ct))?.State),
+            async entity => HelferLesung.Aus(await _ha.GetEntityStateAsync(settings, entity, ct)),
             (entity, wert) => _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
                 new Dictionary<string, object> { ["value"] = wert }),
             stand,
@@ -352,7 +354,7 @@ public sealed class WochenplanSyncService
     /// Assistant prüfbar: gelesen und geschrieben wird über die beiden Rückrufe.
     /// </summary>
     /// <param name="auftraege">Helfer und der Wert, den die Woche für ihn vorsieht.</param>
-    /// <param name="lesen">Der Wert, der in Home Assistant steht (null: unlesbar).</param>
+    /// <param name="lesen">Was in Home Assistant steht: Wert (null: unlesbar) und die Spanne, die der Helfer meldet.</param>
     /// <param name="schreiben"><c>input_number.set_value</c>; false, wenn HA ablehnt.</param>
     /// <returns>Wie viele Helfer geschrieben wurden.</returns>
     /// <remarks>
@@ -370,10 +372,30 @@ public sealed class WochenplanSyncService
     /// Planwert (85), stuende beim naechsten Lauf 80 gegen 85, und jeder begrenzte
     /// Helfer galt fortan als „von dir gesetzt": der Plan liesse ihn fuer immer
     /// in Ruhe, auch wenn die Woche laengst wieder in die Spanne passt.</para>
+    ///
+    /// <para><b>Auch Helfer außerhalb des Katalogs</b> (02.10.2026). Die beiden
+    /// VPD-Ziele (<c>input_number.vpd_ziel_*</c>) legt der Nutzer selbst an; der
+    /// Katalog kennt sie nicht, und <see cref="SteuerungBauteile.AufSpanne"/>
+    /// liess sie deshalb unbegrenzt durch — mit demselben Ergebnis wie oben:
+    /// abgelehnt bei jedem Lauf. Für sie gilt die Spanne, die Home Assistant am
+    /// Helfer meldet; begrenzt wird über dieselbe Stelle.</para>
     /// </remarks>
-    public static async Task<int> HelferNachziehenAsync(
+    public static Task<int> HelferNachziehenAsync(
         IEnumerable<(string Entity, double Planwert)> auftraege,
         Func<string, Task<double?>> lesen,
+        Func<string, double, Task<bool>> schreiben,
+        WochenplanSyncStand stand,
+        bool ersterLauf,
+        ILogger logger)
+        => HelferNachziehenAsync(
+            auftraege,
+            async entity => new HelferLesung(await lesen(entity)),
+            schreiben, stand, ersterLauf, logger);
+
+    /// <inheritdoc cref="HelferNachziehenAsync(IEnumerable{ValueTuple{string, double}}, Func{string, Task{double?}}, Func{string, double, Task{bool}}, WochenplanSyncStand, bool, ILogger)"/>
+    public static async Task<int> HelferNachziehenAsync(
+        IEnumerable<(string Entity, double Planwert)> auftraege,
+        Func<string, Task<HelferLesung>> lesen,
         Func<string, double, Task<bool>> schreiben,
         WochenplanSyncStand stand,
         bool ersterLauf,
@@ -384,7 +406,8 @@ public sealed class WochenplanSyncService
         {
             if (stand.VonDir.Contains(entity, StringComparer.OrdinalIgnoreCase)) continue;
 
-            var istWert = await lesen(entity);
+            var lesung = await lesen(entity);
+            var istWert = lesung.Wert;
 
             // Beim ersten Lauf nur merken, nicht schreiben: was in HA steht, ist
             // die Ausgangslage, nicht ein Fremdeingriff.
@@ -406,7 +429,7 @@ public sealed class WochenplanSyncService
             }
 
             // Was HA annehmen kann — und was ab jetzt als „zuletzt geschrieben" gilt.
-            var wert = SteuerungBauteile.AufSpanne(entity, planwert);
+            var wert = SteuerungBauteile.AufSpanne(entity, planwert, lesung.Min, lesung.Max);
             if (Math.Abs(wert - planwert) > 0.001)
             {
                 logger.LogInformation(
@@ -711,6 +734,20 @@ public sealed class WochenplanSyncService
         return await UebergebenAsync(ct);
     }
 
-    private static double? Zahl(string? zustand)
+    internal static double? Zahl(string? zustand)
         => double.TryParse(zustand, NumberStyles.Float, CultureInfo.InvariantCulture, out var wert) ? wert : null;
+}
+
+/// <summary>
+/// Was der Wochenplan von einem HA-Helfer liest, bevor er schreibt: den Wert und
+/// die Spanne, die Home Assistant am Helfer meldet (Fork AI, 02.10.2026).
+/// </summary>
+/// <param name="Wert">Der Zustand als Zahl — null, wenn unlesbar.</param>
+/// <param name="Min">Attribut <c>min</c> des Helfers, sofern gemeldet.</param>
+/// <param name="Max">Attribut <c>max</c> des Helfers, sofern gemeldet.</param>
+public sealed record HelferLesung(double? Wert, double? Min = null, double? Max = null)
+{
+    /// <summary>Aus einem HA-Zustand — null (nicht erreichbar) ergibt eine leere Lesung.</summary>
+    public static HelferLesung Aus(HomeAssistantState? zustand)
+        => new(WochenplanSyncService.Zahl(zustand?.State), zustand?.AttributMin, zustand?.AttributMax);
 }

@@ -360,6 +360,17 @@ public sealed partial class SystemApiController
                         .OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
             }
 
+            /* Fork AI (02.10.2026): die Schema-Ergänzungen SOFORT, nicht erst beim
+               Neustart. Stammt die Sicherung aus einer älteren Fassung, fehlen ihr
+               Spalten und Tabellen, die der DatabaseInitializer beim Start
+               nachrüstet — bis dahin scheiterte jede Abfrage, die sie braucht
+               („no such column"). Derselbe Aufruf wie in Program.cs, keine eigene
+               Liste. Noch VOR dem Wegräumen der Rollback-Kopie: scheitert er, fängt
+               der catch unten und spielt die vorige Datei zurück, statt eine
+               halb nachgerüstete Datenbank stehen zu lassen. */
+            SqliteConnection.ClearAllPools();
+            _schema.Initialize();
+
             DeleteDirectoryBestEffort(rollbackRoot);
 
             var result = new BackupRestoreResultDto(

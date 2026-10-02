@@ -9,6 +9,7 @@ import { classNames } from '../utils'
 import { aufstellungName, einstiegName, materialName, samenName, statusName, zeltZweckName } from '../deutsche-woerter'
 import { V1Sheet } from '../components/V1Sheet'
 import { deckung, istEigenesProgramm, wechselNoetig } from '../features/grows/programm-deckung'
+import type { PlanStand } from '../features/zielwerte/plan-reiter'
 import { GrowPlanPanel } from '../features/grows/GrowPlanPanel'
 import { buildTimeline, canCreate, checkPlan } from '../features/grows/grow-plan-model'
 import '../features/grows/grows.css'
@@ -46,6 +47,12 @@ function GrowSetupPage() {
   // Fork AI (Grow-Plan): das Programm beim Öffnen — ein Wechsel fragt nach den eigenen Änderungen.
   const [programmVorher, setProgrammVorher] = useState<string | null>(null)
   const [wechsel, setWechsel] = useState<{ anzahl: number; name: string } | null>(null)
+  /* Das Programm des Plans, wenn der Grow einen hat (02.10.2026). Der Plan ist
+     dann das Programm — der Server lehnt ein leeres oder anderes Programm am
+     Grow ab (GrowsApiController.Update). Das Namensfeld „Anderes Programm"
+     wuerde genau das schicken; es steht deshalb gesperrt da, statt etwas
+     anzubieten, das nie ankommt. */
+  const [planProgramm, setPlanProgramm] = useState<{ id: string; name: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +84,7 @@ function GrowSetupPage() {
       setLoading(true)
       setError(null)
       try {
-        const [tentData, hydroData, knowledge, grow, growsData, strainData, pflanzen] = await Promise.all([
+        const [tentData, hydroData, knowledge, grow, growsData, strainData, pflanzen, plan] = await Promise.all([
           apiFetch<TentDto[]>('/api/settings/tents', { signal: controller.signal }),
           apiFetch<HydroSetupDto[]>('/api/hydro-setups?includeArchived=true', { signal: controller.signal }),
           apiFetch<KnowledgeOverviewDto>('/api/knowledge', { signal: controller.signal }),
@@ -88,6 +95,10 @@ function GrowSetupPage() {
             ? apiFetch<PlantInstanceDto[]>(`/api/plants?growId=${growId}`, { signal: controller.signal })
                 .catch(() => [] as PlantInstanceDto[])
             : Promise.resolve([] as PlantInstanceDto[]),
+          // 404 heisst „kein Plan" — kein Fehler.
+          isEditing && growId
+            ? apiFetch<PlanStand>(`/api/grows/${growId}/plan`, { signal: controller.signal }).catch(() => null)
+            : Promise.resolve(null),
         ])
         if (controller.signal.aborted) return
         setTents(tentData)
@@ -96,8 +107,14 @@ function GrowSetupPage() {
         setOtherGrows(growsData)
         setStrains(strainData)
         if (grow) {
-          setFeedProgramId(grow.feedProgramId ?? null)
-          setProgrammVorher(grow.feedProgramId ?? null)
+          /* Mit Plan zaehlt SEIN Programm, nicht das Feld am Grow. Ein aelterer
+             Stand konnte das Feld leeren, waehrend der Plan blieb — ohne diesen
+             Vorrang liesse sich ein solcher Grow gar nicht mehr speichern, und
+             ein Kartenwechsel liefe am Planweg vorbei. */
+          const programm = plan?.programmId ?? grow.feedProgramId ?? null
+          setFeedProgramId(programm)
+          setProgrammVorher(programm)
+          setPlanProgramm(plan ? { id: plan.programmId, name: plan.programmName || plan.programmId } : null)
           // Ein Programm, das keiner Karte entspricht, ist ein eigenes — es
           // gehoert beim Bearbeiten sichtbar ins Freitextfeld, nicht ins Leere.
           const kartenTreffer = (knowledge.programs ?? []).some((program) => program.name === grow.nutrients || program.key === grow.nutrients)
@@ -295,7 +312,7 @@ function GrowSetupPage() {
             onFehler={setError}
           />
           <TimeStep form={form} patch={patch} />
-          <ProgramStep programs={programs} selected={form.nutrients ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} />
+          <ProgramStep programs={programs} selected={form.nutrients ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} planName={planProgramm?.name ?? null} />
         </div>
 
         <aside className="grow-wizard-context">
@@ -691,7 +708,7 @@ function vegHinweis(form: GrowUpsertPayload): string {
   return `Flip am ${datum}, wenn ab Start gerechnet wird \u2014 mit Bewurzelungsdatum entsprechend spaeter.`
 }
 
-function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void }) {
+function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch, planName }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void; planName: string | null }) {
   // Fork AI (Grow-Plan): Karten sagen, wie viel das Programm mitbringt;
   // eigene Programme stehen für sich.
   const karte = (program: NutrientProgramDto) => {
@@ -716,7 +733,12 @@ function ProgramStep({ programs, selected, custom, setCustom, selectProgram, pat
       <p className="program-hinweis">
         Der Grow bekommt eine eigene Kopie des Programms als Plan — spätere Änderungen am Programm ändern diesen Grow nicht.
       </p>
-      <div className="grow-custom-program"><V1Field label="Anderes Programm (nur Name, ohne Werte)"><input value={custom} onChange={(event) => { setCustom(event.target.value); selectProgram(null); patch({ nutrients: event.target.value || null }) }} placeholder="Eigene Mischung" /></V1Field></div>
+      <div className="grow-custom-program"><V1Field label="Anderes Programm (nur Name, ohne Werte)"><input value={custom} disabled={planName != null} onChange={(event) => { setCustom(event.target.value); selectProgram(null); patch({ nutrients: event.target.value || null }) }} placeholder="Eigene Mischung" /></V1Field></div>
+      {planName != null && (
+        <p className="program-hinweis" data-audit="programm-plan-sperre">
+          Dieser Grow läuft nach seinem Plan („{planName}“). Ein Programm nur mit Namen würde ihn nicht ersetzen — ein anderes Programm wählst du oben über die Karten.
+        </p>
+      )}
     </V1Section>
   )
 }

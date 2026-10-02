@@ -198,6 +198,15 @@ public sealed class HomeAssistantService
                 {
                     state.AttributTemperatur = soll.GetDouble();
                 }
+                // Die Spanne eines input_number (siehe HomeAssistantState.AttributMin).
+                if (attrs.TryGetProperty("min", out var min) && min.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    state.AttributMin = min.GetDouble();
+                }
+                if (attrs.TryGetProperty("max", out var max) && max.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    state.AttributMax = max.GetDouble();
+                }
             }
 
             if (double.TryParse(state.State, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var numeric))

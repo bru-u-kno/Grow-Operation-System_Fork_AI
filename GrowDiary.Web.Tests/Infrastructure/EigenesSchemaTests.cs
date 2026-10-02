@@ -98,4 +98,62 @@ public sealed class EigenesSchemaTests : IDisposable
         Assert.True(TabelleDa(paths, "ForkVerbrauchsartikel"));
         Assert.True(TabelleDa(paths, "ForkGeraete"));
     }
+
+    private static bool SpalteDa(AppPaths paths, string tabelle, string spalte)
+    {
+        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = paths.DatabasePath }.ToString());
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tabelle}') WHERE name = $spalte;";
+        command.Parameters.AddWithValue("$spalte", spalte);
+        return (long)command.ExecuteScalar()! > 0;
+    }
+
+    private static void Ausfuehren(AppPaths paths, string sql)
+    {
+        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = paths.DatabasePath }.ToString());
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Die Schema-Ergänzungen des <see cref="DatabaseInitializer"/> laufen nach dem
+    /// Restore sofort — nicht erst beim Neustart (docs/pruefung-2026-10-01.md,
+    /// „Noch offen, klein").
+    /// </summary>
+    /// <remarks>
+    /// Die „alte Fassung" entsteht, indem eine Spalte entfernt wird, die nur
+    /// <c>EnsureColumn</c> nachrüstet (nicht das CREATE TABLE einer Altdatenbank):
+    /// <c>CalibrationEvents.PointsJson</c>, seit 01.09.2026. Gesichert wird DIESE
+    /// Datei; danach läuft der Prozess weiter mit der vollständigen.
+    /// </remarks>
+    [Fact]
+    public void NachDemRestoreLaufenDieSchemaErgaenzungenSofort()
+    {
+        var paths = NeueDatenbank("restore-schema");
+        var system = new SystemApiController(paths, new GrowRepository(paths), new SystemAuditRepository(paths));
+
+        SqliteConnection.ClearAllPools();
+        Ausfuehren(paths, "ALTER TABLE CalibrationEvents DROP COLUMN PointsJson;");
+        Assert.False(SpalteDa(paths, "CalibrationEvents", "PointsJson"), "Die alte Fassung hat die Spalte noch — dann prüft der Fall nichts.");
+        var backup = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(system.CreateBackup().Result).Value);
+
+        // Der laufende Prozess hat die Spalte (Start).
+        TestDatabase.Initialize(paths);
+        Assert.True(SpalteDa(paths, "CalibrationEvents", "PointsJson"));
+
+        var ergebnis = system.RestoreBackup(backup.FileName).Result;
+        Assert.True(ergebnis is OkObjectResult, $"Restore schlug fehl: {(ergebnis as ObjectResult)?.Value}");
+
+        // Vorher: die Spalte fehlte bis zum Neustart.
+        Assert.True(SpalteDa(paths, "CalibrationEvents", "PointsJson"),
+            "Nach dem Restore fehlt CalibrationEvents.PointsJson — die Schema-Ergänzungen laufen erst beim Neustart.");
+
+        // Die Reparatur einmal wiederholen: ein zweiter Restore derselben alten Datei.
+        ergebnis = system.RestoreBackup(backup.FileName).Result;
+        Assert.True(ergebnis is OkObjectResult, $"Zweiter Restore schlug fehl: {(ergebnis as ObjectResult)?.Value}");
+        Assert.True(SpalteDa(paths, "CalibrationEvents", "PointsJson"), "Beim zweiten Restore fehlt die Spalte.");
+    }
 }

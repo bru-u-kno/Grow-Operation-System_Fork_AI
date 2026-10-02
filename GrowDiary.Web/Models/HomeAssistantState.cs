@@ -12,6 +12,20 @@ public sealed class HomeAssistantState
     /// climate-Gerät der eingestellte Sollwert.
     /// </summary>
     public double? AttributTemperatur { get; set; }
+
+    /// <summary>
+    /// Fork AI (02.10.2026): die Attribute <c>min</c> und <c>max</c> — bei einem
+    /// <c>input_number</c> die Spanne, außerhalb der <c>set_value</c> ablehnt.
+    /// </summary>
+    /// <remarks>
+    /// Für Helfer, die nicht aus dem Katalog (<see cref="SteuerungBauteile"/>)
+    /// stammen, ist das die einzige Quelle ihrer Spanne — etwa
+    /// <c>input_number.vpd_ziel_unten</c>, das der Nutzer selbst angelegt hat.
+    /// </remarks>
+    public double? AttributMin { get; set; }
+
+    /// <inheritdoc cref="AttributMin"/>
+    public double? AttributMax { get; set; }
     /// <summary>Wann sich der Zustands<b>text</b> zuletzt geändert hat.</summary>
     public DateTime? LastChanged { get; set; }
 

@@ -174,10 +174,38 @@ public sealed class PlanUndAlarmWegeTests
     }
 
     /// <summary>
-    /// Eigene Nährstoffe leeren das Programm am Grow, der Plan bleibt. Dasselbe
-    /// Programm danach wieder einzutragen ist kein Wechsel — bis zum 02.10.2026
-    /// lehnte die Sperre es ab, weil sie gegen das Feld am Grow verglich statt
-    /// gegen den Plan (E2E: formularfelder-kommen-an konnte nicht aufräumen).
+    /// Ein leeres Programm bei einem Grow mit Plan ist ein Wechsel „auf nichts" —
+    /// und wird abgelehnt wie jeder andere. Bis zum 02.10.2026 nahm der Weg es an:
+    /// am Grow stand kein Programm, der Plan lieferte weiter Programm A
+    /// (docs/pruefung-2026-10-01.md, „Noch offen, klein").
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task EinLeeresProgrammWirdBeiPlanAbgelehnt(string? leer)
+    {
+        var (id, tentId) = GrowMitPlan();
+        var client = _app.IngressClient();
+        // Selbsttest: der Grow hat wirklich einen Plan — sonst prüft der Fall nichts.
+        Assert.NotNull(GrowPlanRegister.Programm(id));
+
+        var antwort = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, leer));
+        Assert.Equal(HttpStatusCode.BadRequest, antwort.StatusCode);
+        var text = await antwort.Content.ReadAsStringAsync();
+        Assert.Contains("ohne Programm geht es nicht", text);
+        Assert.Contains("feedProgramId", text, StringComparison.OrdinalIgnoreCase);
+
+        // Grow und Plan stehen weiter auf demselben Programm.
+        var grow = await client.GetFromJsonAsync<JsonElement>($"/api/grows/{id}");
+        Assert.Equal("skx-canna-aqua", grow.GetProperty("feedProgramId").GetString());
+        Assert.Equal("skx-canna-aqua", GrowPlanRegister.Programm(id)!.Id);
+    }
+
+    /// <summary>
+    /// Dasselbe Programm wie der Plan ist kein Wechsel — auch in anderer
+    /// Schreibweise. Bis zum 02.10.2026 verglich die Sperre gegen das Feld am Grow
+    /// statt gegen den Plan (E2E: formularfelder-kommen-an konnte nicht aufräumen).
     /// </summary>
     [Fact]
     public async Task DasProgrammDesPlansDarfWiederEingetragenWerden()
@@ -185,15 +213,39 @@ public sealed class PlanUndAlarmWegeTests
         var (id, tentId) = GrowMitPlan();
         var client = _app.IngressClient();
 
-        var eigene = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, null));
-        Assert.Equal(HttpStatusCode.OK, eigene.StatusCode);
-
-        var zurueck = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, "skx-canna-aqua"));
-        Assert.Equal(HttpStatusCode.OK, zurueck.StatusCode);
+        var gleich = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, "SKX-Canna-Aqua"));
+        Assert.Equal(HttpStatusCode.OK, gleich.StatusCode);
 
         // Ein anderes Programm bleibt gesperrt.
         var anderes = await client.PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, "athena"));
         Assert.Equal(HttpStatusCode.BadRequest, anderes.StatusCode);
+    }
+
+    /// <summary>Ohne Plan bleibt ein leeres Programm erlaubt — die Sperre gilt nur dem Plan.</summary>
+    [Fact]
+    public async Task OhnePlanDarfDasProgrammLeerSein()
+    {
+        int id;
+        int? tentId;
+        using (var bereich = _app.Services.CreateScope())
+        {
+            var grows = bereich.ServiceProvider.GetRequiredService<GrowRepository>();
+            var vorlage = grows.GetActiveGrows().First();
+            tentId = vorlage.TentId;
+            id = grows.CreateGrow(new GrowRun
+            {
+                Name = "Ohne Plan " + Guid.NewGuid().ToString("N")[..6],
+                TentId = vorlage.TentId,
+                HydroStyle = HydroStyle.RDWC,
+                FeedProgramId = "skx-canna-aqua",
+                Status = GrowStatus.Completed,
+                StartDate = DateTime.Today.AddDays(-60),
+            });
+        }
+        Assert.Null(GrowPlanRegister.Programm(id));
+
+        var antwort = await _app.IngressClient().PutAsJsonAsync($"/api/grows/{id}", Formular(tentId, null));
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
     }
 
     // ---- Befund 6: Toleranz einer Plan-Regel ----
