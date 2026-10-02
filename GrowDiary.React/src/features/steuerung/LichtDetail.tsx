@@ -7,6 +7,7 @@ import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { befehlsMeldung, speicherMeldung } from './licht-meldungen'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
+import { useFehlerZeigen } from './fehler-reiter'
 import { entwurfAbgleichen, stufeAusFeld } from './licht-bedienung'
 
 /**
@@ -34,6 +35,8 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
   const [reiter, setReiter] = useState<LichtReiter>('betrieb')
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
+  // Gesperrtes Speichern: auf den Reiter des markierten Felds wechseln und hinrollen.
+  const fehlerZeigen = useFehlerZeigen(reiter, setReiter, LICHT_REITER)
   const [meldung, setMeldung] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [arbeitet, setArbeitet] = useState(false)
@@ -90,7 +93,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
     // Ein geleertes Zahlenfeld wäre NaN, im JSON `null` — das Backend kann es
     // nicht binden und meldet „Es wurde nichts übergeben.". Vorher sperren.
     const leer = leereZahlenfelder(entwurf)
-    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen(); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<LichtSeite>('/api/steuerung/licht', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -98,7 +101,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
       setMeldung(speicherMeldung(zurueck.haAngenommen))
     } catch (caught) {
       const felder = feldFehlerAus(caught)
-      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
+      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen() }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
       setArbeitet(false)

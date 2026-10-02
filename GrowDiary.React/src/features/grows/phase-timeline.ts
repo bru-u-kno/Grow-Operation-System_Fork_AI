@@ -19,15 +19,39 @@
  * weiterhin den offenen Strahl; erfunden wird nichts.
  */
 
+import { phaseName } from '../../deutsche-woerter'
+
 export type PhaseState = 'done' | 'current' | 'planned'
 
+/** Kennung der Phase im Strahl — nicht der Text auf dem Schirm, dafür {@link PHASEN_ANZEIGE}. */
 export type PhaseName = 'Keim' | 'Sämling' | 'Veg' | 'Blüte' | 'Trocknen' | 'Aushärten'
 
+/**
+ * Wie die Phasen auf dem Schirm heißen — aus `phaseName`, wo es eine GrowStage gibt.
+ *
+ * <b>Warum (02.10.2026).</b> Der Strahl führte eigene Namen, und für eine
+ * Phase wich er ab: auf der Karte stand „Veg Tag 64", während `phaseName`
+ * dieselbe Phase „Wachstum" nennt. Aufgefallen ist es erst, als ein Grow
+ * zufällig im Wachstum stand — der Demobestand hat keinen. Zwei Namen für eine
+ * Phase laufen auseinander; also verweisen statt abtippen.
+ */
+export const PHASEN_ANZEIGE: Record<PhaseName, string> = {
+  // Die Keimung ist keine GrowStage (der Server führt sie nicht als Phase).
+  Keim: 'Keim',
+  Sämling: phaseName('Seedling'),
+  Veg: phaseName('Veg'),
+  Blüte: phaseName('Flower'),
+  Trocknen: phaseName('Dry'),
+  Aushärten: phaseName('Cure'),
+}
+
+const WACHSTUM = PHASEN_ANZEIGE.Veg
+
 export type Phase = {
-  /** Für kurze Anzeigen („Veg Tag 20") — ohne den Text zerlegen zu müssen. */
+  /** Kennung der Phase; der Name auf dem Schirm steht in {@link PHASEN_ANZEIGE}. */
   name: PhaseName
   label: string
-  /** Kurzfassung für enge Stellen wie die Grow-Karten: „Veg 22/28". */
+  /** Kurzfassung für enge Stellen wie die Grow-Karten: „Wachstum 22/28". */
   short: string
   days: number
   state: PhaseState
@@ -260,7 +284,7 @@ export function buildPhaseTimeline(grow: PhaseTimelineInput | null, jetzt = Date
   // `flip` blieb die Veg fuer immer die laufende Phase.
   if (inBluete && flipFuerRechnung) {
     const dauer = tage(vegStart, flipFuerRechnung.getTime())
-    phases.push({ name: 'Veg', label: `Veg ${dauer} T`, short: `Veg ${dauer} T`, days: dauer, state: 'done' })
+    phases.push({ name: 'Veg', label: `${WACHSTUM} ${dauer} T`, short: `${WACHSTUM} ${dauer} T`, days: dauer, state: 'done' })
   } else {
     const gelaufen = tage(vegStart, jetzt)
     const geplant = flipFuerRechnung ? tage(vegStart, flipFuerRechnung.getTime()) : null
@@ -268,15 +292,15 @@ export function buildPhaseTimeline(grow: PhaseTimelineInput | null, jetzt = Date
       ? {
           // Noch im Sämling: die Veg steht bevor, sie läuft nicht.
           name: 'Veg',
-          label: geplant ? `Veg · ${geplant} T geplant` : 'Veg · offen',
-          short: geplant ? `Veg ${geplant} T` : 'Veg —',
+          label: geplant ? `${WACHSTUM} · ${geplant} T geplant` : `${WACHSTUM} · offen`,
+          short: geplant ? `${WACHSTUM} ${geplant} T` : `${WACHSTUM} —`,
           days: geplant ?? 0,
           state: 'planned',
         }
       : {
           name: 'Veg',
-          label: geplant ? `Veg · Tag ${gelaufen} von ${geplant}` : `Veg · Tag ${gelaufen}`,
-          short: geplant ? `Veg ${gelaufen}/${geplant}` : `Veg ${gelaufen} T`,
+          label: geplant ? `${WACHSTUM} · Tag ${gelaufen} von ${geplant}` : `${WACHSTUM} · Tag ${gelaufen}`,
+          short: geplant ? `${WACHSTUM} ${gelaufen}/${geplant}` : `${WACHSTUM} ${gelaufen} T`,
           days: geplant ?? gelaufen,
           state: 'current',
           progress: geplant ? Math.min(1, gelaufen / geplant) : undefined,
@@ -398,7 +422,7 @@ export function flipLabel(geplant: boolean, tage: number | null, datum: string):
 }
 
 /**
- * Die Kurzform für Kartenköpfe: „Veg Tag 20", „Blüte Tag 22".
+ * Die Kurzform für Kartenköpfe: „Wachstum Tag 20", „Blüte Tag 22".
  *
  * Kommt aus demselben Strahl wie alles andere. Die Grow-Karten hatten dafür
  * eine eigene Rechnung, die ab Startdatum zählte — also die Keimzeit
@@ -407,5 +431,5 @@ export function flipLabel(geplant: boolean, tage: number | null, datum: string):
 export function currentPhaseLabel(timeline: PhaseTimeline): string | null {
   const laufend = timeline.phases.find((phase) => phase.state === 'current')
   if (!laufend || laufend.dayInPhase == null) return null
-  return `${laufend.name} Tag ${laufend.dayInPhase}`
+  return `${PHASEN_ANZEIGE[laufend.name]} Tag ${laufend.dayInPhase}`
 }

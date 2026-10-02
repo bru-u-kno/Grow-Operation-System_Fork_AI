@@ -6,6 +6,7 @@ import type { ChillerEinstellungen, ChillerReiter, ChillerSeite, SteuerungModul 
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
+import { useFehlerZeigen } from './fehler-reiter'
 import { haZustandName } from '../../deutsche-woerter'
 
 /**
@@ -37,6 +38,8 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
   const [reiter, setReiter] = useState<ChillerReiter>('betrieb')
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
+  // Gesperrtes Speichern: auf den Reiter des markierten Felds wechseln und hinrollen.
+  const fehlerZeigen = useFehlerZeigen(reiter, setReiter, CHILLER_REITER)
   const [meldung, setMeldung] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [arbeitet, setArbeitet] = useState(false)
@@ -83,7 +86,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
   const speichern = async () => {
     if (!entwurf) return
     const leer = leereZahlenfelder(entwurf)
-    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); return }
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen(); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<ChillerSeite>('/api/steuerung/chiller', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -93,7 +96,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
         : 'Gespeichert.')
     } catch (caught) {
       const felder = feldFehlerAus(caught)
-      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.') }
+      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen() }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
       setArbeitet(false)

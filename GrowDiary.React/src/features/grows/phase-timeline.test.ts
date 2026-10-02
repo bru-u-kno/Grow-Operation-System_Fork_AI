@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildPhaseTimeline, flipLabel, shortDate } from './phase-timeline'
+import { buildPhaseTimeline, currentPhaseLabel, flipLabel, PHASEN_ANZEIGE, shortDate } from './phase-timeline'
+import { PHASEN, phaseName } from '../../deutsche-woerter'
 
 /** 1. Juni 2026, damit die Tagesrechnung nachvollziehbar bleibt. */
 const JETZT = new Date('2026-06-01T12:00:00Z').getTime()
@@ -23,7 +24,7 @@ describe('buildPhaseTimeline', () => {
     expect(strahl.phases.map((phase) => phase.label)).toEqual([
       'Keim · nicht erfasst',
       'Sämling 14 T',
-      'Veg · Tag 6',
+      'Wachstum · Tag 6',
       'Blüte · offen',
       // Trocknen und Aushaerten kamen dazu, weil der Strahl an der Ernte endete
       // — und damit vor der Frage, wann es wirklich fertig ist.
@@ -61,7 +62,7 @@ describe('buildPhaseTimeline', () => {
 
     const laufend = strahl.phases.find((phase) => phase.state === 'current')!
     expect(laufend.name).toBe('Veg')
-    expect(laufend.label).toBe('Veg · Tag 4')
+    expect(laufend.label).toBe('Wachstum · Tag 4')
     // Und der Sämling steht mit seiner echten Dauer da, ohne „geschätzt".
     expect(strahl.phases.find((phase) => phase.name === 'Sämling')!.label).toBe('Sämling 6 T')
   })
@@ -81,7 +82,7 @@ describe('buildPhaseTimeline', () => {
     expect(strahl.dates.harvest).toBe('11.08.')
 
     const veg = strahl.phases.find((phase) => phase.state === 'current')!
-    expect(veg.label).toBe('Veg · Tag 20 von 28')
+    expect(veg.label).toBe('Wachstum · Tag 20 von 28')
     expect(veg.progress).toBeCloseTo(20 / 28, 5)
 
     const bluete = strahl.phases.find((phase) => phase.name === 'Blüte')!
@@ -99,7 +100,7 @@ describe('buildPhaseTimeline', () => {
     const veg = strahl.phases.find((phase) => phase.state === 'current')!
     // Der Fortschritt bleibt bei 1 stehen statt über den Balken hinauszulaufen.
     expect(veg.progress).toBe(1)
-    expect(veg.label).toBe('Veg · Tag 40 von 28')
+    expect(veg.label).toBe('Wachstum · Tag 40 von 28')
   })
 
   it('setzt die Keimphase vor den Sämling, sobald bewurzelt bekannt ist', () => {
@@ -115,7 +116,7 @@ describe('buildPhaseTimeline', () => {
     // Der Sämling liegt zwischen Bewurzelung und dem eingetragenen Übergang.
     expect(strahl.phases[1].label).toBe('Sämling 8 T')
     // Die geplanten 40 Tage zählen ab dem Veg-Beginn, nicht ab dem Start.
-    expect(strahl.phases[2].label).toBe('Veg · Tag 10 von 40')
+    expect(strahl.phases[2].label).toBe('Wachstum · Tag 10 von 40')
   })
 
   it('nimmt das Bewurzelungsdatum, wenn beides bekannt ist', () => {
@@ -139,7 +140,7 @@ describe('buildPhaseTimeline', () => {
     expect(strahl.flipIsPlanned).toBe(false)
     const veg = strahl.phases.find((phase) => phase.name === 'Veg')!
     expect(veg.state).toBe('done')
-    expect(veg.label).toBe('Veg 22 T')
+    expect(veg.label).toBe('Wachstum 22 T')
 
     const bluete = strahl.phases.find((phase) => phase.name === 'Blüte')!
     expect(bluete.state).toBe('current')
@@ -157,7 +158,7 @@ describe('buildPhaseTimeline', () => {
     // Das Datum steht fest, der Flip ist aber noch nicht passiert: Veg läuft.
     const veg = strahl.phases.find((phase) => phase.state === 'current')!
     expect(veg.name).toBe('Veg')
-    expect(veg.label).toBe('Veg · Tag 10 von 15')
+    expect(veg.label).toBe('Wachstum · Tag 10 von 15')
     // Auch ein festes Datum in der Zukunft liest sich als "geplant" — vorher
     // stand unter dem Strahl "Geflippt", obwohl der Termin erst kommt.
     expect(strahl.flipIsPlanned).toBe(true)
@@ -182,7 +183,7 @@ describe('buildPhaseTimeline', () => {
     }, JETZT)
 
     expect(strahl.dates.flip).toBe('—')
-    expect(strahl.phases.find((phase) => phase.state === 'current')!.label).toBe('Veg · Tag 10')
+    expect(strahl.phases.find((phase) => phase.state === 'current')!.label).toBe('Wachstum · Tag 10')
   })
 
   it('gibt einem Klon keine Sämlingsphase', () => {
@@ -196,7 +197,7 @@ describe('buildPhaseTimeline', () => {
     expect(strahl.phases.some((phase) => phase.name === 'Sämling')).toBe(false)
     const laufend = strahl.phases.find((phase) => phase.state === 'current')!
     expect(laufend.name).toBe('Veg')
-    expect(laufend.label).toBe('Veg · Tag 8')
+    expect(laufend.label).toBe('Wachstum · Tag 8')
   })
 
   it('lässt die Sämlingsdauer einstellen', () => {
@@ -304,5 +305,50 @@ describe('Zeitstrahl und Server sagen dasselbe', () => {
 
     const tag = (t: typeof ohne) => t.phases.find((phase) => phase.state === 'current')?.dayInPhase ?? 0
     expect(tag(mit), 'die mitgebrachten Tage werden ignoriert').toBeGreaterThan(tag(ohne))
+  })
+})
+
+/**
+ * Der Strahl spricht dieselbe Sprache wie `phaseName`.
+ *
+ * Befund 02.10.2026: auf der Karte stand „Veg Tag 64" — der Strahl führte für
+ * die vegetative Phase einen eigenen Namen, an der Übersetzung vorbei. Der
+ * Demobestand hat keinen Grow im Wachstum, also sah es nie jemand. Geprüft
+ * wird hier über ALLE Lagen des Strahls (Sämling, Wachstum mit und ohne Plan,
+ * Blüte, geerntet), nicht über eine.
+ */
+describe('Phasennamen auf dem Schirm', () => {
+  const lagen = {
+    'im Sämling': buildPhaseTimeline({ startDate: vorTagen(5) }, JETZT),
+    'im Wachstum ohne Plan': buildPhaseTimeline({ startDate: vorTagen(30) }, JETZT),
+    'im Wachstum mit Flip in der Zukunft': buildPhaseTimeline({ startDate: vorTagen(30), flipDate: inTagen(20) }, JETZT),
+    'im Sämling mit Plan': buildPhaseTimeline({ startDate: vorTagen(5), plannedVegDays: 28 }, JETZT),
+    'in der Blüte': buildPhaseTimeline({ startDate: vorTagen(60), flipDate: vorTagen(20) }, JETZT),
+    'geerntet': buildPhaseTimeline({ startDate: vorTagen(120), flipDate: vorTagen(80), endDate: vorTagen(3) }, JETZT),
+  }
+
+  it('nennt jede Phase so, wie phaseName sie nennt', () => {
+    expect(PHASEN_ANZEIGE.Veg).toBe(phaseName('Veg'))
+    expect(PHASEN_ANZEIGE.Sämling).toBe(phaseName('Seedling'))
+    expect(PHASEN_ANZEIGE.Blüte).toBe(phaseName('Flower'))
+    expect(PHASEN_ANZEIGE.Trocknen).toBe(phaseName('Dry'))
+    expect(PHASEN_ANZEIGE.Aushärten).toBe(phaseName('Cure'))
+  })
+
+  it('schreibt in keine Beschriftung einen rohen Phasen-Wert', () => {
+    // Mengenwächter: ohne Beschriftungen liefe die Suche ins Leere und wäre grün.
+    const texte = Object.entries(lagen).flatMap(([lage, strahl]) =>
+      strahl.phases.flatMap((phase) => [`${lage}: ${phase.label}`, `${lage}: ${phase.short}`]))
+    expect(texte.length).toBeGreaterThanOrEqual(6 * 2 * 5)
+
+    const roh = texte.filter((text) => PHASEN.some((wert) =>
+      phaseName(wert) !== wert && new RegExp(`(?<![\\w-])${wert}(?![\\w-])`).test(text)))
+    expect(roh, `rohe Phasen-Werte im Strahl:\n  ${roh.join('\n  ')}`).toEqual([])
+  })
+
+  it('nennt die laufende Phase im Kartenkopf auf Deutsch', () => {
+    expect(currentPhaseLabel(lagen['im Wachstum mit Flip in der Zukunft'])).toMatch(/^Wachstum Tag \d+$/)
+    expect(currentPhaseLabel(lagen['im Wachstum ohne Plan'])).toMatch(/^Wachstum Tag \d+$/)
+    expect(currentPhaseLabel(lagen['in der Blüte'])).toMatch(/^Blüte Tag \d+$/)
   })
 })
