@@ -218,6 +218,20 @@
   .pa-tabelle th { text-align: left; padding: var(--s-1) var(--s-2); color: var(--faint); font-weight: 500; border-bottom: 1px solid var(--hair); }
   .pa-tabelle td { padding: var(--s-2); border-top: 1px solid var(--hair); font-variant-numeric: tabular-nums; vertical-align: top; }
   .pa-tabelle td:first-child { color: var(--muted); }
+  /* Fork AI (02.10.2026): am Telefon brachen Wochennamen und Spaltenköpfe mitten im
+     Wort („Blütewoche / 1", „Sta / rt", „gemes / sen") — die Zahlenspalten hatten
+     Platz übrig. Köpfe und Wochennamen bleiben ganz, Werte brechen nur an Leerzeichen;
+     unter 400 px rücken Zellen und Rand enger zusammen. Bei 320 px bleibt das knapp —
+     dafür der Wischbereich (.pa-tabelle-huelle): lieber wischen als abschneiden. */
+  .pa-tabelle-huelle { overflow-x: auto; }
+  .pa-tabelle th, .pa-tabelle td { overflow-wrap: normal; word-break: normal; }
+  .pa-tabelle th, .pa-tabelle td:first-child { white-space: nowrap; }
+  /* Tabellenkopf in der Etikett-Größe, wie der Token es vorsieht (tokens.css). */
+  .pa-tabelle th { font-size: var(--fs-etikett); }
+  @media (max-width: 400px) {
+    .pa { padding-left: var(--s-2); padding-right: var(--s-2); }
+    .pa-tabelle th, .pa-tabelle td { padding-left: var(--s-1); padding-right: var(--s-1); }
+  }
   /* Fork AI (02.10.2026): eigene Zeile unter dem Wochennamen — die erste Spalte wird nicht breiter. */
   .pa-verlaengert { display: block; white-space: nowrap; font: 400 var(--fs-etikett)/1.3 var(--font-mono); color: var(--faint); }
   .pa-tabelle .ist-geaendert, .pa-legende .ist-geaendert { color: var(--info-text); font-weight: 600; }

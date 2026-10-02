@@ -113,6 +113,9 @@ export function PlanAuswertung({ growId }: { growId: number }) {
           ))}
         </div>
 
+        {/* Wischbereich als Sicherung: passt die Tabelle einmal nicht (breitere
+            Schrift im Linux-Container), wird gewischt statt abgeschnitten. */}
+        <div className="pa-tabelle-huelle" data-audit="plan-tabelle-huelle">
         <table className="pa-tabelle">
           <thead>
             <tr>
@@ -134,6 +137,7 @@ export function PlanAuswertung({ growId }: { growId: number }) {
             ))}
           </tbody>
         </table>
+        </div>
         <p className="pa-legende">
           <span className="ist-geaendert">geändert</span> {geaendert > 0 ? `in ${geaendert} Woche${geaendert === 1 ? '' : 'n'}` : ''}
           {groesse !== 'dosierung' && <> · <span className="ist-ab">außerhalb</span> des Ziels (mit Alarm-Toleranz)</>}

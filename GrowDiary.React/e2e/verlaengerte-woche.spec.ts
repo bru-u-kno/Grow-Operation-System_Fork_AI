@@ -161,21 +161,35 @@ test('Wochen-Blatt: Wochennamen brechen am Telefon nicht um, die Anzucht heißt 
   // „Bewurzelungswoche 2" bei 390 px mitten im Wort („Bewurzelungswoc / he 2") —
   // Befund des Prüfers, 02.10.2026. Deshalb heißt die Woche „Bewurzelung 2" bzw.
   // „Anzucht 2", ohne „-woche".
-  await page.setViewportSize({ width: 390, height: 800 })
-  await page.goto(`/grows/${ziel.growId}`, { waitUntil: 'networkidle' })
-  const tabelle = page.locator('[data-audit="plan-auswertung"] .pa-tabelle')
-  await expect(tabelle).toBeVisible()
-  // Nur der Name (der erste Textknoten): „verlängert" steht absichtlich darunter.
-  const namen390 = await tabelle.evaluate((el) => [...el.querySelectorAll('tbody td:first-child')].map((td) => {
-    const name = [...td.childNodes].find((k) => k.nodeType === Node.TEXT_NODE && (k.textContent ?? '').trim())
-    if (!name) return { text: '', zeilen: 0 }
-    const r = document.createRange()
-    r.selectNodeContents(name)
-    return { text: (name.textContent ?? '').trim(), zeilen: new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size }
-  }))
-  expect(namen390.length, 'Die Plan-Tabelle am Grow ist leer.').toBeGreaterThanOrEqual(10)
-  expect(namen390.some((n) => angehaengt.test(n.text)), `Die angehängte Woche „${anzucht} N" fehlt in der Tabelle.`).toBe(true)
-  expect(namen390.filter((n) => n.text.startsWith(fremd)).map((n) => n.text),
-    `Startmaterial ${grow.startMaterial}: in der Plan-Tabelle steht „${fremd}".`).toEqual([])
-  expect(namen390.filter((n) => n.zeilen > 1).map((n) => n.text), '390 px: diese Wochennamen brechen in der Plan-Tabelle um.').toEqual([])
+  // Dazu (02.10.2026, Befund aus Agent B): bei 320 und 360 px brachen auch
+  // „Blütewoche / 1" und die Spaltenköpfe („Sta / rt", „gemes / sen").
+  for (const breite of [320, 360, 390]) {
+    await page.setViewportSize({ width: breite, height: 800 })
+    await page.goto(`/grows/${ziel.growId}`, { waitUntil: 'networkidle' })
+    const tabelle = page.locator('[data-audit="plan-auswertung"] .pa-tabelle')
+    await expect(tabelle).toBeVisible()
+    // Nur der Name (der erste Textknoten): „verlängert" steht absichtlich darunter.
+    const zellen = await tabelle.evaluate((el) => {
+      const zeilenVon = (knoten: Node) => {
+        const r = document.createRange()
+        r.selectNodeContents(knoten)
+        return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size
+      }
+      return {
+        namen: [...el.querySelectorAll('tbody td:first-child')].map((td) => {
+          const name = [...td.childNodes].find((k) => k.nodeType === Node.TEXT_NODE && (k.textContent ?? '').trim())
+          return name ? { text: (name.textContent ?? '').trim(), zeilen: zeilenVon(name) } : { text: '', zeilen: 0 }
+        }),
+        koepfe: [...el.querySelectorAll('thead th')].map((th) => ({ text: th.textContent ?? '', zeilen: zeilenVon(th) })),
+      }
+    })
+    expect(zellen.namen.length, 'Die Plan-Tabelle am Grow ist leer.').toBeGreaterThanOrEqual(10)
+    expect(zellen.koepfe.length, 'Die Plan-Tabelle hat keine Spaltenköpfe.').toBeGreaterThanOrEqual(3)
+    expect(zellen.namen.some((n) => angehaengt.test(n.text)), `Die angehängte Woche „${anzucht} N" fehlt in der Tabelle.`).toBe(true)
+    expect(zellen.namen.filter((n) => n.text.startsWith(fremd)).map((n) => n.text),
+      `Startmaterial ${grow.startMaterial}: in der Plan-Tabelle steht „${fremd}".`).toEqual([])
+    expect(zellen.namen.filter((n) => n.zeilen > 1).map((n) => n.text), `${breite} px: diese Wochennamen brechen in der Plan-Tabelle um.`).toEqual([])
+    expect(zellen.koepfe.filter((k) => k.zeilen > 1).map((k) => k.text), `${breite} px: diese Spaltenköpfe brechen um.`).toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${breite} px: die Seite läuft über.`).toBeLessThanOrEqual(0)
+  }
 })
