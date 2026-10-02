@@ -1,5 +1,6 @@
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
+using GrowDiary.Web.Tests.TestFakes;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GrowDiary.Web.Tests.Services;
@@ -102,5 +103,89 @@ public sealed class WochenplanHelferspanneTests
 
         Assert.Contains(RhHelfer, stand.VonDir);
         Assert.Equal(65, ha.Werte[RhHelfer]);
+    }
+
+    // ---- Helfer außerhalb des Katalogs (docs/pruefung-2026-10-01.md) ----
+
+    /// <summary>
+    /// Ein vom Nutzer angelegter Helfer: der Katalog kennt ihn nicht, Home
+    /// Assistant meldet seine Spanne als Attribute und lehnt außerhalb ab.
+    /// </summary>
+    private sealed class FremderHelfer(string entity, double min, double max)
+    {
+        public double Wert { get; set; } = (min + max) / 2;
+        public List<double> Schreibversuche { get; } = [];
+
+        public Task<HelferLesung> Lesen(string e)
+            => Task.FromResult(new HelferLesung(Wert, min, max));
+
+        public Task<bool> Schreiben(string e, double wert)
+        {
+            Assert.Equal(entity, e);
+            Schreibversuche.Add(wert);
+            if (wert < min || wert > max) return Task.FromResult(false);
+            Wert = wert;
+            return Task.FromResult(true);
+        }
+    }
+
+    /// <summary>Die Kennung, an die der Wochenplan das untere VPD-Ziel schreibt — aus dem Code, nicht aus dem Kopf.</summary>
+    private const string VpdHelfer = EntfeuchterSteuerungService.Entitaeten.VpdUnten;
+
+    [Fact]
+    public void DerVpdHelferStehtNichtImKatalog()
+    {
+        // Selbsttest: stünde er im Katalog, prüften die Fälle unten nur den alten Weg.
+        Assert.Throws<InvalidOperationException>(() => SteuerungBauteile.Spanne(VpdHelfer));
+    }
+
+    [Theory]
+    [InlineData(1.9, 1.6)]   // über der Spanne
+    [InlineData(0.2, 0.4)]   // unter der Spanne
+    public async Task EinHelferAusserhalbDesKatalogs_WirdAufDieSpanneAusHaBegrenzt(double planwert, double erwartet)
+    {
+        var ha = new FremderHelfer(VpdHelfer, min: 0.4, max: 1.6);
+        var stand = new WochenplanSyncStand();
+        await WochenplanSyncService.HelferNachziehenAsync(
+            [(VpdHelfer, 1.0)], ha.Lesen, ha.Schreiben, stand, ersterLauf: true, NullLogger.Instance);
+
+        await WochenplanSyncService.HelferNachziehenAsync(
+            [(VpdHelfer, planwert)], ha.Lesen, ha.Schreiben, stand, ersterLauf: false, NullLogger.Instance);
+
+        Assert.True(ha.Wert == erwartet,
+            $"Der Plan will VPD {planwert}, der Helfer nimmt 0,4 bis 1,6. In HA steht {ha.Wert} — "
+            + "set_value wurde abgelehnt (Versuche: " + string.Join(", ", ha.Schreibversuche) + ").");
+
+        // Die Reparatur einmal wiederholen: zweiter Lauf, gleiche Woche — kein „von dir gesetzt".
+        var zweiter = await WochenplanSyncService.HelferNachziehenAsync(
+            [(VpdHelfer, planwert)], ha.Lesen, ha.Schreiben, stand, ersterLauf: false, NullLogger.Instance);
+        Assert.Empty(stand.VonDir);
+        Assert.Equal(0, zweiter);
+    }
+
+    /// <summary>Der Katalog geht vor — er ist die Vorlage, aus der der Fork seine Helfer anlegt.</summary>
+    [Fact]
+    public void DerKatalogGehtVorDerSpanneAusHa()
+    {
+        var (_, max) = SteuerungBauteile.Spanne(RhHelfer);
+        Assert.Equal(max, SteuerungBauteile.AufSpanne(RhHelfer, max + 5, haMin: 0, haMax: max + 100));
+    }
+
+    /// <summary>
+    /// Die Schicht, in der die Spanne entsteht: Home Assistants Antwort auf
+    /// <c>GET /api/states/…</c>. Ohne die gelesenen Attribute käme beim Begrenzen nichts an.
+    /// </summary>
+    [Fact]
+    public async Task DieSpanneKommtAusDenAttributenDesHelfers()
+    {
+        var handler = new RecordingHttpHandler((_, _) => RecordingHttpHandler.Json(
+            $$$"""{"entity_id":"{{{VpdHelfer}}}","state":"1.2","attributes":{"min":0.4,"max":1.6,"step":0.05,"unit_of_measurement":"kPa"}}"""));
+        var ha = new HomeAssistantService(new StubHttpClientFactory(handler), NullLogger<HomeAssistantService>.Instance);
+
+        var lesung = HelferLesung.Aus(await ha.GetEntityStateAsync(
+            new HomeAssistantSettings { BaseUrl = "http://ha.local:8123", AccessToken = "token", Enabled = true }, VpdHelfer));
+
+        Assert.Equal(new HelferLesung(1.2, 0.4, 1.6), lesung);
+        Assert.Equal(1.6, SteuerungBauteile.AufSpanne(VpdHelfer, 1.9, lesung.Min, lesung.Max));
     }
 }
