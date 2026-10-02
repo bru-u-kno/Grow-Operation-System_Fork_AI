@@ -16,9 +16,6 @@ namespace GrowDiary.Web.Infrastructure;
 /// </remarks>
 public sealed class KostenRepository : RepositoryBase
 {
-    private static readonly object SchemaLock = new();
-    private static bool _schemaEnsured;
-
     public KostenRepository(AppPaths paths) : base(paths)
     {
     }
@@ -26,107 +23,102 @@ public sealed class KostenRepository : RepositoryBase
     private SqliteConnection Open()
     {
         var connection = OpenConnection();
-        EnsureSchema(connection);
+        // Je Datenbankdatei, nicht je Prozess — siehe EigenesSchema.
+        EigenesSchema.Sicherstellen(nameof(KostenRepository), Paths.DatabasePath, () => SchemaAnlegen(connection));
         return connection;
     }
 
-    private static void EnsureSchema(SqliteConnection connection)
+    private static void SchemaAnlegen(SqliteConnection connection)
     {
-        if (_schemaEnsured) return;
-        lock (SchemaLock)
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS ForkVerbrauchsartikel (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                Einheit TEXT NOT NULL DEFAULT 'kg',
+                Gebinde REAL NULL,
+                TentId INTEGER NULL,
+                Notiz TEXT NULL,
+                Aktiv INTEGER NOT NULL DEFAULT 1,
+                CreatedAtUtc TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS ForkNachfuellungen (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ArtikelId INTEGER NOT NULL REFERENCES ForkVerbrauchsartikel(Id) ON DELETE CASCADE,
+                ZeitpunktUtc TEXT NOT NULL,
+                Menge REAL NOT NULL,
+                KostenEur REAL NULL,
+                GrowId INTEGER NULL,
+                Notiz TEXT NULL,
+                LeerAmUtc TEXT NULL,
+                CreatedAtUtc TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkNachfuellungen_Artikel ON ForkNachfuellungen(ArtikelId, ZeitpunktUtc);
+            CREATE TABLE IF NOT EXISTS ForkZaehlerstaende (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ZeitpunktUtc TEXT NOT NULL,
+                Kwh REAL NOT NULL,
+                Anlass TEXT NOT NULL,
+                GrowId INTEGER NULL,
+                Phase TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkZaehlerstaende_Zeit ON ForkZaehlerstaende(ZeitpunktUtc);
+            CREATE TABLE IF NOT EXISTS ForkAnschaffungen (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                Hersteller TEXT NULL,
+                Produkt TEXT NULL,
+                DatumUtc TEXT NOT NULL,
+                Stueck INTEGER NOT NULL DEFAULT 1,
+                EinzelpreisEur REAL NOT NULL DEFAULT 0,
+                GrowId INTEGER NULL,
+                Notiz TEXT NULL,
+                HardwareItemId INTEGER NULL,
+                CreatedAtUtc TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkAnschaffungen_Datum ON ForkAnschaffungen(DatumUtc);
+            CREATE TABLE IF NOT EXISTS ForkVerbraeuche (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ArtikelId INTEGER NOT NULL REFERENCES ForkVerbrauchsartikel(Id) ON DELETE CASCADE,
+                GrowId INTEGER NULL,
+                ZeitpunktUtc TEXT NOT NULL,
+                Menge REAL NOT NULL,
+                Quelle TEXT NOT NULL DEFAULT 'manuell',
+                Notiz TEXT NULL,
+                CreatedAtUtc TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkVerbraeuche_Artikel ON ForkVerbraeuche(ArtikelId, ZeitpunktUtc);
+            """;
+        command.ExecuteNonQuery();
+
+        // forkai.8: drei Spalten nachgezogen. SQLite kennt kein
+        // „ADD COLUMN IF NOT EXISTS", also erst nachsehen — das läuft auf
+        // jeder Installation genau einmal.
+        foreach (var (spalte, typ) in new[] { ("Hersteller", "TEXT NULL"), ("Produkt", "TEXT NULL"), ("PreisEur", "REAL NULL") })
         {
-            if (_schemaEnsured) return;
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                CREATE TABLE IF NOT EXISTS ForkVerbrauchsartikel (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,
-                    Einheit TEXT NOT NULL DEFAULT 'kg',
-                    Gebinde REAL NULL,
-                    TentId INTEGER NULL,
-                    Notiz TEXT NULL,
-                    Aktiv INTEGER NOT NULL DEFAULT 1,
-                    CreatedAtUtc TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS ForkNachfuellungen (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ArtikelId INTEGER NOT NULL REFERENCES ForkVerbrauchsartikel(Id) ON DELETE CASCADE,
-                    ZeitpunktUtc TEXT NOT NULL,
-                    Menge REAL NOT NULL,
-                    KostenEur REAL NULL,
-                    GrowId INTEGER NULL,
-                    Notiz TEXT NULL,
-                    LeerAmUtc TEXT NULL,
-                    CreatedAtUtc TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS IX_ForkNachfuellungen_Artikel ON ForkNachfuellungen(ArtikelId, ZeitpunktUtc);
-                CREATE TABLE IF NOT EXISTS ForkZaehlerstaende (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ZeitpunktUtc TEXT NOT NULL,
-                    Kwh REAL NOT NULL,
-                    Anlass TEXT NOT NULL,
-                    GrowId INTEGER NULL,
-                    Phase TEXT NULL
-                );
-                CREATE INDEX IF NOT EXISTS IX_ForkZaehlerstaende_Zeit ON ForkZaehlerstaende(ZeitpunktUtc);
-                CREATE TABLE IF NOT EXISTS ForkAnschaffungen (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,
-                    Hersteller TEXT NULL,
-                    Produkt TEXT NULL,
-                    DatumUtc TEXT NOT NULL,
-                    Stueck INTEGER NOT NULL DEFAULT 1,
-                    EinzelpreisEur REAL NOT NULL DEFAULT 0,
-                    GrowId INTEGER NULL,
-                    Notiz TEXT NULL,
-                    HardwareItemId INTEGER NULL,
-                    CreatedAtUtc TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS IX_ForkAnschaffungen_Datum ON ForkAnschaffungen(DatumUtc);
-                CREATE TABLE IF NOT EXISTS ForkVerbraeuche (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ArtikelId INTEGER NOT NULL REFERENCES ForkVerbrauchsartikel(Id) ON DELETE CASCADE,
-                    GrowId INTEGER NULL,
-                    ZeitpunktUtc TEXT NOT NULL,
-                    Menge REAL NOT NULL,
-                    Quelle TEXT NOT NULL DEFAULT 'manuell',
-                    Notiz TEXT NULL,
-                    CreatedAtUtc TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS IX_ForkVerbraeuche_Artikel ON ForkVerbraeuche(ArtikelId, ZeitpunktUtc);
-                """;
-            command.ExecuteNonQuery();
-
-            // forkai.8: drei Spalten nachgezogen. SQLite kennt kein
-            // „ADD COLUMN IF NOT EXISTS", also erst nachsehen — das läuft auf
-            // jeder Installation genau einmal.
-            foreach (var (spalte, typ) in new[] { ("Hersteller", "TEXT NULL"), ("Produkt", "TEXT NULL"), ("PreisEur", "REAL NULL") })
+            if (!SpalteVorhanden(connection, "ForkVerbrauchsartikel", spalte))
             {
-                if (!SpalteVorhanden(connection, "ForkVerbrauchsartikel", spalte))
-                {
-                    using var alter = connection.CreateCommand();
-                    alter.CommandText = $"ALTER TABLE ForkVerbrauchsartikel ADD COLUMN {spalte} {typ};";
-                    alter.ExecuteNonQuery();
-                }
+                using var alter = connection.CreateCommand();
+                alter.CommandText = $"ALTER TABLE ForkVerbrauchsartikel ADD COLUMN {spalte} {typ};";
+                alter.ExecuteNonQuery();
             }
+        }
 
-            // forkai.90: zwei weitere Spalten. AufGrowBuchen faellt bewusst auf 0
-            // zurueck — bestehende Installationen behalten damit exakt die Zahlen,
-            // die sie vorher hatten, und entscheiden je Artikel neu.
-            foreach (var (tabelle, spalte, typ) in new[]
+        // forkai.90: zwei weitere Spalten. AufGrowBuchen faellt bewusst auf 0
+        // zurueck — bestehende Installationen behalten damit exakt die Zahlen,
+        // die sie vorher hatten, und entscheiden je Artikel neu.
+        foreach (var (tabelle, spalte, typ) in new[]
+        {
+            ("ForkVerbrauchsartikel", "AufGrowBuchen", "INTEGER NOT NULL DEFAULT 0"),
+            ("ForkVerbraeuche", "MessungId", "INTEGER NULL"),
+        })
+        {
+            if (!SpalteVorhanden(connection, tabelle, spalte))
             {
-                ("ForkVerbrauchsartikel", "AufGrowBuchen", "INTEGER NOT NULL DEFAULT 0"),
-                ("ForkVerbraeuche", "MessungId", "INTEGER NULL"),
-            })
-            {
-                if (!SpalteVorhanden(connection, tabelle, spalte))
-                {
-                    using var alter = connection.CreateCommand();
-                    alter.CommandText = $"ALTER TABLE {tabelle} ADD COLUMN {spalte} {typ};";
-                    alter.ExecuteNonQuery();
-                }
+                using var alter = connection.CreateCommand();
+                alter.CommandText = $"ALTER TABLE {tabelle} ADD COLUMN {spalte} {typ};";
+                alter.ExecuteNonQuery();
             }
-            _schemaEnsured = true;
         }
     }
 

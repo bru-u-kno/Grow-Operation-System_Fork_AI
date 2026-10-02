@@ -34,7 +34,8 @@ public sealed class GrowsApiControllerSetupTests : IDisposable
             CreateDeviationAnalyzer(),
             CreateTreatmentRecommender(),
             new SetupRepository(_paths),
-            new HydroSetupRepository(_paths, new TentRepository(_paths)));
+            new HydroSetupRepository(_paths, new TentRepository(_paths)),
+            new SystemAuditRepository(_paths));
     }
 
     public void Dispose()

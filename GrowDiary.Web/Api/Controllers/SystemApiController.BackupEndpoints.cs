@@ -399,6 +399,12 @@ public sealed partial class SystemApiController
         }
         finally
         {
+            // Hinter dem Pfad liegt jetzt eine andere Datei — erfolgreich
+            // zurueckgespielt oder per Rollback wiederhergestellt. Repositories,
+            // die ihre Tabellen selbst anlegen (Kosten, Geraete), merken sich das
+            // je Pfad; ohne dieses Vergessen fehlten ihre Tabellen bis zum
+            // Neustart, wenn das Backup aus einer Fassung ohne sie stammt.
+            EigenesSchema.Vergessen(_paths.DatabasePath);
             DeleteDirectoryBestEffort(tempRoot);
             DeleteDirectoryBestEffort(rollbackRoot);
         }

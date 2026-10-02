@@ -50,7 +50,15 @@ public sealed record KostenFuellungAktuell(
     /// <summary>Was seit dieser Füllung gebucht wurde (Steuerung, Journal) — in der Einheit des Artikels.</summary>
     double VerbrauchtMenge = 0,
     /// <summary><c>gemessen</c>, wenn der Füllstand aus Buchungen kommt, sonst <c>geschaetzt</c> (aus früheren Laufzeiten).</summary>
-    string FuellstandQuelle = "geschaetzt");
+    string FuellstandQuelle = "geschaetzt",
+    /// <summary>
+    /// Woher das Leer-Datum stammt: <c>gemessen</c> (Hochrechnung des gebuchten
+    /// Verbrauchs), <c>geschaetzt</c> (frühere Laufzeiten) oder <c>null</c>
+    /// (keine Prognose). Eigenes Feld, weil beide auseinanderfallen: ein
+    /// gemessener Füllstand mit zu wenig Verbrauch für eine Hochrechnung bekommt
+    /// sein Datum aus den früheren Laufzeiten.
+    /// </summary>
+    string? PrognoseQuelle = null);
 
 public sealed record KostenArtikel(
     int Id,
@@ -486,6 +494,7 @@ public sealed class KostenSeiteService
             var prognoseLeer = prognoseTage is { } pt ? offen.ZeitpunktUtc.AddDays(pt) : (DateTime?)null;
             double? fuellstand = prognoseTage is > 0 ? Math.Clamp(1 - (jetztUtc - offen.ZeitpunktUtc).TotalDays / prognoseTage.Value, 0, 1) * 100 : null;
             var quelle = "geschaetzt";
+            string? prognoseQuelle = prognoseLeer is null ? null : "geschaetzt";
 
             // Fork AI (forkai.20): Gebuchter Verbrauch schlägt die Schätzung.
             // Die CO₂-Steuerung bucht jeden Abend, was durchs Ventil ging —
@@ -522,6 +531,7 @@ public sealed class KostenSeiteService
                 {
                     prognoseTage = offen.Menge / jeTag;
                     prognoseLeer = offen.ZeitpunktUtc.AddDays(prognoseTage.Value);
+                    prognoseQuelle = "gemessen";
                 }
                 else if (jeTag > 0)
                 {
@@ -530,10 +540,14 @@ public sealed class KostenSeiteService
                     // neben einem Fuellstand, der aus Messung stammt.
                     prognoseTage = tageJeEinheit is { } t2 ? t2 * offen.Menge : null;
                     prognoseLeer = prognoseTage is { } pt2 ? offen.ZeitpunktUtc.AddDays(pt2) : null;
+                    // Der Füllstand ist gemessen, das Datum NICHT. Vorher trug
+                    // beides „gemessen", und die Seite schrieb „aus dem
+                    // gebuchten Verbrauch" unter ein geschätztes Datum.
+                    prognoseQuelle = prognoseLeer is null ? null : "geschaetzt";
                 }
             }
             double? eurProTag = offen.KostenEur is { } k && prognoseTage is > 0 ? k / prognoseTage.Value : null;
-            aktuell = new KostenFuellungAktuell(offen.Id, offen.ZeitpunktUtc, offen.Menge, offen.KostenEur, tag, prognoseTage, prognoseLeer, fuellstand, eurProTag, verbraucht, quelle);
+            aktuell = new KostenFuellungAktuell(offen.Id, offen.ZeitpunktUtc, offen.Menge, offen.KostenEur, tag, prognoseTage, prognoseLeer, fuellstand, eurProTag, verbraucht, quelle, prognoseQuelle);
         }
 
         // forkai.101: Die Zeile je Artikel muss dasselbe rechnen wie die Summe

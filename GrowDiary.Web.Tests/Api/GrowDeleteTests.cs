@@ -27,6 +27,7 @@ public sealed class GrowDeleteTests : IDisposable
     private readonly GrowRepository _repository;
     private readonly GrowsApiController _controller;
     private readonly Tent _tent;
+    private readonly SystemAuditRepository _systemAudit;
 
     public GrowDeleteTests()
     {
@@ -35,6 +36,7 @@ public sealed class GrowDeleteTests : IDisposable
         var paths = new AppPaths(_temp);
         _tent = TestDatabase.InitializeWithDefaultTent(paths);
         _repository = new GrowRepository(paths);
+        _systemAudit = new SystemAuditRepository(paths);
 
         var loader = new KnowledgeBaseLoader(paths, NullLogger<KnowledgeBaseLoader>.Instance);
         loader.Initialize();
@@ -45,7 +47,8 @@ public sealed class GrowDeleteTests : IDisposable
             new DeviationAnalyzerService(new TargetValueService(loader)),
             new TreatmentRecommender(loader),
             new SetupRepository(paths),
-            new HydroSetupRepository(paths, new TentRepository(paths)));
+            new HydroSetupRepository(paths, new TentRepository(paths)),
+            _systemAudit);
     }
 
     public void Dispose()
@@ -97,5 +100,34 @@ public sealed class GrowDeleteTests : IDisposable
 
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
         Assert.Equal("grow_not_found", Assert.IsType<GrowDiary.Web.Api.Contracts.ApiError>(notFound.Value).Code);
+    }
+    /// <summary>
+    /// Das Löschen muss nachlesbar bleiben — auch nachdem der Grow weg ist.
+    /// </summary>
+    /// <remarks>
+    /// Vorher stand der Eintrag in <c>AuditEntries</c>, und die Tabelle hängt mit
+    /// <c>ON DELETE CASCADE</c> am Grow: der Nachweis verschwand im selben
+    /// Augenblick wie das, was er nachweisen sollte.
+    /// </remarks>
+    [Fact]
+    public void DasLoeschenUeberlebtImSystemProtokoll()
+    {
+        var growId = _repository.CreateGrow(new GrowRun
+        {
+            TentId = _tent.Id,
+            Name = "Spurensuche 7",
+            StartDate = new DateTime(2026, 6, 1),
+            Status = GrowStatus.Completed,
+        });
+
+        Assert.IsType<NoContentResult>(_controller.Delete(growId));
+        Assert.Null(_repository.GetGrow(growId));
+
+        // Frisch gelesen, nicht aus dem Speicher: was zählt, steht in der Datei.
+        var eintraege = _systemAudit.GetRecent(limit: 50, eventType: GrowsApiController.GrowGeloeschtProtokollTyp);
+        var eintrag = Assert.Single(eintraege, e => e.Summary.Contains("Spurensuche 7", StringComparison.Ordinal));
+        Assert.Equal("Grow geloescht", eintrag.Action);
+        Assert.Contains($"Id {growId}", eintrag.Summary, StringComparison.Ordinal);
+        Assert.True(eintrag.Success);
     }
 }

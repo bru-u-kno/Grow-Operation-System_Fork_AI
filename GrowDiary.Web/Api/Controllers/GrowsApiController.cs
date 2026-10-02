@@ -18,6 +18,7 @@ public sealed class GrowsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
     private readonly AuditRepository _auditRepository;
+    private readonly SystemAuditRepository _systemAudit;
     private readonly WeekCounterService _weekCounter;
     private readonly SetupRepository _setups;
     private readonly HydroSetupRepository _hydro;
@@ -33,11 +34,13 @@ public sealed class GrowsApiController : ApiControllerBase
         TreatmentRecommender treatmentRecommender,
         SetupRepository setups,
         HydroSetupRepository hydro,
+        SystemAuditRepository systemAudit,
         Services.GrowPlan.GrowPlanService? plaene = null)
     {
         _plaene = plaene;
         _repository = repository;
         _auditRepository = auditRepository;
+        _systemAudit = systemAudit;
         _weekCounter = weekCounter;
         _setups = setups;
         _hydro = hydro;
@@ -370,6 +373,9 @@ public sealed class GrowsApiController : ApiControllerBase
             .ToList();
     }
 
+    /// <summary>Ereignisart im System-Protokoll fuer einen geloeschten Grow.</summary>
+    public const string GrowGeloeschtProtokollTyp = "grow";
+
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -381,24 +387,33 @@ public sealed class GrowsApiController : ApiControllerBase
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
         }
 
-        // Reihenfolge mit Absicht: der Eintrag muss VOR dem Loeschen stehen.
-        // `AuditEntries.GrowId` haengt per Fremdschluessel an `Grows` (mit
-        // ON DELETE CASCADE), danach gibt es die Zeile nicht mehr — der
-        // Schreibversuch lief in einen 500, obwohl der Grow bereits weg war.
-        // Der Nutzer sah einen Fehler fuer etwas, das geklappt hat, und
-        // versuchte es womoeglich ein zweites Mal.
-        //
-        // Dass der Eintrag durch CASCADE gleich mitgeloescht wird, ist kein
-        // Verlust: das Journal eines geloeschten Grows gehoert dem Grow.
-        _auditRepository.Add(new AuditEntry
-        {
-            GrowId = id,
-            EntityType = "Grow",
-            EntityId = id,
-            Action = "Grow geloescht",
-            Summary = $"Grow '{existing.Name}' wurde geloescht."
-        });
         _repository.DeleteGrow(id);
+
+        // Das Loeschen selbst gehoert ins System-Protokoll, nicht in das des
+        // Grows. `AuditEntries.GrowId` haengt mit ON DELETE CASCADE an `Grows`:
+        // ein Eintrag dort — ob vor oder nach dem Loeschen geschrieben — war
+        // im selben Augenblick weg, und „wer hat wann welchen Grow
+        // geloescht" liess sich nirgends mehr nachlesen. `SystemAuditEvents`
+        // ueberlebt den Grow (RelatedGrowId: ON DELETE SET NULL).
+        //
+        // Deshalb NACH dem Loeschen, ohne RelatedGrowId (die Zeile gibt es
+        // nicht mehr, der Fremdschluessel wuerde scheitern) und mit Name und
+        // Id im Text. Und ohne den Aufruf scheitern zu lassen: der Grow ist
+        // weg, eine 500 dafuer luede nur zum zweiten Versuch ein.
+        try
+        {
+            _systemAudit.Add(new SystemAuditEvent
+            {
+                EventType = GrowGeloeschtProtokollTyp,
+                Action = "Grow geloescht",
+                Summary = $"Grow '{existing.Name}' (Id {id.ToString(CultureInfo.InvariantCulture)}) wurde geloescht.",
+                Source = "grows-api",
+            });
+        }
+        catch
+        {
+            // Protokoll ist Nachweis, nicht Voraussetzung.
+        }
 
         return NoContent();
     }
