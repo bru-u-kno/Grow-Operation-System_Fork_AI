@@ -1,4 +1,5 @@
 import type { MetricPayload } from '../../types'
+import { maschinenZahl } from '../../zahlenfeld'
 
 /**
  * Das Layout eines Zelt-Dashboards und die Rechnungen darauf.
@@ -256,7 +257,9 @@ export function resolveTile(
 
   const value = tile.entityId ? entityValues.get(tile.entityId) : undefined
   const raw = value?.state ?? null
-  const numeric = raw != null && raw.trim() !== '' && Number.isFinite(Number(raw.replace(',', '.')))
+  // Ein Zustand aus Home Assistant ist ein Maschinenwert: „1.234" heisst dort
+  // eins-komma-zwei-drei-vier, nicht tausendzweihundertvierunddreissig.
+  const zahl = maschinenZahl(raw)
   return {
     key: tile.entityId ?? tile.id,
     label: entityLabel(tile, value),
@@ -264,7 +267,7 @@ export function resolveTile(
     unit: tile.unit ?? value?.unit ?? null,
     tone: 'muted',
     hint: null,
-    numericValue: numeric ? Number(raw!.replace(',', '.')) : null,
+    numericValue: zahl,
     targetMin: null,
     targetMax: null,
   }

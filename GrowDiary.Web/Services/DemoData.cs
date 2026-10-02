@@ -80,7 +80,7 @@ public static class DemoData
     /// Etikett „Modus …" auf „Zelt (AC-Test)" war im Testbestand nie zu sehen —
     /// auch nicht, dass dort roh „On" stand. „Schedule", weil der Bestand für
     /// dieses Licht einen 12/12-Lichtplan führt und die App beim Anwenden eines
-    /// Lichtplans genau diesen Modus setzt (<c>LichtSteuerungService.Modi.Zeitplan</c>).
+    /// Lichtplans genau diesen Modus setzt (<c>AcModi.Zeitplan</c>).
     /// „On" hieße Dauerlicht — im Blütezelt ein Widerspruch (Prüfer, 02.10.2026).
     /// </remarks>
     public const string LichtModus = "select.demo_licht_modus";
@@ -387,7 +387,7 @@ public static class DemoData
             return new HomeAssistantState
             {
                 EntityId = LichtModus,
-                State = LichtSteuerungService.Modi.Zeitplan,
+                State = AcModi.Zeitplan,
                 FriendlyName = "Demo LED · Aktiver Modus",
                 LastChanged = nowUtc,
                 LastUpdated = nowUtc,

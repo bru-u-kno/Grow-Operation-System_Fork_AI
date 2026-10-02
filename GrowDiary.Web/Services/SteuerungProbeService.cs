@@ -153,7 +153,7 @@ public sealed class SteuerungProbeService
         var domain = entityId.Split('.', 2)[0];
         return domain == "select"
             ? _funk.SchickenAsync(settings, "select", "select_option", entityId,
-                new Dictionary<string, object> { ["option"] = "On" }, ct)
+                new Dictionary<string, object> { ["option"] = AcModi.An }, ct)
             : _funk.SchickenAsync(settings, domain, "turn_on", entityId,
                 new Dictionary<string, object>(), ct);
     }

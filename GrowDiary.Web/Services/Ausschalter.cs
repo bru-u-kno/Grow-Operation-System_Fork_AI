@@ -108,7 +108,7 @@ public sealed class Ausschalter
     {
         var domain = entityId.Split('.', 2)[0];
         return domain == "select"
-            ? ("select", "select_option", new Dictionary<string, object> { ["option"] = "Off" })
+            ? ("select", "select_option", new Dictionary<string, object> { ["option"] = AcModi.Aus })
             : (domain, "turn_off", new Dictionary<string, object>());
     }
 

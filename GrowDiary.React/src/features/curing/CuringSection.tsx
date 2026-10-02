@@ -4,6 +4,7 @@ import { apiFetch, ApiRequestError } from '../../api'
 import { V1Alert, V1Card, V1Section } from '../../components/v1'
 import type { CuringJar } from './curing-typen'
 import { faelligText, feuchteTon } from './curing-typen'
+import { istUnlesbar, zahlOderNull } from '../../zahlenfeld'
 import './curing.css'
 
 type StrainOption = { id: number; name: string }
@@ -44,6 +45,12 @@ export function CuringSection({ growId, harvested }: { growId: number; harvested
   }, [growId, refresh])
 
   async function anlegen() {
+    // Bisher wurde „21,5g" still zu NaN und im JSON damit zu `null` — das Glas
+    // stand ohne Gewicht da, mit Erfolgsmeldung.
+    if (istUnlesbar(neu.weightG)) {
+      setError('„Gewicht im Glas" ist keine Zahl. Bitte korrigieren oder das Feld leeren.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -52,7 +59,7 @@ export function CuringSection({ growId, harvested }: { growId: number; harvested
         body: JSON.stringify({
           label: neu.label.trim(),
           filledAtLocal: neu.filledAtLocal,
-          weightG: neu.weightG.trim() ? Number(neu.weightG.replace(',', '.')) : null,
+          weightG: zahlOderNull(neu.weightG),
           strainId: neu.strainId ? Number(neu.strainId) : null,
           hasHumidityPack: neu.hasHumidityPack,
         }),

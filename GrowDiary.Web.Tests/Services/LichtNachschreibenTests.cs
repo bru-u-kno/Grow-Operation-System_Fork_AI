@@ -206,7 +206,7 @@ public sealed class LichtNachschreibenTests : IDisposable
 
         Assert.True(ok);
         Assert.Equal([Ein, Aus, Modus], wolke.Gesendet.Distinct());
-        Assert.Equal(LichtSteuerungService.Modi.Zeitplan, wolke.Stand(Modus));
+        Assert.Equal(AcModi.Zeitplan, wolke.Stand(Modus));
         Assert.Equal(Vorgabe.BlueteEin + ":00", wolke.Stand(Ein));
     }
 
@@ -259,7 +259,7 @@ public sealed class LichtNachschreibenTests : IDisposable
     {
         Offene().TryRemove(Modus, out _);
         var wolke = new Wolke();
-        wolke.Setzen(Modus, LichtSteuerungService.Modi.An);
+        wolke.Setzen(Modus, AcModi.An);
         wolke.Verwirft.Add(Modus);
         var licht = Licht(wolke);
 
@@ -289,10 +289,10 @@ public sealed class LichtNachschreibenTests : IDisposable
         var offene = Offene();
         offene.TryRemove(Modus, out _);
         var vor30s = DateTime.UtcNow - TimeSpan.FromSeconds(30);
-        var alt = new LichtOffen(Modus, LichtSteuerungService.Modi.Aus, vor30s, 1, vor30s, LichtSteuerungService.Modi.An);
+        var alt = new LichtOffen(Modus, AcModi.Aus, vor30s, 1, vor30s, AcModi.An);
         offene[Modus] = alt;
 
-        var neu = new LichtOffen(Modus, LichtSteuerungService.Modi.An, DateTime.UtcNow, 1, DateTime.UtcNow, LichtSteuerungService.Modi.An);
+        var neu = new LichtOffen(Modus, AcModi.An, DateTime.UtcNow, 1, DateTime.UtcNow, AcModi.An);
         var wolke = new NachschreibWolke(() => offene[Modus] = neu);
 
         // Home Assistant ist im Test nicht erreichbar: der Ist-Stand ist

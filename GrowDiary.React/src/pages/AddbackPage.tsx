@@ -16,7 +16,7 @@ import type {
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Stat } from '../components/v1'
 import { classNames, formatNumber } from '../utils'
 import { AddbackFlow, type FlowStep } from '../features/addback/AddbackFlow'
-import { feldText } from '../zahlenfeld'
+import { feldText, unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
 
 /** Nur die zwei Zahlen, die der Wasser-Hinweis braucht. */
@@ -239,10 +239,10 @@ function AddbackPage() {
       const nextResult = await apiFetch<AddbackResultDto>(`/api/grows/${growId}/addback/calculate`, {
         method: 'POST',
         body: JSON.stringify({
-          reservoirLiters: parseNullableNumber(form.reservoirLiters),
-          ecIst: parseNullableNumber(form.ecIst),
-          ecZiel: parseNullableNumber(form.ecZiel),
-          ecStock: parseNullableNumber(form.ecStock),
+          reservoirLiters: zahlOderNull(form.reservoirLiters),
+          ecIst: zahlOderNull(form.ecIst),
+          ecZiel: zahlOderNull(form.ecZiel),
+          ecStock: zahlOderNull(form.ecStock),
         }),
       })
       setResult(nextResult)
@@ -290,13 +290,13 @@ function AddbackPage() {
       const payload: CreateAddbackLogRequest = {
         kind: 'Addback',
         performedAtUtc: new Date().toISOString(),
-        reservoirLiters: parseNullableNumber(form.reservoirLiters),
-        ecBefore: parseNullableNumber(form.ecIst),
-        ecTarget: parseNullableNumber(form.ecZiel),
-        ecStock: parseNullableNumber(form.ecStock),
-        ecAfter: parseNullableNumber(form.ecAfter),
-        phBefore: parseNullableNumber(form.phBefore),
-        phAfter: parseNullableNumber(form.phAfter),
+        reservoirLiters: zahlOderNull(form.reservoirLiters),
+        ecBefore: zahlOderNull(form.ecIst),
+        ecTarget: zahlOderNull(form.ecZiel),
+        ecStock: zahlOderNull(form.ecStock),
+        ecAfter: zahlOderNull(form.ecAfter),
+        phBefore: zahlOderNull(form.phBefore),
+        phAfter: zahlOderNull(form.phAfter),
         litersAdded: calculation.litersToAdd,
         newReservoirVolumeLiters: calculation.newReservoirVolume,
         usedHydroSetupVolume: defaults?.suggestedReservoirLiters != null,
@@ -330,9 +330,9 @@ function AddbackPage() {
   }
 
   // Aus dem vorhandenen Zustand abgeleitet, keine zweite Datenquelle.
-  const ecIst = parseNullableNumber(form.ecIst) ?? defaults?.suggestedEcIst ?? null
-  const ecZiel = parseNullableNumber(form.ecZiel) ?? defaults?.suggestedEcZiel ?? null
-  const ecAfter = parseNullableNumber(form.ecAfter)
+  const ecIst = zahlOderNull(form.ecIst) ?? defaults?.suggestedEcIst ?? null
+  const ecZiel = zahlOderNull(form.ecZiel) ?? defaults?.suggestedEcZiel ?? null
+  const ecAfter = zahlOderNull(form.ecAfter)
   const flowSteps: FlowStep[] = [
     {
       title: 'MESSEN',
@@ -394,7 +394,7 @@ function AddbackPage() {
                 <span className="v1-card-kicker">System</span>
                 <h2>{grow?.hydroStyle ?? 'Hydro'}</h2>
                 <div className="addback-context-grid">
-                  <ContextItem label="Reservoir" value={formatLiters(parseNullableNumber(form.reservoirLiters) ?? defaults?.suggestedReservoirLiters)} />
+                  <ContextItem label="Reservoir" value={formatLiters(zahlOderNull(form.reservoirLiters) ?? defaults?.suggestedReservoirLiters)} />
                   <ContextItem label="Programm" value={selectedProgram?.name ?? grow?.nutrients ?? 'Eigenes'} />
                   <ContextItem label="Phase" value={grow?.latestMeasurement?.stage ?? grow?.entryPoint ?? 'offen'} />
                   <ContextItem label="Letzter Log" value={formatShortDateTime(lastLog?.performedAtUtc)} />
@@ -457,8 +457,8 @@ function AddbackPage() {
                   <div className="addback-summary-grid">
                     <V1Stat label="Grow" value={grow?.name ?? defaults?.growName ?? '–'} hint={(grow ? sortenText(grow) : null) ?? 'Sorte offen'} />
                     <V1Stat label="Zelt" value={grow?.tentName ?? '–'} hint={grow?.hydroStyle ?? null} />
-                    <V1Stat label="Volumen" value={formatNumber(parseNullableNumber(form.reservoirLiters) ?? defaults?.suggestedReservoirLiters, 1)} unit="L" hint="aus Hydro-Setup oder manuell" />
-                    <V1Stat label="EC aktuell" value={formatNumber(parseNullableNumber(form.ecIst), 2)} unit="mS/cm" hint="letzte Messung / manuell" />
+                    <V1Stat label="Volumen" value={formatNumber(zahlOderNull(form.reservoirLiters) ?? defaults?.suggestedReservoirLiters, 1)} unit="L" hint="aus Hydro-Setup oder manuell" />
+                    <V1Stat label="EC aktuell" value={formatNumber(zahlOderNull(form.ecIst), 2)} unit="mS/cm" hint="letzte Messung / manuell" />
                   </div>
                   <div className="addback-action-row">
                     <V1Button variant="primary" onClick={() => void checkAndCalculate()} disabled={calculating}>{calculating ? 'Rechnet...' : 'Prüfen & Dosierung berechnen'}</V1Button>
@@ -573,9 +573,9 @@ function AddbackPage() {
                   <div className="addback-review-grid">
                     <Review label="Grow" value={grow?.name ?? defaults?.growName ?? '–'} />
                     <Review label="Programm" value={selectedProgram?.name ?? grow?.nutrients ?? 'Eigenes'} />
-                    <Review label="Reservoir" value={`${formatNumber(parseNullableNumber(form.reservoirLiters), 1)} L`} />
-                    <Review label="EC" value={`${formatNumber(parseNullableNumber(form.ecIst), 2)} → ${formatNumber(parseNullableNumber(form.ecAfter), 2)} mS/cm`} />
-                    <Review label="pH" value={`${formatNumber(parseNullableNumber(form.phBefore), 2)} → ${formatNumber(parseNullableNumber(form.phAfter), 2)}`} />
+                    <Review label="Reservoir" value={`${formatNumber(zahlOderNull(form.reservoirLiters), 1)} L`} />
+                    <Review label="EC" value={`${formatNumber(zahlOderNull(form.ecIst), 2)} → ${formatNumber(zahlOderNull(form.ecAfter), 2)} mS/cm`} />
+                    <Review label="pH" value={`${formatNumber(zahlOderNull(form.phBefore), 2)} → ${formatNumber(zahlOderNull(form.phAfter), 2)}`} />
                     <Review label="Addback" value={result?.needsAddback ? `${formatNumber(result.litersToAdd, 2)} L` : '0 L'} />
                   </div>
                   <div className="addback-action-row">
@@ -665,7 +665,7 @@ function findProgramStage(program: NutrientProgramDto | null, stage: string | nu
 
 function derivePhTarget(program: NutrientProgramDto | null): string | null {
   const text = program?.phGuidance ?? ''
-  const matches = Array.from(text.matchAll(/\d+(?:[.,]\d+)?/g)).map((match) => Number(match[0].replace(',', '.'))).filter(Number.isFinite)
+  const matches = Array.from(text.matchAll(/\d+(?:[.,]\d+)?/g)).map((match) => zahlOderNull(match[0])).filter((wert): wert is number => wert != null)
   if (matches.length === 0) return null
   const relevant = matches.filter((value) => value >= 4 && value <= 8)
   if (relevant.length === 0) return null
@@ -675,9 +675,16 @@ function derivePhTarget(program: NutrientProgramDto | null): string | null {
 }
 
 function validateActuals(form: AddbackFormState): string | null {
-  const reservoir = parseNullableNumber(form.reservoirLiters)
-  const ec = parseNullableNumber(form.ecIst)
-  const ph = parseNullableNumber(form.phBefore)
+  // `parseFloat` las bis zum 02.10.2026 „1,5 L" als 1,5 und „6,2x" als 6,2 —
+  // was danach kam, verschwand ohne Meldung.
+  const unlesbar = unlesbarMeldung(unlesbareFelder([
+    [form.reservoirLiters, 'Aktuelles Volumen'], [form.ecIst, 'EC aktuell'], [form.phBefore, 'pH aktuell'],
+    [form.ecZiel, 'Ziel-EC'], [form.ecStock, 'Addback-EC'], [form.ecAfter, 'EC nach Addback'], [form.phAfter, 'pH nach Addback'],
+  ]))
+  if (unlesbar) return unlesbar
+  const reservoir = zahlOderNull(form.reservoirLiters)
+  const ec = zahlOderNull(form.ecIst)
+  const ph = zahlOderNull(form.phBefore)
   if (reservoir == null || reservoir <= 0) return 'Reservoir-Volumen ist erforderlich.'
   if (ec == null || ec < 0) return 'Aktueller EC ist erforderlich.'
   if (ph != null && (ph < 0 || ph > 14)) return 'pH muss zwischen 0 und 14 liegen.'
@@ -687,9 +694,9 @@ function validateActuals(form: AddbackFormState): string | null {
 function validateCalculation(form: AddbackFormState): string | null {
   const actualValidation = validateActuals(form)
   if (actualValidation) return actualValidation
-  const ecIst = parseNullableNumber(form.ecIst)
-  const ecZiel = parseNullableNumber(form.ecZiel)
-  const ecStock = parseNullableNumber(form.ecStock)
+  const ecIst = zahlOderNull(form.ecIst)
+  const ecZiel = zahlOderNull(form.ecZiel)
+  const ecStock = zahlOderNull(form.ecStock)
   if (ecZiel == null || ecZiel < 0) return 'Ziel-EC ist erforderlich.'
   if (ecStock == null || ecStock <= 0) return 'Addback-EC ist erforderlich.'
   if (ecIst != null && ecStock <= ecZiel) return 'Addback-EC muss höher sein als Ziel-EC.'
@@ -738,11 +745,5 @@ function draftNumber(value: number | null | undefined): string {
   return feldText(value)
 }
 
-function parseNullableNumber(value: string): number | null {
-  const trimmed = value.trim().replace(',', '.')
-  if (!trimmed) return null
-  const parsed = Number.parseFloat(trimmed)
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 export default AddbackPage

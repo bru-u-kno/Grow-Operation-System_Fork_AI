@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
-import { feldText, istLeer, istUnlesbar, unlesbarMeldung, unlesbareFelder, zahlOderNull } from './zahlenfeld'
+import { feldText, istLeer, istUnlesbar, maschinenZahl, unlesbarMeldung, unlesbareFelder, zahlOderNull } from './zahlenfeld'
 
 /**
  * Keine Seite baut sich ihre eigene Zahlen-Umwandlung.
@@ -24,53 +24,53 @@ import { feldText, istLeer, istUnlesbar, unlesbarMeldung, unlesbareFelder, zahlO
 const QUELLE = new URL('./', import.meta.url)
 
 /**
- * Wie viele eigene Umwandlungen es noch gibt — **diese Zahl darf nur sinken.**
+ * **Null eigene Umwandlungen — seit dem 02.10.2026.**
  *
- * Zwanzig Stellen wandeln getippten deutschen Text selbst in Zahlen um. Alle an
- * einem Tag umzustellen hiesse, zwanzig funktionierende Seiten anzufassen; eine
- * Ausnahmeliste mit zwanzig Namen wäre ein Feigenblatt, das nur an dem
- * scheitern kann, was schon draufsteht.
+ * Bis dahin stand hier eine Ratsche (`HOECHSTENS`), die von 24 über 22 nur
+ * sinken durfte. Am 02.10.2026 wurden die letzten 21 Stellen auf
+ * `zahlenfeld.ts` umgeleitet, weil die Leseregel selbst sich änderte: „1.200"
+ * heisst jetzt 1200 (Punkt = Tausendertrenner). Mit 21 eigenen Fassungen hätte
+ * das an 21 Stellen NICHT gegolten — ein Preis „1.200" wäre auf einer Seite
+ * 1200 € gewesen und auf der nächsten 1,20 €.
  *
- * Deshalb eine Ratsche: eine NEUE eigene Fassung fällt sofort auf, und wer eine
- * alte umstellt, muss die Zahl mitsenken — sonst wird der Test rot und erinnert
- * ihn daran. Der Fortschritt ist damit sichtbar statt behauptet.
- *
- * Stand 2026-08-23: 16. Zwei sind an diesem Tag verschwunden
- * (`MeasurementEditPage`, `DosingPumpSetupPage`) — beide wegen eines echten,
- * lebenden Fehlers.
- *
- * **Stand 2026-09-01: 24 — und das ist ein Anstieg auf dem Papier, kein
- * Rückschritt.** Der Suchausdruck sah nur `Number(…)` und übersah damit zehn
- * Stellen, darunter `Number.parseFloat(x.replace(…))` in `PhenoSheetEditor`,
- * `StrainsPage` und `TentsPage` — zwei davon mit genau dem Fehler, gegen den
- * diese Datei angetreten ist. Eine Ratsche, die einen Teil ihrer Grundmenge
- * nicht sieht, misst den Fortschritt an der falschen Zahl.
- *
- * Am selben Tag sind zwei verschwunden: `HarvestPage` und `AlertsPage`. Dort wurden
- * aus getippten „21,5" die Zahl 215, weil das Feld an einer Zahl hing und die
- * Zwischenform bei jedem Tastendruck wegwarf.
- *
- * 01.09.2026, später: 23 → 22. `HardwarePage` trug eine EIGENE Fassung von
- * `zahlOderNull` — die vierte Abschrift derselben fünf Zeilen. Sie wurde
- * unbenutzt, als die Kalibrierpunkte auf `zahlenfeld.ts` umgestellt wurden.
+ * Damit ist die Ratsche eine Zählung geworden: außer `zahlenfeld.ts` darf
+ * KEINE Datei unter `src/` ein Komma selbst zum Punkt machen. Die eine
+ * erlaubte Stelle muss die Suche finden — sonst sieht sie ihre Grundmenge
+ * nicht, und null Treffer hiessen nichts.
  */
-const HOECHSTENS = 22
+const ERLAUBT = 'zahlenfeld.ts'
 
 /**
  * Das Kennzeichen: eine Komma-Ersetzung ergibt nur bei getipptem Text Sinn.
  *
  * <b>Die erste Fassung sah nur `Number(…)`.</b> Sie hing an `Number\(` und an
- * `[^)]*` — damit fielen `Number.parseFloat(x.replace(',', '.'))` und jede
+ * `[^)]*` — damit fielen `Number.parseFloat(x.replace(…))` und jede
  * Fassung mit einer inneren Klammer heraus. Zehn Stellen blieben unsichtbar,
  * zwei davon mit genau dem Fehler, gegen den diese Datei angetreten ist:
  * `num()` in `PhenoSheetEditor` und `StrainsPage` liefert für „6,2x" die 6,2
  * und meldet nichts.
  *
- * Gesucht wird jetzt die Komma-Ersetzung selbst — die ist das Kennzeichen, und
- * sie steht in jeder Fassung.
+ * Gesucht wird die Komma-Ersetzung selbst — die ist das Kennzeichen, und sie
+ * steht in jeder Fassung: `replace(',', '.')`, `replaceAll(",", ".")`,
+ * `replace(/,/g, '.')`.
  */
-const EIGENE_FASSUNG = /\.replace\(\s*['"],['"]\s*,\s*['"]\.['"]\s*\)/
+const EIGENE_FASSUNG = /\.replace(?:All)?\(\s*(?:(['"`]),\1|\/\\?,\/[a-z]*)\s*,\s*(['"`])\.\2\s*\)/
 
+/**
+ * Kommentare entfernen — eine Erwähnung ist keine Verwendung.
+ *
+ * Block-Kommentare (auch über mehrere Zeilen und `{/* … *\/}` in JSX) und
+ * Zeilen-Kommentare. Ein `//` zählt nur am Zeilenanfang oder nach Leerraum,
+ * damit `https://…` in einer Zeichenkette stehen bleibt. Die Zeilenumbrüche
+ * bleiben erhalten, damit die Zeilennummern der Fundstellen stimmen.
+ */
+function ohneKommentare(inhalt: string): string {
+  return inhalt
+    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
+    .split('\n')
+    .map((zeile) => zeile.replace(/(^|\s)\/\/.*$/, '$1'))
+    .join('\n')
+}
 function alleQuellen(ordner = QUELLE, pfad = ''): string[] {
   const raus: string[] = []
   for (const eintrag of readdirSync(ordner, { withFileTypes: true })) {
@@ -78,32 +78,27 @@ function alleQuellen(ordner = QUELLE, pfad = ''): string[] {
     if (eintrag.isDirectory()) {
       raus.push(...alleQuellen(new URL(eintrag.name + '/', ordner), pfad + eintrag.name + '/'))
     } else if (eintrag.name.endsWith('.tsx') || eintrag.name.endsWith('.ts')) {
+      // Prüfungen zählen nicht — sie dürfen die alte Schreibweise als Beispiel
+      // tragen; diese Datei hier tut es selbst (und darf sich nicht mitlesen).
       if (eintrag.name.includes('.test.')) continue
-      // zahlenfeld.ts IST die Antwort — dort MUSS die Umwandlung stehen.
-      if (eintrag.name === 'zahlenfeld.ts') continue
       raus.push(pfad + eintrag.name)
     }
   }
   return raus
 }
 
-/** Alle Fundstellen mit Datei und Zeile. */
-function eigeneFassungen(): string[] {
+/** Alle Fundstellen mit Datei und Zeile — in einem gegebenen Quelltext. */
+function fundstellen(name: string, inhalt: string): string[] {
   const treffer: string[] = []
-
-  for (const name of alleQuellen()) {
-    const inhalt = readFileSync(new URL(name, QUELLE), 'utf8')
-
-    inhalt.split(String.fromCharCode(10)).forEach((zeile, i) => {
-      const roh = zeile.trim()
-      // Kommentare zählen nicht — dort DARF die alte Schreibweise stehen,
-      // das ist ja die Begründung.
-      if (roh.startsWith('//') || roh.startsWith('*') || roh.startsWith('/*')) return
-      if (EIGENE_FASSUNG.test(roh)) treffer.push(`${name}:${i + 1}  ${roh.slice(0, 90)}`)
-    })
-  }
-
+  ohneKommentare(inhalt).split('\n').forEach((zeile, i) => {
+    if (EIGENE_FASSUNG.test(zeile)) treffer.push(`${name}:${i + 1}  ${zeile.trim().slice(0, 90)}`)
+  })
   return treffer
+}
+
+/** Alle Fundstellen unter `src/`, die eine erlaubte eingeschlossen. */
+function eigeneFassungen(): string[] {
+  return alleQuellen().flatMap((name) => fundstellen(name, readFileSync(new URL(name, QUELLE), 'utf8')))
 }
 
 describe('Zahlenfelder', () => {
@@ -151,48 +146,167 @@ describe('Zahlenfelder', () => {
     expect(unlesbarMeldung([])).toBeNull()
   })
 
-  /* ---------------- Die Ratsche ---------------- */
+  /* ---------------- Die Zählung ---------------- */
 
   it('sieht ihre Grundmenge überhaupt', () => {
     expect(alleQuellen().length,
       'Keine Quelldatei gefunden — dann liefe alles darunter null Mal durch.')
       .toBeGreaterThan(50)
+    // Die Testdateien sind draussen — auch diese hier, die die alte
+    // Schreibweise als Beispiel trägt.
+    expect(alleQuellen().some((name) => name.includes('.test.'))).toBe(false)
   })
 
-  it('keine NEUE eigene Zahlen-Umwandlung', () => {
-    const treffer = eigeneFassungen()
-
-    expect(treffer.length,
-      `Es gibt jetzt ${treffer.length} eigene Zahlen-Umwandlungen, erlaubt sind ${HOECHSTENS}. `
-      + 'Benutze `zahlOderNull` und `istUnlesbar` aus `src/zahlenfeld.ts`. Drei eigene '
-      + 'Fassungen haben drei verschiedene Fehler ergeben — zuletzt eine Dosierpumpe '
-      + 'ohne Mischpause. Fundstellen: ' + treffer.join(' | '))
-      .toBeLessThanOrEqual(HOECHSTENS)
+  it('findet die eine erlaubte Stelle (Mengenwächter)', () => {
+    // Fände die Suche nicht einmal `zahlenfeld.ts`, wären null Treffer
+    // anderswo kein Beleg — dann sähe sie schlicht nichts.
+    const dort = eigeneFassungen().filter((t) => t.split(':')[0] === ERLAUBT)
+    expect(dort.length,
+      `Die Suche findet in ${ERLAUBT} keine Komma-Ersetzung mehr. Entweder wurde die `
+      + 'Leseregel dort umgebaut (dann diesen Wächter an die neue Form anpassen), oder die '
+      + 'Suche ist blind geworden.').toBeGreaterThanOrEqual(1)
   })
 
-  it('und die alten werden weniger, nicht heimlich mehr', () => {
-    const treffer = eigeneFassungen()
+  it('keine Datei ausser zahlenfeld.ts liest Zahlen selbst', () => {
+    const anderswo = eigeneFassungen().filter((t) => t.split(':')[0] !== ERLAUBT)
 
-    expect(treffer.length,
-      `Es sind nur noch ${treffer.length}. Setz HOECHSTENS in dieser Datei auf diese Zahl — `
-      + 'sonst ist wieder Platz für eine neue, ohne dass es auffällt.')
-      .toBeGreaterThanOrEqual(HOECHSTENS)
+    expect(anderswo,
+      'Eigene Zahlen-Umwandlung gefunden. Benutze `zahlOderNull` (getippter Text, deutsche '
+      + 'Leseregel: „1.200" = 1200) oder `maschinenZahl` (Home-Assistant-Zustand, '
+      + '<input type="number">) aus `src/zahlenfeld.ts`. Jede eigene Fassung liest „1.200" '
+      + 'anders als der Rest der App — ein Preis wäre auf einer Seite 1200 € und auf der '
+      + 'nächsten 1,20 €.').toEqual([])
   })
 
-  /* ---------------- Dass die Ratsche beisst ---------------- */
+  /* ---------------- Dass die Zählung beisst ---------------- */
 
-  it('erkennt die alte Schreibweise und lässt Kommentare in Ruhe', () => {
+  it('erkennt jede bekannte Schreibweise der alten Fassung', () => {
     // Die echten Fassungen, wörtlich aus dem Verlauf.
-    expect(EIGENE_FASSUNG.test("const parsed = Number(value.replace(',', '.'))")).toBe(true)
-    expect(EIGENE_FASSUNG.test("const parsed = Number(trimmed.replace(',', '.'))")).toBe(true)
-    expect(EIGENE_FASSUNG.test("weightG: Number(neu.weightG.replace(',', '.'))")).toBe(true)
+    for (const zeile of [
+      "const parsed = Number(value.replace(',', '.'))",
+      "const parsed = Number(trimmed.replace(',', '.'))",
+      "weightG: Number(neu.weightG.replace(',', '.')),",
+      "const parsed = Number.parseFloat(value.replace(',', '.'))",
+      "const ml = Number((doseMl[pump.id] ?? '').replace(',', '.'))",
+      // Schreibweisen, die die erste Fassung der Suche nicht sah:
+      'const x = Number(text.replace(",", "."))',
+      "const x = Number(text.replaceAll(',', '.'))",
+      "const x = Number(text.replace(/,/g, '.'))",
+      "const x = parseFloat(text.replace(/,/, '.'))",
+    ]) {
+      expect(fundstellen('beispiel.ts', zeile), zeile).toHaveLength(1)
+    }
 
-    // Datums-Prüfungen und schon-numerische Werte gehen NICHT ins Netz. Eine
-    // erste Fassung suchte auch nach `Number.isFinite`/`Number.isNaN` und fand
-    // 25 Stellen, davon 17 Unbeteiligte. Eine Prüfung, die überwiegend
-    // Unschuldige meldet, wird abgeschaltet — dann prüft sie gar nichts mehr.
-    expect(EIGENE_FASSUNG.test('if (Number.isNaN(date.getTime())) return null')).toBe(false)
-    expect(EIGENE_FASSUNG.test('if (typeof value === "number" && Number.isFinite(value))')).toBe(false)
+    // Datums-Prüfungen und die Gegenrichtung (Punkt → Komma, fürs Schreiben)
+    // gehen NICHT ins Netz. Eine erste Fassung suchte auch nach
+    // `Number.isFinite`/`Number.isNaN` und fand 25 Stellen, davon 17
+    // Unbeteiligte. Eine Prüfung, die überwiegend Unschuldige meldet, wird
+    // abgeschaltet — dann prüft sie gar nichts mehr.
+    expect(fundstellen('b.ts', 'if (Number.isNaN(date.getTime())) return null')).toEqual([])
+    expect(fundstellen('b.ts', "return String(wert).replace('.', ',')")).toEqual([])
+  })
+
+  it('lässt Kommentare in Ruhe — eine Erwähnung ist keine Verwendung', () => {
+    expect(fundstellen('k.ts', "// früher: Number(x.replace(',', '.'))")).toEqual([])
+    expect(fundstellen('k.ts', " * ein naives `replace(',', '.')` liest den Tausenderpunkt")).toEqual([])
+    expect(fundstellen('k.ts', "/* Number(x.replace(',', '.')) */ const a = 1")).toEqual([])
+    expect(fundstellen('k.ts', "const a = 1 // Number(x.replace(',', '.'))")).toEqual([])
+    expect(fundstellen('k.ts', "/**\n * Number(x.replace(',', '.'))\n */")).toEqual([])
+    // … aber Code HINTER einem Block-Kommentar zählt, und die Zeile stimmt.
+    expect(fundstellen('k.ts', "/* a\n b */ const z = Number(x.replace(',', '.'))"))
+      .toEqual(["k.ts:2  const z = Number(x.replace(',', '.'))"])
+    // Eine URL in einer Zeichenkette ist kein Kommentar.
+    expect(fundstellen('k.ts', "const u = 'https://x'; const z = Number(x.replace(',', '.'))")).toHaveLength(1)
+  })
+})
+
+describe('Die Leseregel (zahlOderNull) — deutsch: Komma = Dezimalzeichen, Punkt = Tausender', () => {
+  /*
+   * Entscheidung des Nutzers am 02.10.2026: „1.200" ist 1200. Vorher war es
+   * 1,2 — im Kostenformular wurde ein Preis „1.200" still zu 1,20 €, ein
+   * CO₂-Grenzwert „1.200" ppm zu 1,2 ppm.
+   */
+
+  it('liest Punkte in Dreiergruppen als Tausendertrenner', () => {
+    expect(zahlOderNull('1.200'), 'Der Anlass: ein Preis „1.200" wurde zu 1,20 €.').toBe(1200)
+    expect(zahlOderNull('12.500')).toBe(12500)
+    expect(zahlOderNull('1.234.567')).toBe(1234567)
+    expect(zahlOderNull('-1.200')).toBe(-1200)
+  })
+
+  it('liest Tausenderpunkt und Dezimalkomma zusammen', () => {
+    expect(zahlOderNull('1.200,5')).toBe(1200.5)
+    expect(zahlOderNull('1.234.567,89')).toBe(1234567.89)
+  })
+
+  it('liest das Komma als Dezimalzeichen', () => {
+    expect(zahlOderNull('1,5')).toBe(1.5)
+    expect(zahlOderNull('1,200'), '„1,200" ist deutsch eins-komma-zwei.').toBe(1.2)
+    expect(zahlOderNull('0,5')).toBe(0.5)
+    expect(zahlOderNull(',5')).toBe(0.5)
+    expect(zahlOderNull('-2,5')).toBe(-2.5)
+  })
+
+  it('lässt ganze Zahlen ganz', () => {
+    expect(zahlOderNull('1200')).toBe(1200)
+    expect(zahlOderNull('0')).toBe(0)
+  })
+
+  it('liest einen Punkt, der kein Tausendertrenner sein KANN, als Dezimalpunkt', () => {
+    // Bewusst beibehalten: „5.8" war in jedem Feld ein gültiger pH-Wert, und
+    // es gibt keine zweite Deutung, die man durch Abweisen schützen würde.
+    expect(zahlOderNull('5.8'), 'pH-Eingabe mit Punkt').toBe(5.8)
+    expect(zahlOderNull('6.25')).toBe(6.25)
+    expect(zahlOderNull('1.20'), 'zwei Ziffern hinter dem Punkt: keine Tausendergruppe').toBe(1.2)
+    expect(zahlOderNull('1.2000'), 'vier Ziffern hinter dem Punkt: keine Tausendergruppe').toBe(1.2)
+    expect(zahlOderNull('1234.5'), 'vier Ziffern vor dem Punkt: keine Tausendergruppe').toBe(1234.5)
+    expect(zahlOderNull('0.500'), '„0.500" schreibt niemand für fünfhundert').toBe(0.5)
+  })
+
+  it('meldet Gemische als unlesbar, statt zu raten', () => {
+    // Ein Punkt vor dem Komma, der keine Tausendergruppe ist, und ein Punkt
+    // hinter dem Komma: keine Leseart ergibt einen Sinn.
+    expect(istUnlesbar('1.2,5')).toBe(true)
+    expect(istUnlesbar('1,5.3')).toBe(true)
+    expect(istUnlesbar('1,2,3')).toBe(true)
+    expect(istUnlesbar('1.20.0')).toBe(true)
+    expect(istUnlesbar(',')).toBe(true)
+    expect(istUnlesbar('1.200 €'), 'Einheiten gehören nicht ins Feld — sonst stünde wieder parseFloat da').toBe(true)
+  })
+
+  it('übersteht den Rundweg über das Eingabefeld', () => {
+    // feldText schreibt nie Tausenderpunkte — also darf ein gespeicherter Wert
+    // beim Zurücklesen nicht plötzlich als Tausender gelten.
+    for (const wert of [1.234, 12.345, 1.2, 1200, 1234.567, 0.125, -1.25]) {
+      expect(zahlOderNull(feldText(wert)), `${wert} → „${feldText(wert)}"`).toBe(wert)
+    }
+  })
+})
+
+describe('Die Maschinen-Regel (maschinenZahl)', () => {
+  /*
+   * Ein Zustand aus Home Assistant und der Wert eines <input type="number">
+   * haben einen Dezimalpunkt und nie Tausendertrenner. Die deutsche Regel
+   * machte aus „1.234" Volt 1234 — tausendmal zu viel.
+   */
+
+  it('liest den Punkt immer als Dezimalpunkt', () => {
+    expect(maschinenZahl('1.234')).toBe(1.234)
+    expect(maschinenZahl('5.82')).toBe(5.82)
+    expect(maschinenZahl('-2.5')).toBe(-2.5)
+    expect(maschinenZahl('1200')).toBe(1200)
+  })
+
+  it('nimmt ein Komma nur, wenn kein Punkt dasteht', () => {
+    // Manche Vorlagen-Sensoren in Home Assistant schreiben deutsch.
+    expect(maschinenZahl('5,8')).toBe(5.8)
+    expect(maschinenZahl('1.234,5')).toBeNull()
+  })
+
+  it('macht aus Nicht-Zahlen null', () => {
+    for (const roh of ['', '   ', 'unavailable', 'unknown', 'on', '–', '-', null, undefined]) {
+      expect(maschinenZahl(roh), String(roh)).toBeNull()
+    }
   })
 })
 

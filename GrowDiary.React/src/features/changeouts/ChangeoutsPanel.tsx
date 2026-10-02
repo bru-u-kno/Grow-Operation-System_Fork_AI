@@ -3,6 +3,7 @@ import { apiFetch, ApiRequestError } from '../../api'
 import type { ChangeoutDto, ChangeoutKind, CreateChangeoutRequest } from '../../types'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Section, V1Skeleton } from '../../components/v1'
 import { formatDateTime, formatNumber } from '../../utils'
+import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../../zahlenfeld'
 import './changeouts.css'
 
 type FormState = {
@@ -35,13 +36,6 @@ const emptyForm: FormState = {
   phBefore: '',
   phAfter: '',
   notes: '',
-}
-
-function toNumber(value: string): number | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const parsed = Number(trimmed.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
 }
 
 function pair(before: number | null, after: number | null): string {
@@ -129,6 +123,14 @@ export function ChangeoutsPanel({ growId, growName, offenBeiStart = false, onGes
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    // Bisher wurde Unlesbares still zu `null` — der Wechsel stand ohne den Wert
+    // da, mit Erfolgsmeldung.
+    const unlesbar = unlesbarMeldung(unlesbareFelder([
+      [form.percentChanged, 'Anteil (%)'], [form.volumeChangedLiters, 'Menge (L)'],
+      [form.ecBefore, 'EC vorher'], [form.ecAfter, 'EC nachher'],
+      [form.phBefore, 'pH vorher'], [form.phAfter, 'pH nachher'],
+    ]))
+    if (unlesbar) { setError(unlesbar); setNotice(null); return }
     setSaving(true)
     setError(null)
     setNotice(null)
@@ -151,12 +153,12 @@ export function ChangeoutsPanel({ growId, growName, offenBeiStart = false, onGes
         performedAtUtc: form.performedAtLocal
           ? new Date(form.performedAtLocal).toISOString()
           : null,
-        percentChanged: toNumber(form.percentChanged),
-        volumeChangedLiters: toNumber(form.volumeChangedLiters),
-        ecBefore: toNumber(form.ecBefore),
-        ecAfter: toNumber(form.ecAfter),
-        phBefore: toNumber(form.phBefore),
-        phAfter: toNumber(form.phAfter),
+        percentChanged: zahlOderNull(form.percentChanged),
+        volumeChangedLiters: zahlOderNull(form.volumeChangedLiters),
+        ecBefore: zahlOderNull(form.ecBefore),
+        ecAfter: zahlOderNull(form.ecAfter),
+        phBefore: zahlOderNull(form.phBefore),
+        phAfter: zahlOderNull(form.phAfter),
         notes: form.notes.trim() || null,
       }
       await apiFetch<ChangeoutDto>(`/api/grows/${growId}/changeouts`, { method: 'POST', body: JSON.stringify(body) })

@@ -94,12 +94,6 @@ export const emptyAutoConfigForm = () => ({
 
 export type AutoConfigFormState = ReturnType<typeof emptyAutoConfigForm>
 
-export function toNullableNumber(value: string): number | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const parsed = Number(trimmed.replace(',', '.'))
-  return Number.isNaN(parsed) ? null : parsed
-}
 
 export function formatDeviationValue(value: number | null, unit: string | null): string {
   if (value == null) return '-'

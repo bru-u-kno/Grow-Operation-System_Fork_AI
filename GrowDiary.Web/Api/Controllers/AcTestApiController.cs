@@ -268,7 +268,7 @@ public sealed class AcTestApiController : ControllerBase
         {
             schritte.Add(new AcSchreibschritt(
                 geraet.ModusEntityId!, "select", "select_option",
-                new Dictionary<string, object> { ["option"] = "Schedule" }, "Schedule"));
+                new Dictionary<string, object> { ["option"] = AcModi.Zeitplan }, AcModi.Zeitplan));
         }
 
         var ergebnisse = await _schreiber.SchreibenAsync(einstellungen, schritte, ct: ct);
