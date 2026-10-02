@@ -38,11 +38,17 @@ public sealed class SteuerungRechenwertAbsicherung
 
     private readonly HomeAssistantService _ha;
     private readonly ILogger _log;
+    private readonly string _sicherungsOrdner;
 
-    public SteuerungRechenwertAbsicherung(HomeAssistantService ha, ILogger log)
+    /// <param name="sicherungsOrdner">
+    /// Wohin der alte Stand gesichert wird — derselbe Ordner wie bei den
+    /// Automationen (<see cref="SteuerungAutomationService.SicherungsOrdner"/>).
+    /// </param>
+    public SteuerungRechenwertAbsicherung(HomeAssistantService ha, ILogger log, string sicherungsOrdner)
     {
         _ha = ha;
         _log = log;
+        _sicherungsOrdner = sicherungsOrdner;
     }
 
     /// <summary>Wie lange nach dem Schreiben auf einen gültigen Zustand gewartet wird.</summary>
@@ -195,7 +201,7 @@ public sealed class SteuerungRechenwertAbsicherung
         return Fehler(zurueckFehler is null
             ? $"{problem} — der alte Stand wurde zurückgeschrieben."
             : $"{problem}, und das Zurückschreiben scheiterte ({zurueckFehler}). "
-              + "Der alte Stand liegt im Add-on unter App_Data/automations-backup.");
+              + $"Der alte Stand liegt unter {_sicherungsOrdner}.");
     }
 
     /// <summary>
@@ -338,9 +344,8 @@ public sealed class SteuerungRechenwertAbsicherung
     {
         try
         {
-            var ordner = Path.Combine(AppContext.BaseDirectory, "App_Data", "automations-backup");
-            Directory.CreateDirectory(ordner);
-            var ziel = Path.Combine(ordner, $"{entityId}-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+            Directory.CreateDirectory(_sicherungsOrdner);
+            var ziel = Path.Combine(_sicherungsOrdner, $"{entityId}-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
             var inhalt = new JsonObject
             {
                 ["entity_id"] = entityId,

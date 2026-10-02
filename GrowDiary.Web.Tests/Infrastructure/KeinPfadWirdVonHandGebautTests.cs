@@ -38,6 +38,9 @@ public sealed class KeinPfadWirdVonHandGebautTests
         ["AppPaths.cs"] =
             "Hier wohnt die Rechnung. DataRootPath faellt genau hier auf "
             + "ContentRoot/App_Data zurueck, wenn GROWDIARY_DATA_PATH fehlt.",
+        ["SteuerungSicherungsOrdner.cs"] =
+            "Kennt den alten Ort der Automations-Sicherungen (Programmordner), "
+            + "um sie beim Start nach DataRootPath zu holen. Geschrieben wird dort nichts.",
     };
 
     [Fact]
@@ -75,7 +78,11 @@ public sealed class KeinPfadWirdVonHandGebautTests
                     continue;
                 }
 
-                if (zeile.Contains("ContentRootPath", StringComparison.Ordinal)
+                // Fork AI (02.10.2026): Der Programmordner ist im Add-on derselbe
+                // Inhaltspfad (/app) — die Sicherungen der Automationen landeten
+                // ueber AppContext.BaseDirectory genau dort.
+                if ((zeile.Contains("ContentRootPath", StringComparison.Ordinal)
+                        || zeile.Contains("AppContext.BaseDirectory", StringComparison.Ordinal))
                     && zeile.Contains("App_Data", StringComparison.Ordinal))
                 {
                     treffer.Add($"{name}:{i + 1}  {zeile}");

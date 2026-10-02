@@ -479,6 +479,39 @@ public static class SteuerungBauteile
     };
 
     /// <summary>
+    /// Die Spanne eines Zahlen-Helfers aus dem Katalog.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Wenn es den Helfer im Katalog nicht gibt oder er keine Grenzen hat — ein
+    /// Tippfehler in einer Kennung soll laut scheitern, nicht still „unbegrenzt"
+    /// liefern.
+    /// </exception>
+    public static (double Min, double Max) Spanne(string entityId)
+        => Alle.FirstOrDefault(b => string.Equals(b.EntityId, entityId, StringComparison.OrdinalIgnoreCase))
+            is { Min: { } min, Max: { } max }
+                ? (min, max)
+                : throw new InvalidOperationException($"{entityId} ist kein Zahlen-Helfer mit Grenzen im Katalog.");
+
+    /// <summary>
+    /// Einen Wert auf die Spanne seines Helfers begrenzen — Fork AI (02.10.2026).
+    /// </summary>
+    /// <remarks>
+    /// <c>input_number.set_value</c> lehnt jeden Wert außerhalb von min/max ab,
+    /// und das bei jedem Abgleich wieder. Ein aus dem Plan abgeleiteter Wert
+    /// (Plan × Anteil, Plan-Luft + Abstand) kann die Spanne verlassen, ohne dass
+    /// ihn eine Formularprüfung je gesehen hat. Die Grenzen kommen aus dem
+    /// Katalog, aus dem auch der Helfer angelegt wird — nicht abgetippt.
+    /// Ein Helfer ohne Katalogeintrag oder ohne Grenzen bleibt unverändert.
+    /// </remarks>
+    public static double AufSpanne(string entityId, double wert)
+    {
+        var bauteil = Alle.FirstOrDefault(b => string.Equals(b.EntityId, entityId, StringComparison.OrdinalIgnoreCase));
+        if (bauteil?.Min is { } min && wert < min) return min;
+        if (bauteil?.Max is { } max && wert > max) return max;
+        return wert;
+    }
+
+    /// <summary>
     /// Die Platzhalter einer Vorlage durch die zugeordneten Entitäten ersetzen.
     /// </summary>
     /// <param name="vorlage">Die Rechenvorschrift mit <c>[[rolle]]</c>-Platzhaltern.</param>

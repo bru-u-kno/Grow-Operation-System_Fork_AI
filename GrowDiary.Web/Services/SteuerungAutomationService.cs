@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 
 namespace GrowDiary.Web.Services;
@@ -46,12 +47,16 @@ public sealed class SteuerungAutomationService
     private readonly ILogger<SteuerungAutomationService> _log;
     private readonly string _vorlagenWurzel;
 
-    public SteuerungAutomationService(HomeAssistantService ha, ILogger<SteuerungAutomationService> log)
+    public SteuerungAutomationService(HomeAssistantService ha, ILogger<SteuerungAutomationService> log, AppPaths pfade)
     {
         _ha = ha;
         _log = log;
         _vorlagenWurzel = VorlagenWurzel;
+        SicherungsOrdner = SteuerungSicherungsOrdner.Fuer(pfade);
     }
+
+    /// <summary>Wohin der alte Stand vor dem Überschreiben gesichert wird — unter dem Datenpfad.</summary>
+    public string SicherungsOrdner { get; }
 
     /// <summary>Was mit einer einzelnen Automation geschehen ist.</summary>
     public enum Stand
@@ -92,7 +97,9 @@ public sealed class SteuerungAutomationService
             return new Bilanz(true, Array.Empty<Ergebnis>());
         }
 
-        using var client = _ha.CreateClient(settings);
+        // Schreibt Automationen: die lange Frist. Home Assistant lädt beim
+        // Speichern alle Automationen neu, das dauert auf einem kleinen Rechner.
+        using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
         var einzeln = new List<Ergebnis>();
 
         // Fork AI (01.10.2026): Die handgebauten Automationen stehen unter den
@@ -425,9 +432,8 @@ public sealed class SteuerungAutomationService
             var antwort = await client.GetAsync($"{ConfigPfad}/{kennung}", ct);
             if (!antwort.IsSuccessStatusCode) return false;
 
-            var ordner = Path.Combine(AppContext.BaseDirectory, "App_Data", "automations-backup");
-            Directory.CreateDirectory(ordner);
-            var ziel = Path.Combine(ordner, $"{kennung}-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+            Directory.CreateDirectory(SicherungsOrdner);
+            var ziel = Path.Combine(SicherungsOrdner, $"{kennung}-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
             await File.WriteAllTextAsync(ziel, await antwort.Content.ReadAsStringAsync(ct), ct);
             _log.LogInformation("Alter Stand von {Kennung} gesichert: {Ziel}", kennung, ziel);
             return true;
@@ -440,12 +446,30 @@ public sealed class SteuerungAutomationService
     }
 
     /// <summary>Schreiben und nachsehen, ob es angekommen ist.</summary>
+    /// <remarks>
+    /// Bleibt die Antwort auf das Schreiben aus, heißt das nicht „abgelehnt":
+    /// Home Assistant lädt beim Speichern alle Automationen neu und kann dabei
+    /// länger brauchen als die Frist. Dann wird nachgelesen, ob genau das
+    /// Geschickte dasteht.
+    /// </remarks>
     public static async Task<string?> SchreibenAsync(
         HttpClient client, string kennung, JsonObject config, CancellationToken ct)
     {
         try
         {
-            var antwort = await client.PostAsJsonAsync($"{ConfigPfad}/{kennung}", config, ct);
+            HttpResponseMessage antwort;
+            try
+            {
+                antwort = await client.PostAsJsonAsync($"{ConfigPfad}/{kennung}", config, ct);
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException && !ct.IsCancellationRequested)
+            {
+                return await StehtDaAsync(client, kennung, config, ct)
+                    ? null
+                    : "Home Assistant hat auf das Schreiben nicht rechtzeitig geantwortet, und die Automation steht "
+                      + "danach nicht in der geschickten Fassung da. Bitte in Home Assistant nachsehen.";
+            }
+
             if (!antwort.IsSuccessStatusCode)
             {
                 var text = await antwort.Content.ReadAsStringAsync(ct);
@@ -462,6 +486,28 @@ public sealed class SteuerungAutomationService
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             return ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Steht die Automation genau so in Home Assistant, wie sie geschickt wurde?
+    /// Home Assistant speichert den Rumpf unverändert und setzt nur <c>id</c> davor.
+    /// </summary>
+    private static async Task<bool> StehtDaAsync(HttpClient client, string kennung, JsonObject config, CancellationToken ct)
+    {
+        try
+        {
+            using var antwort = await client.GetAsync($"{ConfigPfad}/{Uri.EscapeDataString(kennung)}", ct);
+            if (!antwort.IsSuccessStatusCode) return false;
+            if (JsonNode.Parse(await antwort.Content.ReadAsStringAsync(ct)) is not JsonObject gelesen) return false;
+            gelesen.Remove("id");
+            var geschickt = (JsonObject)config.DeepClone();
+            geschickt.Remove("id");
+            return JsonNode.DeepEquals(gelesen, geschickt);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return false;
         }
     }
 }

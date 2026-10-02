@@ -266,6 +266,13 @@ public sealed class LichtSteuerungService
             ziele.Add((id, soll));
         }
 
+        // Ein neuer Befehl ersetzt jeden offenen für dieselbe Entität — auch
+        // dann, wenn gleich unten nichts gesendet wird, weil der Controller
+        // schon auf dem neuen Soll steht. Vorher blieb in genau diesem Fall der
+        // alte Eintrag liegen: „aus" verworfen, dann „an" (stand schon) — und
+        // das nächste Öffnen der Seite schrieb das veraltete „aus" nach.
+        foreach (var (entity, _) in ziele) Offene.TryRemove(entity, out _);
+
         if (ziele.Count > 1)
         {
             var schritte = ziele
@@ -290,10 +297,13 @@ public sealed class LichtSteuerungService
         var vorher = (await _funk.ZustandAsync(settings, entityId, ct))?.State;
         if (vorher is not null && Gleich(vorher, sollWert)) return true;
 
-        var gesendet = await SendenAsync(settings, entityId, sollWert, ct);
+        var antwort = await SendenAsync(settings, entityId, sollWert, ct);
         var jetzt = DateTime.UtcNow;
         Offene[entityId] = new LichtOffen(entityId, sollWert, jetzt, 1, jetzt, vorher);
-        return gesendet;
+        // Blieb nur die Antwort aus, war der Auftrag unterwegs — ob er wirkte,
+        // zeigt die Nachprüfung als „unbestätigt". Abgelehnt ist allein,
+        // was Home Assistant gar nicht angenommen hat.
+        return antwort != HaDienstAntwort.Abgelehnt;
     }
 
     /// <summary>
@@ -326,10 +336,10 @@ public sealed class LichtSteuerungService
         };
     }
 
-    private Task<bool> SendenAsync(HomeAssistantSettings settings, string entityId, string soll, CancellationToken ct)
+    private Task<HaDienstAntwort> SendenAsync(HomeAssistantSettings settings, string entityId, string soll, CancellationToken ct)
         => Schritt(entityId, soll) is { } s
-            ? _funk.SchickenAsync(settings, s.Domain, s.Dienst, s.EntityId, s.Daten, ct)
-            : Task.FromResult(false);
+            ? _funk.SchickenMitAntwortAsync(settings, s.Domain, s.Dienst, s.EntityId, s.Daten, ct)
+            : Task.FromResult(HaDienstAntwort.Abgelehnt);
 
     /// <summary>Die vier Helfer der alten Dashboard-Karte nachziehen.</summary>
     private async Task<bool> HelferSpiegelnAsync(LichtEinstellungen e, CancellationToken ct)
@@ -345,7 +355,7 @@ public sealed class LichtSteuerungService
                      (Entitaeten.BlueteEin, e.BlueteEin), (Entitaeten.BlueteAus, e.BlueteAus),
                  })
         {
-            alles &= await SendenAsync(settings, id, wert + ":00", ct);
+            alles &= await SendenAsync(settings, id, wert + ":00", ct) == HaDienstAntwort.Angenommen;
         }
 
         return alles;
@@ -419,9 +429,15 @@ public sealed class LichtSteuerungService
 
             foreach (var offen in Offene.Values.ToList())
             {
+                // Entfernt und ersetzt wird nur der Eintrag, der hier gelesen
+                // wurde. Kam in der Zwischenzeit ein neuer Befehl für dieselbe
+                // Entität (zweiter Tab, Klick während des Nachschreibens), gehört
+                // dessen Eintrag nicht dieser Prüfung.
+                var gelesen = new KeyValuePair<string, LichtOffen>(offen.EntityId, offen);
+
                 if (!geraete.Values.Any(id => string.Equals(id, offen.EntityId, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Offene.TryRemove(offen.EntityId, out _);
+                    Offene.TryRemove(gelesen);
                     continue;
                 }
 
@@ -429,14 +445,14 @@ public sealed class LichtSteuerungService
                 switch (Nachpruefung(offen, ist, DateTime.UtcNow, e))
                 {
                     case Nachpruefschritt.Erledigt:
-                        Offene.TryRemove(offen.EntityId, out _);
+                        Offene.TryRemove(gelesen);
                         break;
 
                     case Nachpruefschritt.Ueberholt:
                         _logger.LogInformation(
                             "Licht: {Entity} steht jetzt auf {Ist} — anderswo geschaltet, {Soll} wird nicht nachgeschrieben.",
                             offen.EntityId, ist, offen.Soll);
-                        Offene.TryRemove(offen.EntityId, out _);
+                        Offene.TryRemove(gelesen);
                         break;
 
                     case Nachpruefschritt.Warten:
@@ -448,10 +464,22 @@ public sealed class LichtSteuerungService
                         break;
 
                     case Nachpruefschritt.Nachschreiben when darfSchreiben:
+                        // Steht noch derselbe Eintrag da? Sonst hat ein neuer
+                        // Befehl ihn ersetzt oder entfernt — dann ist dieser Soll
+                        // veraltet und wird nicht mehr gesendet.
+                        if (!Offene.TryGetValue(offen.EntityId, out var aktuell) || aktuell != offen)
+                        {
+                            break;
+                        }
+
                         _logger.LogWarning("Licht: {Entity} steht auf {Ist}, gewollt war {Soll} — Versuch {Nummer}.",
                             offen.EntityId, ist, offen.Soll, offen.Versuche + 1);
                         await SendenAsync(settings, offen.EntityId, offen.Soll, ct);
-                        Offene[offen.EntityId] = offen with { SeitUtc = DateTime.UtcNow, Versuche = offen.Versuche + 1 };
+
+                        // Nur fortschreiben, was noch derselbe Eintrag ist: ein
+                        // während des Sendens gesetzter neuer Befehl gewinnt.
+                        Offene.TryUpdate(offen.EntityId,
+                            offen with { SeitUtc = DateTime.UtcNow, Versuche = offen.Versuche + 1 }, offen);
                         unbestaetigt.Add(offen.EntityId);
                         break;
 

@@ -47,6 +47,10 @@ public sealed class SteuerungAbsicherungServiceTests
         public int DosierungLaeuft { get; set; }
         public string Port { get; set; } = "off";
 
+        /// <summary>Datenpfad für die Sicherungen — je Nachbau ein eigener, unter dem Temp-Ordner.</summary>
+        public GrowDiary.Web.Infrastructure.AppPaths Pfade { get; } =
+            new(Path.Combine(Path.GetTempPath(), "Absicherung_" + Guid.NewGuid().ToString("N")));
+
         /// <summary>Nimmt Geschriebenes an, behält aber den alten Stand (ein HA, das still verwirft).</summary>
         public bool VerwirftGeschriebenes { get; set; }
 
@@ -138,11 +142,12 @@ public sealed class SteuerungAbsicherungServiceTests
             var ha = new HomeAssistantService(new StubHttpClientFactory(Handler), NullLogger<HomeAssistantService>.Instance);
             return new SteuerungAbsicherungService(
                 ha,
-                new SteuerungAutomationService(ha, NullLogger<SteuerungAutomationService>.Instance),
+                new SteuerungAutomationService(ha, NullLogger<SteuerungAutomationService>.Instance, Pfade),
                 NullLogger<SteuerungAbsicherungService>.Instance)
             {
                 // Im Nachbau steht der Zustand sofort fest — kein Warten.
-                Rechenwerte = new SteuerungRechenwertAbsicherung(ha, NullLogger.Instance)
+                Rechenwerte = new SteuerungRechenwertAbsicherung(ha, NullLogger.Instance,
+                    GrowDiary.Web.Services.SteuerungSicherungsOrdner.Fuer(Pfade))
                 {
                     Wartezeit = TimeSpan.Zero, Takt = TimeSpan.Zero, SocketFrist = TimeSpan.FromSeconds(2),
                 },
@@ -223,6 +228,43 @@ public sealed class SteuerungAbsicherungServiceTests
 
         Assert.NotNull(bilanz.Abgelehnt);
         Assert.Equal(0, ha.Geschrieben);
+    }
+
+    /// <summary>
+    /// Fork AI (02.10.2026): Ein Ventil, dessen Zustand nicht lesbar ist, gilt
+    /// nicht als zu.
+    /// </summary>
+    /// <remarks>
+    /// Neu schreiben bricht eine laufende Dosierung ab; mitten im Impuls bliebe
+    /// das Ventil offen. Vorher galt „unavailable" (Steckdose offline,
+    /// Schutzschalter offen) als „zu", und die Absicherung schrieb.
+    /// </remarks>
+    [Theory]
+    [InlineData("unavailable")]
+    [InlineData("unknown")]
+    public async Task Absichern_WennDerPortZustandUnbekanntIst_SchreibtNichtsUndSagtWarum(string zustand)
+    {
+        var ha = new NachgebautesHa { Port = zustand };
+
+        var lage = await ha.Dienst().PruefenAsync(Rollen, Einstellungen, default);
+        var bilanz = await ha.Dienst().AbsichernAsync(Rollen, Einstellungen, default);
+
+        Assert.True(lage.DosiertGerade);
+        Assert.Contains("nicht lesbar", lage.Hinweis);
+        Assert.NotNull(bilanz.Abgelehnt);
+        Assert.Equal(0, ha.Geschrieben);
+    }
+
+    [Fact]
+    public async Task Selbsttest_BeiAusdruecklichAusWirdAbgesichert()
+    {
+        // Ohne diesen Fall wäre „nie schreiben" auch grün.
+        var ha = new NachgebautesHa { Port = "off" };
+
+        var bilanz = await ha.Dienst().AbsichernAsync(Rollen, Einstellungen, default);
+
+        Assert.Null(bilanz.Abgelehnt);
+        Assert.True(ha.Geschrieben > 0);
     }
 
     [Fact]
@@ -477,7 +519,8 @@ public sealed class SteuerungAbsicherungServiceTests
         Assert.False(impuls.Geschrieben);
         Assert.DoesNotContain("wurde zurückgeschrieben", impuls.Fehler);
         Assert.Contains("weicht der Helfer noch vom alten Stand ab", impuls.Fehler);
-        Assert.Contains("App_Data/automations-backup", impuls.Fehler);
+        // Die Meldung nennt den Ordner, in dem die Sicherung wirklich liegt — unter dem Datenpfad.
+        Assert.Contains(GrowDiary.Web.Services.SteuerungSicherungsOrdner.Fuer(ha.Pfade), impuls.Fehler);
         Assert.Equal(0, ha.DialogeOffen);
     }
 }

@@ -9,13 +9,34 @@ namespace GrowDiary.Web.Services;
 
 public sealed class HomeAssistantService
 {
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan BackoffWindow = TimeSpan.FromSeconds(20);
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly HydroSetupRepository? _hydroSetups;
     private readonly ILogger<HomeAssistantService> _logger;
     private long _circuitOpenUntilTicks;
+
+    /// <summary>Frist für lesende Abrufe — Zustände, Entitätenliste, Kamerabild.</summary>
+    /// <remarks>
+    /// Kurz, weil die Live-Seiten darauf warten: ein hängendes Home Assistant
+    /// soll die Kacheln nicht für eine Viertelminute einfrieren.
+    /// </remarks>
+    public TimeSpan Lesefrist { get; init; } = TimeSpan.FromSeconds(4);
+
+    /// <summary>Frist für Aufrufe, die etwas schalten oder schreiben.</summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (02.10.2026).</b> Vorher galten auch hier die 4 s
+    /// der Lesefrist. Home Assistants Dienst-Endpunkt wartet aber selbst bis zu
+    /// 10 s auf die Integration, und Wolken-Integrationen wie AC Infinity
+    /// brauchen oft länger. Der Aufruf brach ab, während das Gerät schaltete:
+    /// die Seite meldete „nicht angenommen" (beim Preset blieb deshalb der
+    /// Modus ungeschrieben), und die Stell-Antwort machte daraus einen 502 —
+    /// „502, aber es schaltet".</para>
+    /// <para>15 s liegen über den 10 s von Home Assistant, damit dessen eigene
+    /// Antwort (auch eine Ablehnung) noch ankommt. Faustregel, keine
+    /// dokumentierte Herstellerangabe.</para>
+    /// </remarks>
+    public TimeSpan Dienstfrist { get; init; } = TimeSpan.FromSeconds(15);
 
     public HomeAssistantService(
         IHttpClientFactory httpClientFactory,
@@ -409,7 +430,7 @@ public sealed class HomeAssistantService
 
         try
         {
-            var client = CreateClient(settings);
+            var client = CreateClient(settings, Dienstfrist);
             var payload = JsonSerializer.Serialize(daten ?? new Dictionary<string, object>());
             using var content = new StringContent(payload, Encoding.UTF8, "application/json");
             using var response = await client.PostAsync($"api/services/{domain}/{service}", content, cancellationToken);
@@ -434,7 +455,33 @@ public sealed class HomeAssistantService
         }
     }
 
+    /// <remarks>
+    /// <c>true</c> nur, wenn Home Assistant den Aufruf bestätigt hat. Eine
+    /// Zeitüberschreitung ist hier <c>false</c> — wer unterscheiden muss, ob
+    /// gar nichts gesendet wurde oder nur die Antwort ausblieb, nimmt
+    /// <see cref="RufeEntitaetsDienstAsync"/>.
+    /// </remarks>
     public async Task<bool> CallEntityServiceAsync(
+        HomeAssistantSettings settings,
+        string domain,
+        string service,
+        string entityId,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, object>? daten = null)
+        => await RufeEntitaetsDienstAsync(settings, domain, service, entityId, cancellationToken, daten)
+            == HaDienstAntwort.Angenommen;
+
+    /// <summary>
+    /// Wie <see cref="CallEntityServiceAsync"/>, aber mit dem Unterschied
+    /// zwischen „abgelehnt" und „Antwort blieb aus".
+    /// </summary>
+    /// <remarks>
+    /// Bei <see cref="HaDienstAntwort.Unbestaetigt"/> war der Auftrag
+    /// unterwegs — ob er wirkte, sagt nur ein Blick auf den Zustand danach.
+    /// Raten wäre in beide Richtungen falsch: „nicht angenommen" verschweigt
+    /// ein geschaltetes Gerät, „geschaltet" ein verworfenes.
+    /// </remarks>
+    public async Task<HaDienstAntwort> RufeEntitaetsDienstAsync(
         HomeAssistantSettings settings,
         string domain,
         string service,
@@ -445,7 +492,7 @@ public sealed class HomeAssistantService
         if (!settings.IsConfigured || string.IsNullOrWhiteSpace(domain)
             || string.IsNullOrWhiteSpace(service) || string.IsNullOrWhiteSpace(entityId))
         {
-            return false;
+            return HaDienstAntwort.Abgelehnt;
         }
 
         // Im Testdatenmodus geht kein Aufruf ins Netz — aber er wird
@@ -462,7 +509,7 @@ public sealed class HomeAssistantService
                 _logger.LogWarning(
                     "Testdaten: {Entity} gibt es nicht — {Domain}.{Service} wird nicht ausgefuehrt.",
                     entityId, domain, service);
-                return false;
+                return HaDienstAntwort.Abgelehnt;
             }
 
             var verstanden = Demoschaltbrett.Schalten(domain, service, entityId, daten);
@@ -470,12 +517,12 @@ public sealed class HomeAssistantService
                 "Testdaten: {Domain}.{Service} fuer {Entity} — {Ergebnis}.",
                 domain, service, entityId,
                 verstanden ? "im Schaltbrett vermerkt" : "unbekannter Dienst, nicht vermerkt");
-            return verstanden;
+            return verstanden ? HaDienstAntwort.Angenommen : HaDienstAntwort.Abgelehnt;
         }
 
         try
         {
-            var client = CreateClient(settings);
+            var client = CreateClient(settings, Dienstfrist);
             // Manche Dienste brauchen mehr als die Entitaet: ein Thermostat will
             // `temperature`, ein Zahlenfeld `value`. Deshalb ein Woerterbuch statt
             // eines festen Objekts.
@@ -492,19 +539,28 @@ public sealed class HomeAssistantService
                 _logger.LogWarning(
                     "Home Assistant {Domain}.{Service} für {Entity} schlug fehl: HTTP {StatusCode}.",
                     domain, service, entityId, (int)response.StatusCode);
-                return false;
+                return HaDienstAntwort.Abgelehnt;
             }
 
-            return true;
+            return HaDienstAntwort.Angenommen;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return false;
+            return HaDienstAntwort.Abgelehnt;
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            // Die Frist des Clients lief ab, nicht die des Aufrufers: der
+            // Auftrag war unterwegs, nur die Antwort fehlt.
+            _logger.LogWarning(
+                "Home Assistant {Domain}.{Service} für {Entity}: keine Antwort binnen {Sekunden} s — unbestätigt, nicht abgelehnt.",
+                domain, service, entityId, (int)Dienstfrist.TotalSeconds);
+            return HaDienstAntwort.Unbestaetigt;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Home Assistant {Domain}.{Service} für {Entity} schlug fehl.", domain, service, entityId);
-            return false;
+            return HaDienstAntwort.Abgelehnt;
         }
     }
 
@@ -533,7 +589,7 @@ public sealed class HomeAssistantService
         var (domain, service) = SplitService(notifyService);
         try
         {
-            var client = CreateClient(settings);
+            var client = CreateClient(settings, Dienstfrist);
             // Ohne Ziel-Pfad ist das Payload byte-gleich wie frueher. Mit Pfad
             // bekommt die Companion-App ein Ziel: `clickAction` liest Android,
             // `url` liest iOS — die jeweils fremde Taste wird ignoriert, also
@@ -677,8 +733,14 @@ public sealed class HomeAssistantService
     /// aus drei Aufrufen, die sich dieselbe Adresse und dasselbe Token teilen
     /// müssen. Ein zweiter Aufbau daneben würde die Feinheit mit dem
     /// Schrägstrich am Ende verlieren, die den Add-on-Pfad rettet.
+    /// <para>Ohne Angabe gilt die kurze <see cref="Lesefrist"/>. Wer schreibt —
+    /// Dienste, Automations-Konfiguration, Einstellungsdialoge —, gibt
+    /// <see cref="Dienstfrist"/> mit.</para>
     /// </remarks>
-    public HttpClient CreateClient(HomeAssistantSettings settings)
+    public HttpClient CreateClient(HomeAssistantSettings settings) => CreateClient(settings, Lesefrist);
+
+    /// <summary>Ein angemeldeter Client mit eigener Frist.</summary>
+    public HttpClient CreateClient(HomeAssistantSettings settings, TimeSpan frist)
     {
         var client = _httpClientFactory.CreateClient(nameof(HomeAssistantService));
         // Trailing slash + relative request paths (no leading slash) so a base with a
@@ -686,7 +748,7 @@ public sealed class HomeAssistantService
         // leading-slash path would otherwise drop "/core" and hit the wrong endpoint.
         client.BaseAddress = new Uri(NormalizeBaseUrl(settings.BaseUrl!) + "/");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.AccessToken);
-        client.Timeout = RequestTimeout;
+        client.Timeout = frist;
         return client;
     }
 
@@ -737,4 +799,23 @@ public sealed class HomeAssistantService
 
     private static string NormalizeBaseUrl(string value)
         => value.Trim().TrimEnd('/');
+}
+
+/// <summary>Wie Home Assistant auf einen Dienstaufruf reagiert hat.</summary>
+public enum HaDienstAntwort
+{
+    /// <summary>Home Assistant hat den Aufruf bestätigt (HTTP 2xx).</summary>
+    Angenommen,
+
+    /// <summary>
+    /// Abgelehnt oder gar nicht gesendet — Verbindung, Anmeldung, Entität oder
+    /// Daten stimmen nicht. Geschaltet wurde nichts.
+    /// </summary>
+    Abgelehnt,
+
+    /// <summary>
+    /// Gesendet, aber die Antwort kam nicht binnen der Frist. Ob das Gerät
+    /// geschaltet hat, sagt nur der Zustand danach.
+    /// </summary>
+    Unbestaetigt,
 }

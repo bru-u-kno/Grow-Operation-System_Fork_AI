@@ -91,6 +91,59 @@ public class ChillerAnsteuerungTests
         Assert.DoesNotContain("\"wenn", text);
     }
 
+    // ---------- Fork AI (02.10.2026): der Wächter schaltet nur, was sich schalten lässt ----------
+
+    /// <summary>
+    /// Nur die Aktionen — die Beschreibung erzählt die Geschichte der Fassungen
+    /// und nennt dabei genau die Wörter, nach denen hier gesucht wird.
+    /// </summary>
+    private static string Waechter(string sollwertGeraet, bool steckdose)
+    {
+        var rollen = Rollen(steckdose, sollwert: true);
+        rollen["kuehler_sollwert"] = sollwertGeraet;
+        return SteuerungAutomationService.Fuellen(Datei("waechter.json"), rollen)!["actions"]!.ToJsonString();
+    }
+
+    /// <summary>
+    /// Vorher ging <c>homeassistant.turn_off</c> an jedes Sollwert-Gerät, mit
+    /// <c>continue_on_error</c>. Ein <c>number</c> kennt kein Aus — der Aufruf
+    /// scheiterte, und niemand erfuhr es.
+    /// </summary>
+    [Fact]
+    public void Waechter_SchicktKeinAusAnEinenSollwertEingang()
+    {
+        var text = Waechter("number.kuehler_soll", steckdose: false);
+
+        Assert.DoesNotContain("homeassistant.turn_off", text);
+        Assert.Contains("nur einen Sollwert-Eingang", text);
+    }
+
+    [Fact]
+    public void Waechter_SchaltetEinenClimateKuehlerMitClimateTurnOffAus()
+    {
+        var text = Waechter("climate.kuehler", steckdose: false);
+
+        Assert.Contains("climate.turn_off", text);
+        Assert.DoesNotContain("homeassistant.turn_off", text);
+    }
+
+    [Fact]
+    public void Waechter_MitSteckdose_BrauchtKeinenHinweisAufDenSollwertEingang()
+    {
+        // Die Steckdose schaltet ab — der Logbuch-Satz „lässt sich nicht
+        // abschalten" wäre dann falsch.
+        var text = Waechter("number.kuehler_soll", steckdose: true);
+
+        Assert.Contains("switch.kuehler", text);
+        Assert.DoesNotContain("nur einen Sollwert-Eingang", text);
+        Assert.DoesNotContain("wennNicht", text);
+    }
+
+    [Fact]
+    public void Waechter_DieFassungIstHochgezaehlt()
+        // Mit Fassung 3 bietet der Bestand angelegten Wächtern die neue Fassung an.
+        => Assert.Equal(3, SteuerungAutomationService.VorlagenFassung("chiller", "waechter"));
+
     [Fact]
     public void WennNichtImInnerenEntferntNurDiesenBlock()
     {

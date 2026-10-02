@@ -60,7 +60,9 @@ public sealed class SteuerungMittelwertService
             return false;
         }
 
-        using var client = _ha.CreateClient(settings);
+        // Schreibt die Optionen des Helfers, Home Assistant lädt ihn danach neu:
+        // die lange Frist (HomeAssistantService.Dienstfrist).
+        using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
         try
         {
             var start = await client.PostAsJsonAsync(OptionenPfad, new { handler = eintrag }, ct);

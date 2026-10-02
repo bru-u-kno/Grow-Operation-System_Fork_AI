@@ -81,7 +81,8 @@ public sealed class SteuerungRechenwertService
 
         var ohneGeraet = new List<string>();
         var einzeln = new List<Ergebnis>();
-        using var client = _ha.CreateClient(settings);
+        // Legt Helfer über den Einrichtungsdialog an — ein Schreiben: die lange Frist.
+        using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
 
         foreach (var b in offen)
         {
