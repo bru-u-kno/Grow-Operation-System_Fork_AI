@@ -623,12 +623,7 @@ public static partial class Demobestand
     /// im Bestand steht.
     /// </remarks>
     private static GrowStage PhaseAm(GrowRun grow, DateTime wann)
-    {
-        if (grow.FlipDate is not { } flip) return GrowStage.Veg;
-        var seitFlip = (wann.Date - flip.Date).Days;
-        if (seitFlip < 0) return GrowStage.Veg;
-        return seitFlip < 10 ? GrowStage.Transition : GrowStage.Flower;
-    }
+        => Phasenanker.Fuer(grow, wann).Stufe;
 
 
 

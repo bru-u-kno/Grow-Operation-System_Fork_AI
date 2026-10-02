@@ -81,5 +81,8 @@ public sealed record GrowDetailDto(
     /// Tragen alle erfassten Pflanzen die Hauptsorte des Laufs? Nur dann
     /// gehört <c>Breeder</c> zu dem, was angezeigt wird.
     /// </summary>
-    bool NurHauptsorte
+    bool NurHauptsorte,
+
+    /// <summary>Phase, Beginne, Woche und offene Erinnerung — aus dem Phasenanker.</summary>
+    PhasenankerDto Phasenanker
 );

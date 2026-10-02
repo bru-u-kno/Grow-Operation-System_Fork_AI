@@ -30,7 +30,6 @@ public sealed class GrowsApiControllerSetupTests : IDisposable
         _controller = new GrowsApiController(
             _growRepository,
             new AuditRepository(_paths),
-            new WeekCounterService(),
             CreateDeviationAnalyzer(),
             CreateTreatmentRecommender(),
             new SetupRepository(_paths),

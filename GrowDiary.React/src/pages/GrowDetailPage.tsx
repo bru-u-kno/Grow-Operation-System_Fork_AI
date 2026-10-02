@@ -11,6 +11,7 @@ import { balkenText, buildPhaseTimeline, flipLabel } from '../features/grows/pha
 import { CuringSection } from '../features/curing/CuringSection'
 import { PlanAuswertung } from '../features/zielwerte/PlanAuswertung'
 import { GrowPlantsCard } from '../features/grow-detail/GrowPlantsCard'
+import { PhasenErinnerung } from '../features/grows/PhasenErinnerung'
 import { samenName } from '../deutsche-woerter'
 import type { GrowDeviationDto } from '../types'
 import { resolveUrl } from '../base'
@@ -98,22 +99,21 @@ function GrowDetailPage() {
   const scope = `?growId=${grow.id}`
   const canArchiveGrow = grow.status === 'Planning' || grow.status === 'Running'
   const statusTone = grow.status === 'Running' ? 'ok' : grow.status === 'Planning' ? 'warn' : 'neutral'
-  // Autoflower kennen keinen Flip — sie gehen von selbst in die Bluete. Der
-  // Server lehnt den Aufruf korrekt mit 400 ab; angeboten wurde er trotzdem,
-  // und ein Knopf, der immer scheitert, ist schlimmer als keiner. Der
-  // Kommentar unten wusste es schon („auch bei Autoflowern, die keinen Flip
-  // kennen"), die Bedingung nicht.
-  const canFlip = grow.status === 'Running' && !grow.flipDate && grow.seedType !== 'Autoflower'
-  // Der Übergang zur Veg hängt am Aussehen, nicht am Kalender — echte gezackte
-  // Blätter statt der zwei runden Keimblätter. Also ein Knopf, solange noch
-  // nichts eingetragen ist und noch nicht geflippt wurde.
-  // Beide Knöpfe hängen an der Phase, die der Server ausrechnet — dieselbe
-  // Quelle wie die Zielwerte. „Sämling ist durch" gibt es nur im Sämling
-  // (Klone haben nie einen), „Finish beginnt" nur in der Blüte — auch bei
-  // Autoflowern, die keinen Flip kennen.
-  const canConfirmVeg = grow.currentStage === 'Seedling' && !grow.vegStartedAt && grow.status === 'Running'
-  const canConfirmFinish = ['Transition', 'Flower'].includes(grow.currentStage)
-    && !grow.finishStartedAt && grow.status === 'Running'
+  // Alle Phasen-Knöpfe hängen am Phasenanker des Servers — derselben Quelle wie
+  // Zielwerte, Wochenspalte und Erinnerung. Seit dem 02.10.2026 schaltet keine
+  // Phase mehr nach Tagen um: die Vegi beginnt mit „Vegi beginnt" (beim
+  // Steckling „Bewurzelung abgeschlossen"), die Blüte mit dem Flip — bei der
+  // Autoflower mit „Blüte beginnt".
+  const anker = grow.phasenanker
+  const offen = anker.erinnerung?.aktion
+  const laeuft = grow.status === 'Running' || grow.status === 'Planning'
+  const vorDerBluete = anker.phase === 'Anzucht' || anker.phase === 'Veg'
+  // Zeigt die Erinnerung denselben Knopf schon, steht er nicht doppelt da.
+  const canConfirmRooting = laeuft && anker.anzucht === 'Bewurzelung' && offen !== 'confirm-rooting'
+  const canConfirmVeg = laeuft && anker.phase === 'Anzucht' && grow.startMaterial !== 'Clone' && offen !== 'confirm-veg'
+  const canFlip = laeuft && vorDerBluete && !anker.blueteAb && offen !== 'flip-to-flower'
+  const istAutoflower = grow.seedType === 'Autoflower'
+  const canConfirmFinish = ['Transition', 'Flower'].includes(grow.currentStage) && grow.status === 'Running'
   // An der gerechneten Phase, wie die drei Knoepfe darueber — nicht an der
   // letzten Handmessung. Vorher verschwand der Ernte-Knopf vollstaendig,
   // sobald niemand von Hand gemessen hatte: die Seite /grows/:id/harvest gab
@@ -133,14 +133,19 @@ function GrowDetailPage() {
           <div className="v1-action-row" data-audit="grow-management-actions">
             <V1Badge tone={statusTone}>{formatGrowStatus(grow.status)}</V1Badge>
             <V1LinkButton to={`/grows/${grow.id}/addback`}>Addback</V1LinkButton>
+            {canConfirmRooting && (
+              <V1Button disabled={Boolean(saving)} onClick={() => void handleGrowAction('rooting')}>
+                {saving === 'action-rooting' ? 'Trägt ein…' : 'Bewurzelung abgeschlossen'}
+              </V1Button>
+            )}
             {canConfirmVeg && (
               <V1Button disabled={Boolean(saving)} onClick={() => void handleGrowAction('veg')}>
-                {saving === 'action-veg' ? 'Trägt ein…' : 'Sämling ist durch'}
+                {saving === 'action-veg' ? 'Trägt ein…' : 'Vegi beginnt'}
               </V1Button>
             )}
             {canFlip && (
               <V1Button disabled={Boolean(saving)} onClick={() => void handleGrowAction('flip')}>
-                {saving === 'flip' ? 'Trägt ein…' : 'Flip 12/12'}
+                {saving === 'action-flip' ? 'Trägt ein…' : istAutoflower ? 'Blüte beginnt' : 'Flip 12/12'}
               </V1Button>
             )}
             {canConfirmFinish && (
@@ -199,9 +204,13 @@ function GrowDetailPage() {
             </div>
             </div>
             {timeline.dates.ready !== '—' && <p className="gd-ready-note">{timeline.readyNote}</p>}
+            {/* Die offene Frage des Phasenankers — dort, wo die laufende Phase steht. */}
+            {laeuft && <PhasenErinnerung key={grow.id} growId={grow.id} erinnerung={anker.erinnerung} onErledigt={() => loadBundle()} />}
             {/* Ohne Plan bleibt der Strahl offen — dann steht hier, wo man ihn
                 setzt, statt dass drei Striche ohne Erklaerung dastehen. */}
-            {timeline.dates.flip === '—' && (
+            {/* Mit geplanter Dauer, aber ohne bestätigten Vegi-Beginn fehlt nicht
+                die Dauer, sondern der Beginn — das sagt die Erinnerung darunter. */}
+            {timeline.dates.flip === '—' && !(grow.plannedVegDays != null && grow.plannedVegDays > 0) && (
               <div className="gd-plan-hint">
                 <p className="gc-facts">Keine Veg-Dauer geplant — ohne sie kann der Strahl keinen Flip- und Erntetermin zeigen.</p>
                 <Link className="ls-btn is-small" to={`/grows/${grow.id}/setup`}>Veg-Dauer eintragen</Link>

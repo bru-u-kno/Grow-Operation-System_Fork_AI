@@ -309,6 +309,51 @@ public sealed class EinZielbandJeMessgroesseTests : IDisposable
     }
 
     /// <summary>
+    /// Das Messprotokoll prüft jede Messung gegen die Wochenspalte IHRES Tags.
+    /// </summary>
+    /// <remarks>
+    /// Bis zum 02.10.2026 nahm es für jede Messung die Spalte von heute: eine
+    /// Messung aus Blütewoche 4 wurde gegen das EC-Ziel aus Woche 6 geprüft und
+    /// rückwirkend „daneben" genannt, obwohl sie damals im Plan lag.
+    /// </remarks>
+    [Fact]
+    public void MessprotokollPrueftGegenDieSpalteDesMesstags()
+    {
+        var grow = BlueteGrow(); // Flip vor 35 Tagen: heute Blütewoche 6
+        var wissen = new KnowledgeBaseLoader(new AppPaths(_wurzel), NullLogger<KnowledgeBaseLoader>.Instance);
+        wissen.Initialize();
+        grow.FeedProgramId = ProgrammMitBlueteChart(wissen);
+        grow.UseFeedChartTargets = true;
+
+        var messtag = DateTime.Today.AddDays(-14); // Blütewoche 4
+        Assert.Equal(4, MischplanService.WocheInPhase(grow, "Flower", messtag));
+        Assert.Equal(6, MischplanService.WocheInPhase(grow, "Flower", DateTime.Today));
+
+        var damals = Zielband.FuerGrow(_ziele, wissen, grow, GrowStage.Flower, null, null, messtag)!;
+        var heute = Zielband.FuerGrow(_ziele, wissen, grow, GrowStage.Flower, null, null)!;
+        bool ImBand(double wert, HydroTargetValues b) => wert >= b.EcMin && wert <= b.EcMax;
+        var trenner = new[] { damals.EcMin, damals.EcMax, heute.EcMin, heute.EcMax }
+            .FirstOrDefault(w => ImBand(w, damals) != ImBand(w, heute));
+        Assert.True(trenner > 0,
+            $"Woche 4 ({damals.EcMin:0.00}-{damals.EcMax:0.00}) und Woche 6 ({heute.EcMin:0.00}-{heute.EcMax:0.00}) "
+            + "beurteilen jeden Wert gleich — dann prüft dieser Fall nichts.");
+
+        var urteil = new MeasurementAssessmentService(_ziele, null, wissen)
+            .Assess(grow,
+            [
+                new Measurement
+                {
+                    GrowId = grow.Id, TakenAt = messtag.AddHours(10),
+                    Stage = GrowStage.Flower, ReservoirEc = trenner,
+                },
+            ]).Measurements.SelectMany(z => z.Metrics).First(w => w.Metric == "ec");
+
+        Assert.Equal(damals.EcMin, urteil.TargetMin);
+        Assert.Equal(damals.EcMax, urteil.TargetMax);
+        Assert.Equal(ImBand(trenner, damals), urteil.Verdict == AssessmentVerdict.InTarget);
+    }
+
+    /// <summary>
     /// Eine halbe eigene Grenze laesst die andere Hälfte in Ruhe.
     /// </summary>
     /// <remarks>

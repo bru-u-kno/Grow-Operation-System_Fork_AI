@@ -22,6 +22,8 @@ export type PlanWoche = {
   dosierung: string | null
 }
 
+import type { PhasenerinnerungDto } from '../../types'
+
 export type WochenPlan = {
   growId: number
   growName: string
@@ -34,6 +36,8 @@ export type WochenPlan = {
   jetztLabel: string | null
   haltehinweis?: string | null
   wochen: PlanWoche[]
+  /** Offene Phasen-Erinnerung des Grows (Phasenanker) — fehlt, wenn keine offen ist. */
+  erinnerung?: PhasenerinnerungDto | null
 }
 
 /** Der Plan des Grows, den auch die Reiter zeigen — sonst der erste. */
@@ -46,7 +50,8 @@ export function waehlePlan(plaene: WochenPlan[], growId: number | null): WochenP
 export function anker(plan: WochenPlan): Array<{ name: string; wert: string }> {
   return [
     { name: 'Vegi-Start', wert: plan.vegiStart },
-    { name: 'Flip', wert: plan.flip },
+    // Der Blütebeginn: Flip, bei der Autoflower „Blüte beginnt" (Phasenanker).
+    { name: 'Blüte', wert: plan.flip },
     { name: 'Ernte', wert: plan.erntefenster },
   ].filter((a): a is { name: string; wert: string } => !!a.wert)
 }

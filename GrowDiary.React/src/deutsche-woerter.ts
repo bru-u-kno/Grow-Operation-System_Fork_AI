@@ -1,5 +1,5 @@
 import type {
-  GrowEntryPoint, GrowStage, GrowStatus, HydroSetupLayoutType, PhotoTag,
+  Ankerphase, Anzuchtart, GrowEntryPoint, GrowStage, GrowStatus, HydroSetupLayoutType, PhotoTag,
   HardwareItemStatus, PlantRole, PlantStatus, ReservoirPosition, SeedKind, SeedType,
   StartMaterial, TentType, ValueOrigin,
 } from './types'
@@ -71,6 +71,38 @@ const HERKUNFT_NAMEN: Record<ValueOrigin, string> = {
 export function phaseName(wert: string | null | undefined): string {
   if (!wert) return ''
   return PHASEN_NAMEN[wert as GrowStage] ?? wert
+}
+
+/**
+ * Die Phasen des Phasenankers. Wo es eine GrowStage gibt, heißt die Phase
+ * wie dort — „Veg" ist auch hier „Wachstum".
+ */
+const ANKERPHASEN_NAMEN: Record<Ankerphase, string> = {
+  Anzucht: 'Anzucht',
+  Veg: PHASEN_NAMEN.Veg,
+  Uebergang: PHASEN_NAMEN.Transition,
+  Bluete: PHASEN_NAMEN.Flower,
+  Finish: PHASEN_NAMEN.Finish,
+  Ende: 'Beendet',
+}
+
+/** Was in der Anzucht gerade passiert. */
+const ANZUCHT_NAMEN: Record<Anzuchtart, string> = {
+  Keimung: 'Keimung',
+  Saemling: PHASEN_NAMEN.Seedling,
+  Bewurzelung: 'Bewurzelung',
+}
+
+/** „Uebergang" wird „Übergang". */
+export function ankerphaseName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ANKERPHASEN_NAMEN[wert as Ankerphase] ?? wert
+}
+
+/** „Saemling" wird „Sämling". */
+export function anzuchtName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ANZUCHT_NAMEN[wert as Anzuchtart] ?? wert
 }
 
 /** „Overview" wird „Übersicht". */
@@ -357,6 +389,8 @@ export const WOERTERBUECHER = {
   samen: SAMEN_NAMEN,
   material: MATERIAL_NAMEN,
   einstieg: EINSTIEG_NAMEN,
+  ankerphase: ANKERPHASEN_NAMEN,
+  anzucht: ANZUCHT_NAMEN,
   aufstellung: AUFSTELLUNG_NAMEN,
   tankplatz: TANKPLATZ_NAMEN,
   zeltZweck: ZELTZWECK_NAMEN,

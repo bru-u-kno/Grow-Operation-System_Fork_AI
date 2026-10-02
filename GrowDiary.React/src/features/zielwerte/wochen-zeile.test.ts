@@ -22,7 +22,7 @@ describe('Wochenzeile', () => {
 
   it('zeigt nur gesetzte Anker, in fester Reihenfolge', () => {
     expect(anker(plan({ flip: '23.08.2026', erntefenster: '18.10.–25.10.', vegiStart: null }))).toEqual([
-      { name: 'Flip', wert: '23.08.2026' },
+      { name: 'Blüte', wert: '23.08.2026' },
       { name: 'Ernte', wert: '18.10.–25.10.' },
     ])
     expect(anker(plan({}))).toEqual([])

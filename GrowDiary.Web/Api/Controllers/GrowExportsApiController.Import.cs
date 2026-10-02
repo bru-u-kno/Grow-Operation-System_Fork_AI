@@ -210,6 +210,10 @@ public sealed partial class GrowExportsApiController
             FlipDate = source.FlipDate?.Date,
             GerminatedAt = source.GerminatedAt,
             RootedAt = source.RootedAt,
+            // Die bestätigten Beginne reisen mit: ohne sie stünde ein importierter
+            // Lauf im Phasenanker wieder in der Anzucht.
+            VegStartedAt = source.VegStartedAt,
+            FinishStartedAt = source.FinishStartedAt,
             Nutrients = source.Nutrients,
             Notes = AppendImportNote(source.Notes, export),
             TentSnapshotJson = export.TentSnapshot is null ? null : JsonSerializer.Serialize(ToTentSnapshot(export.TentSnapshot), ExportJsonOptions),

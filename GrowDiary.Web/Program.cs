@@ -72,7 +72,6 @@ builder.Services.AddSingleton<MeasurementAssessmentService>();
 builder.Services.AddSingleton<TreatmentRecommender>();
 builder.Services.AddSingleton<DeviationRiskEventSyncService>();
 builder.Services.AddSingleton<RiskEventSopRecommender>();
-builder.Services.AddSingleton<WeekCounterService>();
 builder.Services.AddSingleton<HomeAssistantService>();
 builder.Services.AddSingleton<SupervisorInfoService>();
 // Der Kalibrierlauf haelt seine Sitzung im Speicher — deshalb Singleton.
@@ -189,6 +188,25 @@ if (!string.IsNullOrWhiteSpace(defaultUrls))
 var app = builder.Build();
 
 app.Services.GetRequiredService<DatabaseInitializer>().Initialize();
+
+// Phasenanker (02.10.2026): nie bestätigte Phasenbeginne einmalig aus der
+// bisherigen Schätzung übernehmen — vor allem, was Phasen liest.
+try
+{
+    var uebernommenePhasen = PhasenankerUebernahme.Ausfuehren(
+        app.Services.GetRequiredService<GrowRepository>(),
+        app.Services.GetRequiredService<JournalRepository>(),
+        app.Services.GetRequiredService<AppSettingsRepository>(),
+        DateTime.Today);
+    if (uebernommenePhasen > 0)
+    {
+        app.Logger.LogInformation("Phasenanker: bei {Anzahl} Grows die bisherige Schätzung übernommen.", uebernommenePhasen);
+    }
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Phasenanker: Übernahme der Schätzung fehlgeschlagen.");
+}
 
 // Fork AI (forkai.136): Einträge aus Crop Steering einmalig als Chiller-Rollen übernehmen.
 using (var uebernahme = app.Services.CreateScope())

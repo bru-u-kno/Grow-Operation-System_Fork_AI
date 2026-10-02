@@ -90,8 +90,8 @@ public sealed class GrowFormViewModel
     /// unveränderten Wert zurück. Belegt am laufenden Stand: 2026-08-01
     /// geschickt, 2026-07-20 geblieben, keine Meldung.</para>
     ///
-    /// <para>Ein Autoflower hat keinen Flip — sie geht nach Tagen in die Blüte
-    /// (<c>GrowStageResolver.AutoflowerBluetenStart</c>). Deshalb bleibt das
+    /// <para>Ein Autoflower hat keinen Flip im Formular — ihr Blütebeginn wird
+    /// mit „Blüte beginnt" bestätigt (<c>Phasenanker</c>). Deshalb bleibt das
     /// die einzige Bedingung.</para>
     /// </remarks>
     public bool NeedsFlipDate => !IsAutoflower;
@@ -202,7 +202,9 @@ public sealed class GrowFormViewModel
             run.RootedAt = run.StartDate;
         }
 
-        // Samen bereits in fortgeschrittener Phase: GerminatedAt setzen
+        // Samen bereits in fortgeschrittener Phase: GerminatedAt setzen.
+        // Das ist KEINE Bestätigung der Vegi — die steckt im Einstiegspunkt
+        // selbst (Phasenanker).
         if (run.StartMaterial == StartMaterial.Seed
             && run.EntryPoint != GrowEntryPoint.Germination
             && run.GerminatedAt == null)

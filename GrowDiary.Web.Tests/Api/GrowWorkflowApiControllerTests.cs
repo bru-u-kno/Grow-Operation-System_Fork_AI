@@ -1,3 +1,4 @@
+using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Controllers;
 using GrowDiary.Web.Infrastructure;
@@ -258,5 +259,74 @@ public sealed class GrowWorkflowApiControllerTests : IDisposable
             Status = GrowStatus.Running,
             StartDate = DateTime.Today.AddDays(-60),
         });
+    }
+
+    // ---------------- Phasen-Bestätigungen (Phasenanker, 02.10.2026) ----------------
+
+    private int Lauf(Action<GrowRun> anpassen)
+    {
+        var grow = new GrowRun
+        {
+            Name = "Phasen",
+            StartDate = DateTime.Today.AddDays(-30),
+            Status = GrowStatus.Running,
+            HydroStyle = HydroStyle.RDWC,
+            StartMaterial = StartMaterial.Seed,
+            SeedType = SeedType.Feminized,
+        };
+        anpassen(grow);
+        return _repository.CreateGrow(grow);
+    }
+
+    [Fact]
+    public void BlueteBeginnt_GehtAuchBeiDerAutoflower()
+    {
+        // Seit dem Phasenanker schaltet die Autoflower nicht mehr nach 28 Tagen
+        // von selbst um — der Knopf „Blüte beginnt" muss also gehen.
+        var id = Lauf(g => { g.SeedType = SeedType.Autoflower; g.VegStartedAt = DateTime.Today.AddDays(-15).AddHours(12); });
+
+        var ok = Assert.IsType<OkObjectResult>(_controller.FlipToFlower(id).Result);
+        var antwort = Assert.IsType<GrowActionResultDto>(ok.Value);
+        Assert.Equal("Blütebeginn eingetragen.", antwort.Message);
+        Assert.Equal(DateTime.Today, _repository.GetGrow(id)!.FlipDate);
+        Assert.Equal("Transition", antwort.Grow.CurrentStage);
+        Assert.Contains(new JournalRepository(_paths).GetForGrow(id), j => j.Body == "Blüte beginnt (Autoflower).");
+
+        // Ein zweites Mal ändert nichts.
+        Assert.IsType<OkObjectResult>(_controller.FlipToFlower(id).Result);
+        Assert.Single(new JournalRepository(_paths).GetForGrow(id), j => j.EntryType == JournalEntryType.FlipToFlower);
+    }
+
+    [Fact]
+    public void VegiBeginnt_SetztWocheEins_UndGehtNichtMehrInDerBluete()
+    {
+        var id = Lauf(_ => { });
+        Assert.Equal("Anzucht", _repository.GetGrow(id)!.ToDetailDto().Phasenanker.Phase);
+        Assert.Equal("confirm-veg", _repository.GetGrow(id)!.ToDetailDto().Phasenanker.Erinnerung?.Aktion);
+
+        var ok = Assert.IsType<OkObjectResult>(_controller.ConfirmVeg(id).Result);
+        var anker = Assert.IsType<GrowActionResultDto>(ok.Value).Grow.Phasenanker;
+        Assert.Equal("Veg", anker.Phase);
+        Assert.Equal(1, anker.WocheInPhase);
+        Assert.Null(anker.Erinnerung);
+
+        var bluehend = Lauf(g => { g.EntryPoint = GrowEntryPoint.Flower; g.GerminatedAt = g.StartDate; });
+        Assert.IsType<BadRequestObjectResult>(_controller.ConfirmVeg(bluehend).Result);
+    }
+
+    [Fact]
+    public void BewurzelungAbgeschlossen_HeisstAuchSo()
+    {
+        // Wortwahl des Nutzers: „Bewurzelung abgeschlossen", nicht „bestätigt".
+        var klon = Lauf(g => g.StartMaterial = StartMaterial.Clone);
+        var ok = Assert.IsType<OkObjectResult>(_controller.ConfirmRooting(klon).Result);
+        var antwort = Assert.IsType<GrowActionResultDto>(ok.Value);
+        Assert.Equal("Bewurzelung abgeschlossen — ab hier Vegi.", antwort.Message);
+        Assert.Equal("Veg", antwort.Grow.Phasenanker.Phase);
+
+        var samen = Lauf(_ => { });
+        var fehler = Assert.IsType<BadRequestObjectResult>(_controller.ConfirmRooting(samen).Result);
+        Assert.Contains("Bewurzelung abgeschlossen", System.Text.Json.JsonSerializer.Serialize(fehler.Value));
+        Assert.DoesNotContain("estaetig", System.Text.Json.JsonSerializer.Serialize(fehler.Value));
     }
 }

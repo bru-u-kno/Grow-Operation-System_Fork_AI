@@ -52,6 +52,9 @@ describe('Deutsche Wörter', () => {
     ['SeedType', WOERTERBUECHER.samen],
     ['StartMaterial', WOERTERBUECHER.material],
     ['GrowEntryPoint', WOERTERBUECHER.einstieg],
+    // Der Phasenanker (02.10.2026): Phase und Anzucht-Unterart stehen an der Wochenzeile.
+    ['Ankerphase', WOERTERBUECHER.ankerphase],
+    ['Anzuchtart', WOERTERBUECHER.anzucht],
     ['HydroSetupLayoutType', WOERTERBUECHER.aufstellung],
     ['ReservoirPosition', WOERTERBUECHER.tankplatz],
     ['PlantRole', WOERTERBUECHER.pflanzenRolle],

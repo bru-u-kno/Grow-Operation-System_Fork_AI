@@ -43,7 +43,6 @@ public sealed class GrowDeleteTests : IDisposable
         _controller = new GrowsApiController(
             _repository,
             new AuditRepository(paths),
-            new WeekCounterService(),
             new DeviationAnalyzerService(new TargetValueService(loader)),
             new TreatmentRecommender(loader),
             new SetupRepository(paths),

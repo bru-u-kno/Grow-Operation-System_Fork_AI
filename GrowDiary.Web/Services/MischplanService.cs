@@ -47,18 +47,15 @@ public sealed class MischplanService
     private readonly GrowRepository _grows;
     private readonly HydroSetupRepository _setups;
     private readonly KnowledgeBaseLoader _wissen;
-    private readonly WeekCounterService _wochen;
 
     public MischplanService(
         GrowRepository grows,
         HydroSetupRepository setups,
-        KnowledgeBaseLoader wissen,
-        WeekCounterService wochen)
+        KnowledgeBaseLoader wissen)
     {
         _grows = grows;
         _setups = setups;
         _wissen = wissen;
-        _wochen = wochen;
     }
 
     /// <summary>
@@ -149,13 +146,18 @@ public sealed class MischplanService
     /// </remarks>
     public static (FeedChartColumn Spalte, string Herkunft)? ZielSpalteFuerGrow(
         GrowRun grow, IEnumerable<NutrientProgramDefinition> programme)
+        => ZielSpalteFuerGrow(grow, programme, DateTime.Today);
+
+    /// <summary>Die Chart-Spalte an einem Stichtag — das Messprotokoll fragt je Messtag.</summary>
+    public static (FeedChartColumn Spalte, string Herkunft)? ZielSpalteFuerGrow(
+        GrowRun grow, IEnumerable<NutrientProgramDefinition> programme, DateTime stichtag)
     {
         if (!NutztWochenziele(grow)) return null;
 
         var programm = ProgrammFuerGrow(grow, programme);
         if (programm?.FeedChart is not { Columns.Count: > 0 } chart) return null;
 
-        var spalte = SpalteFuer(chart, grow);
+        var spalte = SpalteFuer(chart, grow, stichtag);
         return spalte is null ? null : (spalte, $"{programm.Name} · {spalte.Label}");
     }
 
@@ -258,19 +260,29 @@ public sealed class MischplanService
             anlage.PotCount, anlage.PotSizeLiters, anlage.ReservoirLiters);
 
     /// <summary>
-    /// Die Spalte des Charts, die zur Lage des Grows passt.
+    /// Die Spalte des Charts, die zur Lage des Grows passt — heute.
+    /// </summary>
+    public static FeedChartColumn? SpalteFuer(FeedChartDefinition chart, GrowRun grow)
+        => SpalteFuer(chart, grow, DateTime.Today);
+
+    /// <summary>
+    /// Die Spalte des Charts, die an einem Stichtag zur Lage des Grows passt.
     /// </summary>
     /// <remarks>
-    /// Wochen über das Chart hinaus halten die letzte Spalte der Phase — Woche
-    /// 6 einer 4-Wochen-Veg mischt weiter wie Woche 4, statt ins Leere zu
-    /// laufen. Sortenabhängig verschieben bleibt Sache des Betreibers; genau
-    /// das sagt die Chart-Notiz.
+    /// <para>Phase und Woche kommen aus dem <see cref="Phasenanker"/> — hier
+    /// wird kein Phasenbeginn gerechnet. Bis zum 02.10.2026 zählte diese
+    /// Klasse die Vegi-Wochen selbst ab dem Startdatum, also samt Anzucht.</para>
+    ///
+    /// <para>Wochen über das Chart hinaus halten die letzte Spalte der Phase —
+    /// Woche 6 einer 4-Wochen-Veg mischt weiter wie Woche 4, statt ins Leere zu
+    /// laufen. Die Woche selbst hat keine Obergrenze (<see cref="WocheInPhase(GrowRun, string, DateTime)"/>);
+    /// eigene Spalten für Woche 5, 6 … sind der nächste Schritt.</para>
     /// </remarks>
-    public static FeedChartColumn? SpalteFuer(FeedChartDefinition chart, GrowRun grow)
+    public static FeedChartColumn? SpalteFuer(FeedChartDefinition chart, GrowRun grow, DateTime stichtag)
     {
-        var stage = GrowStageResolver.Resolve(grow, DateTime.Today);
+        var stand = Phasenanker.Fuer(grow, stichtag);
 
-        string chartStage = stage switch
+        string chartStage = stand.Stufe switch
         {
             GrowStage.Seedling or GrowStage.Clone => "Clone",
             GrowStage.Veg => "Veg",
@@ -290,35 +302,20 @@ public sealed class MischplanService
             return kandidaten[^1];
         }
 
-        var woche = WocheInPhase(grow, chartStage);
-        return wochenSpalten.LastOrDefault(c => c.Week <= Math.Max(1, woche)) ?? wochenSpalten[0];
+        var woche = stand.WocheIn(chartStage);
+        return wochenSpalten.LastOrDefault(c => c.Week <= woche) ?? wochenSpalten[0];
     }
 
-    /// <summary>Woche innerhalb der Chart-Phase, ab 1.</summary>
+    /// <summary>Woche innerhalb der Chart-Phase heute, ab 1.</summary>
+    public static int WocheInPhase(GrowRun grow, string chartStage)
+        => WocheInPhase(grow, chartStage, DateTime.Today);
+
+    /// <summary>Woche innerhalb der Chart-Phase an einem Stichtag, ab 1, ohne Obergrenze.</summary>
     /// <remarks>
     /// Fork AI: öffentlich, seit der Banner „Gilt gerade" zeigen soll, dass eine
-    /// Spalte GEHALTEN wird. Streckt man die Vegi über die letzte Vega-Spalte
-    /// hinaus, bleibt <see cref="SpalteFuer"/> auf dieser stehen — richtig, aber
-    /// stumm. Die Antwort darauf muss aus derselben Rechnung kommen wie die
-    /// Spaltenwahl; eine zweite Zählung im Controller wäre die nächste
-    /// abweichende Auskunft.
+    /// Spalte GEHALTEN wird. Die Antwort kommt aus derselben Rechnung wie die
+    /// Spaltenwahl — dem <see cref="Phasenanker"/>.
     /// </remarks>
-    public static int WocheInPhase(GrowRun grow, string chartStage)
-    {
-        var heute = DateTime.Today;
-
-        // Blütewochen zählen ab Blütebeginn — beim Photoperioden-Grow ist das
-        // der Flip, bei der Autoflower der gerechnete Start aus dem
-        // GrowStageResolver. Ohne diesen Anker bekam eine Autoflower in
-        // Blütewoche 2 die Spalte ihrer GESAMTwoche — falsche ml und ein
-        // falsches EC-Ziel.
-        if (chartStage == "Flower" && (grow.FlipDate?.Date ?? GrowStageResolver.AutoflowerBluetenStart(grow)) is { } bluetenStart)
-        {
-            return Math.Max(1, ((heute - bluetenStart).Days / 7) + 1);
-        }
-
-        var start = grow.VegStartedAt?.Date ?? grow.StartDate.Date;
-        var ende = chartStage == "Flower" ? heute : (grow.FlipDate?.Date ?? heute);
-        return Math.Max(1, ((ende - start).Days / 7) + 1);
-    }
+    public static int WocheInPhase(GrowRun grow, string chartStage, DateTime stichtag)
+        => Phasenanker.Fuer(grow, stichtag).WocheIn(chartStage);
 }

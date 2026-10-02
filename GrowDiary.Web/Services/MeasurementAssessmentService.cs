@@ -202,8 +202,9 @@ public sealed class MeasurementAssessmentService
             // Dieselbe Kette wie Kachel und Diagnose — inklusive Feedchart.
             // Zweimal: einmal ohne die eigenen Grenzen, weil die
             // Wassertemperatur sie getrennt braucht (siehe oben).
+            // Die Wochenspalte des MESSTAGS, nicht die von heute.
             var ohneNutzer = Zielband.FuerGrow(
-                _targetValues, _wissen, grow, messung.Stage, systemProfileId, null);
+                _targetValues, _wissen, grow, messung.Stage, systemProfileId, null, messung.TakenAt.Date);
             var mitNutzer = ohneNutzer is null ? null : UserTargets.Overlay(ohneNutzer, regeln);
 
             var werte = new List<MetricAssessment>();

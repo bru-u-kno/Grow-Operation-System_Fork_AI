@@ -1,0 +1,19 @@
+/* Die offene Erinnerung des Phasenankers (02.10.2026). Nur Tokens — beide
+   Themen kommen aus tokens.css. Auf dem Telefon bricht der Knopf unter den
+   Text, statt ihn zu quetschen. */
+@layer features {
+  .pe-box {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    margin-top: 10px; padding: 9px 12px;
+    border: 1px solid var(--hair); border-left: 3px solid var(--warn);
+    border-radius: var(--r); background: var(--sunk);
+  }
+  .pe-text {
+    flex: 1 1 14em; min-width: 0; margin: 0;
+    font: 500 var(--fs-klein)/1.45 var(--font-sans); color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .pe-knopf { flex: 0 0 auto; min-height: 44px; }
+  .pe-fehler { flex-basis: 100%; margin: 0; font-size: var(--fs-klein); color: var(--warn-text); }
+  .pe-meldung { margin: 10px 0 0; font-size: var(--fs-klein); color: var(--muted); }
+}

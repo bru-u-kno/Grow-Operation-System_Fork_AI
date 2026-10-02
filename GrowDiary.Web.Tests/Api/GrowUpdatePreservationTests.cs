@@ -41,7 +41,6 @@ public sealed class GrowUpdatePreservationTests : IDisposable
         _controller = new GrowsApiController(
             _repository,
             new AuditRepository(_paths),
-            new WeekCounterService(),
             new DeviationAnalyzerService(new TargetValueService(loader)),
             new TreatmentRecommender(loader),
             new SetupRepository(_paths),

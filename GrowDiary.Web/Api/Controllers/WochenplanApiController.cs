@@ -1,3 +1,4 @@
+using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
@@ -43,7 +44,9 @@ public sealed record WochenplanDto(
     string? Haltehinweis,
     List<WochenplanWocheDto> Wochen,
     List<WochenplanUebergabeDto> Uebergabe,
-    string? LetzteUebergabe);
+    string? LetzteUebergabe,
+    /// <summary>Offene Phasen-Erinnerung des Grows („Anzucht seit 16 Tagen — Vegi-Beginn bestätigen?").</summary>
+    PhasenerinnerungDto? Erinnerung = null);
 
 /// <summary>Ein bearbeitbares Feld einer Woche (F-004).</summary>
 public sealed record WochenwertFeldDto(
@@ -345,6 +348,7 @@ public sealed class WochenplanApiController : ApiControllerBase
 
             var jetzt = MischplanService.ZielSpalteFuerGrow(grow, _wissen.NutrientPrograms);
             var aktiveId = jetzt?.Spalte.Id;
+            var anker = Phasenanker.Fuer(grow, DateTime.Today);
 
             var wochen = chart.Columns
                 .Select(spalte => Zeile(spalte, istJetzt: spalte.Id == aktiveId, grow))
@@ -359,9 +363,9 @@ public sealed class WochenplanApiController : ApiControllerBase
                 // nicht für Kacheln und Alarme. Das muss auf der Seite stehen,
                 // sonst liest man Zahlen, die nirgends wirken.
                 MischplanService.NutztWochenziele(grow),
-                Datum(grow.VegStartedAt),
-                Datum(grow.FlipDate),
-                Erntefenster(grow),
+                Datum(anker.VegAb),
+                Datum(anker.BlueteAb),
+                Erntefenster(grow, anker),
                 jetzt?.Spalte.Label,
                 jetzt is { } j ? Haltehinweis(grow, j.Spalte) : null,
                 wochen,
@@ -373,7 +377,8 @@ public sealed class WochenplanApiController : ApiControllerBase
                         Zahl(u.Wert),
                         u.Zustand))
                     .ToList(),
-                _sync.Stand.LetzterLauf));
+                _sync.Stand.LetzterLauf,
+                PhasenankerDto.Aus(anker).Erinnerung));
         }
 
         return Ok(liste);
@@ -421,16 +426,16 @@ public sealed class WochenplanApiController : ApiControllerBase
     }
 
     /// <summary>
-    /// Wann geerntet werden kann — Flip plus die Blütewochen der Sorte.
+    /// Wann geerntet werden kann — Blütebeginn plus die Blütewochen der Sorte.
     /// </summary>
     /// <remarks>
     /// Ohne Flip gibt es kein Fenster: vor dem Umstellen ist die Blütedauer eine
     /// Eigenschaft der Sorte, kein Datum. Lieber nichts anzeigen als ein Datum,
     /// das sich beim Flip um Wochen verschiebt.
     /// </remarks>
-    private static string? Erntefenster(GrowRun grow)
+    private static string? Erntefenster(GrowRun grow, Phasenstand anker)
     {
-        if (grow.FlipDate is not { } flip) return null;
+        if (anker.BlueteAb is not { } flip) return null;
         if (grow.BreederFlowerWeeksMin is not { } min && grow.BreederFlowerWeeksMax is not { } _) return null;
 
         var von = flip.AddDays(7 * (grow.BreederFlowerWeeksMin ?? grow.BreederFlowerWeeksMax!.Value));

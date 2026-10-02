@@ -246,9 +246,15 @@ function ManualMeasurementPage() {
 
   // Lifecycle confirmations belong here, at measurement time — confirming germination,
   // rooting, or the flip to 12/12 is an observation you make when you check the plant.
-  const canConfirmGermination = selectedGrow?.startMaterial === 'Seed' && !selectedGrow?.germinatedAt
-  const canConfirmRooting = selectedGrow?.startMaterial === 'Clone' && !selectedGrow?.rootedAt
-  const canFlipToFlower = selectedGrow != null && selectedGrow.seedType !== 'Autoflower' && !selectedGrow.flipDate
+  // Welche Bestätigung noch offen ist, sagt der Phasenanker des Servers — nicht
+  // die Rohfelder (02.10.2026). Die Autoflower bekommt „Blüte beginnt": sie
+  // schaltet nicht mehr nach 28 Tagen von selbst um.
+  const anker = selectedGrow?.phasenanker
+  const canConfirmGermination = anker?.anzucht === 'Keimung'
+  const canConfirmRooting = anker?.anzucht === 'Bewurzelung'
+  const canConfirmVeg = anker?.phase === 'Anzucht' && selectedGrow?.startMaterial !== 'Clone'
+  const canFlipToFlower = anker != null && (anker.phase === 'Anzucht' || anker.phase === 'Veg') && !anker.blueteAb
+  const istAutoflower = selectedGrow?.seedType === 'Autoflower'
 
   // Pre-fill the mappable fields from Home Assistant when the tent context appears or
   // changes. Best-effort: silently skipped if HA is unreachable.
@@ -316,16 +322,19 @@ function ManualMeasurementPage() {
     }
   }
 
-  async function confirmGrowAction(action: 'germination' | 'rooting' | 'flip') {
+  async function confirmGrowAction(action: 'germination' | 'rooting' | 'veg' | 'flip') {
     if (!selectedGrowId) return
-    const route = action === 'germination' ? 'confirm-germination' : action === 'rooting' ? 'confirm-rooting' : 'flip-to-flower'
+    const route = action === 'germination' ? 'confirm-germination'
+      : action === 'rooting' ? 'confirm-rooting'
+        : action === 'veg' ? 'confirm-veg'
+          : 'flip-to-flower'
     setGrowActionSaving(action)
     setError(null)
     setMessage(null)
     try {
       const result = await apiFetch<{ message: string }>(`/api/grows/${selectedGrowId}/actions/${route}`, { method: 'POST' })
       setMessage(result.message)
-      // Re-pull grows so the just-confirmed step drops off (germinatedAt/rootedAt/flipDate set).
+      // Grows neu laden, damit der bestätigte Schritt verschwindet (der Phasenanker ist dann weiter).
       const data = await apiFetch<GrowSummary[]>('/api/grows?archived=false')
       setGrows(data.filter((grow) => grow.status === 'Running' || grow.status === 'Planning'))
     } catch (caught) {
@@ -489,22 +498,27 @@ function ManualMeasurementPage() {
               </select>
             </V1Field>
             <V1Badge tone={filledCount > 0 ? 'ok' : 'neutral'}>{filledCount} Werte</V1Badge>
-            {(canConfirmGermination || canConfirmRooting || canFlipToFlower) && (
+            {(canConfirmGermination || canConfirmRooting || canConfirmVeg || canFlipToFlower) && (
               <div className="rc2-measurement-live" style={{ display: 'grid', gap: 8 }}>
                 <span className="v1-card-kicker">Phase bestätigen</span>
                 {canConfirmGermination && (
                   <V1Button variant="secondary" onClick={() => void confirmGrowAction('germination')} disabled={growActionSaving !== null}>
-                    {growActionSaving === 'germination' ? 'Bestätigt…' : 'Keimung bestätigen'}
+                    {growActionSaving === 'germination' ? 'Wird gespeichert…' : 'Keimung bestätigen'}
                   </V1Button>
                 )}
                 {canConfirmRooting && (
                   <V1Button variant="secondary" onClick={() => void confirmGrowAction('rooting')} disabled={growActionSaving !== null}>
-                    {growActionSaving === 'rooting' ? 'Bestätigt…' : 'Bewurzelung bestätigen'}
+                    {growActionSaving === 'rooting' ? 'Wird gespeichert…' : 'Bewurzelung abgeschlossen'}
+                  </V1Button>
+                )}
+                {canConfirmVeg && (
+                  <V1Button variant="secondary" onClick={() => void confirmGrowAction('veg')} disabled={growActionSaving !== null}>
+                    {growActionSaving === 'veg' ? 'Wird gespeichert…' : 'Vegi beginnt'}
                   </V1Button>
                 )}
                 {canFlipToFlower && (
                   <V1Button variant="secondary" onClick={() => void confirmGrowAction('flip')} disabled={growActionSaving !== null}>
-                    {growActionSaving === 'flip' ? 'Trägt ein…' : 'Flip zu 12/12'}
+                    {growActionSaving === 'flip' ? 'Wird gespeichert…' : istAutoflower ? 'Blüte beginnt' : 'Flip zu 12/12'}
                   </V1Button>
                 )}
               </div>
