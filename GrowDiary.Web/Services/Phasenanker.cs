@@ -74,10 +74,18 @@ public sealed record Phasenstand(
     /// „Transition", „Flower", „Finish"), ab 1 und ohne Obergrenze.
     /// </summary>
     /// <remarks>
-    /// Gezählt ab dem Beginn dieser Phase bis zum Stichtag — oder bis zum Beginn
-    /// der nächsten Phase, wenn die schon vorbei ist. So zeigt die gehaltene
-    /// letzte Vegi-Spalte auch in der Blüte noch, wie lang die Vegi war.
+    /// Gezählt ab dem Beginn dieser Phase bis zum Stichtag — oder bis zum
+    /// letzten Tag der Phase, wenn sie schon vorbei ist. Eine abgeschlossene
+    /// Phase hat damit so viele Wochen, wie sie gedauert hat: 29 Tage Vegi sind
+    /// fünf Wochen, auch in der Blüte noch — danach richtet sich, wie viele
+    /// Vegi-Wochen der Plan des Grows führt (<c>Planwochen.Anhaengen</c>).
     /// Fehlt der Beginn (Phase nie erreicht), ist es Woche 1.
+    /// <para><b>Letzter Tag, nicht Folgetag (02.10.2026).</b> Bis dahin zählte
+    /// eine abgeschlossene Phase bis zum Beginn der nächsten einschließlich —
+    /// 28 Tage Vegi ergaben Woche 5. Solange nur die gehaltene Spalte daran
+    /// hing, fiel das nicht auf; seit die Phase eigene Wochen bekommt, hätte es
+    /// eine leere fünfte Vegi-Woche angehängt. Der Beginntag der nächsten Phase
+    /// gehört zu ihr, der Erntetag zum Lauf (wie in <see cref="Phasenanker"/>).</para>
     /// </remarks>
     public int WocheIn(string chartStage)
     {
@@ -90,8 +98,8 @@ public sealed record Phasenstand(
             _ => ((DateTime?)null, (DateTime?)null),
         };
         if (von is not { } beginn) return 1;
-        var ende = bis is { } b && b < Stichtag ? b : Stichtag;
-        if (EndeAm is { } e && e.AddDays(1) < ende) ende = e.AddDays(1);
+        var ende = bis is { } b && b <= Stichtag ? b.AddDays(-1) : Stichtag;
+        if (EndeAm is { } e && e < ende) ende = e;
         return Wochen((ende - beginn).Days);
     }
 

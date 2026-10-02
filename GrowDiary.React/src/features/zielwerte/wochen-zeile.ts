@@ -20,6 +20,8 @@ export type PlanWoche = {
   co2: string | null
   ppfd: string | null
   dosierung: string | null
+  /** Fork AI (02.10.2026): angehängt, weil die Phase länger läuft als das Programm. */
+  verlaengert?: boolean
 }
 
 import type { PhasenerinnerungDto } from '../../types'
@@ -54,6 +56,11 @@ export function anker(plan: WochenPlan): Array<{ name: string; wert: string }> {
     { name: 'Blüte', wert: plan.flip },
     { name: 'Ernte', wert: plan.erntefenster },
   ].filter((a): a is { name: string; wert: string } => !!a.wert)
+}
+
+/** Ist die laufende Woche eine angehängte? */
+export function laufendVerlaengert(plan: WochenPlan): boolean {
+  return plan.wochen.some((w) => w.istJetzt && w.verlaengert)
 }
 
 /** Kurzfassung einer Woche für die Liste im Wochen-Blatt. */

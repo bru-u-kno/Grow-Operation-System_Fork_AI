@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, nachtAbweichend, nachtWieTagFuer, zeilenAus,
+  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, nachtAbweichend, nachtWieTagFuer, programmwoche, zeilenAus,
   type PlanSpalte, type PlanStand,
 } from './plan-reiter'
 import type { WochenwertSpalte } from '../wochenplan/wochenwerte-bearbeiten'
@@ -82,6 +82,25 @@ describe('Anfragen und Texte', () => {
     const basis = { id: 1, zeitUtc: '', spalteId: 'flower-w5', ziel: 'grow', grund: null }
     expect(buchText({ ...basis, art: 'dosierung', feld: 'Cannaboost', alt: '1', neu: null }, (f) => f)).toBe('Cannaboost 1 → entfernt')
     expect(buchText({ ...basis, art: 'wert', feld: 'ecTarget', alt: '1.5', neu: '1.4' }, () => 'EC')).toBe('EC 1,5 → 1,4')
+  })
+
+  it('nennt bei einer angehängten Woche die Woche, deren Werte sie übernommen hat', () => {
+    const e = { id: 2, zeitUtc: '', spalteId: 'flower-w10', ziel: 'grow', grund: null, art: 'verlaengert', feld: null, alt: 'flower-w9', neu: 'Blütewoche 10' }
+    expect(buchText(e, (f) => f, (id) => (id === 'flower-w9' ? 'Blütewoche 9' : id)))
+      .toBe('Woche angehängt · Werte aus Blütewoche 9 übernommen')
+  })
+})
+
+describe('programmwoche', () => {
+  it('folgt der Kette angehängter Wochen bis zur Programmwoche', () => {
+    const stand = { verlaengert: { 'flower-w10': 'flower-w9', 'flower-w11': 'flower-w10' } }
+    expect(programmwoche(stand, 'flower-w11')).toBe('flower-w9')
+    expect(programmwoche(stand, 'flower-w9')).toBe('flower-w9')
+    expect(programmwoche({ verlaengert: null }, 'veg-w2')).toBe('veg-w2')
+  })
+
+  it('hängt sich an einer Schleife nicht auf', () => {
+    expect(['a', 'b']).toContain(programmwoche({ verlaengert: { a: 'b', b: 'a' } }, 'a'))
   })
 })
 

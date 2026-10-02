@@ -673,4 +673,62 @@ public sealed class DemobestandStimmigTests : IDisposable
                 $"{artikel.Name}: keine abgeschlossene Füllung — „Ø … Tage“ stünde leer.");
         }
     }
+
+    /// <summary>
+    /// Fork AI (02.10.2026): im Bestand läuft eine Phase länger als ihr Programm —
+    /// sonst wäre die angehängte Woche nirgends zu sehen.
+    /// </summary>
+    /// <remarks>
+    /// <para>Rein gerechnet, ohne den Plan-Dienst: dessen Register ist prozessweit,
+    /// und die kleinen Ids des Bestands würden parallel laufende Tests mit einem
+    /// fremden Plan versorgen. Der Plan entsteht wie in der Testdaten-App aus
+    /// <see cref="Demobestand.Programm"/>.</para>
+    /// <para>Verlangt werden beide Fälle, die die Oberfläche zeigen muss: ein Lauf,
+    /// dessen LAUFENDE Woche verlängert ist (Wochenzeile „läuft · verlängert"), und
+    /// einer mit mindestens zwei verlängerten Wochen — der Rundweg im Plan prüft die
+    /// erste und die letzte (<c>e2e/verlaengerte-woche.spec.ts</c>).</para>
+    /// </remarks>
+    [Fact]
+    public void Ein_Lauf_dauert_laenger_als_sein_Programm()
+    {
+        // Die Wissensbibliothek dieses Tests ist leer (kein Wissensordner); das
+        // Programm kommt deshalb aus der ausgelieferten Datei, die auch die App lädt.
+        var programm = MitgeliefertesProgramm(Demobestand.Programm);
+        var ziele = new TargetValueService(_dienste.GetRequiredService<KnowledgeBaseLoader>());
+        var laufend = Laufende();
+        Assert.True(laufend.Count >= 2, "Mengenwächter: zwei laufende Grows erwartet.");
+
+        var laufendeWocheVerlaengert = new List<string>();
+        var mehrereVerlaengert = new List<string>();
+        foreach (var grow in laufend)
+        {
+            var inhalt = GrowDiary.Web.Services.GrowPlan.GrowPlanBauer.AusProgramm(
+                programm, stufe => ziele.GetTargets(TargetValueService.ProfileIdFor(grow.HydroStyle), stufe),
+                GrowDiary.Web.Services.GrowPlan.GrowPlanService.VegiWochen(grow), GrowDiary.Web.Services.GrowPlan.GrowPlanService.Bluetewochen(grow));
+            var neu = GrowDiary.Web.Services.GrowPlan.Planwochen.Anhaengen(inhalt, Phasenanker.Fuer(grow, DateTime.Today));
+
+            var jetzt = MischplanService.SpalteFuer(inhalt.Chart, grow, DateTime.Today);
+            if (jetzt is not null && inhalt.IstVerlaengert(jetzt.Id)) laufendeWocheVerlaengert.Add($"{grow.Name}: {jetzt.Label}");
+            if (neu.Count >= 2) mehrereVerlaengert.Add($"{grow.Name}: {string.Join(", ", neu.Select(n => n.Neu.Label))}");
+        }
+
+        Assert.True(laufendeWocheVerlaengert.Count >= 1,
+            "Kein laufender Grow steht in einer verlängerten Woche — die Markierung „verlängert“ an der laufenden Woche "
+            + "wäre im Testbestand nie zu sehen.");
+        Assert.True(mehrereVerlaengert.Count >= 1,
+            "Kein laufender Grow hat zwei verlängerte Wochen — der Rundweg an der ersten und letzten fiele zusammen.");
+    }
+
+    private static GrowDiary.Web.Services.Knowledge.Schema.NutrientProgramDefinition MitgeliefertesProgramm(string id)
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !Directory.Exists(Path.Combine(dir, "GrowDiary.Web"))) dir = Path.GetDirectoryName(dir);
+        var ordner = Path.Combine(dir ?? throw new InvalidOperationException("Projektwurzel nicht gefunden."),
+            "GrowDiary.Web", "wwwroot", "knowledge-defaults", "nutrient-programs");
+        var programme = Directory.EnumerateFiles(ordner, "*.json")
+            .Select(datei => System.Text.Json.JsonSerializer.Deserialize<GrowDiary.Web.Services.Knowledge.Schema.NutrientProgramDefinition>(File.ReadAllText(datei)))
+            .ToList();
+        Assert.True(programme.Count >= 2, $"Nur {programme.Count} Programme gefunden — die Prüfung sähe ihre Grundmenge nicht.");
+        return programme.Single(p => p?.Id == id)!;
+    }
 }

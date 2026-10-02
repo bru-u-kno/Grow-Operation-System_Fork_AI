@@ -64,7 +64,8 @@
   }
   .wp-blatt-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
   .wp-blatt-titel {
-    display: flex; align-items: center; gap: var(--s-2); min-width: 0;
+    /* Umbrechen statt überlaufen: „Blütewoche 10 · läuft · verlängert" braucht bei 320 px zwei Zeilen. */
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--s-2); min-width: 0;
     font: 400 1rem/1.4 var(--font-mono);
   }
   .wp-blatt-titel b { color: var(--accent-text); font-weight: 600; }

@@ -10,7 +10,7 @@ import {
 } from '../wochenplan/wochenwerte-bearbeiten'
 import '../wochenplan/wochenplan.css'
 import {
-  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, nachtAbweichend, nachtWieTagFuer, zeilenAus,
+  aenderungsZeilen, anfragen, buchText, dosisFehler, dosisGeaendert, mengeFuerVolumen, nachtAbweichend, nachtWieTagFuer, programmwoche, zeilenAus,
   type BuchEintrag, type DosisEntwurf, type DosisZeile, type PlanStand,
 } from './plan-reiter'
 import { wochenIndex } from './wochen-zeile'
@@ -119,7 +119,9 @@ export function PlanReiter() {
 
   const woche = daten.werte.spalten[index]
   const planSpalte = spalten.find((s) => s.id === woche.id)
-  const startSpalte = daten.start?.chart.columns.find((s) => s.id === woche.id)
+  // Eine angehängte Woche hat im Startstand keine Spalte — ihr Start ist der ihrer Programmwoche.
+  const startId = programmwoche(daten.arbeit, woche.id)
+  const startSpalte = daten.start?.chart.columns.find((s) => s.id === startId)
   const letzte = daten.werte.spalten.length - 1
   const dosisZeilen: DosisZeile[] = dosis[woche.id] ?? zeilenAus(planSpalte?.items ?? [])
   const feldName = (feld: string) =>
@@ -233,9 +235,16 @@ export function PlanReiter() {
           <div className="wp-blatt-titel">
             <b>{woche.label}</b>
             {woche.istJetzt && <V1Badge tone="accent">läuft</V1Badge>}
+            {woche.verlaengert && <V1Badge tone="neutral">verlängert</V1Badge>}
           </div>
           <button type="button" className="wp-pfeil" aria-label="Nächste Woche" disabled={index === letzte} onClick={() => blaettern(1)}>›</button>
         </div>
+
+        {woche.verlaengert && (
+          <p className="wp-leise pr-verlaengert" data-audit="plan-verlaengert">
+            Angehängt: die Phase läuft länger als das Programm. „Start“ ist der Wert von {wochenName(startId)}.
+          </p>
+        )}
 
         {/* Fork AI (forkai.131): die Knöpfe sagen, was nachts gilt — darunter, ob die
             Woche dem ganzen Plan folgt (Mockup Stand 7, Bru 21.09.2026). */}
@@ -428,7 +437,7 @@ export function PlanReiter() {
               <span className="pr-wann">{new Date(e.zeitUtc).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}</span>
               <div>
                 <b>{e.spalteId ? wochenName(e.spalteId) : 'Plan'}</b>
-                <span>{buchText(e, feldName)}</span>
+                <span>{buchText(e, feldName, wochenName)}</span>
                 {e.grund && <em>„{e.grund}“</em>}
                 <span className="pr-pills">
                   {e.ziel?.startsWith('programm:') && <V1Badge tone="accent">auch im Programm</V1Badge>}

@@ -22,7 +22,9 @@ public sealed record GrowPlanStandDto(
     string? EigenesProgrammName = null,
     int EigeneAenderungen = 0,
     bool NachtWieTag = false,
-    IReadOnlyDictionary<string, bool>? NachtWieTagJeWoche = null);
+    IReadOnlyDictionary<string, bool>? NachtWieTagJeWoche = null,
+    /// <summary>Fork AI (02.10.2026): angehängte Wochen → Woche, deren Werte sie übernommen haben.</summary>
+    IReadOnlyDictionary<string, string>? Verlaengert = null);
 
 /// <summary>
 /// Fork AI (forkai.130): „Nachts gelten die Tageswerte" setzen — Standard und/oder
@@ -153,10 +155,12 @@ public sealed class GrowPlanApiController : ApiControllerBase
     [ProducesResponseType(typeof(GrowPlanStandDto), StatusCodes.Status200OK)]
     public ActionResult<GrowPlanStandDto> Get(int growId, [FromQuery] string stand = GrowPlanStaende.Arbeit)
     {
-        if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
         if (stand is not (GrowPlanStaende.Start or GrowPlanStaende.Arbeit or GrowPlanStaende.Ende or GrowPlanStaende.Basis))
             return ValidationError("Stand muss start, basis, arbeit oder ende sein.");
 
+        // Fork AI (02.10.2026): die Woche, die die Phase schon erreicht hat, steht sofort im Plan.
+        if (stand == GrowPlanStaende.Arbeit) _plaene.WochenNachziehen(grow, DateTime.Today);
         if (_plaene.Stand(growId, stand) is not { } gefunden)
             return NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan in diesem Stand.");
 
@@ -177,7 +181,8 @@ public sealed class GrowPlanApiController : ApiControllerBase
         stand.Inhalt.EigenesProgrammId is { } eigen ? _eigene?.Finden(eigen)?.Name : null,
         stand.Stand == GrowPlanStaende.Arbeit ? _plaene.EigeneAenderungen(stand.GrowId) : 0,
         stand.Inhalt.NachtWieTag,
-        stand.Inhalt.NachtWieTagJeWoche);
+        stand.Inhalt.NachtWieTagJeWoche,
+        stand.Inhalt.Verlaengert);
 
     /// <summary>
     /// Fork AI (forkai.130): Nachts wie tags — Standard für alle Wochen oder eine
@@ -356,6 +361,7 @@ public sealed class GrowPlanApiController : ApiControllerBase
     public ActionResult<PlanAuswertungDto> Auswertung(int growId)
     {
         if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        _plaene.WochenNachziehen(grow, DateTime.Today);
         var ende = _plaene.Stand(growId, GrowPlanStaende.Ende);
         var arbeit = ende ?? _plaene.Stand(growId, GrowPlanStaende.Arbeit);
         // Kein Plan ist hier ein normaler Zustand (Grows von vor forkai.116), kein
@@ -434,7 +440,8 @@ public sealed class GrowPlanApiController : ApiControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<GrowPlanEintragDto>), StatusCodes.Status200OK)]
     public ActionResult<IReadOnlyList<GrowPlanEintragDto>> Buch(int growId)
     {
-        if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_grows.GetGrow(growId) is not { } grow) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        _plaene.WochenNachziehen(grow, DateTime.Today);
         return Ok(_plaene.Buch(growId)
             .Select(e => new GrowPlanEintragDto(e.Id, e.ZeitUtc, e.Art, e.SpalteId, e.Feld, e.Alt, e.Neu, e.Ziel, e.Grund))
             .ToList());

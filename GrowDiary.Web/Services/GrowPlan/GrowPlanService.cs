@@ -183,13 +183,79 @@ public sealed class GrowPlanService
     public static bool HatPlan(int growId) => GrowPlanRegister.Programm(growId) is not null;
 
     /// <summary>Der Wert eines Felds im Startstand — der „Planwert", gegen den Änderungen gemessen werden.</summary>
+    /// <remarks>
+    /// Eine angehängte Woche (Fork AI, 02.10.2026) hat im Startstand keine eigene
+    /// Spalte — der Startstand ist die Vorlage und bleibt, wie er war. Ihr
+    /// Startwert ist der ihrer Programmwoche (<see cref="GrowPlanInhalt.Programmwoche"/>):
+    /// der letzten Woche der Phase, die aus dem Programm kam. Genau das galt
+    /// vorher auch, als die Spalte noch gehalten wurde; „zurück auf Plan" setzt
+    /// eine verlängerte Blütewoche 10 also auf den Startwert von Blütewoche 9.
+    /// </remarks>
     public double? Startwert(int growId, string spalteId, Wochenwertfelder.Feld feld)
     {
         if (!_startstaende.TryGetValue(growId, out var start)) return null;
+        var id = Programmwoche(growId, spalteId);
         var spalte = start.Chart.Columns.FirstOrDefault(
-            c => string.Equals(c.Id, spalteId, StringComparison.OrdinalIgnoreCase));
+            c => string.Equals(c.Id, id, StringComparison.OrdinalIgnoreCase));
         return spalte is null ? null : feld.Lesen(spalte);
     }
+
+    /// <summary>Die Programmwoche einer Woche im Arbeitsstand (bei angehängten Wochen ihre Vorlage).</summary>
+    private static string Programmwoche(int growId, string spalteId)
+        => GrowPlanRegister.Inhalt(growId)?.Programmwoche(spalteId) ?? spalteId;
+
+    /// <summary>
+    /// Fork AI (02.10.2026): hängt dem Arbeitsstand die Wochen an, die eine Phase
+    /// schon erreicht hat, der Plan aber nicht führt — je Woche ein Eintrag im
+    /// Änderungsbuch.
+    /// </summary>
+    /// <remarks>
+    /// <para>Was angehängt wird, entscheidet <see cref="Planwochen.Anhaengen"/>;
+    /// hier wird nur gespeichert. Idempotent: ein zweiter Lauf am selben Tag
+    /// findet nichts mehr. Der Startstand (und die Basis nach einem
+    /// Programmwechsel) bleiben unberührt — sie sind die Vorlage.</para>
+    /// <para>Nie bei einem abgeschlossenen Grow oder eingefrorenen Plan: was
+    /// damals galt, bleibt. Erst wird am Register geprüft, ob überhaupt etwas
+    /// fehlt — der Wochenplan-Takt fragt alle fünf Minuten, und meistens fehlt
+    /// nichts.</para>
+    /// <para>Aufgerufen vom Wochenplan-Takt (<see cref="WochenplanSyncWorker"/>),
+    /// beim Start und überall, wo der Plan zur Anzeige geladen wird — damit die
+    /// neue Woche sofort sichtbar ist und alle Leser sie finden.</para>
+    /// </remarks>
+    /// <returns>Wie viele Wochen angehängt wurden.</returns>
+    public int WochenNachziehen(GrowRun grow, DateTime heute, DateTime? jetztUtc = null)
+    {
+        if (grow.IsArchived) return 0;
+        if (GrowPlanRegister.Inhalt(grow.Id) is not { } bekannt) return 0;
+        var stand = Phasenanker.Fuer(grow, heute);
+        if (!Planwochen.FehltEineWoche(bekannt, stand)) return 0;
+
+        lock (_lock)
+        {
+            if (_repo.Laden(grow.Id, GrowPlanStaende.Ende) is not null) return 0;
+            if (_repo.Laden(grow.Id, GrowPlanStaende.Arbeit) is not { } arbeit) return 0;
+
+            var neu = Planwochen.Anhaengen(arbeit.Inhalt, stand);
+            if (neu.Count == 0) return 0;
+
+            var zeit = jetztUtc ?? DateTime.UtcNow;
+            _repo.Speichern([arbeit with { GeaendertUtc = zeit }], VerlaengertEintraege(grow.Id, neu, zeit));
+            GrowPlanRegister.Setzen(grow.Id, arbeit.Inhalt);
+            _logger.LogInformation("Grow-Plan {Grow}: {Anzahl} Woche(n) angehängt ({Wochen}).",
+                grow.Id, neu.Count, string.Join(", ", neu.Select(n => n.Neu.Label)));
+            return neu.Count;
+        }
+    }
+
+    /// <summary>Alle laufenden Grows nachziehen — Takt und Start.</summary>
+    public int AlleNachziehen(IEnumerable<GrowRun> laufendeGrows, DateTime heute)
+        => laufendeGrows.Sum(grow => WochenNachziehen(grow, heute));
+
+    private static List<GrowPlanEintrag> VerlaengertEintraege(
+        int growId, IEnumerable<(FeedChartColumn Neu, FeedChartColumn Vorlage)> neu, DateTime zeit)
+        => neu.Select(n => new GrowPlanEintrag(0, growId, zeit, GrowPlanArten.Verlaengert, n.Neu.Id, null,
+                n.Vorlage.Id, n.Neu.Label, "grow", null))
+            .ToList();
 
     /// <summary>
     /// Setzt Zielwerte im Arbeitsstand; <c>null</c> stellt den Startwert wieder her.
@@ -519,8 +585,10 @@ public sealed class GrowPlanService
     private List<string> DosierungGeaendert(int growId, GrowPlanInhalt arbeit)
     {
         if (!_startstaende.TryGetValue(growId, out var basis)) return [];
+        // Eine angehängte Woche vergleicht mit ihrer Programmwoche — sonst gälte
+        // jede verlängerte Woche als „Dosierung geändert".
         return arbeit.Chart.Columns
-            .Where(spalte => basis.Chart.Columns.FirstOrDefault(b => b.Id == spalte.Id) is not { } alt
+            .Where(spalte => basis.Chart.Columns.FirstOrDefault(b => b.Id == arbeit.Programmwoche(spalte.Id)) is not { } alt
                              || !GleicheDosierung(alt.Items, spalte.Items))
             .Select(s => s.Id)
             .ToList();
@@ -544,7 +612,7 @@ public sealed class GrowPlanService
     /// ihrer Änderungen — die Zahl steht im Ergebnis.
     /// </remarks>
     public ProgrammwechselErgebnis ProgrammWechseln(
-        GrowRun grow, string neuesProgrammId, bool aenderungenBehalten, DateTime? jetztUtc = null)
+        GrowRun grow, string neuesProgrammId, bool aenderungenBehalten, DateTime? jetztUtc = null, DateTime? heute = null)
     {
         lock (_lock)
         {
@@ -560,6 +628,12 @@ public sealed class GrowPlanService
                 programm, stage => _ziele.GetTargets(profilId, stage), VegiWochen(grow), Bluetewochen(grow));
             var neu = GrowPlanBauer.Kopie(basis);
             neu.EigenesProgrammId = EigeneProgramme.IstEigen(programm.Id) ? programm.Id : null;
+            var zeit = jetztUtc ?? DateTime.UtcNow;
+            // Fork AI (02.10.2026): läuft eine Phase schon länger als das neue
+            // Programm, bekommt auch sein Plan die Wochen — VOR dem Übernehmen, damit
+            // Änderungen an verlängerten Wochen ihre Woche wiederfinden. Die Basis
+            // bleibt das Programm, wie es ist.
+            var angehaengt = Planwochen.Anhaengen(neu, Phasenanker.Fuer(grow, heute ?? DateTime.Today));
 
             var uebernommen = 0;
             var entfallen = 0;
@@ -609,7 +683,6 @@ public sealed class GrowPlanService
                 }
             }
 
-            var zeit = jetztUtc ?? DateTime.UtcNow;
             var eintrag = new GrowPlanEintrag(0, grow.Id, zeit, GrowPlanArten.Programmwechsel, null, null,
                 arbeit.Inhalt.ProgrammName, programm.Name, "grow",
                 aenderungenBehalten
@@ -621,7 +694,7 @@ public sealed class GrowPlanService
                     new GrowPlanStand(grow.Id, GrowPlanStaende.Basis, basis, null, zeit, zeit),
                     arbeit with { Inhalt = neu, GeaendertUtc = zeit },
                 ],
-                [eintrag]);
+                [eintrag, .. VerlaengertEintraege(grow.Id, angehaengt, zeit)]);
             _startstaende[grow.Id] = basis;
             GrowPlanRegister.Setzen(grow.Id, neu);
             _logger.LogInformation("Grow-Plan {Grow}: Programmwechsel {Alt} → {Neu} ({Wahl}).",
@@ -764,7 +837,7 @@ public sealed class GrowPlanService
 
     private string StartHerkunft(int growId, string spalteId, string feld)
         => _startstaende.TryGetValue(growId, out var start)
-            ? start.HerkunftVon(spalteId, feld)
+            ? start.HerkunftVon(Programmwoche(growId, spalteId), feld)
             : GrowPlanHerkunft.Programm;
 
     private static bool Gleich(double? a, double? b)

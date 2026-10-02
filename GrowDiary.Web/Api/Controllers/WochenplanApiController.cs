@@ -25,7 +25,9 @@ public sealed record WochenplanWocheDto(
     string? Luft,
     string? Co2,
     string? Ppfd,
-    string? Dosierung);
+    string? Dosierung,
+    /// <summary>Fork AI (02.10.2026): angehängte Woche — die Phase läuft länger als das Programm.</summary>
+    bool Verlaengert = false);
 
 /// <summary>Ein Wert, den der Sync betreut — für den Block „Übergabe an HA".</summary>
 public sealed record WochenplanUebergabeDto(string Rolle, string Name, string EntityId, string Wert, string Zustand);
@@ -67,7 +69,9 @@ public sealed record WochenwertSpalteDto(
     string Stage,
     int? Woche,
     bool IstJetzt,
-    List<WochenwertFeldDto> Felder);
+    List<WochenwertFeldDto> Felder,
+    /// <summary>Fork AI (02.10.2026): angehängte Woche; ihr „Start" ist der ihrer Programmwoche.</summary>
+    bool Verlaengert = false);
 
 /// <summary>Alle bearbeitbaren Wochen eines Grows (F-004).</summary>
 public sealed record WochenwerteDto(
@@ -264,6 +268,9 @@ public sealed class WochenplanApiController : ApiControllerBase
     private (GrowRun Grow, NutrientProgramDefinition Programm)? Programm(int growId)
     {
         if (_grows.GetGrow(growId) is not { } grow) return null;
+        // Fork AI (02.10.2026): läuft eine Phase länger als der Plan, steht die neue
+        // Woche hier sofort — nicht erst nach dem nächsten Takt.
+        _plaene.WochenNachziehen(grow, DateTime.Today);
         var programm = MischplanService.ProgrammFuerGrow(grow, _wissen.NutrientPrograms);
         return programm?.FeedChart is { Columns.Count: > 0 } ? (grow, programm) : null;
     }
@@ -293,6 +300,7 @@ public sealed class WochenplanApiController : ApiControllerBase
             g.Id != grow.Id && !GrowPlanService.HatPlan(g.Id)
             && string.Equals(g.FeedProgramId, programm.Id, StringComparison.OrdinalIgnoreCase));
 
+        var verlaengert = GrowPlanRegister.Inhalt(grow.Id);
         return new WochenwerteDto(
             grow.Id,
             programm.Id,
@@ -316,7 +324,8 @@ public sealed class WochenplanApiController : ApiControllerBase
                             feld.Lesen(spalte),
                             Planwert(grow, programm, spalte, feld),
                             IstGeaendert(grow, programm, spalte, feld)))
-                        .ToList()))
+                        .ToList(),
+                    verlaengert?.IstVerlaengert(spalte.Id) ?? false))
                 .ToList());
     }
 
@@ -342,6 +351,7 @@ public sealed class WochenplanApiController : ApiControllerBase
 
         foreach (var grow in _grows.GetActiveGrows())
         {
+            _plaene.WochenNachziehen(grow, DateTime.Today);
             var programm = MischplanService.ProgrammFuerGrow(grow, _wissen.NutrientPrograms);
 
             if (programm?.FeedChart is not { } chart || chart.Columns.Count == 0) continue;
@@ -350,8 +360,9 @@ public sealed class WochenplanApiController : ApiControllerBase
             var aktiveId = jetzt?.Spalte.Id;
             var anker = Phasenanker.Fuer(grow, DateTime.Today);
 
+            var inhalt = GrowPlanRegister.Inhalt(grow.Id);
             var wochen = chart.Columns
-                .Select(spalte => Zeile(spalte, istJetzt: spalte.Id == aktiveId, grow))
+                .Select(spalte => Zeile(spalte, istJetzt: spalte.Id == aktiveId, grow, inhalt?.IstVerlaengert(spalte.Id) ?? false))
                 .ToList();
 
             liste.Add(new WochenplanDto(
@@ -384,7 +395,7 @@ public sealed class WochenplanApiController : ApiControllerBase
         return Ok(liste);
     }
 
-    private static WochenplanWocheDto Zeile(FeedChartColumn spalte, bool istJetzt, GrowRun grow)
+    private static WochenplanWocheDto Zeile(FeedChartColumn spalte, bool istJetzt, GrowRun grow, bool verlaengert)
         => new(
             spalte.Id,
             spalte.Label,
@@ -400,7 +411,8 @@ public sealed class WochenplanApiController : ApiControllerBase
             spalte.AirTempC is { } luft ? $"{Zahl(luft)} °C" : null,
             Spanne(spalte.Co2Min, spalte.Co2Max),
             Spanne(spalte.PpfdMin, spalte.PpfdMax),
-            Dosierung(spalte));
+            Dosierung(spalte),
+            verlaengert);
 
     /// <summary>Die zwei, drei Komponenten, die beim Anmischen wirklich zählen.</summary>
     /// <remarks>
@@ -446,6 +458,13 @@ public sealed class WochenplanApiController : ApiControllerBase
             : $"{von:dd.MM.}–{bis:dd.MM.}";
     }
 
+    /// <summary>„gehalten seit Woche N" — nur noch, wo es für die Woche keine eigene Spalte gibt.</summary>
+    /// <remarks>
+    /// Fork AI (02.10.2026): ein Grow mit eigenem Plan bekommt für jede Woche einer
+    /// Phase eine eigene Spalte (<see cref="GrowPlanService.WochenNachziehen"/>) —
+    /// dann ist die laufende Spalte die Woche selbst und hier steht nichts. Der
+    /// Hinweis bleibt für ein Programm ohne Grow-Plan, das die Spalte weiter hält.
+    /// </remarks>
     private static string? Haltehinweis(GrowRun grow, FeedChartColumn spalte)
     {
         if (spalte.Week is not { } spaltenWoche) return null;
