@@ -40,6 +40,15 @@ function reiter(seite: Page, name: string) {
 }
 
 /** Die Antwort eines GET abfangen und verändern. */
+// Die Seiten fragen ihre Daten wiederholt ab (Live z. B. alle paar Sekunden).
+// Endet ein Test, während ein abgefangener Abruf noch in `route.fetch()`
+// steckt, wirft Playwright „route.fetch: Test ended" — im Linux-Tor zweimal
+// rot (CI #470, #472), lokal grün. Am Testende alle Umleitungen abbauen und
+// noch laufende Bearbeiter nicht mehr als Fehler werten.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
+})
+
 async function antwortAendern(seite: Page, muster: RegExp, aendern: (daten: Record<string, unknown>) => void): Promise<void> {
   await seite.route(muster, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback()
