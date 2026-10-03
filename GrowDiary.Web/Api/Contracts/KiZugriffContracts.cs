@@ -58,3 +58,33 @@ public sealed record KiZugriffIchDto(
     IReadOnlyList<string> Stufen,
     string? RueckfrageAbStufe,
     KiHoechstwerteDto Hoechstwerte);
+
+/// <summary>
+/// Fork AI (A-003, 03.10.2026): Ein Eintrag in „Was die KI zuletzt getan hat" —
+/// GET /api/settings/ki-zugriff/protokoll.
+/// </summary>
+/// <remarks>
+/// Aus dem Prüfprotokoll (Quelle <c>ki-zugriff</c>), nur was ein Assistent
+/// ausgelöst hat: schreibende Anfragen, Lesen auf Verwaltungswegen,
+/// Abweisungen und die Sicherung vor einer Aktion. Lesende Anfragen ausserhalb
+/// der Verwaltungswege stehen nie darin — die protokolliert die Sperre nicht.
+/// </remarks>
+public sealed record KiProtokollEintragDto(
+    int Id,
+    DateTime ZeitpunktUtc,
+    /// <summary>Der Schlüssel; null bei ungültigem Schlüssel, ausgeschaltetem Zugriff und bei Einträgen aus forkai.163.</summary>
+    int? SchluesselId,
+    /// <summary>Der heutige Name des Schlüssels; bei einem gelöschten der Name aus dem Eintrag, sonst null.</summary>
+    string? SchluesselName,
+    string? Methode,
+    string? Pfad,
+    /// <summary>HTTP-Status der Antwort; null, wenn der Eintrag keine Antwort beschreibt (Sicherung vorher, Adresse gesperrt).</summary>
+    int? Status,
+    /// <summary>Fehlercode der Antwort, etwa <c>ki_stufe_fehlt</c>; null bei Erfolg oder wenn unbekannt.</summary>
+    string? Fehlercode,
+    /// <summary>Ausgeführt (Status unter 400) — false heisst abgewiesen oder gescheitert.</summary>
+    bool Erfolg,
+    /// <summary>Die Art des Eintrags (<c>KiProtokollArt</c>) — ein Bezeichner, nicht zum Anzeigen.</summary>
+    string Art,
+    /// <summary>Der Satz aus dem Prüfprotokoll, deutsch.</summary>
+    string Beschreibung);

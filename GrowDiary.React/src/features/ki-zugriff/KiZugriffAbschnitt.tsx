@@ -12,6 +12,7 @@ import {
   hoechstwerteLesen, istRiskant, praefixAnzeige, sammelmeldung, stufeAnklicken, stufenWahl,
   warnungAblehnen, warnungBestaetigen, type HoechstwerteEntwurf, type StufenWahl,
 } from './ki-zugriff-logik'
+import KiProtokoll from './KiProtokoll'
 import './ki-zugriff.css'
 
 /**
@@ -54,6 +55,16 @@ export default function KiZugriffAbschnitt() {
   const [bearbeitet, setBearbeitet] = useState<{ id: number; wahl: StufenWahl } | null>(null)
   const [bearbeitFehler, setBearbeitFehler] = useState<string | null>(null)
   const [aendert, setAendert] = useState(false)
+
+  // --- Was die KI zuletzt getan hat (Fork AI, A-003, 03.10.2026) ---
+  const [protokollFilter, setProtokollFilter] = useState<number | null>(null)
+  const gefilterterSchluessel = schluessel.find((s) => s.id === protokollFilter) ?? null
+
+  function nurDiesenZeigen(id: number) {
+    setProtokollFilter((bisher) => (bisher === id ? null : id))
+    // Auf dem Telefon liegt die Liste unter allen Schlüsseln — dorthin, wo sich etwas ändert.
+    document.getElementById('ki-protokoll')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  }
 
   function uebernehmen(seite: KiZugriffSeiteDto) {
     setGespeichertAktiv(seite.aktiv)
@@ -195,6 +206,7 @@ export default function KiZugriffAbschnitt() {
       setSchluessel((liste) => liste.filter((s) => s.id !== eintrag.id))
       if (angelegt?.id === eintrag.id) setAngelegt(null)
       if (bearbeitet?.id === eintrag.id) setBearbeitet(null)
+      if (protokollFilter === eintrag.id) setProtokollFilter(null)
       setListenMeldung(`„${eintrag.name}" ist gelöscht.`)
     } catch (caught) {
       setListenFehler(formatApiError(caught, 'Der Schlüssel konnte nicht gelöscht werden.'))
@@ -327,6 +339,8 @@ export default function KiZugriffAbschnitt() {
                       onStufenAendern={() => { setBearbeitFehler(null); setBearbeitet({ id: eintrag.id, wahl: stufenWahl(eintrag.stufen) }) }}
                       onSperren={() => void sperren(eintrag)}
                       onLoeschen={() => void loeschen(eintrag)}
+                      nurDieser={protokollFilter === eintrag.id}
+                      onNurDiesenZeigen={() => nurDiesenZeigen(eintrag.id)}
                     >
                       {bearbeitet?.id === eintrag.id && (
                         <form className="ki-unterformular" onSubmit={(event) => void stufenSpeichern(event)} data-audit="ki-stufen-form" noValidate>
@@ -345,6 +359,12 @@ export default function KiZugriffAbschnitt() {
                 </ul>
               )}
             </div>
+
+            <KiProtokoll
+              key={gefilterterSchluessel?.id ?? 'alle'}
+              filter={gefilterterSchluessel ? { id: gefilterterSchluessel.id, name: gefilterterSchluessel.name } : null}
+              onFilter={setProtokollFilter}
+            />
           </>
         )}
       </div>
@@ -397,12 +417,15 @@ export function StufenAuswahl({ wahl, onWahl, fehler }: { wahl: StufenWahl; onWa
 }
 
 /** Eine Zeile der Schlüsselliste — zeigt nie mehr als den Anfang des Schlüssels. */
-export function SchluesselZeile({ eintrag, bearbeitet, onStufenAendern, onSperren, onLoeschen, children }: {
+export function SchluesselZeile({ eintrag, bearbeitet, onStufenAendern, onSperren, onLoeschen, nurDieser = false, onNurDiesenZeigen, children }: {
   eintrag: KiSchluesselDto
   bearbeitet: boolean
   onStufenAendern: () => void
   onSperren: () => void
   onLoeschen: () => void
+  /** Fork AI (A-003, 03.10.2026): „Was die KI zuletzt getan hat" zeigt gerade nur diesen Schlüssel. */
+  nurDieser?: boolean
+  onNurDiesenZeigen?: () => void
   children?: ReactNode
 }) {
   const gesperrt = eintrag.gesperrtAmUtc != null
@@ -429,6 +452,11 @@ export function SchluesselZeile({ eintrag, bearbeitet, onStufenAendern, onSperre
           {!gesperrt && <button type="button" className="ls-btn is-small" onClick={onStufenAendern} data-audit="ki-schluessel-stufen-aendern">Stufen ändern</button>}
           {!gesperrt && <button type="button" className="ls-btn is-small" onClick={onSperren} data-audit="ki-schluessel-sperren">Sperren</button>}
           <button type="button" className="ls-btn is-small is-gefahr" onClick={onLoeschen} data-audit="ki-schluessel-loeschen">Löschen</button>
+          {onNurDiesenZeigen && (
+            <button type="button" className="ls-btn is-small" aria-pressed={nurDieser} onClick={onNurDiesenZeigen} data-audit="ki-schluessel-nur-diesen">
+              {nurDieser ? 'Alle zeigen' : 'Nur diesen zeigen'}
+            </button>
+          )}
         </div>
       )}
       {children}

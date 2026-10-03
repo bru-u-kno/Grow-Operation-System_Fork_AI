@@ -336,6 +336,22 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "GrowSystems", "LevelSensorFullLiters", "REAL NULL");
         EnsureColumn(connection, "GrowSystems", "LevelCalibratedAtUtc", "TEXT NULL");
 
+        // Fork AI (A-003, 03.10.2026): „Was die KI zuletzt getan hat" — der
+        // Schlüssel und die Anfrage hinter einem Protokolleintrag als eigene
+        // Spalten, damit sich nach dem Schlüssel filtern lässt. RelatedGrowId
+        // passt nicht: das ist ein Fremdschlüssel auf Grows.
+        EnsureColumn(connection, "SystemAuditEvents", "KiSchluesselId", "INTEGER NULL");
+        EnsureColumn(connection, "SystemAuditEvents", "Methode", "TEXT NULL");
+        EnsureColumn(connection, "SystemAuditEvents", "Pfad", "TEXT NULL");
+        EnsureColumn(connection, "SystemAuditEvents", "HttpStatus", "INTEGER NULL");
+        EnsureColumn(connection, "SystemAuditEvents", "Fehlercode", "TEXT NULL");
+        using (var index = connection.CreateCommand())
+        {
+            // Das Protokoll wächst mit jeder Lichtflanke; die Liste liest nur eine Quelle.
+            index.CommandText = "CREATE INDEX IF NOT EXISTS IX_SystemAuditEvents_Source_CreatedAtUtc ON SystemAuditEvents(Source, CreatedAtUtc DESC);";
+            index.ExecuteNonQuery();
+        }
+
         SchliesseVerwaisteWarnungen(connection);
     }
 

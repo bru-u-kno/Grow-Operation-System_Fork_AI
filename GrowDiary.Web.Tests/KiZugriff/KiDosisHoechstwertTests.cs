@@ -66,10 +66,14 @@ public sealed class KiDosisHoechstwertTests : IDisposable
     {
         var pumpe = Pumpe();
 
-        var antwort = await Controller(mitSchluessel: true).Dose(pumpe.Id, new ManualDoseRequest { Ml = 12 }, CancellationToken.None);
+        var controller = Controller(mitSchluessel: true);
+        var antwort = await controller.Dose(pumpe.Id, new ManualDoseRequest { Ml = 12 }, CancellationToken.None);
 
         var fehler = Abgewiesen(antwort.Result);
         Assert.Equal("ki_hoechstwert", fehler.Code);
+        // Fork AI (A-003, 03.10.2026): vorgemerkt fürs Prüfprotokoll — dort heisst es
+        // dann „Höchstwert erreicht" und nicht bloss „422".
+        Assert.Equal("ki_hoechstwert", KiZugriffSperre.GemerkterFehlercode(controller.HttpContext));
         Assert.Contains("12 ml", fehler.Message);
         Assert.Contains("10 ml", fehler.Message);
         Assert.True(_laeufe.Count == 0,

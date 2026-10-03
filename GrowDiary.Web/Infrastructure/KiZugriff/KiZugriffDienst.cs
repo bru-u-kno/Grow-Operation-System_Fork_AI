@@ -22,7 +22,11 @@ public enum KiPruefung
 }
 
 /// <param name="SperreBegonnen">Dieser Fehlversuch hat die Sperre der Adresse ausgelöst — einmal ins Prüfprotokoll.</param>
-public sealed record KiPruefErgebnis(KiPruefung Ergebnis, KiZugriffKontext? Kontext = null, bool SperreBegonnen = false);
+/// <param name="GesperrterSchluesselId">
+/// Fork AI (A-003, 03.10.2026): Bei <see cref="KiPruefung.Gesperrt"/> der erkannte
+/// Schlüssel — damit die Abweisung im Protokoll bei ihm steht. Sonst null.
+/// </param>
+public sealed record KiPruefErgebnis(KiPruefung Ergebnis, KiZugriffKontext? Kontext = null, bool SperreBegonnen = false, int? GesperrterSchluesselId = null);
 
 /// <summary>Die Einstellungen der Seite „Zugriff für KI-Assistenten".</summary>
 /// <param name="RueckfrageAbStufe">Ab welcher Stufe der Assistent nachfragen soll; null = nie.</param>
@@ -221,7 +225,7 @@ public sealed class KiZugriffDienst
 
         if (treffer.Gesperrt)
         {
-            return new(KiPruefung.Gesperrt, SperreBegonnen: FehlversuchZaehlen(adresse));
+            return new(KiPruefung.Gesperrt, SperreBegonnen: FehlversuchZaehlen(adresse), GesperrterSchluesselId: treffer.Id);
         }
 
         return new(KiPruefung.Gueltig, new KiZugriffKontext(treffer.Id, treffer.Name, treffer.Stufen, einstellungen.Hoechstwerte));

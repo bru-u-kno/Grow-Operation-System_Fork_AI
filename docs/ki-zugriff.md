@@ -64,6 +64,16 @@ Kopfzeile: `Authorization: Bearer gok_<43 Zeichen base64url>` (32 Zufallsbytes).
 3. **Danach:** jede schreibende Anfrage über einen Schlüssel ins Prüfprotokoll
    (`SystemAuditRepository`, Source `ki-zugriff`, Summary
    „über KI-Assistent ‚<Name>': <METHOD> <Pfad> → <Status>"), `ZuletztGenutztAm` setzen.
+   Lesende Anfragen ausserhalb der Verwaltungswege kommen **nicht** ins Protokoll.
+
+Seit 03.10.2026 (Fork AI, „Was die KI zuletzt getan hat") trägt jeder Eintrag
+der Sperre auch eigene Spalten in `SystemAuditEvents`: `KiSchluesselId`,
+`Methode`, `Pfad`, `HttpStatus`, `Fehlercode` (nachgezogen per `EnsureColumn`
+in `DatabaseInitializer.Schema.cs`). Den Fehlercode merkt sich die Anfrage in
+`HttpContext.Items` (`KiZugriffSperre.FehlercodeMerken` — die Sperre selbst und
+der Dosier-Höchstwert). Bei ungültigem Schlüssel und ausgeschaltetem Zugriff
+ist kein Schlüssel bekannt; bei einem gesperrten schon. Einträge aus forkai.163
+haben die Spalten leer und erscheinen nur ungefiltert.
 
 Fehlversuche: je IP im Speicher; ab 10 Fehlversuchen in 10 Minuten wird diese IP
 15 Minuten lang sofort abgewiesen (429 `ki_zu_viele_versuche`), ohne zu prüfen.
@@ -97,6 +107,7 @@ GrowPlanen, 10 ml, 20 Befehle/h.
 | `PUT /api/settings/ki-zugriff/schluessel/{id}` | nur Oberfläche | `KiSchluesselRequest` → `KiSchluesselDto` |
 | `POST /api/settings/ki-zugriff/schluessel/{id}/sperren` | nur Oberfläche | → `KiSchluesselDto` |
 | `DELETE /api/settings/ki-zugriff/schluessel/{id}` | nur Oberfläche | 204 |
+| `GET /api/settings/ki-zugriff/protokoll?schluesselId=&anzahl=` | nur Oberfläche | `KiProtokollEintragDto[]`, neueste zuerst; Vorgabe 50, höchstens 200; nur was ein Assistent ausgelöst hat (nicht die Handgriffe des Betreibers) |
 | `GET /api/ki-zugriff/ich` | nur mit Schlüssel | `KiZugriffIchDto` (ohne Schlüssel: 401) |
 
 Stufen gehen als Namen über die Leitung: `"Dokumentieren"`, `"GrowPlanen"`,
@@ -118,6 +129,11 @@ Rückfrage-Regel (Auswahl: nie / ab Stufe …), Höchstwerte, Liste der Schlüss
 (Name, Stufen-Häkchen; GeraeteSchalten und Verwaltung nur nach Bestätigung eines
 Warnhinweises). Nach dem Anlegen wird der Klartext **einmal** gezeigt, mit
 Kopieren-Knopf und dem Satz, dass er nicht wieder angezeigt wird.
+
+Unter der Schlüsselliste: **„Was die KI zuletzt getan hat"** (`KiProtokoll.tsx`)
+— Zeit, Schlüssel, Aktion in Worten (`AKTIONEN` in `ki-protokoll-logik.ts`, jedes
+Muster gegen die echten Routen geprüft) und ein Ergebnis-Schild nach Fehlercode
+bzw. Status. Je Schlüssel „Nur diesen zeigen", zurück über „Alle zeigen".
 
 ## Für den Assistenten
 
