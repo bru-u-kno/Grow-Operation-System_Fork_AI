@@ -61,7 +61,7 @@ public sealed class HomeAssistantService
             // Auch die Testdaten laufen durch die Umrechnung. Sonst verhielte
             // sich der Vorfuehrmodus anders als der Betrieb, und genau dort
             // schaut man hin, bevor man etwas anschliesst.
-            var demo = DemoData.StatesFor(DateTime.UtcNow);
+            var demo = DemoData.StatesFor(DateTime.UtcNow, DemoData.LageFuer(tent));
             AddLitersFromCentimeters(demo, tent);
             WassersondenNullbild.AufZustaendeAnwenden(demo);
             return demo;

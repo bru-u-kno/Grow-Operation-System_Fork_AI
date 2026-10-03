@@ -3,7 +3,6 @@ import type { Dispatch, FormEvent, SetStateAction } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../../api'
 import { TASKS_CHANGED_EVENT } from '../../useNavCounts'
-import { zahlOderNull } from '../../zahlenfeld'
 import type {
   GrowActionResultDto,
   GrowDetail,
@@ -18,7 +17,6 @@ import type {
 } from '../../types'
 import {
   emptyJournalForm,
-  emptyMeasurementForm,
   emptyPhotoForm,
   emptyTaskForm,
   isNotFound,
@@ -32,10 +30,8 @@ type UseGrowDetailMutationsArgs = {
   sopStepNotesById: Record<number, string>
   navigate: NavigateFunction
   loadBundle: () => Promise<void>
-  loadDeviations: () => Promise<void>
   loadPhotos: (measurementId: number) => Promise<void>
   loadSopInstances: () => Promise<void>
-  loadTreatmentRecommendations: () => Promise<void>
   setError: Dispatch<SetStateAction<string | null>>
   setNotice: Dispatch<SetStateAction<string | null>>
   setSaving: Dispatch<SetStateAction<string | null>>
@@ -49,48 +45,15 @@ export function useGrowDetailMutations({
   sopStepNotesById,
   navigate,
   loadBundle,
-  loadDeviations,
   loadPhotos,
   loadSopInstances,
-  loadTreatmentRecommendations,
   setError,
   setNotice,
   setSaving,
 }: UseGrowDetailMutationsArgs) {
-  const [measurementForm, setMeasurementForm] = useState(emptyMeasurementForm)
   const [taskForm, setTaskForm] = useState(emptyTaskForm)
   const [journalForm, setJournalForm] = useState(emptyJournalForm)
   const [photoForm, setPhotoForm] = useState(emptyPhotoForm)
-
-  async function handleMeasurementSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!growId) return
-
-    setSaving('measurement')
-    try {
-      await apiFetch(`/api/grows/${growId}/measurements`, {
-        method: 'POST',
-        body: JSON.stringify({
-          takenAtLocal: measurementForm.takenAtLocal,
-          stage: measurementForm.stage,
-          source: measurementForm.source,
-          airTemperatureC: zahlOderNull(measurementForm.airTemperatureC),
-          humidityPercent: zahlOderNull(measurementForm.humidityPercent),
-          reservoirPh: zahlOderNull(measurementForm.reservoirPh),
-          reservoirEc: zahlOderNull(measurementForm.reservoirEc),
-          reservoirWaterTempC: zahlOderNull(measurementForm.reservoirWaterTempC),
-          notes: measurementForm.notes || null,
-        }),
-      })
-      setMeasurementForm(emptyMeasurementForm())
-      setNotice('Messung gespeichert.')
-      await Promise.all([loadBundle(), loadDeviations(), loadTreatmentRecommendations()])
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Messung konnte nicht gespeichert werden.')
-    } finally {
-      setSaving(null)
-    }
-  }
 
   async function handleTaskSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -319,18 +282,15 @@ export function useGrowDetailMutations({
 
   return {
     journalForm,
-    measurementForm,
     photoForm,
     taskForm,
     archiveGrow,
     deleteGrow,
     handleGrowAction,
     handleJournalSubmit,
-    handleMeasurementSubmit,
     handlePhotoSubmit,
     handleTaskSubmit,
     setJournalForm,
-    setMeasurementForm,
     setPhotoForm,
     setTaskForm,
     startRecommendedSop,

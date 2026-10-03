@@ -135,6 +135,28 @@ Vorschlag für die Dringlichkeit.
 
 ## D. Demobestand und Prüfungen
 
+> **Stand 03.10.2026 abends (Branch `demobestand-d`):**
+> - **D1 erledigt — und größer als gedacht.** Nicht nur die Luftfeuchte: in der
+>   echten Demo-App (mit Plänen) lagen vier Bereichsziele daneben — Zelt 1
+>   Luftfeuchte 53 % (≤ 50) und EC 1,03 (1,5–1,7), Blütezelt 2 Luftfeuchte 53 %
+>   (≤ 40). Ursache: beide Zelte lasen dieselbe Kurve aus einem älteren Profil,
+>   ihre Grows laufen aber nach dem SKX-Plan in verschiedenen Wochen. Jetzt hat
+>   der Demo-Verlauf eine Lage je Zelt (`Demoverlauf.Lage`: Blüte / Spätblüte,
+>   `DemoData.LageFuer`). Gehalten von `e2e/demobestand-im-ziel.spec.ts` (alter
+>   Stand rot mit genau den drei Fällen). Einzelwert-Ziele („23 °C") zählen
+>   bewusst nicht — die Kachel zeigt dort die Abweichung als Zahl.
+>   Nebenbefund: Backend-Tests sehen den Bestand OHNE Pläne (Program.cs legt
+>   sie erst danach an) und damit Profil-Ziele — zwei Fassungen desselben Bestands.
+> - **D5 teilweise anders als notiert:** `summariseYield` wird von der Ernte-Seite
+>   benutzt — schrieb aber „Trockenausbeute 22.0 %"; jetzt deutsch. `toNullableInt`
+>   ist in Ordnung (alle Aufrufer `type="number"`, ganze Zahlen).
+>   `handleMeasurementSubmit` samt ungenutztem Messformular im Hook entfernt.
+>   `SetpointProfilesPage` (ohne Route) — Löschen mit dem Nutzer klären.
+> - **D2–D4 offen.**
+> - Lokal fällt `verlaufsdiagramm.spec.ts` „in anderer Zeitzone" durch: der Fall
+>   stellt den Browser auf Europe/Berlin — in der VM läuft die App in derselben
+>   Zone, der Mengenwächter meldet das richtig. Im Tor (UTC) grün.
+
 1. **Demobestand widerspricht sich:** Luftfeuchte-Ziel ≤ 50 %, die Werte liegen
    bei 53–55 % — die Kachel zeigt „daneben". Nach der Regel in CLAUDE.md ist der
    Bestand falsch (`DemobestandStimmigTests`).

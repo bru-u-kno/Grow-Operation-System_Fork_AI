@@ -198,8 +198,24 @@ public static class DemoData
     /// und Tageszeiten — „nachts kühler" heißt nachts <i>hier</i>. Deshalb
     /// die Umrechnung an genau dieser Stelle.</para>
     /// </remarks>
-    public static double? ValueFor(string metricKey, DateTime whenUtc)
-        => Demoverlauf.Wert(metricKey, whenUtc.ToLocalTime());
+    public static double? ValueFor(string metricKey, DateTime whenUtc, Demoverlauf.Lage? lage = null)
+        => Demoverlauf.Wert(metricKey, whenUtc.ToLocalTime(), lage);
+
+    /// <summary>Wo dieses Zelt im Grow steht — für EC und Luftfeuchte.</summary>
+    /// <remarks>
+    /// <para>Das Blütezelt 2 trägt den Grow in Blütewoche 9, Zelt 1 den in der
+    /// Blüte davor; ihr Plan verlangt verschiedene EC und Luftfeuchte
+    /// (<see cref="Demoverlauf.Lage"/>, offene Punkte 03.10.2026, D1).</para>
+    /// <para><b>Über den Namen, nicht die Id:</b> die Id vergibt die Datenbank,
+    /// den Namen der Bestand (<see cref="Demobestand.ZweitesBluetezeltName"/>).
+    /// Nur der Weg je Zelt (<see cref="HomeAssistantService.GetStatesAsync"/>,
+    /// die gesäte Historie) unterscheidet; wer eine Entität einzeln abfragt,
+    /// bekommt die Werte von Zelt 1 — beide Zelte teilen sich die Kennungen.</para>
+    /// </remarks>
+    public static Demoverlauf.Lage LageFuer(Tent zelt)
+        => string.Equals(zelt.Name, Demobestand.ZweitesBluetezeltName, StringComparison.Ordinal)
+            ? Demoverlauf.Lage.Spaetbluete
+            : Demoverlauf.Lage.Bluete;
     /// <summary>
     /// Die Tageswerte der zurückliegenden Wochen.
     /// </summary>
@@ -220,7 +236,7 @@ public static class DemoData
     /// Stundenraster über den Tag gerechnet — sonst behauptete das
     /// Tagesband etwas anderes als die Kurve daneben.</para>
     /// </remarks>
-    public static IEnumerable<TentSensorDailyStat> SeedDailyStats(int tentId, DateTime heute)
+    public static IEnumerable<TentSensorDailyStat> SeedDailyStats(int tentId, DateTime heute, Demoverlauf.Lage? lage = null)
     {
         // Der jüngste Tag bleibt den Rohablesungen überlassen: für ihn ist
         // die Aggregation noch nicht gelaufen, und zwei Quellen für denselben
@@ -234,7 +250,7 @@ public static class DemoData
                 var werte = new List<double>();
                 for (var stunde = 0; stunde < 24; stunde++)
                 {
-                    var wert = Demoverlauf.Wert(key, datum.AddHours(stunde));
+                    var wert = Demoverlauf.Wert(key, datum.AddHours(stunde), lage);
                     if (wert is { } vorhanden) werte.Add(vorhanden);
                 }
 
@@ -279,12 +295,12 @@ public static class DemoData
     /// einem frischen Entwicklungsrechner ist nichts zugeordnet, und dann wäre
     /// der Bildschirm wieder leer — genau das, was dieser Modus beheben soll.
     /// </remarks>
-    public static Dictionary<string, HomeAssistantState> StatesFor(DateTime nowUtc)
+    public static Dictionary<string, HomeAssistantState> StatesFor(DateTime nowUtc, Demoverlauf.Lage? lage = null)
     {
         var states = new Dictionary<string, HomeAssistantState>();
         foreach (var (key, shape) in Shape)
         {
-            var wert = ValueFor(key, nowUtc);
+            var wert = ValueFor(key, nowUtc, lage);
             if (wert is null) continue;
             states[key] = new HomeAssistantState
             {
@@ -514,7 +530,7 @@ public static class DemoData
     /// Laufzeit zu sehen, und Kurven, Verlaufsseite und Trend-Wächter liessen
     /// sich auf dem Entwicklungsrechner gar nicht prüfen.
     /// </remarks>
-    public static IEnumerable<TentSensorReading> SeedHistory(int tentId, DateTime nowUtc)
+    public static IEnumerable<TentSensorReading> SeedHistory(int tentId, DateTime nowUtc, Demoverlauf.Lage? lage = null)
     {
         // Zwei Auflösungen. Die letzten zwei Tage im Viertelstundentakt —
         // dort schaut man auf die Kurve und will sie glatt sehen. Davor
@@ -530,7 +546,7 @@ public static class DemoData
             var zeitpunkt = nowUtc.AddMinutes(-minuten);
             foreach (var key in Demoverlauf.Schluessel)
             {
-                var wert = ValueFor(key, zeitpunkt);
+                var wert = ValueFor(key, zeitpunkt, lage);
                 if (wert is null) continue;
                 yield return new TentSensorReading
                 {
