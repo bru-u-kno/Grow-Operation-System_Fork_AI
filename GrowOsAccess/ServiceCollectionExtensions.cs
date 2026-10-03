@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace GrowOsAccess;
 
@@ -33,6 +34,11 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient(GrowOsDiscovery.HttpClientName,
             klient => klient.Timeout = TimeSpan.FromSeconds(10));
         services.AddSingleton<GrowOsDiscovery>();
+
+        // Ohne eigene Quelle geht kein Schlüssel mit — nur lesen, wie bisher.
+        // Der Grow MCP trägt vorher seine eigene ein (Schlüssel aus der
+        // laufenden HTTP-Anfrage); TryAdd lässt sie dann stehen.
+        services.TryAddSingleton<IForkSchluesselQuelle, KeinForkSchluessel>();
 
         services.AddHttpClient<GrowOsReader>(klient => klient.Timeout = TimeSpan.FromSeconds(30));
         return services;

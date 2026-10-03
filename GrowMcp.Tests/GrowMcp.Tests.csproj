@@ -12,6 +12,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <!-- Fork AI (A-004): der echte MCP-Weg im Test (DurchreichenTests) — dieselbe
+         Fassung wie Mvc.Testing in GrowDiary.Web.Tests. -->
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.11" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -25,6 +28,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GrowMcp\GrowMcp.csproj" />
+    <!-- Fork AI (A-004): Grow OS wird mitgebaut, aber NICHT referenziert. Die
+         Schreib-Werkzeuge werden gegen die echten Typen und Wege in der gebauten
+         GrowDiary.Web.dll geprueft (GrowOsBau.cs laedt sie per Reflexion in
+         einen eigenen Ladekontext). Eine echte Referenz zoege die
+         Abhaengigkeiten beider Programme in einen Baum — genau das, wovor der
+         Kommentar oben warnt. -->
+    <ProjectReference Include="..\GrowDiary.Web\GrowDiary.Web.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" ExcludeAssets="all" />
   </ItemGroup>
 
 </Project>

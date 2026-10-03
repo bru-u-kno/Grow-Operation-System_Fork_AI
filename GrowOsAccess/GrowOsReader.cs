@@ -24,19 +24,62 @@ public sealed class GrowOsException(string message, bool nichtGefunden = false) 
 }
 
 /// <summary>
-/// Liest bei Grow OS — mehr nicht.
+/// Spricht mit Grow OS — lesend, und mit einem Fork-Schlüssel auch schreibend.
 /// </summary>
 /// <remarks>
-/// Bewusst nur <c>GET</c>: Grow OS lässt aus dem internen Add-on-Netz auch nur
-/// Lesezugriffe zu, und was hier nicht vorgesehen ist, kann auch nicht
-/// versehentlich gebaut werden. Dosieren und Schalten bleiben in Grow OS hinter
-/// seinen Sperren.
+/// <para>Bis forkai.163 bewusst nur <c>GET</c>: Grow OS liess aus dem internen
+/// Add-on-Netz nur Lesezugriffe zu. Seit dem Zugriff für KI-Assistenten (A-003)
+/// nimmt Grow OS auch schreibende Anfragen an — aber nur mit einem Schlüssel,
+/// den der Betreiber dort angelegt hat, und nur in den Stufen, die er angehakt
+/// hat. Dieser Leser entscheidet darüber nichts: er reicht den Schlüssel der
+/// laufenden Anfrage (<see cref="IForkSchluesselQuelle"/>) bei jeder Anfrage als
+/// <c>Authorization: Bearer gok_…</c> mit, und Grow OS sagt Ja oder Nein.</para>
+///
+/// <para>Ohne Schlüssel geht keine Kopfzeile mit — der MCP-Schlüssel des Add-ons
+/// verlässt dieses Programm nie.</para>
 /// </remarks>
-public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery)
+public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IForkSchluesselQuelle? schluessel = null)
 {
+    private readonly IForkSchluesselQuelle _schluessel = schluessel ?? KeinForkSchluessel.Instanz;
+
+    /// <summary>Ist die laufende Anfrage mit einem Fork-Schlüssel gekommen?</summary>
+    public bool HatForkSchluessel => ForkSchluessel.HatForm(_schluessel.Schluessel);
+
     /// <summary>Einen Pfad abrufen und den rohen JSON-Text zurückgeben.</summary>
     /// <param name="pfad">Etwa <c>api/grows?archived=false</c>, ohne führenden Schrägstrich.</param>
     public async Task<string> LesenAsync(string pfad, CancellationToken cancellationToken)
+    {
+        var antwort = await SendenAsync(HttpMethod.Get, pfad, null, cancellationToken);
+
+        if (antwort.Status == (int)HttpStatusCode.NotFound)
+        {
+            throw new GrowOsException($"Grow OS kennt das nicht: {pfad}", nichtGefunden: true);
+        }
+
+        if (!antwort.Erfolg)
+        {
+            // Mit einem Fork-Schlüssel kann auch ein Lesezugriff abgewiesen
+            // werden (Zugriff aus, Schlüssel gesperrt). Die Begründung von Grow OS
+            // ist dann mehr wert als die blosse Zahl.
+            throw new GrowOsException(antwort.Status is 401 or 403 or 429
+                ? ForkFehler.Text(antwort.Status, antwort.Text, $"lesen {pfad}")
+                : $"Grow OS antwortete mit {antwort.Status} auf {pfad}.");
+        }
+
+        return antwort.Text;
+    }
+
+    /// <summary>
+    /// Eine Anfrage schicken und die Antwort zurückgeben, wie sie ist — auch eine Absage.
+    /// </summary>
+    /// <remarks>
+    /// Wirft nur, wenn Grow OS gar nicht erreichbar ist. Ein 403 ist eine
+    /// Antwort, die der Aufrufer in einen Satz übersetzt (<see cref="ForkFehler"/>).
+    /// </remarks>
+    /// <param name="methode">GET, POST, PUT, PATCH …</param>
+    /// <param name="pfad">Ohne führenden Schrägstrich.</param>
+    /// <param name="json">Der Rumpf als JSON, oder <c>null</c> für keinen.</param>
+    public async Task<ForkAntwort> SendenAsync(HttpMethod methode, string pfad, string? json, CancellationToken cancellationToken)
     {
         var verbindung = await discovery.FindenAsync(cancellationToken);
         if (!verbindung.Erreichbar || verbindung.Basis is null)
@@ -44,19 +87,31 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery)
             throw new GrowOsException(verbindung.Meldung);
         }
 
-        using var antwort = await http.GetAsync($"{verbindung.Basis}/{pfad.TrimStart('/')}", cancellationToken);
-
-        if (antwort.StatusCode == HttpStatusCode.NotFound)
+        using var anfrage = Anfrage(methode, $"{verbindung.Basis}/{pfad.TrimStart('/')}");
+        if (json is not null)
         {
-            throw new GrowOsException($"Grow OS kennt das nicht: {pfad}", nichtGefunden: true);
+            anfrage.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         }
 
-        if (!antwort.IsSuccessStatusCode)
-        {
-            throw new GrowOsException($"Grow OS antwortete mit {(int)antwort.StatusCode} auf {pfad}.");
-        }
+        using var antwort = await http.SendAsync(anfrage, cancellationToken);
+        return new ForkAntwort((int)antwort.StatusCode, await antwort.Content.ReadAsStringAsync(cancellationToken));
+    }
 
-        return await antwort.Content.ReadAsStringAsync(cancellationToken);
+    /// <summary>
+    /// Eine Anfrage bauen — mit dem Fork-Schlüssel der laufenden Anfrage, falls es einen gibt.
+    /// </summary>
+    /// <remarks>
+    /// Die EINE Stelle, an der der Schlüssel in eine Anfrage kommt. Er wird hier
+    /// gelesen, eingesetzt und vergessen; kein Feld, kein Protokoll.
+    /// </remarks>
+    private HttpRequestMessage Anfrage(HttpMethod methode, string adresse)
+    {
+        var anfrage = new HttpRequestMessage(methode, adresse);
+        if (_schluessel.Schluessel is { } wert && ForkSchluessel.HatForm(wert))
+        {
+            anfrage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", wert);
+        }
+        return anfrage;
     }
 
     /// <summary>Eine Datei abrufen — Bytes samt Medientyp.</summary>
@@ -81,7 +136,8 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery)
             throw new GrowOsException(verbindung.Meldung);
         }
 
-        using var antwort = await http.GetAsync($"{verbindung.Basis}/{pfad.TrimStart('/')}", cancellationToken);
+        using var anfrage = Anfrage(HttpMethod.Get, $"{verbindung.Basis}/{pfad.TrimStart('/')}");
+        using var antwort = await http.SendAsync(anfrage, cancellationToken);
 
         if (antwort.StatusCode == HttpStatusCode.NotFound)
         {

@@ -12,10 +12,10 @@ namespace GrowMcp.Tools;
 /// Die Griffe, die ein Modell an Grow OS hat.
 /// </summary>
 /// <remarks>
-/// <para>Alle nur lesend. Es gibt bewusst kein Werkzeug zum Dosieren, Schalten
-/// oder Ändern: die Sperren dafür sitzen in Grow OS, und was hier nicht gebaut
-/// ist, kann auch nicht versehentlich ausgelöst werden. Ein Modell, das eine
-/// Pumpe starten will, muss den Menschen fragen.</para>
+/// <para>Alle nur lesend, und alle gehen mit dem MCP-Schlüssel dieses Add-ons.
+/// Eintragen und Schalten stehen in <see cref="SchreibWerkzeuge"/> und
+/// <see cref="HaWerkzeuge"/> und brauchen einen Schlüssel aus Grow OS — die
+/// Sperren dafür sitzen in Grow OS, nicht hier.</para>
 ///
 /// <para>Zurückgegeben wird meist das JSON von Grow OS, unverändert. Das ist
 /// ehrlicher als eine eigene Zusammenfassung — sie wäre eine zweite Stelle, an der
@@ -304,6 +304,13 @@ public sealed class GrowTools(GrowOsReader reader)
         [Description("Die Id des Grows")] int growId,
         CancellationToken cancellationToken = default)
         => SicherAsync(() => reader.LesenAsync($"api/grows/{growId}/journal", cancellationToken));
+
+    [McpServerTool(Name = "aufgaben")]
+    [Description("Die Aufgaben eines Grows mit Id, Titel, Fälligkeit und Zustand (offen, erledigt, übersprungen). Die Id braucht aufgabe_erledigen.")]
+    public Task<string> AufgabenAsync(
+        [Description("Die Id des Grows")] int growId,
+        CancellationToken cancellationToken = default)
+        => SicherAsync(() => reader.LesenAsync($"api/grows/{growId}/tasks", cancellationToken));
 
     [McpServerTool(Name = "wissen_liste")]
     [Description("Das Fachwissen in Grow OS als Übersicht — die Kürzel, mit denen sich dann einzelne Einträge nachschlagen lassen. Bei sops und treatments kommen nur die Kopfdaten; den ganzen Eintrag holt wissen_nachschlagen.")]

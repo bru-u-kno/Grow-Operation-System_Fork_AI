@@ -1,10 +1,4 @@
-using System.Net;
-using System.Reflection;
-using System.Text;
 using GrowMcp.Tools;
-using GrowOsAccess;
-using Microsoft.Extensions.Logging.Abstractions;
-using ModelContextProtocol.Server;
 
 namespace GrowMcp.Tests;
 
@@ -27,97 +21,71 @@ namespace GrowMcp.Tests;
 /// wird von Hand gesetzt (<see cref="GrowOsOptions.Adresse"/>), und ein
 /// eigener <see cref="HttpMessageHandler"/> beantwortet jeden Pfad mit einem
 /// leeren JSON-Rumpf und merkt sich, wonach gefragt wurde.</para>
+///
+/// <para><b>Fork AI (A-004, 03.10.2026).</b> Gezählt wird über ALLE Klassen mit
+/// <c>[McpServerToolType]</c>, nicht mehr nur über <see cref="GrowTools"/>:
+/// mit den Schreib- und Home-Assistant-Werkzeugen kamen zwei Klassen dazu, und
+/// eine Zählung über eine feste Klasse hätte sie nie gesehen. Jedes Werkzeug
+/// läuft zweimal — mit dem MCP-Schlüssel (nur lesen) und mit einem Schlüssel
+/// aus Grow OS.</para>
 /// </summary>
 public sealed class WerkzeugeVollstaendigTests
 {
-    /// <summary>Beantwortet jede Anfrage und merkt sich den Pfad.</summary>
-    private sealed class MitschreibenderHandler : HttpMessageHandler
-    {
-        public List<string> Pfade { get; } = [];
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Pfade.Add(request.RequestUri!.PathAndQuery);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+    public static IEnumerable<object?[]> Werkzeuge()
+        => Werkzeugkasten.Werkzeugmethoden()
+            .SelectMany(m => new object?[][]
             {
-                Content = new StringContent("{}", Encoding.UTF8, "application/json"),
+                [Werkzeugkasten.Name(m), null],
+                [Werkzeugkasten.Name(m), Werkzeugkasten.ForkSchluessel],
             });
-        }
-    }
-
-    private sealed class EinKlient(HttpMessageHandler handler) : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false)
-        {
-            BaseAddress = new Uri("http://127.0.0.1:9/"),
-        };
-    }
-
-    private static (GrowTools Werkzeuge, MitschreibenderHandler Handler) Aufbauen()
-    {
-        var handler = new MitschreibenderHandler();
-        var fabrik = new EinKlient(handler);
-        var optionen = new GrowOsOptions { Adresse = "http://127.0.0.1:9" };
-
-        var discovery = new GrowOsDiscovery(
-            fabrik,
-            new SupervisorClient(fabrik, NullLogger<SupervisorClient>.Instance),
-            optionen,
-            NullLogger<GrowOsDiscovery>.Instance);
-
-        var reader = new GrowOsReader(fabrik.CreateClient("test"), discovery);
-        return (new GrowTools(reader), handler);
-    }
-
-    /// <summary>Alle Methoden, die als Werkzeug angeboten werden.</summary>
-    private static MethodInfo[] Werkzeugmethoden()
-        => typeof(GrowTools)
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => m.GetCustomAttribute<McpServerToolAttribute>() is not null)
-            .ToArray();
-
-    public static IEnumerable<object[]> Werkzeuge()
-        => Werkzeugmethoden().Select(m => new object[] { m.Name });
 
     [Fact]
     public void Der_Test_sieht_die_Werkzeuge()
     {
         // Sonst laeuft die Schleife null Mal und der Test ist gruen, ohne etwas
         // geprueft zu haben — die Falle, in die seine Vorgaenger gelaufen sind.
-        Assert.True(Werkzeugmethoden().Length >= 20,
-            $"Nur {Werkzeugmethoden().Length} Werkzeuge gefunden — die Reflexion greift ins Leere.");
+        // 23 lesende, 11 schreibende, 4 fuer Home Assistant.
+        var anzahl = Werkzeugkasten.Werkzeugmethoden().Length;
+        Assert.True(anzahl >= 38, $"Nur {anzahl} Werkzeuge gefunden — die Reflexion greift ins Leere.");
+        Assert.True(Werkzeugkasten.Werkzeugklassen().Length >= 3,
+            "Weniger als drei Werkzeugklassen — die Schreib- oder Home-Assistant-Werkzeuge fehlen in der Zaehlung.");
+    }
+
+    [Fact]
+    public void Kein_Werkzeugname_kommt_doppelt_vor()
+    {
+        // Zwei Klassen, ein Name: der Klient saehe nur eines der beiden.
+        var doppelt = Werkzeugkasten.Werkzeugmethoden()
+            .GroupBy(Werkzeugkasten.Name)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+        Assert.Empty(doppelt);
     }
 
     [Theory]
     [MemberData(nameof(Werkzeuge))]
-    public async Task Jedes_Werkzeug_laesst_sich_ausfuehren_und_antwortet(string methodenName)
+    public async Task Jedes_Werkzeug_laesst_sich_ausfuehren_und_antwortet(string werkzeug, string? schluessel)
     {
-        var (werkzeuge, _) = Aufbauen();
-        var methode = Werkzeugmethoden().Single(m => m.Name == methodenName);
+        var fork = new ForkAttrappe();
+        var leser = Werkzeugkasten.Leser(fork, schluessel);
 
         // Pflichtargumente mit etwas Plausiblem fuellen: Ids mit 1, Texte mit
         // einem Wort. Optionale bleiben auf ihrem Standard — genau so ruft ein
         // Klient das Werkzeug beim ersten Mal auf.
-        var argumente = methode.GetParameters().Select(StandardWert).ToArray();
-
-        var ergebnis = methode.Invoke(werkzeuge, argumente);
-        Assert.NotNull(ergebnis);
-
+        //
         // NICHT alle Werkzeuge geben Text zurueck: `foto_ansehen` liefert ein
         // Bild als ContentBlock-Folge. Ein erster Anlauf dieses Tests hat
         // stumpf auf Task<string> gecastet und ausgerechnet daran gescheitert —
         // an einem Werkzeug, das voellig in Ordnung ist.
-        var aufgabe = (Task)ergebnis!;
-        await aufgabe;
-
-        var wert = aufgabe.GetType().GetProperty("Result")!.GetValue(aufgabe);
+        var wert = await Werkzeugkasten.AufrufenAsync(Werkzeugkasten.Werkzeug(werkzeug), leser);
         Assert.NotNull(wert);
 
         // Der Inhalt haengt an echten Daten und wird hier nicht geprueft. Was
         // geprueft wird: das Werkzeug laeuft durch und sagt etwas.
         if (wert is string text)
         {
-            Assert.False(string.IsNullOrWhiteSpace(text), $"{methodenName} antwortet mit nichts.");
+            Assert.False(string.IsNullOrWhiteSpace(text), $"{werkzeug} antwortet mit nichts.");
         }
     }
 
@@ -126,20 +94,10 @@ public sealed class WerkzeugeVollstaendigTests
     {
         // Gegenprobe: liefe der Aufbau ins Leere, wuerde jedes Werkzeug nur eine
         // Fehlermeldung zurueckgeben und der Test darueber waere trotzdem gruen.
-        var (werkzeuge, handler) = Aufbauen();
+        var fork = new ForkAttrappe();
+        var werkzeuge = new GrowTools(Werkzeugkasten.Leser(fork, null));
         await werkzeuge.GrowsAuflistenAsync(cancellationToken: CancellationToken.None);
 
-        Assert.NotEmpty(handler.Pfade);
-        Assert.Contains(handler.Pfade, p => p.Contains("api/grows", StringComparison.Ordinal));
-    }
-
-    private static object? StandardWert(ParameterInfo p)
-    {
-        if (p.HasDefaultValue) return p.DefaultValue;
-        if (p.ParameterType == typeof(CancellationToken)) return CancellationToken.None;
-        if (p.ParameterType == typeof(int)) return 1;
-        if (p.ParameterType == typeof(string)) return "test";
-        if (p.ParameterType == typeof(bool)) return false;
-        return p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null;
+        Assert.Contains(fork.VonWerkzeugen, a => a.Weg.StartsWith("api/grows", StringComparison.Ordinal));
     }
 }

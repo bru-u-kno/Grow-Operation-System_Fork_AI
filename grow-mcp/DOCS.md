@@ -60,8 +60,73 @@ IP wie `192.168.1.50`, zu finden in Home Assistant unter *Einstellungen → Syst
 | `sorte` | Blütewochen, Stretch, Düngerbedarf |
 | `pflanzen` | Einzelne Pflanzen, dazu der Pheno Hunt |
 | `journal` | Deine eigenen Einträge |
+| `aufgaben` | Die Aufgaben eines Grows mit Id und Zustand |
 | `wissen_liste`, `wissen_nachschlagen` | Abläufe, Behandlungen, Symptome, Erreger, Sollwerte |
 | `suchen` | Volltextsuche, wenn das Kürzel noch fehlt |
+
+## Eintragen und Schalten
+
+Mit dem Schlüssel von der Einrichtungsseite liest Claude nur. Zum **Eintragen
+und Schalten** braucht es einen Schlüssel aus Grow OS selbst:
+
+1. In Grow OS **Einstellungen → Zugriff für KI-Assistenten** öffnen, den
+   Hauptschalter einschalten und einen **neuen Schlüssel** anlegen. Dabei die
+   Stufen anhaken, die der Assistent haben soll (siehe unten). Der Schlüssel
+   beginnt mit `gok_` und wird nur einmal angezeigt.
+2. Im Befehl von der Einrichtungsseite den MCP-Schlüssel durch diesen
+   Schlüssel **ersetzen** — derselbe Connector, nur ein anderer Schlüssel:
+
+   ```
+   claude mcp add --transport http grow-os-fork-ai http://homeassistant.local:5080/mcp --header "Authorization: Bearer gok_…"
+   ```
+
+   Wer schon verbunden ist: `claude mcp remove grow-os-fork-ai`, dann neu
+   hinzufügen.
+
+Mit dem Fork-Schlüssel gehen weiter alle lesenden Werkzeuge. Der Grow MCP
+reicht den Schlüssel bei **jeder** Anfrage an Grow OS durch und entscheidet
+selbst nichts: welche Stufe frei ist, wie viele ml eine Dosis höchstens haben
+darf, wie viele Schaltbefehle je Stunde gehen, ob der Schlüssel gesperrt ist —
+das prüft Grow OS. Sagt Grow OS Nein, bekommt Claude den Grund als Satz, etwa
+„Dafür fehlt die Freigabe für Stufe ‚Grow planen'". Jede schreibende Anfrage
+steht in Grow OS im Prüfprotokoll.
+
+### Die Stufen
+
+| Stufe | Werkzeuge |
+| --- | --- |
+| — (nur ein gültiger Schlüssel) | `zugriff_pruefen`, `ha_bereiche`, `ha_zustaende`, `ha_verlauf` |
+| Dokumentieren | `messung_eintragen`, `messung_aendern`, `journal_eintragen`, `aufgabe_erledigen`, `wartung_eintragen`, `kalibrierung_eintragen` |
+| Grow planen | `phase_bestaetigen` (Keimung, Bewurzelung, Veg, Blüte/Flip, Finish) |
+| Geräte schalten | `pumpe_dosieren`, `pumpe_stoppen`, `licht_schalten`, `ha_dienst` |
+| Verwaltung | zusätzlich für `ha_dienst` auf Automationen, Skripte, Szenen und Helfer |
+
+Manche Dienste in Home Assistant gehen über einen Schlüssel **nie**, egal mit
+welcher Stufe — etwa Neustart (`homeassistant`), Add-ons (`hassio`),
+Sicherungen, Schlösser, Alarmanlage, Benachrichtigungen, `update`, `mqtt`,
+`downloader` und jedes `reload`. Die vollständige Liste mit Begründungen führt
+Grow OS.
+
+Claude ruft zuerst `zugriff_pruefen` auf: dort steht, welche Stufen frei sind,
+**wobei es vorher nachfragen soll** und welche Höchstwerte gelten. Die
+Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann Grow OS nur die
+Stufen.
+
+### Zum Diktieren
+
+- „Grow 4: pH 5,8, EC 1,2, ORP 450, Wasser 19,5 Grad, 3 Liter nachgefüllt."
+  → `messung_eintragen` (ohne Phase gilt die aktuelle des Grows)
+- „Die Messung von eben: der pH war 5,9." → `messung_aendern`, alle anderen
+  Werte bleiben stehen
+- „Ins Journal: 2 ml pH-Minus und 300 ml Pyrolyt gegeben." → `journal_eintragen`
+- „Hak die Aufgabe Filter reinigen ab." → `aufgaben`, dann `aufgabe_erledigen`
+- „pH-Sonde kalibriert, 7,00 Referenz, vorher 7,12, nachher 7,01." → `technik`,
+  dann `kalibrierung_eintragen`
+- „Grow 4 ist auf 12/12 geflippt." → `phase_bestaetigen` mit `bluete`
+- „Gib 2 ml pH-Minus." → `pumpe_dosieren`; Grow OS meldet, ob wirklich dosiert
+  wurde
+- „Licht auf Stufe 7." → `licht_schalten`
+- „Wie warm war es die letzte Nacht im Zelt?" → `ha_zustaende`, dann `ha_verlauf`
 
 ## Sicherheit
 
@@ -73,8 +138,13 @@ IP wie `192.168.1.50`, zu finden in Home Assistant unter *Einstellungen → Syst
 - **Der Schlüssel steht nur auf der Ingress-Seite.** Über Port 5080 ist diese
   Seite nicht erreichbar — sonst könnte sich jeder im Netz den Schlüssel
   abholen.
-- **Nur lesend.** Es gibt kein Werkzeug zum Dosieren, Schalten oder Ändern.
-  Claude kann dir sagen, was zu tun wäre; tun musst du es in Grow OS.
+- **Mit dem MCP-Schlüssel nur lesend.** Eintragen und Schalten gehen nur mit
+  einem Schlüssel aus Grow OS (siehe oben), und nur so weit, wie du es dort
+  angehakt hast. Mit dem MCP-Schlüssel antworten diese Werkzeuge nur mit dem
+  Hinweis, wo es den richtigen Schlüssel gibt — Grow OS wird gar nicht gefragt.
+- **Der Fork-Schlüssel wird nicht gespeichert.** Der Grow MCP liest ihn bei
+  jeder Anfrage aus dem Kopf, reicht ihn an Grow OS weiter und vergisst ihn.
+  Gesperrt oder gelöscht wird er in Grow OS; das wirkt sofort.
 - **Neuen Schlüssel?** Datei `mcp-token` im Add-on-Speicher löschen und neu
   starten. Die alten Klienten müssen dann neu eingerichtet werden.
 
