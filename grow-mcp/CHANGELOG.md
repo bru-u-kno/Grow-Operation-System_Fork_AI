@@ -1,5 +1,34 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.1
+
+**Eintragen und Schalten — mit einem Schlüssel aus Grow OS.** Bisher konnte
+der Grow MCP nur lesen. Jetzt nimmt er neben seinem eigenen Schlüssel auch
+einen Schlüssel aus Grow OS an (Einstellungen → Zugriff für KI-Assistenten,
+beginnt mit `gok_`). Den reicht er bei jeder Anfrage an Grow OS durch; was
+erlaubt ist, entscheidet allein Grow OS anhand der Stufen und Höchstwerte, die
+du dort vergeben hast. Braucht Grow OS Fork AI ab 2.0.0-forkai.163.
+
+- **Neu, Stufe Dokumentieren:** `messung_eintragen` (ohne Phase gilt die
+  aktuelle des Grows, nicht still „Veg"), `messung_aendern` (nur die genannten
+  Werte, der Rest bleibt), `journal_eintragen`, `aufgabe_erledigen`,
+  `wartung_eintragen`, `kalibrierung_eintragen`.
+- **Neu, Stufe Grow planen:** `phase_bestaetigen` — Keimung, Bewurzelung, Veg,
+  Blüte (Flip), Finish, wie die Knöpfe auf der Grow-Seite.
+- **Neu, Stufe Geräte schalten:** `pumpe_dosieren` (meldet, ob wirklich
+  dosiert wurde), `pumpe_stoppen`, `licht_schalten`.
+- **Neu, Home Assistant über Grow OS:** `ha_bereiche`, `ha_zustaende`,
+  `ha_verlauf` (lesend) und `ha_dienst` (Geräte schalten; Automationen,
+  Skripte und Helfer brauchen Verwaltung; manche Domains gehen nie).
+- **Neu:** `zugriff_pruefen` sagt dem Assistenten zuerst, welche Stufen frei
+  sind, wobei er vorher fragen soll und welche Höchstwerte gelten.
+- **Neu, lesend:** `aufgaben` — die Aufgaben eines Grows mit ihrer Id.
+- Mit dem MCP-Schlüssel antworten die neuen Werkzeuge mit dem Hinweis, wo es
+  den richtigen Schlüssel gibt; Grow OS wird dann gar nicht erst gefragt. Der
+  MCP-Schlüssel verlässt das Add-on nie.
+- Lehnt Grow OS ab (Stufe fehlt, Höchstwert, Schlüssel gesperrt), kommt der
+  Grund als deutscher Satz zurück statt als Fehlercode.
+
 ## 0.1.9-forkai.1
 
 **Der Grow MCP des Forks ist jetzt wirklich der des Forks.** Bis 0.1.8 zog er

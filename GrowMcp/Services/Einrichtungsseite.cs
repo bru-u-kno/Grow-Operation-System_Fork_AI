@@ -181,7 +181,7 @@ public static class Einrichtungsseite
                 <ul>
                   <li>Der Schlüssel steht im Befehl. Gib ihn nicht weiter — wer ihn hat, kann deine Grow-Daten lesen.</li>
                   <li>Erreichbar ist das nur in deinem eigenen Netz. Aus dem Internet kommt niemand hier an.</li>
-                  <li>Gelesen wird nur. Dosieren und Schalten bleiben in Grow OS.</li>
+                  <li>Mit diesem Schlüssel wird nur gelesen. Zum Eintragen und Schalten in Grow OS unter <em>Einstellungen → Zugriff für KI-Assistenten</em> einen Schlüssel anlegen und ihn im Befehl statt dieses Schlüssels einsetzen. Was er darf, legst du dort fest.</li>
                   <li>Neuen Schlüssel gewünscht? Datei <code>mcp-token</code> im Add-on-Speicher löschen und neu starten.</li>
                 </ul>
               </section>
