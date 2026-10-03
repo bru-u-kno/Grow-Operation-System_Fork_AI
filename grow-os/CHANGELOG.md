@@ -5,6 +5,37 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.162
+
+**Fork AI.** Aufgeräumt nach der Durchsicht vom 01.–03.10.2026: Zahlen aus Home Assistant werden
+überall gleich gelesen, die Dosierung glaubt keiner kaputten Sonde mehr, und zwei Formulare verlieren
+keine Eingaben mehr ohne ein Wort.
+
+### Messwerte und Dosierung
+- **Zahlen aus Home Assistant:** Ein Sensor, der deutsch „5,8" meldet, wurde an manchen Stellen zu
+  58, an anderen gar nicht gelesen. Jetzt gilt überall dieselbe Regel wie in der Oberfläche: Punkt
+  ist Dezimalpunkt, ein Komma nur, wenn kein Punkt dasteht. „nan" und „Infinity" gelten nicht mehr
+  als Messwert.
+- **Reservoir-Größe:** Aus „1.200 L" im Grow las die Nachfüll-Rechnung 1,2 Liter. Jetzt 1200.
+- **Dosierung:** Ein Sensorwert, den es physikalisch nicht geben kann (pH 15, EC 12, negativ), zählt
+  nicht mehr als Messwert. Dann gilt eine frische Handmessung — oder es wird nicht dosiert.
+- **Nullbild der Wassersonde:** Die Bereinigung beim Start rechnet die Tageswerte jetzt zuerst und
+  löscht danach, in einem Schritt. Scheitert die Rechnung, bleibt alles stehen und wird beim nächsten
+  Start erneut versucht — vorher konnte das Minimum 0 dauerhaft im Tageswert bleiben.
+
+### Formulare
+- **Kalibrierung eintragen:** Ein vertippter Wert („6,8x") verschwand still, und mit ihm die
+  Steilheit der Sonde. Jetzt nennt das Formular das Feld und trägt nicht ein. Meldungen stehen direkt
+  über „Eintragen" — vorher oben auf der Seite, am Telefon außerhalb des Bildes.
+- **Kalibrierwerte mit Grenze:** pH-Puffer müssen zwischen 0 und 14 liegen. EC-Lösungen zwischen 0
+  und 120 mS/cm — wer „1413" tippt, bekommt den Hinweis „meintest du µS/cm? Dann 1,413 eintragen".
+- **Grow bearbeiten:** Die Programmkarte des Grows (z. B. SKX Canna Aqua) ist wieder als gewählt
+  markiert, auch wenn am Grow kein Programmname steht.
+
+### Sicherung zurückspielen
+- Nach dem Zurückspielen einer Sicherung startet Grow OS wenige Sekunden später von selbst neu. Vorher
+  hielten Grow-Plan, Wissensbasis und Wochenwerte bis zum nächsten Neustart den alten Stand.
+
 ## 2.0.0-forkai.161
 
 **Fork AI.** Die Live-Übersicht lässt sich ein- und ausklappen — Bereiche, einzelne Kacheln und die
