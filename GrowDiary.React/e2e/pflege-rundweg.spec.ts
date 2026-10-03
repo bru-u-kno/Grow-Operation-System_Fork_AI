@@ -78,6 +78,10 @@ test.describe('Pflege-Rundweg', () => {
       'Kein eigener Kalibriertermin anlegbar — laeuft die App unter GROW_OS_URL?',
     )
 
+    /* Telefon-Hoehe: auf dem Desktop passt das ganze Formular ins Bild, und ob
+       eine Meldung ueber „Eintragen" zu sehen ist, waere dort nie die Frage.
+       Bei 360 × 740 lag sie unter der Bildkante (Pruefer, 03.10.2026). */
+    await page.setViewportSize({ width: 360, height: 740 })
     await page.goto('/hardware', { waitUntil: 'networkidle' })
 
     // „Kalibriert" oeffnet den Pflege-Bereich; er ist bis dahin gar nicht da.
@@ -96,8 +100,33 @@ test.describe('Pflege-Rundweg', () => {
     await formular.getByRole('button', { name: 'Punkt ergänzen' }).click()
     await formular.getByLabel('Lösung 2').fill('pH 7,00')
     await formular.getByLabel('Sollwert 2').fill('7,00')
-    await formular.getByLabel('Vorher 2').fill('6,82')
     await formular.getByLabel('Nachher 2').fill('7,00')
+
+    /* Erst vertippt (offene Punkte 03.10.2026, B9): „6,8x" wurde still zu
+       null, der Punkt fiel weg, und mit ihm die Steilheit — eingetragen wurde
+       trotzdem. Jetzt nennt die Seite das Feld und trägt NICHT ein. */
+    await formular.getByLabel('Vorher 2').fill('6,8x')
+    await formular.getByRole('button', { name: 'Eintragen' }).click()
+    const meldung = page.getByText(/„Vorher 2" ist keine Zahl/)
+    await expect(meldung, 'Ein unlesbarer Kalibrierwert verschwand ohne Meldung.').toBeVisible()
+    // Sichtbar heisst hier: IM BILD. `toBeVisible` ist auch fuer Text unter der
+    // Bildkante wahr — genau so blieb der erste Fix unbemerkt halb.
+    await expect(meldung, 'Die Meldung steht ausserhalb des Bildes.').toBeInViewport({ ratio: 1 })
+
+    // Dieselbe Handlung ein zweites Mal, erschwert: weggescrollt, dann wieder
+    // „Eintragen". Dieselbe Meldung aendert keinen Zustand, der Scroll-Effekt
+    // laeuft also nicht noch einmal — im Bild ist sie trotzdem, weil sie direkt
+    // ueber dem Knopf steht, den man zum Tippen sehen muss.
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await formular.getByRole('button', { name: 'Eintragen' }).click()
+    await expect(meldung, 'Beim zweiten Versuch steht die Meldung ausserhalb des Bildes.').toBeInViewport({ ratio: 1 })
+    await expect(formular, 'Das Formular schloss sich trotz unlesbarem Wert.').toBeVisible()
+    const vorher = await page.request.get('/api/calibration-events')
+    const nochGeplant = ((await vorher.json()) as Array<{ id: number; status: string }>)
+      .find((e) => e.id === terminId)
+    expect(nochGeplant?.status, 'Mit unlesbarem Wert wurde trotzdem eingetragen.').toBe('Planned')
+
+    await formular.getByLabel('Vorher 2').fill('6,82')
 
     /* Die Steilheit ist die eigentliche Auskunft: ein einzelner Abgleich gegen
        7,00 verraet ueber die Sonde nichts. Sie muss schon beim Tippen dastehen,

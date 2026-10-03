@@ -120,18 +120,36 @@ public sealed class SensorReadingRepository
         return ReadReadings(cmd);
     }
 
-    /// <summary>Löscht diese Rohwerte.</summary>
-    public void DeleteReadings(IEnumerable<int> ids)
+    /// <summary>
+    /// Löscht diese Rohwerte und schreibt diese Tageswerte — alles oder nichts.
+    /// </summary>
+    /// <remarks>
+    /// Für die Nullbild-Bereinigung (<c>WassersondenNullbild</c>): bricht sie
+    /// zwischen Löschen und Schreiben ab, wären die Rohwerte weg und der alte
+    /// Tageswert mit seinem Minimum 0 bliebe für immer stehen. In einer
+    /// Transaktion bleibt dann beides, wie es war, und der nächste Start
+    /// versucht es neu.
+    /// </remarks>
+    public void Bereinigen(IEnumerable<int> loeschen, IEnumerable<TentSensorDailyStat> tageswerte)
     {
         using var connection = OpenConnection();
         using var transaction = connection.BeginTransaction();
-        using var cmd = connection.CreateCommand();
-        cmd.Transaction = transaction;
-        cmd.CommandText = "DELETE FROM TentSensorReadings WHERE Id = $id;";
-        var id = cmd.Parameters.Add("$id", SqliteType.Integer);
-        foreach (var eintrag in ids)
+        using (var cmd = connection.CreateCommand())
         {
-            id.Value = eintrag;
+            cmd.Transaction = transaction;
+            cmd.CommandText = "DELETE FROM TentSensorReadings WHERE Id = $id;";
+            var id = cmd.Parameters.Add("$id", SqliteType.Integer);
+            foreach (var eintrag in loeschen)
+            {
+                id.Value = eintrag;
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        foreach (var stat in tageswerte)
+        {
+            using var cmd = TageswertBefehl(connection, stat);
+            cmd.Transaction = transaction;
             cmd.ExecuteNonQuery();
         }
 
@@ -167,7 +185,13 @@ public sealed class SensorReadingRepository
     public void UpsertDailyStat(TentSensorDailyStat stat)
     {
         using var connection = OpenConnection();
-        using var cmd = connection.CreateCommand();
+        using var cmd = TageswertBefehl(connection, stat);
+        cmd.ExecuteNonQuery();
+    }
+
+    private static SqliteCommand TageswertBefehl(SqliteConnection connection, TentSensorDailyStat stat)
+    {
+        var cmd = connection.CreateCommand();
         cmd.CommandText = """
             INSERT INTO TentSensorDailyStats
                 (TentId, MetricKey, Date, Min, Max, Median, P5, P95, Avg, Count, Unit)
@@ -194,7 +218,7 @@ public sealed class SensorReadingRepository
         cmd.Parameters.AddWithValue("$avg",       stat.Avg);
         cmd.Parameters.AddWithValue("$count",     stat.Count);
         cmd.Parameters.AddWithValue("$unit",      (object?)stat.Unit ?? DBNull.Value);
-        cmd.ExecuteNonQuery();
+        return cmd;
     }
 
     public IReadOnlyList<TentSensorDailyStat> GetDailyStats(

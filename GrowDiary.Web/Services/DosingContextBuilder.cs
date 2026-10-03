@@ -197,6 +197,19 @@ public sealed class DosingContextBuilder
     {
         var sensor = _readings.GetNewestReading(tentId, key);
 
+        // Ein Sensorwert, den es physikalisch nicht geben kann (pH 15, EC 12,
+        // negativ), ist kein Messwert, sondern eine kaputte Sonde. Bis
+        // 03.10.2026 nahm die Dosierung ihn ungeprüft; das Nullbild war an der
+        // Quelle abgefangen, andere Ausreisser nicht. Jetzt zählt er wie kein
+        // Sensorwert: es gilt der Handeintrag oder — ohne ihn — gar nichts, und
+        // ohne Messwert dosiert nichts. Dieselbe Tabelle wie die Messformulare.
+        if (sensor is not null
+            && MeasurementSanityService.PhysikSchluesselFuerMetrik(key) is { } groesse
+            && !MeasurementSanityService.IstPhysikalischMoeglich(groesse, sensor.Value))
+        {
+            sensor = null;
+        }
+
         double? handWert = null;
         DateTime? handWann = null;
         if (_repository.GetTent(tentId)?.ActiveGrows.FirstOrDefault() is { } grow

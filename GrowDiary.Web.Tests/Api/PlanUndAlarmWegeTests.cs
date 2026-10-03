@@ -194,6 +194,9 @@ public sealed class PlanUndAlarmWegeTests
         Assert.Equal(HttpStatusCode.BadRequest, antwort.StatusCode);
         var text = await antwort.Content.ReadAsStringAsync();
         Assert.Contains("ohne Programm geht es nicht", text);
+        // Der Satz steht im Grow-Formular — er nennt dessen Weg, keine API-Route (B11).
+        Assert.Contains("Programmkarten", text);
+        Assert.DoesNotContain("plan/programm", text);
         Assert.Contains("feedProgramId", text, StringComparison.OrdinalIgnoreCase);
 
         // Grow und Plan stehen weiter auf demselben Programm.

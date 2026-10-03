@@ -169,6 +169,47 @@ public sealed class CalibrationEventsApiControllerTests : IDisposable
         Assert.Contains(nameof(CreateCalibrationEventRequest.NextDueAtUtc), AssertValidationError(badDate.Result).FieldErrors!.Keys);
     }
 
+    /// <summary>
+    /// Ein pH-Puffer außerhalb von 0–14 ist ein Tippfehler und wird nicht
+    /// eingetragen (offene Punkte 03.10.2026, B10).
+    /// </summary>
+    /// <remarks>
+    /// Puffer „70" statt „7,0" ergibt aus den Werten unten eine Steilheit von
+    /// 4,1 % — die Sonde gälte als fällig, obwohl sie 91 % spreizt.
+    /// </remarks>
+    [Theory]
+    [InlineData(CalibrationEventType.Ph, """[{"sollwert":4.01,"vorher":4.1},{"sollwert":70,"vorher":6.82}]""", false)]
+    [InlineData(CalibrationEventType.Ph, """[{"sollwert":4.01,"vorher":-0.5}]""", false)]
+    [InlineData(CalibrationEventType.Ph, """[{"sollwert":4.01,"vorher":4.1},{"sollwert":7.0,"vorher":6.82,"nachher":7.0}]""", true)]
+    // EC bleibt nach oben offen: 12,88 mS/cm ist eine übliche Lösung über der Messgrenze 10.
+    [InlineData(CalibrationEventType.Ec, """[{"sollwert":12.88,"vorher":12.5}]""", true)]
+    public void Complete_PrueftPhPunkteGegenDiePhysik(CalibrationEventType art, string punkte, bool angenommen)
+    {
+        var hardware = CreateHardware();
+        var create = Assert.IsType<CreatedAtActionResult>(_controller.Create(new CreateCalibrationEventRequest
+        {
+            HardwareItemId = hardware.Id,
+            CalibrationType = art,
+            Status = CalibrationEventStatus.Planned,
+            Result = CalibrationResult.Unknown,
+            Title = "Zweipunkt",
+            DueAtUtc = Utc(2026, 10, 4),
+        }).Result);
+        var id = Assert.IsType<CalibrationEventDto>(create.Value).Id;
+
+        var ergebnis = _controller.Complete(id, new CompleteCalibrationEventRequest { PointsJson = punkte });
+
+        if (angenommen)
+        {
+            Assert.IsType<OkObjectResult>(ergebnis.Result);
+            return;
+        }
+
+        AssertValidationError(ergebnis.Result);
+        var gespeichert = Assert.IsType<CalibrationEventDto>(Assert.IsType<OkObjectResult>(_controller.Detail(id).Result).Value);
+        Assert.Equal(CalibrationEventStatus.Planned, gespeichert.Status);
+    }
+
     private HardwareItem CreateHardware()
     {
         var tent = _repository.GetTents().Single();

@@ -108,7 +108,11 @@ public static class WassersondenNullbild
     /// Betroffene Tageswerte, die nicht neu berechnet werden konnten, weil die
     /// Rohwerte des Tages nicht mehr vollständig vorliegen.
     /// </param>
-    public sealed record Bereinigung(int Entfernt, int TageNeuBerechnet, int TageNichtNeuBerechnet);
+    /// <param name="TageZurueckgestellt">
+    /// Zelt-Tage, deren Rechnung scheiterte. Ihre Nullbilder bleiben in den
+    /// Rohwerten stehen, damit der nächste Start es neu versuchen kann.
+    /// </param>
+    public sealed record Bereinigung(int Entfernt, int TageNeuBerechnet, int TageNichtNeuBerechnet, int TageZurueckgestellt = 0);
 
     /// <summary>Die Bereinigung beim Start der App, samt Protokoll.</summary>
     /// <remarks>
@@ -131,6 +135,12 @@ public static class WassersondenNullbild
                 "Wassersonde: {Entfernt} Rohwerte aus Nullbildern entfernt, {Neu} Tageswerte neu berechnet, {Nicht} nicht neu berechenbar (Rohwerte des Tages nicht mehr vollständig).",
                 ergebnis.Entfernt, ergebnis.TageNeuBerechnet, ergebnis.TageNichtNeuBerechnet);
         }
+        if (ergebnis.TageZurueckgestellt > 0)
+        {
+            protokoll.LogWarning(
+                "Wassersonde: an {Tage} Zelt-Tagen ließ sich der Tageswert nicht rechnen — deren Nullbilder bleiben stehen, der nächste Start versucht es neu.",
+                ergebnis.TageZurueckgestellt);
+        }
         return ergebnis;
     }
 
@@ -148,10 +158,31 @@ public static class WassersondenNullbild
     /// Tag noch ganz abdecken. Nach sieben Tagen räumt der Takt die Rohwerte
     /// weg; ein halber Tag ergäbe ein falsches Tagesbild, und das alte bleibt
     /// dann besser stehen (gezählt in <see cref="Bereinigung.TageNichtNeuBerechnet"/>).</para>
+    /// <para><b>Erst rechnen, dann schreiben (seit 03.10.2026).</b> Vorher wurden
+    /// die Rohwerte zuerst gelöscht und danach gerechnet. Scheiterte die
+    /// Rechnung, war die Grundlage weg, das Minimum 0 blieb im Tageswert, und
+    /// ein zweiter Start fand nichts mehr — selten, aber endgültig. Jetzt
+    /// entstehen die neuen Tageswerte aus den Rohwerten OHNE das Nullbild, bevor
+    /// etwas gelöscht wird; Löschen und Schreiben laufen in einer Transaktion
+    /// (<see cref="SensorReadingRepository.Bereinigen"/>). Scheitert die
+    /// Rechnung für einen Tag, bleiben die Nullbilder dieses Zelt-Tags stehen
+    /// — für ALLE Größen, denn ohne die EC 0 daneben erkennte der nächste Start
+    /// die pH 0 nicht mehr als Nullbild.</para>
     /// <para>Läuft bei jedem Start; ohne Nullbild findet sie nichts und tut nichts.</para>
     /// </remarks>
-    public static Bereinigung GespeicherteEntfernen(SensorReadingRepository rohwerte, DateOnly heuteLokal)
+    /// <param name="rohwerte">Die Rohwerte und Tageswerte.</param>
+    /// <param name="heuteLokal">Der lokale Kalendertag; abgeschlossene Tage liegen davor.</param>
+    /// <param name="rechnen">
+    /// Die Tageswert-Rechnung; <c>null</c> heisst <see cref="Tageswert.Berechnen(IReadOnlyList{TentSensorReading}, int, string, DateOnly)"/>.
+    /// Nur Prüfungen setzen sie, um eine scheiternde Rechnung zu stellen.
+    /// </param>
+    public static Bereinigung GespeicherteEntfernen(
+        SensorReadingRepository rohwerte,
+        DateOnly heuteLokal,
+        Func<IReadOnlyList<TentSensorReading>, int, string, DateOnly, TentSensorDailyStat?>? rechnen = null)
     {
+        rechnen ??= Tageswert.Berechnen;
+
         var verworfen = rohwerte.GetReadingsWithValue(Groessen, 0)
             .GroupBy(reading => (reading.TentId, reading.CapturedAtUtc))
             .SelectMany(augenblick =>
@@ -166,19 +197,17 @@ public static class WassersondenNullbild
 
         if (verworfen.Count == 0) return new Bereinigung(0, 0, 0);
 
-        rohwerte.DeleteReadings(verworfen.Select(reading => reading.Id));
-
-        var neu = 0;
-        var nicht = 0;
+        var verworfeneIds = verworfen.Select(reading => reading.Id).ToHashSet();
+        var tageswerte = new List<TentSensorDailyStat>();
+        var zurueckgestellt = new HashSet<(int Zelt, DateOnly Tag)>();
+        var nichtBerechenbar = new List<(int Zelt, DateOnly Tag)>();
         var betroffen = verworfen
-            .Select(reading => (reading.TentId, reading.MetricKey, Tag: DateOnly.FromDateTime(reading.CapturedAtUtc.ToLocalTime())))
+            .Select(reading => (reading.TentId, reading.MetricKey, Tag: OrtsTag(reading)))
             .Distinct()
             .Where(tag => tag.Tag < heuteLokal);
         foreach (var (zelt, groesse, tag) in betroffen)
         {
             if (rohwerte.GetDailyStats(zelt, groesse, tag, tag).Count == 0) continue;
-            // Ein Tag, der sich nicht rechnen lässt, hält die übrigen nicht auf —
-            // die Rohwerte sind dann schon gelöscht, ein zweiter Lauf fände nichts mehr.
 
             try
             {
@@ -186,22 +215,42 @@ public static class WassersondenNullbild
                 var aeltester = rohwerte.GetOldestReadingUtc(zelt, groesse);
                 // Eine Takt-Länge Spielraum: der erste Wert nach Mitternacht kommt
                 // bis zu fünf Minuten danach.
-                if (aeltester is not { } erster || erster > tagesbeginnUtc.AddMinutes(10)
-                    || Tageswert.Berechnen(rohwerte, zelt, groesse, tag) is not { } stat)
+                if (aeltester is not { } erster || erster > tagesbeginnUtc.AddMinutes(10))
                 {
-                    nicht++;
+                    nichtBerechenbar.Add((zelt, tag));
                     continue;
                 }
 
-                rohwerte.UpsertDailyStat(stat);
-                neu++;
+                var ohneNullbild = rohwerte.GetReadingsForDay(zelt, groesse, tag)
+                    .Where(reading => !verworfeneIds.Contains(reading.Id))
+                    .ToList();
+                if (rechnen(ohneNullbild, zelt, groesse, tag) is not { } stat)
+                {
+                    nichtBerechenbar.Add((zelt, tag));
+                    continue;
+                }
+
+                tageswerte.Add(stat);
             }
             catch (Exception)
             {
-                nicht++;
+                // Ein Tag, der sich nicht rechnen lässt, hält die übrigen nicht
+                // auf — und verliert seine Grundlage nicht.
+                zurueckgestellt.Add((zelt, tag));
             }
         }
 
-        return new Bereinigung(verworfen.Count, neu, nicht);
+        var loeschen = verworfen.Where(reading => !zurueckgestellt.Contains((reading.TentId, OrtsTag(reading)))).ToList();
+        var schreiben = tageswerte.Where(stat => !zurueckgestellt.Contains((stat.TentId, stat.Date))).ToList();
+        rohwerte.Bereinigen(loeschen.Select(reading => reading.Id), schreiben);
+
+        // Ein zurückgestellter Zelt-Tag zählt nur dort — er wird beim nächsten
+        // Start neu versucht, „nicht berechenbar" wäre für ihn falsch.
+        var nicht = nichtBerechenbar.Count(eintrag => !zurueckgestellt.Contains(eintrag));
+        return new Bereinigung(loeschen.Count, schreiben.Count, nicht, zurueckgestellt.Count);
     }
+
+    /// <summary>Der lokale Kalendertag eines Rohwerts — die Spalte ist UTC.</summary>
+    private static DateOnly OrtsTag(TentSensorReading reading)
+        => DateOnly.FromDateTime(reading.CapturedAtUtc.ToLocalTime());
 }

@@ -180,6 +180,131 @@ public sealed class WassersondenNullbildTests : IDisposable
         Assert.Equal(0, WassersondenNullbild.GespeicherteEntfernen(repo, heute).Entfernt);
     }
 
+    /// <summary>
+    /// Scheitert die Rechnung eines Tages, geht nichts verloren: die Nullbilder
+    /// bleiben, und der nächste Start räumt sie auf.
+    /// </summary>
+    /// <remarks>
+    /// <b>Der Anlass (offene Punkte 03.10.2026, B5).</b> Die Bereinigung löschte
+    /// erst die Rohwerte und rechnete danach. Scheiterte die Rechnung, war die
+    /// Grundlage weg, das Minimum 0 blieb im Tageswert, und ein zweiter Start
+    /// fand kein Nullbild mehr — endgültig.
+    /// </remarks>
+    [Fact]
+    public void ScheiterndeRechnung_LaesstDieGrundlageStehen()
+    {
+        var repo = NeueDatenbank();
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var tag = heute.AddDays(-2);
+        var tagesbeginn = tag.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
+        var nullbild = tagesbeginn.AddHours(12);
+        GanzeTageSchreiben(repo, tag.AddDays(-1), tag, nullbild);
+
+        // pH wirft; EC lässt sich am selben Tag nicht rechnen (zu wenig Werte).
+        TentSensorDailyStat? PhScheitert(IReadOnlyList<TentSensorReading> rohwerte, int zelt, string groesse, DateOnly datum)
+            => groesse == WassersondenNullbild.Ph ? throw new InvalidOperationException("gestellt")
+                : groesse == WassersondenNullbild.Ec ? null
+                : Tageswert.Berechnen(rohwerte, zelt, groesse, datum);
+
+        var ergebnis = WassersondenNullbild.GespeicherteEntfernen(repo, heute, PhScheitert);
+
+        Assert.Equal(0, ergebnis.Entfernt);
+        Assert.Equal(1, ergebnis.TageZurueckgestellt);
+        // Der Tag wird neu versucht — „nicht berechenbar" wäre für ihn falsch.
+        Assert.Equal(0, ergebnis.TageNichtNeuBerechnet);
+        // Alle drei Werte des Nullbilds stehen noch — auch EC und Wasser, deren
+        // Rechnung gelang: ohne die EC 0 daneben wäre die pH 0 kein Nullbild mehr.
+        foreach (var groesse in WassersondenNullbild.Groessen)
+        {
+            Assert.Contains(repo.GetReadings(1, groesse, nullbild, nullbild), r => r.Value == 0);
+            Assert.Equal(0, repo.GetDailyStats(1, groesse, tag, tag).Single().Min);
+        }
+
+        // Der nächste Start rechnet richtig und räumt auf.
+        var zweiter = WassersondenNullbild.GespeicherteEntfernen(repo, heute);
+        Assert.Equal(3, zweiter.Entfernt);
+        Assert.Equal(3, zweiter.TageNeuBerechnet);
+        Assert.Equal(6.2, repo.GetDailyStats(1, WassersondenNullbild.Ph, tag, tag).Single().Min);
+        Assert.Equal(17.8, repo.GetDailyStats(1, WassersondenNullbild.Wassertemperatur, tag, tag).Single().Min);
+    }
+
+    /// <summary>
+    /// Ein Nullbild zwischen 00:00 und 02:00 Ortszeit gehört zum Ortstag — in
+    /// UTC liegt es noch am Vortag.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (offene Punkte 03.10.2026, B6).</b> Der Code nimmt
+    /// den lokalen Tag, aber keine Prüfung hätte es gemerkt, wenn er den
+    /// UTC-Tag nähme: das Nullbild der ersten Prüfung liegt um 23:15, wo beide
+    /// Tage gleich sind. Hier liegt es um 01:00 Ortszeit — in Deutschland
+    /// 23:00 oder 00:00 UTC am Vortag. Rechnete die Bereinigung den UTC-Tag
+    /// neu, bliebe das Minimum 0 im Ortstag stehen.</para>
+    /// <para><b>Beisst nur außerhalb von UTC.</b> In UTC sind Ortstag und
+    /// UTC-Tag dasselbe, und diese Prüfung wäre grün ohne etwas zu prüfen.
+    /// Deshalb verlangt sie eine Zeitzone mit Versatz und sagt es laut; jeder
+    /// Lauf bekommt <c>TZ=Europe/Berlin</c> über <c>zeitzone.runsettings</c>
+    /// (im Testprojekt) — so wie die Anlage.</para>
+    /// </remarks>
+    [Fact]
+    public void NullbildNachMitternachtOrtszeit_GehoertZumOrtstag()
+    {
+        var repo = NeueDatenbank();
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var tag = heute.AddDays(-2);
+        var nullbildLokal = tag.ToDateTime(new TimeOnly(1, 0), DateTimeKind.Local);
+        var nullbild = nullbildLokal.ToUniversalTime();
+
+        Assert.True(DateOnly.FromDateTime(nullbild) != tag,
+            $"Die Zeitzone dieses Laufs ({TimeZoneInfo.Local.Id}) legt 01:00 Ortszeit auf denselben UTC-Tag — "
+            + "dann prüft dieser Fall nichts. Mit TZ=Europe/Berlin laufen lassen (so läuft das Tor).");
+
+        GanzeTageSchreiben(repo, tag.AddDays(-1), tag, nullbild);
+        Assert.Equal(0, repo.GetDailyStats(1, WassersondenNullbild.Ph, tag, tag).Single().Min);
+
+        var ergebnis = WassersondenNullbild.GespeicherteEntfernen(repo, heute);
+
+        Assert.Equal(3, ergebnis.Entfernt);
+        Assert.Equal(6.2, repo.GetDailyStats(1, WassersondenNullbild.Ph, tag, tag).Single().Min);
+        Assert.Equal(1.72, repo.GetDailyStats(1, WassersondenNullbild.Ec, tag, tag).Single().Min);
+        Assert.Equal(17.8, repo.GetDailyStats(1, WassersondenNullbild.Wassertemperatur, tag, tag).Single().Min);
+    }
+
+    private SensorReadingRepository NeueDatenbank()
+    {
+        var pfade = new AppPaths(_wurzel);
+        TestDatabase.Initialize(pfade);
+        return new SensorReadingRepository(pfade);
+    }
+
+    /// <summary>
+    /// Ganze Ortstage von <paramref name="von"/> bis <paramref name="bis"/> alle
+    /// fünf Minuten, ein Nullbild zu <paramref name="nullbild"/> (UTC), dazu die
+    /// Tageswerte, wie sie die Nacht-Aggregation MIT dem Nullbild gerechnet hat.
+    /// </summary>
+    private static void GanzeTageSchreiben(SensorReadingRepository repo, DateOnly von, DateOnly bis, DateTime nullbild)
+    {
+        var anfang = von.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
+        var ende = bis.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
+        var getroffen = false;
+        for (var zeit = anfang; zeit < ende; zeit = zeit.AddMinutes(5))
+        {
+            var null_ = zeit == nullbild;
+            getroffen |= null_;
+            Schreiben(repo, zeit, WassersondenNullbild.Ph, null_ ? 0 : 6.2);
+            Schreiben(repo, zeit, WassersondenNullbild.Ec, null_ ? 0 : 1.72);
+            Schreiben(repo, zeit, WassersondenNullbild.Wassertemperatur, null_ ? 0 : 17.8);
+        }
+        Assert.True(getroffen, "Das Nullbild liegt nicht auf dem Fünf-Minuten-Raster — es wurde nie geschrieben.");
+
+        for (var tag = von; tag <= bis; tag = tag.AddDays(1))
+        {
+            foreach (var groesse in WassersondenNullbild.Groessen)
+            {
+                repo.UpsertDailyStat(Tageswert.Berechnen(repo, 1, groesse, tag)!);
+            }
+        }
+    }
+
     private static void Schreiben(SensorReadingRepository repo, DateTime zeit, string groesse, double wert)
         => repo.AddReading(new TentSensorReading { TentId = 1, MetricKey = groesse, Value = wert, CapturedAtUtc = zeit });
 }

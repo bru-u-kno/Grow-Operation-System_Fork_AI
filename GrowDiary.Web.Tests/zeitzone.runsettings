@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Die Backend-Tests laufen in der Zeitzone der Anlage, nicht in der des Rechners.
+
+  In UTC sind Ortstag und UTC-Tag dasselbe — jeder Fehler, der die beiden
+  verwechselt, wäre unsichtbar (WassersondenNullbildTests, Nullbild um 01:00
+  Ortszeit, sagt das laut). Hier statt in ci.yml, damit es überall gilt: im Tor,
+  im Commit-Hook und auf jedem Entwicklungsrechner (offene Punkte 03.10.2026, B6).
+-->
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <TZ>Europe/Berlin</TZ>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

@@ -254,10 +254,15 @@ public sealed class GrowsApiController : ApiControllerBase
         if (Services.GrowPlan.GrowPlanRegister.Programm(id) is { } planProgramm
             && !string.Equals(grow.FeedProgramId, planProgramm.Id, StringComparison.OrdinalIgnoreCase))
         {
+            // Das leere Programm kann im Grow-Formular ankommen — der Satz steht
+            // dann als Feldfehler dort und spricht dessen Sprache: bis 03.10.2026
+            // nannte er „Programm wechseln" und die API-Route, beides gibt es im
+            // Formular nicht (offene Punkte B11). Ein ANDERES Programm schickt
+            // die Oberfläche nie hierher (sie geht vorher über den Planweg);
+            // diesen Satz lesen Aufrufer der Schnittstelle, also nennt er die Route.
             ModelState.AddModelError(nameof(request.FeedProgramId), grow.FeedProgramId is null
                 ? $"Dieser Grow läuft nach seinem Plan („{(string.IsNullOrWhiteSpace(planProgramm.Name) ? planProgramm.Id : planProgramm.Name)}“) — ohne Programm "
-                  + "geht es nicht. Ein anderes Programm wählst du über „Programm wechseln“ "
-                  + "(POST /api/grows/{id}/plan/programm)."
+                  + "geht es nicht. Ein anderes Programm wählst du über die Programmkarten."
                 : "Dieser Grow hat einen Plan — das Programm wechselt über „Programm wechseln“ "
                   + "(POST /api/grows/{id}/plan/programm), damit klar ist, ob eigene Änderungen mitgehen.");
             return ValidationError();

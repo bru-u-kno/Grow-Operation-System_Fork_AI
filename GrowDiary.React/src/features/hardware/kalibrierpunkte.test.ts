@@ -3,6 +3,7 @@ import {
   speicherbarePunkte,
   steilheitProzent,
   steilheitSatz,
+  unlesbarePunktFelder,
   vorbelegung,
   STEILHEIT_FAELLIG_UNTER,
 } from './kalibrierpunkte'
@@ -112,5 +113,19 @@ describe('Vorbelegung', () => {
 
   it('schlägt für EC einen Punkt vor', () => {
     expect(vorbelegung('EC-Sonde')).toHaveLength(1)
+  })
+})
+
+describe('Unlesbare Kalibrierpunkte (B9)', () => {
+  const zeile = (soll: string, vorher: string, nachher = '') =>
+    ({ loesung: '', sollText: soll, vorherText: vorher, nachherText: nachher })
+
+  it('nennt das Feld so, wie es am Eingabefeld steht', () => {
+    expect(unlesbarePunktFelder([zeile('4,01', '4,15'), zeile('7,00', '6,8x')]),
+      '„6,8x" machte den Punkt still zu null — und die Steilheit verschwand').toEqual(['Vorher 2'])
+  })
+
+  it('meldet nichts bei lesbaren und leeren Feldern', () => {
+    expect(unlesbarePunktFelder([zeile('4,01', '4,15'), zeile('', '')])).toEqual([])
   })
 })

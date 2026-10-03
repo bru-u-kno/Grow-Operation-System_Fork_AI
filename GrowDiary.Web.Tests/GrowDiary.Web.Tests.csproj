@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- Zeitzone der Anlage für jeden Testlauf — Begründung in der Datei. -->
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)/zeitzone.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <ItemGroup>

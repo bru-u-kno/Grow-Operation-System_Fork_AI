@@ -313,7 +313,7 @@ function GrowSetupPage() {
             onFehler={setError}
           />
           <TimeStep form={form} patch={patch} />
-          <ProgramStep programs={programs} selected={form.nutrients ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} planName={planProgramm?.name ?? null} />
+          <ProgramStep programs={programs} selected={selectedProgram?.key ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} planName={planProgramm?.name ?? null} />
         </div>
 
         <aside className="grow-wizard-context">
@@ -712,10 +712,15 @@ function vegHinweis(form: GrowUpsertPayload): string {
 function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch, planName }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void; planName: string | null }) {
   // Fork AI (Grow-Plan): Karten sagen, wie viel das Programm mitbringt;
   // eigene Programme stehen für sich.
+  /* `selected` ist die Programm-ID, nicht der Name (offene Punkte 03.10.2026,
+     B11). Verglichen wurde der Name aus `nutrients` — bei einem Grow mit
+     leerem Namensfeld, aber gespeicherter Programm-ID, stand keine Karte als
+     gewählt da, obwohl der Grow nach SKX lief. Die Auflösung ID vor Name
+     steht einmal oben (`selectedProgram`). */
   const karte = (program: NutrientProgramDto) => {
     const d = deckung(program)
     return (
-      <button key={program.key} type="button" className={classNames('program-card', (selected === program.name || selected === program.key) && 'active')} onClick={() => { setCustom(''); selectProgram(program.key); patch({ nutrients: program.name }) }}>
+      <button key={program.key} type="button" className={classNames('program-card', selected === program.key && 'active')} onClick={() => { setCustom(''); selectProgram(program.key); patch({ nutrients: program.name }) }}>
         <span className="grow-card-topline"><strong>{program.name}</strong><V1Badge tone="accent">{program.manufacturer}</V1Badge></span>
         <span className="program-summary">{program.summary}</span>
         <span className={classNames('program-deckung', `ist-${d.stufe}`)} data-audit="programm-deckung">{d.text}</span>

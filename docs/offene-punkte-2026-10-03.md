@@ -34,6 +34,40 @@ Vorschlag für die Dringlichkeit.
 
 ## B. Fehler und Lücken im Code
 
+> **Stand 03.10.2026 nachmittags (Branch `offene-punkte-b`):**
+> - **B1, B2 erledigt.** Neu `Services/Zahlenlesen.cs` (`Maschine` = `maschinenZahl`,
+>   `Getippt` = `zahlOderNull`); alle 22 eigenen Fassungen im Backend laufen darüber,
+>   NaN/Unendlich gelten nicht mehr als Zahl. Fälle beider Seiten in einer Tabelle
+>   (`GrowDiary.React/src/zahlen-leseregeln.json`), Zählung gegen neue eigene Fassungen.
+>   Verhaltensänderung: „7,0" aus HA gilt jetzt als 7 (vorher 70).
+> - **B3 erledigt, ohne Code.** In der Anlage geprüft (104 automatische Messungen
+>   seit 11.08.): keine 0, kein verzerrter Mittelwert. Die eine Auffällige (id 19,
+>   20.08., pH 5,28) hat normale EC und Wassertemperatur — eine echte Messung.
+> - **B4 offen — Entscheidung beim Nutzer** (welche Regel ohne Gegensonde; betrifft
+>   die Anlage nicht, dort sind beide Sonden).
+> - **B5 erledigt.** Erst rechnen (aus den Rohwerten ohne Nullbild), dann löschen und
+>   schreiben in einer Transaktion (`SensorReadingRepository.Bereinigen`). Scheitert
+>   die Rechnung, bleiben die Nullbilder des Zelt-Tags für den nächsten Start stehen.
+> - **B6 erledigt.** Test mit Nullbild um 01:00 Ortszeit; er verlangt eine Zeitzone
+>   mit Versatz und sagt es laut. Das Tor fährt die Backend-Tests jetzt mit
+>   `TZ=Europe/Berlin` (`ci.yml`).
+> - **B7 erledigt.** Ein Sensorwert außerhalb von `PhysikalischeGrenzen` zählt für die
+>   Dosierung wie keiner (dann Handwert oder gar nichts).
+> - **B8 offen — Entscheidung beim Nutzer.** Bestandsaufnahme: außer
+>   `GrowPlanRegister` halten auch die Wissensbasis (wird zurückgespielt, aber nicht
+>   neu geladen), die Wochenwert-Überlagerung, drei `SchemaSteht`-Merker
+>   (`GrowPlanRepository`, `WochenwertRepository`, `SteuerungRepository`) und
+>   mehrere Start-Übernahmen den alten Stand. Vollständig hilft nur ein Neustart.
+> - **B9 erledigt (Kalibrierung).** Unlesbare Kalibrierwerte werden genannt und nicht
+>   eingetragen; Meldungen des Pflege-Formulars stehen jetzt IM Formular (oben auf
+>   der Seite lagen sie ~400 px außerhalb des Bildes). `SetpointProfilesPage` ist
+>   **toter Code** — keine Route, kein Import; Löschkandidat wie D5.
+> - **B10 halb.** pH-Kalibrierpunkte prüft der Server jetzt gegen 0–14 (vorhandene
+>   Tabelle). Eine Obergrenze für EC-Kalibrierlösungen braucht eine belegte Zahl —
+>   Entscheidung beim Nutzer.
+> - **B11 erledigt.** Die Karte markiert nach Programm-ID; der Feldfehler bei leerem
+>   Programm nennt die Programmkarten statt der API-Route.
+
 1. **Zahlen aus Home Assistant mit `NumberStyles.Any` + InvariantCulture.**
    `HomeAssistantService.cs` (Zustand lesen, um Zeile 203), `AcSchreiber.cs:291`,
    `Demoschaltbrett.cs:58`, `PhenoRepository`: erlaubt Tausender-Kommas — ein
@@ -120,6 +154,11 @@ Vorschlag für die Dringlichkeit.
 1. **Commit-Hook:** In der Cloud-Sitzung waren Commits nach Sekunden durch — ob
    `.claude/hooks/vor-commit.sh` (volles Tor) dort überhaupt läuft, ist nicht
    belegt. Einmal mit eingebautem Fehler prüfen.
+   **Befund 03.10.2026 (VM `ClaudeCode`):** er läuft dort NICHT — `vor-commit.sh` ruft
+   `python` und `dotnet`, im PATH stehen nur `python3` und `~/.dotnet/dotnet`. Ohne
+   `python` bleibt der Befehl leer, und der Hook endet still mit 0. Außerdem kennt
+   das .NET-8-SDK dort `GrowDiary.slnx` nicht (MSB4068); die Testprojekte laufen nur
+   einzeln. Das Tor wurde in dieser Sitzung von Hand gefahren.
 2. **Hooks und Worktrees:** Die Hooks arbeiten auf dem Haupt-Repo
    (`WURZEL` aus dem Skriptpfad); Agenten in Worktrees müssen das Tor selbst
    laufen lassen.

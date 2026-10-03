@@ -136,6 +136,26 @@ public sealed class CalibrationEventsApiController : ApiControllerBase
         if (!string.IsNullOrWhiteSpace(request.PointsJson))
         {
             var punkte = Kalibrierpunkte.Lesen(request.PointsJson);
+
+            /* Ein pH-Puffer, der nicht zwischen 0 und 14 liegt, ist ein
+               Tippfehler („70" statt „7,0") — und er verdirbt die Steilheit,
+               an der die Fälligkeit der Sonde hängt. Dieselbe Tabelle wie die
+               Messformulare, keine eigene Zahl. Für EC bleibt es bewusst offen:
+               Kalibrierlösungen liegen über der Messgrenze von 10 mS/cm
+               (12,88 ist üblich), eine eigene Grenze steht noch aus (offene
+               Punkte 03.10.2026, B10). */
+            if (item.CalibrationType == CalibrationEventType.Ph)
+            {
+                for (var i = 0; i < punkte.Count; i++)
+                {
+                    var nummer = i + 1;
+                    MeasurementSanityService.PhysikGrenze(ModelState, $"{nameof(request.PointsJson)}[{i}].sollwert", "ph", punkte[i].Sollwert, $"Sollwert {nummer}");
+                    MeasurementSanityService.PhysikGrenze(ModelState, $"{nameof(request.PointsJson)}[{i}].vorher", "ph", punkte[i].Vorher, $"Vorher {nummer}");
+                    MeasurementSanityService.PhysikGrenze(ModelState, $"{nameof(request.PointsJson)}[{i}].nachher", "ph", punkte[i].Nachher, $"Nachher {nummer}");
+                }
+                if (!ModelState.IsValid) return ValidationError();
+            }
+
             item.PointsJson = Kalibrierpunkte.Schreiben(punkte);
 
             // Der letzte Punkt fuehrt die Zusammenfassung — bei pH 4/7 also 7,00.

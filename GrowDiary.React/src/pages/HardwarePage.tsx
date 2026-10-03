@@ -9,9 +9,10 @@ import { geraeteStatusName } from '../deutsche-woerter'
 import type { HardwareFilter, HardwareRow } from '../features/hardware/hardware-table-model'
 import { buildHardwareRows, countBy, dueLabel, filterHardwareRows, statusLabel, statusTone } from '../features/hardware/hardware-table-model'
 import {
-  speicherbarePunkte, steilheitProzent, steilheitSatz, vorbelegung,
+  speicherbarePunkte, steilheitProzent, steilheitSatz, unlesbarePunktFelder, vorbelegung,
   type PunktZeile,
 } from '../features/hardware/kalibrierpunkte'
+import { unlesbarMeldung } from '../zahlenfeld'
 import '../features/hardware/hardware.css'
 
 const FILTERS: Array<{ value: HardwareFilter; label: string }> = [
@@ -40,6 +41,12 @@ type CareDraft = {
   punkte: PunktZeile[]
   notiz: string
   problem: boolean
+  /**
+   * Was am Formular nicht stimmt — IM Formular angezeigt, nicht oben auf der
+   * Seite: dort stand die Meldung rund 400 px über dem Bild, und wer unten auf
+   * „Eintragen" tippte, sah nur, dass nichts passierte.
+   */
+  fehler?: string | null
 }
 
 type HardwareDraft = {
@@ -140,12 +147,26 @@ function HardwarePage() {
   //
   // `block: start`, nicht `center`: die Ueberschrift ist die Rueckmeldung,
   // dass der Klick angekommen ist.
+  //
+  // Nur beim Öffnen (bzw. Wechsel auf einen anderen Termin), nicht bei jeder
+  // Änderung am Entwurf: sonst sprang die Seite bei jedem getippten Zeichen
+  // zur Überschrift, und eine Meldung über „Eintragen" landete am Telefon
+  // unter der Bildkante (Prüfer, 03.10.2026).
   const pflegeRef = useRef<HTMLDivElement | null>(null)
+  const pflegeFehlerRef = useRef<HTMLDivElement | null>(null)
+  const offenerTermin = careDraft?.eventId ?? null
+  const pflegeFehler = careDraft?.fehler ?? null
 
   useEffect(() => {
-    if (!careDraft) return
+    if (offenerTermin == null) return
     pflegeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [careDraft])
+  }, [offenerTermin])
+
+  // Eine Meldung im Formular muss man sehen — sie steht direkt über dem Knopf.
+  useEffect(() => {
+    if (!pflegeFehler) return
+    pflegeFehlerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [pflegeFehler])
 
   useEffect(() => { void load() }, [])
 
@@ -212,11 +233,19 @@ function HardwarePage() {
     setCareDraft((current) => current && ({
       ...current,
       punkte: current.punkte.map((p, i) => (i === index ? { ...p, ...teil } : p)),
+      fehler: null,
     }))
   }
 
   async function saveCare() {
     if (!careDraft) return
+    const unlesbar = careDraft.kind === 'Kalibrierung'
+      ? unlesbarMeldung(unlesbarePunktFelder(careDraft.punkte))
+      : null
+    if (unlesbar) {
+      setCareDraft((current) => current && ({ ...current, fehler: unlesbar }))
+      return
+    }
     setSaving('care')
     setError(null)
     try {
@@ -242,7 +271,9 @@ function HardwarePage() {
       setMessage(`${careDraft.kind} für „${careDraft.geraet}“ eingetragen — der nächste Termin steht.`)
       await load()
     } catch (caught) {
-      setError(formatApiError(caught, 'Konnte nicht eingetragen werden.'))
+      // Im Formular, nicht oben auf der Seite — siehe CareDraft.fehler.
+      const fehler = formatApiError(caught, 'Konnte nicht eingetragen werden.')
+      setCareDraft((current) => current && ({ ...current, fehler }))
     } finally {
       setSaving(null)
     }
@@ -578,6 +609,7 @@ function HardwarePage() {
                     : 'Dabei etwas gefunden — Ersatz oder Reparatur nötig'}
                 </span>
               </label>
+              {careDraft.fehler && <div ref={pflegeFehlerRef}><V1Alert title="Nicht eingetragen" message={careDraft.fehler} tone="warn" /></div>}
               <div className="co-actions">
                 <V1Button variant="primary" disabled={saving === 'care'} audit="care-save" onClick={() => void saveCare()}>
                   {saving === 'care' ? 'Speichert…' : 'Eintragen'}

@@ -116,12 +116,67 @@ public sealed class ZahlenlesenTests
         Assert.Contains(EigeneFassungen(), t => t.StartsWith("Zahlenlesen.cs:", StringComparison.Ordinal));
     }
 
-    /// <summary>Das Kennzeichen einer eigenen Fassung.</summary>
-    private static readonly string[] Kennzeichen =
-    [
-        "double.TryParse(", "double.Parse(", "float.TryParse(", "float.Parse(",
-        "decimal.TryParse(", "decimal.Parse(", "NumberStyles.Any", "Replace(',', '.')",
-    ];
+    /// <summary>Jede Schreibweise wird erkannt — und keine Erwähnung.</summary>
+    /// <remarks>
+    /// Die erste Fassung der Zählung übersah vier Schreibweisen (Prüfer,
+    /// 03.10.2026): <c>Double.Parse</c>, <c>Replace(",", ".")</c> mit
+    /// Zeichenketten und jede Fassung hinter einem <c>"http://…"</c> in derselben
+    /// Zeile — dort schnitt <c>Split("//")</c> den Code ab.
+    /// </remarks>
+    [Theory]
+    [InlineData("var x = double.TryParse(s, out var v);", true)]
+    [InlineData("var x = Double.Parse(s);", true)]
+    [InlineData("var x = decimal.Parse(s, CultureInfo.InvariantCulture);", true)]
+    [InlineData("var x = float.TryParse(s, out var f);", true)]
+    [InlineData("var x = Single.Parse(s);", true)]
+    [InlineData("var t = s.Replace(',', '.');", true)]
+    [InlineData("var t = s.Replace(\",\", \".\");", true)]
+    [InlineData("var stil = NumberStyles.Any;", true)]
+    [InlineData("var u = \"http://ha.local\"; var x = double.Parse(s);", true)]
+    [InlineData("// double.Parse(s) war hier", false)]
+    [InlineData("var x = 1; // double.Parse(s)", false)]
+    [InlineData("/// <c>double.TryParse</c> stand hier", false)]
+    [InlineData("var u = \"http://ha.local\";", false)]
+    public void DieZaehlungErkenntJedeSchreibweise(string zeile, bool fassung)
+    {
+        Assert.Equal(fassung, IstEigeneFassung(zeile));
+    }
+
+    /// <summary>Das Kennzeichen einer eigenen Fassung (Groß-/Kleinschreibung egal).</summary>
+    /// <remarks>
+    /// <c>Convert.ToDouble</c> steht NICHT darin: im Backend wandelt es
+    /// ausschließlich Datenbankwerte, die schon Zahlen sind
+    /// (<c>RepositoryBase</c>, <c>HydroSetupRepository</c>). Ob ihm ein Text
+    /// übergeben wird, sieht eine Textsuche nicht.
+    /// </remarks>
+    private static readonly System.Text.RegularExpressions.Regex Kennzeichen = new(
+        @"\b(double|single|float|decimal)\.(try)?parse\(|numberstyles\.any|\.replace\(\s*(',',\s*'\.'|"","",\s*""\."")\s*\)",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static bool IstEigeneFassung(string zeile)
+    {
+        var code = OhneKommentar(zeile.Trim());
+        return code.Length > 0 && Kennzeichen.IsMatch(code);
+    }
+
+    /// <summary>
+    /// Die Zeile ohne Kommentar — ein <c>//</c> in einer Zeichenkette ist keiner.
+    /// </summary>
+    private static string OhneKommentar(string zeile)
+    {
+        if (zeile.StartsWith('*') || zeile.StartsWith("/*", StringComparison.Ordinal)) return "";
+        var inText = false;
+        var inZeichen = false;
+        for (var i = 0; i < zeile.Length; i++)
+        {
+            var c = zeile[i];
+            if ((inText || inZeichen) && c == '\\') { i++; continue; }
+            if (!inZeichen && c == '"') inText = !inText;
+            else if (!inText && c == '\'') inZeichen = !inZeichen;
+            else if (!inText && !inZeichen && c == '/' && i + 1 < zeile.Length && zeile[i + 1] == '/') return zeile[..i];
+        }
+        return zeile;
+    }
 
     private static List<string> EigeneFassungen()
     {
@@ -140,19 +195,7 @@ public sealed class ZahlenlesenTests
             var zeilen = File.ReadAllLines(datei);
             for (var i = 0; i < zeilen.Length; i += 1)
             {
-                var zeile = zeilen[i].Trim();
-                if (zeile.StartsWith("//", StringComparison.Ordinal) || zeile.StartsWith("*", StringComparison.Ordinal)
-                    || zeile.StartsWith("/*", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                // Ein Zeilenende-Kommentar ist ebenfalls keine Verwendung.
-                var code = zeile.Split("//")[0];
-                if (Kennzeichen.Any(k => code.Contains(k, StringComparison.Ordinal)))
-                {
-                    treffer.Add($"{Path.GetFileName(datei)}:{i + 1}");
-                }
+                if (IstEigeneFassung(zeilen[i])) treffer.Add($"{Path.GetFileName(datei)}:{i + 1}");
             }
         }
 

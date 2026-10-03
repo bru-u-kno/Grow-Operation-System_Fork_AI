@@ -1,4 +1,4 @@
-import { zahlOderNull } from '../../zahlenfeld'
+import { unlesbareFelder, zahlOderNull } from '../../zahlenfeld'
 
 /**
  * Die Messpunkte einer Kalibrierung — und die Steilheit daraus.
@@ -61,6 +61,23 @@ export function speicherbarePunkte(zeilen: readonly PunktZeile[]): Punkt[] {
       nachher: zahlOderNull(z.nachherText),
     }))
     .filter((p) => p.sollwert != null || p.vorher != null || p.nachher != null)
+}
+
+/**
+ * Die Felder, in denen etwas Unlesbares steht — beschriftet wie am Eingabefeld
+ * („Vorher 2").
+ *
+ * **Der Anlass (offene Punkte 03.10.2026, B9).** {@link speicherbarePunkte}
+ * macht aus „6,8x" ein `null`, und eine Zeile ohne lesbaren Wert fällt ganz
+ * weg. Ohne diese Frage vor dem Speichern verschwand der Punkt still — und mit
+ * ihm die Steilheit, an der die Fälligkeit der Sonde hängt.
+ */
+export function unlesbarePunktFelder(zeilen: readonly PunktZeile[]): string[] {
+  return zeilen.flatMap((z, i) => unlesbareFelder([
+    [z.sollText, `Sollwert ${i + 1}`],
+    [z.vorherText, `Vorher ${i + 1}`],
+    [z.nachherText, `Nachher ${i + 1}`],
+  ]))
 }
 
 /** Unter diesem Wert gilt eine Sonde als fällig — Faustregel, siehe unten. */
