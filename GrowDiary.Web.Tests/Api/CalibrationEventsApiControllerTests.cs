@@ -170,8 +170,9 @@ public sealed class CalibrationEventsApiControllerTests : IDisposable
     }
 
     /// <summary>
-    /// Ein pH-Puffer außerhalb von 0–14 ist ein Tippfehler und wird nicht
-    /// eingetragen (offene Punkte 03.10.2026, B10).
+    /// Ein pH-Puffer außerhalb von 0–14 oder eine EC-Lösung in der falschen
+    /// Einheit ist ein Tippfehler und wird nicht eingetragen (offene Punkte
+    /// 03.10.2026, B10).
     /// </summary>
     /// <remarks>
     /// Puffer „70" statt „7,0" ergibt aus den Werten unten eine Steilheit von
@@ -181,9 +182,16 @@ public sealed class CalibrationEventsApiControllerTests : IDisposable
     [InlineData(CalibrationEventType.Ph, """[{"sollwert":4.01,"vorher":4.1},{"sollwert":70,"vorher":6.82}]""", false)]
     [InlineData(CalibrationEventType.Ph, """[{"sollwert":4.01,"vorher":-0.5}]""", false)]
     [InlineData(CalibrationEventType.Ph, """[{"sollwert":4.01,"vorher":4.1},{"sollwert":7.0,"vorher":6.82,"nachher":7.0}]""", true)]
-    // EC bleibt nach oben offen: 12,88 mS/cm ist eine übliche Lösung über der Messgrenze 10.
+    // EC: 12,88 mS/cm ist eine übliche Lösung über der Messgrenze 10 — angenommen,
+    // ebenso die stärkste übliche (1 mol/l KCl, 111,3 mS/cm).
     [InlineData(CalibrationEventType.Ec, """[{"sollwert":12.88,"vorher":12.5}]""", true)]
-    public void Complete_PrueftPhPunkteGegenDiePhysik(CalibrationEventType art, string punkte, bool angenommen)
+    [InlineData(CalibrationEventType.Ec, """[{"sollwert":111.3,"vorher":110.9}]""", true)]
+    // µS/cm im mS/cm-Feld und Negatives: abgelehnt.
+    [InlineData(CalibrationEventType.Ec, """[{"sollwert":1413,"vorher":1.39}]""", false)]
+    [InlineData(CalibrationEventType.Ec, """[{"sollwert":1.413,"vorher":-0.1}]""", false)]
+    // ORP und Sauerstoff bleiben offen (Sauerstoff oft in %, 100 %).
+    [InlineData(CalibrationEventType.Do, """[{"sollwert":100,"vorher":96}]""", true)]
+    public void Complete_PrueftKalibrierpunkte(CalibrationEventType art, string punkte, bool angenommen)
     {
         var hardware = CreateHardware();
         var create = Assert.IsType<CreatedAtActionResult>(_controller.Create(new CreateCalibrationEventRequest
@@ -208,6 +216,52 @@ public sealed class CalibrationEventsApiControllerTests : IDisposable
         AssertValidationError(ergebnis.Result);
         var gespeichert = Assert.IsType<CalibrationEventDto>(Assert.IsType<OkObjectResult>(_controller.Detail(id).Result).Value);
         Assert.Equal(CalibrationEventStatus.Planned, gespeichert.Status);
+    }
+
+    /// <summary>Die Meldung nennt die Einheit und den gemeinten Wert.</summary>
+    [Fact]
+    public void Complete_NenntBeiMikrosiemensDenGemeintenWert()
+    {
+        var hardware = CreateHardware();
+        var create = Assert.IsType<CreatedAtActionResult>(_controller.Create(new CreateCalibrationEventRequest
+        {
+            HardwareItemId = hardware.Id, CalibrationType = CalibrationEventType.Ec,
+            Status = CalibrationEventStatus.Planned, Result = CalibrationResult.Unknown,
+            Title = "EC 1413", DueAtUtc = Utc(2026, 10, 4),
+        }).Result);
+        var id = Assert.IsType<CalibrationEventDto>(create.Value).Id;
+
+        var fehler = AssertValidationError(_controller.Complete(id,
+            new CompleteCalibrationEventRequest { PointsJson = """[{"sollwert":1413}]""" }).Result);
+
+        var satz = Assert.Single(fehler.FieldErrors!.SelectMany(f => f.Value));
+        Assert.Contains("µS/cm", satz);
+        Assert.Contains("1,413 eintragen", satz);
+    }
+
+    /// <summary>
+    /// Vorher/Nachher sind Anzeigen der Sonde, keine Lösungen — ihr Satz sagt
+    /// nicht „gibt es als Kalibrierlösung nicht" (Prüfer, 03.10.2026).
+    /// </summary>
+    [Fact]
+    public void Complete_NenntBeiDerSondenanzeigeKeineLoesung()
+    {
+        var hardware = CreateHardware();
+        var create = Assert.IsType<CreatedAtActionResult>(_controller.Create(new CreateCalibrationEventRequest
+        {
+            HardwareItemId = hardware.Id, CalibrationType = CalibrationEventType.Ec,
+            Status = CalibrationEventStatus.Planned, Result = CalibrationResult.Unknown,
+            Title = "EC 1413", DueAtUtc = Utc(2026, 10, 4),
+        }).Result);
+        var id = Assert.IsType<CalibrationEventDto>(create.Value).Id;
+
+        var fehler = AssertValidationError(_controller.Complete(id,
+            new CompleteCalibrationEventRequest { PointsJson = """[{"sollwert":1.413,"vorher":1390}]""" }).Result);
+
+        var satz = Assert.Single(fehler.FieldErrors!.SelectMany(f => f.Value));
+        Assert.StartsWith("Vorher 1", satz);
+        Assert.DoesNotContain("Kalibrierlösung nicht", satz);
+        Assert.Contains("1,39 eintragen", satz);
     }
 
     private HardwareItem CreateHardware()

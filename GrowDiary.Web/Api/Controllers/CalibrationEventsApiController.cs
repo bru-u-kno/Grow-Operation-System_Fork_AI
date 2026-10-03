@@ -137,24 +137,15 @@ public sealed class CalibrationEventsApiController : ApiControllerBase
         {
             var punkte = Kalibrierpunkte.Lesen(request.PointsJson);
 
-            /* Ein pH-Puffer, der nicht zwischen 0 und 14 liegt, ist ein
-               Tippfehler („70" statt „7,0") — und er verdirbt die Steilheit,
-               an der die Fälligkeit der Sonde hängt. Dieselbe Tabelle wie die
-               Messformulare, keine eigene Zahl. Für EC bleibt es bewusst offen:
-               Kalibrierlösungen liegen über der Messgrenze von 10 mS/cm
-               (12,88 ist üblich), eine eigene Grenze steht noch aus (offene
-               Punkte 03.10.2026, B10). */
-            if (item.CalibrationType == CalibrationEventType.Ph)
+            /* Ein pH-Puffer ausserhalb 0–14 oder eine EC-Lösung in der falschen
+               Einheit („1413" statt „1,413" mS/cm) verdirbt die Steilheit, an der
+               die Fälligkeit der Sonde hängt. Die Regeln stehen an
+               Kalibrierpunkte.Pruefen (offene Punkte 03.10.2026, B10). */
+            foreach (var (feld, meldung) in Kalibrierpunkte.Pruefen(item.CalibrationType, punkte))
             {
-                for (var i = 0; i < punkte.Count; i++)
-                {
-                    var nummer = i + 1;
-                    MeasurementSanityService.PhysikGrenze(ModelState, $"{nameof(request.PointsJson)}[{i}].sollwert", "ph", punkte[i].Sollwert, $"Sollwert {nummer}");
-                    MeasurementSanityService.PhysikGrenze(ModelState, $"{nameof(request.PointsJson)}[{i}].vorher", "ph", punkte[i].Vorher, $"Vorher {nummer}");
-                    MeasurementSanityService.PhysikGrenze(ModelState, $"{nameof(request.PointsJson)}[{i}].nachher", "ph", punkte[i].Nachher, $"Nachher {nummer}");
-                }
-                if (!ModelState.IsValid) return ValidationError();
+                ModelState.AddModelError(feld, meldung);
             }
+            if (!ModelState.IsValid) return ValidationError();
 
             item.PointsJson = Kalibrierpunkte.Schreiben(punkte);
 

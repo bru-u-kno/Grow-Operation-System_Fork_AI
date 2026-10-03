@@ -77,6 +77,13 @@ public sealed partial class SystemApiController
 
 
 
+    /// <summary>Was jeder Restore-Plan sagt — und ein echtes Zurückspielen nicht.</summary>
+    private static readonly string[] PlanHinweise =
+    [
+        "Restore-Plan ist ein Dry-Run. Es wurden keine Dateien geaendert.",
+        "Echter Restore ist nur ueber den Restore-Endpunkt mit Safety-Backup, Schema-Pruefung und Integritaetscheck erlaubt.",
+    ];
+
     [HttpPost("backup/{fileName}/restore-plan")]
     [ProducesResponseType(typeof(BackupRestorePlanDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
@@ -96,11 +103,7 @@ public sealed partial class SystemApiController
 
         var files = new List<BackupRestorePlanFileDto>();
         var blockers = new List<string>();
-        var warnings = new List<string>
-        {
-            "Restore-Plan ist ein Dry-Run. Es wurden keine Dateien geaendert.",
-            "Echter Restore ist nur ueber den Restore-Endpunkt mit Safety-Backup, Schema-Pruefung und Integritaetscheck erlaubt."
-        };
+        var warnings = new List<string>(PlanHinweise);
 
         string? backupSchemaVersion = null;
         bool containsDatabase;
@@ -319,7 +322,9 @@ public sealed partial class SystemApiController
         var tempRoot = Path.Combine(Path.GetTempPath(), "GrowOSRestore_" + restoreId);
         var rollbackRoot = Path.Combine(_paths.DataRootPath, "restore-rollback-" + restoreId);
         var restoredKnowledgeFiles = new List<string>();
-        var warnings = new List<string>(plan.Warnings);
+        // Die Hinweise des Plans gelten dem Trockenlauf — im Ergebnis eines echten
+        // Zurückspielens stand sonst „Es wurden keine Dateien geaendert" (Prüfer, 03.10.2026).
+        var warnings = plan.Warnings.Except(PlanHinweise).ToList();
 
         try
         {
@@ -373,6 +378,15 @@ public sealed partial class SystemApiController
 
             DeleteDirectoryBestEffort(rollbackRoot);
 
+            /* Fork AI (03.10.2026, offene Punkte B8): Neustart. Rund acht Stellen
+               halten den Stand der vorigen Datenbank im Speicher (Grow-Plan,
+               Wissensbasis, Wochenwerte, Schema-Merker, Start-Übernahmen) — nur
+               ein Neustart erfasst alle, auch die, die später dazukommen. */
+            var neustartGeplant = _neustart?.Planen($"Sicherung {fileName} zurückgespielt") ?? false;
+            warnings.Add(neustartGeplant
+                ? "Grow OS startet in wenigen Sekunden neu, damit alles im Speicher zur zurückgespielten Sicherung passt."
+                : "Grow OS bitte jetzt neu starten: bis dahin halten Grow-Plan, Wissensbasis und Wochenwerte im Speicher den Stand vor dem Zurückspielen.");
+
             var result = new BackupRestoreResultDto(
                 RestoreSchema: "grow-os.backup-restore.v1",
                 FileName: fileName,
@@ -386,7 +400,8 @@ public sealed partial class SystemApiController
                 ShmRestored: System.IO.File.Exists(extractedShm),
                 KnowledgeFileCount: restoredKnowledgeFiles.Count,
                 RestoredKnowledgeFiles: restoredKnowledgeFiles,
-                Warnings: warnings.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+                Warnings: warnings.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                NeustartGeplant: neustartGeplant);
 
             LogSystemAudit("backup", "backup-restored", $"Backup {fileName} wiederhergestellt. Safety-Backup: {safetyBackup.FileName}.", true, relatedFileName: fileName, severity: "warning");
             return Ok(result);

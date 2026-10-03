@@ -41,6 +41,70 @@ public static class Kalibrierpunkte
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>
+    /// Die stärkste übliche Kalibrierlösung für Leitfähigkeit, mit Luft nach oben:
+    /// 1 mol/l KCl hat bei 25 °C 110–112 mS/cm (Merck Certipur 101255, an die PTB
+    /// rückgeführt; als „1 Demal"-Standard 111,3 mS/cm). Darüber gibt es keine
+    /// Kalibrierlösung — ein Wert dort ist fast immer µS/cm im mS/cm-Feld.
+    /// </summary>
+    public const double EcKalibrierObergrenzeMsCm = 120;
+
+    /// <summary>
+    /// Was an den Punkten nicht stimmen kann — Feld und Satz für den Nutzer.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>pH</b> gegen die Tabelle der Messformulare (0–14, keine eigene Zahl).</para>
+    /// <para><b>EC</b> nicht gegen deren Grenze 10 mS/cm: 12,88 mS/cm ist eine
+    /// übliche Lösung. Stattdessen 0 bis <see cref="EcKalibrierObergrenzeMsCm"/>.
+    /// Der Fehler, den das fängt, ist die Einheit: das Formular schlägt „1,413"
+    /// (mS/cm) vor; wer „1413" tippt, meint µS/cm (offene Punkte 03.10.2026, B10).
+    /// <b>Nicht gefangen</b> wird eine µS-Eingabe unter der Grenze: die schwache
+    /// Lösung 84 µS/cm, als „84" getippt, gilt als 84 mS/cm — dieselbe Zahl kann
+    /// in beiden Einheiten eine Lösung sein (80 mS/cm gibt es auch).</para>
+    /// <para><b>ORP und Sauerstoff</b> bleiben offen: Sauerstoff wird oft in %
+    /// kalibriert (100 %), die Messgrenze 20 mg/l würde das abweisen.</para>
+    /// </remarks>
+    public static IReadOnlyList<(string Feld, string Meldung)> Pruefen(
+        Models.CalibrationEventType art, IReadOnlyList<Kalibrierpunkt> punkte)
+    {
+        var befunde = new List<(string, string)>();
+        for (var i = 0; i < punkte.Count; i++)
+        {
+            foreach (var (feld, name, wert) in new[]
+                     {
+                         ("sollwert", "Sollwert", punkte[i].Sollwert),
+                         ("vorher", "Vorher", punkte[i].Vorher),
+                         ("nachher", "Nachher", punkte[i].Nachher),
+                     })
+            {
+                if (wert is not { } v) continue;
+                var bezeichnung = $"{name} {i + 1}";
+                var schluessel = $"pointsJson[{i}].{feld}";
+                if (art == Models.CalibrationEventType.Ph && !MeasurementSanityService.IstPhysikalischMoeglich("ph", v))
+                {
+                    befunde.Add((schluessel, MeasurementSanityService.PhysikMeldung("ph", bezeichnung)));
+                }
+                else if (art == Models.CalibrationEventType.Ec && v < 0)
+                {
+                    befunde.Add((schluessel, $"{bezeichnung} kann nicht negativ sein."));
+                }
+                else if (art == Models.CalibrationEventType.Ec && v > EcKalibrierObergrenzeMsCm)
+                {
+                    // Der Sollwert ist eine Lösung, Vorher/Nachher sind Anzeigen der Sonde —
+                    // „gibt es als Kalibrierlösung nicht" stimmt nur für den Sollwert.
+                    befunde.Add((schluessel, feld == "sollwert"
+                        ? $"{bezeichnung}: {v:0.###} mS/cm gibt es als Kalibrierlösung nicht "
+                          + $"(die stärkste übliche, 1 mol/l KCl, hat rund 111 mS/cm). Die Werte stehen in mS/cm — "
+                          + $"meintest du µS/cm? Dann {v / 1000:0.###} eintragen."
+                        : $"{bezeichnung}: {v:0.###} mS/cm liegt über jeder Kalibrierlösung — meintest du µS/cm? "
+                          + $"Dann {v / 1000:0.###} eintragen."));
+                }
+            }
+        }
+
+        return befunde;
+    }
+
     /// <summary>Liest die Punkte — eine unlesbare Zeile ergibt eine leere Liste.</summary>
     /// <remarks>
     /// Bewusst still: eine kaputte JSON-Zeile darf die Geräteseite nicht

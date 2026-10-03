@@ -219,7 +219,10 @@ public sealed record BackupRestoreResultDto(
     bool ShmRestored,
     int KnowledgeFileCount,
     IReadOnlyList<string> RestoredKnowledgeFiles,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    // Fork AI (03.10.2026, offene Punkte B8): startet Grow OS gleich neu? Nur
+    // ein Neustart lädt alles, was im Speicher noch zur vorigen Datenbank gehört.
+    bool NeustartGeplant = false);
 
 public sealed record SchemaMigrationStatusDto(
     string MigrationSchema,

@@ -45,6 +45,12 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
     public string Datenordner => _datenordner;
 
     /// <summary>
+    /// Dienste, die ein Fall ersetzt — nach der Registrierung in Program.cs,
+    /// also gewinnt die Ersetzung (etwa ein Neustart, der nur mitschreibt).
+    /// </summary>
+    public Action<IServiceCollection>? Zusatzdienste { get; init; }
+
+    /// <summary>
     /// Ein Client, der die App so anspricht, wie Home Assistant es tut.
     /// </summary>
     /// <remarks>
@@ -77,6 +83,7 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
         // zählt der Ingress-Kopf nur vom Ingress-Proxy des Supervisors — also
         // wird hier dessen Adresse nachgestellt, wie beim echten Weg.
         builder.ConfigureServices(dienste => dienste.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, IngressAbsender>());
+        if (Zusatzdienste is { } zusatz) builder.ConfigureServices(zusatz);
         var host = base.CreateHost(builder);
 
         // Den Bestand SELBST saeen statt ueber GROW_OS_DEMO. Grund:

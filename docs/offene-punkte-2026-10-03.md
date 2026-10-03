@@ -43,28 +43,38 @@ Vorschlag für die Dringlichkeit.
 > - **B3 erledigt, ohne Code.** In der Anlage geprüft (104 automatische Messungen
 >   seit 11.08.): keine 0, kein verzerrter Mittelwert. Die eine Auffällige (id 19,
 >   20.08., pH 5,28) hat normale EC und Wassertemperatur — eine echte Messung.
-> - **B4 offen — Entscheidung beim Nutzer** (welche Regel ohne Gegensonde; betrifft
->   die Anlage nicht, dort sind beide Sonden).
+> - **B4 bewusst nicht umgesetzt** (Entscheidung 03.10.2026). Ohne Gegensonde gibt es
+>   keinen Widerspruch, der eine echte Messung ausschliesst — jede Regel wäre eine
+>   Faustregel. Die Anlage hat beide Sonden. Wieder aufnehmen mit A-001 („Fork für
+>   andere Benutzer").
 > - **B5 erledigt.** Erst rechnen (aus den Rohwerten ohne Nullbild), dann löschen und
 >   schreiben in einer Transaktion (`SensorReadingRepository.Bereinigen`). Scheitert
 >   die Rechnung, bleiben die Nullbilder des Zelt-Tags für den nächsten Start stehen.
 > - **B6 erledigt.** Test mit Nullbild um 01:00 Ortszeit; er verlangt eine Zeitzone
->   mit Versatz und sagt es laut. Das Tor fährt die Backend-Tests jetzt mit
->   `TZ=Europe/Berlin` (`ci.yml`).
+>   mit Versatz und sagt es laut. Jeder Lauf der Backend-Tests (Tor, Hook, lokal)
+>   bekommt `TZ=Europe/Berlin` über `GrowDiary.Web.Tests/zeitzone.runsettings`.
+>   (Nicht in `ci.yml`: das Token der Claude-Sitzungen darf keine Workflows ändern.)
 > - **B7 erledigt.** Ein Sensorwert außerhalb von `PhysikalischeGrenzen` zählt für die
 >   Dosierung wie keiner (dann Handwert oder gar nichts).
-> - **B8 offen — Entscheidung beim Nutzer.** Bestandsaufnahme: außer
->   `GrowPlanRegister` halten auch die Wissensbasis (wird zurückgespielt, aber nicht
->   neu geladen), die Wochenwert-Überlagerung, drei `SchemaSteht`-Merker
->   (`GrowPlanRepository`, `WochenwertRepository`, `SteuerungRepository`) und
->   mehrere Start-Übernahmen den alten Stand. Vollständig hilft nur ein Neustart.
+> - **B8 erledigt: Neustart.** Bestandsaufnahme: außer `GrowPlanRegister` halten
+>   auch die Wissensbasis (wird zurückgespielt, aber nicht neu geladen), die
+>   Wochenwert-Überlagerung, drei `SchemaSteht`-Merker (`GrowPlanRepository`,
+>   `WochenwertRepository`, `SteuerungRepository`) und mehrere Start-Übernahmen den
+>   alten Stand. Statt sie einzeln nachzuladen, startet Grow OS nach erfolgreichem
+>   Zurückspielen 3 s später neu (`SupervisorNeustart`, `POST
+>   http://supervisor/addons/self/restart` — ohne `hassio_api` erlaubt). Ausserhalb
+>   des Add-ons sagt das Ergebnis, dass ein Neustart nötig ist. **In der Anlage noch
+>   nicht ausgelöst** — Zurückspielen überschreibt Daten.
 > - **B9 erledigt (Kalibrierung).** Unlesbare Kalibrierwerte werden genannt und nicht
 >   eingetragen; Meldungen des Pflege-Formulars stehen jetzt IM Formular (oben auf
 >   der Seite lagen sie ~400 px außerhalb des Bildes). `SetpointProfilesPage` ist
 >   **toter Code** — keine Route, kein Import; Löschkandidat wie D5.
-> - **B10 halb.** pH-Kalibrierpunkte prüft der Server jetzt gegen 0–14 (vorhandene
->   Tabelle). Eine Obergrenze für EC-Kalibrierlösungen braucht eine belegte Zahl —
->   Entscheidung beim Nutzer.
+> - **B10 erledigt.** pH-Kalibrierpunkte gegen 0–14 (vorhandene Tabelle), EC gegen
+>   0–120 mS/cm (`Kalibrierpunkte.EcKalibrierObergrenzeMsCm`; stärkste übliche Lösung
+>   1 mol/l KCl, 110–112 mS/cm, Merck Certipur 101255). Die Meldung nennt bei „1413"
+>   den gemeinten Wert in mS/cm. ORP und Sauerstoff bleiben offen (Sauerstoff oft in %).
+>   Nicht gefangen: eine µS-Eingabe unter 120 („84" für 84 µS/cm gilt als 84 mS/cm —
+>   die Zahl ist in beiden Einheiten eine mögliche Lösung).
 > - **B11 erledigt.** Die Karte markiert nach Programm-ID; der Feldfehler bei leerem
 >   Programm nennt die Programmkarten statt der API-Route.
 

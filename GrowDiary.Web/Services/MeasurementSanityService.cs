@@ -93,8 +93,14 @@ public sealed class MeasurementSanityService
     public static void PhysikGrenze(ModelStateDictionary modelState, string feld, string groesse, double? wert, string bezeichnung)
     {
         if (wert is not { } v || IstPhysikalischMoeglich(groesse, v)) return;
+        modelState.AddModelError(feld, PhysikMeldung(groesse, bezeichnung));
+    }
+
+    /// <summary>Der Satz zu einem Wert ausserhalb der physikalischen Grenze — eine Fassung für alle Leser.</summary>
+    public static string PhysikMeldung(string groesse, string bezeichnung)
+    {
         var g = PhysikalischeGrenzen[groesse];
-        modelState.AddModelError(feld, $"{bezeichnung} liegt ausserhalb dessen, was physikalisch vorkommen kann ({g.Min:0}–{g.Max:0}). Bitte Messgerät oder Einheit prüfen.");
+        return $"{bezeichnung} liegt ausserhalb dessen, was physikalisch vorkommen kann ({g.Min:0}–{g.Max:0}). Bitte Messgerät oder Einheit prüfen.";
     }
 
     /// <summary>Ist dieser Wert fuer diese Groesse ueberhaupt moeglich?</summary>
