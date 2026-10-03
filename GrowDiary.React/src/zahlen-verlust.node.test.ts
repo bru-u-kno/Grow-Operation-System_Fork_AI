@@ -358,3 +358,34 @@ describe('Der Weg zurueck ins Feld (feldText)', () => {
     }
   })
 })
+
+describe('Eine Falltabelle für Frontend und Backend (zahlen-leseregeln.json)', () => {
+  /*
+   * Dieselben zwei Regeln stehen seit dem 03.10.2026 auch im Backend
+   * (`GrowDiary.Web/Services/Zahlenlesen.cs`). Zwei Umsetzungen laufen
+   * auseinander, sobald nur eine geändert wird — deshalb prüfen beide gegen
+   * dieselbe Tabelle. Vorher las das Backend Home-Assistant-Zustände mit
+   * `NumberStyles.Any`: „5,8" wurde dort 58, hier 5,8.
+   */
+  const tabelle = JSON.parse(readFileSync(new URL('zahlen-leseregeln.json', QUELLE), 'utf8')) as {
+    getippt: Array<[string, number | null]>
+    maschine: Array<[string, number | null]>
+  }
+
+  it('sieht ihre Grundmenge überhaupt', () => {
+    expect(tabelle.getippt.length).toBeGreaterThanOrEqual(30)
+    expect(tabelle.maschine.length).toBeGreaterThanOrEqual(15)
+  })
+
+  it('zahlOderNull erfüllt jeden Fall der Tabelle', () => {
+    for (const [roh, erwartet] of tabelle.getippt) {
+      expect(zahlOderNull(roh), `„${roh}"`).toBe(erwartet)
+    }
+  })
+
+  it('maschinenZahl erfüllt jeden Fall der Tabelle', () => {
+    for (const [roh, erwartet] of tabelle.maschine) {
+      expect(maschinenZahl(roh), `„${roh}"`).toBe(erwartet)
+    }
+  })
+})

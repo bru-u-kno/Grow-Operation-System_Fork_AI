@@ -110,8 +110,7 @@ public sealed class PhenoRepository : RepositoryBase
             while (reader.Read())
             {
                 var key = reader["Key"].ToString()![WeightsKeyPrefix.Length..];
-                if (double.TryParse(reader["Value"].ToString(), System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out var value))
+                if (Zahlenlesen.Maschine(reader["Value"].ToString()) is { } value)
                 {
                     values[key] = value;
                 }

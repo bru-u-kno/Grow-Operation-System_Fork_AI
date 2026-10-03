@@ -81,6 +81,38 @@ public sealed class HomeAssistantServiceTests
         Assert.Empty(result);
     }
 
+    /// <summary>
+    /// Ein deutsch schreibender Vorlagen-Sensor: „5,8" ist 5,8 — nicht 58.
+    /// </summary>
+    /// <remarks>
+    /// Geprüft am Weg, auf dem es passiert ist: der Zustand kommt als JSON von
+    /// Home Assistant und wird im <see cref="HomeAssistantService"/> zur
+    /// <c>NumericValue</c>, die als Messwert gespeichert wird.
+    /// </remarks>
+    [Theory]
+    [InlineData("5,8", 5.8)]
+    [InlineData("5.8", 5.8)]
+    [InlineData("1,234", 1.234)]
+    [InlineData("nan", null)]
+    [InlineData("unavailable", null)]
+    public async Task HomeAssistantZustand_WirdNichtZurTausenderzahl(string zustand, double? erwartet)
+    {
+        var service = new HomeAssistantService(
+            new FakeHttpClientFactory(_ => Json(
+                $$$"""{"entity_id":"sensor.ph","state":"{{{zustand}}}","attributes":{}}""")),
+            NullLogger<HomeAssistantService>.Instance);
+
+        var zelt = new Tent
+        {
+            Id = 1,
+            Sensors = [new TentSensor { TentId = 1, MetricType = SensorMetricType.ReservoirPh, HaEntityId = "sensor.ph", IsActive = true }],
+        };
+        var staende = await service.GetStatesAsync(CreateSettings(), zelt);
+
+        var stand = Assert.Single(staende).Value;
+        Assert.Equal(erwartet, stand.NumericValue);
+    }
+
     private static HomeAssistantSettings CreateSettings() => new()
     {
         BaseUrl = "http://homeassistant.local:8123",

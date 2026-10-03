@@ -76,7 +76,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         var de = CultureInfo.GetCultureInfo("de-DE");
 
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
-        double? Zahl(string id) => double.TryParse(Text(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+        double? Zahl(string id) => Zahlenlesen.Maschine(Text(id));
         string F(double? v, string einheit, string format = "0") => v is { } x ? x.ToString(format, de) + einheit : "–";
 
         var module = new List<SteuerungModulDto>

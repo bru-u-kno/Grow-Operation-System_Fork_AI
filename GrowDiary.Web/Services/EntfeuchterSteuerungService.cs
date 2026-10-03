@@ -125,7 +125,7 @@ public sealed class EntfeuchterSteuerungService
         var e = new EntfeuchterEinstellungen();
 
         double? Zahl(string id) => zustaende.TryGetValue(id, out var s)
-            && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+            ? Zahlenlesen.Maschine(s) : null;
         bool? An(string id) => zustaende.TryGetValue(id, out var s) && s is "on" or "off" or "On" or "Off"
             ? s is "on" or "On" : null;
 
@@ -270,7 +270,7 @@ public sealed class EntfeuchterSteuerungService
 
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var nachId = entities.ToDictionary(x => x.EntityId, x => x.State, StringComparer.OrdinalIgnoreCase);
-        double? Ist(string id) => double.TryParse(nachId.GetValueOrDefault(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+        double? Ist(string id) => Zahlenlesen.Maschine(nachId.GetValueOrDefault(id));
 
         var geschrieben = 0;
         foreach (var (modus, entity, soll) in new[]
@@ -301,7 +301,7 @@ public sealed class EntfeuchterSteuerungService
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
 
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
-        double? Zahl(string id) => double.TryParse(Text(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+        double? Zahl(string id) => Zahlenlesen.Maschine(Text(id));
         bool? An(string id) => Text(id) is { } t && t is not ("unknown" or "unavailable") ? t is "on" or "On" : null;
 
         var geraete = _geraete.EntitiesFuerModul(Modul);

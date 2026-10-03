@@ -136,7 +136,7 @@ public sealed class ZuluftSteuerungService
         var e = new ZuluftEinstellungen();
 
         double? Zahl(string id) => zustaende.TryGetValue(id, out var s)
-            && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+            ? Zahlenlesen.Maschine(s) : null;
 
         if (Zahl(Entitaeten.MindestDifferenz) is { } md) e.MindestDifferenzGm3 = md;
         if (Zahl(Entitaeten.AussentemperaturMin) is { } at) e.AussentemperaturMinC = at;
@@ -236,7 +236,7 @@ public sealed class ZuluftSteuerungService
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
 
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
-        double? Zahl(string id) => double.TryParse(Text(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+        double? Zahl(string id) => Zahlenlesen.Maschine(Text(id));
         bool? An(string id) => Text(id) is { } t && t is not ("unknown" or "unavailable") ? t is "on" or "On" : null;
 
         // Geräte kommen aus der Zuordnung, nicht aus dem Code: eine Rolle ohne

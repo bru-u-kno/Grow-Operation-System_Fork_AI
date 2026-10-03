@@ -288,10 +288,8 @@ public sealed class AcSchreiber
         if (ist is null) return false;
         if (string.Equals(ist, soll, StringComparison.OrdinalIgnoreCase)) return true;
 
-        if (double.TryParse(ist, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var istZahl)
-            && double.TryParse(soll, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var sollZahl))
+        if (Zahlenlesen.Maschine(ist) is { } istZahl
+            && Zahlenlesen.Maschine(soll) is { } sollZahl)
         {
             return Math.Abs(istZahl - sollZahl) < 0.001;
         }

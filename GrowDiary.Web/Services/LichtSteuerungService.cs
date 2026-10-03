@@ -323,7 +323,7 @@ public sealed class LichtSteuerungService
             "number" => new AcSchreibschritt(entityId, "number", "set_value",
                 new Dictionary<string, object>
                 {
-                    ["value"] = double.TryParse(soll, NumberStyles.Float, CultureInfo.InvariantCulture, out var zahl) ? (object)zahl : soll,
+                    ["value"] = Zahlenlesen.Maschine(soll) is { } zahl ? (object)zahl : soll,
                 }, soll),
             "input_datetime" => new AcSchreibschritt(entityId, "input_datetime", "set_datetime",
                 new Dictionary<string, object> { ["time"] = soll }, soll),
@@ -546,8 +546,8 @@ public sealed class LichtSteuerungService
     {
         if (string.Equals(ist, soll, StringComparison.OrdinalIgnoreCase)) return true;
         if (Zeit(ist) is { } a && Zeit(soll) is { } b) return a == b;
-        return double.TryParse(ist, NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
-            && double.TryParse(soll, NumberStyles.Float, CultureInfo.InvariantCulture, out var y)
+        return Zahlenlesen.Maschine(ist) is { } x
+            && Zahlenlesen.Maschine(soll) is { } y
             && Math.Abs(x - y) < 0.001;
     }
 

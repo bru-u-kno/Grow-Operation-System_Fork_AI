@@ -755,25 +755,15 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         return volumen is { } wert && wert > 0 ? Math.Round(wert, 1) : null;
     }
 
+    /// <summary>
+    /// Der Liter-Wert aus dem freien Text „Reservoir" eines Grows.
+    /// </summary>
+    /// <remarks>
+    /// Das Grow-Formular schreibt dort „1.200 L" (deutsch, mit
+    /// Tausenderpunkt), <c>GrowsApiController</c> „1200.5 L Gesamtvolumen".
+    /// Bis zum 03.10.2026 stand hier <c>Replace(',', '.')</c> — aus „1.200 L"
+    /// wurden 1,2 Liter, und die Nachfüll-Rechnung rechnete mit einem Eimer.
+    /// </remarks>
     private static double? TryParseReservoirSize(string? reservoirSize)
-    {
-        if (string.IsNullOrWhiteSpace(reservoirSize))
-        {
-            return null;
-        }
-
-        var match = System.Text.RegularExpressions.Regex.Match(reservoirSize, @"(\d+([.,]\d+)?)");
-        if (!match.Success)
-        {
-            return null;
-        }
-
-        return double.TryParse(
-            match.Value.Replace(',', '.'),
-            System.Globalization.NumberStyles.Any,
-            System.Globalization.CultureInfo.InvariantCulture,
-            out var parsed)
-            ? parsed
-            : null;
-    }
+        => Zahlenlesen.ErsteGetippteZahl(reservoirSize);
 }

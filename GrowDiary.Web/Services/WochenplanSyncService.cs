@@ -735,7 +735,7 @@ public sealed class WochenplanSyncService
     }
 
     internal static double? Zahl(string? zustand)
-        => double.TryParse(zustand, NumberStyles.Float, CultureInfo.InvariantCulture, out var wert) ? wert : null;
+        => Zahlenlesen.Maschine(zustand);
 }
 
 /// <summary>

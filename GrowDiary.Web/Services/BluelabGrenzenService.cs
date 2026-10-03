@@ -129,7 +129,7 @@ public sealed class BluelabGrenzenService
         var grenzen = Zuordnung.Select(z =>
         {
             double? geraet = rollen.TryGetValue(z.Rolle, out var id) && id is not null && zustaende.TryGetValue(id, out var s)
-                && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+                ? Zahlenlesen.Maschine(s) : null;
             return new Grenze(z.Rolle, soll.TryGetValue(z.Rolle, out var w) ? w : null, geraet);
         }).ToList();
 
@@ -161,7 +161,7 @@ public sealed class BluelabGrenzenService
         {
             if (!soll.TryGetValue(rolle, out var wert)) continue;
             if (!rollen.TryGetValue(rolle, out var entity) || entity is null) continue;
-            if (!zustaende.TryGetValue(entity, out var ist) || !double.TryParse(ist, NumberStyles.Float, CultureInfo.InvariantCulture, out var istWert)) continue;
+            if (!zustaende.TryGetValue(entity, out var ist) || Zahlenlesen.Maschine(ist) is not { } istWert) continue;
             if (Math.Abs(istWert - wert) < 0.05) continue;
             if (KuerzlichGeschrieben(rolle, wert)) continue;
 

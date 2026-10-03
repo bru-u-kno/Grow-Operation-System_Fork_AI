@@ -55,8 +55,7 @@ public static class Demoschaltbrett
         var wert = Deuten(domain, dienst, entityId, daten);
         if (wert is null) return false;
 
-        var zahl = double.TryParse(wert, System.Globalization.NumberStyles.Any,
-            System.Globalization.CultureInfo.InvariantCulture, out var z) ? z : (double?)null;
+        var zahl = Zahlenlesen.Maschine(wert);
 
         Stand[entityId] = new Eintrag(wert, zahl, DateTime.UtcNow);
         return true;

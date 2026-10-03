@@ -75,8 +75,7 @@ public sealed class KuehlerLageTests : IDisposable
         {
             EntityId = "sensor.egal",
             State = wert,
-            NumericValue = double.TryParse(wert, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var zahl) ? zahl : null,
+            NumericValue = Zahlenlesen.Maschine(wert),
             LastChanged = geaendert,
             LastUpdated = aktualisiert,
         };

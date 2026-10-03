@@ -599,7 +599,7 @@ public sealed class Co2SteuerungService
         var plan = PlanZielPpm();
         var (warm, mittel, kuehl) = WirksameZiele(e, plan);
 
-        double? Zahl(string id) => nachId.TryGetValue(id, out var s) && double.TryParse(s.State, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+        double? Zahl(string id) => nachId.TryGetValue(id, out var s) ? Zahlenlesen.Maschine(s.State) : null;
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
         // Fork AI (02.10.2026): Nur „on" und „off" sind eine Aussage. Vorher
         // wurde jeder andere Text zu „aus" — ein kurzes „unavailable" des

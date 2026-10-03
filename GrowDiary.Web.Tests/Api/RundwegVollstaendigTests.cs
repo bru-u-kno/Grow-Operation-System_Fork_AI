@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Controllers;
+using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Tests.Api;
@@ -632,10 +633,8 @@ public sealed class RundwegVollstaendigTests
         }
 
         // Zahl: 3 gegen 3.0.
-        return double.TryParse(a, System.Globalization.NumberStyles.Any,
-                   System.Globalization.CultureInfo.InvariantCulture, out var x)
-            && double.TryParse(b, System.Globalization.NumberStyles.Any,
-                   System.Globalization.CultureInfo.InvariantCulture, out var y)
+        return Zahlenlesen.Maschine(a) is { } x
+            && Zahlenlesen.Maschine(b) is { } y
             && Math.Abs(x - y) < 0.0001;
     }
 

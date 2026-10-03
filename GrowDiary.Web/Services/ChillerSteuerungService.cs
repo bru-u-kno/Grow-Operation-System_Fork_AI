@@ -192,7 +192,7 @@ public sealed class ChillerSteuerungService
     {
         if (gespeichert.HystereseGefuehrt) return gespeichert;
         if (zustaende.TryGetValue(Entitaeten.Hysterese, out var s)
-            && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var h))
+            && Zahlenlesen.Maschine(s) is { } h)
         {
             gespeichert.HystereseK = h;
         }
@@ -246,7 +246,7 @@ public sealed class ChillerSteuerungService
         var e = new ChillerEinstellungen();
 
         double? Zahl(string id) => zustaende.TryGetValue(id, out var s)
-            && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+            ? Zahlenlesen.Maschine(s) : null;
 
         if (Zahl(Entitaeten.ZielTag) is { } tag) e.ZielTagC = tag;
         if (Zahl(Entitaeten.ZielNacht) is { } nacht) e.ZielNachtC = nacht;
@@ -332,7 +332,7 @@ public sealed class ChillerSteuerungService
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
 
         string? Text(string id) => nachId.TryGetValue(id, out var s) ? s.State : null;
-        double? Zahl(string id) => double.TryParse(Text(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+        double? Zahl(string id) => Zahlenlesen.Maschine(Text(id));
         bool? An(string id) => Text(id) is { } t && t is not ("unknown" or "unavailable") ? t is "on" or "On" : null;
 
         var geraete = _geraete.EntitiesFuerModul(Modul);

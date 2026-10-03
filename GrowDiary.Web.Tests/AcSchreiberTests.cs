@@ -23,7 +23,11 @@ public sealed class AcSchreiberTests
     // hielte das für einen Fehlschlag und schriebe endlos nach.
     [InlineData("7", "7", true)]
     [InlineData("7.0", "7", true)]
-    [InlineData("7,0", "7", false)]      // deutsches Komma kommt aus HA nicht
+    // Ein deutsches Komma liest die Maschinen-Regel (Zahlenlesen.Maschine) als
+    // Dezimalzeichen, wie das Frontend. Bis 03.10.2026 stand hier „false" —
+    // NumberStyles.Any las „7,0" als 70.
+    [InlineData("7,0", "7", true)]
+    [InlineData("5,8", "58", false)]
     [InlineData("6", "7", false)]
     // Zeiten: gesetzt wird „18:00", gemeldet „18:00:00".
     [InlineData("18:00:00", "18:00", true)]

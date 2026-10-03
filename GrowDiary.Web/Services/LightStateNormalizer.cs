@@ -28,8 +28,7 @@ public static class LightStateNormalizer
         //
         // Die Schwelle liegt bewusst knapp über null statt in der Mitte: eine
         // gedimmte Lampe ist an, eine dunkle Kammer misst nichts.
-        if (double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var zahl))
+        if (Zahlenlesen.Maschine(normalized) is { } zahl)
         {
             return zahl >= 1 ? LightState.On : LightState.Off;
         }

@@ -222,7 +222,7 @@ public sealed class HomeAssistantService
                 }
             }
 
-            if (double.TryParse(state.State, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var numeric))
+            if (Zahlenlesen.Maschine(state.State) is { } numeric)
             {
                 state.NumericValue = numeric;
             }
