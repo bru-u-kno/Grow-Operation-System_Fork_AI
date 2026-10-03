@@ -37,6 +37,21 @@ public sealed class KiSchluesselRepository : RepositoryBase
     private static readonly object SchemaLock = new();
     private static readonly HashSet<string> SchemaSteht = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Das Schema der Tabelle — auch für <see cref="KiZustandBeimZurueckspielen"/>, damit es nur einmal dasteht.</summary>
+    internal const string SchemaSql = """
+                CREATE TABLE IF NOT EXISTS ForkKiSchluessel (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Praefix TEXT NOT NULL,
+                    Hash TEXT NOT NULL,
+                    Stufen INTEGER NOT NULL DEFAULT 0,
+                    ErstelltAmUtc TEXT NOT NULL,
+                    ZuletztGenutztAmUtc TEXT NULL,
+                    GesperrtAmUtc TEXT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_ForkKiSchluessel_Praefix ON ForkKiSchluessel (Praefix);
+                """;
+
     public KiSchluesselRepository(AppPaths paths) : base(paths)
     {
     }
@@ -55,19 +70,7 @@ public sealed class KiSchluesselRepository : RepositoryBase
         {
             if (SchemaSteht.Contains(datei)) return;
             using var command = connection.CreateCommand();
-            command.CommandText = """
-                CREATE TABLE IF NOT EXISTS ForkKiSchluessel (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,
-                    Praefix TEXT NOT NULL,
-                    Hash TEXT NOT NULL,
-                    Stufen INTEGER NOT NULL DEFAULT 0,
-                    ErstelltAmUtc TEXT NOT NULL,
-                    ZuletztGenutztAmUtc TEXT NULL,
-                    GesperrtAmUtc TEXT NULL
-                );
-                CREATE INDEX IF NOT EXISTS IX_ForkKiSchluessel_Praefix ON ForkKiSchluessel (Praefix);
-                """;
+            command.CommandText = SchemaSql;
             command.ExecuteNonQuery();
             SchemaSteht.Add(datei);
         }

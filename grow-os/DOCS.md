@@ -55,7 +55,7 @@ Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
 | Dokumentieren | Messungen, Journal, Beobachtungen, Aufgaben abhaken, Wartung, Kosten, Einkaufsliste, Meldungen quittieren |
 | Grow planen | Phase wechseln, Zielwerte, Misch-, Licht- und Wochenplan, Pflanzen und Sorten |
 | Geräte schalten | Licht, Klima und Dosierpumpen sofort auslösen |
-| Verwaltung | Einstellungen, Sicherungen, Import und Export, Stammdaten löschen — damit lassen sich auch Dienste in Home Assistant auslösen |
+| Verwaltung | Einstellungen, Sicherung anlegen, Import und Export, Stammdaten löschen — damit lassen sich auch Dienste in Home Assistant auslösen. Sicherungen zurückspielen oder herunterladen geht nur von Hand. |
 
 Ein Schlüssel wird nur aus dem internen Add-on-Netz angenommen. Geht er verloren: sperren oder
 löschen und einen neuen anlegen. Was über einen Schlüssel geändert wurde, steht im

@@ -268,11 +268,10 @@ public sealed partial class SystemApiController
 
 
 
-    // Fork AI (A-003, 03.10.2026): Über einen Schlüssel vorher eine Sicherung —
-    // zusätzlich zur eigenen Safety-Sicherung dieses Wegs, damit der Stand vor
-    // dem Assistenten in jedem Fall greifbar bleibt.
     [HttpPost("backup/{fileName}/restore")]
-    [KiSicherungVorher]
+    [KeinKiZugriff("Eine Sicherung enthält die Schlüssel und ihre Stufen. Über einen Schlüssel "
+        + "zurückgespielt, holte sich ein heruntergestufter Schlüssel seine alten Stufen zurück "
+        + "(Prüfer A-003, 03.10.2026). Zurückspielen ist deshalb nur von Hand möglich.")]
     [ProducesResponseType(typeof(BackupRestoreResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -333,6 +332,11 @@ public sealed partial class SystemApiController
 
         try
         {
+            // Fork AI (A-003, Prüfer 03.10.2026): Der Zugriff für KI-Assistenten
+            // reist nicht mit der Sicherung zurück — sonst wird ein gelöschter,
+            // vielleicht verratener Schlüssel wieder gültig.
+            var kiZustand = KiZustandBeimZurueckspielen.Lesen(_paths.DatabasePath);
+
             Directory.CreateDirectory(tempRoot);
             Directory.CreateDirectory(rollbackRoot);
             ZipFile.ExtractToDirectory(backupPath, tempRoot);
@@ -380,6 +384,10 @@ public sealed partial class SystemApiController
                halb nachgerüstete Datenbank stehen zu lassen. */
             SqliteConnection.ClearAllPools();
             _schema.Initialize();
+            // Vor dem Wegräumen der Rollback-Kopie: scheitert es, fängt der catch
+            // und spielt die vorige Datei zurück.
+            KiZustandBeimZurueckspielen.Schreiben(_paths.DatabasePath, kiZustand);
+            SqliteConnection.ClearAllPools();
 
             DeleteDirectoryBestEffort(rollbackRoot);
 
@@ -444,6 +452,9 @@ public sealed partial class SystemApiController
 
 
     [HttpGet("backup/{fileName}")]
+    [KeinKiZugriff("In der Sicherungsdatei kann das Home-Assistant-Token im Klartext stehen "
+        + "(ausserhalb des Add-on-Betriebs). Ein Schlüssel mit Verwaltung las es so heraus, obwohl "
+        + "die HA-Verbindung selbst gesperrt ist (Prüfer A-003, 03.10.2026).")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]

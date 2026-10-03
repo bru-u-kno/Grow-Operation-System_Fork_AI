@@ -190,6 +190,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     }
 
     [HttpPut("co2")]
+    [KiStufe(KiStufe.Verwaltung | KiStufe.GeraeteSchalten)]
     [ProducesResponseType(typeof(Co2SeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<Co2SeiteDto>> Co2Speichern([FromBody] Co2Einstellungen request, CancellationToken ct)
     {
@@ -231,6 +232,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     }
 
     [HttpPut("zuluft")]
+    [KiStufe(KiStufe.Verwaltung | KiStufe.GeraeteSchalten)]
     [ProducesResponseType(typeof(ZuluftSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ZuluftSeiteDto>> ZuluftSpeichern([FromBody] ZuluftEinstellungen request, CancellationToken ct)
     {
@@ -267,6 +269,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     }
 
     [HttpPut("entfeuchter")]
+    [KiStufe(KiStufe.Verwaltung | KiStufe.GeraeteSchalten)]
     [ProducesResponseType(typeof(EntfeuchterSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<EntfeuchterSeiteDto>> EntfeuchterSpeichern([FromBody] EntfeuchterEinstellungen request, CancellationToken ct)
     {
@@ -304,6 +307,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     }
 
     [HttpPut("chiller")]
+    [KiStufe(KiStufe.Verwaltung | KiStufe.GeraeteSchalten)]
     [ProducesResponseType(typeof(ChillerSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ChillerSeiteDto>> ChillerSpeichern([FromBody] ChillerEinstellungen request, CancellationToken ct)
     {

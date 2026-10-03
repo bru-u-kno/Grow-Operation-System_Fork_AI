@@ -60,14 +60,14 @@ public sealed class KiEinstufungBTests
         ["DosingApiController.Update"] = "Verwaltung",
         ["DosingApiController.Delete"] = "Verwaltung" + Sicherung,
         ["DosingApiController.CalibrationRun"] = "GeraeteSchalten",
-        ["DosingApiController.SaveCalibration"] = "Dokumentieren",
+        ["DosingApiController.SaveCalibration"] = "Verwaltung",
         ["DosingApiController.Dose"] = "GeraeteSchalten",
         ["DosingApiController.Stop"] = "GeraeteSchalten",
 
-        ["SteuerungApiController.Co2Speichern"] = "Verwaltung",
-        ["SteuerungApiController.ZuluftSpeichern"] = "Verwaltung",
-        ["SteuerungApiController.EntfeuchterSpeichern"] = "Verwaltung",
-        ["SteuerungApiController.ChillerSpeichern"] = "Verwaltung",
+        ["SteuerungApiController.Co2Speichern"] = "GeraeteSchalten, Verwaltung",
+        ["SteuerungApiController.ZuluftSpeichern"] = "GeraeteSchalten, Verwaltung",
+        ["SteuerungApiController.EntfeuchterSpeichern"] = "GeraeteSchalten, Verwaltung",
+        ["SteuerungApiController.ChillerSpeichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.LichtSpeichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.LichtBefehl"] = "GeraeteSchalten",
         ["SteuerungApiController.Probeschaltung"] = "GeraeteSchalten",
@@ -93,7 +93,7 @@ public sealed class KiEinstufungBTests
 
         ["SystemApiController.RestorePlan"] = "Verwaltung",
         ["SystemApiController.CreateBackup"] = "Verwaltung",
-        ["SystemApiController.RestoreBackup"] = "Verwaltung" + Sicherung,
+        ["SystemApiController.RestoreBackup"] = Gesperrt,
         ["SystemApiController.UpgradePreflight"] = "Verwaltung",
 
         ["GrowExportsApiController.ImportGrow"] = "Verwaltung" + Sicherung,

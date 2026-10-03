@@ -14,7 +14,7 @@ import { feldText, istLeer, unlesbarMeldung, unlesbareFelder, zahlOderNull } fro
  * Stufen, die nur nach einem bestätigten Warnhinweis angehakt werden.
  *
  * Geräte schalten wirkt sofort an der Anlage (Licht, Klima, Dosierpumpe);
- * Verwaltung kann Einstellungen ändern, Sicherungen zurückspielen und
+ * Verwaltung kann Einstellungen ändern, Sicherungen anlegen und
  * Stammdaten löschen. Beides soll niemand im Vorbeigehen freigeben.
  */
 export const RISKANTE_STUFEN: readonly KiStufe[] = ['GeraeteSchalten', 'Verwaltung']
@@ -27,7 +27,7 @@ export const STUFEN_ERKLAERUNG: Record<KiStufe, string> = {
   Dokumentieren: 'Messungen, Journal, Aufgaben abhaken, Wartung, Kosten, Einkaufsliste',
   GrowPlanen: 'Phase wechseln, Zielwerte, Misch-, Licht- und Wochenplan, Pflanzen und Sorten',
   GeraeteSchalten: 'Licht, Klima und Dosierpumpen sofort auslösen',
-  Verwaltung: 'Einstellungen, Sicherungen, Import und Export, Stammdaten löschen',
+  Verwaltung: 'Einstellungen, Sicherung anlegen, Import und Export, Stammdaten löschen',
 }
 
 /** Der Warnhinweis vor dem Freigeben einer riskanten Stufe. */
@@ -37,8 +37,8 @@ export const STUFEN_WARNUNG: Partial<Record<KiStufe, string>> = {
     + 'auch wenn niemand hinsieht. Ein Missverständnis kann den Pflanzen schaden. '
     + 'Die Höchstwerte unten gelten zusätzlich.',
   Verwaltung:
-    'Mit „Verwaltung" kann der Assistent Einstellungen ändern, Sicherungen zurückspielen, '
-    + 'Daten importieren und Stammdaten löschen. Vor dem Zurückspielen, Importieren und Löschen '
+    'Mit „Verwaltung" kann der Assistent Einstellungen ändern, Sicherungen anlegen, '
+    + 'Daten importieren und Stammdaten löschen. Vor dem Importieren und Löschen '
     + 'legt Grow OS eine Sicherung an. Über die Zelt- und Steuerungseinstellungen kann er '
     + 'auch Dienste in Home Assistant auslösen — gib das nur einem Assistenten, dem du '
     + 'wie dir selbst vertraust. Schlüssel verwalten kann er nie.',

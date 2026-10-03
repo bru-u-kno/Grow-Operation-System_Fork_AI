@@ -203,7 +203,12 @@ public sealed class DosingApiController : ApiControllerBase
 
     /// <summary>Trägt ein, was im Becher stand, und rechnet die Fördermenge daraus.</summary>
     [HttpPost("pumps/{id:int}/calibration")]
-    [KiStufe(KiStufe.Dokumentieren)]
+    // Fork AI (A-003, Prüfer 03.10.2026): Verwaltung, nicht Dokumentieren. Das
+    // Ergebnis setzt MlPerMinute — und darüber rechnet jede Dosisgrenze. Ein
+    // Schlüssel, der nur dokumentieren darf, stellte die Pumpe auf 1 ml/min und
+    // liess danach einen Kalibrierlauf von 300 s durch die 10-ml-Grenze: real
+    // etwa 225 ml. Die Fördermenge ist Einrichtung der Pumpe wie Create/Update.
+    [KiStufe(KiStufe.Verwaltung)]
     [ProducesResponseType(typeof(DosingPumpDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<DosingPumpDto> SaveCalibration(int id, [FromBody] CalibrationResultRequest request)

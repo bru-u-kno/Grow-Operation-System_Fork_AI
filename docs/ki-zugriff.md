@@ -22,7 +22,7 @@ vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 | Dokumentieren | 1 | Messung anlegen/ändern, Journal, Beobachtung, Aufgabe abhaken, Wartung/Kalibrierung festhalten, Kosten, Einkaufsliste, Meldung quittieren |
 | GrowPlanen | 2 | Phase wechseln, Zielwerte, Mischplan, Lichtplan, Wochenplan, Pflanzen/Sorten/Setups bearbeiten |
 | GeraeteSchalten | 4 | Licht-Befehl, AC-Stufe, Dosierpumpe auslösen/stoppen, Probeschaltung, Steuerungs-Einstellungen, die sofort schalten |
-| Verwaltung | 8 | Einstellungen, Sicherung anlegen/zurückspielen, Import/Export, Löschen von Stammdaten, HA-Automationen/Helfer anlegen |
+| Verwaltung | 8 | Einstellungen, Sicherung anlegen, Import/Export, Löschen von Stammdaten, HA-Automationen/Helfer anlegen, Pumpen einrichten und kalibrieren. Sicherung zurückspielen/herunterladen: nie über einen Schlüssel (Prüfer 03.10.2026) |
 
 Stufen bauen **nicht** aufeinander auf; jede wird einzeln angehakt.
 Vorbelegung eines neuen Schlüssels: nur Dokumentieren.
@@ -31,7 +31,8 @@ Vorbelegung eines neuen Schlüssels: nur Dokumentieren.
 - `[KiStufe(KiStufe.X)]` am Controller gilt für alle schreibenden Aktionen; an der Aktion gewinnt es.
 - `[KeinKiZugriff("Grund")]` — nie über einen Schlüssel (Schlüsselverwaltung, Fehlerbehandler …).
 - `[KiSicherungVorher]` — vor der Ausführung über einen Schlüssel eine Sicherung anlegen
-  (Zurückspielen, Import, alles mit DELETE auf Stammdaten).
+  (Import, alles mit DELETE). Zurückspielen trägt `[KeinKiZugriff]`; beim Zurückspielen von Hand
+  bleibt der Zugriffs-Zustand wie vorher (`KiZustandBeimZurueckspielen`).
 - Lesen (GET) braucht keine Stufe — das darf das Add-on-Netz schon heute. Ausnahme:
   GET auf Verwaltungswege (`AdminAccessPolicy.IsAdminPath`) braucht Verwaltung.
 - Eine schreibende Aktion **ohne** Einstufung ist über einen Schlüssel gesperrt

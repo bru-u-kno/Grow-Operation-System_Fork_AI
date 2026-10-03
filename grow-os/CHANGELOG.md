@@ -15,7 +15,7 @@ einem Schlüssel, der nur kann, was du bei ihm anhakst. Ab Werk ist alles aus.
 - **Hauptschalter:** Aus heißt, jeder Schlüssel wird abgewiesen, auch ein gültiger.
 - **Schlüssel mit Namen,** je Schlüssel vier Stufen zum Anhaken: *Dokumentieren* (Messungen,
   Journal, Aufgaben, Wartung, Kosten), *Grow planen* (Phase, Zielwerte, Pläne, Pflanzen, Sorten),
-  *Geräte schalten* (Licht, Klima, Dosierpumpen) und *Verwaltung* (Einstellungen, Sicherungen,
+  *Geräte schalten* (Licht, Klima, Dosierpumpen) und *Verwaltung* (Einstellungen, Sicherung anlegen,
   Import, Löschen). Ein neuer Schlüssel darf nur dokumentieren; die beiden oberen Stufen gibt es
   erst nach einem Warnhinweis.
 - Der Schlüssel wird **einmal** angezeigt. Grow OS speichert ihn nur verschlüsselt; sperren und
@@ -30,7 +30,11 @@ einem Schlüssel, der nur kann, was du bei ihm anhakst. Ab Werk ist alles aus.
 - Ein Schlüssel gilt nur aus dem internen Add-on-Netz von Home Assistant, nie aus dem Heimnetz.
 - Jede schreibende Schnittstelle ist einer Stufe zugeordnet; eine ohne Zuordnung ist über einen
   Schlüssel gesperrt. Eine Prüfung zählt das bei jedem Bau nach.
-- Vor Zurückspielen, Import und Löschen über einen Schlüssel legt Grow OS eine Sicherung an.
+- Vor Import und Löschen über einen Schlüssel legt Grow OS eine Sicherung an. Eine Sicherung
+  zurückspielen oder herunterladen geht nur von Hand — darin stehen die Schlüssel selbst und unter
+  Umständen das Home-Assistant-Token.
+- Wer eine Sicherung zurückspielt, behält die Schlüssel und Einstellungen des Zugriffs, wie sie
+  gerade sind: ein inzwischen gelöschter Schlüssel kommt mit der Sicherung nicht zurück.
 - Jede Änderung über einen Schlüssel steht im Prüfprotokoll („über KI-Assistent ‚Name'"), nach
   zehn falschen Schlüsseln in zehn Minuten wird der Absender eine Viertelstunde abgewiesen.
 
