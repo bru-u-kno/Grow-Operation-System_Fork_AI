@@ -28,6 +28,8 @@ export type SetupType = 'Production' | 'Mother' | 'Quarantine' | 'Propagation'
 export type SetupStatus = 'Planning' | 'Active' | 'Archived'
 export type MotherHealthStatus = 'Stable' | 'Watch' | 'Critical'
 export type QuarantineResult = 'Pending' | 'Cleared' | 'Rejected'
+/** Freigabe-Stufe eines Schlüssels für KI-Assistenten (Backend `KiStufe`, ohne `Keine`). Geht als Name über die Leitung. */
+export type KiStufe = 'Dokumentieren' | 'GrowPlanen' | 'GeraeteSchalten' | 'Verwaltung'
 export type PlantRole = 'Production' | 'Mother' | 'Clone' | 'Quarantine'
 export type PlantStatus = 'Planned' | 'Active' | 'Archived' | 'Culled' | 'Harvested'
 export type StrainDominance = 'Unknown' | 'Indica' | 'Sativa' | 'Hybrid'

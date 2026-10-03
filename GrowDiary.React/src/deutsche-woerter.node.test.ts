@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { FOTO_TAGS, PHASEN, WOERTERBUECHER, fotoTagName, herkunftName, phaseName } from './deutsche-woerter'
+import { FOTO_TAGS, KI_STUFEN, PHASEN, WOERTERBUECHER, fotoTagName, herkunftName, phaseName } from './deutsche-woerter'
 
 /**
  * Kein Entwickler-Bezeichner steht roh auf dem Bildschirm.
@@ -71,6 +71,9 @@ describe('Deutsche Wörter', () => {
     ['RiskEventSeverity', WOERTERBUECHER.stufe],
     ['TaskPriority', WOERTERBUECHER.stufe],
     ['HardwareItemCriticality', WOERTERBUECHER.stufe],
+    // Zugriff für KI-Assistenten (A-003): die Stufen eines Schlüssels stehen
+    // in der Schlüsselliste und an den Häkchen.
+    ['KiStufe', WOERTERBUECHER.kiStufe],
   ] as const) {
     it(`jeder Wert von ${typ} hat ein deutsches Wort`, () => {
       const fehlend = werteVon(typ).filter((wert) => !(wert in woerterbuch))
@@ -83,6 +86,9 @@ describe('Deutsche Wörter', () => {
     // ein Wert, kann man ihn nicht mehr auswählen — ein stiller Funktionsverlust.
     expect([...PHASEN].sort()).toEqual([...werteVon('GrowStage')].sort())
     expect([...FOTO_TAGS].sort()).toEqual([...werteVon('PhotoTag')].sort())
+    // Die Häkchen eines neuen Schlüssels kommen aus KI_STUFEN — fehlt dort
+    // eine Stufe, lässt sie sich nie freigeben.
+    expect([...KI_STUFEN].sort()).toEqual([...werteVon('KiStufe')].sort())
   })
 
   it('übersetzt, was es kennt', () => {

@@ -3,7 +3,7 @@ import type {
   HardwareItemStatus, PlantRole, PlantStatus, ReservoirPosition, SeedKind, SeedType,
   StartMaterial, TentType, ValueOrigin,
 } from './types'
-import type { MotherHealthStatus, QuarantineResult, SetupStatus, SetupType } from './types/shared'
+import type { KiStufe, MotherHealthStatus, QuarantineResult, SetupStatus, SetupType } from './types/shared'
 
 /**
  * Deutsche Namen für die Enum-Werte, die auf dem Bildschirm landen.
@@ -380,7 +380,32 @@ export function quarantaeneErgebnisName(wert: string | null | undefined): string
   return ohneSchreibweise(QUARANTAENE_NAMEN, wert)
 }
 
+/**
+ * Die Freigabe-Stufen eines Schlüssels für KI-Assistenten, in der Reihenfolge
+ * der Oberfläche (vom harmlosesten zum weitreichendsten).
+ *
+ * Zwei der vier Namen sind schon deutsch und sehen auf dem Schirm genauso aus
+ * wie über die Leitung — „Dokumentieren", „Verwaltung". Die anderen zwei
+ * („GrowPlanen", „GeraeteSchalten") sind zusammengeschriebene Bezeichner ohne
+ * Umlaut und dürfen so nie erscheinen.
+ */
+export const KI_STUFEN: KiStufe[] = ['Dokumentieren', 'GrowPlanen', 'GeraeteSchalten', 'Verwaltung']
+
+const KI_STUFEN_NAMEN: Record<KiStufe, string> = {
+  Dokumentieren: 'Dokumentieren',
+  GrowPlanen: 'Grow planen',
+  GeraeteSchalten: 'Geräte schalten',
+  Verwaltung: 'Verwaltung',
+}
+
+/** „GeraeteSchalten" wird „Geräte schalten". */
+export function kiStufeName(wert: string | null | undefined): string {
+  if (!wert) return ''
+  return ohneSchreibweise(KI_STUFEN_NAMEN, wert)
+}
+
 export const WOERTERBUECHER = {
+  kiStufe: KI_STUFEN_NAMEN,
   stufe: STUFEN_NAMEN,
   phase: PHASEN_NAMEN,
   fotoTag: FOTO_NAMEN,

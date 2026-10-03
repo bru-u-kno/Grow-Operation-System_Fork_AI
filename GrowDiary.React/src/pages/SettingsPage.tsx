@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import type { GrowSummary, SettingsOverviewDto } from '../types'
 import FileInput from '../components/FileInput'
+import KiZugriffAbschnitt from '../features/ki-zugriff/KiZugriffAbschnitt'
 import { useTheme } from '../useTheme'
 import { useNavBar } from '../useNavBar'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
@@ -366,6 +367,13 @@ function SettingsPage() {
           </section>
         </div>
       )}
+
+      {/* A-003: eigener Abschnitt unter den drei Panels, über die volle
+          Breite — er trägt eine Liste und drei Formulare und wäre in einer
+          300-px-Spalte länger als alle anderen zusammen. Lädt sich selbst,
+          damit er auch dann bedienbar bleibt, wenn der Rest der Seite
+          nicht lädt. */}
+      <KiZugriffAbschnitt />
     </V1Page>
   )
 }
