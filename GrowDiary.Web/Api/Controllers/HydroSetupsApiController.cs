@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/hydro-setups")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class HydroSetupsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -109,6 +111,8 @@ public sealed class HydroSetupsApiController : ApiControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(HydroSetupDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]

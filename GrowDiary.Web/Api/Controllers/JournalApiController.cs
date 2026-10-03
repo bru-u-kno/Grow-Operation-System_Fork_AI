@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class JournalApiController : ApiControllerBase
 {
     private readonly GrowRepository _growRepository;
@@ -93,6 +95,7 @@ public sealed class JournalApiController : ApiControllerBase
     /// 25.08.2026 ging das nirgends.
     /// </remarks>
     [HttpDelete("journal/{entryId:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult DeleteEntry(int entryId)

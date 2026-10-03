@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/calibration-events")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class CalibrationEventsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -219,6 +221,7 @@ public sealed class CalibrationEventsApiController : ApiControllerBase
     /// stattgefunden hat — und meldet die naechste Kalibrierung zu spaet.
     /// </remarks>
     [HttpDelete("{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)

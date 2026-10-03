@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/auto-measurements")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class AutoMeasurementsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -202,6 +204,8 @@ public sealed class AutoMeasurementsApiController : ApiControllerBase
     /// sie keinen Sinn.
     /// </remarks>
     [HttpDelete("configs/{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult DeleteConfig(int id)

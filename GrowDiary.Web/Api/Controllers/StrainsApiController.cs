@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
@@ -8,6 +9,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/strains")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class StrainsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -124,6 +126,8 @@ public sealed class StrainsApiController : ApiControllerBase
     /// und Glaesern wortlos ihre Sorte.</para>
     /// </remarks>
     [HttpDelete("{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]

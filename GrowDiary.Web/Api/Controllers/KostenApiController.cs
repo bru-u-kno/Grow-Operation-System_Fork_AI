@@ -1,6 +1,7 @@
 using System.Globalization;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/kosten")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class KostenApiController : ApiControllerBase
 {
     private readonly KostenSeiteService _seite;
@@ -58,7 +60,9 @@ public sealed class KostenApiController : ApiControllerBase
     [ProducesResponseType(typeof(StromQuelle), StatusCodes.Status200OK)]
     public ActionResult<StromQuelle> GetStromQuelle() => Ok(_seite.StromQuelle);
 
+    // KI-Zugriff: Verwaltung — legt fest, welche Home-Assistant-Entität als Stromzähler gilt (Einstellung).
     [HttpPut("strom-quelle")]
+    [KiStufe(KiStufe.Verwaltung)]
     [ProducesResponseType(typeof(StromQuelle), StatusCodes.Status200OK)]
     public async Task<ActionResult<StromQuelle>> PutStromQuelle([FromBody] StromQuelle request, CancellationToken ct)
     {
@@ -211,7 +215,10 @@ public sealed class KostenApiController : ApiControllerBase
         return Ok(_repo.GetArtikel(id));
     }
 
+    // KI-Zugriff: Verwaltung — ein Verbrauchsartikel ist Stammdatum; seine Füllungen und Buchungen hängen an ihm.
     [HttpDelete("artikel/{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult DeleteArtikel(int id)
@@ -350,6 +357,7 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpDelete("nachfuellungen/{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult DeleteNachfuellung(int id)
@@ -469,6 +477,7 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpDelete("anschaffungen/{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult DeleteAnschaffung(int id)
@@ -484,6 +493,7 @@ public sealed class KostenApiController : ApiControllerBase
     /// und verfaelscht jede Summe darueber.
     /// </summary>
     [HttpDelete("zaehlerstand/{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult DeleteZaehlerstand(int id)
     {
@@ -557,6 +567,7 @@ public sealed class KostenApiController : ApiControllerBase
 
     /// <summary>Eine Verbrauchsbuchung zuruecknehmen.</summary>
     [HttpDelete("verbrauch/{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult DeleteVerbrauch(int id)
     {
@@ -572,7 +583,10 @@ public sealed class KostenApiController : ApiControllerBase
     /// Mit <c>?neuAufbauen=true</c> wird die Reihe des Grows stattdessen verworfen
     /// und vollstaendig aus der Statistik neu geschrieben.
     /// </summary>
+    // KI-Zugriff: Verwaltung — ein Import; mit neuAufbauen wird die Reihe des Grows verworfen.
     [HttpPost("zaehlerstaende/import/{growId:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(ZaehlerstandImportService.Ergebnis), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ZaehlerstandImportService.Ergebnis>> ZaehlerstaendeImportieren(

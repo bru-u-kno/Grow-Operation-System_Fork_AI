@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Services.Knowledge;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,6 +46,7 @@ public sealed record SymptomPhotoDto(
 [ApiController]
 [Route("api")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class SymptomPhotosApiController : ApiControllerBase
 {
     private readonly PhotoRepository _photos;

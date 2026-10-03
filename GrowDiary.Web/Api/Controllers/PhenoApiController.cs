@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/pheno")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class PhenoApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -160,7 +162,9 @@ public sealed class PhenoApiController : ApiControllerBase
     [ProducesResponseType(typeof(PhenoWeightsDto), StatusCodes.Status200OK)]
     public ActionResult<PhenoWeightsDto> GetWeights() => Ok(ToDto(_pheno.GetWeights()));
 
+    // KI-Zugriff: Verwaltung — die Gewichtung gilt für jede Bewertung (Einstellung).
     [HttpPut("weights")]
+    [KiStufe(KiStufe.Verwaltung)]
     [ProducesResponseType(typeof(PhenoWeightsDto), StatusCodes.Status200OK)]
     public ActionResult<PhenoWeightsDto> SaveWeights([FromBody] PhenoWeightsDto request)
     {

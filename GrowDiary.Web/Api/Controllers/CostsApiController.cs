@@ -1,4 +1,5 @@
 using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,6 +9,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/costs")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Verwaltung)]
 public sealed class CostsApiController : ApiControllerBase
 {
     private readonly GrowCostService _kosten;

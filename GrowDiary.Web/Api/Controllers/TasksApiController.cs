@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class TasksApiController : ApiControllerBase
 {
     private readonly GrowRepository _growRepository;
@@ -104,6 +106,7 @@ public sealed class TasksApiController : ApiControllerBase
     }
 
     [HttpDelete("tasks/{taskId:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Delete(int taskId)

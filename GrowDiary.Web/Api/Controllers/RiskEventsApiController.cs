@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.Knowledge;
@@ -11,6 +12,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/risk-events")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class RiskEventsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;

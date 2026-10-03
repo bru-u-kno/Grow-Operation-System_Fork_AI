@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class MeasurementsApiController : ApiControllerBase
 {
     /// <summary>Format von <see cref="MeasurementUpsertRequest.TakenAtLocal"/>.</summary>
@@ -278,6 +280,7 @@ public sealed class MeasurementsApiController : ApiControllerBase
     }
 
     [HttpDelete("measurements/{measurementId:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Delete(int measurementId)

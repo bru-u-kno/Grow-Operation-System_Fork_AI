@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/setups")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class SetupsApiController : ApiControllerBase
 {
     private static readonly HashSet<string> MotherHealthStatuses = new(StringComparer.OrdinalIgnoreCase)
@@ -156,6 +158,8 @@ public sealed class SetupsApiController : ApiControllerBase
     /// das Loeschen ein stiller Datenverlust.
     /// </remarks>
     [HttpDelete("{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]

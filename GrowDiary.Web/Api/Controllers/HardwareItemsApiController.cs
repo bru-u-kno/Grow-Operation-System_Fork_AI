@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services.Knowledge;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/hardware-items")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class HardwareItemsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -111,6 +113,8 @@ public sealed class HardwareItemsApiController : ApiControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)

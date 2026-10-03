@@ -1,6 +1,7 @@
 using System.Globalization;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class CuringApiController : ApiControllerBase
 {
     private readonly CuringRepository _repository;
@@ -193,6 +195,7 @@ public sealed class CuringApiController : ApiControllerBase
     }
 
     [HttpDelete("curing/jars/{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public ActionResult DeleteJar(int id)

@@ -1,4 +1,5 @@
 using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/water-profile")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class WaterProfileApiController : ApiControllerBase
 {
     private readonly WaterProfileStore _store;

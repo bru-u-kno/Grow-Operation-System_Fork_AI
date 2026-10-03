@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.GrowPlan;
@@ -101,6 +102,7 @@ public sealed record WochenwerteGespeichertDto(WochenwerteDto Werte, int Ueberge
 [ApiController]
 [Route("api/wochenplan")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class WochenplanApiController : ApiControllerBase
 {
     private static readonly Dictionary<string, string> Rollennamen = new()
@@ -335,7 +337,9 @@ public sealed class WochenplanApiController : ApiControllerBase
         => Ok(new { geschrieben = await _sync.UebergebenAsync(ct) });
 
     /// <summary>Einen von Hand verstellten Helfer wieder dem Plan überlassen.</summary>
+    // KI-Zugriff: Verwaltung — überschreibt sofort einen Helfer, den ein Mensch in Home Assistant von Hand gesetzt hat.
     [HttpPost("freigeben/{rolle}")]
+    [KiStufe(KiStufe.Verwaltung)]
     public async Task<ActionResult> Freigeben(string rolle, CancellationToken ct)
     {
         // Fork AI (forkai.130): sofort übergeben, nicht erst beim Tageslauf um 06:00.

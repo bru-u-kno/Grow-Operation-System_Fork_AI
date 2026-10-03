@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.Knowledge;
@@ -11,6 +12,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/sop-instances")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class SopInstancesApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -243,6 +245,7 @@ public sealed class SopInstancesApiController : ApiControllerBase
     /// mehr gibt.</para>
     /// </remarks>
     [HttpDelete("{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)

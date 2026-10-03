@@ -1,4 +1,5 @@
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.GrowPlan;
@@ -134,6 +135,7 @@ public sealed record PlanGespeichertDto(
 /// </summary>
 [ApiController]
 [Route("api/grows/{growId:int}/plan")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class GrowPlanApiController : ApiControllerBase
 {
     private readonly GrowRepository _grows;

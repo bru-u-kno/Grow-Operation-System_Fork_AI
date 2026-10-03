@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/grows")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class GrowWorkflowApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -140,7 +142,9 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             3.0));
     }
 
+    // KI-Zugriff: rechnet nur, schreibt nichts — die niedrigste Stufe genügt.
     [HttpPost("{id:int}/addback/calculate")]
+    [KiStufe(KiStufe.Dokumentieren)]
     [ProducesResponseType(typeof(AddbackResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -206,6 +210,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
     }
 
     [HttpPost("{id:int}/addback/logs")]
+    [KiStufe(KiStufe.Dokumentieren)]
     [ProducesResponseType(typeof(AddbackLogDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -305,6 +310,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             : NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
 
     [HttpPost("{id:int}/changeouts")]
+    [KiStufe(KiStufe.Dokumentieren)]
     [ProducesResponseType(typeof(ChangeoutDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -400,6 +406,8 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
     /// eine Woche still — dann muss er sich zuruecknehmen lassen.
     /// </remarks>
     [HttpDelete("{id:int}/changeouts/{changeoutId:int}")]
+    [KiStufe(KiStufe.Dokumentieren)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult DeleteChangeout(int id, int changeoutId)

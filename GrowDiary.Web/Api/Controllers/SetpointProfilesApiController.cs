@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -41,6 +42,7 @@ public sealed class SetpointProfileUpsertRequest
 [ApiController]
 [Route("api/setpoint-profiles")]
 [Produces("application/json")]
+[KiStufe(KiStufe.GrowPlanen)]
 public sealed class SetpointProfilesApiController : ApiControllerBase
 {
     private static readonly GrowStage[] Stages =
@@ -110,6 +112,8 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult Delete(int id)
     {

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
@@ -21,6 +22,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/navbar")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Verwaltung)]
 public sealed class NavBarApiController : ApiControllerBase
 {
     /// <summary>Schluessel in der AppSettings-Tabelle.</summary>

@@ -1,6 +1,7 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/maintenance-events")]
 [Produces("application/json")]
+[KiStufe(KiStufe.Dokumentieren)]
 public sealed class MaintenanceEventsApiController : ApiControllerBase
 {
     private readonly GrowRepository _repository;
@@ -160,6 +162,7 @@ public sealed class MaintenanceEventsApiController : ApiControllerBase
     /// <summary>Einen falsch eingetragenen Wartungsvorgang entfernen.</summary>
     /// <remarks>Gleiche Begruendung wie bei der Kalibrierung.</remarks>
     [HttpDelete("{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)
