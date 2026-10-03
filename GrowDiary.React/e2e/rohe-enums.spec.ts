@@ -60,6 +60,11 @@ const ERLAUBT: Record<string, string> = {
   // gehört dem Steckling, und der Demobestand hat keinen. Wer einen Steckling
   // in den Bestand bringt, trägt die Ausnahme mit diesem Grund wieder ein.
   Ende: 'Ankerphase — deutsches Wort, steht in normalen Sätzen („Ende der Blüte“)',
+  // Zugriff für KI-Assistenten (A-003): zwei der vier Stufen heißen über die
+  // Leitung schon so, wie sie auf dem Schirm stehen. „GrowPlanen" und
+  // „GeraeteSchalten" stehen NICHT hier — die dürfen nie roh erscheinen.
+  Dokumentieren: 'KiStufe — das deutsche Wort selbst, so steht es auch am Häkchen',
+  Verwaltung: 'KiStufe — das deutsche Wort selbst, so steht es auch am Häkchen',
 }
 
 
@@ -148,6 +153,8 @@ const HINTER_EINEM_KLICK: Array<{ pfad: string, knopf: string, was: string }> = 
   { pfad: '/journal', knopf: '+ Eintrag', was: 'das Journal-Formular' },
   { pfad: '/sorten', knopf: '+ Sorte', was: 'das Sorten-Formular' },
   { pfad: '/zelte', knopf: 'Bearbeiten', was: 'das Zelt-Formular' },
+  // A-003: die Stufen-Häkchen eines neuen Schlüssels stehen erst nach dem Klick da.
+  { pfad: '/settings', knopf: 'Neuer Schlüssel', was: 'das Schlüssel-Formular' },
 ]
 
 /**

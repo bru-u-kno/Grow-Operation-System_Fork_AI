@@ -1,0 +1,78 @@
+/* Zugriff für KI-Assistenten (A-003) — Abschnitt der Einstellungen.
+   Nur Token des Forks, damit helles und dunkles Thema mitziehen. */
+@layer features {
+  /* Unter dem Raster der drei Einstellungs-Panels, über die volle Breite. */
+  .ki-zugriff { margin-top: 14px; }
+  .ki-inhalt { padding: 14px; display: grid; gap: var(--s-4); max-width: 960px; min-width: 0; }
+  .ki-erklaerung { margin: 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); max-width: 68ch; }
+
+  .ki-block { display: grid; gap: var(--s-3); min-width: 0; }
+  .ki-block + .ki-block { padding-top: var(--s-4); border-top: 1px solid var(--hair); }
+  .ki-block-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; }
+  .ki-block-kopf h3 { margin: 0; font-size: var(--fs-text); font-weight: 600; }
+
+  .ki-felder { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+  .ki-felder input, .ki-felder select { width: 100%; min-width: 0; }
+  .ki-fehler { display: block; font-size: var(--fs-klein); color: var(--danger-text); line-height: 1.4; }
+
+  /* Knopfreihen: `.ls-btn.is-small` bringt `margin-left: auto` mit
+     (live-screen.css) — drei Klassen, damit die Gruppe beisammen bleibt
+     statt über die Zeile verstreut. */
+  .ki-knoepfe { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
+  .ki-knoepfe .ls-btn.is-small { margin-left: 0; }
+  .ki-block-kopf .ls-btn.is-small { margin-left: 0; }
+  .ls-btn.is-small.is-gefahr { color: var(--danger-text); border-color: color-mix(in oklab, var(--danger-text) 45%, var(--hair-2)); }
+  .ls-btn.is-small.is-gefahr:hover { border-color: var(--danger-text); color: var(--danger-text); }
+
+  .ki-unterformular {
+    display: grid; gap: var(--s-3); min-width: 0;
+    padding: var(--s-3); border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--sunk);
+  }
+
+  /* --- Stufen-Häkchen --- */
+  .ki-stufen { border: 0; margin: 0; padding: 0; display: grid; gap: var(--s-2); min-width: 0; }
+  .ki-stufen legend {
+    padding: 0; margin-bottom: var(--s-2);
+    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: 0.1em; color: var(--faint);
+  }
+  .ki-stufe { display: grid; gap: var(--s-2); min-width: 0; }
+  .ki-stufe .v1-switch { background: var(--panel); }
+
+  .ki-warnung {
+    display: grid; gap: var(--s-2);
+    padding: var(--s-3); border: 1px solid var(--warn-text); border-left-width: 4px; border-radius: var(--r-sm);
+    background: var(--warn-wash); color: var(--ink);
+  }
+  .ki-warnung > strong { color: var(--warn-text); font-size: var(--fs-text); }
+  .ki-warnung > p { margin: 0; font-size: var(--fs-text); line-height: 1.5; max-width: 68ch; }
+  .ls-btn.is-small.ki-warnung-ja { border-color: var(--warn-text); color: var(--warn-text); }
+
+  /* --- Schlüsselliste --- */
+  .ki-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+  .ki-schluessel {
+    display: grid; gap: var(--s-2); min-width: 0;
+    padding: var(--s-3); border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel-2);
+  }
+  .ki-schluessel.is-gesperrt { opacity: .8; }
+  .ki-schluessel-kopf { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; min-width: 0; }
+  .ki-schluessel-name { font-size: var(--fs-text); font-weight: 600; overflow-wrap: anywhere; }
+  .ki-praefix { font: 400 var(--fs-klein)/1.3 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+  .ki-stufen-marken { display: flex; gap: var(--s-1); flex-wrap: wrap; }
+  .ki-zeit { font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted); }
+
+  /* --- Klartext nach dem Anlegen --- */
+  .ki-klartext {
+    display: grid; gap: var(--s-2); min-width: 0;
+    padding: var(--s-3); border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--accent-wash);
+  }
+  .ki-klartext > strong { font-size: var(--fs-text); }
+  .ki-klartext-wert {
+    display: block; padding: var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+    background: var(--panel); color: var(--ink);
+    font: 500 var(--fs-gross)/1.5 var(--font-mono); letter-spacing: .02em;
+    overflow-wrap: anywhere; word-break: break-all; user-select: all;
+  }
+  .ki-klartext-satz { margin: 0; font-weight: 600; font-size: var(--fs-text); color: var(--ink); }
+  .ki-klartext-hinweis { margin: 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); max-width: 68ch; }
+  .ki-klartext-kopiert { font-size: var(--fs-klein); color: var(--accent-text); }
+}
