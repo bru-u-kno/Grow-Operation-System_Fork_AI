@@ -153,11 +153,41 @@ public static class AdminAccessPolicy
     /// Add-on-Netz. Ohne ihn könnte ein zweites Add-on — etwa Grow MCP —
     /// nichts abrufen, denn es ist weder Loopback noch Ingress. Bewusst nur
     /// lesend: mitlesen kann ein Nachbar-Add-on damit, schalten oder dosieren
-    /// nicht. Für einen Schlüssel hat sich der Betreiber ausdrücklich nicht
-    /// entschieden; das Netz enthält nur selbst installierte Software.
+    /// nicht; das Netz enthält nur selbst installierte Software.
+    ///
+    /// Fork AI (A-003, 03.10.2026): Schreiben aus dem Add-on-Netz geht seitdem
+    /// nur mit einem <b>Schlüssel</b> (<see cref="IsKiSchluesselWeg"/>) — und
+    /// der ist Opt-in: ab Werk ist der Zugriff für KI-Assistenten aus, und jeder
+    /// Schlüssel öffnet nur die Stufen, die der Betreiber angehakt hat. Diese
+    /// Methode kennt den Schlüssel nicht; ohne ihn bleibt alles wie zuvor.
     /// </remarks>
     public static bool CanAccess(HttpContext context)
         => IsLocalRequest(context) || IsIngressRequest(context) || IsInternalAddonRead(context);
+
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Geht diese Anfrage den Schlüsselweg?
+    /// </summary>
+    /// <remarks>
+    /// <para>Nur, wenn sie einen <c>gok_</c>-Schlüssel trägt <b>und</b> aus dem
+    /// Add-on-Netz oder von Loopback kommt. Ein Schlüssel von irgendwo sonst
+    /// wird nie geprüft — die Anfrage geht den Weg von heute und bekommt 403.
+    /// Sonst wäre der Schlüssel eine Tür ins Netz, das Grow OS nie
+    /// veröffentlicht hat.</para>
+    ///
+    /// <para>Echter Ingress geht vor: dort sitzt ein Mensch, den Home Assistant
+    /// angemeldet hat, und ein mitgeschickter Schlüssel ändert daran nichts.
+    /// Der Ingress-Proxy liegt selbst im Add-on-Netz (172.30.32.2) — ohne diese
+    /// Ausnahme bekäme die Oberfläche die Grenzen eines Schlüssels.</para>
+    /// </remarks>
+    public static bool IsKiSchluesselWeg(HttpContext context)
+        => !IsIngressRequest(context)
+           && KiZugriff.KiZugriffDienst.SchluesselAusKopf(context.Request) is not null
+           && (IsLocalRequest(context) || IstImAddonNetz(context));
+
+    /// <summary>Kommt die Anfrage aus dem internen Add-on-Netz (egal mit welcher Methode)?</summary>
+    public static bool IstImAddonNetz(HttpContext context)
+        => context.Connection.RemoteIpAddress is { } ip
+           && AddonNetworks.Any(bereich => IsInSubnet(ip, bereich.Netz, bereich.Bits));
 
     /// <summary>Eine lesende Anfrage eines anderen Add-ons im internen Netz.</summary>
     public static bool IsInternalAddonRead(HttpContext context)

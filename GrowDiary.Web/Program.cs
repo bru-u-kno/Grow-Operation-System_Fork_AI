@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Services;
 using GrowDiary.Web.Services.Knowledge;
 using Microsoft.AspNetCore.DataProtection;
@@ -103,6 +104,11 @@ builder.Services.AddScoped<AgentPackageBuilder>();
 builder.Services.AddScoped<AlertEvaluationService>();
 builder.Services.AddSingleton<NotificationSettingsRepository>();
 builder.Services.AddSingleton<AppSettingsRepository>();
+// Fork AI (A-003, 03.10.2026): Zugriff für KI-Assistenten. Der Dienst ist ein
+// Singleton, weil Fehlversuche und das Stundenfenster über alle Anfragen zählen.
+builder.Services.AddSingleton<KiSchluesselRepository>();
+builder.Services.AddSingleton<KiZugriffDienst>();
+builder.Services.AddSingleton<IKiSicherung, KiSicherungUeberSystemApi>();
 builder.Services.AddSingleton<WaterProfileStore>();
 builder.Services.AddScoped<GrowCostService>();
 // Fork AI (forkai.6): Kosten-Seite
@@ -451,6 +457,16 @@ app.Use(async (context, next) =>
 {
     if (AdminAccessPolicy.IsProtectedPath(context.Request.Path))
     {
+        // Fork AI (A-003, 03.10.2026): Schritt 1 des Schlüsselwegs. Nur mit
+        // gok_-Schlüssel aus dem Add-on-Netz oder von Loopback, nie über echten
+        // Ingress; alles andere läuft unten weiter wie bisher. Dort steht auch
+        // Schritt 3 (Prüfprotokoll), nach dem Rest der Kette.
+        if (AdminAccessPolicy.IsKiSchluesselWeg(context))
+        {
+            await KiZugriffSperre.SchluesselWegAsync(context, next);
+            return;
+        }
+
         var isLocal = AdminAccessPolicy.IsLocalRequest(context);
         var canAccess = AdminAccessPolicy.CanAccess(context);
         // Ins Prüfprotokoll: jede Abweisung, und erlaubte Zugriffe nur auf
@@ -528,6 +544,12 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseRouting();
+
+// Fork AI (A-003, 03.10.2026): Schritt 2 des Schlüsselwegs — DIREKT nach dem
+// Routing, denn erst hier steht fest, welche Aktion antwortet, und damit ihre
+// Einstufung (KiStufe, KeinKiZugriff, KiSicherungVorher). Ohne Schlüssel
+// geht jede Anfrage unberührt durch.
+app.Use(KiZugriffSperre.NachDemRoutingAsync);
 
 // API-Attribute-Routes, Kamera-Routen und Export-Endpoints
 app.MapControllers();

@@ -51,6 +51,13 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
     public Action<IServiceCollection>? Zusatzdienste { get; init; }
 
     /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Die Umgebung der App. Ab Werk „Development"
+    /// wie bisher; „Production" fährt die Kette wie im Add-on — mit
+    /// <c>UseExceptionHandler("/api/error")</c> statt der Entwicklerseite.
+    /// </summary>
+    public string Umgebung { get; init; } = "Development";
+
+    /// <summary>
     /// Ein Client, der die App so anspricht, wie Home Assistant es tut.
     /// </summary>
     /// <remarks>
@@ -68,6 +75,31 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
         return client;
     }
 
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Ein Client, der wie ein anderes Add-on aus
+    /// dem internen Netz kommt — ohne Ingress-Kopf, wahlweise mit Schlüssel.
+    /// </summary>
+    /// <remarks>
+    /// Die Absenderadresse wird gesetzt, bevor die Kette läuft; der
+    /// <see cref="IngressAbsender"/> setzt seine nur, wenn noch keine da ist,
+    /// und bleibt deshalb für alle anderen Clients, wie er war. Mit einer
+    /// Adresse ausserhalb des Add-on-Netzes (etwa 192.168.1.50) stellt er
+    /// einen Rechner im Heimnetz nach.
+    /// </remarks>
+    public HttpClient AddonClient(string absender = "172.30.33.5", string? kiSchluessel = null)
+    {
+        var adresse = System.Net.IPAddress.Parse(absender);
+        var client = new HttpClient(Server.CreateHandler(context => context.Connection.RemoteIpAddress = adresse))
+        {
+            BaseAddress = Server.BaseAddress,
+        };
+        if (kiSchluessel is not null)
+        {
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", kiSchluessel);
+        }
+        return client;
+    }
+
     protected override IHost CreateHost(IHostBuilder builder)
     {
         // Ueber den INHALTSPFAD, nicht ueber GROWDIARY_DATA_PATH: die Variable
@@ -78,7 +110,7 @@ public sealed class IntegrationsApp : WebApplicationFactory<Program>
             _datenordner);
 
         builder.UseContentRoot(_datenordner);
-        builder.UseEnvironment("Development");
+        builder.UseEnvironment(Umgebung);
         // Der Testserver liefert keine Absenderadresse. Seit dem 01.10.2026
         // zählt der Ingress-Kopf nur vom Ingress-Proxy des Supervisors — also
         // wird hier dessen Adresse nachgestellt, wie beim echten Weg.

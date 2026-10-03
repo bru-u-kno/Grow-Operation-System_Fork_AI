@@ -42,7 +42,11 @@ public sealed class KiZugriffSpeichernRequest
 public sealed class KiSchluesselRequest
 {
     public string? Name { get; set; }
-    public List<string> Stufen { get; set; } = [];
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): null = nicht angegeben (beim Anlegen gilt dann die
+    /// Vorbelegung Dokumentieren); eine ausdrücklich leere Liste ist ein Fehler.
+    /// </summary>
+    public List<string>? Stufen { get; set; }
 }
 
 /// <summary>Antwort auf das Anlegen — der einzige Moment, in dem der Schlüssel im Klartext existiert.</summary>

@@ -103,6 +103,16 @@ public sealed class JedeRouteHatEinenAufruferTests
         // immer. Der Weg bleibt für das Original und für Grows ohne Plan.
         ["PUT /api/grows/{growId:int}/mixing-plan/use-targets"] =
             "Wochen-Ziele an/aus fuer Grows ohne eigenen Plan; seit forkai.121 ohne Schalter im Fork.",
+        // Fork AI (A-003, 03.10.2026): Zugriff für KI-Assistenten.
+        ["GET /api/ki-zugriff/ich"] =
+            "Die erste Frage eines KI-Assistenten mit Schluessel: welche Stufen frei sind, ab "
+            + "wann er nachfragen soll, welche Hoechstwerte gelten. Gerufen wird er von aussen "
+            + "ueber HTTP (Authorization: Bearer gok_...), nicht aus diesem Repository; die "
+            + "Oberflaeche bekaeme ohne Schluessel ohnehin nur 401.",
+        ["POST /api/settings/ki-zugriff/schluessel/{id:int}/sperren"] =
+            "Den Knopf \"Sperren\" baut der Oberflaechen-Strang von A-003 (Einstellungen -> "
+            + "Zugriff fuer KI-Assistenten) parallel zu diesem Kern. Bis beide zusammengefuehrt "
+            + "sind, ruft ihn nur KiSchluesselWegTests. BEIM ZUSAMMENFUEHREN STREICHEN.",
         ["GET /api/system/audit-events"] =
             "Das Protokoll kritischer Backend-Vorgaenge (SystemAuditEvents): Lichtflanken, "
             + "Nachtabsenkung, Sicherungen. Zum Nachsehen, wenn etwas passiert ist — dafuer "
