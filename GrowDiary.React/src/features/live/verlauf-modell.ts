@@ -1,6 +1,5 @@
-import { uhrzeitLesen } from './licht-restzeit'
+import { schaltzeitAmTag, uhrzeitLesen } from './licht-restzeit'
 import { tagKurz } from '../steuerung/steuerung-typen'
-import { formatNumber } from '../../utils'
 
 /**
  * Die Rechnung hinter dem Verlaufsdiagramm der Live-Seite — ohne React, ohne DOM.
@@ -182,15 +181,20 @@ export function spannenTeile(fenster: Fenster): string[] {
   return [`${tagText(von)} –`, tagText(bis)]
 }
 
-/** Ein Messwert mit fester Stellenzahl, deutsch — „24,6", „1.020", „–". */
+/**
+ * Ein Messwert mit fester Stellenzahl, deutsch — „24,6", „1020", „–".
+ *
+ * Ohne Tausenderpunkt, wie überall in der App (`MetricTile`, Befund B8 in
+ * `docs/pruefung-2026-10-01.md`): die Kachel daneben schreibt „1020 ppm".
+ */
 export function zahl(wert: number | null | undefined, stellen: number): string {
   if (wert == null || !Number.isFinite(wert)) return '–'
-  return wert.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen })
+  return wert.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen, useGrouping: false })
 }
 
 /** Eine Grenze an der Achse: nur so viele Stellen wie nötig — „5,8", „1,25", „26". */
 export function grenzText(wert: number, stellen: number): string {
-  return formatNumber(wert, stellen)
+  return wert.toLocaleString('de-DE', { maximumFractionDigits: stellen, useGrouping: false })
 }
 
 /* ---------------------------------------------------------------------------
@@ -289,10 +293,18 @@ function zusammenlegen(stuecke: Fenster[]): Fenster[] {
  * Die Lichtphasen im Ausschnitt nach dem Lichtplan (`lightOnAt`/`lightOffAt`
  * der Licht-Kachel), oder null, wenn kein Plan bekannt ist.
  *
- * Liegt „aus" vor „an" (z. B. an 20:00, aus 08:00), brennt das Licht über
- * Mitternacht — das Stück reicht dann in den nächsten Tag.
+ * Die Uhrzeiten gelten in der Zone, deren Versatz `versatzMinuten` nennt
+ * (`lightUtcOffsetMinutes`, siehe `schaltzeitAmTag`) — nicht in der des
+ * Browsers. Liegt „aus" vor „an" (z. B. an 20:00, aus 08:00), brennt das
+ * Licht über Mitternacht — das Stück reicht dann in den nächsten Tag.
+ *
+ * Bewusst EIN Zyklus für alle Tage im Ausschnitt: der Server kennt nur den
+ * gelernten Zyklus von jetzt. Wurde innerhalb der sieben Tage umgestellt
+ * (Flip auf 12/12), liegen die Streifen vor dem Wechsel an der neuen Stelle.
  */
-export function lichtPhasen(fenster: Fenster, an: string | null | undefined, aus: string | null | undefined): Fenster[] | null {
+export function lichtPhasen(
+  fenster: Fenster, an: string | null | undefined, aus: string | null | undefined, versatzMinuten?: number | null,
+): Fenster[] | null {
   const ein = uhrzeitLesen(an)
   const ab = uhrzeitLesen(aus)
   if (!ein || !ab) return null
@@ -301,26 +313,22 @@ export function lichtPhasen(fenster: Fenster, an: string | null | undefined, aus
   if (einMin === abMin) return null
 
   const stuecke: Fenster[] = []
-  const tag = new Date(fenster.von)
-  tag.setHours(0, 0, 0, 0)
-  tag.setDate(tag.getDate() - 1)
-  for (let sicherung = 0; tag.getTime() <= fenster.bis && sicherung < 400; sicherung++) {
-    const j = tag.getFullYear()
-    const m = tag.getMonth()
-    const d = tag.getDate()
-    const von = new Date(j, m, d, ein.stunde, ein.minute).getTime()
-    const bis = new Date(j, m, abMin > einMin ? d : d + 1, ab.stunde, ab.minute).getTime()
+  for (let tage = -1; tage < 400; tage++) {
+    const von = schaltzeitAmTag(fenster.von, ein, versatzMinuten, tage)
+    if (von > fenster.bis) break
+    const bis = schaltzeitAmTag(fenster.von, ab, versatzMinuten, abMin > einMin ? tage : tage + 1)
     const a = Math.max(von, fenster.von)
     const b = Math.min(bis, fenster.bis)
     if (b > a) stuecke.push({ von: a, bis: b })
-    tag.setDate(tag.getDate() + 1)
   }
   return zusammenlegen(stuecke)
 }
 
 /** Die Dunkelphasen im Ausschnitt — je Nacht EIN Stück, nicht viele kleine. */
-export function dunkelphasen(fenster: Fenster, an: string | null | undefined, aus: string | null | undefined): Fenster[] {
-  const licht = lichtPhasen(fenster, an, aus)
+export function dunkelphasen(
+  fenster: Fenster, an: string | null | undefined, aus: string | null | undefined, versatzMinuten?: number | null,
+): Fenster[] {
+  const licht = lichtPhasen(fenster, an, aus, versatzMinuten)
   if (!licht) return []
   const raus: Fenster[] = []
   let anfang = fenster.von
@@ -353,37 +361,55 @@ function band(min: number | null | undefined, max: number | null | undefined): B
   return lo == null && hi == null ? null : { min: lo, max: hi }
 }
 
+function gleich(a: Band | null, b: Band | null): boolean {
+  return a != null && b != null && a.min === b.min && a.max === b.max
+}
+
 /**
  * Welches Zielband gilt in dieser Phase?
  *
- * Kennt die Kachel getrennte Tag- und Nachtbänder, gilt je Phase das eigene;
- * sonst das eine Band (`targetMin`/`targetMax`) rund um die Uhr. Kein Ziel,
- * kein Band — eine erfundene Grenze wäre schlimmer als keine.
+ * Kennt die Kachel Tag- und Nachtbänder, gilt je Phase das eigene (fehlt es,
+ * keins). Nur ohne Tag/Nacht gilt `targetMin`/`targetMax` — sonst NICHT als
+ * Ersatz: der Server legt dort das Band der GERADE gültigen Phase ab
+ * (`KachelZiele.ZieleSetzen`), kein Ganztagsband.
  */
 export function zielbandFuer(ziele: Ziele | null | undefined, phase: 'tag' | 'nacht'): Band | null {
   if (!ziele) return null
-  const eigenes = phase === 'tag'
-    ? band(ziele.targetDayMin, ziele.targetDayMax)
-    : band(ziele.targetNightMin, ziele.targetNightMax)
-  return eigenes ?? band(ziele.targetMin, ziele.targetMax)
+  const tag = band(ziele.targetDayMin, ziele.targetDayMax)
+  const nacht = band(ziele.targetNightMin, ziele.targetNightMax)
+  if (tag || nacht) return phase === 'tag' ? tag : nacht
+  return band(ziele.targetMin, ziele.targetMax)
+}
+
+/**
+ * Unterscheiden sich Tag- und Nachtziel? Dann braucht das Band den Lichtplan;
+ * ohne ihn wäre jede Zuordnung geraten.
+ */
+export function zielBrauchtLichtplan(ziele: Ziele | null | undefined): boolean {
+  if (!ziele) return false
+  const tag = band(ziele.targetDayMin, ziele.targetDayMax)
+  const nacht = band(ziele.targetNightMin, ziele.targetNightMax)
+  return tag != null && nacht != null && !gleich(tag, nacht)
 }
 
 export type BandStueck = Fenster & Band
 
 /**
  * Das Zielband als Stücke über die Zeit: mit Lichtplan je Licht- und
- * Dunkelphase das passende, ohne Lichtplan das eine Band über den ganzen
- * Ausschnitt.
+ * Dunkelphase das passende. Ohne Lichtplan nur, wenn Tag und Nacht dasselbe
+ * Ziel haben (oder es nur eins gibt) — dann ganztags; unterscheiden sie sich,
+ * gibt es KEIN Band. Lieber nichts als ein Band zur falschen Stunde.
  */
 export function zielbandStuecke(fenster: Fenster, ziele: Ziele | null | undefined, licht: Fenster[] | null): BandStueck[] {
   if (!ziele) return []
+  const tagBand = zielbandFuer(ziele, 'tag')
+  const nachtBand = zielbandFuer(ziele, 'nacht')
   if (!licht) {
-    const eins = band(ziele.targetMin, ziele.targetMax)
+    if (zielBrauchtLichtplan(ziele)) return []
+    const eins = tagBand ?? nachtBand
     return eins ? [{ ...fenster, ...eins }] : []
   }
   const raus: BandStueck[] = []
-  const tagBand = zielbandFuer(ziele, 'tag')
-  const nachtBand = zielbandFuer(ziele, 'nacht')
   let anfang = fenster.von
   const schiebe = (von: number, bis: number, b: Band | null) => { if (b && bis > von) raus.push({ von, bis, ...b }) }
   for (const stueck of licht) {
@@ -393,6 +419,23 @@ export function zielbandStuecke(fenster: Fenster, ziele: Ziele | null | undefine
   }
   schiebe(anfang, fenster.bis, nachtBand)
   return raus
+}
+
+/**
+ * Was die große Zahl im Fokus über das Ziel sagt: „im Ziel (18–24 °C)",
+ * „über dem Ziel (bis 50 %)", „unter dem Ziel (ab 18 °C)", „Soll 23 °C".
+ * Null ohne Wert oder ohne Band.
+ */
+export function zielUrteil(wert: number | null, gilt: Band | null, stellen: number, einheit: string | null): { text: string; imZiel: boolean } | null {
+  if (wert == null || !gilt) return null
+  const e = einheit ? ` ${einheit}` : ''
+  if (gilt.min != null && gilt.min === gilt.max) return { text: `Soll ${grenzText(gilt.min, stellen)}${e}`, imZiel: false }
+  const bereich = gilt.min != null && gilt.max != null ? `${grenzText(gilt.min, stellen)}–${grenzText(gilt.max, stellen)}`
+    : gilt.min != null ? `ab ${grenzText(gilt.min, stellen)}`
+      : `bis ${grenzText(gilt.max as number, stellen)}`
+  if (gilt.max != null && wert > gilt.max) return { text: `über dem Ziel (${bereich}${e})`, imZiel: false }
+  if (gilt.min != null && wert < gilt.min) return { text: `unter dem Ziel (${bereich}${e})`, imZiel: false }
+  return { text: `im Ziel (${bereich}${e})`, imZiel: true }
 }
 
 /* ---------------------------------------------------------------------------
@@ -524,13 +567,14 @@ export function zusammenfuehren(woche: readonly Punkt[] | undefined, tag: readon
 }
 
 /**
- * Wie weit zurück und vor man blättern darf.
+ * Die Spanne der Daten, die gerade da sind — vom ältesten bis zum neuesten Punkt.
  *
- * Solange die 7 Tage nicht geladen sind, reicht die Grenze trotzdem sieben
- * Tage zurück — so weit hält Grow OS die Rohwerte vor. Wer dorthin blättert,
- * löst das Nachladen aus; danach gilt der älteste tatsächlich vorhandene Punkt.
+ * Solange nur die 24 h geladen sind, sind das die 24 h: Leiste und Ausschnitt
+ * zeigen keinen leeren Vorlauf, der wie ein Fehler aussieht. Wer weiter
+ * zurück will (◀ am Rand, „7 Tage", Ziehen an den linken Rand), löst das
+ * Nachladen aus, und die Spanne wächst auf sieben Tage.
  */
-export function datenGrenzen(reihen: ReadonlyArray<readonly Punkt[]>, wocheGeladen: boolean): Fenster | null {
+export function datenGrenzen(reihen: ReadonlyArray<readonly Punkt[]>): Fenster | null {
   let von = Infinity
   let bis = -Infinity
   for (const reihe of reihen) {
@@ -539,7 +583,28 @@ export function datenGrenzen(reihen: ReadonlyArray<readonly Punkt[]>, wocheGelad
     bis = Math.max(bis, reihe[reihe.length - 1].t)
   }
   if (!Number.isFinite(bis)) return null
-  return { von: wocheGeladen ? von : Math.min(von, bis - MAX_BREITE), bis }
+  return { von, bis }
+}
+
+/** So weit zurück reichen die Rohwerte höchstens — die Grenze für Blättern vor dem Nachladen. */
+export function wochenGrenzen(grenzen: Fenster): Fenster {
+  return { von: Math.min(grenzen.von, grenzen.bis - MAX_BREITE), bis: grenzen.bis }
+}
+
+/**
+ * Die Abschnitte (siehe `abschnitte`) auf den Ausschnitt beschnitten, je mit
+ * einem Nachbarn links und rechts. Die Abschnitte werden einmal je Datenstand
+ * gerechnet — der Median in `lueckenGrenze` lief sonst bei jedem Zeichnen über
+ * alle Punkte aller Kurven.
+ */
+export function abschnitteImFenster(stuecke: readonly Punkt[][], fenster: Fenster): Punkt[][] {
+  const raus: Punkt[][] = []
+  for (const stueck of stuecke) {
+    if (!stueck.length || stueck[stueck.length - 1].t < fenster.von || stueck[0].t > fenster.bis) continue
+    const teil = imFenster(stueck, fenster)
+    if (teil.length) raus.push(teil)
+  }
+  return raus
 }
 
 /**
@@ -558,3 +623,13 @@ export function pfad(stuecke: readonly Punkt[][], x: (t: number) => number, y: (
     .map((stueck) => stueck.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' '))
     .join(' ')
 }
+
+/**
+ * Der Speicherplatz der Auswahl — mit einem Fingerabdruck der Kachel-Werte.
+ *
+ * Ändert jemand im Anpassen-Modus, welche Werte die Kachel zeigt, gilt deren
+ * neue Auswahl. Ohne den Fingerabdruck hätte eine einmal gemerkte Auswahl
+ * jede spätere Änderung der Kachel für immer überstimmt.
+ */
+export const speicherSchluessel = (tileId: string, metricKeys: readonly string[]) =>
+  `growos.verlauf.${tileId}.${[...metricKeys].sort().join(',')}`

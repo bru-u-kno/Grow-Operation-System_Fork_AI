@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { naechsterZeitpunkt, schaltzeitAmTag } from './licht-restzeit'
 import {
   MAX_BREITE, MIN_BREITE, MINUTE, QUELLE_SPIEL, STUNDE, TAG,
-  abschnitte, achsenMarken, amZeiger, begrenzeFenster, blaettern, datenGrenzen, dunkelphasen,
+  abschnitte, abschnitteImFenster, achsenMarken, amZeiger, begrenzeFenster, blaettern, datenGrenzen, dunkelphasen,
   fensterFuerZeitraum, fensterUmAnker, imFenster, kannBlaettern, kurvenFarbe, lichtPhasen,
   lueckenGrenze, quelleWaehlen, spannenTeile, statistik, teilung, yTeilung, zahl, zeitraumBeiBreite,
-  zielbandFuer, zielbandStuecke, zoomUm, zusammenfuehren, type Punkt,
+  speicherSchluessel, wochenGrenzen, zielBrauchtLichtplan, zielbandFuer, zielbandStuecke, zielUrteil, zoomUm, zusammenfuehren, type Punkt,
 } from './verlauf-modell'
 
 /** Ortszeit — die Tests laufen in jeder Zeitzone, weil das Modell in Ortszeit rechnet. */
@@ -197,15 +198,25 @@ describe('Licht und Dunkelphase', () => {
 })
 
 describe('Zielband', () => {
-  const tagNacht = { targetMin: 22, targetMax: 26, targetDayMin: 24, targetDayMax: 28, targetNightMin: 18, targetNightMax: 22 }
+  /* Die Testobjekte sind so gebaut, wie das Backend sie WIRKLICH liefert
+     (GET /api/live/tents/1 im Demobestand, `KachelZiele.ZieleSetzen`):
+     `targetMin`/`targetMax` ist das Band der GERADE gültigen Phase. */
+  const luftNachts = { targetMin: 19, targetMax: 19, targetDayMin: 23, targetDayMax: 23, targetNightMin: 19, targetNightMax: 19, targetPhase: 'night' }
+  const feuchte = { targetMax: 50, targetDayMax: 50, targetNightMax: 50, targetPhase: 'night' }
+  const ph = { targetMin: 5.8, targetMax: 6.2 }
 
   it('nimmt je Phase das eigene Band', () => {
-    expect(zielbandFuer(tagNacht, 'tag')).toEqual({ min: 24, max: 28 })
-    expect(zielbandFuer(tagNacht, 'nacht')).toEqual({ min: 18, max: 22 })
+    expect(zielbandFuer(luftNachts, 'tag')).toEqual({ min: 23, max: 23 })
+    expect(zielbandFuer(luftNachts, 'nacht')).toEqual({ min: 19, max: 19 })
   })
 
-  it('fällt ohne Tag/Nacht auf das eine Band zurück', () => {
-    expect(zielbandFuer({ targetMin: 5.6, targetMax: 6.2 }, 'nacht')).toEqual({ min: 5.6, max: 6.2 })
+  it('nimmt das Band der aktuellen Phase NICHT als Ersatz für die andere', () => {
+    const nurTag = { targetMin: 24, targetMax: 28, targetDayMin: 24, targetDayMax: 28 }
+    expect(zielbandFuer(nurTag, 'nacht')).toBeNull()
+  })
+
+  it('ohne Tag/Nacht gilt das eine Band', () => {
+    expect(zielbandFuer(ph, 'nacht')).toEqual({ min: 5.8, max: 6.2 })
   })
 
   it('ohne Ziel kein Band', () => {
@@ -215,22 +226,62 @@ describe('Zielband', () => {
   })
 
   it('ein einseitiges Ziel bleibt einseitig', () => {
-    expect(zielbandFuer({ targetMax: 1200 }, 'tag')).toEqual({ min: null, max: 1200 })
+    expect(zielbandFuer(feuchte, 'tag')).toEqual({ min: null, max: 50 })
   })
 
   it('zeichnet nachts das Nachtband und am Tag das Tagband', () => {
     const f = { von: ort(2026, 10, 2, 12), bis: ort(2026, 10, 3, 12) }
     const licht = lichtPhasen(f, '08:00', '20:00')
-    expect(zielbandStuecke(f, tagNacht, licht)).toEqual([
-      { von: ort(2026, 10, 2, 12), bis: ort(2026, 10, 2, 20), min: 24, max: 28 },
-      { von: ort(2026, 10, 2, 20), bis: ort(2026, 10, 3, 8), min: 18, max: 22 },
-      { von: ort(2026, 10, 3, 8), bis: ort(2026, 10, 3, 12), min: 24, max: 28 },
+    expect(zielbandStuecke(f, luftNachts, licht)).toEqual([
+      { von: ort(2026, 10, 2, 12), bis: ort(2026, 10, 2, 20), min: 23, max: 23 },
+      { von: ort(2026, 10, 2, 20), bis: ort(2026, 10, 3, 8), min: 19, max: 19 },
+      { von: ort(2026, 10, 3, 8), bis: ort(2026, 10, 3, 12), min: 23, max: 23 },
     ])
   })
 
-  it('ohne Lichtplan das eine Band über den ganzen Ausschnitt', () => {
-    const f = { von: 0, bis: TAG }
-    expect(zielbandStuecke(f, tagNacht, null)).toEqual([{ von: 0, bis: TAG, min: 22, max: 26 }])
+  it('ohne Lichtplan und mit verschiedenem Tag- und Nachtziel: KEIN Band', () => {
+    // Früher stand hier das Band der aktuellen Phase rund um die Uhr — nachts
+    // um 3 Uhr gezeichnet hieß das: auch am Mittag 19 °C als Ziel.
+    expect(zielBrauchtLichtplan(luftNachts)).toBe(true)
+    expect(zielbandStuecke({ von: 0, bis: TAG }, luftNachts, null)).toEqual([])
+  })
+
+  it('ohne Lichtplan und mit gleichem Tag- und Nachtziel: ganztags', () => {
+    expect(zielBrauchtLichtplan(feuchte)).toBe(false)
+    expect(zielbandStuecke({ von: 0, bis: TAG }, feuchte, null)).toEqual([{ von: 0, bis: TAG, min: null, max: 50 }])
+    expect(zielbandStuecke({ von: 0, bis: TAG }, ph, null)).toEqual([{ von: 0, bis: TAG, min: 5.8, max: 6.2 }])
+  })
+
+  it('sagt im Fokus, wo der Wert zum Ziel steht', () => {
+    expect(zielUrteil(55, { min: null, max: 50 }, 0, '%')).toEqual({ text: 'über dem Ziel (bis 50 %)', imZiel: false })
+    expect(zielUrteil(17.5, { min: 18, max: null }, 1, '°C')).toEqual({ text: 'unter dem Ziel (ab 18 °C)', imZiel: false })
+    expect(zielUrteil(20, { min: 18, max: 24 }, 1, '°C')).toEqual({ text: 'im Ziel (18–24 °C)', imZiel: true })
+    expect(zielUrteil(24.7, { min: 23, max: 23 }, 1, '°C')).toEqual({ text: 'Soll 23 °C', imZiel: false })
+    expect(zielUrteil(6.0, { min: 5.8, max: 6.2 }, 2, null)).toEqual({ text: 'im Ziel (5,8–6,2)', imZiel: true })
+    expect(zielUrteil(null, { min: 1, max: 2 }, 1, null)).toBeNull()
+  })
+})
+
+describe('Zone der Lichtzeiten', () => {
+  it('rechnet die Schaltzeiten in der Zone des Servers, nicht des Browsers', () => {
+    const f = { von: Date.UTC(2026, 9, 2, 12), bis: Date.UTC(2026, 9, 3, 12) }
+    // Server in UTC (Versatz 0): Nacht 20:00–08:00 UTC, egal wo der Browser steht.
+    expect(dunkelphasen(f, '08:00', '20:00', 0)).toEqual([{ von: Date.UTC(2026, 9, 2, 20), bis: Date.UTC(2026, 9, 3, 8) }])
+    // Lichtplan in Berlin (Sommerzeit, +120): 20:00 Berlin = 18:00 UTC.
+    expect(dunkelphasen(f, '08:00', '20:00', 120)).toEqual([{ von: Date.UTC(2026, 9, 2, 18), bis: Date.UTC(2026, 9, 3, 6) }])
+  })
+
+  it('über Mitternacht und mit negativem Versatz', () => {
+    const f = { von: Date.UTC(2026, 9, 2, 0), bis: Date.UTC(2026, 9, 3, 0) }
+    // New York (−240): Licht 20:00–08:00 dort = 00:00–12:00 UTC.
+    expect(lichtPhasen(f, '20:00', '08:00', -240)).toEqual([{ von: Date.UTC(2026, 9, 2, 0), bis: Date.UTC(2026, 9, 2, 12) }])
+  })
+
+  it('Kachel und Diagramm nehmen dieselbe Funktion', () => {
+    const jetzt = new Date(Date.UTC(2026, 9, 2, 19, 0))
+    expect(naechsterZeitpunkt(jetzt, '20:00', 0)?.getTime()).toBe(Date.UTC(2026, 9, 2, 20))
+    expect(naechsterZeitpunkt(jetzt, '20:00', 120)?.getTime()).toBe(Date.UTC(2026, 9, 3, 18))
+    expect(schaltzeitAmTag(jetzt.getTime(), { stunde: 20, minute: 0 }, 0)).toBe(lichtPhasen({ von: jetzt.getTime() - STUNDE, bis: jetzt.getTime() + 2 * STUNDE }, '08:00', '20:00', 0)![0].bis)
   })
 })
 
@@ -294,7 +345,7 @@ describe('Ausschnitt und Statistik', () => {
   it('schreibt Zahlen deutsch mit fester Stellenzahl', () => {
     expect(zahl(24.56, 1)).toBe('24,6')
     expect(zahl(5.8, 2)).toBe('5,80')
-    expect(zahl(1020, 0)).toBe('1.020')
+    expect(zahl(1020, 0)).toBe('1020')
     expect(zahl(null, 1)).toBe('–')
   })
 })
@@ -326,13 +377,23 @@ describe('Quelle wählen', () => {
     expect(alle.filter((p) => p.v === 1)).toHaveLength(5)
   })
 
-  it('reicht vor dem Nachladen sieben Tage zurück, danach bis zum ältesten Punkt', () => {
+  it('die Grenzen sind die Daten, die da sind — vor dem Nachladen nur die 24 h', () => {
     const tag = reihe(10 * TAG, 15 * MINUTE, 96)
-    const ohne = datenGrenzen([tag], false)!
-    expect(ohne.bis - ohne.von).toBe(MAX_BREITE)
+    const ohne = datenGrenzen([tag])!
+    expect(ohne).toEqual({ von: 10 * TAG, bis: 10 * TAG + 95 * 15 * MINUTE })
+    expect(wochenGrenzen(ohne).bis - wochenGrenzen(ohne).von).toBe(MAX_BREITE)
     const woche = reihe(8 * TAG, STUNDE, 48)
-    expect(datenGrenzen([zusammenfuehren(woche, tag)], true)!.von).toBe(8 * TAG)
-    expect(datenGrenzen([[]], false)).toBeNull()
+    expect(datenGrenzen([zusammenfuehren(woche, tag)])!.von).toBe(8 * TAG)
+    expect(datenGrenzen([[]])).toBeNull()
+  })
+
+  it('beschneidet die vorab gerechneten Abschnitte auf den Ausschnitt', () => {
+    const punkte = [...reihe(0, 5 * MINUTE, 10), ...reihe(3 * STUNDE, 5 * MINUTE, 10)]
+    const stuecke = abschnitte(punkte)
+    expect(abschnitteImFenster(stuecke, { von: 20 * MINUTE, bis: 30 * MINUTE }).map((s) => s.map((p) => p.t / MINUTE)))
+      .toEqual([[15, 20, 25, 30, 35]])
+    expect(abschnitteImFenster(stuecke, { von: 0, bis: 4 * STUNDE })).toHaveLength(2)
+    expect(abschnitteImFenster(stuecke, { von: STUNDE, bis: 2 * STUNDE })).toEqual([])
   })
 })
 
@@ -346,5 +407,12 @@ describe('Farben', () => {
     const farben = VERLAUFS_METRIKEN.map((key, i) => kurvenFarbe(key, i))
     expect(farben.length).toBeGreaterThanOrEqual(10)
     expect(new Set(farben).size).toBe(farben.length)
+  })
+})
+
+describe('Gemerkte Auswahl', () => {
+  it('hängt an den Werten der Kachel: ändert jemand die Kachel, gilt deren neue Auswahl', () => {
+    expect(speicherSchluessel('verlauf', ['temperature', 'humidity'])).toBe(speicherSchluessel('verlauf', ['humidity', 'temperature']))
+    expect(speicherSchluessel('verlauf', ['temperature', 'humidity'])).not.toBe(speicherSchluessel('verlauf', ['temperature', 'humidity', 'co2']))
   })
 })

@@ -219,7 +219,7 @@ function AddTileDialog({
             <span className="dot" />
             <span className="ls-pick-text">
               Verlauf
-              <em> — alle Werte dieses Bereichs in einem Bild, 1 Stunde bis 7 Tage</em>
+              <em> — die Werte dieses Bereichs als Kurven, 1 Stunde bis 7 Tage; weitere lassen sich in der Kachel ein- und ausblenden</em>
             </span>
           </button>
 

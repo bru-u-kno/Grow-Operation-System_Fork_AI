@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { backendAntwortet, darfUeberspringen } from './pflicht'
+import { KONTRAST_HELFER } from './kontrast-messung'
 
 /**
  * Das Verlaufsdiagramm der Live-Seite (Verlaufsdiagramm.tsx).
@@ -120,13 +121,19 @@ test.describe('Verlaufsdiagramm', () => {
     let nochmal = false
     page.on('request', (r) => { if (/days=7/.test(r.url())) nochmal = true })
     await verlauf.locator('[data-audit="verlauf-zeitraum-24h"]').click()
-    await expect(spanne).toHaveText(spanne24)
+    // Nicht wörtlich dieselbe Spanne: vor dem Nachladen reicht sie nur bis zum
+    // ersten der 24-h-Punkte, danach volle 24 h. Wieder Tag UND Uhrzeit.
+    await expect(spanne).toHaveText(/^[A-Z][a-z] \d\d\.\d\d\. \d\d:\d\d –\s+[A-Z][a-z] \d\d\.\d\d\. \d\d:\d\d$/)
     expect(nochmal, 'Die 7 Tage wurden ein zweites Mal geladen.').toBe(false)
     expect(fehler).toEqual([])
   })
 
   test('◀ blättert um eine Fensterbreite, ▶ ist an „jetzt" gesperrt', async ({ page, request }) => {
     const verlauf = await oeffnen(page, request)
+    for (const name of ['Früher', 'Später']) {
+      const k = (await verlauf.getByRole('button', { name }).boundingBox())!
+      expect(Math.min(k.width, k.height), `„${name}" ist kleiner als 44 × 44 px.`).toBeGreaterThanOrEqual(44)
+    }
     await verlauf.locator('[data-audit="verlauf-zeitraum-6h"]').click()
     const spanne = verlauf.locator('[data-audit="verlauf-spanne"]')
     const vorher = await spanne.innerText()
@@ -159,29 +166,61 @@ test.describe('Verlaufsdiagramm', () => {
     await expect(zeit).not.toHaveText(zeitLinks)
     expect(await kartenwerte(verlauf)).not.toEqual(links)
 
-    // Die Werte bleiben deutsch.
-    for (const wert of await kartenwerte(verlauf)) expect(wert).not.toMatch(/\d\.\d{1,2}(?!\d)/)
+    // Die Werte bleiben deutsch — und ohne Tausenderpunkt, wie die Kacheln („1020 ppm").
+    for (const wert of await kartenwerte(verlauf)) {
+      expect(wert).not.toMatch(/\d\.\d{1,2}(?!\d)/)
+      expect(wert, `„${wert}" trägt einen Tausenderpunkt, die Kachel daneben nicht.`).not.toMatch(/\d\.\d{3}/)
+    }
+
+    // Die Uhrzeit am Zeiger liegt auf einem Schild ÜBER den Kurven: ein
+    // deckender Grund hinter dem Text, im Dokument NACH allen Kurven gemalt.
+    const schild = await verlauf.locator('[data-audit="verlauf-zeigerzeit"]').evaluate((text) => {
+      const grund = text.parentElement?.querySelector('rect.vd-schild')
+      if (!grund) return 'kein Grund hinter der Uhrzeit'
+      const t = text.getBoundingClientRect()
+      const g = grund.getBoundingClientRect()
+      if (g.left > t.left || g.right < t.right || g.top > t.top || g.bottom < t.bottom) return 'der Grund deckt die Uhrzeit nicht ab'
+      if (Number(getComputedStyle(grund).fillOpacity) < 0.8) return 'der Grund ist durchsichtig'
+      const svg = text.closest('svg')!
+      const spaeter = Array.from(svg.querySelectorAll('path')).every((p) => p.compareDocumentPosition(grund) & Node.DOCUMENT_POSITION_FOLLOWING)
+      return spaeter ? 'ok' : 'eine Kurve wird nach dem Schild gemalt'
+    })
+    expect(schild, 'Die Uhrzeit am Zeiger kann von Kurven überdeckt werden.').toBe('ok')
 
     await page.mouse.move(kasten.x + kasten.width / 2, kasten.y - 120)
     await expect(verlauf.locator('[data-audit="verlauf-zeiger"]')).toHaveCount(0)
     expect(await kartenwerte(verlauf)).toEqual(jetzt)
   })
 
-  test('das Mausrad zoomt, der Doppelklick führt zurück auf den Zeitraum', async ({ page, request }) => {
+  test('das Mausrad scrollt die Seite, Strg+Rad zoomt, der Doppelklick führt zurück', async ({ page, request }) => {
     const verlauf = await oeffnen(page, request, 1280)
     const bild = verlauf.locator('[data-audit="verlauf-bild"]').first()
+    await bild.scrollIntoViewIfNeeded()
     const kasten = (await bild.boundingBox())!
     const spanne = verlauf.locator('[data-audit="verlauf-spanne"]')
     const vorher = await spanne.innerText()
-    const scroll = await page.evaluate(() => window.scrollY)
-
     await page.mouse.move(kasten.x + kasten.width * 0.5, kasten.y + kasten.height / 2)
+
+    // Einfaches Rad: die Seite scrollt, das Diagramm bleibt.
+    const scrollVorher = await page.evaluate(() => window.scrollY)
+    await page.mouse.wheel(0, 200)
+    await expect.poll(() => page.evaluate(() => window.scrollY), { message: 'Das einfache Mausrad über dem Diagramm scrollt die Seite nicht.' })
+      .toBeGreaterThan(scrollVorher)
+    await expect(spanne).toHaveText(vorher)
+    await bild.scrollIntoViewIfNeeded()
+    const k2 = (await bild.boundingBox())!
+
+    // Strg + Rad: Zoom um die Mausposition, die Seite steht.
+    const scroll = await page.evaluate(() => window.scrollY)
+    await page.mouse.move(k2.x + k2.width * 0.5, k2.y + k2.height / 2)
+    await page.keyboard.down('Control')
     await page.mouse.wheel(0, -300)
+    await page.keyboard.up('Control')
     await expect(spanne).not.toHaveText(vorher)
     await expect(verlauf.locator('.vd-segment[aria-label="Zeitraum"] [aria-pressed="true"]'), 'Nach dem Zoom ist noch ein Zeitraum markiert.').toHaveCount(0)
-    expect(await page.evaluate(() => window.scrollY), 'Das Mausrad hat die Seite mitgescrollt.').toBe(scroll)
+    expect(await page.evaluate(() => window.scrollY), 'Strg+Rad hat die Seite mitgescrollt.').toBe(scroll)
 
-    await page.mouse.dblclick(kasten.x + kasten.width * 0.5, kasten.y + kasten.height / 2)
+    await page.mouse.dblclick(k2.x + k2.width * 0.5, k2.y + k2.height / 2)
     await expect(spanne).toHaveText(vorher)
     await expect(verlauf.locator('[data-audit="verlauf-zeitraum-24h"]')).toHaveAttribute('aria-pressed', 'true')
   })
@@ -237,6 +276,17 @@ test.describe('Verlaufsdiagramm', () => {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     }
     await expect(verlauf.locator('[data-audit="verlauf-zeitraum-24h"]')).toHaveAttribute('aria-pressed', 'true')
+
+    // Ein Finger SENKRECHT auf dem Diagramm: die Seite scrollt (touch-action: pan-y).
+    // Mit `none` blieb die Seite hier stehen — wer am Telefon über das
+    // Diagramm hinweg scrollen wollte, kam nicht weiter.
+    await seite.waitForTimeout(400)
+    const scrollWisch = await seite.evaluate(() => window.scrollY)
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: mitte, y: y + 60, id: 5 }] })
+    for (let dy = 10; dy <= 160; dy += 10) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: mitte, y: y + 60 - dy, id: 5 }] })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect.poll(() => seite.evaluate(() => window.scrollY), { message: 'Ein senkrechter Wisch über das Diagramm scrollt die Seite nicht.' })
+      .toBeGreaterThan(scrollWisch + 40)
     await ctx.close()
   })
 
@@ -352,6 +402,9 @@ test.describe('Verlaufsdiagramm', () => {
       const striche = await fokus.locator('svg text.vd-achse').allTextContents()
       expect(striche.filter((t) => /^-?\d+(,\d+)?$/.test(t.replace(/\./g, ''))).length).toBeGreaterThanOrEqual(3)
       await expect(zeilen).toHaveCount(0)
+      // Wortlaut des Urteils (falls es ein Ziel gibt): nie mehr „außerhalb bis 50 %".
+      const urteil = fokus.locator('[data-audit="verlauf-zielstatus"]')
+      if (await urteil.count()) await expect(urteil).toHaveText(/^(im Ziel|über dem Ziel|unter dem Ziel) \(.+\)$|^Soll /)
 
       const zurueck = fokus.getByRole('button', { name: '← Alle Werte' })
       const kasten = (await zurueck.boundingBox())!
@@ -359,6 +412,15 @@ test.describe('Verlaufsdiagramm', () => {
       await zurueck.click()
       await expect(fokus).toHaveCount(0)
       await expect(zeilen, 'Nach „← Alle Werte" fehlen die Zeilen.').toHaveCount(anzahl)
+    }
+
+    // Der Wortlaut am Zielband: die Luftfeuchte des Demobestands hat „höchstens
+    // 50 %" — dort stand vorher „außerhalb bis 50 %".
+    const feuchte = verlauf.locator('[data-audit="verlauf-zeile-humidity"] .vd-zeile-kopf')
+    if (await feuchte.count()) {
+      await feuchte.click()
+      await expect(fokus.locator('[data-audit="verlauf-zielstatus"]')).toHaveText(/^(im Ziel|über dem Ziel|unter dem Ziel) \(bis 50 %\)$/)
+      await fokus.getByRole('button', { name: '← Alle Werte' }).click()
     }
 
     // Im Fokus wechselt eine Karte den Wert, statt Kurven auszublenden.
@@ -396,6 +458,48 @@ test.describe('Verlaufsdiagramm', () => {
     const geaendert = unterZeiger.filter((wert, i) => wert !== jetzt[i]).length
     expect(geaendert, `Nur ${geaendert} von ${anzahl} Zeilen folgen dem Zeiger.`).toBeGreaterThanOrEqual(anzahl - 1)
     await verlauf.locator('[data-audit="verlauf-darstellung-zusammen"]').click()
+  })
+
+  test('eine gemerkte Auswahl für ANDERE Kachel-Werte überstimmt die Kachel nicht', async ({ page, request }) => {
+    darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend.')
+    const anordnung = await (await request.get('/api/tents/1/dashboard')).json() as { sections: Array<{ tiles: Array<{ id: string; kind: string; metricKeys?: string[] }> }> }
+    const kachel = anordnung.sections.flatMap((s) => s.tiles).find((t) => t.kind === 'Chart')
+    darfUeberspringen(!kachel, 'Keine Verlaufs-Kachel im Demobestand.')
+    const werte = kachel!.metricKeys ?? []
+    expect(werte.length).toBeGreaterThanOrEqual(2)
+    // Gemerkt wurde einmal „nur PPFD" — für eine Kachel, die damals andere
+    // Werte hatte, und in der alten Ablage ohne Fingerabdruck.
+    await page.addInitScript(({ id }) => {
+      try {
+        localStorage.setItem(`growos.verlauf.${id}`, JSON.stringify({ an: ['ppfd'] }))
+        localStorage.setItem(`growos.verlauf.${id}.ppfd,temperature`, JSON.stringify({ an: ['ppfd'] }))
+      } catch { /* egal */ }
+    }, { id: kachel!.id })
+    const verlauf = await oeffnen(page, request)
+    expect((await eingeschaltet(verlauf)).sort(), 'Eine alte Auswahl hat die Werte der Kachel überstimmt.').toEqual([...werte].sort())
+  })
+
+  test('vor dem Nachladen zeigt die Leiste nur die 24 h; ◀ am Rand lädt die 7 Tage nach', async ({ page, request }) => {
+    let wochenAbrufe = 0
+    page.on('request', (r) => { if (/\/history\?.*days=7/.test(r.url())) wochenAbrufe++ })
+    const verlauf = await oeffnen(page, request)
+    const leiste = verlauf.locator('[data-audit="verlauf-leiste"]')
+    const anteil = () => leiste.evaluate((svg) => {
+      const rahmen = svg.querySelector('.vd-fenster')!.getBoundingClientRect()
+      return rahmen.width / svg.getBoundingClientRect().width
+    })
+    expect(wochenAbrufe, 'Die Grundansicht hat die 7 Tage geladen.').toBe(0)
+    expect(await anteil(), 'Vor dem Nachladen steht in der Leiste ein kleiner Kasten vor leerem Vorlauf.').toBeGreaterThan(0.9)
+
+    const frueher = verlauf.getByRole('button', { name: 'Früher' })
+    await expect(frueher, '◀ ist am Rand der 24 h gesperrt — älter kommt man dann nie.').toBeEnabled()
+    const abruf = page.waitForRequest((r) => /days=7/.test(r.url()))
+    await frueher.click()
+    await abruf
+    await expect(verlauf.locator('.vd-status')).toHaveCount(0, { timeout: 15_000 })
+    await verlauf.locator('[data-audit="verlauf-zeitraum-24h"]').click()
+    await expect.poll(anteil, { message: 'Nach dem Nachladen ist die Leiste nicht auf 7 Tage gewachsen.' }).toBeLessThan(0.3)
+    expect(wochenAbrufe).toBe(1)
   })
 
   test('am Telefon: kein Überlauf (320–768 px) und kein abgeschnittener Text in den Zeilen', async ({ page, request }) => {
@@ -438,49 +542,48 @@ test.describe('Verlaufsdiagramm', () => {
       await page.addInitScript((t) => { try { localStorage.setItem('growos.theme', t) } catch { /* egal */ } }, thema)
       const verlauf = await oeffnen(page, request, 360)
       await expect(page.locator('html')).toHaveAttribute('data-theme', thema)
+      // Alle Karten einschalten: die hellen Kurvenfarben (Gelb, Grün, Türkis)
+      // sind im Bestand anfangs aus — gerade deren Rand muss 3:1 halten.
+      // Ein Locator „nicht gedrückt" schrumpft mit jedem Tipp; erst die
+      // Kennungen holen, dann tippen.
+      const aus = await verlauf.locator('.vd-wert[aria-pressed="false"]').evaluateAll((k) => k.map((e) => e.getAttribute('data-audit')))
+      for (const kennung of aus) await verlauf.locator(`[data-audit="${kennung}"]`).click()
+      expect(await verlauf.locator('.vd-wert[aria-pressed="true"]').count()).toBeGreaterThanOrEqual(8)
       for (const ansicht of ['zusammen', 'einzeln'] as const) {
         await verlauf.locator(`[data-audit="verlauf-darstellung-${ansicht}"]`).click()
-        const messung = await verlauf.evaluate((wurzel) => {
-          const leinwand = document.createElement('canvas').getContext('2d')!
-          const rgba = (farbe: string): number[] => {
-            leinwand.clearRect(0, 0, 1, 1)
-            leinwand.fillStyle = '#000'
-            leinwand.fillStyle = farbe
-            leinwand.fillRect(0, 0, 1, 1)
-            return Array.from(leinwand.getImageData(0, 0, 1, 1).data).map((v, i) => (i === 3 ? v / 255 : v))
+        // Die Messung aus kontrast.spec.ts (KONTRAST_HELFER): die SCHRIFT wird
+        // samt Deckkraft über ihren Grund gemalt, nicht nur der Grund gemischt.
+        const messung = await page.evaluate(`(() => {
+          ${KONTRAST_HELFER}
+          const wurzel = document.querySelector('[data-audit="verlauf"]')
+          const kontrast = (vorne, grund) => {
+            const l1 = lum(vorne), l2 = lum(grund)
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
           }
-          const mischen = (oben: number[], unten: number[]) => [0, 1, 2].map((i) => oben[i] * oben[3] + unten[i] * (1 - oben[3])).concat(1)
-          const grund = (el: Element): number[] => {
-            const kette: number[][] = []
-            for (let n: Element | null = el; n; n = n.parentElement) {
-              const f = rgba(getComputedStyle(n).backgroundColor)
-              if (f[3] > 0) kette.push(f)
-              if (f[3] >= 1) break
-            }
-            let ergebnis = rgba(getComputedStyle(document.body).backgroundColor)
-            for (const f of kette.reverse()) ergebnis = mischen(f, ergebnis)
-            return ergebnis
-          }
-          const hell = (f: number[]) => {
-            const [r, g, b] = f.slice(0, 3).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 })
-            return 0.2126 * r + 0.7152 * g + 0.0722 * b
-          }
-          const kontrast = (a: number[], b: number[]) => { const [x, y] = [hell(a), hell(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
-          const proben: Array<{ was: string; wert: number }> = []
+          const schrift = (el, farbe) => { const grund = flaeche(el); return kontrast(alsRgb(farbe, grund), grund) }
+          const proben = []
           const achse = wurzel.querySelector('svg text.vd-achse')
-          if (achse) proben.push({ was: 'Achsentext', wert: kontrast(rgba(getComputedStyle(achse).fill), grund(achse.closest('svg')!)) })
-          const spanne = wurzel.querySelector('.vd-teil')!
-          proben.push({ was: 'Spanne', wert: kontrast(rgba(getComputedStyle(spanne).color), grund(spanne)) })
-          const aktiv = wurzel.querySelector('.vd-seg[aria-pressed="true"]')!
-          proben.push({ was: 'aktiver Knopf', wert: kontrast(rgba(getComputedStyle(aktiv).color), grund(aktiv)) })
-          const name = wurzel.querySelector('.vd-wert-name')!
-          proben.push({ was: 'Kartenname', wert: kontrast(rgba(getComputedStyle(name).color), grund(name)) })
+          if (achse) proben.push({ was: 'Achsentext', wert: schrift(achse.closest('svg'), getComputedStyle(achse).fill), mindestens: 4.5 })
+          const spanne = wurzel.querySelector('.vd-teil')
+          proben.push({ was: 'Spanne', wert: schrift(spanne, getComputedStyle(spanne).color), mindestens: 4.5 })
+          const aktiv = wurzel.querySelector('.vd-seg[aria-pressed="true"]')
+          proben.push({ was: 'aktiver Knopf', wert: schrift(aktiv, getComputedStyle(aktiv).color), mindestens: 4.5 })
+          for (const name of wurzel.querySelectorAll('.vd-wert-name')) {
+            proben.push({ was: 'Kartenname ' + name.textContent.trim(), wert: schrift(name, getComputedStyle(name).color), mindestens: 4.5 })
+          }
+          // Der Rand einer EINGESCHALTETEN Karte trägt die Aussage „an" — er
+          // braucht als Bedienelement 3:1 zum Grund (WCAG 1.4.11).
+          for (const karte of wurzel.querySelectorAll('.vd-wert[aria-pressed="true"]')) {
+            const grund = flaeche(karte)
+            proben.push({ was: 'Rand der Karte ' + karte.querySelector('.vd-wert-name').textContent.trim(),
+              wert: kontrast(alsRgb(getComputedStyle(karte).borderTopColor, grund), grund), mindestens: 3 })
+          }
           const nacht = wurzel.querySelector('.vd-nacht')
-          const nachtSichtbar = nacht ? Number(getComputedStyle(nacht).opacity) > 0.02 : false
-          return { proben, nachtSichtbar, nachtDa: Boolean(nacht) }
-        })
+          return { proben, nachtDa: Boolean(nacht), nachtSichtbar: nacht ? Number(getComputedStyle(nacht).opacity) > 0.02 : false }
+        })()`) as { proben: Array<{ was: string; wert: number; mindestens: number }>; nachtDa: boolean; nachtSichtbar: boolean }
+        expect(messung.proben.length, 'Die Kontrastmessung hat fast nichts gefunden.').toBeGreaterThanOrEqual(6)
         for (const probe of messung.proben) {
-          expect(probe.wert, `${thema}, ${ansicht}: ${probe.was} hat Kontrast ${probe.wert.toFixed(2)}.`).toBeGreaterThanOrEqual(4.5)
+          expect(probe.wert, `${thema}, ${ansicht}: ${probe.was} hat Kontrast ${probe.wert.toFixed(2)}.`).toBeGreaterThanOrEqual(probe.mindestens)
         }
         expect(messung.nachtDa, `${thema}, ${ansicht}: keine Dunkelphase gezeichnet, obwohl der Lichtplan 08–20 Uhr gilt.`).toBe(true)
         expect(messung.nachtSichtbar).toBe(true)
@@ -489,4 +592,50 @@ test.describe('Verlaufsdiagramm', () => {
       expect(fehler).toEqual([])
     })
   }
+})
+
+/**
+ * Die Dunkelphase liegt dort, wo die Messwerte Nacht zeigen — auch wenn der
+ * Browser in einer anderen Zone steht als der Server.
+ *
+ * Die Schaltzeiten bildet der Server in SEINER Zone (bzw. der des Lichtplans).
+ * Das Diagramm las sie als Browserzeit: Server in UTC, Browser in Berlin, und
+ * der graue Streifen begann um 20:00, während PPFD erst um 22:00 auf 0 fiel
+ * (Befund des Prüfers, 03.10.2026). Geprüft wird gegen die Messwerte selbst:
+ * innerhalb jeder Nacht ist PPFD 0, ausserhalb nicht.
+ */
+test.describe('Verlaufsdiagramm in anderer Zeitzone', () => {
+  test.use({ timezoneId: 'Europe/Berlin' })
+
+  test('die Dunkelphase deckt sich mit PPFD 0 aus dem Demobestand', async ({ page, request }) => {
+    const verlauf = await oeffnen(page, request, 1280)
+    const live = await (await request.get('/api/live/tents/1')).json() as { metrics: Array<{ key: string; lightUtcOffsetMinutes?: number | null }> }
+    const versatz = live.metrics.find((m) => m.key === 'light-cycle')?.lightUtcOffsetMinutes
+    expect(versatz, 'Der Server schickt keine Zone zu den Lichtzeiten.').not.toBeNull()
+    const browserVersatz = await page.evaluate(() => -new Date().getTimezoneOffset())
+    // Mengenwaechter: ohne Unterschied der Zonen prüft dieser Fall nichts.
+    expect(browserVersatz, 'Browser und Lichtplan liegen in derselben Zone — der Fall misst nichts.').not.toBe(versatz)
+
+    const naechte = await verlauf.locator('[data-audit="verlauf-nacht"]').evaluateAll((rects) =>
+      rects.map((r) => ({ von: Number(r.getAttribute('data-von')), bis: Number(r.getAttribute('data-bis')) })))
+    expect(naechte.length).toBeGreaterThanOrEqual(1)
+
+    const verlaufPpfd = await (await request.get('/api/tents/1/history?metrics=ppfd&days=1&resolution=raw')).json() as { series: Array<{ points: Array<{ t: string; v: number }> }> }
+    const punkte = verlaufPpfd.series[0].points.map((p) => ({ t: new Date(p.t).getTime(), v: p.v }))
+    const von = Math.min(...naechte.map((n) => n.von))
+    const bis = Math.max(...naechte.map((n) => n.bis))
+    const RAND = 20 * 60_000
+    let geprueft = 0
+    const fehler: string[] = []
+    for (const p of punkte) {
+      if (p.t < von - 12 * 3600_000 || p.t > bis + 12 * 3600_000) continue
+      const nacht = naechte.some((n) => p.t > n.von + RAND && p.t < n.bis - RAND)
+      const tag = naechte.every((n) => p.t < n.von - RAND || p.t > n.bis + RAND)
+      if (nacht && p.v !== 0) fehler.push(`${new Date(p.t).toISOString()} im grauen Streifen, PPFD ${p.v}`)
+      if (tag && p.v === 0) fehler.push(`${new Date(p.t).toISOString()} ausserhalb der Nacht, PPFD 0`)
+      if (nacht || tag) geprueft++
+    }
+    expect(geprueft, 'Zu wenige PPFD-Werte geprüft.').toBeGreaterThanOrEqual(20)
+    expect(fehler, fehler.slice(0, 6).join('\n')).toEqual([])
+  })
 })

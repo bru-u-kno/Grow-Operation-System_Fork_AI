@@ -32,6 +32,7 @@ public static class MetricPayloadMapping
             StatusNote = metric.StatusNote,
             LightOnAt = metric.LightOnAt,
             LightOffAt = metric.LightOffAt,
+            LightUtcOffsetMinutes = metric.LightUtcOffsetMinutes,
             ValueSource = metric.ValueSource,
             MeasuredAgeMinutes = metric.MeasuredAgeMinutes
         };

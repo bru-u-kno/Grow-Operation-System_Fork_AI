@@ -615,6 +615,8 @@ public sealed class GrowDashboardComposer
                     StatusNote = cycle?.Label,
                     LightOnAt = cycle?.OnAt.ToString("HH:mm"),
                     LightOffAt = cycle?.OffAt.ToString("HH:mm"),
+                    // Dieselbe Zone, in der der Lerner die Uhrzeiten gebildet hat.
+                    LightUtcOffsetMinutes = cycle is null ? null : (int)lightCycles!.LocalOffset(tent.Id).TotalMinutes,
                     Hint = cycle is not null
                         ? $"an {cycle.OnAt:HH:mm} · aus {cycle.OffAt:HH:mm}"
                         : lightState.FriendlyName ?? (isOn ? "Licht eingeschaltet" : "Licht ausgeschaltet")

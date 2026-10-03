@@ -389,6 +389,8 @@ export interface MetricPayload {
   /** Schaltzeiten des Lichts als 'HH:mm'; die Restzeit rechnet die Oberflaeche. */
   lightOnAt?: string | null
   lightOffAt?: string | null
+  /** Versatz der Schaltzeiten zu UTC in Minuten (Zone des Lichtplans bzw. des Servers). */
+  lightUtcOffsetMinutes?: number | null
   /** Woher der WERT kommt: 'live' (Sensor) oder 'hand' (erfasste Messung). */
   valueSource?: string | null
   /** Alter der Handmessung in Minuten; null bei Live-Werten. */

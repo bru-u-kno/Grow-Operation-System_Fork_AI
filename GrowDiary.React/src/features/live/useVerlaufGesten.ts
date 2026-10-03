@@ -32,7 +32,7 @@ function anteilBei(svg: SVGSVGElement, clientX: number): number {
  * - ein Finger oder die Maus: Zeiger mit den Werten zu dieser Uhrzeit
  * - zwei Finger: Abstand zoomt, Mittelpunkt verschiebt
  * - Doppeltipp: zurück auf den gewählten Zeitraum
- * - Mausrad: Zoom um die Mausposition
+ * - Strg/Cmd + Mausrad (und Trackpad-Zwei-Finger): Zoom um die Mausposition
  *
  * Die Finger werden für ALLE Diagramme der Kachel gemeinsam gezählt: in der
  * Ansicht „Einzeln" darf der zweite Finger auf der Nachbarzeile landen, und
@@ -132,9 +132,13 @@ export function useVerlaufGesten({
     if (event.pointerType === 'mouse' && finger.current.size === 0) setZeiger(null)
   }
 
-  // Das Mausrad braucht einen NICHT passiven Listener — sonst scrollt die
-  // Seite mit, während das Diagramm zoomt. React hängt `onWheel` passiv an.
+  // Zoom nur mit Strg/Cmd + Rad: das einfache Rad gehört der Seite, sonst
+  // bleibt jeder, der am Rechner nach unten scrollt, im Diagramm hängen.
+  // Die Zwei-Finger-Geste auf dem Trackpad schickt Chrome als Strg+Rad — sie
+  // zoomt also weiter. Der Listener ist NICHT passiv, damit er mit Strg das
+  // Zoomen der ganzen Seite verhindern kann; React hängt `onWheel` passiv an.
   const raeder = (event: WheelEvent) => {
+    if (!event.ctrlKey && !event.metaKey) return
     const svg = (event.target as Element | null)?.closest?.('svg[data-links]') as SVGSVGElement | null
     const s = stand.current
     if (!svg || !s) return

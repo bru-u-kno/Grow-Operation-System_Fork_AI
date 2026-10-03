@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { GrowSummary, KuehlerLivePayload, MetricPayload, RiskEventDto, TentDto } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
@@ -116,7 +116,12 @@ export function LiveScreen({
   const eigeneAnordnung = dashboard && (dashboard.editing || dashboard.layout.isCustom)
   // Erst alles, was der Server kennt — dann die Baender darueber, denn deren
   // Fassungen tragen die zurueckgerechneten Ziele.
-  const metricsByKey = new Map([...(alleMetriken ?? []), ...climate, ...hydro].map((metric) => [metric.key, metric]))
+  // Gemerkt, damit nicht jedes Rendern eine neue Map liefert — das
+  // Verlaufsdiagramm darunter rechnet sonst jedes Mal alle Kurven neu.
+  const metricsByKey = useMemo(
+    () => new Map([...(alleMetriken ?? []), ...climate, ...hydro].map((metric) => [metric.key, metric])),
+    [alleMetriken, climate, hydro],
+  )
   const [offeneMetrik, setOffeneMetrik] = useState<string | null>(null)
 
   /* Fork AI: „⋯" neben dem Messen-Knopf. Die selten gebrauchten Handlungen
@@ -546,6 +551,7 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
               statusText={metric.statusNote}
               lightOnAt={metric.lightOnAt}
               lightOffAt={metric.lightOffAt}
+              lightUtcOffsetMinutes={metric.lightUtcOffsetMinutes}
               lightIsOn={metric.value === 'An'}
               sourceNote={herkunft.sourceNote}
               stale={herkunft.stale}

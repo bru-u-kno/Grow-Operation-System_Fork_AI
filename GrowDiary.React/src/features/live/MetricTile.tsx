@@ -1,7 +1,7 @@
 import { bandGeometrie, bandText, kachelUrteil, kurzeZahl, targetLabel, urteilText, type MetricStatus } from './metric-tile-model'
 import { Sparkline, type HistoryPoint } from '../../components/SensorChart'
 import { useEffect, useState } from 'react'
-import { naechsterZeitpunkt, restdauer } from './licht-restzeit'
+import { naechsterZeitpunkt, restdauer, schaltzeitImBrowser } from './licht-restzeit'
 import { classNames } from '../../utils'
 
 export type MetricTileProps = {
@@ -42,6 +42,8 @@ export type MetricTileProps = {
   /** Schaltzeiten des Lichts; daraus rechnet die Kachel die Restzeit bis zum Wechsel. */
   lightOnAt?: string | null
   lightOffAt?: string | null
+  /** Zone der Schaltzeiten: Versatz zu UTC in Minuten (`lightUtcOffsetMinutes`). */
+  lightUtcOffsetMinutes?: number | null
   /** Ob das Licht gerade an ist — entscheidet, welche der beiden Zeiten die naechste ist. */
   lightIsOn?: boolean
   /**
@@ -99,11 +101,11 @@ function useMinutentakt(aktiv: boolean): Date {
 export function MetricTile({
   label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open,
   dayMin = null, dayMax = null, nightMin = null, nightMax = null, targetPhase = null,
-  statusText = null, lightOnAt = null, lightOffAt = null, lightIsOn = false,
+  statusText = null, lightOnAt = null, lightOffAt = null, lightUtcOffsetMinutes = null, lightIsOn = false,
   alarmMin = null, alarmMax = null,
 }: MetricTileProps) {
   const jetzt = useMinutentakt(Boolean(lightOnAt || lightOffAt))
-  const restzeit = restdauer(jetzt, lightIsOn, lightOnAt, lightOffAt)
+  const restzeit = restdauer(jetzt, lightIsOn, lightOnAt, lightOffAt, lightUtcOffsetMinutes)
 
   /* Fork AI (F-041): Ziel (Plan) und Grenze (Meldung) getrennt.
    *
@@ -137,8 +139,8 @@ export function MetricTile({
   /* Licht: beide Schaltzeiten untereinander, die nächste hell. */
   const lichtZeiten = lightOnAt || lightOffAt
     ? (() => {
-        const an = lightOnAt ? naechsterZeitpunkt(jetzt, lightOnAt) : null
-        const aus = lightOffAt ? naechsterZeitpunkt(jetzt, lightOffAt) : null
+        const an = lightOnAt ? naechsterZeitpunkt(jetzt, lightOnAt, lightUtcOffsetMinutes) : null
+        const aus = lightOffAt ? naechsterZeitpunkt(jetzt, lightOffAt, lightUtcOffsetMinutes) : null
         const naechsteIstAn = an != null && (aus == null || an.getTime() < aus.getTime())
         return { naechsteIstAn }
       })()
@@ -224,8 +226,8 @@ export function MetricTile({
 
       {lichtZeiten && (
         <div className="gos-metric-licht">
-          {lightOnAt && <><span className="k">an</span><span className={classNames(lichtZeiten.naechsteIstAn && 'is-aktiv')}>{lightOnAt} Uhr</span></>}
-          {lightOffAt && <><span className="k">aus</span><span className={classNames(!lichtZeiten.naechsteIstAn && 'is-aktiv')}>{lightOffAt} Uhr</span></>}
+          {lightOnAt && <><span className="k">an</span><span className={classNames(lichtZeiten.naechsteIstAn && 'is-aktiv')}>{schaltzeitImBrowser(lightOnAt, lightUtcOffsetMinutes, jetzt)} Uhr</span></>}
+          {lightOffAt && <><span className="k">aus</span><span className={classNames(!lichtZeiten.naechsteIstAn && 'is-aktiv')}>{schaltzeitImBrowser(lightOffAt, lightUtcOffsetMinutes, jetzt)} Uhr</span></>}
         </div>
       )}
       {restzeit && (

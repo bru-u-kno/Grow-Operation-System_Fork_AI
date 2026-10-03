@@ -94,6 +94,9 @@ public sealed class MetricPayload
     public string? LightOnAt { get; set; }
     public string? LightOffAt { get; set; }
 
+    /// <summary>Versatz der Schaltzeiten zu UTC in Minuten — siehe <see cref="Models.MetricCard.LightUtcOffsetMinutes"/>.</summary>
+    public int? LightUtcOffsetMinutes { get; set; }
+
     /// <summary>Woher der Wert kommt: live (Sensor) oder hand (erfasste Messung).</summary>
     public string? ValueSource { get; set; }
 

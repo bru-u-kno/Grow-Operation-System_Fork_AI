@@ -131,6 +131,8 @@ export function DashboardBands({
                           nur 24 h konnte — gespeicherte Kacheln tragen ihn noch. */}
                       <div className="ls-chart-head">{!tile.label || tile.label === 'Verlauf · 24 h' ? 'Verlauf' : tile.label}</div>
                       <Verlaufsdiagramm
+                        // Neue Werte in der Kachel = neue Auswahl (siehe speicherSchluessel).
+                        key={(tile.metricKeys ?? []).join(',')}
                         tileId={tile.id}
                         tentId={tentId}
                         metricKeys={tile.metricKeys ?? []}
@@ -160,6 +162,7 @@ export function DashboardBands({
                     statusText={metric.statusNote}
                     lightOnAt={metric.lightOnAt}
                     lightOffAt={metric.lightOffAt}
+                    lightUtcOffsetMinutes={metric.lightUtcOffsetMinutes}
                     lightIsOn={metric.value === 'An'}
                     sourceNote={metricProvenance(metric).sourceNote}
                     stale={metricProvenance(metric).stale}

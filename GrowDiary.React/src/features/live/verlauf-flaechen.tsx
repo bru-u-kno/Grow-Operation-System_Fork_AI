@@ -1,6 +1,6 @@
 import { memo, useId, useMemo, type PointerEventHandler } from 'react'
 import {
-  abschnitte, achsenMarken, amZeiger, grenzText, imFenster, pfad, skala, statistik, textBreite, uhrzeit, yTeilung,
+  abschnitteImFenster, achsenMarken, amZeiger, grenzText, pfad, skala, statistik, textBreite, uhrzeit, yTeilung,
   type BandStueck, type Fenster, type Punkt, type Ziele,
 } from './verlauf-modell'
 import { FOKUS, ZEILE, ZUSAMMEN } from './verlauf-masse'
@@ -28,6 +28,8 @@ export type Reihe = {
   stellen: number
   /** Nach Zeit sortiert. */
   punkte: Punkt[]
+  /** Die Punkte, an den Lücken geteilt — einmal je Datenstand gerechnet (`abschnitte`). */
+  stuecke: Punkt[][]
   ziele: Ziele | null
 }
 
@@ -55,7 +57,8 @@ function Nacht({ dunkel, x, oben, hoehe, links, rechts }: {
         const x0 = Math.max(links, x(stueck.von))
         const x1 = Math.min(rechts, x(stueck.bis))
         return x1 > x0
-          ? <rect key={stueck.von} x={x0} y={oben} width={x1 - x0} height={hoehe} className="vd-nacht" data-audit="verlauf-nacht" />
+          ? <rect key={stueck.von} x={x0} y={oben} width={x1 - x0} height={hoehe} className="vd-nacht" data-audit="verlauf-nacht"
+            data-von={stueck.von} data-bis={stueck.bis} />
           : null
       })}
     </>
@@ -109,11 +112,19 @@ function Zielband({ stuecke, x, y, oben, unten, links, rechts, raender }: {
   )
 }
 
+/**
+ * Die Uhrzeit am Zeiger — auf einem Schild ÜBER den Kurven. Ohne Grund lief
+ * eine Kurve mitten durch die Ziffern (im Demobestand die CO₂-Linie um 22:22).
+ */
 function zeigerZeitText(xz: number, links: number, rechts: number, y: number, zeit: number) {
+  const text = uhrzeit(zeit)
+  const halb = textBreite(text) / 2 + 4
+  const x = Math.min(Math.max(xz, links + halb), rechts - halb)
   return (
-    <text x={Math.min(Math.max(xz, links + 22), rechts - 22)} y={y} textAnchor="middle" className="vd-achse vd-zeigerzeit" data-audit="verlauf-zeigerzeit">
-      {uhrzeit(zeit)}
-    </text>
+    <g data-audit="verlauf-zeigerschild">
+      <rect x={x - halb} y={y - 11} width={2 * halb} height={15} rx={4} className="vd-schild" />
+      <text x={x} y={y} textAnchor="middle" className="vd-achse vd-zeigerzeit" data-audit="verlauf-zeigerzeit">{text}</text>
+    </g>
   )
 }
 
@@ -156,11 +167,11 @@ export function ZusammenBild({ reihen, fenster, breite, dunkel, zeiger, gesten }
   const skaliert = useMemo<Skaliert[]>(() => {
     const x = zeitX(fenster, PZ.l, plot)
     return reihen.flatMap((reihe) => {
-      const sichtbar = imFenster(reihe.punkte, fenster)
+      const stuecke = abschnitteImFenster(reihe.stuecke, fenster)
       const s = statistik(reihe.punkte, fenster)
-      if (!s || sichtbar.length === 0) return []
+      if (!s || stuecke.length === 0) return []
       const y = skala(s.min, s.max, PZ.t, ZUSAMMEN_HOEHE - PZ.b)
-      return [{ reihe, y, d: pfad(abschnitte(sichtbar), x, y) }]
+      return [{ reihe, y, d: pfad(stuecke, x, y) }]
     })
   }, [reihen, fenster, plot])
 
@@ -239,14 +250,13 @@ export function EinzelZeile({ reihe, fenster, breite, dunkel, band, zeiger, gest
   const clipId = useId().replace(/:/g, '')
   const plot = breite - PE.l - PE.r
   const { y, d } = useMemo(() => {
-    const sichtbar = imFenster(reihe.punkte, fenster)
     const s = statistik(reihe.punkte, fenster)
     const werte = [...(s ? [s.min, s.max] : []), ...bandGrenzen(band)]
     const lo = werte.length ? Math.min(...werte) : 0
     const hi = werte.length ? Math.max(...werte) : 1
     const rand = (hi - lo) * 0.08
     const yy = skala(lo - rand, hi + rand, PE.t, ZEILEN_HOEHE - PE.b, 0)
-    return { y: yy, d: pfad(abschnitte(sichtbar), zeitX(fenster, PE.l, plot), yy) }
+    return { y: yy, d: pfad(abschnitteImFenster(reihe.stuecke, fenster), zeitX(fenster, PE.l, plot), yy) }
   }, [reihe, fenster, band, plot])
 
   const x = zeitX(fenster, PE.l, plot)
@@ -328,13 +338,12 @@ export function FokusBild({ reihe, fenster, breite, dunkel, band, zeiger, gesten
   const plot = breite - PF.l - PF.r
   const unten = FOKUS_HOEHE - PF.b
   const { teilung, d, flaechen, y } = useMemo(() => {
-    const sichtbar = imFenster(reihe.punkte, fenster)
     const s = statistik(reihe.punkte, fenster)
     const werte = [...(s ? [s.min, s.max] : []), ...bandGrenzen(band)]
     const t = yTeilung(werte.length ? Math.min(...werte) : 0, werte.length ? Math.max(...werte) : 1)
     const yy = (v: number) => PF.t + (1 - (v - t.unten) / (t.oben - t.unten)) * (unten - PF.t)
     const x = zeitX(fenster, PF.l, plot)
-    const stuecke = abschnitte(sichtbar)
+    const stuecke = abschnitteImFenster(reihe.stuecke, fenster)
     const boden = yy(t.unten)
     return {
       teilung: t,
@@ -411,7 +420,7 @@ export function LichtSpur({ fenster, licht, links, plotBreite, breite, an, aus }
  */
 export function Uebersicht({ reihe, grenzen, fenster, breite, spanneText, onMitte, onTaste }: {
   reihe: Reihe | null; grenzen: Fenster; fenster: Fenster; breite: number; spanneText: string
-  onMitte: (zeit: number) => void; onTaste: (richtung: -1 | 1 | 'anfang' | 'ende') => void
+  onMitte: (zeit: number, amLinkenRand: boolean) => void; onTaste: (richtung: -1 | 1 | 'anfang' | 'ende') => void
 }) {
   const H = 34
   const P = 4
@@ -422,13 +431,14 @@ export function Uebersicht({ reihe, grenzen, fenster, breite, spanneText, onMitt
     const s = statistik(reihe.punkte, grenzen)
     if (!s) return ''
     const y = skala(s.min, s.max, 3, H - 3, 2)
-    return pfad(abschnitte(reihe.punkte), (t) => P + ((t - grenzen.von) / spanne) * (breite - 2 * P), y)
+    return pfad(reihe.stuecke, (t) => P + ((t - grenzen.von) / spanne) * (breite - 2 * P), y)
   }, [reihe, grenzen, spanne, breite])
 
   const mitteBei = (svg: SVGSVGElement, clientX: number) => {
     const box = svg.getBoundingClientRect()
-    const anteil = Math.min(1, Math.max(0, (clientX - box.left - P) / Math.max(1, box.width - 2 * P)))
-    onMitte(grenzen.von + anteil * spanne)
+    const roh = (clientX - box.left - P) / Math.max(1, box.width - 2 * P)
+    const anteil = Math.min(1, Math.max(0, roh))
+    onMitte(grenzen.von + anteil * spanne, roh <= 0.02)
   }
   const x0 = Math.max(P, x(fenster.von))
   const x1 = Math.min(breite - P, x(fenster.bis))

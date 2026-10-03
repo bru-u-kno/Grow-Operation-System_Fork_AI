@@ -67,4 +67,20 @@ public sealed class KachelFeldGehtNichtVerlorenTests
         Assert.Equal(24, payload.TargetNightMax);
         Assert.Equal("night", payload.TargetPhase);
     }
+
+    /// <summary>
+    /// Die Zone der Schaltzeiten kommt mit — ohne sie liest die Oberfläche
+    /// „20:00" als Browserzeit, und die Dunkelphase im Verlaufsdiagramm
+    /// verrutscht um den Versatz zwischen Server und Browser.
+    /// </summary>
+    [Fact]
+    public void DieAbbildungTraegtDieZoneDerLichtzeitenMit()
+    {
+        var karte = new MetricCard { Key = "light-cycle", LightOnAt = "08:00", LightOffAt = "20:00", LightUtcOffsetMinutes = 120 };
+
+        var payload = karte.ToPayload();
+
+        Assert.Equal("08:00", payload.LightOnAt);
+        Assert.Equal(120, payload.LightUtcOffsetMinutes);
+    }
 }

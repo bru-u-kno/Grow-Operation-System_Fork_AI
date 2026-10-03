@@ -15,27 +15,35 @@
 }
 .vd-werte::-webkit-scrollbar { display: none; }
 .vd-wert {
+  /* Die Kurvenfarbe setzt jede Karte selbst (style); das hier ist nur der Rückfall. */
+  --vd-farbe: var(--muted);
   flex: none; display: grid; gap: 2px; align-content: center;
   min-width: 80px; min-height: 44px; padding: 6px 9px;
   border: 1px solid var(--hair-2); border-radius: var(--r); background: transparent;
   color: var(--ink); text-align: left; cursor: pointer; font: inherit;
 }
-.vd-wert[aria-pressed='false'] { border-style: dashed; }
+/* Ein: Rand in der Kurvenfarbe, voller Ring. Aus: gestrichelt in --hair-2,
+   hohler Ring. Die Kurvenfarbe wird zum Rand mit 30 % --ink gemischt: im hellen
+   Thema dunkler, im dunklen heller — so hält auch Gelb und Grün 3:1 zum Grund
+   (geprüft in e2e/verlaufsdiagramm.spec.ts). */
+.vd-wert[aria-pressed='true'] { border-color: color-mix(in srgb, var(--vd-farbe) 70%, var(--ink)); border-width: 2px; padding: 5px 8px; }
+.vd-wert[aria-pressed='false'] { border-style: dashed; border-color: var(--hair-2); }
 .vd-wert[aria-pressed='false'] .vd-wert-zahl { color: var(--muted); }
 .vd-wert-name {
   display: flex; align-items: center; gap: 5px; white-space: nowrap;
   font: 400 var(--fs-etikett)/1.15 var(--font-mono); color: var(--faint);
 }
-.vd-ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; flex: none; box-sizing: border-box; }
+.vd-ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--vd-farbe); flex: none; box-sizing: border-box; }
+.vd-wert[aria-pressed='true'] .vd-ring { background: var(--vd-farbe); }
 .vd-wert-zahl { font: 600 var(--fs-gross)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .vd-wert-zahl small, .vd-zeile-zahl small, .vd-gross-zahl small, .vd-tabelle small {
   font-size: var(--fs-etikett); font-weight: 400; color: var(--muted);
 }
 
 /* Zeitleiste: ◀ Spanne ▶ */
-.vd-zeitleiste { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 4px; }
+.vd-zeitleiste { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 4px; }
 .vd-pfeil {
-  height: 36px; border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+  width: 44px; height: 44px; border: 1px solid var(--hair-2); border-radius: var(--r-sm);
   background: transparent; color: var(--ink); cursor: pointer; font: 600 var(--fs-klein) var(--font-mono);
 }
 .vd-pfeil:disabled { opacity: 0.4; cursor: default; }
@@ -70,12 +78,15 @@
 /* Zeichenflächen */
 .vd-flaeche-huelle { display: grid; gap: 4px; min-width: 0; }
 .vd-flaeche-huelle svg { display: block; width: 100%; }
-/* Nur hier fängt das Diagramm den Finger selbst — überall sonst scrollt die Seite. */
-.vd-bild { touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+/* pan-y: ein Finger senkrecht scrollt die Seite weiter, waagrecht zeigt er
+   den Zeiger; zwei Finger zoomen über Pointer Events (pinch-zoom des Browsers
+   ist damit aus). `none` hatte die Seite unter dem Diagramm festgehalten. */
+.vd-bild { touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
 .vd-leiste { touch-action: none; cursor: grab; border-radius: var(--r-sm); }
 .vd-gitter { stroke: var(--hair); stroke-width: 1; }
 .vd-achse { fill: var(--muted); font: 400 var(--fs-etikett) var(--font-mono); }
 .vd-zeigerzeit { fill: var(--ink); font-weight: 600; }
+.vd-schild { fill: var(--panel-2); stroke: var(--hair-2); stroke-width: 1; }
 .vd-zeiger { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .vd-nacht { fill: var(--ink); opacity: 0.06; }
 .vd-band { fill: var(--accent); opacity: 0.13; }
@@ -140,6 +151,5 @@
 .vd-tabelle td { text-align: right; padding: 5px 4px; border-top: 1px solid var(--hair); white-space: nowrap; }
 
 @media (pointer: coarse) {
-  .vd-pfeil, .vd-seg, .vd-zurueck { min-height: var(--h-lg); height: auto; }
-  .vd-pfeil { height: var(--h-lg); }
+  .vd-seg, .vd-zurueck { min-height: var(--h-lg); }
 }

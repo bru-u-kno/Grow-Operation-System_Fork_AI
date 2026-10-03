@@ -25,17 +25,52 @@ export function uhrzeitLesen(hhmm: string | null | undefined): { stunde: number;
   return { stunde, minute }
 }
 
+/**
+ * Der Zeitpunkt einer Schaltzeit an einem Kalendertag DER ZONE, in der die
+ * Schaltzeit gilt — der Tag, in dem `bezug` liegt, verschoben um `tage`.
+ *
+ * Die Schaltzeiten (`lightOnAt`/`lightOffAt`) bildet der Server in der Zone
+ * des Lichtplans bzw. seiner eigenen (`LightCycleReader.LocalOffset`) und
+ * schickt den Versatz zu UTC mit (`lightUtcOffsetMinutes`). Ohne Versatz
+ * (ältere Server) gilt wie bisher die Ortszeit des Browsers.
+ *
+ * Eine Funktion für alle Abnehmer: die Restzeit auf der Licht-Kachel, die
+ * Dunkelphasen, die Licht-Spur und das Tag/Nacht-Zielband im Verlaufsdiagramm.
+ */
+export function schaltzeitAmTag(
+  bezug: number, zeit: { stunde: number; minute: number }, versatzMinuten: number | null | undefined, tage = 0,
+): number {
+  if (versatzMinuten == null) {
+    const d = new Date(bezug)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + tage, zeit.stunde, zeit.minute).getTime()
+  }
+  const imZelt = new Date(bezug + versatzMinuten * 60_000)
+  return Date.UTC(imZelt.getUTCFullYear(), imZelt.getUTCMonth(), imZelt.getUTCDate() + tage, zeit.stunde, zeit.minute)
+    - versatzMinuten * 60_000
+}
+
 /** Die nächste Uhrzeit `HH:mm` nach `jetzt` — auch über Mitternacht hinweg. */
-export function naechsterZeitpunkt(jetzt: Date, hhmm: string): Date | null {
+export function naechsterZeitpunkt(jetzt: Date, hhmm: string, versatzMinuten?: number | null): Date | null {
   const zeit = uhrzeitLesen(hhmm)
   if (!zeit) return null
 
-  const ziel = new Date(jetzt)
-  ziel.setHours(zeit.stunde, zeit.minute, 0, 0)
+  let ziel = schaltzeitAmTag(jetzt.getTime(), zeit, versatzMinuten)
   // Schon vorbei heisst: morgen. Ohne diesen Fall zeigt die Kachel abends um
   // 21 Uhr „vor 16 Stunden" statt „in 8 Stunden".
-  if (ziel.getTime() <= jetzt.getTime()) ziel.setDate(ziel.getDate() + 1)
-  return ziel
+  if (ziel <= jetzt.getTime()) ziel = schaltzeitAmTag(jetzt.getTime(), zeit, versatzMinuten, 1)
+  return new Date(ziel)
+}
+
+/**
+ * Eine Schaltzeit, umgerechnet in die Uhrzeit des Browsers — so, wie die
+ * Zeitachse im Diagramm und jede andere Uhrzeit der App sie zeigt. Ohne
+ * Versatz bleibt der Text, wie er kam.
+ */
+export function schaltzeitImBrowser(hhmm: string, versatzMinuten: number | null | undefined, jetzt = new Date()): string {
+  const zeit = uhrzeitLesen(hhmm)
+  if (!zeit || versatzMinuten == null) return hhmm
+  return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' })
+    .format(new Date(schaltzeitAmTag(jetzt.getTime(), zeit, versatzMinuten)))
 }
 
 /**
@@ -70,11 +105,12 @@ export function restdauer(
   anJetzt: boolean,
   onAt: string | null | undefined,
   offAt: string | null | undefined,
+  versatzMinuten?: number | null,
 ): string | null {
   const ziel = anJetzt ? offAt : onAt
   if (!ziel) return null
 
-  const zeitpunkt = naechsterZeitpunkt(jetzt, ziel)
+  const zeitpunkt = naechsterZeitpunkt(jetzt, ziel, versatzMinuten)
   if (zeitpunkt == null) return null
 
   /* Nur die Dauer, ohne Beiwerk.

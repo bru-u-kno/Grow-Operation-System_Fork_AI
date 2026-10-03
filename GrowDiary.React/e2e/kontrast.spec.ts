@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { ALLE_SEITEN } from './seiten'
+import { KONTRAST_HELFER } from './kontrast-messung'
 
 // Schrift, die man nicht lesen kann.
 //
@@ -58,55 +59,7 @@ const MESSUNG = `() => {
   // eine erste Fassung dieser Pruefung meldete so einen Kontrast von 2,79 an
   // einer Stelle, die in Wahrheit bei 5,9 lag. Ueber eine 1x1-Leinwand malt der
   // Browser jede Farbschreibweise korrekt und mischt die Deckkraft gleich mit.
-  const c = document.createElement('canvas'); c.width = c.height = 1
-  const ctx = c.getContext('2d', { willReadFrequently: true })
-  const alsRgb = (farbe, unter) => {
-    ctx.clearRect(0, 0, 1, 1)
-    ctx.fillStyle = 'rgb(' + unter[0] + ',' + unter[1] + ',' + unter[2] + ')'
-    ctx.fillRect(0, 0, 1, 1)
-    ctx.fillStyle = farbe
-    ctx.fillRect(0, 0, 1, 1)
-    const d = ctx.getImageData(0, 0, 1, 1).data
-    return [d[0], d[1], d[2]]
-  }
-  const zahl = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
-  const flaeche = (el) => {
-    const schichten = []
-    for (let e = el; e; e = e.parentElement) {
-      const bg = getComputedStyle(e).backgroundColor
-      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') schichten.unshift(bg)
-    }
-    // Ueberlappende Geschwister, die NICHT Vorfahren sind: der Fuellbalken der
-    // laufenden Phase liegt als eigenes Element ueber der Beschriftung, gehoert
-    // aber keinem gemeinsamen Ast an — ueber die Elternkette allein war er
-    // unsichtbar, und genau dort lagen 3,93:1 im hellen Thema.
-    //
-    // Nur Elemente, die im Dokument SPAETER kommen (die also darueber malen),
-    // und nur solche, die den Textkasten wirklich ueberdecken. Sonst gibt es
-    // Fehlalarme bei jedem beliebigen Nachbarn.
-    const r = el.getBoundingClientRect()
-    if (r.width > 0 && r.height > 0) {
-      for (const o of document.querySelectorAll('body *')) {
-        if (o === el || o.contains(el) || el.contains(o)) continue
-        if (!(el.compareDocumentPosition(o) & Node.DOCUMENT_POSITION_FOLLOWING)) continue
-        const os = getComputedStyle(o)
-        const bg = os.backgroundColor
-        if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') continue
-        if (os.visibility === 'hidden' || os.display === 'none') continue
-        const q = o.getBoundingClientRect()
-        if (q.left <= r.left && q.right >= r.right && q.top <= r.top && q.bottom >= r.bottom) {
-          schichten.push(bg)
-        }
-      }
-    }
-    let unten = [255, 255, 255]
-    for (const s of schichten) unten = alsRgb(s, unten)
-    return unten
-  }
-  const lum = ([r, g, b]) => {
-    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
-    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
-  }
+  ${KONTRAST_HELFER}
   const funde = []
   // ALLES im Koerper, nicht nur main/nav/header. Die frueheren drei Selektoren
   // waren schon eine Reparatur (die Navigation lag ausserhalb von <main>), aber

@@ -80,6 +80,17 @@ public sealed class MetricCard
     public string? LightOffAt { get; set; }
 
     /// <summary>
+    /// In welcher Zone <see cref="LightOnAt"/>/<see cref="LightOffAt"/> gelten:
+    /// Versatz zu UTC in Minuten (Zone des Lichtplans, sonst des Servers).
+    /// </summary>
+    /// <remarks>
+    /// Ohne ihn las die Oberflaeche „20:00" als Uhrzeit des Browsers. Laeuft
+    /// der Server in UTC und der Browser in Berlin, lag die Dunkelphase im
+    /// Verlaufsdiagramm zwei Stunden neben der Nacht in den Messwerten.
+    /// </remarks>
+    public int? LightUtcOffsetMinutes { get; set; }
+
+    /// <summary>
     /// Woher der WERT kommt: <c>live</c> (Sensor) oder <c>hand</c> (erfasste Messung).
     /// </summary>
     /// <remarks>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { MetricPayload } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
 import { classNames } from '../../utils'
@@ -9,11 +9,13 @@ import { useWochenverlauf } from './useWochenverlauf'
 import { useVerlaufGesten, type GestenStand } from './useVerlaufGesten'
 import { EinzelZeile, FokusBild, LichtSpur, Uebersicht, ZeilenAchse, ZusammenBild, type Reihe } from './verlauf-flaechen'
 import { FOKUS, ZEILE, ZUSAMMEN } from './verlauf-masse'
+import { schaltzeitImBrowser } from './licht-restzeit'
 import {
-  ZEITRAEUME, amZeiger, begrenzeFenster, blaettern, datenGrenzen, dunkelphasen, fensterFuerZeitraum,
-  grenzText, kannBlaettern, kurvenFarbe, letzterPunkt, lichtPhasen, quelleWaehlen,
-  spannenTeile, statistik, uhrzeit, zahl, zeitraumBeiBreite, zielbandStuecke, zusammenfuehren,
-  type BandStueck, type Fenster, type Punkt, type ZeitraumId,
+  ZEITRAEUME, abschnitte, amZeiger, begrenzeFenster, blaettern, datenGrenzen, dunkelphasen, fensterFuerZeitraum,
+  kannBlaettern, kurvenFarbe, letzterPunkt, lichtPhasen, quelleWaehlen,
+  spannenTeile, statistik, uhrzeit, wochenGrenzen, zahl, zeitraumBeiBreite, zielBrauchtLichtplan, zielbandStuecke,
+  speicherSchluessel, zielUrteil, zusammenfuehren,
+  type BandStueck, type Fenster, type Punkt, type Ziele, type ZeitraumId,
 } from './verlauf-modell'
 import './verlauf.css'
 
@@ -21,12 +23,10 @@ type Darstellung = 'zusammen' | 'einzeln'
 type Ansicht = { art: 'zeitraum'; id: ZeitraumId } | { art: 'frei'; fenster: Fenster }
 type Gemerkt = { an?: string[]; darstellung?: Darstellung }
 
-const speicherSchluessel = (tileId: string) => `growos.verlauf.${tileId}`
-
 /** Was die Kachel sich gemerkt hat — ohne Speicher (Privatmodus) eben nichts. */
-function gemerktLesen(tileId: string): Gemerkt {
+function gemerktLesen(schluessel: string): Gemerkt {
   try {
-    const roh = localStorage.getItem(speicherSchluessel(tileId))
+    const roh = localStorage.getItem(schluessel)
     if (!roh) return {}
     const wert = JSON.parse(roh) as Gemerkt
     return {
@@ -41,6 +41,16 @@ function gemerktLesen(tileId: string): Gemerkt {
 function fensterAus(ansicht: Ansicht, grenzen: Fenster): Fenster {
   return ansicht.art === 'zeitraum' ? fensterFuerZeitraum(ansicht.id, grenzen) : begrenzeFenster(ansicht.fenster, grenzen)
 }
+
+/** Der gewünschte Ausschnitt, NICHT auf die geladenen Daten beschnitten — danach entscheidet sich das Nachladen. */
+function wunschFenster(ansicht: Ansicht, bis: number): Fenster {
+  if (ansicht.art === 'frei') return ansicht.fenster
+  const breite = ZEITRAEUME.find((z) => z.id === ansicht.id)?.breite ?? 0
+  return { von: bis - breite, bis }
+}
+
+/** Was aus den Live-Metriken in die Kurven geht — als Text, damit ein Neuladen mit gleichem Inhalt nichts neu rechnet. */
+type Meta = { label: string | null; unit: string | null; ziele: Ziele } | null
 
 /** Das Band, das zur Zeit `t` gilt. */
 function bandBei(stuecke: BandStueck[], t: number): BandStueck | null {
@@ -74,7 +84,8 @@ export function Verlaufsdiagramm({
   /** Die 24 h Rohwerte, die die Live-Seite ohnehin lädt (`useTentSparklines`). */
   tag: Map<string, HistoryPoint[]>
 }) {
-  const [gemerkt] = useState(() => gemerktLesen(tileId))
+  const schluessel = speicherSchluessel(tileId, metricKeys)
+  const [gemerkt] = useState(() => gemerktLesen(schluessel))
   const [an, setAn] = useState<string[]>(() => gemerkt.an ?? metricKeys)
   const [darstellung, setDarstellung] = useState<Darstellung>(gemerkt.darstellung ?? 'zusammen')
   const [fokus, setFokus] = useState<string | null>(null)
@@ -85,9 +96,9 @@ export function Verlaufsdiagramm({
 
   useEffect(() => {
     try {
-      localStorage.setItem(speicherSchluessel(tileId), JSON.stringify({ an, darstellung } satisfies Gemerkt))
+      localStorage.setItem(schluessel, JSON.stringify({ an, darstellung } satisfies Gemerkt))
     } catch { /* ohne Speicher geht alles, nur gemerkt wird nichts */ }
-  }, [tileId, an, darstellung])
+  }, [schluessel, an, darstellung])
 
   /* ---------- Daten ---------- */
 
@@ -101,40 +112,71 @@ export function Verlaufsdiagramm({
     return anfaenge.length ? Math.min(...anfaenge) : null
   }, [tagPunkte])
 
-  // Ob die 7 Tage gebraucht werden, entscheidet der Ausschnitt — gerechnet an
-  // den 24-h-Grenzen, denn die 7-Tage-Grenzen gibt es erst nach dem Laden.
-  const tagGrenzen = useMemo(() => datenGrenzen([...tagPunkte.values()], false), [tagPunkte])
+  // Ob die 7 Tage gebraucht werden, entscheidet der GEWÜNSCHTE Ausschnitt —
+  // der angezeigte ist auf die geladenen Daten beschnitten und läge nie davor.
+  const tagGrenzen = useMemo(() => datenGrenzen([...tagPunkte.values()]), [tagPunkte])
   // Ohne 24-h-Daten wird NICHT von selbst nachgeladen: beim ersten Zeichnen
   // sind die 24 h schlicht noch unterwegs, und jede Live-Seite holte sonst
   // einmal die ganze Woche. Dann entscheidet ein Knopf im Leerzustand.
   const [wocheAngefordert, setWocheAngefordert] = useState(false)
-  const benoetigt = wocheAngefordert || (tagGrenzen != null && quelleWaehlen(fensterAus(ansicht, tagGrenzen), tagVon) === '7t')
+  const benoetigt = wocheAngefordert || (tagGrenzen != null && quelleWaehlen(wunschFenster(ansicht, tagGrenzen.bis), tagVon) === '7t')
   const woche = useWochenverlauf(tentId, benoetigt)
+  const wocheGeladen = woche.daten != null
 
-  const reihen = useMemo<Reihe[]>(() => VERLAUFS_METRIKEN.flatMap((key, index) => {
+  // Die Punkte und ihre Abschnitte einmal je Datenstand. Hier hing vorher
+  // auch `metricsByKey` dran — eine neue Map bei jedem 30-s-Abruf, und damit
+  // liefen Lückensuche und alle Pfade jedes Mal neu (Long Tasks um 100 ms).
+  const daten = useMemo(() => new Map(VERLAUFS_METRIKEN.flatMap((key) => {
     const punkte = zusammenfuehren(woche.daten?.get(key), tagPunkte.get(key))
-    if (punkte.length < 2) return []
-    const metric = metricsByKey.get(key)
-    return [{
-      key,
-      label: metric?.label ?? KNOWN_METRICS.find((m) => m.key === key)?.label ?? key,
-      unit: metric?.unit ?? null,
-      farbe: kurvenFarbe(key, index),
-      stellen: decimalsForMetric(key),
-      punkte,
-      ziele: metric ?? null,
-    }]
-  }), [woche.daten, tagPunkte, metricsByKey])
+    return punkte.length < 2 ? [] : [[key, { punkte, stuecke: abschnitte(punkte) }] as const]
+  })), [woche.daten, tagPunkte])
 
-  const grenzen = useMemo(() => datenGrenzen(reihen.map((r) => r.punkte), woche.daten != null), [reihen, woche.daten])
+  const metaText = JSON.stringify(VERLAUFS_METRIKEN.map((key): Meta => {
+    const m = metricsByKey.get(key)
+    return m ? {
+      label: m.label ?? null,
+      unit: m.unit ?? null,
+      ziele: {
+        targetMin: m.targetMin ?? null, targetMax: m.targetMax ?? null,
+        targetDayMin: m.targetDayMin ?? null, targetDayMax: m.targetDayMax ?? null,
+        targetNightMin: m.targetNightMin ?? null, targetNightMax: m.targetNightMax ?? null,
+      },
+    } : null
+  }))
+
+  const reihen = useMemo<Reihe[]>(() => {
+    const meta = JSON.parse(metaText) as Meta[]
+    return VERLAUFS_METRIKEN.flatMap((key, index) => {
+      const d = daten.get(key)
+      if (!d) return []
+      const m = meta[index]
+      return [{
+        key,
+        label: m?.label ?? KNOWN_METRICS.find((k) => k.key === key)?.label ?? key,
+        unit: m?.unit ?? null,
+        farbe: kurvenFarbe(key, index),
+        stellen: decimalsForMetric(key),
+        punkte: d.punkte,
+        stuecke: d.stuecke,
+        ziele: m?.ziele ?? null,
+      }]
+    })
+  }, [daten, metaText])
+
+  const grenzen = useMemo(() => datenGrenzen(reihen.map((r) => r.punkte)), [reihen])
   const fenster = useMemo(() => (grenzen ? fensterAus(ansicht, grenzen) : null), [ansicht, grenzen])
 
   const licht = metricsByKey.get('light-cycle')
   const lichtAn = licht?.lightOnAt ?? null
   const lichtAus = licht?.lightOffAt ?? null
-  const dunkel = useMemo(() => (fenster ? dunkelphasen(fenster, lichtAn, lichtAus) : []), [fenster, lichtAn, lichtAus])
-  const hell = useMemo(() => (fenster ? lichtPhasen(fenster, lichtAn, lichtAus) : null), [fenster, lichtAn, lichtAus])
+  const lichtVersatz = licht?.lightUtcOffsetMinutes ?? null
+  const dunkel = useMemo(() => (fenster ? dunkelphasen(fenster, lichtAn, lichtAus, lichtVersatz) : []), [fenster, lichtAn, lichtAus, lichtVersatz])
+  const hell = useMemo(() => (fenster ? lichtPhasen(fenster, lichtAn, lichtAus, lichtVersatz) : null), [fenster, lichtAn, lichtAus, lichtVersatz])
   const baender = useMemo(() => new Map(reihen.map((r) => [r.key, fenster ? zielbandStuecke(fenster, r.ziele, hell) : []])), [reihen, fenster, hell])
+  // Licht-Spur in Browserzeit beschriftet, wie die Zeitachse darüber.
+  const lichtText = lichtAn && lichtAus
+    ? { an: schaltzeitImBrowser(lichtAn, lichtVersatz), aus: schaltzeitImBrowser(lichtAus, lichtVersatz) }
+    : null
 
   const eingeschaltet = useMemo(() => reihen.filter((r) => an.includes(r.key)), [reihen, an])
   const fokusReihe = fokus ? reihen.find((r) => r.key === fokus) ?? null : null
@@ -188,7 +230,9 @@ export function Verlaufsdiagramm({
 
   /* ---------- Ansicht ---------- */
 
-  const kann = kannBlaettern(fenster, grenzen)
+  // Vor dem Nachladen darf ◀ über den linken Rand — das lädt die 7 Tage.
+  const blaetterGrenzen = wocheGeladen || woche.fehler ? grenzen : wochenGrenzen(grenzen)
+  const kann = kannBlaettern(fenster, blaetterGrenzen)
   // Gewählt heißt gewählt — auch wenn die Daten keine vollen 7 Tage hergeben
   // und das Fenster deshalb ein paar Minuten schmaler ist. Nach Blättern oder
   // Zoomen entscheidet die Breite.
@@ -220,12 +264,13 @@ export function Verlaufsdiagramm({
               key={reihe.key}
               type="button"
               className="vd-wert"
+              style={{ '--vd-farbe': reihe.farbe } as CSSProperties}
               aria-pressed={aktiv}
               data-audit={`verlauf-karte-${reihe.key}`}
               onClick={() => karteTippen(reihe.key)}
             >
               <span className="vd-wert-name">
-                <i className="vd-ring" style={{ borderColor: reihe.farbe, background: aktiv ? reihe.farbe : 'transparent' }} aria-hidden="true" />
+                <i className="vd-ring" aria-hidden="true" />
                 {reihe.label}
               </span>
               <span className="vd-wert-zahl" data-audit="verlauf-kartenwert">
@@ -239,7 +284,7 @@ export function Verlaufsdiagramm({
 
       <div className="vd-zeitleiste">
         <button type="button" className="vd-pfeil" aria-label="Früher" disabled={!kann.zurueck}
-          onClick={() => { setZeiger(null); setAnsicht({ art: 'frei', fenster: blaettern(fenster, -1, grenzen) }) }}>
+          onClick={() => { setZeiger(null); setAnsicht({ art: 'frei', fenster: blaettern(fenster, -1, blaetterGrenzen) }) }}>
           <span aria-hidden="true">◀</span>
         </button>
         <p className="vd-spanne" data-audit="verlauf-spanne">
@@ -281,9 +326,9 @@ export function Verlaufsdiagramm({
         {breite > 0 && darstellung === 'zusammen' && (
           <>
             <ZusammenBild reihen={eingeschaltet} fenster={fenster} breite={breite} dunkel={dunkel} zeiger={zeiger} gesten={gesten.svgProps} />
-            {hell && lichtAn && lichtAus && (
+            {hell && lichtText && (
               <LichtSpur fenster={fenster} licht={hell} links={ZUSAMMEN.rand.l} plotBreite={breite - ZUSAMMEN.rand.l - ZUSAMMEN.rand.r}
-                breite={breite} an={lichtAn} aus={lichtAus} />
+                breite={breite} an={lichtText.an} aus={lichtText.aus} />
             )}
           </>
         )}
@@ -318,9 +363,9 @@ export function Verlaufsdiagramm({
                 <span />
                 <div>
                   <ZeilenAchse fenster={fenster} breite={zeilenBreite} />
-                  {hell && lichtAn && lichtAus && (
+                  {hell && lichtText && (
                     <LichtSpur fenster={fenster} licht={hell} links={ZEILE.rand.l} plotBreite={zeilenBreite - ZEILE.rand.l - ZEILE.rand.r}
-                      breite={zeilenBreite} an={lichtAn} aus={lichtAus} />
+                      breite={zeilenBreite} an={lichtText.an} aus={lichtText.aus} />
                   )}
                 </div>
               </div>
@@ -331,16 +376,8 @@ export function Verlaufsdiagramm({
         {breite > 0 && imFokus && fokusReihe && (() => {
           const band = baender.get(fokusReihe.key) ?? []
           const wert = wertBei(fokusReihe)
-          const gilt = bandBei(band, zeiger ?? grenzen.bis)
-          // Ein Sollwert (min = max) ist kein Band: „im Ziel" träfe nie zu, und
-          // „außerhalb 19–19" liest sich wie ein Fehler. Dort steht nur der Sollwert.
-          const sollwert = gilt != null && gilt.min != null && gilt.min === gilt.max
-          const imZiel = wert != null && gilt != null && !sollwert && (gilt.min == null || wert >= gilt.min) && (gilt.max == null || wert <= gilt.max)
-          const zielText = gilt == null ? null
-            : sollwert ? `${grenzText(gilt.min as number, fokusReihe.stellen)}`
-            : gilt.min != null && gilt.max != null ? `${grenzText(gilt.min, fokusReihe.stellen)}–${grenzText(gilt.max, fokusReihe.stellen)}`
-              : gilt.min != null ? `ab ${grenzText(gilt.min, fokusReihe.stellen)}`
-                : `bis ${grenzText(gilt.max as number, fokusReihe.stellen)}`
+          const urteil = zielUrteil(wert, bandBei(band, zeiger ?? grenzen.bis), fokusReihe.stellen, fokusReihe.unit)
+          const ohneLichtplan = !hell && zielBrauchtLichtplan(fokusReihe.ziele)
           return (
             <div className="vd-fokus" data-audit="verlauf-fokus">
               <div className="vd-fokus-kopf">
@@ -356,15 +393,18 @@ export function Verlaufsdiagramm({
                 </span>
                 <span className="vd-gross-text">
                   {zeitText}
-                  {zielText && wert != null && (
-                    <> · <span className={classNames(imZiel && 'vd-im-ziel')} data-audit="verlauf-zielstatus">{sollwert ? 'Soll' : imZiel ? 'im Ziel' : 'außerhalb'} {zielText}{fokusReihe.unit ? ` ${fokusReihe.unit}` : ''}</span></>
+                  {urteil && (
+                    <> · <span className={classNames(urteil.imZiel && 'vd-im-ziel')} data-audit="verlauf-zielstatus">{urteil.text}</span></>
                   )}
                 </span>
               </div>
+              {ohneLichtplan && (
+                <p className="vd-status" data-audit="verlauf-ohne-lichtplan">Tag- und Nachtziel unterscheiden sich, Lichtplan unbekannt — darum kein Zielband.</p>
+              )}
               <FokusBild reihe={fokusReihe} fenster={fenster} breite={breite} dunkel={dunkel} band={band} zeiger={zeiger} gesten={gesten.svgProps} />
-              {hell && lichtAn && lichtAus && (
+              {hell && lichtText && (
                 <LichtSpur fenster={fenster} licht={hell} links={FOKUS.rand.l} plotBreite={breite - FOKUS.rand.l - FOKUS.rand.r}
-                  breite={breite} an={lichtAn} aus={lichtAus} />
+                  breite={breite} an={lichtText.an} aus={lichtText.aus} />
               )}
             </div>
           )
@@ -377,16 +417,20 @@ export function Verlaufsdiagramm({
             fenster={fenster}
             breite={breite}
             spanneText={teile.join(' ')}
-            onMitte={(mitte) => {
+            onMitte={(mitte, amLinkenRand) => {
               const w = fenster.bis - fenster.von
-              setAnsicht({ art: 'frei', fenster: begrenzeFenster({ von: mitte - w / 2, bis: mitte + w / 2 }, grenzen) })
+              // Ganz links gezogen, solange nur 24 h da sind: dahinter liegt
+              // mehr — nachladen, die Leiste wächst dann auf 7 Tage.
+              if (amLinkenRand && !wocheGeladen) setWocheAngefordert(true)
+              setAnsicht({ art: 'frei', fenster: begrenzeFenster({ von: mitte - w / 2, bis: mitte + w / 2 }, blaetterGrenzen) })
             }}
             onTaste={(richtung) => {
               const w = fenster.bis - fenster.von
-              const ziel = richtung === 'anfang' ? { von: grenzen.von, bis: grenzen.von + w }
-                : richtung === 'ende' ? { von: grenzen.bis - w, bis: grenzen.bis }
+              const g = blaetterGrenzen
+              const ziel = richtung === 'anfang' ? { von: g.von, bis: g.von + w }
+                : richtung === 'ende' ? { von: g.bis - w, bis: g.bis }
                   : { von: fenster.von + richtung * w / 4, bis: fenster.bis + richtung * w / 4 }
-              setAnsicht({ art: 'frei', fenster: begrenzeFenster(ziel, grenzen) })
+              setAnsicht({ art: 'frei', fenster: begrenzeFenster(ziel, g) })
             }}
           />
         )}
