@@ -215,6 +215,17 @@ Vorschlag für die Dringlichkeit.
    `GrowDiary.slnx`. Belegt: Compilerfehler per Edit → Hook rot; kaputter Code im
    Commit → abgelehnt; ohne Python/dotnet → laut abgelehnt; die alte Fassung meldete
    beim selben Compilerfehler Exit 0.
+> **Stand 03.10.2026 abends (Branch `arbeitsweise-f`):** F1 erledigt (siehe unten).
+> **F2 erledigt:** Die Hooks bauen und prüfen den Stand, zu dem die Datei bzw. der
+> Commit gehört (`ziel_wurzel` in `.claude/hooks/werkzeuge.sh`) — auch einen
+> Worktree. Belegt mit einem echten `git worktree`: Compilerfehler nur dort →
+> neuer Hook rot, alter Hook Exit 0; Commit dort → Tor im Worktree rot.
+> **F3 erledigt:** `scripts/demo-app.sh start|stop|status [PORT]` — eigener Port
+> über `Hosting__DefaultUrls` (`ASPNETCORE_URLS` wirkt NICHT, Program.cs
+> überschreibt es), frischer Datenordner je Start, belegter Port bricht laut ab,
+> Beenden nur über die PID am eigenen Port, Bau-Kennung wird abgeglichen.
+> **F4 erledigt:** `docs/pruefung-2026-10-01.md` hat einen Abschnitt „Stand 03.10.2026".
+
 2. **Hooks und Worktrees:** Die Hooks arbeiten auf dem Haupt-Repo
    (`WURZEL` aus dem Skriptpfad); Agenten in Worktrees müssen das Tor selbst
    laufen lassen.

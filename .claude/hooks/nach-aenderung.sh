@@ -18,7 +18,8 @@ datei="$(eingabe_feld file_path)"
 
 [ -z "$datei" ] && exit 0
 # Andere Projekte unter demselben Arbeitsordner gehen diesen Hook nichts an.
-im_repo "$datei" || exit 0
+# Gebaut wird der Stand, zu dem die Datei gehoert — auch in einem Worktree.
+ZIEL="$(ziel_wurzel "$datei")" || exit 0
 case "$datei" in
   *_test.go|*/node_modules/*|*/bin/*|*/obj/*|*/zz-*) exit 0 ;;
 esac
@@ -31,7 +32,7 @@ case "$datei" in
     # die .exe sperrt — das ist kein Fehler im Quelltext.
     dotnet_bin="$(dotnet_finden)" || laut "Der Bau-Hook findet dotnet nicht (weder im PATH noch in ~/.dotnet)." \
       "Nach der Aenderung an $(basename "$datei") wurde NICHT gebaut."
-    if ! ausgabe="$(cd "$WURZEL" && "$dotnet_bin" build GrowDiary.slnx -v q --nologo -p:UseAppHost=false 2>&1)"; then
+    if ! ausgabe="$(cd "$ZIEL" && "$dotnet_bin" build GrowDiary.slnx -v q --nologo -p:UseAppHost=false 2>&1)"; then
       # MSB3021/3026/3027 sind KEINE Fehler im Quelltext: die laufende App
       # sperrt ihre eigene .dll/.exe. Wer die mitmeldet, schickt bei jedem
       # zweiten Bau einen Fehlalarm.
@@ -42,7 +43,7 @@ case "$datei" in
     # `tsc -b`, NICHT `--noEmit`: tsconfig.json hat "files": [] und nur
     # references. `tsc --noEmit` prueft damit NULL Dateien und ist immer gruen —
     # am 19.08.2026 mehrfach als "Typen ok" gemeldet, ohne etwas zu pruefen.
-    if ! ausgabe="$(cd "$WURZEL/GrowDiary.React" && npx tsc -b 2>&1)"; then
+    if ! ausgabe="$(cd "$ZIEL/GrowDiary.React" && npx tsc -b 2>&1)"; then
       meldung="$(printf '%s' "$ausgabe" | grep -E "error TS" | head -8)"
     fi
     ;;

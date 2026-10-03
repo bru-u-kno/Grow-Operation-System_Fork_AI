@@ -24,12 +24,17 @@ befehl="$(eingabe_feld command)"
 # Nur beim echten Commit, nicht bei `git log --grep commit` o.ae.
 printf '%s' "$befehl" | grep -qE '(^|[;&|]|\s)git\s+(-[^ ]+\s+)*commit(\s|$)' || exit 0
 
-# Nur Commits in DIESEM Repository: das Arbeitsverzeichnis liegt darin, oder der
-# Befehl nennt es (`cd …/Grow-Operation-System_Fork_AI && git commit`).
+# Nur Commits in DIESEM Projekt — und geprueft wird der Stand, in dem der
+# Commit geschieht (Haupt-Verzeichnis oder Worktree, F2). Woher: das letzte
+# `cd` oder `git -C` im Befehl, sonst das Arbeitsverzeichnis der Sitzung.
 arbeitsort="$(eingabe_feld oben.cwd)"
-if ! im_repo "$arbeitsort" && ! printf '%s' "$befehl" | grep -qF "$WURZEL"; then
-  exit 0
-fi
+ZIEL=""
+kandidaten="$(printf '%s' "$befehl" | grep -oE '(cd|git -C)[[:space:]]+"?[^"&;|[:space:]]+' | sed -E 's/^(cd|git -C)[[:space:]]+"?//' | tac)"
+for kandidat in $kandidaten "$arbeitsort"; do
+  ZIEL="$(ziel_wurzel "$kandidat")" && break
+  ZIEL=""
+done
+[ -z "$ZIEL" ] && exit 0
 
 # WELCHE DATEIEN. Der Index allein reicht NICHT: dieser Hook laeuft, BEVOR der
 # Befehl ausgefuehrt wird. Bei `git add -A && git commit` in EINEM Aufruf ist zu
@@ -39,11 +44,11 @@ fi
 #
 # Merkt der Befehl selbst etwas vor (git add, commit -a, commit <pfade>), zaehlt
 # deshalb der ganze Arbeitsbaum.
-vorgemerkt="$(cd "$WURZEL" && git diff --cached --name-only)"
+vorgemerkt="$(cd "$ZIEL" && git diff --cached --name-only)"
 
 if printf '%s' "$befehl" | grep -qE '(^|[;&|]|\s)git\s+add(\s|$)|commit\s+(-[a-zA-Z]*a|--all)'; then
   vorgemerkt="$vorgemerkt
-$(cd "$WURZEL" && git status --porcelain | sed 's/^...//' | sed 's/.* -> //')"
+$(cd "$ZIEL" && git status --porcelain | sed 's/^...//' | sed 's/.* -> //')"
 fi
 
 vorgemerkt="$(printf '%s
@@ -60,7 +65,7 @@ fehler=""
 if printf '%s\n' "$vorgemerkt" | grep -qE '\.(cs|csproj|slnx|runsettings)$'; then
   dotnet_bin="$(dotnet_finden)" || laut "Der Commit-Hook findet dotnet nicht (weder im PATH noch in ~/.dotnet)." \
     "Das Backend-Tor laeuft damit NICHT — der Commit wird nicht ausgefuehrt."
-  if ! a="$(cd "$WURZEL" && "$dotnet_bin" test GrowDiary.slnx --nologo -v q 2>&1)"; then
+  if ! a="$(cd "$ZIEL" && "$dotnet_bin" test GrowDiary.slnx --nologo -v q 2>&1)"; then
     fehler="$fehler
 BACKEND ROT:
 $(printf '%s' "$a" | grep -E 'FAIL|Fehler:|error ' | head -10)"
@@ -68,17 +73,17 @@ $(printf '%s' "$a" | grep -E 'FAIL|Fehler:|error ' | head -10)"
 fi
 
 if printf '%s\n' "$vorgemerkt" | grep -qE '\.(ts|tsx|css|json)$'; then
-  if ! a="$(cd "$WURZEL/GrowDiary.React" && npx tsc -b --force 2>&1)"; then
+  if ! a="$(cd "$ZIEL/GrowDiary.React" && npx tsc -b --force 2>&1)"; then
     fehler="$fehler
 TYPEN ROT:
 $(printf '%s' "$a" | grep -E 'error TS' | head -10)"
   fi
-  if ! a="$(cd "$WURZEL/GrowDiary.React" && npm run lint 2>&1)"; then
+  if ! a="$(cd "$ZIEL/GrowDiary.React" && npm run lint 2>&1)"; then
     fehler="$fehler
 LINT ROT:
 $(printf '%s' "$a" | grep -E 'error' | head -10)"
   fi
-  if ! a="$(cd "$WURZEL/GrowDiary.React" && npx vitest run 2>&1)"; then
+  if ! a="$(cd "$ZIEL/GrowDiary.React" && npx vitest run 2>&1)"; then
     fehler="$fehler
 VITEST ROT:
 $(printf '%s' "$a" | grep -E 'FAIL|×' | head -10)"
