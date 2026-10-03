@@ -7,7 +7,25 @@
 
 ## 2.0.0-forkai.160
 
-**Fork AI.** Ausfälle der Wassersonde werden nicht mehr als Messwert 0 gespeichert.
+**Fork AI.** Neues Verlaufsdiagramm auf der Live-Seite, und Ausfälle der Wassersonde werden nicht mehr
+als Messwert 0 gespeichert.
+
+### Verlaufsdiagramm
+- Neu — **das Verlaufsdiagramm nach dem Vorbild der AC-Infinity-App.** Bisher wurde es am Telefon
+  gestaucht (Schrift und Punkte verzerrt), und die Werte am Zeiger kamen nur mit der Maus.
+  - Wertekarten oben: ein Tipp blendet die Kurve ein oder aus; die Auswahl merkt sich die Kachel.
+  - Zeitraum 1 Std, 6 Std, 24 Std, 7 Tage; mit ◀ ▶ blättern.
+  - Ein Finger waagrecht zeigt alle Werte zu dieser Uhrzeit, zwei Finger zoomen und verschieben,
+    Doppeltipp springt zurück. Senkrecht scrollt die Seite weiter. Am Rechner: Strg + Mausrad zoomt.
+  - „Zusammen" zeigt alle Werte in einem Bild, „Einzeln" jeden Wert in einer eigenen Zeile mit dem
+    Zielband aus deinem Plan (tags und nachts getrennt). Ein Tipp auf eine Zeile zeigt nur diesen Wert
+    groß, mit Achse und Einheit; „← Alle Werte" führt zurück.
+  - Dunkelphase grau hinterlegt, darunter eine Licht-Spur; Übersichtsleiste zum Verschieben; Max, Min
+    und Ø für den gezeigten Ausschnitt.
+- Behoben — Die Lichtzeiten kommen mit ihrem Zeitversatz: bei unterschiedlicher Zeitzone von Home
+  Assistant und Browser lagen Dunkelphase und Restzeit der Licht-Kachel sonst um Stunden daneben.
+
+### Wassersonde
 
 - Behoben — **pH 0, EC 0 und 0 °C bei einem Ausfall der Wassersonde.** Die Bluelab-Integration in Home
   Assistant meldet bei einem kurzen Ausfall gut eine Minute lang gleichzeitig pH 0 und EC 0 als echte

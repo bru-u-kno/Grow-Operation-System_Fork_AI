@@ -21,6 +21,21 @@ git log --oneline origin/main..HEAD
 
 Die neue Nummer ist die alte plus eins. **Nicht raten** — lesen.
 
+## Schritt 0b — `main` einführen
+
+Der Release-Lauf spult `main` am Ende auf den Release-Commit **vor** und legt
+danach den Hochzähl-Commit („Release X") obendrauf. Der Arbeitsbranch kennt
+diesen Commit nicht. Vor dem nächsten Release:
+
+```
+git fetch origin main
+git log --oneline HEAD..origin/main   # steht hier etwas, fehlt es dem Branch
+git merge --no-edit origin/main
+```
+
+Ohne das kann der nächste Lauf `main` nicht vorspulen — am 03.10.2026 musste
+deshalb ein Release-Lauf abgebrochen und neu angestoßen werden.
+
 ## Schritt 1 — Changelog-Eintrag in den Commit
 
 `grow-os/CHANGELOG.md` bekommt oben einen Abschnitt `## <X>`. `config.yaml`
