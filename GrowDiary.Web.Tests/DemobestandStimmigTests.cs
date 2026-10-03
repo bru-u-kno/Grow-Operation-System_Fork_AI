@@ -198,6 +198,73 @@ public sealed class DemobestandStimmigTests : IDisposable
         }
     }
 
+    /// <summary>Der Bestand hat einen laufenden Steckling mit mehr als einer Woche Bewurzelung.</summary>
+    /// <remarks>
+    /// Offene Punkte 03.10.2026, D2: vorher nur Samen-Grows — „Bewurzelung", die
+    /// Phase „Clone" und eine angehängte Woche „Bewurzelung 2" kamen im Bestand
+    /// nicht vor. Mehr als sieben Tage, weil das Programm eine Anzuchtwoche führt;
+    /// erst darüber hängt der Plan eine Woche an (in der Demo-App geprüft von
+    /// <c>e2e/demobestand-steckling.spec.ts</c>).
+    /// </remarks>
+    [Fact]
+    public void Der_Bestand_hat_einen_Steckling_mit_langer_Bewurzelung()
+    {
+        var steckling = Laufende().SingleOrDefault(g => g.StartMaterial == StartMaterial.Clone);
+        Assert.True(steckling is not null, "Kein laufender Steckling im Bestand — die Bewurzelung kommt dort nie vor.");
+        Assert.False(string.IsNullOrWhiteSpace(steckling!.CloneSource), "Der Steckling nennt keine Herkunft.");
+        Assert.Null(steckling.GerminatedAt);
+        Assert.NotNull(steckling.RootedAt);
+        var tage = (steckling.RootedAt!.Value.Date - steckling.StartDate.Date).Days;
+        Assert.True(tage > 7, $"Nur {tage} Tage Bewurzelung — der Plan hängt dann keine Woche „Bewurzelung 2\" an.");
+    }
+
+    /// <summary>
+    /// Jede Licht-Rolle ist zugeordnet — auf eine Entität, die der Testbestand
+    /// kennt und deren Domäne die Rolle erlaubt.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (offene Punkte 03.10.2026, D3).</b> Im Testbestand war
+    /// keine Licht-Rolle zugeordnet: „Geräte 0/6", „Modus – · Stufe –". Der Weg
+    /// mit echtem Lichtmodus war am Bestand nie zu sehen.</para>
+    /// <para><b>Zählung über die Rollen</b> (<see cref="SteuerungGeraeteRollen.Alle"/>),
+    /// nicht über eine abgetippte Liste: kommt eine siebte Licht-Rolle dazu,
+    /// fehlt sie hier sofort.</para>
+    /// </remarks>
+    [Fact]
+    public void Jede_Licht_Rolle_ist_auf_eine_bekannte_Entitaet_zugeordnet()
+    {
+        var rollen = SteuerungGeraeteRollen.Alle.Where(r => r.Modul == LichtSteuerungService.Modul).ToList();
+        Assert.True(rollen.Count >= 6, $"Nur {rollen.Count} Licht-Rollen gefunden — die Zählung sieht ihre Grundmenge nicht.");
+
+        var zugeordnet = _dienste.GetRequiredService<SteuerungRepository>()
+            .GetGeraete(LichtSteuerungService.Modul)
+            .ToDictionary(g => g.Rolle, g => g.EntityId);
+
+        var fehler = new List<string>();
+        foreach (var rolle in rollen)
+        {
+            if (!zugeordnet.TryGetValue(rolle.Schluessel, out var entitaet) || string.IsNullOrWhiteSpace(entitaet))
+            {
+                fehler.Add($"{rolle.Schluessel}: nicht zugeordnet");
+                continue;
+            }
+            if (DemoData.EntityState(entitaet, DateTime.UtcNow) is null)
+                fehler.Add($"{rolle.Schluessel}: {entitaet} kennt der Testbestand nicht");
+            if (!rolle.Domains.Contains(entitaet.Split('.', 2)[0]))
+                fehler.Add($"{rolle.Schluessel}: {entitaet} hat nicht die Domäne {string.Join("/", rolle.Domains)}");
+        }
+
+        Assert.True(fehler.Count == 0, "Licht-Rollen im Testbestand: " + string.Join("; ", fehler));
+
+        // Der Zeitplan „Blüte" fährt dieselben Zeiten wie Lichtplan und Lichtkurve —
+        // sonst nennt die Kachel ihn „eigen".
+        var einstellungen = _dienste.GetRequiredService<SteuerungRepository>()
+            .GetEinstellungen<LichtEinstellungen>(LichtSteuerungService.Modul);
+        Assert.NotNull(einstellungen);
+        Assert.Equal(Demoverlauf.LichtAnUhr, einstellungen!.BlueteEin);
+        Assert.Equal(Demoverlauf.LichtAusUhr, einstellungen.BlueteAus);
+    }
+
     /// <summary>Lichtplan, Lichtkurve und Zeit-Entitäten nennen dieselbe Uhrzeit.</summary>
     /// <remarks>
     /// Drei Stellen, an denen dieselbe Uhrzeit steht — Lichtplan des Zelts,

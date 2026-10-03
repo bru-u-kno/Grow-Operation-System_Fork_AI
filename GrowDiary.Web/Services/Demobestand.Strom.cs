@@ -87,7 +87,7 @@ public static partial class Demobestand
             DisplayOrder = 3,
         });
 
-        // Gestartet VOR der White Widow (Tag 85 gegen 73). Mehrere Stellen der App
+        // Gestartet VOR der White Widow (Tag 92 gegen 73). Mehrere Stellen der App
         // nehmen bei mehreren laufenden Grows einfach „den neuesten"
         // (GetActiveGrows sortiert nach Start absteigend; so wählen Zielwerte und
         // die CRUD-Rundweg-Prüfung). Wäre dieser hier der neueste, stünde auf
@@ -113,12 +113,20 @@ public static partial class Demobestand
             IrrigationType = IrrigationType.ActiveHydro,
             Environment = GrowEnvironment.Indoor,
             WaterSource = WaterSource.Tap,
-            SeedType = Models.SeedType.Feminized,
-            StartMaterial = StartMaterial.Seed,
+            // Ein STECKLING (offene Punkte 03.10.2026, D2): bis dahin waren alle
+            // Grows des Bestands Samen-Grows. Damit hieß die Anzucht im Plan nie
+            // „Bewurzelung" (GrowPlanBauer), und Phase „Clone" samt
+            // „Bewurzelung abgeschlossen" kam nur in Unit-Tests vor. Unbewurzelt
+            // aus dem Mutterzelt gesteckt, 14 Tage Bewurzelung — länger als die
+            // eine Anzuchtwoche des Programms, also hängt der Plan „Bewurzelung 2"
+            // an (der Fall „Bewurzelung N"). Flip und Blütewoche bleiben.
+            StartMaterial = StartMaterial.Clone,
+            CloneSource = "Mutterzelt (Testdaten)",
+            CloneIsRooted = false,
             EntryPoint = GrowEntryPoint.Germination,
             PlantCount = 2,
-            StartDate = Tag(85),
-            GerminatedAt = Tag(85),
+            StartDate = Tag(92),
+            RootedAt = Tag(78),
             VegStartedAt = Tag(78),
             FlipDate = Tag(57),
             BreederFlowerWeeksMin = 9,
@@ -140,7 +148,7 @@ public static partial class Demobestand
                 Label = $"Pflanze {topf}",
                 PlantRole = PlantRole.Production,
                 PlantStatus = PlantStatus.Active,
-                StartedAt = Tag(85),
+                StartedAt = grow.StartDate,
                 Notes = "Testdaten.",
             });
         }

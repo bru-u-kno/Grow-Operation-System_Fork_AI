@@ -97,6 +97,19 @@ public static class DemoData
     /// <inheritdoc cref="LichtEinZeit"/>
     public const string LichtAusZeit = "time.demo_licht_aus";
 
+    /// <summary>Brennt die Demo-Lampe gerade? — für die Licht-Rolle „Lampe · Zustand".</summary>
+    /// <remarks>
+    /// Fork AI (03.10.2026, offene Punkte D3): ohne sie und
+    /// <see cref="LichtPortOnline"/> ließen sich im Testbestand nur vier der sechs
+    /// Licht-Rollen zuordnen — die beiden Messrollen verlangen ein
+    /// <c>binary_sensor</c>, und den gab es hier nicht. Der Zustand folgt dem
+    /// Lichtplan (<see cref="LightOn"/>), wie bei einer echten Lampe.
+    /// </remarks>
+    public const string LichtZustand = "binary_sensor.demo_licht_zustand";
+
+    /// <summary>Ist der Controller-Port erreichbar? — Licht-Rolle „Lampe · Port online".</summary>
+    public const string LichtPortOnline = "binary_sensor.demo_licht_status";
+
     /// <summary>Der gemeinsame kWh-Zähler im Testbestand — die Steckdosenleiste vor beiden Blütezelten.</summary>
     /// <remarks>
     /// <para><b>Der Anlass (02.10.2026).</b> Der Testbestand hatte keine
@@ -398,6 +411,24 @@ public static class DemoData
             };
         }
 
+        foreach (var (kennung, brennt, name) in new[]
+                 {
+                     (LichtZustand, LightOn(nowUtc), "Demo LED · Zustand"),
+                     (LichtPortOnline, true, "Demo LED · Port online"),
+                 })
+        {
+            if (!string.Equals(entityId, kennung, StringComparison.OrdinalIgnoreCase)) continue;
+
+            return new HomeAssistantState
+            {
+                EntityId = kennung,
+                State = brennt ? "on" : "off",
+                FriendlyName = name,
+                LastChanged = nowUtc,
+                LastUpdated = nowUtc,
+            };
+        }
+
         if (string.Equals(entityId, LichtModus, StringComparison.OrdinalIgnoreCase))
         {
             return new HomeAssistantState
@@ -478,7 +509,7 @@ public static class DemoData
         // Die benannten Geraete: ohne sie steht im Testbetrieb keine Steckdose
         // und kein Dimmfeld in der Auswahl — und dann laesst sich weder der
         // Kuehler noch der AC-Versuch ueberhaupt einrichten.
-        foreach (var kennung in new[] { LichtLeistung, LichtModus, LichtEinZeit, LichtAusZeit, StromZaehler, StromLeistung })
+        foreach (var kennung in new[] { LichtLeistung, LichtModus, LichtEinZeit, LichtAusZeit, LichtZustand, LichtPortOnline, StromZaehler, StromLeistung })
         {
             var zustand = EntityState(kennung, nowUtc);
             if (zustand is null) continue;
