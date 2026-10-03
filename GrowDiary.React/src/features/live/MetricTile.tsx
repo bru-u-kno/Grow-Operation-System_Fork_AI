@@ -52,6 +52,11 @@ export type MetricTileProps = {
    */
   alarmMin?: number | null
   alarmMax?: number | null
+  /**
+   * Fork AI: nur Name, Status und Wert in einer Zeile. Die Statusfarbe bleibt —
+   * eingeklappt heisst „weniger Platz", nicht „nicht mehr hinsehen".
+   */
+  eingeklappt?: boolean
 }
 
 /**
@@ -102,7 +107,7 @@ export function MetricTile({
   label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open,
   dayMin = null, dayMax = null, nightMin = null, nightMax = null, targetPhase = null,
   statusText = null, lightOnAt = null, lightOffAt = null, lightUtcOffsetMinutes = null, lightIsOn = false,
-  alarmMin = null, alarmMax = null,
+  alarmMin = null, alarmMax = null, eingeklappt = false,
 }: MetricTileProps) {
   const jetzt = useMinutentakt(Boolean(lightOnAt || lightOffAt))
   const restzeit = restdauer(jetzt, lightIsOn, lightOnAt, lightOffAt, lightUtcOffsetMinutes)
@@ -156,7 +161,7 @@ export function MetricTile({
   // waeren und der Anpassen-Modus eigene Knoepfe hineinlegt.
   return (
     <div
-      className={classNames('gos-metric', `is-${status}`, onOpen && 'is-clickable', open && 'is-open')}
+      className={classNames('gos-metric', `is-${status}`, onOpen && 'is-clickable', open && 'is-open', eingeklappt && 'is-zu')}
       data-audit={`metric-${label.toLowerCase()}`}
       role={onOpen ? 'button' : undefined}
       tabIndex={onOpen ? 0 : undefined}
@@ -177,6 +182,7 @@ export function MetricTile({
         {unit && display == null && <span className="unit">{unit}</span>}
       </div>
 
+      {!eingeklappt && <>
       {/* Die 24-h-Kurve bleibt — sie ist der Einstieg in den Verlauf. */}
       {trend && trend.length > 1 && (
         <div className="gos-metric-spark" aria-hidden="true">
@@ -240,9 +246,11 @@ export function MetricTile({
             </div>
           )
       )}
-      {stale
-        ? <div className="gos-metric-stale">{stale}</div>
-        : sourceNote && <div className="gos-metric-source">{sourceNote}</div>}
+      {sourceNote && !stale && <div className="gos-metric-source">{sourceNote}</div>}
+      </>}
+      {/* Ein veralteter Wert bleibt auch eingeklappt markiert: eine alte Zahl
+          ohne Hinweis sieht aus wie eine frische. */}
+      {stale && <div className="gos-metric-stale">{stale}</div>}
     </div>
   )
 }

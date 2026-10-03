@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { resolveUrl } from '../../base'
 import type { TentDto } from '../../types'
 import { classNames } from '../../utils'
+import { KlappTitel } from './Einklappen'
 
 /**
  * Die Kamera als Bühne, wie im Entwurf: Kopfzeile mit Entity und Alter des
@@ -16,7 +17,16 @@ import { classNames } from '../../utils'
  * der es stammt, und die Bühne zeigt nur Bilder der gerade gewählten — sonst
  * stünde nach dem Umschalten das Bild der vorigen unter dem neuen Namen.
  */
-export function CameraPanel({ tent, onReload }: { tent: TentDto | null; onReload?: () => void }) {
+export function CameraPanel({ tent, onReload, zu = false, onUmschalten }: {
+  tent: TentDto | null
+  onReload?: () => void
+  /**
+   * Fork AI: eingeklappt holt die Karte KEIN Bild — der Abruf laeuft sonst
+   * jede Sekunde weiter, und am Telefon kostet genau das Daten und Akku.
+   */
+  zu?: boolean
+  onUmschalten?: () => void
+}) {
   const cameras = tent?.cameras?.length ? tent.cameras : (tent?.cameraEntityId ? [tent.cameraEntityId] : [])
   const [active, setActive] = useState(0)
   const [frame, setFrame] = useState<{ camera: string; src: string; capturedAt: string | null; live: boolean } | null>(null)
@@ -26,7 +36,7 @@ export function CameraPanel({ tent, onReload }: { tent: TentDto | null; onReload
   const current = cameras[Math.min(active, cameras.length - 1)]
 
   useEffect(() => {
-    if (!tent || !current) return
+    if (!tent || !current || zu) return
     let alive = true
     let timer: number | undefined
 
@@ -61,7 +71,7 @@ export function CameraPanel({ tent, onReload }: { tent: TentDto | null; onReload
 
     void loop()
     return () => { alive = false; if (timer !== undefined) window.clearTimeout(timer) }
-  }, [tent, current, reloadKey])
+  }, [tent, current, reloadKey, zu])
 
   useEffect(() => () => { if (urlRef.current) URL.revokeObjectURL(urlRef.current) }, [])
 
@@ -69,13 +79,17 @@ export function CameraPanel({ tent, onReload }: { tent: TentDto | null; onReload
   const failed = failedCamera === current
 
   return (
-    <article className="ls-panel ls-cam" data-audit="live-camera">
+    <article className={classNames('ls-panel', 'ls-cam', zu && 'is-zu')} data-audit="live-camera">
       <div className="ls-panel-head">
-        <span className="ls-label">Kamera</span>
+        {onUmschalten
+          ? <KlappTitel zu={zu} onUmschalten={onUmschalten}><span className="ls-label">Kamera</span></KlappTitel>
+          : <span className="ls-label">Kamera</span>}
         <span className="ls-panel-meta">
-          {current ? `${current}${shown?.capturedAt ? ` · ${ageLabel(shown.capturedAt)}` : ''}` : 'keine gemappt'}
+          {zu
+            ? 'eingeklappt · lädt kein Bild'
+            : current ? `${current}${shown?.capturedAt ? ` · ${ageLabel(shown.capturedAt)}` : ''}` : 'keine gemappt'}
         </span>
-        {current && (
+        {current && !zu && (
           <button
             type="button"
             className="ls-btn is-small"
@@ -89,6 +103,7 @@ export function CameraPanel({ tent, onReload }: { tent: TentDto | null; onReload
       {/* Ohne zugeordnete Kamera schrumpft die Buehne: 260 px grauer Klotz
           fuer den Satz „keine gemappt“ schoben auf dem Telefon alles
           darunter aus dem Bild. */}
+      {!zu && <>
       <div className={`ls-cam-stage${cameras.length === 0 ? ' is-empty' : ''}`}>
         {shown ? (
           <img src={shown.src} alt={`Kamerabild ${current}`} />
@@ -119,6 +134,7 @@ export function CameraPanel({ tent, onReload }: { tent: TentDto | null; onReload
           ))}
         </div>
       )}
+      </>}
     </article>
   )
 }

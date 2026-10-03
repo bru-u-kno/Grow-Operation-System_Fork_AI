@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.161
+
+**Fork AI.** Die Live-Übersicht lässt sich ein- und ausklappen — Bereiche, einzelne Kacheln und die
+Karten darunter.
+
+### Live-Übersicht
+- Neu — **Bereiche einklappen.** Ein Tipp auf die Überschrift (▾/▸) klappt „Klima", „Hydroponik ·
+  Nährlösung" oder einen eigenen Bereich zu. Eingeklappt steht dahinter, was der Bereich sonst zeigen
+  würde: „6 Werte · 2 Warnungen", gelb bei Warnungen, rot bei einem Wert an der Grenze. Gezählt wird
+  genau wie auf den Kacheln — ein zugeklappter Bereich kann also nicht „alles gut" sagen, während darin
+  eine rote Kachel steht.
+- Neu — **Kacheln einklappen.** Das kleine ▾ oben rechts macht aus einer Kachel eine Zeile mit Name,
+  Status und Wert — in ihrer Statusfarbe, ein veralteter Wert bleibt markiert. Ein Tipp auf die Kachel
+  öffnet weiter den 24-h-Verlauf. Auch die Verlaufskachel lässt sich einklappen.
+- Neu — **Karten einklappen:** Risiko, Heute fällig, Kühler, Beobachtungen, Kamera und Grow im Zelt.
+  Der Kopf nennt dann das Wichtigste, etwa „pH: Abweichung prüfen · +1 weitere" oder „steht · Wasser
+  19,8 °C". Die eingeklappte Kamera lädt kein Bild mehr — das spart am Telefon Daten und Akku.
+- Was eingeklappt ist, merkt sich jedes Gerät für sich (wie die Knöpfe in der Kopfzeile): am Telefon
+  darf anderes zu sein als am Rechner. Im Anpassen-Modus ist alles offen, damit jeder Bereich als Ziel
+  zum Verschieben sichtbar ist; nach „Fertig" ist wieder zu, was vorher zu war.
+
 ## 2.0.0-forkai.160
 
 **Fork AI.** Neues Verlaufsdiagramm auf der Live-Seite, und Ausfälle der Wassersonde werden nicht mehr

@@ -10,6 +10,7 @@ import {
   type DashboardLayout,
 } from './dashboard-layout'
 import { VERLAUFS_METRIKEN } from './useTentSparklines'
+import { BandTitel, type BandKlappe } from './Einklappen'
 import { classNames } from '../../utils'
 
 type HaEntity = {
@@ -264,7 +265,7 @@ function AddTileDialog({
 
 /** Der Kopf eines Bereichs: im Anpassen-Modus umbenennbar, sonst nur Beschriftung. */
 export function SectionHead({
-  title, editing, onRename, onRemove, onUp, onDown, canUp, canDown, tone,
+  title, editing, onRename, onRemove, onUp, onDown, canUp, canDown, tone, klappe,
 }: {
   title: string
   editing: boolean
@@ -275,14 +276,11 @@ export function SectionHead({
   canUp: boolean
   canDown: boolean
   tone?: 'new'
+  /** Fork AI: Einklappen ausserhalb des Anpassen-Modus. */
+  klappe?: BandKlappe
 }) {
   if (!editing) {
-    return (
-      <div className="ls-band-label">
-        <span>{title}</span>
-        <i />
-      </div>
-    )
+    return <BandTitel title={title} klappe={klappe} />
   }
 
   return (

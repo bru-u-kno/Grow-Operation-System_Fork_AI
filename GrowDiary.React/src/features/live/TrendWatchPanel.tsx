@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../../api'
 import { wegZurRoutine } from '../changeouts/routine-weg'
+import { KlappTitel } from './Einklappen'
+import { classNames } from '../../utils'
 
 type TrendFinding = {
   code: string
@@ -18,7 +20,12 @@ type TrendFinding = {
  * value is *heading* somewhere — often while still perfectly inside its band. Mixing the
  * two would bury the slow ones under the loud ones.
  */
-export function TrendWatchPanel({ growId }: { growId: number | null }) {
+export function TrendWatchPanel({ growId, zu = false, onUmschalten }: {
+  growId: number | null
+  /** Fork AI: eingeklappt bleibt nur der Kopf mit „N prüfen" stehen. */
+  zu?: boolean
+  onUmschalten?: () => void
+}) {
   const [findings, setFindings] = useState<TrendFinding[]>([])
 
   useEffect(() => {
@@ -42,12 +49,14 @@ export function TrendWatchPanel({ growId }: { growId: number | null }) {
   const actionable = findings.filter((finding) => finding.severity !== 'Info').length
 
   return (
-    <article className="ls-panel" data-audit="live-trend-card">
+    <article className={classNames('ls-panel', zu && 'is-zu')} data-audit="live-trend-card">
       <div className="ls-panel-head">
-        <span className="ls-label">Beobachtungen · über Tage</span>
+        {onUmschalten
+          ? <KlappTitel zu={zu} onUmschalten={onUmschalten}><span className="ls-label">Beobachtungen · über Tage</span></KlappTitel>
+          : <span className="ls-label">Beobachtungen · über Tage</span>}
         {actionable > 0 && <span className="ls-panel-meta ls-trend-count">{actionable} prüfen</span>}
       </div>
-      {findings.length === 0 ? (
+      {zu ? null : findings.length === 0 ? (
         <div className="ls-panel-body"><p>Nichts Auffälliges — keine Drift, kein Verbrauchssprung.</p></div>
       ) : (
         <ul className="ls-trends">

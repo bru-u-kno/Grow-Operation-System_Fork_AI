@@ -651,3 +651,72 @@
 .ls-chiller-state.is-an { color: var(--accent-text); }
 .ls-chiller-state.is-aus { color: var(--ink); }
 .ls-chiller-state:not(.is-an):not(.is-aus) { color: var(--warn-text); }
+
+/* ---------- Fork AI: Einklappen ----------
+   Bereiche und Karten klappen über ihre Überschrift (Pfeil + Name sind EIN
+   Knopf), Kacheln über die Klappe in der Ecke. Eingeklappt bleibt stehen, was
+   man nicht übersehen darf: die Bilanz eines Bereichs, Titel und Zustand einer
+   Karte, Wert und Statusfarbe einer Kachel. */
+@layer features {
+  /* Darf umbrechen — dann rutscht die Bilanz als Ganzes unter den Titel,
+     statt dass Titel und Bilanz beide mitten im Wort brechen (390 px). */
+  .ls-fold-titel {
+    display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 2px;
+    min-height: 32px; min-width: 0; padding: 0 6px 0 0; margin: 0;
+    border: 0; background: none; color: inherit; font: inherit; text-align: left;
+    cursor: pointer;
+  }
+  .ls-fold-pfeil {
+    flex: 0 0 auto; display: grid; place-items: center; width: 22px; height: 22px;
+    border: 1px solid var(--hair-2); border-radius: 6px;
+    color: var(--muted); font: 500 var(--fs-klein)/1 var(--font-mono);
+  }
+  .ls-fold-titel:hover .ls-fold-pfeil { border-color: var(--accent); color: var(--ink); }
+  .ls-fold-titel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  /* Die Bilanz hinter einem eingeklappten Bereich — in normaler Schreibung,
+     nicht in den gesperrten Grossbuchstaben des Titels: sie ist ein Satz. */
+  .ls-bilanz {
+    font: 400 var(--fs-klein)/1.3 var(--font-mono); font-style: normal;
+    letter-spacing: .02em; text-transform: none; color: var(--muted); white-space: nowrap;
+  }
+  .ls-bilanz.is-warn { color: var(--warn-text); }
+  .ls-bilanz.is-crit { color: var(--danger-text); }
+
+  .ls-panel.is-zu > .ls-panel-head { border-bottom: 0; }
+
+  /* Die Klappe einer Kachel. Klein gezeichnet, weil sie auf jeder Kachel
+     steht — die Trefferfläche polstert ::after auf (siehe unten). */
+  .ls-fold {
+    position: absolute; top: 6px; right: 6px; z-index: 1;
+    display: grid; place-items: center; width: 24px; height: 24px; padding: 0;
+    border: 1px solid transparent; border-radius: 6px; background: none;
+    color: var(--faint); font: 500 var(--fs-klein)/1 var(--font-mono); cursor: pointer;
+  }
+  .ls-fold:hover { border-color: var(--hair-2); color: var(--ink); }
+  .ls-fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+  /* Platz für die Klappe, damit der Status („im Ziel") nicht darunter liegt. */
+  .ls-tile-slot.has-fold > .gos-metric .gos-metric-head { padding-right: 24px; }
+  .ls-tile-slot.has-fold > .ls-chart-tile .ls-chart-head { padding-right: 28px; }
+
+  /* Die eingeklappte Kachel: eine Zeile, Name und Status links, Wert rechts.
+     Oben angeschlagen, nicht mittig: steht sie neben offenen Kacheln, ist sie
+     so hoch wie die Zeile — dann gehört ihr Name auf die Höhe der anderen
+     Namen, sonst schwimmt er. */
+  .gos-metric.is-zu { display: flex; flex-wrap: wrap; align-items: baseline; align-content: flex-start; column-gap: 10px; row-gap: 4px; }
+  .gos-metric.is-zu .gos-metric-head { flex: 1 1 auto; min-width: 0; }
+  .gos-metric.is-zu .gos-metric-value { margin: 0 0 0 auto; font-size: var(--fs-gross); }
+  .gos-metric.is-zu .gos-metric-stale { flex: 1 0 100%; }
+  .ls-tile-slot.has-fold > .gos-metric.is-zu { padding-right: 34px; }
+  .ls-tile-slot.has-fold > .gos-metric.is-zu .gos-metric-head { padding-right: 0; }
+
+  /* Am Finger: 44 px hoch, wie überall (e2e/touch-targets). Echt hoch statt
+     per ::after aufgepolstert — die Prüfung misst unterhalb des sichtbaren
+     Bereichs nur den Kasten. Schmal bleibt sie, damit der Status daneben Platz
+     hat; gemessen wird die Höhe. */
+  @media (pointer: coarse) {
+    .ls-fold-titel { min-height: var(--h-lg); }
+    .ls-fold { top: 0; right: 0; width: 32px; height: var(--h-lg); }
+    .ls-tile-slot.has-fold > .gos-metric .gos-metric-head { padding-right: 28px; }
+  }
+}

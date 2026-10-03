@@ -7,6 +7,8 @@ import { Verlaufsdiagramm } from './Verlaufsdiagramm'
 import { decimalsForMetric } from './metric-tile-model'
 import { metricProvenance } from './live-model'
 import { SectionHead } from './DashboardEditor'
+import { KachelKlappe } from './Einklappen'
+import { bereichsBilanz, type Einklappen } from './eingeklappt'
 import {
   encodeDropTarget,
   moveSection,
@@ -38,7 +40,7 @@ import { classNames } from '../../utils'
  * jeder Wischer zum Scrollen an einer Kachel hängen.
  */
 export function DashboardBands({
-  tentId, layout, metricsByKey, entityValues, trends, editing, onChange,
+  tentId, layout, metricsByKey, entityValues, trends, editing, onChange, einklappen,
 }: {
   /** Für das Nachladen der 7 Tage im Verlaufsdiagramm. */
   tentId: number | null
@@ -48,6 +50,8 @@ export function DashboardBands({
   trends: Map<string, HistoryPoint[]>
   editing: boolean
   onChange: (layout: DashboardLayout) => void
+  /** Fork AI: was eingeklappt ist — im Anpassen-Modus ist alles offen. */
+  einklappen: Einklappen
 }) {
   // Der Zustand liegt zusaetzlich in einem Ref, und die Handler lesen NUR den.
   // Zwischen Greifen und erster Bewegung liegt nicht zwangslaeufig ein Rendern:
@@ -93,7 +97,10 @@ export function DashboardBands({
 
   return (
     <>
-      {layout.sections.map((section, sectionIndex) => (
+      {layout.sections.map((section, sectionIndex) => {
+        const bereichId = `bereich:${section.id}`
+        const bereichZu = einklappen.istZu(bereichId)
+        return (
         <div key={section.id} className="ls-band" data-audit={`live-section-${section.id}`}>
           <SectionHead
             title={section.title}
@@ -104,17 +111,31 @@ export function DashboardBands({
             onRemove={() => onChange(removeSection(layout, section.id))}
             onUp={() => onChange(moveSection(layout, sectionIndex, sectionIndex - 1))}
             onDown={() => onChange(moveSection(layout, sectionIndex, sectionIndex + 1))}
+            klappe={{
+              zu: bereichZu,
+              // Gezählt wird, was als Kachel einen Wert hat — ein Verlauf ist
+              // kein eigener Wert, er zeigt dieselben noch einmal.
+              bilanz: bereichsBilanz(section.tiles
+                .filter((tile) => tile.kind !== 'Chart')
+                .map((tile) => resolveTile(tile, metricsByKey, entityValues))),
+              onUmschalten: () => einklappen.umschalten(bereichId),
+            }}
           />
+
+          {!bereichZu && <>
 
           <div className={classNames('gos-metric-row', editing && 'is-editing')}>
             {section.tiles.map((tile, index) => {
               const metric = resolveTile(tile, metricsByKey, entityValues)
               const trend = tile.kind === 'Metric' && tile.metricKey ? trends.get(tile.metricKey) : undefined
+              const kachelId = `kachel:${tile.id}`
+              const kachelZu = einklappen.istZu(kachelId)
               return (
                 <div
                   key={tile.id}
                   className={classNames(
                     'ls-tile-slot',
+                    !editing && 'has-fold',
                     editing && 'is-draggable',
                     dragged?.sectionId === section.id && dragged.index === index && 'is-dragging',
                     over === encodeDropTarget(section.id, index) && 'is-over')}
@@ -126,11 +147,11 @@ export function DashboardBands({
                   data-drop-target={encodeDropTarget(section.id, index)}
                 >
                   {tile.kind === 'Chart' ? (
-                    <div className="ls-chart-tile">
+                    <div className={classNames('ls-chart-tile', kachelZu && 'is-zu')}>
                       {/* „Verlauf · 24 h" war der Standardname, solange die Kachel
                           nur 24 h konnte — gespeicherte Kacheln tragen ihn noch. */}
                       <div className="ls-chart-head">{!tile.label || tile.label === 'Verlauf · 24 h' ? 'Verlauf' : tile.label}</div>
-                      <Verlaufsdiagramm
+                      {!kachelZu && <Verlaufsdiagramm
                         // Neue Werte in der Kachel = neue Auswahl (siehe speicherSchluessel).
                         key={(tile.metricKeys ?? []).join(',')}
                         tileId={tile.id}
@@ -138,7 +159,7 @@ export function DashboardBands({
                         metricKeys={tile.metricKeys ?? []}
                         metricsByKey={metricsByKey}
                         tag={trends}
-                      />
+                      />}
                     </div>
                   ) : (
                   <MetricTile
@@ -170,7 +191,15 @@ export function DashboardBands({
                       ? () => setOffeneMetrik(offeneMetrik === tile.metricKey ? null : tile.metricKey)
                       : undefined}
                     open={offeneMetrik === tile.metricKey}
+                    eingeklappt={kachelZu}
                   />
+                  )}
+                  {!editing && (
+                    <KachelKlappe
+                      zu={kachelZu}
+                      name={tile.kind === 'Chart' ? 'Verlauf' : metric.label}
+                      onUmschalten={() => einklappen.umschalten(kachelId)}
+                    />
                   )}
                   {editing && (
                     <span className="ls-tile-tools">
@@ -228,8 +257,10 @@ export function DashboardBands({
               </div>
             )
           })()}
+          </>}
         </div>
-      ))}
+        )
+      })}
     </>
   )
 }

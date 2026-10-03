@@ -14,6 +14,8 @@ import { decimalsForMetric } from './metric-tile-model'
 import { CameraPanel } from './CameraPanel'
 import { TrendWatchPanel } from './TrendWatchPanel'
 import { DashboardBands } from './DashboardBands'
+import { BandTitel, KachelKlappe, KlappTitel } from './Einklappen'
+import { bereichsBilanz, useEingeklappt, type Einklappen } from './eingeklappt'
 import { DashboardEditorBar } from './DashboardEditor'
 import type { DashboardLayout, EntityValue } from './dashboard-layout'
 import { buildScore, metricProvenance } from './live-model'
@@ -131,6 +133,11 @@ export function LiveScreen({
   const [knoepfeBearbeiten, setKnoepfeBearbeiten] = useState(false)
   const [angeheftet, setAngeheftet] = useState<KopfKnopf[]>(ladeKopfKnoepfe)
   const navigate = useNavigate()
+  // Fork AI: Bereiche, Kacheln und Karten lassen sich einklappen. Im
+  // Anpassen-Modus ist alles offen, damit jeder Bereich als Ziel sichtbar ist.
+  const einklappen = useEingeklappt(dashboard?.editing ?? false)
+  const zu = einklappen.istZu
+  const klappe = (id: string) => () => einklappen.umschalten(id)
 
   const anpassenMoeglich = Boolean(dashboard) && !dashboard?.editing
   /* „Anpassen" gehört nur in die Zeile, solange es etwas anzupassen gibt —
@@ -335,11 +342,12 @@ export function LiveScreen({
             trends={trends}
             editing={dashboard.editing}
             onChange={dashboard.onChange}
+            einklappen={einklappen}
           />
         ) : (
           <>
-            <MetricBand title="Klima" metrics={climate} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} />
-            <MetricBand title="Hydroponik · Nährlösung" metrics={hydro} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} />
+            <MetricBand id="klima" title="Klima" metrics={climate} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} einklappen={einklappen} />
+            <MetricBand id="hydro" title="Hydroponik · Nährlösung" metrics={hydro} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} einklappen={einklappen} />
           </>
         )}
       </section>
@@ -356,11 +364,20 @@ export function LiveScreen({
       <section className="ls-lower">
         <div className="ls-lower-right">
           {topRisk ? (
-            <article className={classNames('ls-panel', 'ls-risk', `is-${topRisk.severity.toLowerCase()}`)} data-audit="live-risk">
+            <article className={classNames('ls-panel', 'ls-risk', `is-${topRisk.severity.toLowerCase()}`, zu('panel:risiko') && 'is-zu')} data-audit="live-risk">
               <div className="ls-panel-head">
-                <span className="ls-label">Risiko · {topRisk.severity === 'Critical' ? 'kritisch' : topRisk.severity === 'Warning' ? 'Warnung' : 'Hinweis'}</span>
-                <span className="ls-panel-meta">{topRisk.startedAtUtc ? `seit ${sinceLabel(topRisk.startedAtUtc)}` : ''}</span>
+                <KlappTitel zu={zu('panel:risiko')} onUmschalten={klappe('panel:risiko')}>
+                  <span className="ls-label">Risiko · {topRisk.severity === 'Critical' ? 'kritisch' : topRisk.severity === 'Warning' ? 'Warnung' : 'Hinweis'}</span>
+                </KlappTitel>
+                {/* Eingeklappt nennt der Kopf, WAS es ist — „seit 2 h" allein
+                    hiesse nur, dass irgendetwas ist. */}
+                <span className="ls-panel-meta">
+                  {zu('panel:risiko')
+                    ? [topRisk.title, risks.length > 1 ? `+${risks.length - 1} weitere` : null].filter(Boolean).join(' · ')
+                    : topRisk.startedAtUtc ? `seit ${sinceLabel(topRisk.startedAtUtc)}` : ''}
+                </span>
               </div>
+              {!zu('panel:risiko') && (
               <div className="ls-panel-body">
                 <strong>{topRisk.title}</strong>
                 {topRisk.description && <p>{topRisk.description}</p>}
@@ -375,21 +392,31 @@ export function LiveScreen({
                   <Link className="ls-btn" to="/aufgaben">Aufgaben</Link>
                 </div>
               </div>
+              )}
             </article>
           ) : (
-            <article className="ls-panel" data-audit="live-risk">
-              <div className="ls-panel-head"><span className="ls-label">Risiken</span></div>
-              <div className="ls-panel-body"><strong>Nichts Offenes</strong><p>Keine kritischen Abweichungen im gewählten Zelt.</p></div>
+            <article className={classNames('ls-panel', zu('panel:risiko') && 'is-zu')} data-audit="live-risk">
+              <div className="ls-panel-head">
+                <KlappTitel zu={zu('panel:risiko')} onUmschalten={klappe('panel:risiko')}>
+                  <span className="ls-label">Risiken</span>
+                </KlappTitel>
+                {zu('panel:risiko') && <span className="ls-panel-meta">nichts Offenes</span>}
+              </div>
+              {!zu('panel:risiko') && (
+                <div className="ls-panel-body"><strong>Nichts Offenes</strong><p>Keine kritischen Abweichungen im gewählten Zelt.</p></div>
+              )}
             </article>
           )}
 
-          <article className="ls-panel" data-audit="live-tasks">
+          <article className={classNames('ls-panel', zu('panel:aufgaben') && 'is-zu')} data-audit="live-tasks">
             <div className="ls-panel-head">
-              <span className="ls-label">Heute fällig</span>
+              <KlappTitel zu={zu('panel:aufgaben')} onUmschalten={klappe('panel:aufgaben')}>
+                <span className="ls-label">Heute fällig</span>
+              </KlappTitel>
               <span className="ls-panel-meta">{tasks.length} {tasks.length === 1 ? 'Aufgabe' : 'Aufgaben'}</span>
               <Link className="ls-btn is-small" to="/aufgaben">Alle</Link>
             </div>
-            {tasks.length === 0 ? (
+            {zu('panel:aufgaben') ? null : tasks.length === 0 ? (
               <div className="ls-panel-body"><p>Für heute steht nichts an.</p></div>
             ) : (
               <ul className="ls-tasks">
@@ -409,15 +436,21 @@ export function LiveScreen({
               Grund sieht ein stehender Kühler bei 21 °C wie ein Fehler aus,
               obwohl gerade die Mindestpause läuft. */}
           {chiller && (
-            <article className="ls-panel ls-chiller" data-audit="live-chiller">
+            <article className={classNames('ls-panel', 'ls-chiller', zu('panel:kuehler') && 'is-zu')} data-audit="live-chiller">
               <div className="ls-panel-head">
-                <span className="ls-label">Kühler · Crop Steering</span>
+                <KlappTitel zu={zu('panel:kuehler')} onUmschalten={klappe('panel:kuehler')}>
+                  <span className="ls-label">Kühler · Crop Steering</span>
+                </KlappTitel>
                 <span className="ls-panel-meta">
-                  {chiller.tagbetrieb ? 'Tagwert' : 'Nachtwert'}
-                  {chiller.sollC != null ? ` ${grad(chiller.sollC)}` : ' – '}
+                  {/* Eingeklappt der Zustand statt des Sollwerts: „steht" ist
+                      das, wonach man auf dieser Karte zuerst sucht. */}
+                  {zu('panel:kuehler')
+                    ? `${chiller.laeuftGerade == null ? 'Zustand unbekannt' : chiller.laeuftGerade ? 'läuft' : 'steht'}${chiller.istC != null ? ` · Wasser ${grad(chiller.istC)}` : ''}`
+                    : <>{chiller.tagbetrieb ? 'Tagwert' : 'Nachtwert'}{chiller.sollC != null ? ` ${grad(chiller.sollC)}` : ' – '}</>}
                 </span>
                 <Link className="ls-btn is-small" to="/cropsteering">Einstellen</Link>
               </div>
+              {!zu('panel:kuehler') && (
               <div className="ls-panel-body">
                 <strong className={classNames('ls-chiller-state', chiller.laeuftGerade === true && 'is-an', chiller.laeuftGerade === false && 'is-aus')}>
                   {chiller.laeuftGerade == null ? 'Zustand der Steckdose unbekannt' : chiller.laeuftGerade ? 'läuft' : 'steht'}
@@ -425,26 +458,30 @@ export function LiveScreen({
                 </strong>
                 <p>{chiller.grund}</p>
               </div>
+              )}
             </article>
           )}
 
           {/* Die Watchdog-Beobachtungen (Drift, Verbrauch) blieben beim Umbau
               zunaechst auf der Strecke — sie sind ein bestehendes Feature und
               gehoeren zu „heute fällig“ dazu: was sich ueber Tage anbahnt. */}
-          <TrendWatchPanel growId={grow?.id ?? null} />
+          <TrendWatchPanel growId={grow?.id ?? null} zu={zu('panel:beobachtungen')} onUmschalten={klappe('panel:beobachtungen')} />
         </div>
 
-        <CameraPanel tent={tent} onReload={onRefresh} />
+        <CameraPanel tent={tent} onReload={onRefresh} zu={zu('panel:kamera')} onUmschalten={klappe('panel:kamera')} />
       </section>
 
       {/* ---------- Grow im Zelt ---------- */}
       {grow && (
-        <section className="ls-panel ls-grow" data-audit="live-grow">
+        <section className={classNames('ls-panel', 'ls-grow', zu('panel:grow') && 'is-zu')} data-audit="live-grow">
           <div className="ls-panel-head">
-            <span className="ls-label">Grow im Zelt</span>
+            <KlappTitel zu={zu('panel:grow')} onUmschalten={klappe('panel:grow')}>
+              <span className="ls-label">Grow im Zelt</span>
+            </KlappTitel>
             <span className="ls-panel-meta">{[grow.name, plantLine, tent?.name].filter(Boolean).join(' · ')}</span>
             <Link className="ls-btn is-small" to={`/grows/${grow.id}`}>Grow öffnen</Link>
           </div>
+          {!zu('panel:grow') && (
           <div className="ls-panel-body">
             {/* Wischbar auf dem Telefon: die Balkenlaengen SIND die Dauer, also
                 darf die Achse nicht umbrechen — sie scrollt lieber in sich. */}
@@ -477,6 +514,7 @@ export function LiveScreen({
             {/* Die offene Frage des Phasenankers unter dem Strahl, der die Phase zeigt. */}
             <PhasenErinnerung key={grow.id} growId={grow.id} erinnerung={grow.phasenanker?.erinnerung} onErledigt={onRefresh} />
           </div>
+          )}
         </section>
       )}
     </main>
@@ -497,7 +535,9 @@ export function LiveScreen({
  * der Zeile, nicht als Fenster darüber — man will die Nachbarkacheln zum
  * Vergleich weiter sehen.
  */
-function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
+function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik, einklappen }: {
+  /** Kennung fürs Einklappen — fest, weil die Standard-Bänder keine Layout-Id haben. */
+  id: string
   title: string
   metrics: MetricPayload[]
   trends: Map<string, HistoryPoint[]>
@@ -510,27 +550,36 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
    */
   offeneMetrik: string | null
   setOffeneMetrik: (key: string | null) => void
+  einklappen: Einklappen
 }) {
   if (metrics.length === 0) return null
+
+  const bereichId = `bereich:${id}`
+  const bereichZu = einklappen.istZu(bereichId)
 
   const offene = offeneMetrik ? metrics.find((m) => m.key === offeneMetrik) : null
   const punkte = offeneMetrik ? (trends.get(offeneMetrik) ?? []) : []
 
   return (
     <>
-      <div className="ls-band-label">
-        <span>{title}</span>
-        <i />
-      </div>
+      <BandTitel
+        title={title}
+        klappe={{ zu: bereichZu, bilanz: bereichsBilanz(metrics), onUmschalten: () => einklappen.umschalten(bereichId) }}
+      />
+      {!bereichZu && <>
       <div className="gos-metric-row">
         {metrics.map((metric) => {
           const herkunft = metricProvenance(metric)
           // Klickbar nur mit Verlauf: eine Kachel, die sich als Knopf anbietet
           // und dann nichts zeigt, ist schlimmer als eine, die stumm bleibt.
           const hatVerlauf = (trends.get(metric.key)?.length ?? 0) > 1
+          const kachelId = `kachel:${metric.key}`
+          const kachelZu = einklappen.istZu(kachelId)
+          // Derselbe Platz wie in den eigenen Bereichen: die Klappe liegt
+          // neben der Kachel, nicht in ihr — die Kachel ist selbst ein Knopf.
           return (
+            <div key={metric.key} className="ls-tile-slot has-fold" style={{ flex: '1 1 150px' }}>
             <MetricTile
-              key={metric.key}
               label={metric.label}
               value={metric.numericValue}
               unit={metric.unit}
@@ -557,7 +606,10 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
               stale={herkunft.stale}
               onOpen={hatVerlauf ? () => setOffeneMetrik(offeneMetrik === metric.key ? null : metric.key) : undefined}
               open={offeneMetrik === metric.key}
+              eingeklappt={kachelZu}
             />
+            <KachelKlappe zu={kachelZu} name={metric.label} onUmschalten={() => einklappen.umschalten(kachelId)} />
+            </div>
           )
         })}
       </div>
@@ -570,6 +622,7 @@ function MetricBand({ title, metrics, trends, offeneMetrik, setOffeneMetrik }: {
           />
         </div>
       )}
+      </>}
     </>
   )
 }
