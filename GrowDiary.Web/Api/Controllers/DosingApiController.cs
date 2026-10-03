@@ -399,6 +399,7 @@ public sealed class DosingApiController : ApiControllerBase
     /// richtige Preis.
     /// </remarks>
     [HttpPost("pumps/{id:int}/stop")]
+    [KiOhneHoechstwert("Ausschalten darf nie an einer Grenze scheitern — auch nicht an der Stundengrenze für Schaltbefehle über einen Schlüssel (A-003).")]
     [ProducesResponseType(typeof(DoseResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DoseResultDto>> Stop(int id, CancellationToken cancellationToken)

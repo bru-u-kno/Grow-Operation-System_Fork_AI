@@ -109,10 +109,6 @@ public sealed class JedeRouteHatEinenAufruferTests
             + "wann er nachfragen soll, welche Hoechstwerte gelten. Gerufen wird er von aussen "
             + "ueber HTTP (Authorization: Bearer gok_...), nicht aus diesem Repository; die "
             + "Oberflaeche bekaeme ohne Schluessel ohnehin nur 401.",
-        ["POST /api/settings/ki-zugriff/schluessel/{id:int}/sperren"] =
-            "Den Knopf \"Sperren\" baut der Oberflaechen-Strang von A-003 (Einstellungen -> "
-            + "Zugriff fuer KI-Assistenten) parallel zu diesem Kern. Bis beide zusammengefuehrt "
-            + "sind, ruft ihn nur KiSchluesselWegTests. BEIM ZUSAMMENFUEHREN STREICHEN.",
         ["GET /api/system/audit-events"] =
             "Das Protokoll kritischer Backend-Vorgaenge (SystemAuditEvents): Lichtflanken, "
             + "Nachtabsenkung, Sicherungen. Zum Nachsehen, wenn etwas passiert ist — dafuer "
