@@ -37,3 +37,26 @@ Home Assistant backup first if you want to keep it.
   and updates never require a reinstall — your data on `/data` is preserved.
 - Requires a Home Assistant OS or Supervised installation (add-ons are not
   available on Home Assistant Container or Core installs).
+
+## Zugriff für KI-Assistenten
+
+Ein KI-Assistent (etwa Claude über das Home-Assistant-MCP oder den Grow MCP Fork AI) kann
+Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
+
+1. **Einstellungen → Zugriff für KI-Assistenten:** „Zugriff erlauben" anhaken, speichern.
+2. **Neuer Schlüssel:** Namen vergeben, Stufen anhaken, anlegen. Den angezeigten Schlüssel
+   (`gok_…`) sofort kopieren — er wird nur dieses eine Mal gezeigt.
+3. Den Schlüssel deinem Assistenten geben. Er schickt ihn bei jeder Anfrage als
+   `Authorization: Bearer gok_…` mit; `GET /api/ki-zugriff/ich` sagt ihm, welche Stufen frei
+   sind, ab wann er nachfragen soll und welche Höchstwerte gelten.
+
+| Stufe | Was der Assistent damit darf |
+|---|---|
+| Dokumentieren | Messungen, Journal, Beobachtungen, Aufgaben abhaken, Wartung, Kosten, Einkaufsliste, Meldungen quittieren |
+| Grow planen | Phase wechseln, Zielwerte, Misch-, Licht- und Wochenplan, Pflanzen und Sorten |
+| Geräte schalten | Licht, Klima und Dosierpumpen sofort auslösen |
+| Verwaltung | Einstellungen, Sicherungen, Import und Export, Stammdaten löschen — damit lassen sich auch Dienste in Home Assistant auslösen |
+
+Ein Schlüssel wird nur aus dem internen Add-on-Netz angenommen. Geht er verloren: sperren oder
+löschen und einen neuen anlegen. Was über einen Schlüssel geändert wurde, steht im
+Prüfprotokoll.

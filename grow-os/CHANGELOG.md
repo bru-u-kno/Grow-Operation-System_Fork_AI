@@ -5,6 +5,35 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.163
+
+**Fork AI.** Neu: **Zugriff für KI-Assistenten.** Wer seinem Assistenten (etwa Claude) diktiert
+„ORP 450, 2 ml pH-Minus, 20 Liter nachgefüllt", kann ihn das jetzt selbst eintragen lassen — mit
+einem Schlüssel, der nur kann, was du bei ihm anhakst. Ab Werk ist alles aus.
+
+### Einstellungen → Zugriff für KI-Assistenten
+- **Hauptschalter:** Aus heißt, jeder Schlüssel wird abgewiesen, auch ein gültiger.
+- **Schlüssel mit Namen,** je Schlüssel vier Stufen zum Anhaken: *Dokumentieren* (Messungen,
+  Journal, Aufgaben, Wartung, Kosten), *Grow planen* (Phase, Zielwerte, Pläne, Pflanzen, Sorten),
+  *Geräte schalten* (Licht, Klima, Dosierpumpen) und *Verwaltung* (Einstellungen, Sicherungen,
+  Import, Löschen). Ein neuer Schlüssel darf nur dokumentieren; die beiden oberen Stufen gibt es
+  erst nach einem Warnhinweis.
+- Der Schlüssel wird **einmal** angezeigt. Grow OS speichert ihn nur verschlüsselt; sperren und
+  löschen geht jederzeit. Die Schlüsselverwaltung selbst kann kein Schlüssel erreichen.
+- **Vorher nachfragen:** ab welcher Stufe der Assistent erst fragen soll — eine Bitte an ihn,
+  durchsetzen kann Grow OS nur die Stufen.
+- **Höchstwerte:** höchstens so viele ml je Dosierbefehl (die Grenze der Pumpe gilt zusätzlich)
+  und höchstens so viele Schalt- und Dosierbefehle je Stunde. Der Pumpen-Stopp zählt nie mit.
+
+### Sicherheit
+- Ohne Schlüssel bleibt alles wie bisher: andere Add-ons dürfen nur lesen.
+- Ein Schlüssel gilt nur aus dem internen Add-on-Netz von Home Assistant, nie aus dem Heimnetz.
+- Jede schreibende Schnittstelle ist einer Stufe zugeordnet; eine ohne Zuordnung ist über einen
+  Schlüssel gesperrt. Eine Prüfung zählt das bei jedem Bau nach.
+- Vor Zurückspielen, Import und Löschen über einen Schlüssel legt Grow OS eine Sicherung an.
+- Jede Änderung über einen Schlüssel steht im Prüfprotokoll („über KI-Assistent ‚Name'"), nach
+  zehn falschen Schlüsseln in zehn Minuten wird der Absender eine Viertelstunde abgewiesen.
+
 ## 2.0.0-forkai.162
 
 **Fork AI.** Aufgeräumt nach der Durchsicht vom 01.–03.10.2026: Zahlen aus Home Assistant werden
