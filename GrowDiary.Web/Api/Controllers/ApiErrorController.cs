@@ -1,10 +1,12 @@
 using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
 
 [ApiController]
+[KeinKiZugriff("Fehlerbehandler der App — wird nur intern nach einer Ausnahme angesprungen, nie als Befehl aufgerufen.")]
 [Route("api/error")]
 [Produces("application/json")]
 public sealed class ApiErrorController : ApiControllerBase

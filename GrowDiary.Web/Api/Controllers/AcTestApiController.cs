@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +14,12 @@ namespace GrowDiary.Web.Api.Controllers;
 /// Siehe <see cref="AcTest"/> für das Warum. Kurz: es geht um die Frage, ob
 /// Grow OS die Zentrale sein kann, von der aus der ganze Grow läuft — und die
 /// beantwortet ein Nutzer, kein Entwurf.
+/// <para>Fork AI (A-003, 03.10.2026): Stufe und Zeitplan gehen sofort an den
+/// Port — „Geräte schalten". Die Geräteliste eintragen schaltet nichts und ist
+/// Verwaltung.</para>
 /// </remarks>
 [ApiController]
+[KiStufe(KiStufe.GeraeteSchalten)]
 [Route("api/ac-test")]
 public sealed class AcTestApiController : ControllerBase
 {
@@ -126,6 +131,7 @@ public sealed class AcTestApiController : ControllerBase
 
     /// <summary>Die Geräte eintragen oder ändern.</summary>
     [HttpPut("{zeltId:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
     public ActionResult<IReadOnlyList<string>> Speichern(
         int zeltId, [FromBody] List<AcGeraet> geraete)
     {

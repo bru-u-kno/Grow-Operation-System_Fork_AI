@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -12,8 +13,13 @@ namespace GrowDiary.Web.Api.Controllers;
 /// <remarks>
 /// Der Plan ist abrufbar, BEVOR etwas geschrieben wird. Eine Automatik, deren
 /// Wirkung man erst am Chiller merkt, hat in einer Anlage nichts verloren.
+/// <para>Fork AI (A-003, 03.10.2026): Verwaltung, nicht Grow-Planung. Dasselbe
+/// Speichern setzt am Zelt das Zielgerät in Home Assistant und die
+/// Kühler-Steuerung (Steckdose, Ein/Aus, Taktgrenzen), nach der der
+/// Kühler-Worker selbständig schaltet. Im Zweifel die höhere Stufe.</para>
 /// </remarks>
 [ApiController]
+[KiStufe(KiStufe.Verwaltung)]
 [Route("api/grows/{growId:int}/night-ramp")]
 [Produces("application/json")]
 public sealed class NightRampApiController : ApiControllerBase

@@ -1,4 +1,5 @@
 using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Controllers;
@@ -10,6 +11,7 @@ namespace GrowDiary.Web.Controllers;
 /// Views-Verzeichnis mehr gibt: zwei Schreibpfade an der API-Validierung
 /// vorbei, die niemand mehr erreichen sollte.
 /// </summary>
+[KeinKiZugriff("Stillgelegte Alt-Routen der MVC-Oberfläche — sie antworten nur noch 410; ein Assistent benutzt die API.")]
 [Route("settings")]
 public sealed class SettingsController : Controller
 {

@@ -1,13 +1,18 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
 
+// Fork AI (A-003, 03.10.2026): Zelte anlegen, ändern, archivieren, löschen —
+// Stammdaten, über einen Schlüssel Verwaltung; Löschen mit Sicherung vorher.
+// Die Verbindung zu Home Assistant (Adresse, Token) stellt nur ein Mensch ein.
 [ApiController]
+[KiStufe(KiStufe.Verwaltung)]
 [Route("api/settings")]
 [Produces("application/json")]
 public sealed class SettingsApiController : ApiControllerBase
@@ -47,6 +52,7 @@ public sealed class SettingsApiController : ApiControllerBase
         => HomeAssistant();
 
     [HttpPut("home-assistant")]
+    [KeinKiZugriff("Adresse und Zugangs-Token von Home Assistant stellt nur ein Mensch ein — ein Assistent könnte Grow OS sonst auf ein anderes Home Assistant umlenken oder die Verbindung kappen.")]
     [ProducesResponseType(typeof(HomeAssistantSettingsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<HomeAssistantSettingsDto> SaveHomeAssistant([FromBody] SaveHomeAssistantSettingsRequest request)
@@ -288,6 +294,7 @@ public sealed class SettingsApiController : ApiControllerBase
     }
 
     [HttpDelete("tents/{id:int}")]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(TentDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]

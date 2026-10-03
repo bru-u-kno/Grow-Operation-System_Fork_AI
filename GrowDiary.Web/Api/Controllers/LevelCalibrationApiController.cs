@@ -1,4 +1,5 @@
 using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +8,12 @@ namespace GrowDiary.Web.Api.Controllers;
 /// <summary>
 /// Der geführte Kalibrierlauf: Sensor mitlesen, während der Nutzer füllt.
 /// </summary>
+/// <remarks>
+/// Fork AI (A-003, 03.10.2026): Nichts schaltet — gelesen wird der Sensor,
+/// eingetragen die Liter von der Wasseruhr. Über einen Schlüssel Dokumentieren.
+/// </remarks>
 [ApiController]
+[KiStufe(KiStufe.Dokumentieren)]
 [Route("api/hydro-setups/{systemId:int}/level-calibration")]
 [Produces("application/json")]
 public sealed class LevelCalibrationApiController : ApiControllerBase

@@ -1,4 +1,5 @@
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +14,11 @@ namespace GrowDiary.Web.Api.Controllers;
 /// <para>Diese Etappe liest nur. Geändert wird weiter an den bisherigen Stellen;
 /// die Liste sagt dafür, wo das ist — je Entität steht, wofür sie benutzt wird und
 /// aus welcher Quelle das kommt.</para>
+/// <para>Fork AI (A-003, 03.10.2026): Zuordnen, Umbenennen, Rubriken — reine
+/// Stammdaten des Forks, nichts schaltet. Über einen Schlüssel Verwaltung.</para>
 /// </remarks>
 [ApiController]
+[KiStufe(KiStufe.Verwaltung)]
 [Route("api/geraete")]
 [Produces("application/json")]
 public sealed class GeraeteApiController : ApiControllerBase
@@ -153,6 +157,7 @@ public sealed class GeraeteApiController : ApiControllerBase
 
     /// <summary>Die Korrektur verwerfen — es gilt wieder, was abgeleitet wird.</summary>
     [HttpDelete("{schluessel}/korrektur")]
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<GeraeteSeiteDto>> Verwerfen(string schluessel, CancellationToken ct)
     {

@@ -1,5 +1,6 @@
 using System.Globalization;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,8 +17,14 @@ namespace GrowDiary.Web.Api.Controllers;
 /// vollständiges Modul mit eigener Detailseite; Entfeuchter, Chiller, Abluft
 /// und Licht stehen als Anzeige-Zeilen da, damit die Übersicht das ganze Zelt
 /// zeigt und ein späteres Modul nur noch seine Detailseite mitbringen muss.</para>
+/// <para>Fork AI (A-003, 03.10.2026): Über einen Schlüssel ist fast alles hier
+/// Verwaltung — Speichern schreibt Helfer-Werte nach Home Assistant und schaltet
+/// Automationen, dazu Helfer, Rechenwerte, Automationen, Absicherung und die
+/// Geräte-Zuordnung. „Geräte schalten" sind der Licht-Befehl und die
+/// Probeschaltung; das Licht-Speichern braucht beides (siehe dort).</para>
 /// </remarks>
 [ApiController]
+[KiStufe(KiStufe.Verwaltung)]
 [Route("api/steuerung")]
 [Produces("application/json")]
 public sealed class SteuerungApiController : ApiControllerBase
@@ -330,7 +337,12 @@ public sealed class SteuerungApiController : ApiControllerBase
         });
     }
 
+    // Fork AI (A-003, 03.10.2026): Beide Stufen. Das Speichern schreibt die
+    // Helfer (Verwaltung) und, solange ein Preset aktiv ist, dessen Ein- und
+    // Aus-Zeit sofort an den Controller (LichtSteuerungService.SpeichernAsync) —
+    // eine frühere Ein-Zeit macht das Licht auf der Stelle an.
     [HttpPut("licht")]
+    [KiStufe(KiStufe.Verwaltung | KiStufe.GeraeteSchalten)]
     [ProducesResponseType(typeof(LichtSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<LichtSeiteDto>> LichtSpeichern([FromBody] LichtEinstellungen request, CancellationToken ct)
     {
@@ -348,6 +360,7 @@ public sealed class SteuerungApiController : ApiControllerBase
 
     /// <summary>Aus, An, Preset anwenden, Stufe setzen — oder eine gemeldete Fehlmeldung wegräumen.</summary>
     [HttpPost("licht/befehl")]
+    [KiStufe(KiStufe.GeraeteSchalten)]
     [ProducesResponseType(typeof(LichtSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<LichtSeiteDto>> LichtBefehl([FromBody] LichtBefehlRequest request, CancellationToken ct)
     {
@@ -437,6 +450,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     /// Zwei Sekunden beim Einrichten ersparen dem Nächsten diese Suche.
     /// </remarks>
     [HttpPost("{modul}/probe")]
+    [KiStufe(KiStufe.GeraeteSchalten)]
     public async Task<ActionResult<SteuerungProbeService.Ergebnis>> Probeschaltung(
         string modul, CancellationToken ct)
     {
@@ -636,6 +650,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     }
 
     [HttpDelete("geraete/eigene/{name}")]
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(SteuerungGeraeteSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<SteuerungGeraeteSeiteDto>> EigenesGeraetLoeschen(string name, CancellationToken ct)
     {

@@ -5,6 +5,7 @@ using System.Text.Json;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +13,10 @@ namespace GrowDiary.Web.Api.Controllers;
 
 public sealed partial class GrowExportsApiController
 {
+    // Fork AI (A-003, 03.10.2026): Ein Import schreibt einen ganzen Grow in die
+    // Datenbank — über einen Schlüssel vorher eine Sicherung.
     [HttpPost("import")]
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(GrowImportResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status500InternalServerError)]

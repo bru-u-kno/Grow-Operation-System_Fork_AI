@@ -5,12 +5,17 @@ using System.Text.Json;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
 
+// Fork AI (A-003, 03.10.2026): Import, Import-Plan und Export-Prüfung — über
+// einen Schlüssel Verwaltung. Der Import trägt zusätzlich [KiSicherungVorher]
+// (GrowExportsApiController.Import.cs).
 [ApiController]
+[KiStufe(KiStufe.Verwaltung)]
 [Route("api/exports/grows")]
 [Produces("application/json")]
 public sealed partial class GrowExportsApiController : ApiControllerBase

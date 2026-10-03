@@ -2,6 +2,7 @@ using GrowDiary.Web.Services;
 using System.IO.Compression;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Models;
 using Microsoft.Data.Sqlite;
@@ -9,7 +10,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Api.Controllers;
 
+// Fork AI (A-003, 03.10.2026): Sicherungen, Restore-Plan, Upgrade-Vorprüfung —
+// über einen Schlüssel Verwaltung. Das Zurückspielen trägt zusätzlich
+// [KiSicherungVorher] (SystemApiController.BackupEndpoints.cs). Die
+// Upgrade-Vorprüfung migriert nichts; sie legt selbst eine Sicherung an.
 [ApiController]
+[KiStufe(KiStufe.Verwaltung)]
 [Route("api/system")]
 [Produces("application/json")]
 public sealed partial class SystemApiController : ApiControllerBase
