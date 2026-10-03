@@ -24,10 +24,11 @@ namespace GrowDiary.Web.Services;
 /// <para><b>Was der Verlauf erzählt.</b> Sechs Wochen Blüte mit vier
 /// Geschichten:</para>
 /// <list type="bullet">
-///   <item><b>EC im Sägezahn.</b> Frisch angemischt bei 1,02, dann täglich
-///   rund +0,035, weil die Pflanze mehr Wasser zieht als Salz. Am sechsten und
-///   siebten Tag über dem Blüteziel (1,00–1,20) — genau dann ist der
-///   Wasserwechsel fällig. Das ist der Grund, warum es den Ablauf gibt.</item>
+///   <item><b>EC im Sägezahn.</b> Frisch angemischt bei 1,52, dann täglich
+///   rund +0,03, weil die Pflanze mehr Wasser zieht als Salz. Am sechsten Tag
+///   knapp über dem Planziel (1,5–1,7) — genau dann ist der Wasserwechsel
+///   fällig. Das ist der Grund, warum es den Ablauf gibt. (Das Blütezelt 2
+///   steht tiefer, siehe <see cref="Lage"/>.)</item>
 ///   <item><b>pH gegen die Dosierung.</b> Steigt täglich um rund 0,1, wird
 ///   alle drei Tage heruntergezogen. Bleibt im Band — der pH darf im RDWC
 ///   wandern —, aber man sieht, wer ihn hält.</item>
@@ -144,13 +145,44 @@ public static class Demoverlauf
     /// <summary>Die wievielte Blütewoche, als Bruch.</summary>
     private static double Bluetewoche(DateTime ortszeit) => Alter(ortszeit) / 7.0;
 
+    /// <summary>
+    /// Wo ein Zelt im Grow steht — EC und Luftfeuchte folgen dem Plan seiner Woche.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (offene Punkte 03.10.2026, D1).</b> Beide Blütezelte
+    /// lasen dieselbe Kurve — und die stammte aus einem älteren Profil
+    /// (EC-Blüteziel 1,00–1,20, Luftfeuchte um 54 %). Seit die Grows nach dem
+    /// SKX-Plan laufen, verlangt Zelt 1 EC 1,5–1,7 und höchstens 50 %, das
+    /// Blütezelt 2 (Blütewoche 9) EC 0,87–1,13 und höchstens 40 %. Die
+    /// Live-Kacheln zeigten bei beiden „daneben" — nach der Regel in CLAUDE.md
+    /// war der Bestand falsch, nicht die Kachel. Mit einer Kurve für zwei Zelte
+    /// lässt sich das nicht lösen; deshalb die Lage je Zelt.</para>
+    /// <para>Alles andere — pH, Wassertemperatur, Kühlerausfall, Licht — bleibt
+    /// eine gemeinsame Geschichte.</para>
+    /// </remarks>
+    /// <param name="EcFrisch">EC direkt nach dem Wasserwechsel, mS/cm.</param>
+    /// <param name="FeuchteMitte">Mittlere Luftfeuchte in %.</param>
+    public sealed record Lage(double EcFrisch, double FeuchteMitte)
+    {
+        /// <summary>Zelt 1, mitten in der Blüte: EC 1,52 → 1,71 über die Woche, Luftfeuchte 44–48 %.</summary>
+        public static readonly Lage Bluete = new(1.52, 46);
+
+        /// <summary>Das Blütezelt 2 kurz vor der Ernte: EC 0,92 → 1,11, Luftfeuchte 35–39 %.</summary>
+        public static readonly Lage Spaetbluete = new(0.92, 37);
+    }
+
     /* ------------------------------------------------------------------ */
     /* Die vier Geschichten                                                */
     /* ------------------------------------------------------------------ */
 
     /// <summary>EC in mS/cm — Sägezahn über die Woche.</summary>
-    public static double Ec(DateTime ortszeit)
-        => 1.02 + SeitWasserwechsel(ortszeit) * 0.035 + (1 + Tagesgang(ortszeit)) * 0.006;
+    /// <remarks>
+    /// Täglich rund +0,03, weil die Pflanze mehr Wasser zieht als Salz. In der
+    /// <see cref="Lage.Bluete"/> liegt der sechste Tag knapp über dem Planziel
+    /// 1,5–1,7 — genau dann ist der Wasserwechsel fällig.
+    /// </remarks>
+    public static double Ec(DateTime ortszeit, Lage? lage = null)
+        => (lage ?? Lage.Bluete).EcFrisch + SeitWasserwechsel(ortszeit) * 0.03 + (1 + Tagesgang(ortszeit)) * 0.006;
 
     /// <summary>pH — Sägezahn über drei Tage, steigt bei Licht schneller.</summary>
     public static double Ph(DateTime ortszeit)
@@ -192,10 +224,11 @@ public static class Demoverlauf
 
     /// <summary>Luftfeuchte in % — sinkt, wenn es waermer wird.</summary>
     /// <remarks>
-    /// Zusammen mit der Lufttemperatur ergibt das ein Blatt-VPD um 1,03 bis
-    /// 1,14 kPa und liegt damit im Blueteziel 1,00–1,20.
+    /// Unter dem Höchstwert des Plans der jeweiligen Woche (Zelt 1: 50 %,
+    /// Blütezelt 2: 40 %), siehe <see cref="Lage"/>.
     /// </remarks>
-    public static double FeuchtePercent(DateTime ortszeit) => 54 - Tagesgang(ortszeit) * 1.5;
+    public static double FeuchtePercent(DateTime ortszeit, Lage? lage = null)
+        => (lage ?? Lage.Bluete).FeuchteMitte - Tagesgang(ortszeit) * 1.5;
 
     /// <summary>ORP in mV — faellt zwischen den HOCl-Gaben ab.</summary>
     public static double OrpMv(DateTime ortszeit) => 437 - SeitDosierung(ortszeit) * 19;
@@ -237,14 +270,15 @@ public static class Demoverlauf
     /// <b>Ortszeit</b>, nicht UTC. Der Verlauf ist in Kalendertagen und
     /// Tageszeiten gedacht — „nachts kühler" heißt nachts <i>hier</i>.
     /// </param>
-    public static double? Wert(string metricKey, DateTime ortszeit) => metricKey switch
+    /// <param name="lage">Wo das Zelt im Grow steht; ohne Angabe <see cref="Lage.Bluete"/>.</param>
+    public static double? Wert(string metricKey, DateTime ortszeit, Lage? lage = null) => metricKey switch
     {
         "temperature" => Math.Round(LuftTempC(ortszeit), 1),
-        "humidity" => Math.Round(FeuchtePercent(ortszeit), 0),
+        "humidity" => Math.Round(FeuchtePercent(ortszeit, lage), 0),
         "co2" => Math.Round(Co2Ppm(ortszeit), 0),
         "ppfd" => Math.Round(Ppfd(ortszeit), 0),
         "reservoir-ph" => Math.Round(Ph(ortszeit), 2),
-        "reservoir-ec" => Math.Round(Ec(ortszeit), 2),
+        "reservoir-ec" => Math.Round(Ec(ortszeit, lage), 2),
         "reservoir-temp" => Math.Round(WasserTempC(ortszeit), 1),
         "reservoir-level-cm" => Math.Round(FuellstandCm(ortszeit), 1),
         "orp" => Math.Round(OrpMv(ortszeit), 0),

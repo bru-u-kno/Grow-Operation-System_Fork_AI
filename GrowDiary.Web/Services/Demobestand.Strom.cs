@@ -17,6 +17,9 @@ public static partial class Demobestand
     /// </remarks>
     private const int ZaehlerTage = 186;
 
+    /// <summary>Der Name des zweiten Blütezelts — eine Stelle, damit <see cref="DemoData.LageFuer"/> ihn nicht abtippt.</summary>
+    internal const string ZweitesBluetezeltName = "Blütezelt 2 (Testdaten)";
+
     /// <summary>
     /// Ein zweites Blütezelt mit eigenem laufenden Grow — am selben Zähler wie das erste.
     /// </summary>
@@ -42,7 +45,7 @@ public static partial class Demobestand
     {
         var zelt = grows.CreateTent(new Tent
         {
-            Name = "Blütezelt 2 (Testdaten)",
+            Name = ZweitesBluetezeltName,
             TentType = TentType.Production,
             Status = TentStatus.Active,
             WidthCm = 80,

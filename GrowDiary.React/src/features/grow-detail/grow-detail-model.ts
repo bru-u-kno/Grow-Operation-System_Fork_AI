@@ -40,19 +40,6 @@ export const defaultMetricKeyByField: Record<AutoMeasurementField, string> = {
   Co2Ppm: 'co2',
 }
 
-export const emptyMeasurementForm = () => ({
-  takenAtLocal: toLocalInputValue(),
-  stage: 'Veg',
-  source: 'Manual',
-  airTemperatureC: '',
-  humidityPercent: '',
-  reservoirPh: '',
-  reservoirEc: '',
-  reservoirWaterTempC: '',
-  notes: '',
-})
-
-export type MeasurementFormState = ReturnType<typeof emptyMeasurementForm>
 
 export const emptyTaskForm = () => ({
   title: '',

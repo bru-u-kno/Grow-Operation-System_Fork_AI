@@ -1,5 +1,6 @@
 /** Ableitungen aus den Erntegewichten. */
 import { zahlOderNull } from '../../zahlenfeld'
+import { formatNumber } from '../../utils'
 
 /** Trockenausbeute in Prozent — üblich sind 20–25 %. */
 export function summariseYield(wetWeightG: string, dryWeightG: string): { text: string } | null {
@@ -10,5 +11,9 @@ export function summariseYield(wetWeightG: string, dryWeightG: string): { text: 
   // Über 100 % ist keine Ausbeute, sondern ein Zahlendreher — das zu sagen ist
   // hilfreicher, als eine unmögliche Zahl auszugeben.
   if (dry > wet) return { text: 'Trockengewicht über Frischgewicht — vermutlich vertauscht.' }
-  return { text: `Trockenausbeute ${percent.toFixed(1)} % (${dry} g von ${wet} g)` }
+  // Deutsch geschrieben, wie jede Zahl auf dem Schirm: bis 03.10.2026 stand
+  // hier `toFixed(1)` — „Trockenausbeute 22.0 %" mit englischem Punkt
+  // (offene Punkte D5; e2e/deutsche-zahlen.spec.ts sah die Zeile nicht, weil
+  // sie erst nach dem Eintippen beider Gewichte erscheint).
+  return { text: `Trockenausbeute ${formatNumber(percent, 1)} % (${formatNumber(dry, 1)} g von ${formatNumber(wet, 1)} g)` }
 }

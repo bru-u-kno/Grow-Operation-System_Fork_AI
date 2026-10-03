@@ -3,12 +3,12 @@ import { summariseYield } from './harvest-yield'
 
 describe('summariseYield', () => {
   it('rechnet die Trockenausbeute aus', () => {
-    expect(summariseYield('1000', '220')?.text).toBe('Trockenausbeute 22.0 % (220 g von 1000 g)')
+    expect(summariseYield('1000', '220')?.text).toBe('Trockenausbeute 22 % (220 g von 1.000 g)')
   })
 
   it('versteht das Komma als Dezimaltrenner', () => {
     // Wer auf einer deutschen Tastatur 21,5 tippt, meint 21.5 — nicht 215.
-    expect(summariseYield('100,0', '21,5')?.text).toContain('21.5 %')
+    expect(summariseYield('100,0', '21,5')?.text, 'englischer Dezimalpunkt im Satz').toBe('Trockenausbeute 21,5 % (21,5 g von 100 g)')
   })
 
   it('sagt es, wenn die Gewichte vertauscht sind', () => {

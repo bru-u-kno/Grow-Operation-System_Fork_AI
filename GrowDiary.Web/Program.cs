@@ -335,7 +335,7 @@ if (DemoData.IsEnabled)
             if (neuester is { } vorhanden && nowUtc - vorhanden < TimeSpan.FromHours(2)) continue;
 
             var anzahl = 0;
-            foreach (var reading in DemoData.SeedHistory(tent.Id, nowUtc))
+            foreach (var reading in DemoData.SeedHistory(tent.Id, nowUtc, DemoData.LageFuer(tent)))
             {
                 readings.AddReading(reading);
                 anzahl++;
@@ -346,7 +346,7 @@ if (DemoData.IsEnabled)
             // ohne Tageswerte zeigt das 14- und 30-Tage-Diagramm genau einen
             // Punkt.
             var tageswerte = 0;
-            foreach (var stat in DemoData.SeedDailyStats(tent.Id, DateTime.Today))
+            foreach (var stat in DemoData.SeedDailyStats(tent.Id, DateTime.Today, DemoData.LageFuer(tent)))
             {
                 readings.UpsertDailyStat(stat);
                 tageswerte++;
