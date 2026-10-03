@@ -81,11 +81,11 @@ export function CameraPanel({ tent, onReload, zu = false, onUmschalten }: {
   return (
     <article className={classNames('ls-panel', 'ls-cam', zu && 'is-zu')} data-audit="live-camera">
       <div className="ls-panel-head">
-        {onUmschalten
-          ? <KlappTitel zu={zu} onUmschalten={onUmschalten}><span className="ls-label">Kamera</span></KlappTitel>
-          : <span className="ls-label">Kamera</span>}
+        <KlappTitel zu={zu} onUmschalten={onUmschalten}><span className="ls-label">Kamera</span></KlappTitel>
         <span className="ls-panel-meta">
-          {zu
+          {/* Ohne Kamera gibt es nichts zu laden — dann bleibt die Auskunft
+              „keine gemappt" auch eingeklappt stehen. */}
+          {zu && current
             ? 'eingeklappt · lädt kein Bild'
             : current ? `${current}${shown?.capturedAt ? ` · ${ageLabel(shown.capturedAt)}` : ''}` : 'keine gemappt'}
         </span>

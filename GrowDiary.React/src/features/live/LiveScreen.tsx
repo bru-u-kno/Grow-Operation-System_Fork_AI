@@ -137,7 +137,7 @@ export function LiveScreen({
   // Anpassen-Modus ist alles offen, damit jeder Bereich als Ziel sichtbar ist.
   const einklappen = useEingeklappt(dashboard?.editing ?? false)
   const zu = einklappen.istZu
-  const klappe = (id: string) => () => einklappen.umschalten(id)
+  const klappe = (id: string) => (dashboard?.editing ? undefined : () => einklappen.umschalten(id))
 
   const anpassenMoeglich = Boolean(dashboard) && !dashboard?.editing
   /* „Anpassen" gehört nur in die Zeile, solange es etwas anzupassen gibt —

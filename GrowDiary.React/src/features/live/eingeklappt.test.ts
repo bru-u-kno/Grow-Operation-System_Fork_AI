@@ -48,7 +48,8 @@ describe('Bilanz eines eingeklappten Bereichs', () => {
 
   it('nennt im Text nur, was es gibt', () => {
     expect(bilanzText({ werte: 4, warnungen: 0, kritisch: 0 })).toBe('4 Werte')
-    expect(bilanzText({ werte: 1, warnungen: 1, kritisch: 0 })).toBe('1 Wert · 1 Warnung')
-    expect(bilanzText({ werte: 6, warnungen: 2, kritisch: 1 })).toBe('6 Werte · 1 an der Grenze · 2 Warnungen')
+    expect(bilanzText({ werte: 1, warnungen: 1, kritisch: 0 })).toBe('1 Wert · 1 daneben')
+    expect(bilanzText({ werte: 6, warnungen: 2, kritisch: 1 })).toBe('6 Werte · 3 daneben, davon 1 an der Grenze')
+    expect(bilanzText({ werte: 2, warnungen: 0, kritisch: 2 })).toBe('2 Werte · 2 daneben, davon 2 an der Grenze')
   })
 })

@@ -51,10 +51,10 @@ export function TrendWatchPanel({ growId, zu = false, onUmschalten }: {
   return (
     <article className={classNames('ls-panel', zu && 'is-zu')} data-audit="live-trend-card">
       <div className="ls-panel-head">
-        {onUmschalten
-          ? <KlappTitel zu={zu} onUmschalten={onUmschalten}><span className="ls-label">Beobachtungen · über Tage</span></KlappTitel>
-          : <span className="ls-label">Beobachtungen · über Tage</span>}
-        {actionable > 0 && <span className="ls-panel-meta ls-trend-count">{actionable} prüfen</span>}
+        <KlappTitel zu={zu} onUmschalten={onUmschalten}><span className="ls-label">Beobachtungen · über Tage</span></KlappTitel>
+        {actionable > 0
+          ? <span className="ls-panel-meta ls-trend-count">{actionable} prüfen</span>
+          : zu && <span className="ls-panel-meta">nichts Auffälliges</span>}
       </div>
       {zu ? null : findings.length === 0 ? (
         <div className="ls-panel-body"><p>Nichts Auffälliges — keine Drift, kein Verbrauchssprung.</p></div>

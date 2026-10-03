@@ -666,10 +666,14 @@
     border: 0; background: none; color: inherit; font: inherit; text-align: left;
     cursor: pointer;
   }
-  .ls-fold-pfeil {
+  /* Zwei Klassen im Selektor: `.ls-band-label span` (0,1,1) setzte dem Pfeil
+     in den Bereichsüberschriften sonst Sperrung, Grösse und Farbe des Titels
+     auf — er sah dort anders aus als in den Karten (Befund des Prüfers). */
+  .ls-fold-titel .ls-fold-pfeil {
     flex: 0 0 auto; display: grid; place-items: center; width: 22px; height: 22px;
     border: 1px solid var(--hair-2); border-radius: 6px;
     color: var(--muted); font: 500 var(--fs-klein)/1 var(--font-mono);
+    letter-spacing: 0; text-transform: none;
   }
   .ls-fold-titel:hover .ls-fold-pfeil { border-color: var(--accent); color: var(--ink); }
   .ls-fold-titel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
@@ -695,8 +699,13 @@
   }
   .ls-fold:hover { border-color: var(--hair-2); color: var(--ink); }
   .ls-fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
-  /* Platz für die Klappe, damit der Status („im Ziel") nicht darunter liegt. */
-  .ls-tile-slot.has-fold > .gos-metric .gos-metric-head { padding-right: 24px; }
+  /* Platz für die Klappe, damit der Status („im Ziel") nicht darunter liegt.
+     Der Rand allein reichte nicht: Name und Status sind `nowrap` und schrumpfen
+     nicht — bei 166 px breiten Kacheln lief „−0,9 K" einfach über den Rand
+     und unter die Klappe (Befund des Prüfers, „−0,9 ▾K"). Passt der Status
+     nicht mehr neben den Namen, rutscht er deshalb in eine eigene Zeile,
+     links unter den Namen — weg von der Klappe rechts oben. */
+  .ls-tile-slot.has-fold > .gos-metric .gos-metric-head { padding-right: 24px; flex-wrap: wrap; row-gap: 4px; }
   .ls-tile-slot.has-fold > .ls-chart-tile .ls-chart-head { padding-right: 28px; }
 
   /* Die eingeklappte Kachel: eine Zeile, Name und Status links, Wert rechts.
@@ -704,11 +713,20 @@
      so hoch wie die Zeile — dann gehört ihr Name auf die Höhe der anderen
      Namen, sonst schwimmt er. */
   .gos-metric.is-zu { display: flex; flex-wrap: wrap; align-items: baseline; align-content: flex-start; column-gap: 10px; row-gap: 4px; }
-  .gos-metric.is-zu .gos-metric-head { flex: 1 1 auto; min-width: 0; }
-  .gos-metric.is-zu .gos-metric-value { margin: 0 0 0 auto; font-size: var(--fs-gross); }
+  /* Einzeilig heisst: der Statustext fällt weg, seine Farbe geht auf den
+     Wert über — gelb daneben, rot an der Grenze. So bleibt die Aussage, und
+     die Zeile bricht auch bei 360 px nicht um (Befund des Prüfers). */
+  .gos-metric.is-zu { flex-wrap: nowrap; }
+  .gos-metric.is-zu .gos-metric-head { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; }
+  .gos-metric.is-zu .gos-metric-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gos-metric.is-zu .gos-metric-status { display: none; }
+  .gos-metric.is-zu .gos-metric-value { margin: 0 0 0 auto; font-size: var(--fs-gross); white-space: nowrap; }
+  .gos-metric.is-zu.is-warn .gos-metric-value { color: var(--warn-text); }
+  /* Ein veralteter Wert braucht seine zweite Zeile — dann darf sie umbrechen. */
+  .gos-metric.is-zu:has(> .gos-metric-stale) { flex-wrap: wrap; }
   .gos-metric.is-zu .gos-metric-stale { flex: 1 0 100%; }
   .ls-tile-slot.has-fold > .gos-metric.is-zu { padding-right: 34px; }
-  .ls-tile-slot.has-fold > .gos-metric.is-zu .gos-metric-head { padding-right: 0; }
+  .ls-tile-slot.has-fold > .gos-metric.is-zu .gos-metric-head { padding-right: 0; flex-wrap: nowrap; }
 
   /* Am Finger: 44 px hoch, wie überall (e2e/touch-targets). Echt hoch statt
      per ::after aufgepolstert — die Prüfung misst unterhalb des sichtbaren

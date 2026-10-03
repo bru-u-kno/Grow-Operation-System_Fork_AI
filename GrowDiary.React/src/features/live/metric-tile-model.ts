@@ -219,6 +219,30 @@ export function kachelUrteil(
   return (unten == null || wert >= unten) && (oben == null || wert <= oben) ? 'ok' : 'warn'
 }
 
+/**
+ * Das Urteil der Kachel für einen Messwert, wie ihn die API liefert.
+ *
+ * Score, Kopfzeile („5 Werte daneben") und die Bilanz eines eingeklappten
+ * Bereichs setzten denselben Aufruf je selbst zusammen — Ziel, Meldegrenzen,
+ * Stellen des Messwerts. Drei Abschriften derselben Lesart laufen irgendwann
+ * auseinander; hier steht sie einmal.
+ */
+export function urteilFuerMetrik(metric: {
+  key: string
+  numericValue?: number | null
+  targetMin?: number | null
+  targetMax?: number | null
+  alarmMin?: number | null
+  alarmMax?: number | null
+}): KachelUrteil {
+  return kachelUrteil(
+    metric.numericValue ?? null,
+    { min: metric.targetMin ?? null, max: metric.targetMax ?? null },
+    { min: metric.alarmMin ?? null, max: metric.alarmMax ?? null },
+    decimalsForMetric(metric.key),
+  )
+}
+
 /** Beschriftung des Urteils — bei Einzelwerten steht statt „daneben" die Abweichung. */
 export function urteilText(
   urteil: KachelUrteil,

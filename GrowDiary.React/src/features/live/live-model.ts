@@ -1,4 +1,4 @@
-import { decimalsForMetric, kachelUrteil } from './metric-tile-model'
+import { urteilFuerMetrik } from './metric-tile-model'
 import type { GrowSummary, MetricPayload, TentDto, TentLivePayload } from '../../types'
 import { zeltZweckName } from '../../deutsche-woerter'
 
@@ -144,12 +144,7 @@ export function buildScore(metrics: MetricPayload[], tent: TentDto | null) {
     const wert = metric.numericValue as number
     const unten = metric.targetMin
     const oben = metric.targetMax
-    const urteil = kachelUrteil(
-      wert,
-      { min: unten, max: oben },
-      { min: metric.alarmMin ?? null, max: metric.alarmMax ?? null },
-      decimalsForMetric(metric.key),
-    )
+    const urteil = urteilFuerMetrik(metric)
     if (urteil === 'ok') continue
 
     // Fork AI (F-041): mit Grenzwerten entscheidet die Grenze — daneben, aber noch

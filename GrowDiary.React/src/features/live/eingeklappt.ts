@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { MetricPayload } from '../../types'
-import { decimalsForMetric, kachelUrteil } from './metric-tile-model'
+import { urteilFuerMetrik } from './metric-tile-model'
 
 /**
  * Fork AI: Was auf der Live-Seite eingeklappt ist.
@@ -57,12 +57,16 @@ export type Einklappen = {
 export function useEingeklappt(alleOffen: boolean): Einklappen {
   const [menge, setMenge] = useState<Set<string>>(ladeEingeklappt)
   const umschalten = useCallback((id: string) => {
+    // Im Anpassen-Modus wäre ein Umschalten unsichtbar — es wirkte erst nach
+    // „Fertig". Die Oberfläche bietet dort keinen Knopf an; das hier hält es,
+    // falls doch einer durchrutscht.
+    if (alleOffen) return
     setMenge((vorher) => {
       const naechste = umschaltenEingeklappt(vorher, id)
       speichereEingeklappt(naechste)
       return naechste
     })
-  }, [])
+  }, [alleOffen])
   return { istZu: (id) => !alleOffen && menge.has(id), umschalten }
 }
 
@@ -80,22 +84,22 @@ export function bereichsBilanz(metriken: MetricPayload[]): Bilanz {
   let warnungen = 0
   let kritisch = 0
   for (const metric of metriken) {
-    const urteil = kachelUrteil(
-      metric.numericValue ?? null,
-      { min: metric.targetMin ?? null, max: metric.targetMax ?? null },
-      { min: metric.alarmMin ?? null, max: metric.alarmMax ?? null },
-      decimalsForMetric(metric.key),
-    )
+    const urteil = urteilFuerMetrik(metric)
     if (urteil === 'warn') warnungen++
     else if (urteil === 'crit') kritisch++
   }
   return { werte: metriken.length, warnungen, kritisch }
 }
 
+/**
+ * Dieselben Wörter wie der Rest der Seite: „daneben" wie in der Kopfzeile
+ * („5 Werte daneben") und auf der gelben Kachel, „Grenze" wie auf der roten.
+ * „Warnung" wäre falsch — so heisst auf dieser Seite die Schwere eines
+ * Risikos, und eine gelbe Kachel löst gerade KEINE Meldung aus.
+ */
 export function bilanzText({ werte, warnungen, kritisch }: Bilanz): string {
-  return [
-    `${werte} ${werte === 1 ? 'Wert' : 'Werte'}`,
-    kritisch > 0 ? `${kritisch} an der Grenze` : null,
-    warnungen > 0 ? `${warnungen} ${warnungen === 1 ? 'Warnung' : 'Warnungen'}` : null,
-  ].filter(Boolean).join(' · ')
+  const daneben = warnungen + kritisch
+  const teile = [`${werte} ${werte === 1 ? 'Wert' : 'Werte'}`]
+  if (daneben > 0) teile.push(`${daneben} daneben${kritisch > 0 ? `, davon ${kritisch} an der Grenze` : ''}`)
+  return teile.join(' · ')
 }

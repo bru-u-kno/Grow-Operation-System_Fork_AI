@@ -49,9 +49,15 @@ export function BandTitel({ title, klappe }: { title: string; klappe?: BandKlapp
 
 export function KlappTitel({ zu, onUmschalten, children }: {
   zu: boolean
-  onUmschalten: () => void
+  /**
+   * Fehlt im Anpassen-Modus: dort ist alles offen, und ein Knopf, der dann
+   * still den gespeicherten Zustand umschaltet, wirkte erst nach „Fertig" —
+   * ohne dass man je gesehen hätte, was er tut (Befund des Prüfers).
+   */
+  onUmschalten?: () => void
   children: ReactNode
 }) {
+  if (!onUmschalten) return <>{children}</>
   return (
     <button type="button" className="ls-fold-titel" aria-expanded={!zu} onClick={onUmschalten}>
       <span className="ls-fold-pfeil" aria-hidden="true">{zu ? '▸' : '▾'}</span>

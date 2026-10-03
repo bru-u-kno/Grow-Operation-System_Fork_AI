@@ -197,7 +197,9 @@ export function DashboardBands({
                   {!editing && (
                     <KachelKlappe
                       zu={kachelZu}
-                      name={tile.kind === 'Chart' ? 'Verlauf' : metric.label}
+                      // Derselbe Name wie im Kopf der Verlaufskachel — zwei
+                      // Verläufe heissen sonst beide „Verlauf einklappen".
+                      name={tile.kind === 'Chart' ? (!tile.label || tile.label === 'Verlauf · 24 h' ? 'Verlauf' : tile.label) : metric.label}
                       onUmschalten={() => einklappen.umschalten(kachelId)}
                     />
                   )}
