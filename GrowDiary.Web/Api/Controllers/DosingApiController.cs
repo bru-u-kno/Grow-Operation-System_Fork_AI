@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +14,15 @@ namespace GrowDiary.Web.Api.Controllers;
 /// Stufe 1 — nichts läuft von allein. Jede Dosis wird hier ausgelöst, weil
 /// jemand gedrückt hat. Die Automatik kommt erst, wenn Rechnung und Anschläge
 /// sich an echten Zelten bewährt haben.
+/// <para>Fork AI (A-003, 03.10.2026): Über einen Schlüssel sind Dosieren,
+/// Kalibrierlauf und Stoppen „Geräte schalten". Pumpen einrichten ist
+/// Verwaltung — die Einrichtung entscheidet über Automatik, Testbetrieb und die
+/// Grenzen der Pumpe selbst. Das Kalibrier-Ergebnis festhalten ist
+/// Dokumentieren. Dazu gilt der KI-Höchstwert je Befehl
+/// (<see cref="KiHoechstwertGrund"/>).</para>
 /// </remarks>
 [ApiController]
+[KiStufe(KiStufe.GeraeteSchalten)]
 [Route("api/dosing")]
 [Produces("application/json")]
 public sealed class DosingApiController : ApiControllerBase
@@ -86,6 +94,7 @@ public sealed class DosingApiController : ApiControllerBase
     }
 
     [HttpPost("pumps")]
+    [KiStufe(KiStufe.Verwaltung)]
     [ProducesResponseType(typeof(DosingPumpDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<DosingPumpDto> Create([FromBody] DosingPumpUpsertRequest? request)
@@ -100,6 +109,7 @@ public sealed class DosingApiController : ApiControllerBase
     }
 
     [HttpPut("pumps/{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
     [ProducesResponseType(typeof(DosingPumpDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public ActionResult<DosingPumpDto> Update(int id, [FromBody] DosingPumpUpsertRequest? request)
@@ -116,6 +126,8 @@ public sealed class DosingApiController : ApiControllerBase
     }
 
     [HttpDelete("pumps/{id:int}")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult Delete(int id)
     {
@@ -144,6 +156,27 @@ public sealed class DosingApiController : ApiControllerBase
             ? DosingCalculator.SecondsForTarget(ziel, pump.MlPerMinute) ?? request.Seconds
             : request.Seconds;
         var seconds = Math.Clamp(gewuenscht, 5, DosingGuard.MaxCalibrationSeconds);
+
+        // Fork AI (A-003, 03.10.2026): Auch ein Kalibrierlauf fördert — fünf
+        // Minuten sind bei einer schnellen Pumpe mehr als jede Einzeldosis. Ob
+        // das Schlauchende im Becher oder im Becken steckt, sieht über einen
+        // Schlüssel niemand; deshalb gilt der KI-Höchstwert auch hier.
+        if (KiZugriffKontext.Aus(HttpContext) is { } ki && KiKalibrierlaufGrund(ki, pump, seconds) is { } kiGrund)
+        {
+            _dosing.InsertEvent(new DoseEvent
+            {
+                PumpId = pump.Id,
+                TentId = pump.TentId,
+                OccurredAtUtc = DateTime.UtcNow,
+                Trigger = DoseTrigger.Calibration,
+                Outcome = DoseOutcome.Rejected,
+                RequestedMl = 0,
+                Reason = kiGrund,
+                Simulated = pump.SimulationMode,
+            });
+            return KiHoechstwertAbgewiesen(kiGrund);
+        }
+
         var lauf = await _service.RunForSecondsAsync(pump, seconds, cancellationToken, DosingGuard.MaxCalibrationSeconds);
         var ok = lauf == Pumpenlauf.Gelaufen;
 
@@ -170,6 +203,7 @@ public sealed class DosingApiController : ApiControllerBase
 
     /// <summary>Trägt ein, was im Becher stand, und rechnet die Fördermenge daraus.</summary>
     [HttpPost("pumps/{id:int}/calibration")]
+    [KiStufe(KiStufe.Dokumentieren)]
     [ProducesResponseType(typeof(DosingPumpDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<DosingPumpDto> SaveCalibration(int id, [FromBody] CalibrationResultRequest request)
@@ -199,6 +233,28 @@ public sealed class DosingApiController : ApiControllerBase
 
         var nowUtc = DateTime.UtcNow;
         var context = _situations.Build(pump, nowUtc, await LiveStatesAsync(pump, cancellationToken)).Context;
+
+        // Fork AI (A-003, 03.10.2026): Über einen Schlüssel zuerst der
+        // KI-Höchstwert — zusätzlich zur Grenze der Pumpe, die DosingGuard
+        // danach unverändert prüft. Abgewiesen wird ganz, nicht gedeckelt: wer
+        // „12 ml" diktiert, soll nicht stillschweigend 10 bekommen.
+        if (KiZugriffKontext.Aus(HttpContext) is { } ki && KiHoechstwertGrund(ki, pump, request.Ml) is { } kiGrund)
+        {
+            _dosing.InsertEvent(new DoseEvent
+            {
+                PumpId = pump.Id,
+                TentId = pump.TentId,
+                OccurredAtUtc = nowUtc,
+                Trigger = DoseTrigger.Manual,
+                Outcome = DoseOutcome.Rejected,
+                RequestedMl = request.Ml,
+                ValueBefore = context.Reading,
+                Reason = kiGrund,
+                Simulated = pump.SimulationMode,
+            });
+            return KiHoechstwertAbgewiesen(kiGrund);
+        }
+
         var decision = DosingGuard.Evaluate(pump, request.Ml, context, nowUtc);
 
         if (!decision.Allowed)
@@ -243,6 +299,69 @@ public sealed class DosingApiController : ApiControllerBase
             ok ? $"{decision.Ml:0.##} ml gegeben." + (partnerHinweis ?? " Erst mischen, dann neu messen.")
                : DosingService.Grund(lauf)));
     }
+
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Warum diese Dosis über einen Schlüssel zu
+    /// gross ist — oder null.
+    /// </summary>
+    /// <remarks>
+    /// <para>Zwei Mengen zählen: die Dosis selbst und die zweite Hälfte, die sie
+    /// bei einem Zweikomponenten-Paar nach sich zieht
+    /// (<see cref="PartnerDosing.PartnerMl"/>). Bei einem Verhältnis über 1
+    /// liefe sonst aus einem einzigen Befehl mehr nach, als der Betreiber dem
+    /// Assistenten je Befehl erlaubt hat.</para>
+    /// <para>Gerechnet wird mit der angefragten Menge, nicht mit der von
+    /// <see cref="DosingGuard"/> gedeckelten: die Grenze der Pumpe ist eine
+    /// andere Zusage als die des Assistenten.</para>
+    /// </remarks>
+    private string? KiHoechstwertGrund(KiZugriffKontext ki, DosingPump pump, double ml)
+    {
+        var hoechstens = ki.Hoechstwerte.MaxDosisMlJeBefehl;
+        if (ml > hoechstens)
+        {
+            return $"KI-Höchstwert: {ml:0.##} ml angefragt, über den Assistenten sind je Befehl höchstens {hoechstens:0.##} ml erlaubt.";
+        }
+
+        if (PartnerDosing.PartnerMl(pump, ml) is { } partnerMl && partnerMl > hoechstens)
+        {
+            var partner = pump.PartnerPumpId is { } partnerId ? _dosing.GetPump(partnerId)?.Name : null;
+            return $"KI-Höchstwert: {ml:0.##} ml zögen {partnerMl:0.##} ml aus {partner ?? "der Partnerpumpe"} nach, "
+                   + $"über den Assistenten sind je Befehl höchstens {hoechstens:0.##} ml erlaubt.";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Warum dieser Kalibrierlauf über einen
+    /// Schlüssel zu viel fördern kann — oder null.
+    /// </summary>
+    /// <remarks>
+    /// Ohne Fördermenge lässt sich ein Lauf nicht in Millilitern begrenzen;
+    /// dann läuft er über einen Schlüssel gar nicht. Den ersten Kalibrierlauf
+    /// macht ohnehin ein Mensch: er hält den Messbecher.
+    /// </remarks>
+    private static string? KiKalibrierlaufGrund(KiZugriffKontext ki, DosingPump pump, double seconds)
+    {
+        var hoechstens = ki.Hoechstwerte.MaxDosisMlJeBefehl;
+        if (pump.MlPerMinute is not { } rate || rate <= 0)
+        {
+            return $"KI-Höchstwert: {pump.Name} ist nicht kalibriert — ein Kalibrierlauf von {seconds:0.#} s lässt sich nicht "
+                   + $"auf höchstens {hoechstens:0.##} ml begrenzen. Den ersten Kalibrierlauf startet ein Mensch am Messbecher.";
+        }
+
+        var erwartetMl = seconds * rate / 60.0;
+        return erwartetMl > hoechstens
+            ? $"KI-Höchstwert: ein Kalibrierlauf von {seconds:0.#} s fördert etwa {erwartetMl:0.##} ml, "
+              + $"über den Assistenten sind je Befehl höchstens {hoechstens:0.##} ml erlaubt."
+            : null;
+    }
+
+    /// <summary>Fork AI (A-003, 03.10.2026): 422 im gewohnten Fehlerformat, Code <c>ki_hoechstwert</c>.</summary>
+    private ObjectResult KiHoechstwertAbgewiesen(string grund)
+        => StatusCode(
+            StatusCodes.Status422UnprocessableEntity,
+            ApiErrorFactory.Create("ki_hoechstwert", grund, StatusCodes.Status422UnprocessableEntity, traceId: HttpContext?.TraceIdentifier));
 
     /// <summary>Alles, was fuer eines der beiden Pumpen des Paares noch aussteht.</summary>
     private List<PendingDose> PendingForPair(DosingPump pump)

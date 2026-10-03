@@ -2,6 +2,7 @@ using System.IO.Compression;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -267,7 +268,11 @@ public sealed partial class SystemApiController
 
 
 
+    // Fork AI (A-003, 03.10.2026): Über einen Schlüssel vorher eine Sicherung —
+    // zusätzlich zur eigenen Safety-Sicherung dieses Wegs, damit der Stand vor
+    // dem Assistenten in jedem Fall greifbar bleibt.
     [HttpPost("backup/{fileName}/restore")]
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(BackupRestoreResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]

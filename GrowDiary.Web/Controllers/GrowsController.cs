@@ -1,9 +1,11 @@
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Controllers;
 
 // Schlanke Redirect-Shims fuer alte /grows-Bookmarks. Die eigentliche
 // Grow-Funktionalitaet liegt in der React-App + den /api/grows-Endpunkten.
+[KeinKiZugriff("Stillgelegte Alt-Routen der MVC-Oberfläche — sie antworten nur noch 410; ein Assistent benutzt die API.")]
 [Route("grows")]
 public sealed class GrowsController : Controller
 {

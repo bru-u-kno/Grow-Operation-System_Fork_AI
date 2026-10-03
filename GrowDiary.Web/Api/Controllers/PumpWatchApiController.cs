@@ -1,4 +1,5 @@
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -65,7 +66,12 @@ public sealed class PumpWatchApiController : ApiControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public ActionResult Grace() => Ok(new { minutes = _waechter.SchonfristMinuten });
 
+    /// <remarks>
+    /// Fork AI (A-003, 03.10.2026): Eine Einstellung des Wächters — wer sie
+    /// hochdreht, hört länger nichts von einer stehenden Pumpe. Verwaltung.
+    /// </remarks>
     [HttpPut("grace")]
+    [KiStufe(KiStufe.Verwaltung)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public ActionResult SetGrace([FromBody] GraceRequest request)
     {
