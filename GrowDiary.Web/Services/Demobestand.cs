@@ -98,6 +98,7 @@ public static partial class Demobestand
         var pumpe = WeitereGeraeteAnlegen(hardware, zelt.Id, laufend.Id);
         AlarmregelAnlegen(alarme, zelt.Id);
         LichtplanAnlegen(grows, zelt.Id);
+        LichtRollenZuordnen(dienste.GetRequiredService<SteuerungRepository>());
         LichtflankenAnlegen(dienste.GetRequiredService<LightRepository>(), zelt.Id, DateTime.Now);
         VerlaufsKachelAnlegen(dienste.GetRequiredService<DashboardLayoutRepository>(), zelt.Id);
         SensorenZuordnen(grows, zelt.Id);
@@ -982,6 +983,37 @@ public static partial class Demobestand
             LightsOffTime = Demoverlauf.LichtAusUhr,
             Source = LightSource.Manual,
         });
+    }
+
+    /// <summary>Die sechs Licht-Rollen auf das Demo-Licht — und dessen Zeitplan „Blüte".</summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (offene Punkte 03.10.2026, D3).</b> Im Testbestand war
+    /// keine Licht-Rolle zugeordnet: die Steuerung zeigte „Geräte 0/6" und
+    /// „Modus – · Stufe –". Der Weg mit echtem Lichtmodus — Modus lesen, Stufe
+    /// stellen, Zeitplan erkennen — war am Bestand nie zu sehen.</para>
+    /// <para>Dieselben Entitäten wie der Versuchsaufbau „Zelt (AC-Test)". Die
+    /// Blüte-Zeiten kommen aus <see cref="Demoverlauf"/> wie Lichtplan und
+    /// Lichtkurve; mit den Vorgaben (05:00–17:00) hieße der Zeitplan „eigen".</para>
+    /// </remarks>
+    private static void LichtRollenZuordnen(SteuerungRepository steuerung)
+    {
+        foreach (var (rolle, entitaet) in new[]
+                 {
+                     (LichtSteuerungService.Rollen.Modus, DemoData.LichtModus),
+                     (LichtSteuerungService.Rollen.Stufe, DemoData.LichtLeistung),
+                     (LichtSteuerungService.Rollen.EinZeit, DemoData.LichtEinZeit),
+                     (LichtSteuerungService.Rollen.AusZeit, DemoData.LichtAusZeit),
+                     (LichtSteuerungService.Rollen.Zustand, DemoData.LichtZustand),
+                     (LichtSteuerungService.Rollen.Status, DemoData.LichtPortOnline),
+                 })
+        {
+            steuerung.SetGeraet(LichtSteuerungService.Modul, rolle, entitaet);
+        }
+
+        var einstellungen = steuerung.GetEinstellungen<LichtEinstellungen>(LichtSteuerungService.Modul) ?? new LichtEinstellungen();
+        einstellungen.BlueteEin = Demoverlauf.LichtAnUhr;
+        einstellungen.BlueteAus = Demoverlauf.LichtAusUhr;
+        steuerung.SetEinstellungen(LichtSteuerungService.Modul, einstellungen);
     }
 
     /// <summary>

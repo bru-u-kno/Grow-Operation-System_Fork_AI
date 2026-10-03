@@ -152,7 +152,20 @@ Vorschlag für die Dringlichkeit.
 >   ist in Ordnung (alle Aufrufer `type="number"`, ganze Zahlen).
 >   `handleMeasurementSubmit` samt ungenutztem Messformular im Hook entfernt.
 >   `SetpointProfilesPage` (ohne Route) — Löschen mit dem Nutzer klären.
-> - **D2–D4 offen.**
+> - **D2 erledigt.** Der Grow im Blütezelt 2 ist jetzt ein Steckling aus dem
+>   Mutterzelt mit 14 Tagen Bewurzelung — sein Plan hängt „Bewurzelung 2" an.
+>   Flip und Blütewoche unverändert. Gehalten von `DemobestandStimmigTests`
+>   (Steckling, > 7 Tage) und `e2e/demobestand-steckling.spec.ts`.
+> - **D3 erledigt.** Die sechs Licht-Rollen zeigen auf das Demo-Licht (zwei neue
+>   Demo-Entitäten `binary_sensor.demo_licht_zustand`/`_status`), der Zeitplan
+>   „Blüte" fährt die Zeiten des Bestands: Übersicht „Zeitplan Blüte 08:00 – 20:00 ·
+>   Stufe 7", Lichtseite „Geräte 6/6". Gehalten von `DemobestandStimmigTests`
+>   (Zählung über die Licht-Rollen) und `e2e/demobestand-licht.spec.ts`.
+> - **D4 bewusst nicht.** Kein Weg der App setzt einen seltenen Modus — die
+>   Lichtbefehle sind Aus, An, Zeitplan und Stufe; „Auto"/„Cycle" setzt nur die
+>   AC-Infinity-App. Im Bestand ginge es nur über eine feste Vorbelegung, die dem
+>   Zeitplan aus D3 widerspräche. Der Name kommt aus `AcModi.Name` (Backend), per
+>   Unit-Test belegt; `licht-modi-vertrag.node.test.ts` hält die Oberfläche dagegen.
 > - Lokal fällt `verlaufsdiagramm.spec.ts` „in anderer Zeitzone" durch: der Fall
 >   stellt den Browser auf Europe/Berlin — in der VM läuft die App in derselben
 >   Zone, der Mengenwächter meldet das richtig. Im Tor (UTC) grün.
