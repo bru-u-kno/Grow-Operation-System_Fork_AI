@@ -167,7 +167,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
     // Neu laden: der Klartext ist weg, die Zeile zeigt nur den Anfang.
     bereich = await abschnitt(page)
     await expect(bereich.locator('[data-audit="ki-klartext"]')).toHaveCount(0)
-    expect(await page.locator('main').innerText(), 'Der Klartext steht nach dem Neuladen noch auf der Seite.')
+    expect(await page.locator('body').innerText(), 'Der Klartext steht nach dem Neuladen noch auf der Seite.')
       .not.toContain(klartext)
     let zeile = bereich.locator('[data-audit="ki-schluessel"]', { hasText: name })
     await expect(zeile).toHaveCount(1)
