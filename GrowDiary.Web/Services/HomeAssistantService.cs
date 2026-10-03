@@ -398,6 +398,12 @@ public sealed class HomeAssistantService
                     UnitOfMeasurement = unit,
                     DeviceClass = deviceClass,
                     KonfigKennung = konfigKennung,
+                    LastChangedUtc = element.TryGetProperty("last_changed", out var geaendertEl)
+                                     && geaendertEl.ValueKind == JsonValueKind.String
+                                     && DateTime.TryParse(geaendertEl.GetString(), System.Globalization.CultureInfo.InvariantCulture,
+                                         System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var geaendert)
+                        ? DateTime.SpecifyKind(geaendert, DateTimeKind.Utc)
+                        : null,
                     Domain = entityId.Split('.', 2)[0],
                 });
             }
@@ -414,6 +420,154 @@ public sealed class HomeAssistantService
             TryOpenCircuit();
             _logger.LogDebug(ex, "Home Assistant Entity-Liste konnte nicht geladen werden.");
             return Array.Empty<HomeAssistantEntity>();
+        }
+    }
+
+    /// <summary>
+    /// Fork AI (A-003 Etappe B, 03.10.2026): Die Bereiche (Areas) von Home Assistant
+    /// samt ihrer Entitäten — für <c>GET /api/ki-ha/bereiche</c> und den Bereichsfilter
+    /// der Zustände.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Warum über die Vorlagen-Schnittstelle.</b> Die REST-Schnittstelle kennt
+    /// keine Bereiche; das Register gibt es sonst nur über den WebSocket
+    /// (<see cref="HomeAssistantRegistryService"/>). <c>POST /api/template</c> geht
+    /// denselben Weg wie jeder andere Aufruf hier — gleiche Adresse, gleiches Token,
+    /// gleicher Schutzschalter — und liefert mit <c>areas()</c>, <c>area_name()</c>
+    /// und <c>area_entities()</c> alles in einem Aufruf. <c>area_entities</c> nimmt
+    /// auch die Entitäten der Geräte im Bereich mit.</para>
+    /// <para><c>null</c> heisst: nicht eingerichtet, nicht erreichbar oder nicht
+    /// lesbar — anders als eine leere Liste, die heisst „keine Bereiche angelegt".
+    /// Im Testbetrieb gibt es keine Bereiche.</para>
+    /// </remarks>
+    public async Task<IReadOnlyList<HaBereich>?> GetBereicheAsync(
+        HomeAssistantSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        if (DemoData.IsEnabled) return Array.Empty<HaBereich>();
+        if (!settings.IsConfigured || IsCircuitOpen()) return null;
+
+        try
+        {
+            var client = CreateClient(settings);
+            var payload = JsonSerializer.Serialize(new { template = BereichsVorlage });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            using var response = await client.PostAsync("api/template", content, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Home Assistant Bereiche konnten nicht geladen werden: HTTP {StatusCode}.", (int)response.StatusCode);
+                return null;
+            }
+
+            var text = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(text) ? "[]" : text);
+            var bereiche = new List<HaBereich>();
+            foreach (var element in document.RootElement.EnumerateArray())
+            {
+                var id = element.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String ? idEl.GetString() : null;
+                if (string.IsNullOrWhiteSpace(id)) continue;
+                var name = element.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() : null;
+                var entitaeten = element.TryGetProperty("entitaeten", out var entEl) && entEl.ValueKind == JsonValueKind.Array
+                    ? entEl.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToList()
+                    : new List<string>();
+                bereiche.Add(new HaBereich(id, string.IsNullOrWhiteSpace(name) ? id : name, entitaeten));
+            }
+
+            ResetCircuit();
+            return bereiche;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            // Die Vorlage lief, aber ihre Antwort ist kein Feld von Bereichen — kein
+            // Grund, den Schutzschalter für alle anderen Abrufe zu öffnen.
+            _logger.LogDebug(ex, "Home Assistant Bereiche: Antwort der Vorlage nicht lesbar.");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            TryOpenCircuit();
+            _logger.LogDebug(ex, "Home Assistant Bereiche konnten nicht geladen werden.");
+            return null;
+        }
+    }
+
+    /// <summary>Die Vorlage für <see cref="GetBereicheAsync"/>: ein JSON-Feld mit einem Eintrag je Bereich.</summary>
+    public const string BereichsVorlage =
+        "[{% for a in areas() %}{{ {'id': a, 'name': area_name(a), 'entitaeten': area_entities(a)} | to_json }}"
+        + "{% if not loop.last %},{% endif %}{% endfor %}]";
+
+    /// <summary>
+    /// Fork AI (A-003 Etappe B, 03.10.2026): Der Verlauf EINER Entität über
+    /// <c>GET /api/history/period</c>.
+    /// </summary>
+    /// <remarks>
+    /// Mit <c>minimal_response</c> und <c>no_attributes</c> — nur Zustand und
+    /// Zeitpunkt, so schnell, wie Home Assistant ihn liefern kann. <c>null</c>
+    /// heisst: nicht eingerichtet oder nicht erreichbar. Im Testbetrieb gibt es
+    /// keinen Verlauf (leere Liste).
+    /// </remarks>
+    public async Task<IReadOnlyList<HaVerlaufsPunkt>?> GetVerlaufAsync(
+        HomeAssistantSettings settings,
+        string entityId,
+        DateTime vonUtc,
+        DateTime bisUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(entityId)) return null;
+        if (DemoData.IsEnabled) return Array.Empty<HaVerlaufsPunkt>();
+        if (!settings.IsConfigured || IsCircuitOpen()) return null;
+
+        static string Zeit(DateTime t) => Uri.EscapeDataString(
+            DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss'+00:00'", System.Globalization.CultureInfo.InvariantCulture));
+
+        try
+        {
+            var client = CreateClient(settings);
+            var pfad = $"api/history/period/{Zeit(vonUtc)}?filter_entity_id={Uri.EscapeDataString(entityId)}"
+                       + $"&end_time={Zeit(bisUtc)}&minimal_response&no_attributes";
+            using var response = await client.GetAsync(pfad, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Home Assistant Verlauf {EntityId} konnte nicht geladen werden: HTTP {StatusCode}.", entityId, (int)response.StatusCode);
+                return null;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var punkte = new List<HaVerlaufsPunkt>();
+            foreach (var reihe in document.RootElement.EnumerateArray())
+            {
+                if (reihe.ValueKind != JsonValueKind.Array) continue;
+                foreach (var element in reihe.EnumerateArray())
+                {
+                    var zustand = element.TryGetProperty("state", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
+                    if (zustand is null) continue;
+                    if (!element.TryGetProperty("last_changed", out var z) || z.ValueKind != JsonValueKind.String
+                        || !DateTime.TryParse(z.GetString(), System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var zeit))
+                    {
+                        continue;
+                    }
+                    punkte.Add(new HaVerlaufsPunkt(DateTime.SpecifyKind(zeit, DateTimeKind.Utc), zustand));
+                }
+            }
+
+            ResetCircuit();
+            return punkte.OrderBy(p => p.ZeitUtc).ToList();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            TryOpenCircuit();
+            _logger.LogDebug(ex, "Home Assistant Verlauf {EntityId} konnte nicht geladen werden.", entityId);
+            return null;
         }
     }
 
@@ -841,3 +995,10 @@ public enum HaDienstAntwort
     /// </summary>
     Unbestaetigt,
 }
+
+/// <summary>Fork AI (A-003 Etappe B, 03.10.2026): Ein Bereich (Area) in Home Assistant.</summary>
+/// <param name="Entitaeten">Die Entitäten im Bereich, auch die über ein Gerät zugeordneten.</param>
+public sealed record HaBereich(string Id, string Name, IReadOnlyList<string> Entitaeten);
+
+/// <summary>Fork AI (A-003 Etappe B, 03.10.2026): Ein Zustand im Verlauf einer Entität.</summary>
+public sealed record HaVerlaufsPunkt(DateTime ZeitUtc, string Zustand);

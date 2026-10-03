@@ -124,3 +124,90 @@ Kopieren-Knopf und dem Satz, dass er nicht wieder angezeigt wird.
 `GET /api/ki-zugriff/ich` zuerst: welche Stufen frei sind, ab wann er nachfragen
 soll, welche Höchstwerte gelten. Die Rückfrage-Regel ist eine Bitte an den
 Assistenten — durchsetzen kann der Fork nur die Stufen.
+
+## Home Assistant über den Fork
+
+Fork AI (A-003 Etappe B, 03.10.2026). Ein Assistent bedient mit **einem**
+Connector (Grow MCP Fork AI) den Fork und Home Assistant — ohne eigenen HA-MCP.
+Der Weg führt durch den Fork, damit dieselben Stufen, Höchstwerte und dasselbe
+Prüfprotokoll gelten. Controller: `Api/Controllers/KiHomeAssistantApiController.cs`,
+Verträge: `Api/Contracts/KiHomeAssistantContracts.cs`, HA-Zugang:
+`HomeAssistantService` (dieselbe Verbindung wie überall).
+
+**Jeder Weg verlangt einen Schlüssel**, auch die lesenden. Sonst könnte jedes
+Nachbar-Add-on über den lesenden Weg alle Zustände von Home Assistant abgreifen —
+mit dem Token des Forks. Ohne Schlüssel: 401 `ki_schluessel_fehlt` (aus der
+Oberfläche wie aus dem Add-on-Netz). Ein POST aus dem Add-on-Netz ohne Schlüssel
+endet wie überall schon vor dem Routing mit 403 `admin_access_required`.
+
+| Weg | Antwort | Stufe |
+|---|---|---|
+| `GET /api/ki-ha/bereiche` | `[{ id, name }]` | jeder gültige Schlüssel |
+| `GET /api/ki-ha/zustaende?bereich=&domain=&suche=&anzahl=` | `[{ entityId, name, zustand, einheit, bereich, geaendertAmUtc }]` | jeder gültige Schlüssel |
+| `GET /api/ki-ha/verlauf?entityId=&stunden=` | `{ entityId, punkte: [{ zeitUtc, zustand }] }` | jeder gültige Schlüssel |
+| `POST /api/ki-ha/dienst` | Body `{ domain, dienst, entityId?, daten? }` → `{ erfolg, meldung }` | Geräte schalten, je Domain mehr (unten) |
+
+- **Zustände:** alle Filter wahlweise. `bereich` = Kennung oder Name des Bereichs,
+  `suche` durchsucht Entity-ID und Namen ohne Rücksicht auf Groß-/Kleinschreibung.
+  `anzahl` Vorgabe 100, erlaubt 1–500 (sonst 400). Sortiert nach Entity-ID.
+- **Bereiche** holt der Fork über `POST /api/template` (`areas()`, `area_name()`,
+  `area_entities()` — Letzteres nimmt die Entitäten der Geräte im Bereich mit). Die
+  REST-Schnittstelle kennt keine Bereiche, und die Vorlage geht über dieselbe
+  Verbindung wie alles andere.
+- **Verlauf** über `GET /api/history/period` mit `minimal_response` und
+  `no_attributes`. `stunden` 1–168, Vorgabe 24 (sonst 400).
+- **Fehler:** 503 `ha_nicht_eingerichtet` (keine Verbindung eingerichtet), 502
+  `ha_nicht_erreichbar` (Home Assistant antwortet nicht).
+- **Dienst:** `domain` und `dienst` nur aus Kleinbuchstaben, Ziffern, Unterstrich
+  (sonst 400 — die Namen landen im Pfad `api/services/{domain}/{dienst}`).
+  `entityId` ist genau **eine** Entität, und ihr Präfix muss die Domain sein
+  (`light.turn_on` mit `switch.x` → 400). Ziele in `daten` (`entity_id`,
+  `device_id`, `area_id`, `floor_id`, `label_id`, `target`) → 400: das Ziel geht nur
+  über `entityId`, sonst liefe die Präfix-Prüfung ins Leere. Antwortet Home
+  Assistant, ist die Antwort 200; `erfolg` sagt, ob es angenommen hat (bei
+  ausbleibender Antwort `false` mit dem Hinweis, den Zustand nachzusehen).
+
+### Einstufung je Domain
+
+Die Aktion trägt `[KiStufe(KiStufe.GeraeteSchalten)]`: die Sperre prüft das vor
+dem Controller **und zählt jeden Aufruf ins Stundenfenster der Schaltbefehle**
+(429 `ki_hoechstwert`). Auch ein Aufruf, den der Controller danach abweist,
+zählt — die Sperre zählt, bevor die Domain bekannt ist. Darauf legt der Controller
+je Domain eine Tabelle (`Infrastructure/KiZugriff/KiHaEinstufung.cs`, jede Domain
+genau einmal, mit Grund):
+
+- **Verwaltung zusätzlich** (sonst 403 `ki_stufe_fehlt`, Meldung wie in der Sperre):
+  `automation`, `script`, `scene`, `input_boolean`, `input_number`,
+  `input_select`, `input_text`, `input_datetime`, `input_button`, `timer`,
+  `counter`, `schedule` — sie ändern die Logik von Home Assistant, nicht ein Gerät.
+- **Nie** (403 `ki_kein_zugriff`, auch mit allen Stufen):
+
+| Domain / Dienst | Grund |
+|---|---|
+| `homeassistant` | Neustart, Stopp, Konfiguration neu laden, generisches Schalten jeder Domain — umginge die Tabelle |
+| `hassio` | Supervisor: Add-ons, Host, Neustart, Sicherungen |
+| `backup` | Sicherungen anlegen/zurückspielen — auch in Grow OS nie über einen Schlüssel |
+| `recorder` | Löscht oder sperrt die Geschichte — nicht zurückzudrehen |
+| `system_log` | Leert/schreibt das Systemprotokoll, die Spur des Geschehenen |
+| `logger` | Ändert, was protokolliert wird |
+| `shell_command` | Befehle auf dem Host |
+| `python_script`, `pyscript` | Beliebiger Code in Home Assistant |
+| `rest_command` | Anfragen an beliebige Adressen |
+| `notify` | Nachrichten an Menschen gehen von Grow OS aus, nicht vom Assistenten |
+| `persistent_notification` | Meldungen in HA — dem Betreiber nichts unterschieben |
+| `tts` | Sprachausgabe an Lautsprecher im Haus |
+| `conversation` | Der Sprachassistent führt beliebige Absichten aus — umginge die Tabelle |
+| `lock` | Haus- und Zelttüren öffnen ist kein Grow-Betrieb |
+| `alarm_control_panel` | Alarmanlage scharf/unscharf |
+| `update` | Installiert Firmware und Updates (über den Auftrag hinaus ergänzt) |
+| `mqtt` | `mqtt.publish` erreicht jedes Gerät — umginge die Tabelle (ergänzt) |
+| `downloader` | Lädt Dateien auf den Host (ergänzt) |
+| jeder Dienst `reload` | Konfiguration neu laden wirft Zustände weg und schaltet kaputte Konfiguration scharf |
+
+- **Alles andere** (light, switch, fan, climate, humidifier, cover, number, select,
+  button, valve, water_heater, vacuum, media_player …) genügt mit Geräte schalten.
+
+Gehalten von `GrowDiary.Web.Tests/KiZugriff/KiHaSchnittstelleTests.cs` (an der
+echten App mit nachgestelltem Home Assistant) und den Ausnahmen in
+`JedeRouteHatEinenAufruferTests` (gerufen vom Grow MCP Fork AI, nicht aus der
+Oberfläche).

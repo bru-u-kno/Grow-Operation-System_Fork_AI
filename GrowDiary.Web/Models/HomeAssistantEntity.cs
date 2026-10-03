@@ -21,6 +21,12 @@ public sealed class HomeAssistantEntity
     /// </summary>
     public string? KonfigKennung { get; init; }
 
+    /// <summary>
+    /// Fork AI (A-003 Etappe B, 03.10.2026): Wann sich der Zustand zuletzt geändert hat
+    /// (<c>last_changed</c>, UTC). Für <c>GET /api/ki-ha/zustaende</c>; null im Testbetrieb.
+    /// </summary>
+    public DateTime? LastChangedUtc { get; init; }
+
     /// <summary>The entity domain (the part before the first dot, e.g. "sensor").</summary>
     public string Domain { get; init; } = string.Empty;
 }

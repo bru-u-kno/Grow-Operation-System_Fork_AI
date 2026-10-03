@@ -225,7 +225,9 @@ public static class KiZugriffSperre
             SicherungVorher: endpunkt.Metadata.GetMetadata<KiSicherungVorherAttribute>() is not null);
     }
 
-    private static KiEntscheidung StufeFehlt(KiStufe stufe)
+    /// <remarks>Öffentlich seit A-003 Etappe B (03.10.2026): <c>KiHomeAssistantApiController</c>
+    /// verlangt je Domain zusätzlich Verwaltung und antwortet mit genau dieser Meldung.</remarks>
+    public static KiEntscheidung StufeFehlt(KiStufe stufe)
         => KiEntscheidung.Verboten("ki_stufe_fehlt",
             $"Dafür fehlt die Freigabe für Stufe „{KiZugriffDienst.Anzeigename(stufe)}“. "
             + "Der Betreiber kann sie in Grow OS für diesen Schlüssel anhaken.");
