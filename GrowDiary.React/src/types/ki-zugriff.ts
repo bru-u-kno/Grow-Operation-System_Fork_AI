@@ -50,3 +50,26 @@ export interface KiSchluesselAngelegtDto {
   schluessel: KiSchluesselDto
   klartext: string
 }
+
+/**
+ * Fork AI (A-003, 03.10.2026): Ein Eintrag in „Was die KI zuletzt getan hat" —
+ * GET /api/settings/ki-zugriff/protokoll (`KiProtokollEintragDto`).
+ */
+export interface KiProtokollEintragDto {
+  id: number
+  zeitpunktUtc: string
+  /** `null` bei ungültigem Schlüssel, ausgeschaltetem Zugriff und alten Einträgen. */
+  schluesselId: number | null
+  schluesselName: string | null
+  methode: string | null
+  pfad: string | null
+  /** `null`, wenn der Eintrag keine Antwort beschreibt (Sicherung vorher, Adresse gesperrt). */
+  status: number | null
+  /** Etwa `ki_stufe_fehlt` — nie zum Anzeigen. */
+  fehlercode: string | null
+  erfolg: boolean
+  /** Die Art des Eintrags (`ki-zugriff-schreibend` …) — ein Bezeichner, nie zum Anzeigen. */
+  art: string
+  /** Der Satz aus dem Prüfprotokoll. */
+  beschreibung: string
+}

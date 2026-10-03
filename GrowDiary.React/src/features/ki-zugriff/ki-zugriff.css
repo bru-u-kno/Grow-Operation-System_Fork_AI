@@ -75,4 +75,20 @@
   .ki-klartext-satz { margin: 0; font-weight: 600; font-size: var(--fs-text); color: var(--ink); }
   .ki-klartext-hinweis { margin: 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); max-width: 68ch; }
   .ki-klartext-kopiert { font-size: var(--fs-klein); color: var(--accent-text); }
+
+  /* --- Was die KI zuletzt getan hat (Fork AI, A-003, 03.10.2026) --- */
+  .ki-protokoll { scroll-margin-top: var(--s-4); }
+  .ki-protokoll-filter {
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; min-width: 0;
+    font-size: var(--fs-text); color: var(--ink);
+  }
+  .ki-protokoll-filter > span { overflow-wrap: anywhere; min-width: 0; }
+  .ki-protokoll-filter .ls-btn.is-small { margin-left: 0; }
+  .ki-protokoll-liste { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
+  .ki-protokoll-eintrag { display: grid; gap: var(--s-1); min-width: 0; padding: var(--s-2) 0; }
+  .ki-protokoll-eintrag + .ki-protokoll-eintrag { border-top: 1px solid var(--hair); }
+  .ki-protokoll-zeile { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; min-width: 0; }
+  .ki-protokoll-aktion { font-size: var(--fs-text); font-weight: 600; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+  /* Ein Schlüsselname hat bis zu 60 Zeichen — in Monospace bei 320 px zu viel für eine Zeile. */
+  .ki-protokoll-eintrag .ki-zeit { overflow-wrap: anywhere; }
 }

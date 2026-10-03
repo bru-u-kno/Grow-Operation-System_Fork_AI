@@ -19,8 +19,10 @@ public sealed class SystemAuditRepository
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO SystemAuditEvents (EventType, Action, Summary, Severity, Source, RemoteAddress, RelatedGrowId, RelatedFileName, Success, CreatedAtUtc)
-            VALUES ($eventType, $action, $summary, $severity, $source, $remoteAddress, $relatedGrowId, $relatedFileName, $success, $createdAtUtc);";
+            INSERT INTO SystemAuditEvents (EventType, Action, Summary, Severity, Source, RemoteAddress, RelatedGrowId, RelatedFileName, Success, CreatedAtUtc,
+                                           KiSchluesselId, Methode, Pfad, HttpStatus, Fehlercode)
+            VALUES ($eventType, $action, $summary, $severity, $source, $remoteAddress, $relatedGrowId, $relatedFileName, $success, $createdAtUtc,
+                    $kiSchluesselId, $methode, $pfad, $httpStatus, $fehlercode);";
         command.Parameters.AddWithValue("$eventType", entry.EventType);
         command.Parameters.AddWithValue("$action", entry.Action);
         command.Parameters.AddWithValue("$summary", entry.Summary);
@@ -31,7 +33,64 @@ public sealed class SystemAuditRepository
         command.Parameters.AddWithValue("$relatedFileName", (object?)entry.RelatedFileName ?? DBNull.Value);
         command.Parameters.AddWithValue("$success", entry.Success ? 1 : 0);
         command.Parameters.AddWithValue("$createdAtUtc", entry.CreatedAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$kiSchluesselId", (object?)entry.KiSchluesselId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$methode", (object?)entry.Methode ?? DBNull.Value);
+        command.Parameters.AddWithValue("$pfad", (object?)entry.Pfad ?? DBNull.Value);
+        command.Parameters.AddWithValue("$httpStatus", (object?)entry.HttpStatus ?? DBNull.Value);
+        command.Parameters.AddWithValue("$fehlercode", (object?)entry.Fehlercode ?? DBNull.Value);
         command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Die jüngsten Einträge einer Quelle, neueste zuerst —
+    /// wahlweise nur bestimmte Arten (<see cref="SystemAuditEvent.Action"/>) und
+    /// nur die eines KI-Schlüssels.
+    /// </summary>
+    /// <remarks>
+    /// Gefiltert wird in SQL, nicht danach: sonst schnitte die Grenze erst die
+    /// jüngsten <paramref name="limit"/> Einträge ab und filterte dann — ein
+    /// Schlüssel, der lange nichts getan hat, stünde mit leerer Liste da. Ein
+    /// Eintrag ohne Schlüssel-Id (ungültiger Schlüssel, alle aus forkai.163)
+    /// erscheint nur ohne Filter.
+    /// </remarks>
+    public List<SystemAuditEvent> GetRecentForSource(string source, int limit, IReadOnlyCollection<string>? actions = null, int? kiSchluesselId = null)
+    {
+        var safeLimit = Math.Clamp(limit, 1, 500);
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        var bedingungen = new List<string> { "Source = $source" };
+        command.Parameters.AddWithValue("$source", source);
+
+        if (actions is { Count: > 0 })
+        {
+            var namen = new List<string>();
+            foreach (var action in actions)
+            {
+                var name = "$action" + namen.Count.ToString(CultureInfo.InvariantCulture);
+                namen.Add(name);
+                command.Parameters.AddWithValue(name, action);
+            }
+            bedingungen.Add("Action IN (" + string.Join(", ", namen) + ")");
+        }
+
+        if (kiSchluesselId is { } id)
+        {
+            bedingungen.Add("KiSchluesselId = $kiSchluesselId");
+            command.Parameters.AddWithValue("$kiSchluesselId", id);
+        }
+
+        command.CommandText = "SELECT * FROM SystemAuditEvents WHERE " + string.Join(" AND ", bedingungen)
+            + " ORDER BY CreatedAtUtc DESC, Id DESC LIMIT $limit;";
+        command.Parameters.AddWithValue("$limit", safeLimit);
+
+        var items = new List<SystemAuditEvent>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            items.Add(Map(reader));
+        }
+
+        return items;
     }
 
     public List<SystemAuditEvent> GetRecent(int limit = 100, string? eventType = null)
@@ -73,8 +132,33 @@ public sealed class SystemAuditRepository
             RelatedGrowId = reader["RelatedGrowId"] is DBNull ? null : Convert.ToInt32((long)reader["RelatedGrowId"]),
             RelatedFileName = reader["RelatedFileName"] is DBNull ? null : reader["RelatedFileName"]?.ToString(),
             Success = Convert.ToInt32((long)reader["Success"]) == 1,
-            CreatedAtUtc = ParseUtcOrDefault(reader["CreatedAtUtc"])
+            CreatedAtUtc = ParseUtcOrDefault(reader["CreatedAtUtc"]),
+            KiSchluesselId = Spalte(reader, "KiSchluesselId") is long schluessel ? Convert.ToInt32(schluessel) : null,
+            Methode = Spalte(reader, "Methode") as string,
+            Pfad = Spalte(reader, "Pfad") as string,
+            HttpStatus = Spalte(reader, "HttpStatus") is long status ? Convert.ToInt32(status) : null,
+            Fehlercode = Spalte(reader, "Fehlercode") as string,
         };
+
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Eine Spalte, die erst nachgezogen wird — oder null.
+    /// </summary>
+    /// <remarks>
+    /// Der DatabaseInitializer zieht sie beim Start und nach dem Zurückspielen
+    /// nach. Wer dazwischen liest (eine eben eingespielte ältere Datei), soll
+    /// das Protokoll trotzdem sehen und nicht an einer fehlenden Spalte scheitern.
+    /// </remarks>
+    private static object? Spalte(SqliteDataReader reader, string name)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), name, StringComparison.OrdinalIgnoreCase))
+            {
+                return reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+        }
+        return null;
+    }
 
     private static DateTime ParseUtcOrDefault(object raw)
     {

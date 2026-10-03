@@ -163,6 +163,37 @@ public sealed class KiZugriffApiController : ApiControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): „Was die KI zuletzt getan hat" — die jüngsten
+    /// Einträge, neueste zuerst; wahlweise nur die eines Schlüssels.
+    /// </summary>
+    /// <remarks>
+    /// <para>Nur Oberfläche: der Weg liegt unter <c>/api/settings</c> und die
+    /// Klasse trägt <see cref="KeinKiZugriffAttribute"/>. Ein Assistent soll
+    /// nicht nachlesen, was andere Schlüssel getan haben.</para>
+    /// <para>Einträge ohne Schlüssel-Id (ungültiger Schlüssel, Zugriff aus,
+    /// alles aus forkai.163) erscheinen nur ohne Filter.</para>
+    /// </remarks>
+    [HttpGet("protokoll")]
+    [ProducesResponseType(typeof(IReadOnlyList<KiProtokollEintragDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    public ActionResult<IReadOnlyList<KiProtokollEintragDto>> Protokoll([FromQuery] int? schluesselId = null, [FromQuery] int? anzahl = null)
+    {
+        if (anzahl is < 1)
+        {
+            ModelState.AddModelError("anzahl", $"Bitte mindestens 1 Eintrag anfordern (höchstens {ProtokollHoechstens}).");
+            return ValidationError("Das Protokoll konnte nicht gelesen werden.");
+        }
+
+        var grenze = Math.Min(anzahl ?? ProtokollVorgabe, ProtokollHoechstens);
+        var namen = _dienst.Alle().ToDictionary(s => s.Id, s => s.Name);
+        var eintraege = _protokoll
+            .GetRecentForSource(KiProtokollArt.Quelle, grenze, KiProtokollArt.VomAssistenten, schluesselId)
+            .Select(e => ProtokollEintrag(e, namen))
+            .ToList();
+        return Ok(eintraege);
+    }
+
     /// <summary>Was der anfragende Schlüssel darf — die erste Frage eines Assistenten.</summary>
     /// <remarks>Ohne Schlüssel (etwa aus der Oberfläche) gibt es hier nichts zu sagen: 401.</remarks>
     [HttpGet("/api/ki-zugriff/ich")]
@@ -188,6 +219,39 @@ public sealed class KiZugriffApiController : ApiControllerBase
     }
 
     // --------------------------------------------------------------- Hilfe
+
+    /// <summary>Vorgabe und Obergrenze für „Was die KI zuletzt getan hat".</summary>
+    public const int ProtokollVorgabe = 50;
+    public const int ProtokollHoechstens = 200;
+
+    // Einträge aus forkai.163 tragen Methode, Pfad und Status nur im Satz:
+    // „über KI-Assistent ‚Name‘: POST /api/… → 403" bzw. „Ungültiger Schlüssel: POST /api/…".
+    private static readonly System.Text.RegularExpressions.Regex AnfrageImSatz = new(
+        @"(?<methode>GET|POST|PUT|PATCH|DELETE) (?<pfad>/\S*)(?: → (?<status>\d{3}))?",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex NameImSatz = new(
+        "KI-Assistent(?:en)? ‚(?<name>[^‘]+)‘",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    private static KiProtokollEintragDto ProtokollEintrag(SystemAuditEvent e, IReadOnlyDictionary<int, string> namen)
+    {
+        var methode = e.Methode;
+        var pfad = e.Pfad;
+        var status = e.HttpStatus;
+        if (methode is null && AnfrageImSatz.Match(e.Summary) is { Success: true } treffer)
+        {
+            methode = treffer.Groups["methode"].Value;
+            pfad = treffer.Groups["pfad"].Value;
+            if (treffer.Groups["status"].Success) status = int.Parse(treffer.Groups["status"].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        // Der heutige Name; ist der Schlüssel gelöscht, der aus dem Satz.
+        string? name = e.KiSchluesselId is { } id && namen.TryGetValue(id, out var heute) ? heute : null;
+        if (name is null && NameImSatz.Match(e.Summary) is { Success: true } imSatz) name = imSatz.Groups["name"].Value;
+
+        return new KiProtokollEintragDto(
+            e.Id, e.CreatedAtUtc, e.KiSchluesselId, name, methode, pfad, status, e.Fehlercode, e.Success, e.Action, e.Summary);
+    }
 
     private KiZugriffSeiteDto SeiteBauen()
     {

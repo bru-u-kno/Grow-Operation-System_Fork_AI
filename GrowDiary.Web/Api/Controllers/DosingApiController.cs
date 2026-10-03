@@ -364,9 +364,13 @@ public sealed class DosingApiController : ApiControllerBase
 
     /// <summary>Fork AI (A-003, 03.10.2026): 422 im gewohnten Fehlerformat, Code <c>ki_hoechstwert</c>.</summary>
     private ObjectResult KiHoechstwertAbgewiesen(string grund)
-        => StatusCode(
+    {
+        // Fork AI (A-003, 03.10.2026): fürs Prüfprotokoll — „Höchstwert erreicht" statt nur „422".
+        KiZugriffSperre.FehlercodeMerken(HttpContext, "ki_hoechstwert");
+        return StatusCode(
             StatusCodes.Status422UnprocessableEntity,
             ApiErrorFactory.Create("ki_hoechstwert", grund, StatusCodes.Status422UnprocessableEntity, traceId: HttpContext?.TraceIdentifier));
+    }
 
     /// <summary>Alles, was fuer eines der beiden Pumpen des Paares noch aussteht.</summary>
     private List<PendingDose> PendingForPair(DosingPump pump)

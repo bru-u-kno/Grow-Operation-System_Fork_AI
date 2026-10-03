@@ -66,7 +66,9 @@ public static class KiZugriffSperre
                 return;
 
             case KiPruefung.ZugriffAus:
-                Protokollieren(context, "ki-zugriff-aus", $"Schlüssel abgewiesen, Zugriff für KI-Assistenten ist aus: {context.Request.Method} {context.Request.Path}", "warning", false);
+                // Ohne Schlüssel-Id: bei ausgeschaltetem Zugriff wird der Schlüssel gar nicht erst geprüft.
+                Protokollieren(context, KiProtokollArt.ZugriffAus, $"Schlüssel abgewiesen, Zugriff für KI-Assistenten ist aus: {context.Request.Method} {context.Request.Path}", "warning", false,
+                    anfrage: new KiAnfrage(null, StatusCodes.Status403Forbidden, "ki_zugriff_aus"));
                 await FehlerSchreiben(context, StatusCodes.Status403Forbidden, "ki_zugriff_aus",
                     "Der Zugriff für KI-Assistenten ist in Grow OS ausgeschaltet "
                     + "(Einstellungen → Zugriff für KI-Assistenten).");
@@ -74,15 +76,18 @@ public static class KiZugriffSperre
 
             case KiPruefung.Ungueltig:
             case KiPruefung.Gesperrt:
-                Protokollieren(context, "ki-schluessel-abgewiesen",
+                Protokollieren(context, KiProtokollArt.SchluesselAbgewiesen,
                     $"{(ergebnis.Ergebnis == KiPruefung.Gesperrt ? "Gesperrter" : "Ungültiger")} Schlüssel: {context.Request.Method} {context.Request.Path}",
-                    "warning", false);
+                    "warning", false,
+                    anfrage: new KiAnfrage(ergebnis.GesperrterSchluesselId, StatusCodes.Status401Unauthorized, "ki_schluessel_ungueltig"));
                 if (ergebnis.SperreBegonnen)
                 {
-                    Protokollieren(context, "ki-adresse-gesperrt",
+                    Protokollieren(context, KiProtokollArt.AdresseGesperrt,
                         $"{KiZugriffDienst.FehlversucheBisSperre} ungültige Schlüssel in {KiZugriffDienst.FehlversuchFenster.TotalMinutes:0} Minuten — "
                         + $"Adresse für {KiZugriffDienst.SperrDauer.TotalMinutes:0} Minuten gesperrt.",
-                        "critical", false);
+                        "critical", false,
+                        // Was ab jetzt von dieser Adresse kommt: 429 ki_zu_viele_versuche.
+                        anfrage: new KiAnfrage(ergebnis.GesperrterSchluesselId, null, "ki_zu_viele_versuche"));
                 }
                 context.Response.Headers.WWWAuthenticate = "Bearer";
                 await FehlerSchreiben(context, StatusCodes.Status401Unauthorized, "ki_schluessel_ungueltig",
@@ -163,9 +168,10 @@ public static class KiZugriffSperre
                     + "Es wurde nichts ausgeführt.");
                 return;
             }
-            Protokollieren(context, "ki-sicherung-vorher",
+            Protokollieren(context, KiProtokollArt.SicherungVorher,
                 $"Sicherung {datei} vor {context.Request.Method} {context.Request.Path} über KI-Assistent ‚{kontext.SchluesselName}‘.",
-                "info", true, datei);
+                "info", true, datei,
+                new KiAnfrage(kontext.SchluesselId, null, null));
         }
 
         await weiter();
@@ -262,15 +268,39 @@ public static class KiZugriffSperre
         var status = ausnahme ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
         var erfolg = status < 400;
         Protokollieren(context,
-            lesend ? "ki-zugriff-verwaltung-lesend" : "ki-zugriff-schreibend",
+            lesend ? KiProtokollArt.VerwaltungLesend : KiProtokollArt.Schreibend,
             $"über KI-Assistent ‚{kontext.SchluesselName}‘: {context.Request.Method} {context.Request.Path} → {status}",
             erfolg ? "info" : "warning",
-            erfolg);
+            erfolg,
+            anfrage: new KiAnfrage(kontext.SchluesselId, status, ausnahme ? null : GemerkterFehlercode(context)));
     }
 
     // --------------------------------------------------------------- Hilfe
 
-    private static void Protokollieren(HttpContext context, string aktion, string zusammenfassung, string schwere, bool erfolg, string? datei = null)
+    /// <summary>Unter diesem Schlüssel in <see cref="HttpContext.Items"/> liegt der Fehlercode der Antwort.</summary>
+    private const string FehlercodeItemKey = "GrowOs.KiZugriff.Fehlercode";
+
+    /// <summary>
+    /// Fork AI (A-003, 03.10.2026): Den Fehlercode einer Antwort an eine Anfrage über
+    /// einen Schlüssel fürs Protokoll vormerken.
+    /// </summary>
+    /// <remarks>
+    /// Schritt 3 sieht nur den Status. Ob eine 403 „Stufe fehlt" oder „nie
+    /// erreichbar" hiess, steht im Körper, der da schon unterwegs ist. Die
+    /// Abweisungen hier tun das selbst (<see cref="FehlerSchreiben"/>); ein
+    /// Controller mit eigener KI-Abweisung ruft das hier (Dosier-Höchstwert).
+    /// </remarks>
+    public static void FehlercodeMerken(HttpContext? context, string code)
+    {
+        if (context is not null) context.Items[FehlercodeItemKey] = code;
+    }
+
+    /// <summary>Der vorgemerkte Fehlercode dieser Anfrage — oder null.</summary>
+    public static string? GemerkterFehlercode(HttpContext context)
+        => context.Items.TryGetValue(FehlercodeItemKey, out var code) ? code as string : null;
+
+    private static void Protokollieren(HttpContext context, string aktion, string zusammenfassung, string schwere, bool erfolg,
+        string? datei = null, KiAnfrage? anfrage = null)
     {
         try
         {
@@ -280,10 +310,17 @@ public static class KiZugriffSperre
                 Action = aktion,
                 Summary = zusammenfassung,
                 Severity = schwere,
-                Source = "ki-zugriff",
+                Source = KiProtokollArt.Quelle,
                 RemoteAddress = context.Connection.RemoteIpAddress?.ToString(),
                 RelatedFileName = datei,
                 Success = erfolg,
+                // Fork AI (A-003, 03.10.2026): Schlüssel und Anfrage als eigene Spalten,
+                // damit „Was die KI zuletzt getan hat" nach dem Schlüssel filtern kann.
+                KiSchluesselId = anfrage?.SchluesselId,
+                Methode = context.Request.Method,
+                Pfad = context.Request.Path.Value,
+                HttpStatus = anfrage?.Status,
+                Fehlercode = anfrage?.Fehlercode,
             });
         }
         catch
@@ -295,6 +332,7 @@ public static class KiZugriffSperre
     /// <summary>Eine Fehlerantwort im Format aller anderen (<see cref="ApiErrorFactory"/>).</summary>
     public static async Task FehlerSchreiben(HttpContext context, int status, string code, string meldung)
     {
+        FehlercodeMerken(context, code);
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/json; charset=utf-8";
         await JsonSerializer.SerializeAsync(
