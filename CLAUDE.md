@@ -251,6 +251,13 @@ Beide sind nachgewiesen: Fehler eingebaut, Hook wurde rot. **Sie ersetzen die
 fünf Prüfungen nicht** — sie fangen Tippfehler und rotes CI, nicht ein
 doppeltes Formular oder eine Seite, die niemand liest.
 
+**Startet die Sitzung im Ordner über dem Repo** (VM `ClaudeCode`:
+`/home/claude/projekte`), liest Claude Code diese Hooks NICHT — dort bindet
+`/home/claude/projekte/.claude/settings.json` sie ein. Fehlt ein Werkzeug
+(Python, dotnet), melden die Hooks das laut statt still durchzuwinken
+(`.claude/hooks/werkzeuge.sh`). Bis zum 03.10.2026 lief dort wochenlang kein
+einziges Tor, und jeder Commit kam durch.
+
 ### Welche E2E-Fälle lokal laufen
 
 Die volle E2E-Mappe (über 860 Fälle) läuft im Tor bei **jedem Push** mit

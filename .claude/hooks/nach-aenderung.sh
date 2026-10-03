@@ -9,14 +9,16 @@
 # Exit 2 gibt stderr an Claude zurueck — wie eine Rueckmeldung des Nutzers.
 set -uo pipefail
 
-WURZEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/werkzeuge.sh"
 EINGABE="$(cat)"
 
-datei="$(printf '%s' "$EINGABE" | python -c "import json,sys
-try: print(json.load(sys.stdin).get('tool_input',{}).get('file_path',''))
-except Exception: print('')" 2>/dev/null)"
+datei="$(eingabe_feld file_path)"
+[ $? -eq 3 ] && laut "Der Bau-Hook kann die geaenderte Datei nicht lesen: weder python3 noch python laeuft." \
+  "Nach dieser Aenderung wurde NICHT gebaut."
 
 [ -z "$datei" ] && exit 0
+# Andere Projekte unter demselben Arbeitsordner gehen diesen Hook nichts an.
+im_repo "$datei" || exit 0
 case "$datei" in
   *_test.go|*/node_modules/*|*/bin/*|*/obj/*|*/zz-*) exit 0 ;;
 esac
@@ -27,7 +29,9 @@ case "$datei" in
   *.cs)
     # -p:UseAppHost=false: sonst scheitert der Bau an der laufenden App, die
     # die .exe sperrt — das ist kein Fehler im Quelltext.
-    if ! ausgabe="$(cd "$WURZEL" && dotnet build GrowDiary.slnx -v q --nologo -p:UseAppHost=false 2>&1)"; then
+    dotnet_bin="$(dotnet_finden)" || laut "Der Bau-Hook findet dotnet nicht (weder im PATH noch in ~/.dotnet)." \
+      "Nach der Aenderung an $(basename "$datei") wurde NICHT gebaut."
+    if ! ausgabe="$(cd "$WURZEL" && "$dotnet_bin" build GrowDiary.slnx -v q --nologo -p:UseAppHost=false 2>&1)"; then
       # MSB3021/3026/3027 sind KEINE Fehler im Quelltext: die laufende App
       # sperrt ihre eigene .dll/.exe. Wer die mitmeldet, schickt bei jedem
       # zweiten Bau einen Fehlalarm.

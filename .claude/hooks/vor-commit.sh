@@ -9,15 +9,27 @@
 # nichts uebersetzen.
 set -uo pipefail
 
-WURZEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/werkzeuge.sh"
 EINGABE="$(cat)"
 
-befehl="$(printf '%s' "$EINGABE" | python -c "import json,sys
-try: print(json.load(sys.stdin).get('tool_input',{}).get('command',''))
-except Exception: print('')" 2>/dev/null)"
+# Schneller Ausstieg fuer jeden Bash-Aufruf ohne das Wort „commit" — der Hook
+# laeuft vor JEDEM Befehl, und Python zu starten kostet.
+case "$EINGABE" in *commit*) ;; *) exit 0 ;; esac
+
+befehl="$(eingabe_feld command)"
+[ $? -eq 3 ] && laut "Der Commit-Hook kann den Befehl nicht lesen: weder python3 noch python laeuft." \
+  "Das Tor (Backend, Typen, Lint, Vitest) laeuft damit NICHT — deshalb wird nichts durchgelassen." \
+  "Python installieren oder in den PATH bringen; bis dahin das Tor von Hand fahren."
 
 # Nur beim echten Commit, nicht bei `git log --grep commit` o.ae.
 printf '%s' "$befehl" | grep -qE '(^|[;&|]|\s)git\s+(-[^ ]+\s+)*commit(\s|$)' || exit 0
+
+# Nur Commits in DIESEM Repository: das Arbeitsverzeichnis liegt darin, oder der
+# Befehl nennt es (`cd …/Grow-Operation-System_Fork_AI && git commit`).
+arbeitsort="$(eingabe_feld oben.cwd)"
+if ! im_repo "$arbeitsort" && ! printf '%s' "$befehl" | grep -qF "$WURZEL"; then
+  exit 0
+fi
 
 # WELCHE DATEIEN. Der Index allein reicht NICHT: dieser Hook laeuft, BEVOR der
 # Befehl ausgefuehrt wird. Bei `git add -A && git commit` in EINEM Aufruf ist zu
@@ -39,14 +51,16 @@ vorgemerkt="$(printf '%s
 [ -z "$vorgemerkt" ] && exit 0
 
 # Nur Text? Dann gibt es nichts zu uebersetzen.
-if ! printf '%s\n' "$vorgemerkt" | grep -qE '\.(cs|ts|tsx|css|json|csproj|slnx)$'; then
+if ! printf '%s\n' "$vorgemerkt" | grep -qE '\.(cs|ts|tsx|css|json|csproj|slnx|runsettings)$'; then
   exit 0
 fi
 
 fehler=""
 
-if printf '%s\n' "$vorgemerkt" | grep -qE '\.(cs|csproj|slnx)$'; then
-  if ! a="$(cd "$WURZEL" && dotnet test GrowDiary.slnx --nologo -v q 2>&1)"; then
+if printf '%s\n' "$vorgemerkt" | grep -qE '\.(cs|csproj|slnx|runsettings)$'; then
+  dotnet_bin="$(dotnet_finden)" || laut "Der Commit-Hook findet dotnet nicht (weder im PATH noch in ~/.dotnet)." \
+    "Das Backend-Tor laeuft damit NICHT — der Commit wird nicht ausgefuehrt."
+  if ! a="$(cd "$WURZEL" && "$dotnet_bin" test GrowDiary.slnx --nologo -v q 2>&1)"; then
     fehler="$fehler
 BACKEND ROT:
 $(printf '%s' "$a" | grep -E 'FAIL|Fehler:|error ' | head -10)"

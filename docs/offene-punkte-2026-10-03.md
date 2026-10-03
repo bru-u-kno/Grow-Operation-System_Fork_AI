@@ -169,6 +169,17 @@ Vorschlag für die Dringlichkeit.
    `python` bleibt der Befehl leer, und der Hook endet still mit 0. Außerdem kennt
    das .NET-8-SDK dort `GrowDiary.slnx` nicht (MSB4068); die Testprojekte laufen nur
    einzeln. Das Tor wurde in dieser Sitzung von Hand gefahren.
+   **Erledigt 03.10.2026 (Branch `werkzeug-hooks`).** Drei Ursachen:
+   (a) Die Sitzungen starten in `/home/claude/projekte`; Claude Code liest Hooks nur
+   aus `.claude/settings.json` des Startordners — die des Repos wurden nie geladen.
+   Jetzt bindet `/home/claude/projekte/.claude/settings.json` (nicht im Git) die
+   Skripte des Repos ein. (b) Die Skripte suchen `python3`/`python` und `dotnet`
+   (auch `~/.dotnet`) selbst (`.claude/hooks/werkzeuge.sh`); fehlt eins, melden sie
+   das laut (Exit 2) statt still durchzuwinken. Sie greifen nur bei Dateien und
+   Commits dieses Repos. (c) In der VM liegt neben SDK 8 jetzt SDK 10 — damit lädt
+   `GrowDiary.slnx`. Belegt: Compilerfehler per Edit → Hook rot; kaputter Code im
+   Commit → abgelehnt; ohne Python/dotnet → laut abgelehnt; die alte Fassung meldete
+   beim selben Compilerfehler Exit 0.
 2. **Hooks und Worktrees:** Die Hooks arbeiten auf dem Haupt-Repo
    (`WURZEL` aus dem Skriptpfad); Agenten in Worktrees müssen das Tor selbst
    laufen lassen.
