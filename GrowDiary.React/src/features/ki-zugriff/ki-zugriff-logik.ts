@@ -39,7 +39,9 @@ export const STUFEN_WARNUNG: Partial<Record<KiStufe, string>> = {
   Verwaltung:
     'Mit „Verwaltung" kann der Assistent Einstellungen ändern, Sicherungen zurückspielen, '
     + 'Daten importieren und Stammdaten löschen. Vor dem Zurückspielen, Importieren und Löschen '
-    + 'legt Grow OS eine Sicherung an. Schlüssel verwalten kann er nie.',
+    + 'legt Grow OS eine Sicherung an. Über die Zelt- und Steuerungseinstellungen kann er '
+    + 'auch Dienste in Home Assistant auslösen — gib das nur einem Assistenten, dem du '
+    + 'wie dir selbst vertraust. Schlüssel verwalten kann er nie.',
 }
 
 export function istRiskant(stufe: KiStufe): boolean {
