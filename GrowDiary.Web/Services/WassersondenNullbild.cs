@@ -110,6 +110,30 @@ public static class WassersondenNullbild
     /// </param>
     public sealed record Bereinigung(int Entfernt, int TageNeuBerechnet, int TageNichtNeuBerechnet);
 
+    /// <summary>Die Bereinigung beim Start der App, samt Protokoll.</summary>
+    /// <remarks>
+    /// <para><b>Eigener Gültigkeitsbereich.</b> <see cref="SensorReadingRepository"/>
+    /// ist „scoped" registriert. Aus dem Wurzel-Container geholt, warf das in jeder
+    /// Development-Umgebung (Scope-Prüfung an) — also im E2E-Backend des Tors und
+    /// beim lokalen Start —, und die Nullbilder blieben stehen. Im Add-on
+    /// (Production) lief es zufällig. Befund des Prüfers, 03.10.2026.</para>
+    /// </remarks>
+    /// <param name="dienste">Der Wurzel-Container der App.</param>
+    /// <param name="protokoll">Wohin die Zeile geht.</param>
+    /// <param name="heuteLokal">Der lokale Kalendertag; abgeschlossene Tage liegen davor.</param>
+    public static Bereinigung BeimStart(IServiceProvider dienste, ILogger protokoll, DateOnly heuteLokal)
+    {
+        using var bereich = dienste.CreateScope();
+        var ergebnis = GespeicherteEntfernen(bereich.ServiceProvider.GetRequiredService<SensorReadingRepository>(), heuteLokal);
+        if (ergebnis.Entfernt > 0)
+        {
+            protokoll.LogInformation(
+                "Wassersonde: {Entfernt} Rohwerte aus Nullbildern entfernt, {Neu} Tageswerte neu berechnet, {Nicht} nicht neu berechenbar (Rohwerte des Tages nicht mehr vollständig).",
+                ergebnis.Entfernt, ergebnis.TageNeuBerechnet, ergebnis.TageNichtNeuBerechnet);
+        }
+        return ergebnis;
+    }
+
     /// <summary>
     /// Entfernt gespeicherte Nullbilder aus den Rohwerten und berechnet die
     /// betroffenen Tageswerte neu.
@@ -153,20 +177,29 @@ public static class WassersondenNullbild
         foreach (var (zelt, groesse, tag) in betroffen)
         {
             if (rohwerte.GetDailyStats(zelt, groesse, tag, tag).Count == 0) continue;
+            // Ein Tag, der sich nicht rechnen lässt, hält die übrigen nicht auf —
+            // die Rohwerte sind dann schon gelöscht, ein zweiter Lauf fände nichts mehr.
 
-            var tagesbeginnUtc = tag.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
-            var aeltester = rohwerte.GetOldestReadingUtc(zelt, groesse);
-            // Eine Takt-Länge Spielraum: der erste Wert nach Mitternacht kommt
-            // bis zu fünf Minuten danach.
-            if (aeltester is not { } erster || erster > tagesbeginnUtc.AddMinutes(10)
-                || Tageswert.Berechnen(rohwerte, zelt, groesse, tag) is not { } stat)
+            try
+            {
+                var tagesbeginnUtc = tag.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
+                var aeltester = rohwerte.GetOldestReadingUtc(zelt, groesse);
+                // Eine Takt-Länge Spielraum: der erste Wert nach Mitternacht kommt
+                // bis zu fünf Minuten danach.
+                if (aeltester is not { } erster || erster > tagesbeginnUtc.AddMinutes(10)
+                    || Tageswert.Berechnen(rohwerte, zelt, groesse, tag) is not { } stat)
+                {
+                    nicht++;
+                    continue;
+                }
+
+                rohwerte.UpsertDailyStat(stat);
+                neu++;
+            }
+            catch (Exception)
             {
                 nicht++;
-                continue;
             }
-
-            rohwerte.UpsertDailyStat(stat);
-            neu++;
         }
 
         return new Bereinigung(verworfen.Count, neu, nicht);

@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.160
+
+**Fork AI.** Ausfälle der Wassersonde werden nicht mehr als Messwert 0 gespeichert.
+
+- Behoben — **pH 0, EC 0 und 0 °C bei einem Ausfall der Wassersonde.** Die Bluelab-Integration in Home
+  Assistant meldet bei einem kurzen Ausfall gut eine Minute lang gleichzeitig pH 0 und EC 0 als echte
+  Zahlen. Grow OS hat das übernommen, sobald sein 5-Minuten-Takt in so ein Fenster fiel: im Verlauf
+  sprang die Kurve auf 0, und der Tageswert bekam ein Minimum von 0. pH 0 und EC 0 im selben Augenblick
+  gibt es physikalisch nicht — Grow OS behandelt das jetzt als Ausfall (Lücke statt 0), auch in Kacheln,
+  Alarmen und Dosierung. Eine einzelne Null (EC 0 bei Osmosewasser, 0 °C) bleibt ein echter Wert.
+- Beim ersten Start nach dem Update werden schon gespeicherte Nullbilder aus den Rohwerten entfernt
+  und betroffene Tageswerte neu berechnet, soweit die Rohwerte des Tages noch vorliegen (7 Tage).
+  Ältere Tageswerte mit Minimum 0 bleiben, wie sie sind; das Startprotokoll nennt ihre Zahl.
+
 ## 2.0.0-forkai.159
 
 **Fork AI.** Restliche Punkte aus der Durchsicht, deutsche Zahlen überall und ein eigener MCP.

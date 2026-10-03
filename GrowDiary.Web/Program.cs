@@ -194,14 +194,7 @@ app.Services.GetRequiredService<DatabaseInitializer>().Initialize();
 // Regel und warum sie eindeutig ist: WassersondenNullbild.
 try
 {
-    var nullbilder = WassersondenNullbild.GespeicherteEntfernen(
-        app.Services.GetRequiredService<SensorReadingRepository>(), DateOnly.FromDateTime(DateTime.Now));
-    if (nullbilder.Entfernt > 0)
-    {
-        app.Logger.LogInformation(
-            "Wassersonde: {Entfernt} Rohwerte aus Nullbildern entfernt, {Neu} Tageswerte neu berechnet, {Nicht} nicht neu berechenbar (Rohwerte des Tages nicht mehr vollständig).",
-            nullbilder.Entfernt, nullbilder.TageNeuBerechnet, nullbilder.TageNichtNeuBerechnet);
-    }
+    WassersondenNullbild.BeimStart(app.Services, app.Logger, DateOnly.FromDateTime(DateTime.Now));
 }
 catch (Exception ex)
 {
