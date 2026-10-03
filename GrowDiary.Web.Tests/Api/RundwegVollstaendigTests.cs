@@ -409,6 +409,18 @@ public sealed class RundwegVollstaendigTests
             "Der AC-Test nimmt eine LISTE von Geraeten entgegen, keinen benannten "
             + "Vertrag. Die Reihenpruefung ueber Eigenschaften trifft dort nichts; "
             + "geprueft wird der Weg von AcSchreiberWegTests.",
+        // Fork AI (A-003, 03.10.2026)
+        ["KiZugriffSpeichernRequest"] =
+            "Der Rundweg faehrt jedes Feld mit derselben Probe (1 bzw. true). Die Rueckfrage-"
+            + "Stufe ist ein Stufenname (Dokumentieren, GrowPlanen ...) — \"1\" lehnt das PUT mit "
+            + "400 ab; die Hoechstwerte sind ein verschachteltes Objekt. Und Aktiv = true schaltete "
+            + "in der gemeinsamen Test-App den Zugriff fuer KI-Assistenten ein. Dass jedes Feld "
+            + "ankommt (auch beim zweiten Speichern), faehrt "
+            + "KiSchluesselWegTests.EinstellungenKommenAnUndBleiben.",
+        ["KiSchluesselRequest"] =
+            "Ab Werk gibt es keinen Schluessel, der Demobestand legt keinen an — ohne Bestand "
+            + "faehrt der Rundweg ins Leere. Die Stufen sind eine Liste von Namen. Name und "
+            + "Stufen faehrt KiSchluesselWegTests.SchluesselAendernUndLoeschen.",
         ["UpdateSetupRequest"] =
             "Der Demobestand legt kein Setup an (0 Zeilen in der Tabelle), also "
             + "haette der Rundweg dort nichts zu fassen und waere gruen, ohne etwas "

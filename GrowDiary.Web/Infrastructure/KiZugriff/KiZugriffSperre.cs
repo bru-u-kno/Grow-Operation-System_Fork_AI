@@ -1,0 +1,305 @@
+using System.Text.Json;
+using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Models;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Routing;
+
+namespace GrowDiary.Web.Infrastructure.KiZugriff;
+
+/// <summary>Was Schritt 2 zu einer Anfrage über einen Schlüssel sagt.</summary>
+/// <param name="SchaltbefehlZaehlen">Die Aktion schaltet ein Gerät — zählt ins Stundenfenster.</param>
+/// <param name="SicherungVorher">Vorher eine Sicherung anlegen.</param>
+public sealed record KiEntscheidung(
+    bool Durch,
+    int Status = StatusCodes.Status200OK,
+    string? Code = null,
+    string? Meldung = null,
+    bool SchaltbefehlZaehlen = false,
+    bool SicherungVorher = false)
+{
+    public static KiEntscheidung Weiter { get; } = new(true);
+
+    public static KiEntscheidung Verboten(string code, string meldung) => new(false, StatusCodes.Status403Forbidden, code, meldung);
+}
+
+/// <summary>
+/// Fork AI (A-003, 03.10.2026): Der Weg einer Anfrage mit Schlüssel.
+/// </summary>
+/// <remarks>
+/// <para>Drei Schritte, so im Bauplan (<c>docs/ki-zugriff.md</c>, „Weg einer Anfrage"):</para>
+/// <list type="number">
+///   <item><see cref="SchluesselWegAsync"/> — in der bestehenden Sperre vor dem
+///   Routing: Schlüssel prüfen, Kontext ablegen. Ruft den Rest der Kette und
+///   schreibt danach Schritt 3 (Prüfprotokoll, zuletzt genutzt).</item>
+///   <item><see cref="NachDemRoutingAsync"/> — direkt nach
+///   <c>UseRouting</c>: erst dort ist bekannt, welche Aktion antworten wird,
+///   und damit ihre Einstufung.</item>
+/// </list>
+/// <para>Schritt 3 hängt an Schritt 1 und nicht an Schritt 2, damit auch eine
+/// Abweisung in Schritt 2 ins Protokoll kommt — und eine Ausnahme mittendrin.</para>
+/// </remarks>
+public static class KiZugriffSperre
+{
+    private static readonly JsonSerializerOptions JsonOptionen = new(JsonSerializerDefaults.Web);
+
+    // ------------------------------------------------------------ Schritt 1
+
+    /// <summary>
+    /// Schritt 1: Den Schlüssel prüfen. Nur aufrufen, wenn
+    /// <see cref="AdminAccessPolicy.IsKiSchluesselWeg"/> zutrifft.
+    /// </summary>
+    public static async Task SchluesselWegAsync(HttpContext context, Func<Task> weiter)
+    {
+        var dienst = context.RequestServices.GetRequiredService<KiZugriffDienst>();
+        var klartext = KiZugriffDienst.SchluesselAusKopf(context.Request);
+        var ergebnis = dienst.Pruefen(klartext, context.Connection.RemoteIpAddress);
+
+        switch (ergebnis.Ergebnis)
+        {
+            case KiPruefung.ZuVieleVersuche:
+                context.Response.Headers.RetryAfter = ((int)KiZugriffDienst.SperrDauer.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                await FehlerSchreiben(context, StatusCodes.Status429TooManyRequests, "ki_zu_viele_versuche",
+                    "Zu viele ungültige Schlüssel von dieser Adresse. Grow OS nimmt von hier "
+                    + $"{KiZugriffDienst.SperrDauer.TotalMinutes:0} Minuten lang keinen Schlüssel an.");
+                return;
+
+            case KiPruefung.ZugriffAus:
+                Protokollieren(context, "ki-zugriff-aus", $"Schlüssel abgewiesen, Zugriff für KI-Assistenten ist aus: {context.Request.Method} {context.Request.Path}", "warning", false);
+                await FehlerSchreiben(context, StatusCodes.Status403Forbidden, "ki_zugriff_aus",
+                    "Der Zugriff für KI-Assistenten ist in Grow OS ausgeschaltet "
+                    + "(Einstellungen → Zugriff für KI-Assistenten).");
+                return;
+
+            case KiPruefung.Ungueltig:
+            case KiPruefung.Gesperrt:
+                Protokollieren(context, "ki-schluessel-abgewiesen",
+                    $"{(ergebnis.Ergebnis == KiPruefung.Gesperrt ? "Gesperrter" : "Ungültiger")} Schlüssel: {context.Request.Method} {context.Request.Path}",
+                    "warning", false);
+                if (ergebnis.SperreBegonnen)
+                {
+                    Protokollieren(context, "ki-adresse-gesperrt",
+                        $"{KiZugriffDienst.FehlversucheBisSperre} ungültige Schlüssel in {KiZugriffDienst.FehlversuchFenster.TotalMinutes:0} Minuten — "
+                        + $"Adresse für {KiZugriffDienst.SperrDauer.TotalMinutes:0} Minuten gesperrt.",
+                        "critical", false);
+                }
+                context.Response.Headers.WWWAuthenticate = "Bearer";
+                await FehlerSchreiben(context, StatusCodes.Status401Unauthorized, "ki_schluessel_ungueltig",
+                    ergebnis.Ergebnis == KiPruefung.Gesperrt
+                        ? "Dieser Schlüssel ist gesperrt. Der Betreiber kann in Grow OS einen neuen anlegen."
+                        : "Der Schlüssel ist ungültig.");
+                return;
+        }
+
+        var kontext = ergebnis.Kontext!;
+        context.Items[KiZugriffKontext.ItemKey] = kontext;
+
+        var ausnahme = false;
+        try
+        {
+            await weiter();
+        }
+        catch
+        {
+            ausnahme = true;
+            throw;
+        }
+        finally
+        {
+            Nachher(context, dienst, kontext, ausnahme);
+        }
+    }
+
+    // ------------------------------------------------------------ Schritt 2
+
+    /// <summary>
+    /// Schritt 2: Darf dieser Schlüssel diese Aktion? Direkt nach <c>UseRouting</c>.
+    /// </summary>
+    public static async Task NachDemRoutingAsync(HttpContext context, Func<Task> weiter)
+    {
+        if (KiZugriffKontext.Aus(context) is not { } kontext)
+        {
+            await weiter();
+            return;
+        }
+
+        // Die Fehlerseite: UseExceptionHandler führt die Anfrage nach einer
+        // Ausnahme noch einmal nach /api/error aus — mit denselben Items, also
+        // mit Kontext. Ohne diese Ausnahme würde aus der 500 eine 403
+        // (ApiErrorController ist nicht für Schlüssel eingestuft), und der
+        // Assistent erführe nie, dass seine Aktion gescheitert ist.
+        if (context.Features.Get<IExceptionHandlerFeature>() is not null)
+        {
+            await weiter();
+            return;
+        }
+
+        var entscheidung = Entscheiden(kontext, context.GetEndpoint(), context.Request.Method, context.Request.Path);
+        if (!entscheidung.Durch)
+        {
+            await FehlerSchreiben(context, entscheidung.Status, entscheidung.Code!, entscheidung.Meldung!);
+            return;
+        }
+
+        var dienst = context.RequestServices.GetRequiredService<KiZugriffDienst>();
+        if (entscheidung.SchaltbefehlZaehlen
+            && !dienst.SchaltbefehlZulassen(kontext.Hoechstwerte.MaxSchaltbefehleJeStunde))
+        {
+            await FehlerSchreiben(context, StatusCodes.Status429TooManyRequests, "ki_hoechstwert",
+                $"Höchstwert erreicht: über KI-Assistenten sind höchstens {kontext.Hoechstwerte.MaxSchaltbefehleJeStunde} "
+                + "Schalt- und Dosierbefehle je Stunde erlaubt. Der Betreiber kann den Wert in Grow OS ändern.");
+            return;
+        }
+
+        if (entscheidung.SicherungVorher)
+        {
+            var sicherung = context.RequestServices.GetRequiredService<IKiSicherung>();
+            var datei = sicherung.Anlegen(context.RequestServices);
+            if (datei is null)
+            {
+                await FehlerSchreiben(context, StatusCodes.Status503ServiceUnavailable, "ki_sicherung_fehlgeschlagen",
+                    "Vor dieser Aktion legt Grow OS eine Sicherung an, und das ist gerade nicht gelungen. "
+                    + "Es wurde nichts ausgeführt.");
+                return;
+            }
+            Protokollieren(context, "ki-sicherung-vorher",
+                $"Sicherung {datei} vor {context.Request.Method} {context.Request.Path} über KI-Assistent ‚{kontext.SchluesselName}‘.",
+                "info", true, datei);
+        }
+
+        await weiter();
+    }
+
+    /// <summary>
+    /// Die Regel aus dem Bauplan — ohne Seiteneffekte, damit sie sich einzeln prüfen lässt.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Aktion gewinnt vor Controller.</b> Die Endpunkt-Metadaten führen
+    /// die Attribute des Controllers zuerst, die der Aktion danach. Das letzte
+    /// von <see cref="KiStufeAttribute"/> oder <see cref="KeinKiZugriffAttribute"/>
+    /// ist also das der Aktion, wenn sie eines trägt.</para>
+    ///
+    /// <para><b>Verwaltungswege</b> (<see cref="AdminAccessPolicy.IsAdminPath"/>)
+    /// brauchen immer Verwaltung — lesend wie schreibend, zusätzlich zur Stufe der
+    /// Aktion. Sie sind schon heute für ein Nachbar-Add-on auch lesend zu.</para>
+    /// </remarks>
+    public static KiEntscheidung Entscheiden(KiZugriffKontext kontext, Endpoint? endpunkt, string methode, PathString pfad)
+    {
+        // Kein Endpunkt: die App antwortet ohnehin 404.
+        if (endpunkt is null || IstFallback(endpunkt)) return KiEntscheidung.Weiter;
+
+        var lesend = HttpMethods.IsGet(methode);
+        var verwaltungsweg = AdminAccessPolicy.IsAdminPath(pfad);
+        if (lesend && !verwaltungsweg) return KiEntscheidung.Weiter;
+
+        var einstufung = endpunkt.Metadata.LastOrDefault(m => m is KiStufeAttribute or KeinKiZugriffAttribute);
+
+        if (einstufung is KeinKiZugriffAttribute kein)
+        {
+            return KiEntscheidung.Verboten("ki_kein_zugriff",
+                $"Das ist über einen KI-Assistenten nie erreichbar: {kein.Grund}");
+        }
+
+        if (verwaltungsweg && !kontext.Darf(KiStufe.Verwaltung))
+        {
+            return StufeFehlt(KiStufe.Verwaltung);
+        }
+
+        if (lesend) return KiEntscheidung.Weiter;
+
+        if (einstufung is not KiStufeAttribute { Stufe: not KiStufe.Keine } stufe)
+        {
+            return KiEntscheidung.Verboten("ki_nicht_eingestuft",
+                "Diese Aktion ist für KI-Assistenten nicht freigegeben: sie ist keiner Stufe zugeordnet.");
+        }
+
+        if (!kontext.Darf(stufe.Stufe)) return StufeFehlt(stufe.Stufe);
+
+        return new KiEntscheidung(
+            Durch: true,
+            // Per Bit: eine Aktion kann mehrere Stufen verlangen (etwa Verwaltung | GeraeteSchalten).
+            // Ein Sicherheitsbefehl wie der Pumpen-Stopp zählt nie (KiOhneHoechstwertAttribute).
+            SchaltbefehlZaehlen: (stufe.Stufe & KiStufe.GeraeteSchalten) != 0
+                                 && endpunkt.Metadata.GetMetadata<KiOhneHoechstwertAttribute>() is null,
+            SicherungVorher: endpunkt.Metadata.GetMetadata<KiSicherungVorherAttribute>() is not null);
+    }
+
+    private static KiEntscheidung StufeFehlt(KiStufe stufe)
+        => KiEntscheidung.Verboten("ki_stufe_fehlt",
+            $"Dafür fehlt die Freigabe für Stufe „{KiZugriffDienst.Anzeigename(stufe)}“. "
+            + "Der Betreiber kann sie in Grow OS für diesen Schlüssel anhaken.");
+
+    /// <summary>
+    /// Der SPA-Fallback aus <c>Program.cs</c> (<c>MapFallback</c>): er beantwortet
+    /// einen unbekannten /api-Weg mit 404 und schreibt nichts.
+    /// </summary>
+    /// <remarks>
+    /// <c>MapFallback</c> setzt die Reihenfolge auf <see cref="int.MaxValue"/> — so
+    /// erkennt ihn auch ASP.NET selbst. Jeder andere Endpunkt ohne Controller
+    /// läuft durch die normale Regel und ist ohne Einstufung gesperrt.
+    /// </remarks>
+    private static bool IstFallback(Endpoint endpunkt)
+        => endpunkt is RouteEndpoint { Order: int.MaxValue }
+           && endpunkt.Metadata.GetMetadata<ControllerActionDescriptor>() is null;
+
+    // ------------------------------------------------------------ Schritt 3
+
+    private static void Nachher(HttpContext context, KiZugriffDienst dienst, KiZugriffKontext kontext, bool ausnahme)
+    {
+        try
+        {
+            dienst.ZuletztGenutzt(kontext.SchluesselId);
+        }
+        catch
+        {
+            // Der Zeitstempel darf die Antwort nie kippen.
+        }
+
+        var lesend = HttpMethods.IsGet(context.Request.Method);
+        if (lesend && !AdminAccessPolicy.IsAdminPath(context.Request.Path)) return;
+
+        var status = ausnahme ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
+        var erfolg = status < 400;
+        Protokollieren(context,
+            lesend ? "ki-zugriff-verwaltung-lesend" : "ki-zugriff-schreibend",
+            $"über KI-Assistent ‚{kontext.SchluesselName}‘: {context.Request.Method} {context.Request.Path} → {status}",
+            erfolg ? "info" : "warning",
+            erfolg);
+    }
+
+    // --------------------------------------------------------------- Hilfe
+
+    private static void Protokollieren(HttpContext context, string aktion, string zusammenfassung, string schwere, bool erfolg, string? datei = null)
+    {
+        try
+        {
+            context.RequestServices.GetService<SystemAuditRepository>()?.Add(new SystemAuditEvent
+            {
+                EventType = "security",
+                Action = aktion,
+                Summary = zusammenfassung,
+                Severity = schwere,
+                Source = "ki-zugriff",
+                RemoteAddress = context.Connection.RemoteIpAddress?.ToString(),
+                RelatedFileName = datei,
+                Success = erfolg,
+            });
+        }
+        catch
+        {
+            // Wie TryLogAdminAccess in Program.cs: das Protokoll darf keine Anfrage blockieren.
+        }
+    }
+
+    /// <summary>Eine Fehlerantwort im Format aller anderen (<see cref="ApiErrorFactory"/>).</summary>
+    public static async Task FehlerSchreiben(HttpContext context, int status, string code, string meldung)
+    {
+        context.Response.StatusCode = status;
+        context.Response.ContentType = "application/json; charset=utf-8";
+        await JsonSerializer.SerializeAsync(
+            context.Response.Body,
+            ApiErrorFactory.Create(code, meldung, status, traceId: context.TraceIdentifier),
+            JsonOptionen);
+    }
+}
