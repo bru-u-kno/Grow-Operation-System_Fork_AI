@@ -55,30 +55,26 @@ except Exception:
     print('')" "$feld"
 }
 
-# Gehoert dieser Pfad zu diesem Repository? Die Hooks sind auch aktiv, wenn die
-# Sitzung im Ordner darueber startet (`projekte/`) — dort liegen andere Projekte,
-# deren Commits dieses Tor nichts angehen.
+# In WELCHEM Stand des Repos arbeitet dieser Pfad? — das Haupt-Verzeichnis
+# oder ein Worktree (offene Punkte 03.10.2026, F2).
 #
-# Unter Windows kommen Pfade als „C:\Users\…", Git-Bash schreibt „/c/Users/…".
-# Ohne Angleichung hielte der Hook dort JEDE Datei für fremd — und stiege
-# wieder still aus.
-pfad_einheitlich() {
-  local p="${1//\\//}"
-  case "$p" in
-    [A-Za-z]:/*) p="/$(printf '%s' "${p:0:1}" | tr 'A-Z' 'a-z')${p:2}" ;;
-  esac
-  printf '%s' "$p" | tr 'A-Z' 'a-z'
-}
-
-im_repo() {
-  local pfad wurzel
-  [ -z "$1" ] && return 1
-  pfad="$(pfad_einheitlich "$1")"
-  wurzel="$(pfad_einheitlich "$WURZEL")"
-  case "$pfad" in
-    "$wurzel"|"$wurzel"/*) return 0 ;;
-    *) return 1 ;;
-  esac
+# Bis dahin bauten und prueften die Hooks immer `WURZEL`, also das
+# Haupt-Verzeichnis, aus dem die Skripte stammen. Ein Agent in einem Worktree
+# (`.claude/worktrees/…`, oder ein `git worktree` daneben) aenderte seine Datei
+# — und der Hook baute einen ANDEREN Stand: gruen, ohne die Aenderung je
+# gesehen zu haben. Jetzt gilt der Stand, zu dem der Pfad gehoert, sofern es
+# dieses Projekt ist (es traegt `GrowDiary.slnx`). Gibt die Ausgabe leer
+# zurueck, geht der Pfad dieses Projekt nichts an.
+ziel_wurzel() {
+  local pfad="$1" ordner oben
+  [ -z "$pfad" ] && return 1
+  ordner="$pfad"
+  [ -d "$ordner" ] || ordner="$(dirname "$ordner")"
+  # Neue Dateien: der Ordner kann noch fehlen — dann den naechsten vorhandenen.
+  while [ ! -d "$ordner" ] && [ "$ordner" != "/" ] && [ "$ordner" != "." ]; do ordner="$(dirname "$ordner")"; done
+  oben="$(git -C "$ordner" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [ -f "$oben/GrowDiary.slnx" ] || return 1
+  printf '%s' "$oben"
 }
 
 # Laut abbrechen: Exit 2 gibt stderr an Claude zurueck (bei PreToolUse:

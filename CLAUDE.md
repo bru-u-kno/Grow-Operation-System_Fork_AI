@@ -227,6 +227,13 @@ hat, behält sie.
 GROW_OS_DEMO=1 dotnet run --project GrowDiary.Web
 ```
 
+Auf Linux (VM, Agenten): `scripts/demo-app.sh start [PORT]` — eigener Port,
+frischer Datenordner, Abgleich der Bau-Kennung; `stop [PORT]` beendet genau die
+App an diesem Port. Der Port geht über `Hosting__DefaultUrls`;
+**`ASPNETCORE_URLS` wirkt nicht** (Program.cs überschreibt es mit
+`Hosting:DefaultUrls`). Nie alle `GrowDiary.Web.dll`-Prozesse beenden — am
+02.10.2026 hat das die Apps paralleler Agenten mitgerissen.
+
 Gegen die laufende App prüfen:
 
 ```bash
