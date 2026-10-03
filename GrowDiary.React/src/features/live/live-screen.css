@@ -607,7 +607,7 @@
   .af-row .ls-btn { margin-left: auto; }
 }
 
-/* ---------- Verlaufs-Kachel (24 h, mehrere Werte) ---------- */
+/* ---------- Verlaufs-Kachel (Rahmen; das Diagramm selbst: verlauf.css) ---------- */
 
 .ls-chart-tile {
   border: 1px solid var(--border);
@@ -624,33 +624,6 @@
   text-transform: uppercase;
   margin-bottom: 4px;
 }
-
-.hc svg { display: block; cursor: crosshair; }
-.hc-grid { stroke: var(--border); stroke-width: 1; }
-.hc-cursor { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
-.hc-axis { fill: var(--muted); font-size: var(--fs-etikett); }
-
-.hc-readout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  align-items: center;
-  margin-top: 6px;
-  font-size: var(--fs-text);
-}
-
-.hc-readout-time {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  min-width: 76px;
-}
-
-.hc-readout-item { display: inline-flex; align-items: center; gap: 5px; }
-.hc-readout-item strong { font-variant-numeric: tabular-nums; }
-
-.hc-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-
-.hc-empty { color: var(--muted); font-size: var(--fs-text); padding: 18px 0; text-align: center; }
 
 /* Der Zusatztext im Auswahl-Dialog, der sagt, was die Kachel mitnimmt. */
 .ls-pick-text em { color: var(--muted); font-style: normal; }

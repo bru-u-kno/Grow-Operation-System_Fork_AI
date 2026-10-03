@@ -218,8 +218,8 @@ function AddTileDialog({
           >
             <span className="dot" />
             <span className="ls-pick-text">
-              Verlauf · 24 h
-              <em> — alle Werte dieses Bereichs in einem Bild</em>
+              Verlauf
+              <em> — alle Werte dieses Bereichs in einem Bild, 1 Stunde bis 7 Tage</em>
             </span>
           </button>
 

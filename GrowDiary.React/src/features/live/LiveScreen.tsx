@@ -323,6 +323,7 @@ export function LiveScreen({
       <section className="ls-metrics">
         {eigeneAnordnung && dashboard ? (
           <DashboardBands
+            tentId={tent?.id ?? null}
             layout={dashboard.layout}
             metricsByKey={metricsByKey}
             entityValues={dashboard.entityValues}

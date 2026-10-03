@@ -58,7 +58,7 @@ export const KNOWN_METRICS: ReadonlyArray<{ key: string; label: string }> = [
  * nicht noch einmal auswählen. Nachträglich lässt sich die Kachel entfernen
  * wie jede andere.
  */
-export function chartTile(metricKeys: string[], label = 'Verlauf · 24 h'): DashboardTile {
+export function chartTile(metricKeys: string[], label = 'Verlauf'): DashboardTile {
   return {
     id: newId(),
     kind: 'Chart',

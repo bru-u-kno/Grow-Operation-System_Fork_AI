@@ -7,17 +7,31 @@
  * Minute neu einen Satz.
  */
 
-/** Die nächste Uhrzeit `HH:mm` nach `jetzt` — auch über Mitternacht hinweg. */
-export function naechsterZeitpunkt(jetzt: Date, hhmm: string): Date | null {
-  const treffer = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim())
+/**
+ * Eine Schaltzeit `HH:mm` als Stunde und Minute — oder null, wenn sie keine ist.
+ *
+ * Eine Stelle für das Lesen, weil zwei Abnehmer dieselbe Zeit brauchen: die
+ * Restzeit auf der Licht-Kachel und die Dunkelphasen im Verlaufsdiagramm.
+ * Liest die eine „8:00" und die andere nicht, zeigt die Kachel eine Restzeit
+ * und das Diagramm keine Nacht.
+ */
+export function uhrzeitLesen(hhmm: string | null | undefined): { stunde: number; minute: number } | null {
+  const treffer = /^(\d{1,2}):(\d{2})$/.exec((hhmm ?? '').trim())
   if (!treffer) return null
 
   const stunde = Number(treffer[1])
   const minute = Number(treffer[2])
   if (stunde > 23 || minute > 59) return null
+  return { stunde, minute }
+}
+
+/** Die nächste Uhrzeit `HH:mm` nach `jetzt` — auch über Mitternacht hinweg. */
+export function naechsterZeitpunkt(jetzt: Date, hhmm: string): Date | null {
+  const zeit = uhrzeitLesen(hhmm)
+  if (!zeit) return null
 
   const ziel = new Date(jetzt)
-  ziel.setHours(stunde, minute, 0, 0)
+  ziel.setHours(zeit.stunde, zeit.minute, 0, 0)
   // Schon vorbei heisst: morgen. Ohne diesen Fall zeigt die Kachel abends um
   // 21 Uhr „vor 16 Stunden" statt „in 8 Stunden".
   if (ziel.getTime() <= jetzt.getTime()) ziel.setDate(ziel.getDate() + 1)

@@ -3,7 +3,7 @@ import type { MetricPayload } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
 import { SensorChart } from '../../components/SensorChart'
 import { MetricTile } from './MetricTile'
-import { HistoryChart } from './HistoryChart'
+import { Verlaufsdiagramm } from './Verlaufsdiagramm'
 import { decimalsForMetric } from './metric-tile-model'
 import { metricProvenance } from './live-model'
 import { SectionHead } from './DashboardEditor'
@@ -38,8 +38,10 @@ import { classNames } from '../../utils'
  * jeder Wischer zum Scrollen an einer Kachel hängen.
  */
 export function DashboardBands({
-  layout, metricsByKey, entityValues, trends, editing, onChange,
+  tentId, layout, metricsByKey, entityValues, trends, editing, onChange,
 }: {
+  /** Für das Nachladen der 7 Tage im Verlaufsdiagramm. */
+  tentId: number | null
   layout: DashboardLayout
   metricsByKey: Map<string, MetricPayload>
   entityValues: Map<string, EntityValue>
@@ -125,14 +127,15 @@ export function DashboardBands({
                 >
                   {tile.kind === 'Chart' ? (
                     <div className="ls-chart-tile">
-                      <div className="ls-chart-head">{tile.label ?? 'Verlauf · 24 h'}</div>
-                      <HistoryChart
-                        lines={(tile.metricKeys ?? []).map((key) => ({
-                          key,
-                          label: metricsByKey.get(key)?.label ?? key,
-                          unit: metricsByKey.get(key)?.unit ?? null,
-                          points: trends.get(key) ?? [],
-                        }))}
+                      {/* „Verlauf · 24 h" war der Standardname, solange die Kachel
+                          nur 24 h konnte — gespeicherte Kacheln tragen ihn noch. */}
+                      <div className="ls-chart-head">{!tile.label || tile.label === 'Verlauf · 24 h' ? 'Verlauf' : tile.label}</div>
+                      <Verlaufsdiagramm
+                        tileId={tile.id}
+                        tentId={tentId}
+                        metricKeys={tile.metricKeys ?? []}
+                        metricsByKey={metricsByKey}
+                        tag={trends}
                       />
                     </div>
                   ) : (

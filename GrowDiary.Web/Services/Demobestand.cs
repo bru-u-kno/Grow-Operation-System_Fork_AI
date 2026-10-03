@@ -98,6 +98,8 @@ public static partial class Demobestand
         var pumpe = WeitereGeraeteAnlegen(hardware, zelt.Id, laufend.Id);
         AlarmregelAnlegen(alarme, zelt.Id);
         LichtplanAnlegen(grows, zelt.Id);
+        LichtflankenAnlegen(dienste.GetRequiredService<LightRepository>(), zelt.Id, DateTime.Now);
+        VerlaufsKachelAnlegen(dienste.GetRequiredService<DashboardLayoutRepository>(), zelt.Id);
         SensorenZuordnen(grows, zelt.Id);
         RisikoAnlegen(hardware, zelt.Id, laufend.Id, pumpe.Id);
         GlasAnlegen(aushaerten, laufend.Id);
@@ -980,6 +982,75 @@ public static partial class Demobestand
             LightsOffTime = Demoverlauf.LichtAusUhr,
             Source = LightSource.Manual,
         });
+    }
+
+    /// <summary>
+    /// Die Schaltflanken des Lichts der letzten Tage, passend zum Lichtplan.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Warum.</b> Die Schaltzeiten an der Licht-Kachel
+    /// (<c>lightOnAt</c>/<c>lightOffAt</c>) kommen aus dem
+    /// <see cref="LightCycleReader"/>, und der lernt sie aus beobachteten
+    /// Flanken. Der Bestand hatte keine — die Kachel stand deshalb ohne
+    /// Uhrzeiten da, und das Verlaufsdiagramm, das die Dunkelphase daraus
+    /// grau hinterlegt, zeigte im Testbetrieb nie eine Nacht.</para>
+    ///
+    /// <para>Sieben Tage, weil der Lerner fünf zurückschaut
+    /// (<see cref="LightCycleReader.LookbackDays"/>) und mindestens zwei
+    /// vollständige Phasen braucht. Nur Flanken in der Vergangenheit.</para>
+    /// </remarks>
+    public static int LichtflankenAnlegen(LightRepository licht, int zeltId, DateTime jetztOrt)
+    {
+        var anzahl = 0;
+        for (var vorTagen = 7; vorTagen >= 0; vorTagen--)
+        {
+            var tag = jetztOrt.Date.AddDays(-vorTagen);
+            var an = tag.AddHours(Demoverlauf.LichtAn);
+            var aus = Demoverlauf.LichtAus > Demoverlauf.LichtAn
+                ? tag.AddHours(Demoverlauf.LichtAus)
+                : tag.AddDays(1).AddHours(Demoverlauf.LichtAus % 24);
+            foreach (var (zeit, art) in new[] { (an, LightTransitionKind.LightOn), (aus, LightTransitionKind.LightOff) })
+            {
+                if (zeit >= jetztOrt) continue;
+                licht.CreateLightTransitionIfNotDuplicate(new LightTransitionEvent
+                {
+                    TentId = zeltId,
+                    Kind = art,
+                    OccurredAtUtc = DateTime.SpecifyKind(zeit, DateTimeKind.Local).ToUniversalTime(),
+                    Source = LightSource.HomeAssistant,
+                    RawState = art == LightTransitionKind.LightOn ? "on" : "off",
+                });
+                anzahl++;
+            }
+        }
+        return anzahl;
+    }
+
+    /// <summary>Die Messgrößen, die die Verlaufs-Kachel des Testzelts zeichnet.</summary>
+    public static readonly string[] VerlaufsKachelWerte = ["temperature", "humidity", "co2"];
+
+    /// <summary>
+    /// Eine eigene Anordnung der Live-Seite mit Verlaufs-Kachel im Bereich Klima.
+    /// </summary>
+    /// <remarks>
+    /// Ohne sie zeichnet die Live-Seite ihre festen Reihen — und das
+    /// Verlaufsdiagramm gibt es nur als Kachel einer eigenen Anordnung. Die
+    /// Oberflächen-Prüfungen (<c>e2e/verlaufsdiagramm.spec.ts</c> und alle
+    /// Querschnitte über die Startseite) hätten es sonst nie gesehen.
+    /// Ausgangspunkt ist die eingebaute Anordnung; dazu kommt nur die Kachel.
+    /// </remarks>
+    private static void VerlaufsKachelAnlegen(DashboardLayoutRepository anordnungen, int zeltId)
+    {
+        var anordnung = DashboardLayout.Default(zeltId);
+        anordnung.Sections.First(bereich => bereich.Id == "climate").Tiles.Add(new DashboardTile
+        {
+            Id = "verlauf",
+            Kind = DashboardTileKind.Chart,
+            MetricKeys = [.. VerlaufsKachelWerte],
+            Label = "Verlauf",
+            Span = 3,
+        });
+        anordnungen.Save(anordnung);
     }
 
     private static void AlarmregelAnlegen(AlertRuleRepository alarme, int zeltId)

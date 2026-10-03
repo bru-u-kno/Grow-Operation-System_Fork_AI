@@ -149,6 +149,55 @@ public sealed class DemobestandStimmigTests : IDisposable
             $"Der Testbestand widerspricht der eigenen Regel der App: {beanstandung}");
     }
 
+    /// <summary>Die Lichtflanken des Bestands ergeben den Lichtplan.</summary>
+    /// <remarks>
+    /// Die Schaltzeiten an der Licht-Kachel und die Dunkelphase im
+    /// Verlaufsdiagramm kommen aus dem gelernten Zyklus. Ohne Flanken lernt der
+    /// <see cref="LightCycleReader"/> nichts, und beide stehen im Testbetrieb
+    /// leer — genau so war es bis zum 03.10.2026.
+    /// </remarks>
+    [Fact]
+    public void Die_Lichtflanken_ergeben_den_Lichtplan()
+    {
+        var zelt = _grows.GetTents()[0];
+        var leser = new LightCycleReader(_dienste.GetRequiredService<LightRepository>());
+
+        var zyklus = leser.CycleFor(zelt.Id, DateTime.UtcNow);
+
+        Assert.NotNull(zyklus);
+        Assert.Equal(new TimeOnly(Demoverlauf.LichtAn, 0), zyklus!.OnAt);
+        Assert.Equal(new TimeOnly(Demoverlauf.LichtAus % 24, 0), zyklus.OffAt);
+        Assert.True(zyklus.Days >= LightCycleLearner.MinPhases, $"Nur {zyklus.Days} Phasen gelernt.");
+
+        var beanstandung = LightCycleLearner.Mismatch(zyklus, GrowStageResolver.Resolve(LaufenderGrow(), DateTime.Today), LaufenderGrow().SeedType);
+        Assert.True(beanstandung is null, $"Die gelernten Flanken widersprechen der eigenen Regel der App: {beanstandung}");
+    }
+
+    /// <summary>Die Live-Seite des Testzelts hat eine Verlaufs-Kachel, und hinter jedem ihrer Werte steht ein Verlauf.</summary>
+    /// <remarks>
+    /// Das Verlaufsdiagramm gibt es nur als Kachel einer eigenen Anordnung. Ohne
+    /// sie im Bestand prüft keine Oberflächen-Prüfung das Diagramm. Und ein
+    /// Wert in der Kachel, für den der Bestand keinen Verlauf anlegt (VPD stand
+    /// im ersten Entwurf darin), wäre eine Kurve, die nie erscheint.
+    /// </remarks>
+    [Fact]
+    public void Die_Live_Seite_hat_eine_Verlaufs_Kachel_mit_Verlauf()
+    {
+        var zelt = _grows.GetTents()[0];
+        var anordnung = _dienste.GetRequiredService<DashboardLayoutRepository>().GetSaved(zelt.Id);
+
+        Assert.NotNull(anordnung);
+        var kacheln = anordnung!.Sections.SelectMany(s => s.Tiles).Where(t => t.Kind == DashboardTileKind.Chart).ToList();
+        Assert.Single(kacheln);
+        var werte = kacheln[0].MetricKeys ?? [];
+        Assert.True(werte.Count >= 2, $"Die Verlaufs-Kachel zeichnet nur {werte.Count} Wert(e).");
+        foreach (var wert in werte)
+        {
+            Assert.True(Demoverlauf.Schluessel.Contains(wert),
+                $"Die Verlaufs-Kachel zeigt „{wert}\", aber der Bestand legt dafür keinen Verlauf an (Demoverlauf.Schluessel).");
+        }
+    }
+
     /// <summary>Lichtplan, Lichtkurve und Zeit-Entitäten nennen dieselbe Uhrzeit.</summary>
     /// <remarks>
     /// Drei Stellen, an denen dieselbe Uhrzeit steht — Lichtplan des Zelts,
