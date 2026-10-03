@@ -103,6 +103,58 @@ public sealed class SensorReadingRepository
                 : null;
     }
 
+    /// <summary>Alle Rohwerte dieser Messgrößen, die genau diesen Wert tragen (für die Nullbild-Bereinigung).</summary>
+    public IReadOnlyList<TentSensorReading> GetReadingsWithValue(IReadOnlyList<string> metricKeys, double value)
+    {
+        if (metricKeys.Count == 0) return [];
+
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        var platzhalter = metricKeys.Select((_, i) => $"$k{i}").ToList();
+        cmd.CommandText =
+            "SELECT Id, TentId, MetricKey, Value, Unit, CapturedAtUtc FROM TentSensorReadings " +
+            $"WHERE Value = $value AND MetricKey IN ({string.Join(", ", platzhalter)}) " +
+            "ORDER BY CapturedAtUtc ASC;";
+        cmd.Parameters.AddWithValue("$value", value);
+        for (var i = 0; i < metricKeys.Count; i++) cmd.Parameters.AddWithValue(platzhalter[i], metricKeys[i]);
+        return ReadReadings(cmd);
+    }
+
+    /// <summary>Löscht diese Rohwerte.</summary>
+    public void DeleteReadings(IEnumerable<int> ids)
+    {
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction();
+        using var cmd = connection.CreateCommand();
+        cmd.Transaction = transaction;
+        cmd.CommandText = "DELETE FROM TentSensorReadings WHERE Id = $id;";
+        var id = cmd.Parameters.Add("$id", SqliteType.Integer);
+        foreach (var eintrag in ids)
+        {
+            id.Value = eintrag;
+            cmd.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+    }
+
+    /// <summary>Der älteste noch vorhandene Rohwert dieser Messgröße — null, wenn es keinen gibt.</summary>
+    public DateTime? GetOldestReadingUtc(int tentId, string metricKey)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT Id, TentId, MetricKey, Value, Unit, CapturedAtUtc
+            FROM TentSensorReadings
+            WHERE TentId = $tentId AND MetricKey = $metricKey
+            ORDER BY CapturedAtUtc ASC
+            LIMIT 1;
+            """;
+        cmd.Parameters.AddWithValue("$tentId", tentId);
+        cmd.Parameters.AddWithValue("$metricKey", metricKey);
+        return ReadReadings(cmd).FirstOrDefault()?.CapturedAtUtc;
+    }
+
     public void DeleteOlderThan(DateTime cutoffUtc)
     {
         using var connection = OpenConnection();

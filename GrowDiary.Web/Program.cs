@@ -189,6 +189,25 @@ var app = builder.Build();
 
 app.Services.GetRequiredService<DatabaseInitializer>().Initialize();
 
+// Gespeicherte Nullbilder der Wassersonde (pH 0 und EC 0 im selben Augenblick)
+// aus den Rohwerten nehmen und die betroffenen Tageswerte neu rechnen. Die
+// Regel und warum sie eindeutig ist: WassersondenNullbild.
+try
+{
+    var nullbilder = WassersondenNullbild.GespeicherteEntfernen(
+        app.Services.GetRequiredService<SensorReadingRepository>(), DateOnly.FromDateTime(DateTime.Now));
+    if (nullbilder.Entfernt > 0)
+    {
+        app.Logger.LogInformation(
+            "Wassersonde: {Entfernt} Rohwerte aus Nullbildern entfernt, {Neu} Tageswerte neu berechnet, {Nicht} nicht neu berechenbar (Rohwerte des Tages nicht mehr vollständig).",
+            nullbilder.Entfernt, nullbilder.TageNeuBerechnet, nullbilder.TageNichtNeuBerechnet);
+    }
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Wassersonde: Bereinigung der Nullbilder fehlgeschlagen.");
+}
+
 // Phasenanker (02.10.2026): nie bestätigte Phasenbeginne einmalig aus der
 // bisherigen Schätzung übernehmen — vor allem, was Phasen liest.
 try

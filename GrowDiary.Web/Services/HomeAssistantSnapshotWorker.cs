@@ -156,17 +156,9 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
                 var capturedAt  = DateTime.UtcNow;
                 heartbeat.MarkHomeAssistantSuccess(capturedAt);
 
-                foreach (var (key, state) in states)
+                foreach (var reading in Rohwerte(tent.Id, states, capturedAt))
                 {
-                    if (state.NumericValue is not { } value) continue;
-                    sensorRepo.AddReading(new TentSensorReading
-                    {
-                        TentId        = tent.Id,
-                        MetricKey     = key,
-                        Value         = value,
-                        Unit          = state.UnitOfMeasurement,
-                        CapturedAtUtc = capturedAt
-                    });
+                    sensorRepo.AddReading(reading);
                 }
 
                 // Kamera-Snapshot täglich nach 12:00 Uhr
@@ -215,6 +207,26 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
             }
         }
     }
+
+    /// <summary>Die Rohwerte, die eine Erfassungsrunde schreibt: jeder Zustand mit Zahl, sonst keiner.</summary>
+    /// <remarks>
+    /// Ein Zustand ohne Zahl (<c>unavailable</c>, <c>unknown</c>, leer — oder ein
+    /// Nullbild der Wassersonde, siehe <see cref="WassersondenNullbild"/>) wird
+    /// zur Lücke im Verlauf, nicht zu 0.
+    /// </remarks>
+    public static IReadOnlyList<TentSensorReading> Rohwerte(
+        int tentId, IReadOnlyDictionary<string, HomeAssistantState> states, DateTime capturedAtUtc)
+        => states
+            .Where(paar => paar.Value.NumericValue is not null)
+            .Select(paar => new TentSensorReading
+            {
+                TentId        = tentId,
+                MetricKey     = paar.Key,
+                Value         = paar.Value.NumericValue!.Value,
+                Unit          = paar.Value.UnitOfMeasurement,
+                CapturedAtUtc = capturedAtUtc
+            })
+            .ToList();
 
     private async Task TryCaptureCamera(
         HomeAssistantService haService,
@@ -376,12 +388,7 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
 
             foreach (var key in metricKeys)
             {
-                var readings = sensorRepo.GetReadingsForDay(tent.Id, key, yesterday);
-                if (readings.Count < 3) continue;
-
-                var values = readings.Select(r => r.Value).ToList();
-                var unit   = readings[0].Unit;
-                var stat   = PercentileCalculator.ComputeStats(tent.Id, key, yesterday, values, unit);
+                if (Tageswert.Berechnen(sensorRepo, tent.Id, key, yesterday) is not { } stat) continue;
                 sensorRepo.UpsertDailyStat(stat);
             }
         }

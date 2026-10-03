@@ -63,6 +63,7 @@ public sealed class HomeAssistantService
             // schaut man hin, bevor man etwas anschliesst.
             var demo = DemoData.StatesFor(DateTime.UtcNow);
             AddLitersFromCentimeters(demo, tent);
+            WassersondenNullbild.AufZustaendeAnwenden(demo);
             return demo;
         }
 
@@ -108,6 +109,18 @@ public sealed class HomeAssistantService
             // „cm-Sensor" kennen. Genau daran scheiterte der Volumenfaktor
             // vorher: er las nur `reservoir-level` in Litern.
             AddLitersFromCentimeters(states, tent);
+
+            // Ebenfalls an der Quelle: meldet die Wassersonde pH 0 und EC 0
+            // zugleich, ist das ein Platzhalter der Integration und kein
+            // Messwert (Begründung in WassersondenNullbild). Ohne diese Zeile
+            // landete er als 0 in Rohwerten, Tageswerten, Kacheln und Alarmen.
+            var nullbild = WassersondenNullbild.AufZustaendeAnwenden(states);
+            if (nullbild.Count > 0)
+            {
+                _logger.LogInformation(
+                    "Wassersonde in Zelt {TentId} meldet pH 0 und EC 0 zugleich — als nicht verfügbar behandelt: {Groessen}.",
+                    tent.Id, string.Join(", ", nullbild));
+            }
 
             if (results.Any(result => result.TransportFailure))
             {
