@@ -13,8 +13,8 @@ import {
   warnungAblehnen, warnungBestaetigen, zustandWaehlen, type HoechstwerteEntwurf, type StufenWahl,
 } from './ki-zugriff-logik'
 import KiProtokoll from './KiProtokoll'
-import { insBildRollen } from '../../components/reiter-ins-bild'
-import { insBildHolen, rollArt } from './ins-bild'
+import { auslaufZuruecksetzen } from '../../components/reiter-ins-bild'
+import { handyOderBrowser, insBildHolen, rollArt } from './ins-bild'
 import { altesKopieren } from './kopieren'
 import './ki-zugriff.css'
 
@@ -67,8 +67,10 @@ export default function KiZugriffAbschnitt() {
   function nurDiesenZeigen(id: number) {
     setProtokollFilter((bisher) => (bisher === id ? null : id))
     // Auf dem Telefon liegt die Liste unter allen Schlüsseln — dorthin, wo sich etwas ändert.
-    // Selbst gerollt statt scrollIntoView — sonst landet die Liste in der HA-App unter der Kopfleiste (ins-bild.ts).
-    insBildRollen(document.getElementById('ki-protokoll'), rollArt())
+    // Am Handy selbst gerollt statt scrollIntoView — sonst landet die Liste in der HA-App unter der Kopfleiste (ins-bild.ts).
+    // Zwei Frames später, damit schon die gefilterte Liste gemessen wird.
+    auslaufZuruecksetzen()
+    handyOderBrowser('start')(() => document.getElementById('ki-protokoll'), rollArt())
   }
 
   // Der Kasten mit dem Klartext hatte den Fokus — nach dem Ausblenden fiele er
@@ -76,8 +78,12 @@ export default function KiZugriffAbschnitt() {
   const neuKnopf = useRef<HTMLButtonElement>(null)
   function klartextAusblenden() {
     setAngelegt(null)
+    auslaufZuruecksetzen()
     requestAnimationFrame(() => neuKnopf.current?.focus())
   }
+
+  // Der Auslauf unten (insBildRollen) gehört zu diesem Abschnitt — beim Verlassen des Reiters weg damit.
+  useEffect(() => auslaufZuruecksetzen, [])
 
   function uebernehmen(seite: KiZugriffSeiteDto) {
     setGespeichertAktiv(seite.aktiv)

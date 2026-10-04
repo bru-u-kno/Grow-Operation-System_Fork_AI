@@ -35,7 +35,7 @@ export function auslaufZuruecksetzen(): void {
  * ein eingerolltes Ziel unter ihr. Der Stapel endet an der ersten Luecke: eine
  * feste Leiste weiter unten ist keine Kopfflaeche.
  */
-function kopfUnterkante(): number {
+export function kopfUnterkante(): number {
   const leisten = [...document.querySelectorAll<HTMLElement>('.v1-mobile-topbar, .v1-mobile-nav')]
     .filter((el) => getComputedStyle(el).position === 'fixed')
     .map((el) => el.getBoundingClientRect())

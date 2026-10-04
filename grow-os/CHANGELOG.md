@@ -18,6 +18,8 @@
   unten man beim Anlegen war.
 - **„Nur diesen zeigen" landet ebenfalls oben:** Der Sprung zur Liste „Was die KI zuletzt getan
   hat" hatte denselben Fehler und rollt jetzt genauso.
+- **Am Computer bleibt alles ruhig:** Ohne feste Kopfleiste rollt der Browser selbst und nur, wenn
+  der Kasten nicht schon zu sehen ist — kein Sprung an die Fensterkante, kein Leerraum unten.
 
 Gemessen bei 412 × 732 Pixeln mit nachgestellter App-Ansicht (Kopfleiste 137 Pixel hoch, Abstand
 nicht beachtet): vorher lag die Oberkante des Kastens bei 102 — unter der Kopfleiste —, jetzt direkt

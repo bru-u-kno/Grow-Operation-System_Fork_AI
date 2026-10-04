@@ -309,10 +309,11 @@ test.describe('Zugriff für KI-Assistenten', () => {
   /**
    * Fork AI (A-003, 04.10.2026 abends): forkai.166 rollte per scrollIntoView —
    * im Chromium hier richtig, in Brus HA-App lag der Kasten trotzdem ein Stück
-   * unter der Kopfleiste (dieselbe Falle wie F-049). Nachgestellt werden die
-   * zwei Unterschiede der App-Ansicht, die wir kennen: sie beachtet
-   * `scroll-margin-top` nicht, und die Kopfleiste ist bei größerer Schrift
-   * höher als der feste Rand. Das Stylesheet hier stellt die UMGEBUNG nach,
+   * unter der Kopfleiste (dieselbe Wirkung wie F-049). Nachgestellt werden zwei
+   * vermutete Unterschiede der App-Ansicht (belegt ist nur die Wirkung): sie
+   * beachtet `scroll-margin-top` nicht, und die Kopfleiste ist bei größerer
+   * Schrift höher als der feste Rand. Damit prüft der Fall den Zweig
+   * „gemessene Kopfleiste" in insBildRollen. Das Stylesheet hier stellt die UMGEBUNG nach,
    * nicht die Reparatur — die steckt im gebauten Stand.
    * Verlangt wird: Kasten OBEN, direkt unter der Kopfleiste, ganz zu sehen —
    * egal wie weit unten man beim Anlegen war. Dasselbe für „Nur diesen
@@ -361,11 +362,42 @@ test.describe('Zugriff für KI-Assistenten', () => {
         await expect(kasten).toBeFocused()
       }
 
+      // Ausblenden: kein Leerraum unten bleibt stehen (Auslauf aus insBildRollen).
+      await bereich.locator('[data-audit="ki-klartext-ausblenden"]').click()
+      expect(await page.evaluate(() => document.documentElement.style.getPropertyValue('--reiter-auslauf'))).toBe('')
+
       await page.evaluate(() => window.scrollTo(0, 0))
       await bereich.locator('[data-audit="ki-schluessel"]').first().getByRole('button', { name: 'Nur diesen zeigen' }).click()
       await obenUnterDerKopfleiste(page.locator('#ki-protokoll'), 'Nur diesen zeigen: Protokoll')
     } finally {
       for (const id of ids) await page.request.delete(`${WEG}/schluessel/${id}`)
+    }
+  })
+
+  /**
+   * Am Desktop gibt es keine feste Kopfleiste: der Kasten bleibt stehen, wenn er
+   * schon zu sehen ist, klebt nicht an der Fensterkante, und unten entsteht kein
+   * Leerraum (Prüferbefund zu forkai.167).
+   */
+  test('am Desktop: Kasten im Bild, ohne Sprung an die Kante und ohne Auslauf', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const bereich = await abschnitt(page)
+    let id = 0
+    try {
+      await bereich.locator('[data-audit="ki-schluessel-neu"]').click()
+      const neu = bereich.locator('[data-audit="ki-schluessel-form"]')
+      await neu.getByLabel('Name des Schlüssels').fill(`Desktop ${marke()}`)
+      const antwort = page.waitForResponse((r) => r.request().method() === 'POST' && /\/api\/settings\/ki-zugriff\/schluessel$/.test(new URL(r.url()).pathname))
+      await neu.locator('[data-audit="ki-schluessel-anlegen"]').click()
+      id = ((await (await antwort).json()) as { schluessel: { id: number } }).schluessel.id
+      const kasten = bereich.locator('[data-audit="ki-klartext"]')
+      await expect(kasten).toBeInViewport({ ratio: 1 })
+      await expect(kasten).toBeFocused()
+      await page.waitForTimeout(600)
+      expect(await kasten.evaluate((e) => e.getBoundingClientRect().top), 'Der Kasten klebt an der Fensterkante.').toBeGreaterThan(8)
+      expect(await page.evaluate(() => document.documentElement.style.getPropertyValue('--reiter-auslauf'))).toBe('')
+    } finally {
+      if (id) await page.request.delete(`${WEG}/schluessel/${id}`)
     }
   })
 })
