@@ -258,9 +258,11 @@ Beide sind nachgewiesen: Fehler eingebaut, Hook wurde rot. **Sie ersetzen die
 fünf Prüfungen nicht** — sie fangen Tippfehler und rotes CI, nicht ein
 doppeltes Formular oder eine Seite, die niemand liest.
 
-**Startet die Sitzung im Ordner über dem Repo** (VM `ClaudeCode`:
-`/home/claude/projekte`), liest Claude Code diese Hooks NICHT — dort bindet
-`/home/claude/projekte/.claude/settings.json` sie ein. Fehlt ein Werkzeug
+**Startet die Sitzung im Ordner über dem Repo** (VM `ClaudeCode`: seit
+04.10.2026 `~/projekte/homeassistant/`, das Repo liegt in `fork-ai/quellcode/`),
+liest Claude Code diese Hooks NICHT — dort bindet
+`~/projekte/homeassistant/.claude/settings.json` sie ein. Eine neue
+Hook-Einstellung wirkt erst in einer neu gestarteten Sitzung. Fehlt ein Werkzeug
 (Python, dotnet), melden die Hooks das laut statt still durchzuwinken
 (`.claude/hooks/werkzeuge.sh`). Bis zum 03.10.2026 lief dort wochenlang kein
 einziges Tor, und jeder Commit kam durch.
