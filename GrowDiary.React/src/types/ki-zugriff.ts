@@ -77,4 +77,9 @@ export interface KiProtokollEintragDto {
   art: string
   /** Der Satz aus dem Prüfprotokoll. */
   beschreibung: string
+  /**
+   * Bei `POST /api/ki-ha/dienst`: Dienst und Entität, etwa `light.turn_on → light.zelt`
+   * (nie die Daten). Fehlt bei allen anderen Einträgen und bei älteren.
+   */
+  haDienst: string | null
 }

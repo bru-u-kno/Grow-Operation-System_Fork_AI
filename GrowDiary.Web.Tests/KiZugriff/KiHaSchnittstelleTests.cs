@@ -200,6 +200,96 @@ public sealed class KiHaSchnittstelleTests : IClassFixture<KiHaApp>
         Assert.Equal(0, _ki.Ha.Anzahl(a => a.Pfad == $"/api/services/{domain}/{dienst}"));
     }
 
+    /// <summary>
+    /// Prüferbefund 04.10.2026: mit nur „Geräte schalten" kam der Prüfer über diese
+    /// Dienste bis Home Assistant. Jetzt sind sie nie erreichbar — auch mit allen
+    /// Stufen —, und zwar nicht über einen eigenen Eintrag, sondern weil nur die
+    /// Positivliste erlaubt ist (<see cref="KiHaEinstufungTests.Der_Prueferbefund_faellt_ohne_Sonderbehandlung_auf_nie"/>).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(KiHaEinstufungTests.Prueferbefund), MemberType = typeof(KiHaEinstufungTests))]
+    public async Task Prueferbefund_ist_auch_mit_allen_Stufen_403_und_Home_Assistant_hoert_nichts(
+        string domain, string dienst, string? entityId, string? datenJson)
+    {
+        await _ki.SchalterAsync(true);
+        var (_, alles) = await _ki.SchluesselAsync("Alles", AlleStufen);
+        var daten = datenJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(datenJson);
+
+        var antwort = await App.AddonClient("172.30.33.47", alles)
+            .PostAsJsonAsync("/api/ki-ha/dienst", KiHaApp.Dienst(domain, dienst, entityId, daten));
+        await KiHaApp.Erwarte(antwort, HttpStatusCode.Forbidden, "ki_kein_zugriff");
+        var meldung = (await antwort.Content.ReadFromJsonAsync<ApiError>())!.Message;
+        Assert.Contains("nur bekannte Gerätebereiche erlaubt", meldung, StringComparison.Ordinal);
+        Assert.Equal(0, _ki.Ha.Anzahl(a => a.Pfad == $"/api/services/{domain}/{dienst}"));
+    }
+
+    /// <summary>Über eine erlaubte Domain kein schädlicher Dienst: nur die Dienste der Liste.</summary>
+    [Theory]
+    [InlineData("media_player", "play_media", "media_player.zelt", "{\"media_content_id\":\"http://boese.example/x.mp3\",\"media_content_type\":\"music\"}")]
+    [InlineData("vacuum", "send_command", "vacuum.robbi", "{\"command\":\"app_goto_target\"}")]
+    [InlineData("climate", "set_climate_timer", "climate.zelt", null)]
+    public async Task In_einer_erlaubten_Domain_geht_nur_die_Dienstliste(string domain, string dienst, string entityId, string? datenJson)
+    {
+        await _ki.SchalterAsync(true);
+        var (_, alles) = await _ki.SchluesselAsync("Alles", AlleStufen);
+        var daten = datenJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(datenJson);
+
+        var antwort = await App.AddonClient("172.30.33.48", alles)
+            .PostAsJsonAsync("/api/ki-ha/dienst", KiHaApp.Dienst(domain, dienst, entityId, daten));
+        await KiHaApp.Erwarte(antwort, HttpStatusCode.Forbidden, "ki_kein_zugriff");
+        Assert.Equal(0, _ki.Ha.Anzahl(a => a.Pfad == $"/api/services/{domain}/{dienst}"));
+
+        // Gegenprobe in derselben Domain: ein Dienst der Liste geht durch.
+        var erlaubt = KiHaEinstufung.Domains[domain].Dienste![0];
+        await KiHaApp.Erwarte(await App.AddonClient("172.30.33.48", alles)
+                .PostAsJsonAsync("/api/ki-ha/dienst", KiHaApp.Dienst(domain, erlaubt, entityId)),
+            HttpStatusCode.OK);
+        Assert.True(_ki.Ha.Anzahl(a => a.Pfad == $"/api/services/{domain}/{erlaubt}") >= 1);
+    }
+
+    /// <summary>
+    /// Prüferbefund 04.10.2026: das Protokoll sagt, WAS in Home Assistant geschaltet
+    /// wurde — Dienst und Entität —, aber nie die Daten. Und eine Abweisung des
+    /// Controllers trägt ihren Code.
+    /// </summary>
+    [Fact]
+    public async Task Das_Protokoll_nennt_Dienst_und_Entitaet_aber_keine_Daten()
+    {
+        await _ki.SchalterAsync(true);
+        var (id, schalten) = await _ki.SchluesselAsync("Protokoll HA", "GeraeteSchalten");
+        var ki = App.AddonClient("172.30.33.49", schalten);
+        const string geheim = "geheim-4711";
+
+        await KiHaApp.Erwarte(await ki.PostAsJsonAsync("/api/ki-ha/dienst",
+                KiHaApp.Dienst("light", "turn_on", "light.zelt", new Dictionary<string, object> { ["brightness_pct"] = 4711, ["effect"] = geheim })),
+            HttpStatusCode.OK);
+        await KiHaApp.Erwarte(await ki.PostAsJsonAsync("/api/ki-ha/dienst",
+                KiHaApp.Dienst("zha", "issue_zigbee_cluster_command", null, new Dictionary<string, object> { ["ieee"] = geheim })),
+            HttpStatusCode.Forbidden, "ki_kein_zugriff");
+        await KiHaApp.Erwarte(await ki.PostAsJsonAsync("/api/ki-ha/dienst",
+                KiHaApp.Dienst("automation", "turn_off", "automation.licht_an")),
+            HttpStatusCode.Forbidden, "ki_stufe_fehlt");
+        await KiHaApp.Erwarte(await ki.PostAsJsonAsync("/api/ki-ha/dienst", KiHaApp.Dienst("light", "turn_on", "switch.x")),
+            HttpStatusCode.BadRequest, "validation_failed");
+
+        var antwort = await _ki.Oberflaeche().GetAsync($"/api/settings/ki-zugriff/protokoll?schluesselId={id}");
+        await KiHaApp.Erwarte(antwort, HttpStatusCode.OK);
+        var roh = await antwort.Content.ReadAsStringAsync();
+        var eintraege = (await antwort.Content.ReadFromJsonAsync<List<KiProtokollEintragDto>>())!;
+
+        // Mengenwächter: alle vier Aufrufe stehen da, neueste zuerst.
+        Assert.Equal(4, eintraege.Count);
+        Assert.Equal(["light.turn_on → switch.x", "automation.turn_off → automation.licht_an", "zha.issue_zigbee_cluster_command", "light.turn_on → light.zelt"],
+            eintraege.Select(e => e.HaDienst).ToList());
+        Assert.Equal(["validation_failed", "ki_stufe_fehlt", "ki_kein_zugriff", null], eintraege.Select(e => e.Fehlercode).ToList());
+        Assert.Equal([400, 403, 403, 200], eintraege.Select(e => e.Status).ToList());
+        Assert.Contains("(Home Assistant: light.turn_on → light.zelt)", eintraege[3].Beschreibung, StringComparison.Ordinal);
+
+        // Nie die Daten — weder im Feld noch im Satz noch sonst irgendwo in der Antwort.
+        Assert.DoesNotContain(geheim, roh, StringComparison.Ordinal);
+        Assert.DoesNotContain("brightness", roh, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Entitaet_muss_zur_Domain_passen_und_Ziele_nur_ueber_entityId()
     {
@@ -219,6 +309,11 @@ public sealed class KiHaSchnittstelleTests : IClassFixture<KiHaApp>
         await KiHaApp.Erwarte(await ki.PostAsJsonAsync("/api/ki-ha/dienst",
                 KiHaApp.Dienst("light", "turn_off", null, new Dictionary<string, object> { ["area_id"] = "growzelt" })),
             HttpStatusCode.BadRequest);
+        // scene.apply setzt über „entities" beliebige Entitäten — auch mit Verwaltung nicht.
+        var (_, beides) = await _ki.SchluesselAsync("Schalten und Verwaltung", "GeraeteSchalten", "Verwaltung");
+        await KiHaApp.Erwarte(await App.AddonClient("172.30.33.45", beides).PostAsJsonAsync("/api/ki-ha/dienst",
+                KiHaApp.Dienst("scene", "apply", null, new Dictionary<string, object> { ["entities"] = new Dictionary<string, string> { ["lock.haustuer"] = "unlocked" } })),
+            HttpStatusCode.BadRequest, "validation_failed");
         // Pfad-Teile in der Domain landeten sonst in api/services/{domain}/{dienst}.
         await KiHaApp.Erwarte(await ki.PostAsJsonAsync("/api/ki-ha/dienst", KiHaApp.Dienst("../states", "x", null)),
             HttpStatusCode.BadRequest);
@@ -279,6 +374,106 @@ public sealed class KiHaStundengrenzeTests : IClassFixture<KiHaApp>
 /// <summary>Die Tabelle <see cref="KiHaEinstufung"/>: vollständig, ohne Doppelte, und die Prüfung beisst.</summary>
 public sealed class KiHaEinstufungTests
 {
+    /// <summary>
+    /// Prüferbefund 04.10.2026 — wörtlich die 13 Dienste, mit denen der Prüfer über
+    /// „Geräte schalten" bis Home Assistant kam (Domain, Dienst, Entität, Daten als JSON).
+    /// </summary>
+    public static TheoryData<string, string, string?, string?> Prueferbefund => new()
+    {
+        { "zha", "issue_zigbee_cluster_command", null, """{"ieee":"00:11:22:33:44:55:66:77","endpoint_id":1,"cluster_id":257,"command":1,"command_type":"server"}""" },
+        { "zwave_js", "multicast_set_value", null, """{"broadcast":true,"command_class":98,"property":"targetMode","value":0}""" },
+        { "telegram_bot", "send_message", null, """{"message":"Hallo"}""" },
+        { "assist_satellite", "announce", "assist_satellite.kueche", """{"message":"Hallo"}""" },
+        { "cloud", "remote_connect", null, null },
+        { "auto_backup", "purge", null, null },
+        { "import_statistics", "import_from_json", null, """{"filename":"/config/x.json"}""" },
+        { "fritz", "set_guest_wifi_password", null, """{"password":"x"}""" },
+        { "device_tracker", "see", null, """{"dev_id":"handy","location_name":"home"}""" },
+        { "group", "set", null, """{"object_id":"zelt","entities":"lock.haustuer"}""" },
+        { "logbook", "log", null, """{"name":"x","message":"y"}""" },
+        { "camera", "snapshot", "camera.zelt", """{"filename":"/config/www/zelt.jpg"}""" },
+        { "alert", "turn_off", "alert.wasser", null },
+    };
+
+    /// <summary>
+    /// Alle 13 ergeben „nie" — und zwar ohne Einzelfall: keine der Domains steht in
+    /// der Tabelle. Sie fallen auf die Vorgabe für Unbekanntes.
+    /// </summary>
+    [Fact]
+    public void Der_Prueferbefund_faellt_ohne_Sonderbehandlung_auf_nie()
+    {
+        var faelle = Prueferbefund.Select(f => ((string)f[0], (string)f[1])).ToList();
+        Assert.Equal(13, faelle.Count);
+
+        foreach (var (domain, dienst) in faelle)
+        {
+            Assert.False(KiHaEinstufung.Domains.ContainsKey(domain),
+                $"{domain} steht in der Tabelle — der Fall muss über die Positivliste fallen, nicht über einen eigenen Eintrag.");
+            Assert.False(KiHaEinstufung.Dienste.ContainsKey(dienst), $"{dienst} hat einen eigenen Dienst-Eintrag.");
+            var regel = KiHaEinstufung.Einstufen(domain, dienst);
+            Assert.Equal(KiHaUrteil.Nie, regel.Urteil);
+            Assert.Equal(KiHaEinstufung.UnbekanntGrund, regel.Grund);
+        }
+    }
+
+    /// <summary>Die Positivliste aus dem Auftrag (Prüferbefund 04.10.2026).</summary>
+    private static readonly string[] GeraeteLautAuftrag =
+    [
+        "light", "switch", "fan", "climate", "humidifier", "cover", "valve", "number", "select", "button",
+        "water_heater", "vacuum", "media_player",
+    ];
+
+    [Fact]
+    public void Positivliste_Verwaltung_und_Nie_ueberschneiden_sich_nicht_und_jede_Geraetedomain_hat_Dienste()
+    {
+        var geraete = KiHaEinstufung.Eintraege.Where(r => r.Urteil == KiHaUrteil.GeraeteSchalten).ToList();
+        var verwaltung = KiHaEinstufung.Eintraege.Where(r => r.Urteil == KiHaUrteil.Verwaltung).Select(r => r.Name).ToList();
+        var nie = KiHaEinstufung.Eintraege.Where(r => r.Urteil == KiHaUrteil.Nie).Select(r => r.Name).ToList();
+
+        // Mengenwächter: ohne Einträge wäre „keine Überschneidung" geschenkt.
+        Assert.True(geraete.Count >= GeraeteLautAuftrag.Length, $"Nur {geraete.Count} Gerätedomains.");
+        Assert.True(verwaltung.Count >= VerwaltungLautAuftrag.Length, $"Nur {verwaltung.Count} Verwaltungsdomains.");
+        Assert.True(nie.Count >= NieLautAuftrag.Length, $"Nur {nie.Count} Nie-Domains.");
+
+        var geraeteNamen = geraete.Select(r => r.Name).ToList();
+        Assert.Empty(geraeteNamen.Intersect(verwaltung, StringComparer.Ordinal));
+        Assert.Empty(geraeteNamen.Intersect(nie, StringComparer.Ordinal));
+        Assert.Empty(verwaltung.Intersect(nie, StringComparer.Ordinal));
+
+        Assert.Equal(GeraeteLautAuftrag.Order(StringComparer.Ordinal), geraeteNamen.Order(StringComparer.Ordinal));
+
+        // Jede Gerätedomain hat ihre Dienstliste — sonst stünde sie mit leerer Liste da
+        // (nichts erlaubt) oder ein Umbau machte daraus wieder „alles erlaubt".
+        Assert.All(geraete, r => Assert.True(r.Dienste is { Count: > 0 }, $"{r.Name} hat keine Dienstliste."));
+        Assert.All(geraete, r => Assert.Equal(r.Dienste!.Count, r.Dienste.Distinct(StringComparer.Ordinal).Count()));
+        // Nur Gerätedomains tragen eine Dienstliste; bei den anderen wäre sie wirkungslos.
+        Assert.All(KiHaEinstufung.Eintraege.Where(r => r.Urteil != KiHaUrteil.GeraeteSchalten), r => Assert.Null(r.Dienste));
+
+        // media_player: genau so im Auftrag.
+        Assert.Equal(["media_pause", "media_play", "media_stop", "toggle", "turn_off", "turn_on", "volume_mute", "volume_set"],
+            KiHaEinstufung.Domains["media_player"].Dienste!.Order(StringComparer.Ordinal));
+        // Dienste, die beliebige Befehle, Adressen oder Dateien annehmen, stehen nirgends darin.
+        foreach (var gefaehrlich in new[] { "play_media", "send_command", "snapshot", "join", "select_source" })
+        {
+            Assert.DoesNotContain(geraete, r => r.Dienste!.Contains(gefaehrlich));
+        }
+    }
+
+    [Fact]
+    public void Jeder_Dienst_der_Liste_geht_mit_GeraeteSchalten_jeder_andere_nie()
+    {
+        var paare = KiHaEinstufung.Eintraege
+            .Where(r => r.Urteil == KiHaUrteil.GeraeteSchalten)
+            .SelectMany(r => r.Dienste!.Select(d => (r.Name, d)))
+            .ToList();
+        Assert.True(paare.Count >= 60, $"Nur {paare.Count} erlaubte Dienste — die Zählung sieht ihre Grundmenge nicht.");
+        Assert.All(paare, p => Assert.Equal(KiHaUrteil.GeraeteSchalten, KiHaEinstufung.Einstufen(p.Name, p.d).Urteil));
+
+        Assert.Equal(KiHaUrteil.Nie, KiHaEinstufung.Einstufen("media_player", "play_media").Urteil);
+        Assert.Equal(KiHaUrteil.Nie, KiHaEinstufung.Einstufen("vacuum", "send_command").Urteil);
+        Assert.Equal(KiHaUrteil.Nie, KiHaEinstufung.Einstufen("light", "reload").Urteil);
+    }
+
     /// <summary>So im Auftrag (A-003 Etappe B) — wörtlich, damit eine Lücke auffällt.</summary>
     private static readonly string[] VerwaltungLautAuftrag =
     [
@@ -293,16 +488,9 @@ public sealed class KiHaEinstufungTests
     ];
 
     [Fact]
-    public void Nie_und_Verwaltung_ueberschneiden_sich_nicht()
+    public void Keine_Domain_steht_doppelt()
     {
-        var nie = KiHaEinstufung.Eintraege.Where(r => r.Urteil == KiHaUrteil.Nie).Select(r => r.Name).ToList();
-        var verwaltung = KiHaEinstufung.Eintraege.Where(r => r.Urteil == KiHaUrteil.Verwaltung).Select(r => r.Name).ToList();
-
-        // Mengenwächter: ohne Einträge wäre „keine Überschneidung" geschenkt.
-        Assert.True(nie.Count >= NieLautAuftrag.Length, $"Nur {nie.Count} Einträge „nie“ — die Zählung sieht ihre Grundmenge nicht.");
-        Assert.True(verwaltung.Count >= VerwaltungLautAuftrag.Length, $"Nur {verwaltung.Count} Einträge „Verwaltung“.");
-
-        Assert.Empty(nie.Intersect(verwaltung, StringComparer.Ordinal));
+        Assert.True(KiHaEinstufung.Eintraege.Count >= 40, "Mengenwächter: die Tabelle ist leer oder fast leer.");
         Assert.Empty(KiHaEinstufung.Doppelte(KiHaEinstufung.Eintraege));
         Assert.Equal(KiHaEinstufung.Eintraege.Count, KiHaEinstufung.Domains.Count);
     }
@@ -324,6 +512,8 @@ public sealed class KiHaEinstufungTests
         Assert.Equal(KiHaUrteil.Nie, KiHaEinstufung.Einstufen("light", "reload").Urteil);
         Assert.Equal(KiHaUrteil.GeraeteSchalten, KiHaEinstufung.Einstufen("light", "turn_on").Urteil);
         Assert.Equal(KiHaUrteil.GeraeteSchalten, KiHaEinstufung.Einstufen("climate", "set_temperature").Urteil);
+        // Unbekannt ist nie — es gibt keine Vorgabe „Geräte schalten" mehr.
+        Assert.Equal(KiHaUrteil.Nie, KiHaEinstufung.Einstufen("irgendeine_integration", "turn_on").Urteil);
 
         Assert.All(KiHaEinstufung.Eintraege.Concat(KiHaEinstufung.Dienste.Values),
             r => Assert.False(string.IsNullOrWhiteSpace(r.Grund), $"{r.Name} hat keinen Grund."));

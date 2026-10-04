@@ -217,7 +217,8 @@ endet wie überall schon vor dem Routing mit 403 `admin_access_required`.
   (sonst 400 — die Namen landen im Pfad `api/services/{domain}/{dienst}`).
   `entityId` ist genau **eine** Entität, und ihr Präfix muss die Domain sein
   (`light.turn_on` mit `switch.x` → 400). Ziele in `daten` (`entity_id`,
-  `device_id`, `area_id`, `floor_id`, `label_id`, `target`) → 400: das Ziel geht nur
+  `device_id`, `area_id`, `floor_id`, `label_id`, `target`, seit 04.10.2026 auch
+  `entities` und `snapshot_entities` von `scene.apply`/`scene.create`) → 400: das Ziel geht nur
   über `entityId`, sonst liefe die Präfix-Prüfung ins Leere. Antwortet Home
   Assistant, ist die Antwort 200; `erfolg` sagt, ob es angenommen hat (bei
   ausbleibender Antwort `false` mit dem Hinweis, den Zustand nachzusehen).
@@ -229,13 +230,43 @@ dem Controller **und zählt jeden Aufruf ins Stundenfenster der Schaltbefehle**
 (429 `ki_hoechstwert`). Auch ein Aufruf, den der Controller danach abweist,
 zählt — die Sperre zählt, bevor die Domain bekannt ist. Darauf legt der Controller
 je Domain eine Tabelle (`Infrastructure/KiZugriff/KiHaEinstufung.cs`, jede Domain
-genau einmal, mit Grund):
+genau einmal, mit Grund).
+
+**Positivliste seit dem Prüferbefund vom 04.10.2026.** Vorher galt für jede Domain,
+die nicht in der Tabelle stand, „Geräte schalten" — der Prüfer kam damit unter anderem
+über `zha.issue_zigbee_cluster_command` (Türschloss), `telegram_bot.send_message`,
+`cloud.remote_connect`, `camera.snapshot` (Datei nach `/config/www`) und `group.set`
+(mit `lock.haustuer`) bis Home Assistant. Jetzt ist **alles, was nicht ausdrücklich
+erlaubt ist, nie** (403 `ki_kein_zugriff`, „nur bekannte Gerätebereiche erlaubt").
+
+- **Geräte schalten genügt** nur für diese Domains und dort nur für diese Dienste
+  (abgefragt an der Anlage; weggelassen ist, was beliebige Befehle, Adressen oder
+  Dateien annimmt). Jeder andere Dienst einer dieser Domains → nie.
+
+| Domain | erlaubte Dienste |
+|---|---|
+| `light` | turn_on, turn_off, toggle |
+| `switch` | turn_on, turn_off, toggle |
+| `fan` | turn_on, turn_off, toggle, set_percentage, increase_speed, decrease_speed, oscillate, set_direction, set_preset_mode |
+| `climate` | turn_on, turn_off, toggle, set_temperature, set_humidity, set_hvac_mode, set_preset_mode, set_fan_mode, set_swing_mode, set_swing_horizontal_mode |
+| `humidifier` | turn_on, turn_off, toggle, set_humidity, set_mode |
+| `cover` | open_cover, close_cover, stop_cover, toggle, set_cover_position, open/close/stop_cover_tilt, set_cover_tilt_position, toggle_cover_tilt |
+| `valve` | open_valve, close_valve, stop_valve, toggle, set_valve_position |
+| `number` | set_value |
+| `select` | select_option, select_first, select_last, select_next, select_previous |
+| `button` | press |
+| `water_heater` | turn_on, turn_off, set_temperature, set_operation_mode, set_away_mode |
+| `vacuum` | start, pause, stop, return_to_base, clean_spot, clean_area, locate, set_fan_speed (nicht send_command) |
+| `media_player` | turn_on, turn_off, toggle, volume_set, volume_mute, media_pause, media_play, media_stop (nicht play_media) |
+
 
 - **Verwaltung zusätzlich** (sonst 403 `ki_stufe_fehlt`, Meldung wie in der Sperre):
   `automation`, `script`, `scene`, `input_boolean`, `input_number`,
   `input_select`, `input_text`, `input_datetime`, `input_button`, `timer`,
   `counter`, `schedule` — sie ändern die Logik von Home Assistant, nicht ein Gerät.
-- **Nie** (403 `ki_kein_zugriff`, auch mit allen Stufen):
+- **Nie, mit dokumentierter Begründung** (403 `ki_kein_zugriff`, auch mit allen Stufen).
+  Am Ergebnis ändert diese Liste nichts mehr — unbekannt ist ohnehin nie —, sie hält
+  fest, warum diese Domains nie auf die Positivliste gehören:
 
 | Domain / Dienst | Grund |
 |---|---|
@@ -259,8 +290,18 @@ genau einmal, mit Grund):
 | `downloader` | Lädt Dateien auf den Host (ergänzt) |
 | jeder Dienst `reload` | Konfiguration neu laden wirft Zustände weg und schaltet kaputte Konfiguration scharf |
 
-- **Alles andere** (light, switch, fan, climate, humidifier, cover, number, select,
-  button, valve, water_heater, vacuum, media_player …) genügt mit Geräte schalten.
+- **Alles andere: nie** — mit der Meldung, dass nur bekannte Gerätebereiche erlaubt sind.
+  Ergänzen heisst: Domain mit Grund und Dienstliste in die Tabelle, nicht eine Ausnahme
+  im Controller. `KiHaEinstufungTests` hält, dass die drei Teile sich nicht überschneiden
+  und dass die 13 Dienste aus dem Prüferbefund ohne eigenen Eintrag auf nie fallen.
+
+**Im Protokoll** steht zu jedem Aufruf von `/api/ki-ha/dienst` Dienst und Entität
+(Spalte `HaDienst` in `SystemAuditEvents`, etwa `light.turn_on → light.zelt`; Feld
+`haDienst` in `KiProtokollEintragDto`) — **nie die `daten`**. Der Controller merkt es
+sich in `HttpContext.Items` (`KiZugriffSperre.HaDienstMerken`), sobald Domain und Dienst
+die Form bestanden haben, also auch für eine Abweisung; seine Fehler merkt er sich mit
+`FehlercodeMerken`. Die Oberfläche zeigt „Home Assistant: light.turn_on (light.zelt)"
+bzw. „… — abgewiesen".
 
 Gehalten von `GrowDiary.Web.Tests/KiZugriff/KiHaSchnittstelleTests.cs` (an der
 echten App mit nachgestelltem Home Assistant) und den Ausnahmen in

@@ -270,12 +270,14 @@ public static class KiZugriffSperre
 
         var status = ausnahme ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
         var erfolg = status < 400;
+        var haDienst = GemerkterHaDienst(context);
         Protokollieren(context,
             lesend ? KiProtokollArt.VerwaltungLesend : KiProtokollArt.Schreibend,
-            $"über KI-Assistent ‚{kontext.SchluesselName}‘: {context.Request.Method} {context.Request.Path} → {status}",
+            $"über KI-Assistent ‚{kontext.SchluesselName}‘: {context.Request.Method} {context.Request.Path} → {status}"
+            + (haDienst is null ? string.Empty : $" (Home Assistant: {haDienst})"),
             erfolg ? "info" : "warning",
             erfolg,
-            anfrage: new KiAnfrage(kontext.SchluesselId, status, ausnahme ? null : GemerkterFehlercode(context)));
+            anfrage: new KiAnfrage(kontext.SchluesselId, status, ausnahme ? null : GemerkterFehlercode(context), haDienst));
     }
 
     // --------------------------------------------------------------- Hilfe
@@ -302,6 +304,29 @@ public static class KiZugriffSperre
     public static string? GemerkterFehlercode(HttpContext context)
         => context.Items.TryGetValue(FehlercodeItemKey, out var code) ? code as string : null;
 
+    /// <summary>Unter diesem Schlüssel in <see cref="HttpContext.Items"/> liegt der gerufene Home-Assistant-Dienst.</summary>
+    private const string HaDienstItemKey = "GrowOs.KiZugriff.HaDienst";
+
+    /// <summary>
+    /// Fork AI (Prüferbefund 04.10.2026): Den Home-Assistant-Dienst einer Anfrage über
+    /// einen Schlüssel fürs Protokoll vormerken — etwa <c>light.turn_on → light.zelt</c>.
+    /// </summary>
+    /// <remarks>
+    /// Schritt 3 sieht nur <c>POST /api/ki-ha/dienst</c>; was dahinter in Home
+    /// Assistant geschaltet wurde, weiss nur der Controller. Er ruft das hier, sobald
+    /// Domain und Dienst die Form bestanden haben — also auch für eine Abweisung.
+    /// <b>Nie die <c>daten</c></b>: darin kann stehen, was nicht ins Protokoll gehört.
+    /// </remarks>
+    public static void HaDienstMerken(HttpContext? context, string domain, string dienst, string? entityId)
+    {
+        if (context is null) return;
+        context.Items[HaDienstItemKey] = entityId is null ? $"{domain}.{dienst}" : $"{domain}.{dienst} → {entityId}";
+    }
+
+    /// <summary>Der vorgemerkte Home-Assistant-Dienst dieser Anfrage — oder null.</summary>
+    public static string? GemerkterHaDienst(HttpContext context)
+        => context.Items.TryGetValue(HaDienstItemKey, out var dienst) ? dienst as string : null;
+
     private static void Protokollieren(HttpContext context, string aktion, string zusammenfassung, string schwere, bool erfolg,
         string? datei = null, KiAnfrage? anfrage = null)
     {
@@ -324,6 +349,7 @@ public static class KiZugriffSperre
                 Pfad = context.Request.Path.Value,
                 HttpStatus = anfrage?.Status,
                 Fehlercode = anfrage?.Fehlercode,
+                HaDienst = anfrage?.HaDienst,
             });
         }
         catch

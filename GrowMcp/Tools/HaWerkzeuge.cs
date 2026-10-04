@@ -108,10 +108,10 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
     /// der Entität vorbei.
     /// </remarks>
     public static IReadOnlyList<string> VerboteneDaten { get; } =
-        ["entity_id", "device_id", "area_id", "floor_id", "label_id", "target"];
+        ["entity_id", "device_id", "area_id", "floor_id", "label_id", "target", "entities", "snapshot_entities"];
 
     [McpServerTool(Name = "ha_dienst")]
-    [Description($"Ruft einen Dienst in Home Assistant auf, etwa domain light, dienst turn_on, entityId light.zelt, daten {{\"brightness_pct\": 60}}. Braucht Stufe „{Stufen.GeraeteSchaltenText}\". Automationen, Skripte, Szenen und Helfer (input_*, timer, counter, schedule) brauchen zusätzlich Stufe „{Stufen.VerwaltungText}\". Manche Domains gehen über einen Schlüssel nie, egal mit welcher Stufe — etwa homeassistant, hassio, backup, recorder, shell_command, notify, lock, alarm_control_panel, update, mqtt und downloader, dazu jeder reload-Dienst; Grow OS lehnt sie mit Begründung ab. Die Entität geht nur über entityId (genau eine, Präfix = Domain); entity_id, device_id, area_id, floor_id, label_id und target sind in daten verboten. erfolg=false heißt: NICHT ausgeführt.")]
+    [Description($"Ruft einen Dienst in Home Assistant auf, etwa domain light, dienst turn_on, entityId light.zelt, daten {{\"brightness_pct\": 60}}. Braucht Stufe „{Stufen.GeraeteSchaltenText}\". Automationen, Skripte, Szenen und Helfer (input_*, timer, counter, schedule) brauchen zusätzlich Stufe „{Stufen.VerwaltungText}\". Erlaubt sind nur Gerätebereiche: light, switch, fan, climate, humidifier, cover, valve, number, select, button, water_heater, vacuum, media_player — und dort nur ihre Steuerdienste (etwa turn_on, turn_off, set_temperature; media_player ohne play_media, vacuum ohne send_command). Jede andere Domain und jeder reload-Dienst geht über einen Schlüssel nie, egal mit welcher Stufe; Grow OS lehnt sie mit Begründung ab. Die Entität geht nur über entityId (genau eine, Präfix = Domain); entity_id, device_id, area_id, floor_id, label_id, target, entities und snapshot_entities sind in daten verboten. erfolg=false heißt: NICHT ausgeführt.")]
     [BrauchtForkSchluessel(Stufen.GeraeteSchalten)]
     public async Task<string> DienstAsync(
         [Description("Domain des Dienstes, etwa light, switch, climate")][Beispiel("light")] string domain,

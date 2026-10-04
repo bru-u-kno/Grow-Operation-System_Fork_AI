@@ -238,7 +238,7 @@ public sealed class KiZugriffApiController : ApiControllerBase
         if (name is null && NameImSatz.Match(e.Summary) is { Success: true } imSatz) name = imSatz.Groups["name"].Value;
 
         return new KiProtokollEintragDto(
-            e.Id, e.CreatedAtUtc, e.KiSchluesselId, name, methode, pfad, status, e.Fehlercode, e.Success, e.Action, e.Summary);
+            e.Id, e.CreatedAtUtc, e.KiSchluesselId, name, methode, pfad, status, e.Fehlercode, e.Success, e.Action, e.Summary, e.HaDienst);
     }
 
     private KiZugriffSeiteDto SeiteBauen()

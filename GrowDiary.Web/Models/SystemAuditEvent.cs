@@ -30,4 +30,9 @@ public sealed class SystemAuditEvent
     public int? HttpStatus { get; set; }
     /// <summary>Der Fehlercode der Antwort (<c>ki_stufe_fehlt</c> …), soweit bekannt.</summary>
     public string? Fehlercode { get; set; }
+    /// <summary>
+    /// Fork AI (Prüferbefund 04.10.2026): bei <c>POST /api/ki-ha/dienst</c> der Dienst
+    /// und seine Entität, etwa <c>light.turn_on → light.zelt</c> — ohne <c>daten</c>.
+    /// </summary>
+    public string? HaDienst { get; set; }
 }

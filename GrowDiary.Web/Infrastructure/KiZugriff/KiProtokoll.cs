@@ -43,4 +43,10 @@ public static class KiProtokollArt
 /// <param name="SchluesselId">Der Schlüssel — null, wenn keiner erkannt wurde.</param>
 /// <param name="Status">Der Status der Antwort; null, wenn der Eintrag keine Antwort beschreibt.</param>
 /// <param name="Fehlercode">Der Code der Fehlerantwort, soweit bekannt.</param>
-public sealed record KiAnfrage(int? SchluesselId, int? Status, string? Fehlercode);
+/// <param name="HaDienst">
+/// Fork AI (Prüferbefund 04.10.2026): Bei <c>POST /api/ki-ha/dienst</c> der gerufene
+/// Dienst und seine Entität, etwa <c>light.turn_on → light.zelt</c> — nie die
+/// <c>daten</c>. Sonst stand im Protokoll nur, DASS in Home Assistant geschaltet
+/// wurde, nicht WAS.
+/// </param>
+public sealed record KiAnfrage(int? SchluesselId, int? Status, string? Fehlercode, string? HaDienst = null);

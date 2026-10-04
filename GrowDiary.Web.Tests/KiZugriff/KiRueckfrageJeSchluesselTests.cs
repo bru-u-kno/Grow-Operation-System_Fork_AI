@@ -117,6 +117,32 @@ public sealed class KiRueckfrageJeSchluesselTests : IDisposable
         Assert.Null(new AppSettingsRepository(pfade).GetValue(AlteEinstellung));
     }
 
+    /// <summary>
+    /// Prüferbefund 04.10.2026: Ein NULL in der alten Einstellung heisst „fehlt" —
+    /// forkai.163 las es als nicht gesetzt und nahm die Vorbelegung „ab Grow planen".
+    /// Bis dahin wurde NULL hier zu „nie", und der Assistent hätte nie mehr gefragt.
+    /// </summary>
+    [Fact]
+    public void EinNullInDerAltenEinstellungGiltWieFehlend()
+    {
+        var pfade = AlteDatenbank(alteRegel: null);
+        using (var verbindung = Oeffnen(pfade))
+        {
+            Ausfuehren(verbindung, $"INSERT INTO AppSettings (Key, Value) VALUES ('{AlteEinstellung}', NULL);");
+            // Der Fall prüft nur etwas, wenn die Zeile wirklich mit NULL dasteht.
+            using var pruefen = verbindung.CreateCommand();
+            pruefen.CommandText = $"SELECT COUNT(*) FROM AppSettings WHERE Key = '{AlteEinstellung}' AND Value IS NULL;";
+            Assert.Equal(1L, (long)pruefen.ExecuteScalar()!);
+        }
+
+        var rueckfrage = RueckfrageJeName(pfade);
+
+        Assert.Equal(KiStufe.GrowPlanen | KiStufe.GeraeteSchalten, rueckfrage["Alles ausser Verwaltung"]);
+        Assert.Equal(KiStufe.Keine, rueckfrage["Nur Doku"]);
+        Assert.Equal(KiStufe.Verwaltung, rueckfrage["Nur Verwaltung"]);
+        Assert.Null(new AppSettingsRepository(pfade).GetValue(AlteEinstellung));
+    }
+
     [Fact]
     public void DieUebernahmeLaeuftNurEinmal()
     {

@@ -206,7 +206,15 @@ public sealed class SchreibWerkzeugeTests
         Assert.Contains("Automationen", beschreibung);
         Assert.Contains("Helfer", beschreibung);
         Assert.Contains("nie", beschreibung);
-        foreach (var domain in new[] { "update", "mqtt", "downloader" }) Assert.Contains(domain, beschreibung);
+        // Seit dem Prüferbefund vom 04.10.2026 gilt in Grow OS eine Positivliste
+        // (KiHaEinstufung): die Beschreibung nennt sie, und dass alles andere nie geht.
+        foreach (var domain in new[] { "light", "switch", "fan", "climate", "humidifier", "cover", "valve", "number",
+                     "select", "button", "water_heater", "vacuum", "media_player" })
+        {
+            Assert.Contains(domain, beschreibung);
+        }
+        Assert.Contains("Jede andere Domain", beschreibung);
+        Assert.Contains("ohne play_media", beschreibung);
     }
 
     [Fact]

@@ -81,10 +81,25 @@ export function kurzerPfad(pfad: string): string {
   return ohne.length > 40 ? `${ohne.slice(0, 39)}…` : ohne
 }
 
+/**
+ * Ein Dienst in Home Assistant (Prüferbefund 04.10.2026): aus `light.turn_on → light.zelt`
+ * wird „Home Assistant: light.turn_on (light.zelt)". Dienst und Entität bleiben als
+ * Kennung stehen — eine Übersetzung jeder Domain wäre eine zweite Tabelle neben der
+ * des Backends, und der Betreiber erkennt seine Entitäten an genau diesem Namen.
+ * Nicht ausgeführt: „… — abgewiesen" bzw. „… — nicht ausgeführt".
+ */
+export function haDienstText(haDienst: string, erfolg: boolean, status?: number | null): string {
+  const [dienst, entitaet] = haDienst.split(' → ')
+  const text = `Home Assistant: ${dienst}${entitaet ? ` (${entitaet})` : ''}`
+  if (erfolg) return text
+  return status != null && status >= 400 && status < 500 ? `${text} — abgewiesen` : `${text} — nicht ausgeführt`
+}
+
 /** Was getan — oder versucht — wurde, in Worten. */
-export function aktionText(eintrag: Pick<KiProtokollEintragDto, 'art' | 'methode' | 'pfad' | 'erfolg'>): string {
+export function aktionText(eintrag: Pick<KiProtokollEintragDto, 'art' | 'methode' | 'pfad' | 'erfolg'> & Partial<Pick<KiProtokollEintragDto, 'haDienst' | 'status'>>): string {
   if (eintrag.art === 'ki-sicherung-vorher') return 'Sicherung vor der Aktion'
   if (eintrag.art === 'ki-adresse-gesperrt') return 'Zu viele falsche Schlüssel'
+  if (eintrag.haDienst) return haDienstText(eintrag.haDienst, eintrag.erfolg, eintrag.status)
 
   const methode = (eintrag.methode ?? '').toUpperCase()
   const pfad = eintrag.pfad ?? ''
@@ -168,14 +183,15 @@ export interface ProtokollGruppe {
  *
  * Zehn falsche Schlüssel in einer Minute füllten die ganze Liste mit zehn
  * gleichen Zeilen und schoben alles andere aus dem Bild. „Gleich" heisst: was
- * der Betreiber liest, ist gleich — Aktion, Ergebnis und Absender. Nur
- * aufeinanderfolgende Einträge, damit die Reihenfolge stimmt.
+ * der Betreiber liest, ist gleich — Aktion, Ergebnis und Absender — und bei
+ * Home Assistant derselbe Dienst an derselben Entität. Nur aufeinanderfolgende
+ * Einträge, damit die Reihenfolge stimmt.
  */
 export function zusammenfassen(eintraege: readonly KiProtokollEintragDto[]): ProtokollGruppe[] {
   const gruppen: ProtokollGruppe[] = []
   let letzterSchluessel: string | null = null
   for (const eintrag of eintraege) {
-    const schluessel = [aktionText(eintrag), ergebnisSchild(eintrag).text, schluesselText(eintrag)].join('\u0000')
+    const schluessel = [aktionText(eintrag), ergebnisSchild(eintrag).text, schluesselText(eintrag), eintrag.haDienst ?? ''].join('\u0000')
     const letzte = gruppen[gruppen.length - 1]
     if (letzte && schluessel === letzterSchluessel) {
       letzte.anzahl += 1

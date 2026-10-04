@@ -345,6 +345,8 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "SystemAuditEvents", "Pfad", "TEXT NULL");
         EnsureColumn(connection, "SystemAuditEvents", "HttpStatus", "INTEGER NULL");
         EnsureColumn(connection, "SystemAuditEvents", "Fehlercode", "TEXT NULL");
+        // Fork AI (Prüferbefund 04.10.2026): was über /api/ki-ha/dienst in Home Assistant geschaltet wurde.
+        EnsureColumn(connection, "SystemAuditEvents", "HaDienst", "TEXT NULL");
         using (var index = connection.CreateCommand())
         {
             // Das Protokoll wächst mit jeder Lichtflanke; die Liste liest nur eine Quelle.

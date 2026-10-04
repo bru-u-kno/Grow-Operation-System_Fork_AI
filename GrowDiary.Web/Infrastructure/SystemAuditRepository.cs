@@ -20,9 +20,9 @@ public sealed class SystemAuditRepository
         using var command = connection.CreateCommand();
         command.CommandText = @"
             INSERT INTO SystemAuditEvents (EventType, Action, Summary, Severity, Source, RemoteAddress, RelatedGrowId, RelatedFileName, Success, CreatedAtUtc,
-                                           KiSchluesselId, Methode, Pfad, HttpStatus, Fehlercode)
+                                           KiSchluesselId, Methode, Pfad, HttpStatus, Fehlercode, HaDienst)
             VALUES ($eventType, $action, $summary, $severity, $source, $remoteAddress, $relatedGrowId, $relatedFileName, $success, $createdAtUtc,
-                    $kiSchluesselId, $methode, $pfad, $httpStatus, $fehlercode);";
+                    $kiSchluesselId, $methode, $pfad, $httpStatus, $fehlercode, $haDienst);";
         command.Parameters.AddWithValue("$eventType", entry.EventType);
         command.Parameters.AddWithValue("$action", entry.Action);
         command.Parameters.AddWithValue("$summary", entry.Summary);
@@ -38,6 +38,7 @@ public sealed class SystemAuditRepository
         command.Parameters.AddWithValue("$pfad", (object?)entry.Pfad ?? DBNull.Value);
         command.Parameters.AddWithValue("$httpStatus", (object?)entry.HttpStatus ?? DBNull.Value);
         command.Parameters.AddWithValue("$fehlercode", (object?)entry.Fehlercode ?? DBNull.Value);
+        command.Parameters.AddWithValue("$haDienst", (object?)entry.HaDienst ?? DBNull.Value);
         command.ExecuteNonQuery();
     }
 
@@ -138,6 +139,7 @@ public sealed class SystemAuditRepository
             Pfad = Spalte(reader, "Pfad") as string,
             HttpStatus = Spalte(reader, "HttpStatus") is long status ? Convert.ToInt32(status) : null,
             Fehlercode = Spalte(reader, "Fehlercode") as string,
+            HaDienst = Spalte(reader, "HaDienst") as string,
         };
 
     /// <summary>

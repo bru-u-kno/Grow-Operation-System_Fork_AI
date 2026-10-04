@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import type { KiProtokollEintragDto, KiSchluesselDto } from '../../types'
 import { SchluesselZeile } from './KiZugriffAbschnitt'
 import KiProtokoll, { KiProtokollListe, LEER_SATZ } from './KiProtokoll'
-import { AKTIONEN, aktionText, ergebnisSchild, kurzerPfad, protokollWeg, schluesselText, zusammenfassen } from './ki-protokoll-logik'
+import { AKTIONEN, aktionText, ergebnisSchild, haDienstText, kurzerPfad, protokollWeg, schluesselText, zusammenfassen } from './ki-protokoll-logik'
 
 /**
  * „Was die KI zuletzt getan hat" (A-003, Fork AI 03.10.2026) — ohne Browser.
@@ -34,6 +34,7 @@ function eintrag(teil: Partial<KiProtokollEintragDto> = {}): KiProtokollEintragD
     erfolg: true,
     art: 'ki-zugriff-schreibend',
     beschreibung: 'über KI-Assistent ‚Claude am Telefon‘: POST /api/grows/1/measurements → 201',
+    haDienst: null,
     ...teil,
   }
 }
@@ -278,5 +279,56 @@ describe('Gleiche Einträge hintereinander', () => {
   it('eine einzelne Zeile trägt keine Anzahl', () => {
     const html = renderToStaticMarkup(<KiProtokollListe eintraege={[falsch(1)]} filterName={null} />)
     expect(html).not.toContain('hintereinander')
+  })
+})
+
+/* ------------------------------------------------------------------ */
+/* Home Assistant über den Fork (Prüferbefund 04.10.2026)              */
+/* ------------------------------------------------------------------ */
+
+describe('Home Assistant im Protokoll', () => {
+  const ha = (haDienst: string, teil: Partial<KiProtokollEintragDto> = {}) => eintrag({
+    methode: 'POST', pfad: '/api/ki-ha/dienst', status: 200, haDienst,
+    beschreibung: `über KI-Assistent ‚Claude am Telefon‘: POST /api/ki-ha/dienst → 200 (Home Assistant: ${haDienst})`, ...teil,
+  })
+
+  it('zeigt Dienst und Entität statt „POST ki-ha/dienst"', () => {
+    expect(aktionText(ha('light.turn_on → light.zelt'))).toBe('Home Assistant: light.turn_on (light.zelt)')
+    expect(aktionText(ha('scene.turn_on'))).toBe('Home Assistant: scene.turn_on')
+    expect(aktionText(ha('zha.issue_zigbee_cluster_command', { status: 403, fehlercode: 'ki_kein_zugriff', erfolg: false })))
+      .toBe('Home Assistant: zha.issue_zigbee_cluster_command — abgewiesen')
+    expect(haDienstText('light.turn_on → light.zelt', false, 503)).toBe('Home Assistant: light.turn_on (light.zelt) — nicht ausgeführt')
+    // Ohne Angabe (andere Wege, alte Einträge) bleibt alles wie bisher.
+    expect(aktionText(eintrag({ methode: 'POST', pfad: '/api/ki-ha/dienst' }))).toBe('POST ki-ha/dienst')
+  })
+
+  it('rendert die Zeile lesbar — ohne Pfeil, Pfad oder Code', () => {
+    const liste = [
+      ha('lock.unlock → lock.haustuer', { id: 3, status: 403, fehlercode: 'ki_kein_zugriff', erfolg: false }),
+      ha('light.turn_on → light.zelt', { id: 2 }),
+    ]
+    const text = sichtbarerText(renderToStaticMarkup(<KiProtokollListe eintraege={liste} filterName={null} />))
+    expect(text).toContain('Home Assistant: light.turn_on (light.zelt)')
+    expect(text).toContain('Home Assistant: lock.unlock (lock.haustuer) — abgewiesen')
+    expect(text).toContain('abgewiesen: nie erlaubt')
+    for (const roh of ['→', '/api/', 'ki-ha/dienst', 'ki_kein_zugriff', 'POST']) {
+      expect(text, `„${roh}" steht roh auf dem Schirm`).not.toContain(roh)
+    }
+  })
+
+  it('fasst nur gleiche Dienste zusammen — verschiedene Dienste oder Entitäten bleiben getrennt', () => {
+    const gruppen = zusammenfassen([
+      ha('light.turn_on → light.zelt', { id: 6 }),
+      ha('light.turn_on → light.zelt', { id: 5 }),
+      ha('light.turn_off → light.zelt', { id: 4 }),
+      ha('light.turn_off → light.flur', { id: 3 }),
+      ha('switch.turn_on → switch.pumpe', { id: 2 }),
+    ])
+    expect(gruppen.map((g) => [g.eintrag.haDienst, g.anzahl])).toEqual([
+      ['light.turn_on → light.zelt', 2],
+      ['light.turn_off → light.zelt', 1],
+      ['light.turn_off → light.flur', 1],
+      ['switch.turn_on → switch.pumpe', 1],
+    ])
   })
 })
