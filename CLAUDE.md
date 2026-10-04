@@ -397,6 +397,40 @@ Warten je Release ist ihm zu viel. Deshalb:
 Was bleibt, weil es schützt: Bissnachweise, Prüfer, volles Tor vor jedem
 Release, Sicherung vor jedem Update, Installation mit Startprotokoll.
 
+## PARALLELE SITZUNGEN
+
+Vereinbart mit dem Nutzer am 05.10.2026. Am Fork arbeiten oft mehrere
+Claude-Sitzungen gleichzeitig, auf seiner VM und in der Cloud, und jede liefert
+Releases aus. Bis dahin teilten sich die Sitzungen auf der VM einen Checkout
+(eine wechselte den Branch, während eine andere darin arbeitete) und arbeiteten
+mit dem Wissensstand von ihrem Start — „installiert ist 169" stimmte nach dem
+nächsten Release einer anderen Sitzung nicht mehr.
+
+- **Eigener Arbeitsstand je Sitzung.** Jede Sitzung arbeitet auf ihrem eigenen
+  Branch in einem eigenen Checkout (Worktree), abgezweigt vom **frisch geholten**
+  `origin/main` (`git fetch origin` zuerst). Nie im gemeinsamen Haupt-Checkout
+  Branches wechseln oder committen; der bleibt auf `main`.
+- **Stand live, nie aus dem Gedächtnis.** Welche Version auf `main` liegt, steht
+  in `grow-os/config.yaml` auf `origin/main`; welche installiert ist, zeigt Home
+  Assistant (`update.grow_os_fork_ai_update`). Beides vor Release und Installation
+  neu nachsehen. Versionsnummern in Notizen und Gedächtnis sind Geschichte.
+- **Vor dem Release frisch einmischen.** `git fetch origin main`, einmischen, Tor
+  ansehen, erst dann `release/<Nummer>` pushen — die Nummer ist die auf
+  `origin/main` plus eins. Liegt auf GitHub schon ein Branch `release/*`, läuft
+  ein anderer Release: warten, danach neu einmischen und neu zählen.
+  `release.yml` weist das ohnehin ab — nur später und nach dem Image-Bau.
+- **Anmelden, wer woran arbeitet.** Die Abstimmung liegt privat beim Nutzer
+  (nicht im Repo, nicht in Draft-PRs — das Repo ist öffentlich). Sitzungen mit
+  seinem Nextcloud-Connector sehen dort vor dem Arbeiten nach, wer gerade woran
+  sitzt, und tragen sich ein; der Ort steht in seinem Gedächtnis-Vault unter
+  „Parallele Sitzungen". Überschneidet sich etwas, der anderen Sitzung schreiben
+  statt beide Stände später zusammenzuflicken.
+
+Auf der VM des Nutzers erzwingen Hooks außerhalb des Repos diese Regeln
+(Sperre im Haupt-Checkout, Lagebild beim Sitzungsstart, Prüfung vor dem
+Release-Push). Cloud-Sitzungen sehen diese Hooks nicht — für sie gilt der
+Abschnitt hier.
+
 ## RELEASE
 
 Ein Release ist ein Branch `release/X` (aus einer Claude-Sitzung — Tags darf
