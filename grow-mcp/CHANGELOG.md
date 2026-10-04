@@ -7,7 +7,7 @@ der Grow MCP nur lesen. Jetzt nimmt er neben seinem eigenen Schlüssel auch
 einen Schlüssel aus Grow OS an (Einstellungen → Zugriff für KI-Assistenten,
 beginnt mit `gok_`). Den reicht er bei jeder Anfrage an Grow OS durch; was
 erlaubt ist, entscheidet allein Grow OS anhand der Stufen und Höchstwerte, die
-du dort vergeben hast. Braucht Grow OS Fork AI ab 2.0.0-forkai.163.
+du dort vergeben hast. Braucht Grow OS Fork AI ab 2.0.0-forkai.164.
 
 - **Neu, Stufe Dokumentieren:** `messung_eintragen` (ohne Phase gilt die
   aktuelle des Grows, nicht still „Veg"), `messung_aendern` (nur die genannten

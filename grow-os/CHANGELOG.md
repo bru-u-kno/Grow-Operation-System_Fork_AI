@@ -5,6 +5,38 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.164
+
+**Fork AI.** Der Zugriff für KI-Assistenten wird übersichtlicher und reicht weiter: drei Schalter je
+Stufe statt Häkchen und „ab", eine Liste dessen, was die KI zuletzt getan hat, und Home Assistant
+über Grow OS — für Assistenten, die über den Grow MCP Fork AI (ab 0.2.0-forkai.1) verbunden sind.
+
+### Einstellungen → Zugriff für KI-Assistenten
+- **Je Schlüssel und Stufe: Gesperrt · Mit Rückfrage · Frei.** Die Auswahl „Vorher nachfragen ab …"
+  ist weg; ob der Assistent vorher fragen soll, gilt jetzt je Schlüssel. Bestehende Schlüssel
+  übernehmen die bisherige Einstellung. „Geräte schalten" und „Verwaltung" brauchen beim Freigeben
+  weiter eine Bestätigung des Warnhinweises.
+- **„Was die KI zuletzt getan hat":** jede Änderung und jede Abweisung über einen Schlüssel mit
+  Zeit, Schlüssel und Ergebnis — „Messung eingetragen · erledigt", „Licht schalten · abgewiesen:
+  Stufe fehlt". Je Schlüssel „Nur diesen zeigen". Gleiche Einträge hintereinander stehen in einer
+  Zeile („10× hintereinander").
+
+### Home Assistant über Grow OS
+- Ein Assistent mit Schlüssel kann Bereiche, Zustände und Verläufe aus Home Assistant lesen und
+  Dienste aufrufen — ohne zweiten Connector. Lesen geht mit jedem Schlüssel, ein Dienst braucht
+  „Geräte schalten", Automationen, Skripte, Szenen und Helfer zusätzlich „Verwaltung".
+- **Nie über einen Schlüssel:** Neustart und Steuerung von Home Assistant, Add-ons, Sicherungen,
+  Updates, MQTT-Senden, Schlösser, Alarmanlage, Benachrichtigungen und jedes „Neu laden".
+- Ohne Schlüssel gibt es keine Zustände — auch nicht für andere Add-ons im internen Netz.
+
+### Sicherheit
+- **Ein gültiger Schlüssel wird nie mehr ausgesperrt.** Alle Assistenten kommen über dieselbe
+  Adresse des Grow MCP bzw. HA-MCP. Zehn erfundene Schlüssel sperrten diese Adresse bisher eine
+  Viertelstunde — und damit auch den echten Assistenten. Jetzt prüft Grow OS während der Sperre
+  trotzdem; nur falsche Schlüssel bleiben abgewiesen.
+- Beim Zurückspielen einer Sicherung bleiben alle Einstellungen der Schlüssel erhalten, auch die
+  neue Rückfrage je Stufe.
+
 ## 2.0.0-forkai.163
 
 **Fork AI.** Neu: **Zugriff für KI-Assistenten.** Wer seinem Assistenten (etwa Claude) diktiert
