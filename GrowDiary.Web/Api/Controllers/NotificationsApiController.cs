@@ -200,7 +200,9 @@ public sealed class NotificationsApiController : ControllerBase
         }
 
         var sent = await _notifications.SendAsync(
-            NotificationCategory.System, "🌱 Grow OS · Systemtest", $"{verdict.Headline}: {verdict.Detail}", cancellationToken);
+            NotificationCategory.System, "🌱 Grow OS · Systemtest", $"{verdict.Headline}: {verdict.Detail}", cancellationToken,
+            // Derselbe Weg wie die echte Watchdog-Meldung (WatchdogService) — sonst belegt der Test einen anderen.
+            seite: NotificationService.LiveSeite());
         return Ok(new
         {
             ok = sent,

@@ -186,7 +186,9 @@ public sealed class WatchdogService
         if (schritt.Warnen)
         {
             var sent = await _notifications.SendAsync(
-                NotificationCategory.System, "🌱 Grow OS · Systemwarnung", $"{verdict.Headline}: {verdict.Detail}", cancellationToken);
+                NotificationCategory.System, "🌱 Grow OS · Systemwarnung", $"{verdict.Headline}: {verdict.Detail}", cancellationToken,
+                // Die Warnung des Watchdogs steht oben auf Live, nicht unter Aufgaben.
+                seite: NotificationService.LiveSeite());
             if (sent)
             {
                 _heartbeat.NotifiedCode = verdict.ChangeKey;
@@ -213,7 +215,8 @@ public sealed class WatchdogService
         if (schritt.EntwarnungSenden)
         {
             await _notifications.SendAsync(
-                NotificationCategory.System, "🌱 Grow OS · Entwarnung", "Die Überwachung läuft wieder — Sensordaten kommen an.", cancellationToken);
+                NotificationCategory.System, "🌱 Grow OS · Entwarnung", "Die Überwachung läuft wieder — Sensordaten kommen an.", cancellationToken,
+                seite: NotificationService.LiveSeite());
             _heartbeat.NotifiedCode = null;
             _logger.LogInformation("Watchdog: wieder normal.");
         }

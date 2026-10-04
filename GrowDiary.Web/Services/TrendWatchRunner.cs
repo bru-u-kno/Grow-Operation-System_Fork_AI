@@ -161,7 +161,9 @@ public sealed class TrendWatchRunner
                 NotificationCategory.Risk,
                 $"{grow.Name}: {finding.Headline}",
                 finding.Detail,
-                cancellationToken);
+                cancellationToken,
+                // „Beobachtungen" auf Live zeigt die Befunde des Grows im gewählten Zelt.
+                seite: NotificationService.LiveSeite(grow.TentId));
 
             if (raus) gemeldet.Add(finding.Code);
         }

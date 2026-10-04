@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import AddbackHubPage from './pages/AddbackHubPage'
 import AddbackPage from './pages/AddbackPage'
 import { GrowScopedSectionPage } from './pages/GrowScopedSectionPage'
@@ -88,6 +88,20 @@ function SteuerungGeraeteWeiterleitung() {
   return <Navigate to={rollenPfad(modul)} replace />
 }
 
+/**
+ * Live mit einem bestimmten Zelt — Ziel der Push-Meldungen (forkai.169).
+ *
+ * Eine Grenzwert-Meldung zu „Zelt-RDWC" soll dessen Kacheln zeigen, nicht das
+ * Zelt, das Live gerade zufällig gewählt hat. Das Zelt geht als Zustand mit,
+ * nicht als Suchparameter: Home Assistant reicht nur den Pfad an die App
+ * weiter (`route.path`), keine Abfrage.
+ */
+function LiveZeltWeiterleitung() {
+  const { zeltId } = useParams()
+  const id = Number(zeltId)
+  return <Navigate to="/" replace state={Number.isInteger(id) && id > 0 ? { zeltId: id } : undefined} />
+}
+
 function LegacyRedirect({ to }: { to: string }) {
   const { search } = useLocation()
   const [path, targetQuery] = to.split('?')
@@ -109,6 +123,7 @@ function App() {
       <Routes>
           <Route path="/" element={<LiveDashboardPage />} />
           <Route path="/live" element={<Navigate to="/" replace />} />
+          <Route path="/live/:zeltId" element={<LiveZeltWeiterleitung />} />
           <Route path="/addback" element={<AddbackHubPage />} />
           <Route path="/wasserwechsel" element={<WasserwechselPage />} />
           <Route path="/aufgaben" element={<MobileActionPage />} />

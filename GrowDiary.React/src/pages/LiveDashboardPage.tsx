@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { wegZurRoutine } from '../features/changeouts/routine-weg'
 import type { GrowSummary, RiskEventDto, TentDto, TentLivePayload } from '../types'
@@ -27,6 +27,23 @@ import {
 function LiveDashboardPage() {
   const [state, setState] = useState<LiveState>(initialLiveState)
   const [selectedTentId, setSelectedTentId] = useState<number | null>(null)
+  // Ein Link auf /live/<zelt> (Push-Meldung) wählt das Zelt. Je Navigation
+  // einmal — danach darf man im Live frei umschalten. Angepasst während des
+  // Renderns statt im Effekt, damit nicht erst das falsche Zelt aufblitzt.
+  const location = useLocation()
+  const zeltAusLink = (location.state as { zeltId?: unknown } | null)?.zeltId
+  const [linkGelesen, setLinkGelesen] = useState<string | null>(null)
+  if (typeof zeltAusLink === 'number' && linkGelesen !== location.key) {
+    setLinkGelesen(location.key)
+    setSelectedTentId(zeltAusLink)
+  }
+  // Danach den Zustand aus dem Verlaufseintrag nehmen. Sonst setzt die
+  // Zurück-Taste (Kachel antippen, zurück) wieder das Zelt aus der Meldung —
+  // auch wenn man inzwischen selbst ein anderes gewählt hat.
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (typeof zeltAusLink === 'number') navigate(location.pathname + location.search, { replace: true, state: null })
+  }, [zeltAusLink, location.pathname, location.search, navigate])
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
   // Der Watchdog meldet, wenn die Überwachung SELBST schweigt — das gehört auf
@@ -134,7 +151,11 @@ function LiveDashboardPage() {
     return () => window.clearInterval(id)
   }, [])
 
-  const selectedTent = state.tents.find((tent) => tent.id === selectedTentId) ?? state.tents[0] ?? null
+  // Ein Zelt, das es nicht (mehr) gibt — etwa gelöscht, während die Meldung
+  // unterwegs war —, fällt auf dieselbe Wahl zurück wie ohne Link.
+  const selectedTent = state.tents.find((tent) => tent.id === selectedTentId)
+    ?? state.tents.find((tent) => tent.id === chooseInitialTent(state.tents, state.grows))
+    ?? state.tents[0] ?? null
   const live = selectedTent ? state.liveByTentId[selectedTent.id] : undefined
   const activeGrows = state.grows.filter((grow) => grow.status === 'Running' || grow.status === 'Planning')
   const growsForTent = selectedTent ? activeGrows.filter((grow) => grow.tentId === selectedTent.id) : []

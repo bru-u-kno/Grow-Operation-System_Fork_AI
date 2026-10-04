@@ -452,7 +452,8 @@ public sealed class DosingWorker : BackgroundService
                 + (haelfte is null ? string.Empty
                     : $" {haelfte.Partner.Name} gibt in {haelfte.Minuten} min {haelfte.Ml:0.##} ml nach.")
                 + (pump.SimulationMode ? " (Testbetrieb — es ist nichts geflossen.)" : string.Empty),
-            cancellationToken);
+            cancellationToken,
+            seite: "dosierung");
         return true;
     }
 }

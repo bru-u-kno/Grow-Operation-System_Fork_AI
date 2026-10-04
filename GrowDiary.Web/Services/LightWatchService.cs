@@ -66,7 +66,8 @@ public sealed class LightWatchService
             "Licht in der Dunkelphase",
             LightIntrusionGuard.Message(tent.Name, cycle!, lokal),
             cancellationToken,
-            trotzRuhezeit: true);
+            trotzRuhezeit: true,
+            seite: NotificationService.LiveSeite(tent.Id));
     }
 
 }

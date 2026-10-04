@@ -31,35 +31,56 @@ public sealed class NotificationService
         _supervisor = supervisor;
     }
 
-    /// <summary>Die Seite, auf der man die Sache erledigt, je Meldungsart.</summary>
+    /// <summary>Die Seite, auf der die Meldung steht, je Meldungsart — wenn der Absender keine genauere kennt.</summary>
     /// <remarks>
-    /// Eine Warnung, die nur meldet, ist eine halbe Warnung — bisher landete
-    /// jeder Tipp auf der Startseite von Home Assistant, und der Weg zur
-    /// eigentlichen Stelle blieb Handarbeit.
+    /// <para>Ziel ist die Stelle, an der man die Sache <b>sieht</b>. forkai.168
+    /// schickte Grenzwert und Risiko auf „Aufgaben" — dort steht aber keine
+    /// Grenzwert-Überschreitung und kein Trend-Befund. Bru bekam fast nur
+    /// Grenzwert-Meldungen und landete damit immer auf einer Seite, die mit der
+    /// Meldung nichts zu tun hatte (04.10.2026).</para>
+    /// <para>Absender, die das Zelt kennen, geben es per <c>seite</c> mit
+    /// (<see cref="LiveSeite"/>); diese Tabelle ist der Rückfall.</para>
     /// </remarks>
-    private static string SeiteFuer(NotificationCategory category) => category switch
+    public static string SeiteFuer(NotificationCategory category) => category switch
     {
+        // Sensoren & Wartung: Kalibrier- und Wartungstermine.
         NotificationCategory.Calibration => "sensoren",
         NotificationCategory.Maintenance => "sensoren",
-        NotificationCategory.SensorOffline => "sensoren",
-        // Grenzwert, Risiko und Systemmeldung fuehren dorthin, wo das offene
-        // Zeug steht — Aufgaben zeigt Risiken, Termine und Pumpen zusammen.
-        _ => "aufgaben",
+        // Live: die Kacheln zeigen den Wert ausserhalb des Bands, „Beobachtungen"
+        // die Trend-Befunde, ein ausgefallener Sensor steht als „–" in seiner
+        // Kachel und fehlt bei „N Sensoren live". Sensoren & Wartung zeigt nur
+        // den von Hand gesetzten Status „Offline".
+        NotificationCategory.SensorOffline => "live",
+        NotificationCategory.Threshold => "live",
+        NotificationCategory.Risk => "live",
+        // Aufgaben: Pumpen-Lage, offene Risiken, Termine.
+        NotificationCategory.System => "aufgaben",
+        _ => "live",
     };
+
+    /// <summary>
+    /// Live mit diesem Zelt — <c>live/&lt;id&gt;</c>, ohne Zelt <c>live</c>.
+    /// </summary>
+    /// <remarks>
+    /// Nie leer für die Startseite: HA gibt dann <c>route.path = ""</c> weiter,
+    /// und das schickt es auch bei jeder Größenänderung. Die App könnte einen
+    /// Tipp auf „Live" so nicht von einem gedrehten Handy unterscheiden und
+    /// bliebe auf der Seite, die gerade offen ist.
+    /// </remarks>
+    public static string LiveSeite(int? zeltId = null) => zeltId is { } id ? $"live/{id}" : "live";
 
     /// <summary>
     /// Der HA-interne Pfad zur Grow-OS-Seite, oder null wenn Grow OS nicht als
     /// Add-on laeuft (dann gibt es nichts, auf das man zeigen koennte).
     /// </summary>
-    private async Task<string?> ZielPfadAsync(NotificationCategory category, CancellationToken ct)
+    private async Task<string?> ZielPfadAsync(string seite, CancellationToken ct)
     {
         if (_supervisor is null) return null;
-        return SupervisorInfoService.PanelPath(await _supervisor.GetAddonSlugAsync(ct), SeiteFuer(category));
+        return SupervisorInfoService.PanelPath(await _supervisor.GetAddonSlugAsync(ct), seite);
     }
 
-    /// <summary>Der Link auf die Startseite (Live), für Tagesbericht und Testmeldung.</summary>
-    public async Task<string?> StartPfadAsync(CancellationToken ct)
-        => _supervisor is null ? null : SupervisorInfoService.PanelPath(await _supervisor.GetAddonSlugAsync(ct));
+    /// <summary>Der Link auf Live, für Tagesbericht und Testmeldung.</summary>
+    public Task<string?> StartPfadAsync(CancellationToken ct) => ZielPfadAsync(LiveSeite(), ct);
 
     public NotificationSettings GetSettings() => _settingsRepo.GetNotificationSettings();
 
@@ -83,7 +104,11 @@ public sealed class NotificationService
     /// Morgen wertlos wäre. Die Kategorie muss weiter eingeschaltet sein: wer
     /// eine Art Meldung ganz abstellt, meint das auch.</para>
     /// </remarks>
-    public async Task<bool> SendAsync(NotificationCategory category, string title, string message, CancellationToken cancellationToken = default, bool trotzRuhezeit = false)
+    /// <param name="seite">
+    /// Die Seite der App, die der Tipp auf die Meldung öffnet (z. B.
+    /// <c>live/3</c>). Leer = die Seite der Meldungsart (<see cref="SeiteFuer"/>).
+    /// </param>
+    public async Task<bool> SendAsync(NotificationCategory category, string title, string message, CancellationToken cancellationToken = default, bool trotzRuhezeit = false, string? seite = null)
     {
         var settings = _settingsRepo.GetNotificationSettings();
         if (!settings.IsConfigured || !settings.IsCategoryEnabled(category))
@@ -97,7 +122,7 @@ public sealed class NotificationService
         }
 
         var haSettings = _growRepository.GetEffectiveHomeAssistantSettings();
-        var ziel = await ZielPfadAsync(category, cancellationToken);
+        var ziel = await ZielPfadAsync(string.IsNullOrWhiteSpace(seite) ? SeiteFuer(category) : seite, cancellationToken);
         var sent = await _homeAssistant.SendNotificationAsync(haSettings, settings.NotifyService!, title, message, cancellationToken, ziel);
         if (sent)
         {

@@ -27,6 +27,8 @@ const OHNE_EIGENE_SEITE: Record<string, string> = {
   '/action': 'Nimmt einen Klick aus einer Push-Nachricht entgegen und leitet weiter.',
   '/messung': 'Kurzform, leitet auf /messungen/new um.',
   '/live': 'Steht im Menü unter „/" und wird darüber geprüft — dieselbe Seite.',
+  '/live/:zeltId': 'Ziel der Push-Meldungen (forkai.169) — leitet auf „/" um und wählt dort das Zelt; '
+    + 'dieselbe Seite. Der Weg läuft in e2e/ha-tiefenlink.spec.ts.',
   '/grows/measurements/:measurementId/edit':
     'Braucht eine bestehende Messung; die Id wechselt mit dem Bestand. '
     + 'Der Rundweg dafür läuft in formular-rundweg.spec.ts über die Liste.',

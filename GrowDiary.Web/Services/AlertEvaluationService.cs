@@ -154,7 +154,8 @@ public sealed class AlertEvaluationService
                 {
                     var sent = await _notifications.SendAsync(
                         NotificationCategory.Threshold, BuildTitle(tent),
-                        BuildBreachMessage(rule, value, decision.NewState, band.Herkunft, lights), cancellationToken);
+                        BuildBreachMessage(rule, value, decision.NewState, band.Herkunft, lights), cancellationToken,
+                        seite: NotificationService.LiveSeite(tent.Id));
                     if (sent)
                     {
                         _rules.UpdateState(rule.Id, decision.NewState, nowUtc);
@@ -171,7 +172,8 @@ public sealed class AlertEvaluationService
                     // Zustand stehen und der naechste Takt versucht es wieder.
                     // Sonst saehe der Nutzer den Alarm — aber nie die Entwarnung.
                     var sent = await _notifications.SendAsync(
-                        NotificationCategory.Threshold, BuildTitle(tent), BuildRecoveryMessage(rule, value), cancellationToken);
+                        NotificationCategory.Threshold, BuildTitle(tent), BuildRecoveryMessage(rule, value), cancellationToken,
+                        seite: NotificationService.LiveSeite(tent.Id));
                     if (sent)
                     {
                         _rules.UpdateState(rule.Id, decision.NewState, rule.LastNotifiedUtc);

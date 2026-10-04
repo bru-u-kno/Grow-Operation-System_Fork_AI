@@ -295,10 +295,12 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
             switch (transition)
             {
                 case SensorOfflineTracker.Transition.WentOffline:
-                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Grow OS · {tent.Name}", $"Sensor liefert keine Werte mehr: {name}.", cancellationToken);
+                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Grow OS · {tent.Name}", $"Sensor liefert keine Werte mehr: {name}.", cancellationToken,
+                        seite: NotificationService.LiveSeite(tent.Id));
                     break;
                 case SensorOfflineTracker.Transition.CameOnline:
-                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Grow OS · {tent.Name}", $"Sensor liefert wieder Werte: {name}.", cancellationToken);
+                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Grow OS · {tent.Name}", $"Sensor liefert wieder Werte: {name}.", cancellationToken,
+                        seite: NotificationService.LiveSeite(tent.Id));
                     break;
             }
         }

@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.169
+
+**Fork AI.** Jede Push-Meldung öffnet die Seite, auf der ihr Inhalt steht.
+
+- **Grenzwert-Meldungen öffnen Live mit dem Zelt der Meldung:** forkai.168 schickte sie auf
+  „Aufgaben" — dort steht aber keine Grenzwert-Überschreitung. Weil fast alle Meldungen
+  Grenzwert-Meldungen sind, landete man praktisch immer auf einer Seite, die mit der Meldung nichts
+  zu tun hatte. Jetzt öffnet „Zelt-RDWC: Temperatur über …" die Live-Ansicht von genau diesem Zelt,
+  auch wenn Live gerade ein anderes Zelt zeigt.
+- **Je Meldung das passende Ziel:**
+  - Trend-Befunde und „Licht in der Dunkelphase": Live mit dem betroffenen Zelt (Bereich
+    „Beobachtungen").
+  - „Sensor liefert keine Werte mehr" und „… wieder Werte": Live mit dem Zelt — dort steht der
+    Ausfall als „–" in der Kachel. „Sensoren & Wartung" zeigt nur den von Hand gesetzten Status.
+  - Systemwarnung und Entwarnung der Überwachung: Live (die Warnung steht dort oben).
+  - Pumpe steht oder prüfen, Kühler: weiter „Aufgaben" (Pumpen-Lage).
+  - „… hat dosiert": „Dosierung".
+  - Kalibrierung und Wartung: weiter „Sensoren & Wartung".
+- **Test-Push und Tagesbericht öffnen Live auch dann, wenn Grow OS schon offen ist:** Bisher blieb die
+  App auf der Seite, die gerade offen war.
+- **Die eigene Zeltwahl bleibt:** Wer nach dem Tipp auf ein anderes Zelt umschaltet, eine Kachel
+  öffnet und zurückgeht, landet nicht wieder beim Zelt aus der Meldung.
+
+Geprüft je Meldungsart vom Alarm bis zum Link, und an der gebauten App in einer nachgestellten
+Home-Assistant-Hülle: Tipp auf eine Meldung zu Zelt 4 zeigt Live mit Zelt 4, ein zweiter Tipp zu
+Zelt 1 schaltet auf Zelt 1 um.
+
 ## 2.0.0-forkai.168
 
 **Fork AI.** Ein Tipp auf eine Push-Meldung öffnet wieder Grow OS — und zwar die richtige Seite.
