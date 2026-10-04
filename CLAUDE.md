@@ -293,7 +293,7 @@ gehören die Querschnitte oben in jede Auswahl.
 ### Vor „fertig": den Prüfer laufen lassen
 
 `.claude/agents/pruefer.md` — ein Agent in eigenem Kontext, der die Änderung
-gegen die fünf Regeln ansieht. Er hat sie nicht gebaut und keinen Grund, sie zu
+gegen die fünf Regeln und `docs/sicherheits-leitplanken.md` ansieht. Er hat sie nicht gebaut und keinen Grund, sie zu
 mögen. Aufrufen **bevor** „fertig" gesagt wird.
 
 Für ein Release: `/release` — die Reihenfolge steht dort, nicht im Kopf.
@@ -347,6 +347,48 @@ Wo eine Zahl gebraucht wird, die es schon gibt: **verweisen, nicht abtippen.**
 - **Das Telefon ist sauber** (320–768 px, null Überlauf über zwölf Breiten).
   Jede Änderung wird dagegen gemessen.
 - **Athena-PDFs gehören nicht ins Repository.**
+
+## ARBEITSTAKT — DER RELEASE-ZUG
+
+Vereinbart mit dem Nutzer am 04.10.2026. Anlass: Für vier zusammenhängende
+Teile (A-005 Etappe A+B) lag zwischen „los" und „installiert" eine halbe Nacht.
+Gründe:
+- alles zu einem Release gebündelt
+- der Prüfer erst am Ende, jeder Befund eine ganze neue Runde
+- jeder Agent lokal mit der vollen Mappe, danach dieselbe Mappe noch einmal im Tor
+- ein zeitabhängiger Demowert machte die CI rot
+
+Der Nutzer arbeitet oft einen oder zwei Tage am Stück. Schon eine Stunde
+Warten je Release ist ihm zu viel. Deshalb:
+
+- **Ein Thema, ein Release.** Fertig und geprüft heißt: fährt los. Gebündelt
+  wird nur, was ohne den anderen Teil nicht funktioniert.
+- **Der Nutzer wartet nicht auf den Zug.** Während Tor, Image, Sicherung und
+  Installation laufen (zusammen rund 10–15 Minuten), geht die Arbeit am nächsten
+  Thema weiter. Gemeldet wird, wenn es bei ihm installiert ist.
+- **Release-Branch direkt nach dem Arbeitsbranch pushen.** `release.yml` wartet
+  selbst auf die grüne CI desselben Commits (seit forkai.155). Kein Zwischenwarten.
+- **Leitplanken zuerst.** Jeder Bau-Agent liest `docs/sicherheits-leitplanken.md`,
+  bevor er Rechte, HA, Geräte oder Sicherungen anfasst.
+- **Prüfer pro Strang, sofort.** Sobald ein Strang fertig ist, sieht der Prüfer
+  ihn an, parallel zu den anderen Strängen, nicht erst nach dem Zusammenführen.
+  Am Ende prüft er nur noch die Nahtstellen.
+- **Lokal gezielt, die volle Mappe im Tor.** Agenten lassen lokal die betroffenen
+  Tests und die Querschnitte laufen (siehe „Welche E2E-Fälle lokal laufen"). Die
+  Backend-Mappe läuft lokal einmal nach dem Zusammenführen (rund 2 Minuten). Die
+  volle E2E-Mappe läuft im Tor.
+- **Wackelnde Tests sofort reparieren.** Ein Tor, das ohne Fehler rot wird,
+  kostet jeden folgenden Zug eine Runde.
+- **Keine Umwege ohne Auftrag.** Werkzeuge, die nichts Belastbares liefern
+  (Mutationstest gegen Integrationstests: fast nur Zeitüberschreitungen), nicht
+  auf eigene Faust einschieben.
+- **Modelle nach Arbeit.** Mechanisches (Einstufen, Texte, Doku, Zählungen) auf
+  einem schnellen Modell; Sicherheit, Architektur und den Prüfer auf dem
+  stärksten. Viele parallele Agenten verbrauchen das Nutzungslimit; am 03.10.
+  brach eines mitten im Bau ab. Lieber drei gut geschnittene Stränge als acht.
+
+Was bleibt, weil es schützt: Bissnachweise, Prüfer, volles Tor vor jedem
+Release, Sicherung vor jedem Update, Installation mit Startprotokoll.
 
 ## RELEASE
 

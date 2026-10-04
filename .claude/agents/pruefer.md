@@ -35,6 +35,13 @@ die du am **laufenden Stand** beantwortest, nicht am Diff:
    Fehler wieder eingebaut und die Prüfung rot wurde. Fehlt sie, ist die
    Prüfung kein Beleg. **Baue sie selbst ein und lass die Prüfung laufen.**
 
+## Dazu die Sicherheits-Leitplanken
+
+Berührt die Änderung Rechte, Home Assistant, Geräte oder Sicherungen:
+`docs/sicherheits-leitplanken.md` Punkt für Punkt durchgehen. Jeder
+Verstoß ist ein Befund. Findest du eine neue Fehlerklasse, schlag in deinem
+Bericht eine Leitplanke dafür vor.
+
 ## Dazu die drei Fallen dieses Projekts
 
 - **Helles Thema.** Ist es dreimal zugeschnappt. Neue Farbe? Miss den Kontrast

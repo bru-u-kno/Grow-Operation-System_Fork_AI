@@ -101,6 +101,11 @@ GHCR, wird aber niemandem angeboten. Reparieren, den Tag auf den neuen Commit
 setzen (`git tag -fa v<X>`, `git push -f origin v<X>`) — der nächste Lauf
 überschreibt das Image unter derselben Nummer.
 
+**Im Release-Zug (CLAUDE.md „Arbeitstakt"):** Arbeitsbranch und Release-Branch
+direkt nacheinander pushen. Die Sicherung des Add-ons (Schritt 4 setzt sie
+voraus, siehe Gedächtnis „Backup vor Release") währenddessen anlegen, nicht
+danach. Während der Zug fährt, geht die Arbeit am nächsten Thema weiter.
+
 ## Schritt 3 — hinsehen
 
 Dem Workflow glauben reicht nicht:
