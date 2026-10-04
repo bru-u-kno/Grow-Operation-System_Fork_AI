@@ -19,7 +19,7 @@ vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 
 | Stufe | Wert | Beispiele |
 |---|---|---|
-| Dokumentieren | 1 | Messung anlegen/ändern, Journal, Beobachtung, Aufgabe abhaken, Wartung/Kalibrierung festhalten, Kosten, Einkaufsliste, Meldung quittieren |
+| Dokumentieren | 1 | Messung anlegen/ändern, Journal anlegen/ändern, Beobachtung, Aufgabe abhaken, Wartung/Kalibrierung festhalten, Kosten, Einkaufsliste, Meldung quittieren |
 | GrowPlanen | 2 | Phase wechseln, Zielwerte, Mischplan, Lichtplan, Wochenplan, Pflanzen/Sorten/Setups bearbeiten |
 | GeraeteSchalten | 4 | Licht-Befehl, AC-Stufe, Dosierpumpe auslösen/stoppen, Probeschaltung, Steuerungs-Einstellungen, die sofort schalten |
 | Verwaltung | 8 | Einstellungen, Sicherung anlegen, Import/Export, Löschen von Stammdaten, HA-Automationen/Helfer anlegen, Pumpen einrichten und kalibrieren. Sicherung zurückspielen/herunterladen: nie über einen Schlüssel (Prüfer 03.10.2026) |

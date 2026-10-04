@@ -108,6 +108,8 @@ describe('Zuordnung Pfad → Aktion', () => {
     expect(aktion('POST', '/api/steuerung/licht/befehl')).toBe('Licht geschaltet')
     expect(aktion('PUT', '/api/measurements/5')).toBe('Messung geändert')
     expect(aktion('DELETE', '/api/measurements/5')).toBe('Messung gelöscht')
+    expect(aktion('PUT', '/api/journal/19')).toBe('Journal-Eintrag geändert')
+    expect(aktion('PUT', '/api/journal/19', false)).toBe('Journal-Eintrag ändern')
   })
 
   it('was nicht ausgeführt wurde, heisst nicht „geschaltet"', () => {

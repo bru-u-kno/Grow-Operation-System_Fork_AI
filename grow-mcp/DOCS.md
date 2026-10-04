@@ -96,7 +96,7 @@ steht in Grow OS im Prüfprotokoll.
 | Stufe | Werkzeuge |
 | --- | --- |
 | — (nur ein gültiger Schlüssel) | `zugriff_pruefen`, `ha_bereiche`, `ha_zustaende`, `ha_verlauf` |
-| Dokumentieren | `messung_eintragen`, `messung_aendern`, `journal_eintragen`, `aufgabe_erledigen`, `wartung_eintragen`, `kalibrierung_eintragen` |
+| Dokumentieren | `messung_eintragen`, `messung_aendern`, `journal_eintragen`, `journal_aendern`, `aufgabe_erledigen`, `wartung_eintragen`, `kalibrierung_eintragen` |
 | Grow planen | `phase_bestaetigen` (Keimung, Bewurzelung, Veg, Blüte/Flip, Finish) |
 | Geräte schalten | `pumpe_dosieren`, `pumpe_stoppen`, `licht_schalten`, `ha_dienst` |
 | Verwaltung | zusätzlich für `ha_dienst` auf Automationen, Skripte, Szenen und Helfer |
@@ -119,6 +119,8 @@ Stufen.
 - „Die Messung von eben: der pH war 5,9." → `messung_aendern`, alle anderen
   Werte bleiben stehen
 - „Ins Journal: 2 ml pH-Minus und 300 ml Pyrolyt gegeben." → `journal_eintragen`
+- „Im Wasserwechsel-Eintrag fehlt noch: Purolyt 200 ml." → `journal`, dann
+  `journal_aendern` mit `anhaengen` (der alte Text bleibt; `text` ersetzt ihn ganz)
 - „Hak die Aufgabe Filter reinigen ab." → `aufgaben`, dann `aufgabe_erledigen`
 - „pH-Sonde kalibriert, 7,00 Referenz, vorher 7,12, nachher 7,01." → `technik`,
   dann `kalibrierung_eintragen`

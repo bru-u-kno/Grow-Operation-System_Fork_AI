@@ -28,7 +28,8 @@ public sealed class SchreibWerkzeugeTests
     public static IEnumerable<object[]> SchreibendeWerkzeuge() => Schreibend().Select(m => new object[] { Werkzeugkasten.Name(m) });
 
     /// <summary>Ein Wert für die Messungs-Werkzeuge — ohne jeden Wert tragen sie mit Absicht nichts ein.</summary>
-    private static readonly Dictionary<string, object?> EinWert = new() { ["ph"] = 5.8 };
+    // „anhaengen" für journal_aendern: ohne jede Angabe ändert es mit Absicht nichts.
+    private static readonly Dictionary<string, object?> EinWert = new() { ["ph"] = 5.8, ["anhaengen"] = "Purolyt: 200 ml" };
 
     [Fact]
     public void Die_Zaehlung_sieht_ihre_Grundmenge()
@@ -265,6 +266,55 @@ public sealed class SchreibWerkzeugeTests
         // Ohne neuen Zeitpunkt keiner — sonst schöbe Grow OS die Messung.
         Assert.False(wurzel.TryGetProperty("takenAtLocal", out _));
         Assert.False(wurzel.TryGetProperty("id", out _));
+    }
+
+    [Fact]
+    public async Task Journal_aendern_schickt_nur_was_genannt_wurde()
+    {
+        // Grow OS lässt beim Journal-PUT fehlende Felder stehen. Geht hier
+        // mehr mit als genannt, überschreibt das Werkzeug still Titel oder
+        // Zeitpunkt.
+        var fork = ForkAttrappe.MitGrow();
+        await Werkzeugkasten.TextAsync("journal_aendern", Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel),
+            new Dictionary<string, object?> { ["eintragId"] = 19, ["text"] = "CANNA pH- Pro Bloom: ca. 25 ml" });
+
+        var put = Assert.Single(fork.VonWerkzeugen, a => a.Methode == "PUT");
+        Assert.Equal("api/journal/19", put.Weg);
+        using var rumpf = JsonDocument.Parse(put.Rumpf!);
+        Assert.Equal("CANNA pH- Pro Bloom: ca. 25 ml", rumpf.RootElement.GetProperty("body").GetString());
+        Assert.False(rumpf.RootElement.TryGetProperty("title", out _));
+        Assert.False(rumpf.RootElement.TryGetProperty("entryType", out _));
+        Assert.False(rumpf.RootElement.TryGetProperty("occurredAtLocal", out _));
+        // Ersetzen braucht keinen Lesezugriff vorher.
+        Assert.DoesNotContain(fork.VonWerkzeugen, a => a.Methode == "GET");
+    }
+
+    [Fact]
+    public async Task Journal_aendern_haengt_an_und_behaelt_den_alten_Text()
+    {
+        var fork = ForkAttrappe.MitGrow()
+            .Antwort("GET", @"api/journal/\d+", 200,
+                """{"id":19,"growId":1,"title":"Wasserwechsel","body":"CANNA pH- Pro Bloom: ca. 25 ml\n","entryType":"ReservoirChange"}""");
+        await Werkzeugkasten.TextAsync("journal_aendern", Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel),
+            new Dictionary<string, object?> { ["eintragId"] = 19, ["anhaengen"] = " Purolyt: 200 ml direkt nach dem Wechsel → ORP 450 mV " });
+
+        var put = Assert.Single(fork.VonWerkzeugen, a => a.Methode == "PUT");
+        using var rumpf = JsonDocument.Parse(put.Rumpf!);
+        Assert.Equal("CANNA pH- Pro Bloom: ca. 25 ml\nPurolyt: 200 ml direkt nach dem Wechsel → ORP 450 mV",
+            rumpf.RootElement.GetProperty("body").GetString());
+    }
+
+    [Theory]
+    [InlineData(null, null, "Nichts geändert")]
+    [InlineData("neu", "Zeile", "nicht beides")]
+    public async Task Journal_aendern_schreibt_nicht_ohne_klare_Angabe(string? text, string? anhaengen, string erwartet)
+    {
+        var fork = ForkAttrappe.MitGrow();
+        var antwort = await Werkzeugkasten.TextAsync("journal_aendern", Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel),
+            new Dictionary<string, object?> { ["eintragId"] = 19, ["text"] = text, ["anhaengen"] = anhaengen });
+
+        Assert.Contains(erwartet, antwort);
+        Assert.Empty(fork.VonWerkzeugen);
     }
 
     [Fact]

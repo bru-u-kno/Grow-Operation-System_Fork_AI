@@ -319,11 +319,11 @@ public sealed class SchreibWerkzeuge(GrowOsReader reader)
     [
         ("Note", ["notiz", "note"]),
         ("Observation", ["beobachtung", "observation"]),
-        ("Action", ["maßnahme", "massnahme", "handlung", "action"]),
+        ("Action", ["maßnahme", "massnahme", "handlung", "aktion", "action"]),
         ("Problem", ["problem"]),
         ("Solution", ["lösung", "loesung", "solution"]),
         ("Training", ["training", "lst", "topping"]),
-        ("Transplant", ["umpflanzen", "transplant"]),
+        ("Transplant", ["umpflanzen", "umtopfen", "transplant"]),
         ("Feeding", ["düngen", "duengen", "fütterung", "feeding"]),
         ("ReservoirChange", ["wasserwechsel", "reservoirwechsel", "reservoirchange"]),
     ];
@@ -363,6 +363,79 @@ public sealed class SchreibWerkzeuge(GrowOsReader reader)
 
         return await SchreibenAsync(HttpMethod.Post, $"api/grows/{growId}/journal", rumpf, "Journal eintragen",
             json => $"Im Journal von Grow {growId} eingetragen (Eintrag {Zahl(json, "id")}):", cancellationToken);
+    }
+
+    [McpServerTool(Name = "journal_aendern")]
+    [Description($"Ändert einen vorhandenen Journal-Eintrag: Text ersetzen, eine Zeile anhängen, Titel, Art oder Zeitpunkt korrigieren. Nur was genannt wird, ändert sich. Die Eintrags-Id liefert das Werkzeug journal. {StufeDokumentieren}")]
+    [BrauchtForkSchluessel(Stufen.Dokumentieren)]
+    public async Task<string> JournalAendernAsync(
+        [Description("Die Id des Journal-Eintrags")] int eintragId,
+        [Description("Neuer Text (ersetzt den alten ganz); leer = Text leeren")] string? text = null,
+        [Description("Eine Zeile, die unten an den Text angehängt wird — der alte Text bleibt")] string? anhaengen = null,
+        [Description("Neuer Titel; leer = Titel leeren")] string? titel = null,
+        [Description("Neue Art: Notiz, Beobachtung, Maßnahme, Problem, Lösung, Training, Umpflanzen, Düngen, Wasserwechsel")] string? art = null,
+        [Description("Neuer Zeitpunkt in Ortszeit, etwa 2026-10-03T14:30 oder 03.10.2026 14:30. Weglassen = bleibt.")] string? zeitpunkt = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!reader.HatForkSchluessel) return ForkFehler.SchluesselNoetig;
+        if (text is null && anhaengen is null && titel is null && art is null && zeitpunkt is null)
+        {
+            return "Nichts geändert: es wurde weder Text, Titel, Art noch Zeitpunkt genannt.";
+        }
+
+        if (text is not null && !string.IsNullOrWhiteSpace(anhaengen))
+        {
+            return "Entweder den Text ersetzen oder eine Zeile anhängen — nicht beides in einem Schritt.";
+        }
+
+        // Grow OS lässt beim Ändern jedes Feld, das fehlt (null), wie es ist.
+        // Darum geht hier nur mit, was genannt wurde.
+        var rumpf = new JsonObject();
+        if (text is not null) rumpf["body"] = text.Trim();
+        if (titel is not null) rumpf["title"] = titel.Trim();
+
+        if (art is not null)
+        {
+            var wert = Auswahl(JournalArten, art);
+            if (wert is null)
+            {
+                return $"„{art}\" kennt das Journal nicht. Möglich: Notiz, Beobachtung, Maßnahme, Problem, Lösung, Training, Umpflanzen, Düngen, Wasserwechsel.";
+            }
+            rumpf["entryType"] = wert;
+        }
+
+        if (zeitpunkt is not null)
+        {
+            if (Messfelder.Ortszeit(zeitpunkt) is not { } zeit) return ZeitpunktUnlesbar(zeitpunkt);
+            rumpf["occurredAtLocal"] = zeit;
+        }
+
+        if (!string.IsNullOrWhiteSpace(anhaengen))
+        {
+            // Anhängen braucht den gespeicherten Text — sonst würde die neue
+            // Zeile den alten Eintrag ersetzen.
+            var vorher = await SendenAsync(HttpMethod.Get, $"api/journal/{eintragId}", null, cancellationToken);
+            if (vorher.Fehler is { } fehler) return fehler;
+            if (!vorher.Antwort!.Erfolg) return ForkFehler.Text(vorher.Antwort.Status, vorher.Antwort.Text, "Journal-Eintrag lesen");
+
+            string? alterText;
+            try
+            {
+                using var dokument = JsonDocument.Parse(vorher.Antwort.Text);
+                alterText = Text(dokument.RootElement, "body");
+            }
+            catch (JsonException)
+            {
+                return AndersAlsErwartet;
+            }
+
+            rumpf["body"] = string.IsNullOrWhiteSpace(alterText)
+                ? anhaengen.Trim()
+                : alterText.TrimEnd() + "\n" + anhaengen.Trim();
+        }
+
+        return await SchreibenAsync(HttpMethod.Put, $"api/journal/{eintragId}", rumpf, "Journal-Eintrag ändern",
+            _ => $"Journal-Eintrag {eintragId} geändert. Grow OS hat gespeichert:", cancellationToken);
     }
 
     [McpServerTool(Name = "aufgabe_erledigen")]

@@ -211,6 +211,7 @@ export function GrowWorkspace({ growId, section }: { growId: string; section: Gr
           saving={saving}
           selectedMeasurementId={selectedMeasurementId}
           onEntfernt={() => void loadBundle()}
+          onGeaendert={() => loadBundle()}
           onMeasurementSelection={(measurementId) => void handleMeasurementSelection(measurementId)}
           onJournalFormChange={(patch) => setJournalForm((current) => ({ ...current, ...patch }))}
           onPhotoFormChange={(patch) => setPhotoForm((current) => ({ ...current, ...patch }))}

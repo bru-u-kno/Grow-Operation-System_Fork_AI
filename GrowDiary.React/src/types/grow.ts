@@ -469,6 +469,8 @@ export interface JournalEntryDto {
   source: ValueOrigin
   occurredAtUtc: string
   createdAtUtc: string
+  /** Wann zuletzt geändert; null = nie (seit 05.10.2026). */
+  updatedAtUtc?: string | null
 }
 
 export interface AddbackDefaultsDto {

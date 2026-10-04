@@ -14,6 +14,7 @@ public static class JournalMapping
         EntryType: entry.EntryType,
         Source: entry.Source,
         OccurredAtUtc: entry.OccurredAtUtc,
-        CreatedAtUtc: entry.CreatedAtUtc
+        CreatedAtUtc: entry.CreatedAtUtc,
+        UpdatedAtUtc: entry.UpdatedAtUtc
     );
 }

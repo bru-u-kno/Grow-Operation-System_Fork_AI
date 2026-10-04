@@ -31,7 +31,8 @@ public sealed class ForkWegeTests
                          + "ki-ha-schnittstelle; bis zum Zusammenführen gilt der Vertrag aus dem Auftrag.",
     };
 
-    private static readonly Dictionary<string, object?> EinWert = new() { ["ph"] = 5.8 };
+    // „anhaengen" für journal_aendern: ohne jede Angabe ändert es mit Absicht nichts.
+    private static readonly Dictionary<string, object?> EinWert = new() { ["ph"] = 5.8, ["anhaengen"] = "Purolyt: 200 ml" };
 
     private static async Task<List<Angekommen>> AlleAnfragenAsync()
     {

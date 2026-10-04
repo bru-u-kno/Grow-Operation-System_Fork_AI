@@ -11,5 +11,6 @@ public sealed record JournalEntryDto(
     JournalEntryType EntryType,
     ValueOrigin Source,
     DateTime OccurredAtUtc,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc = null
 );

@@ -244,6 +244,7 @@ public sealed partial class DatabaseInitializer
                 Source TEXT NOT NULL DEFAULT 'Manual',
                 OccurredAtUtc TEXT NOT NULL,
                 CreatedAtUtc TEXT NOT NULL,
+                UpdatedAtUtc TEXT NULL,
                 FOREIGN KEY (GrowId) REFERENCES Grows (Id) ON DELETE CASCADE,
                 FOREIGN KEY (MeasurementId) REFERENCES Measurements (Id) ON DELETE SET NULL
             );

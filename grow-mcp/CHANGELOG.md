@@ -1,5 +1,11 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.3
+
+**Journal-Einträge ändern.** Neues Werkzeug `journal_aendern` (Stufe Dokumentieren): Text ersetzen
+oder eine Zeile anhängen (der alte Text bleibt), Titel, Art oder Zeitpunkt korrigieren. Nur was
+genannt wird, ändert sich. Braucht Grow OS Fork AI ab 2.0.0-forkai.170.
+
 ## 0.2.0-forkai.2
 
 **Der Weg zum Schlüssel stimmt wieder.** Grow OS Fork AI hat ab 2.0.0-forkai.165 eine eigene Seite

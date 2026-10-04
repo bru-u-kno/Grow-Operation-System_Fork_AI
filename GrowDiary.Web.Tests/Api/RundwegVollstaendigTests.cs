@@ -71,6 +71,8 @@ public sealed class RundwegVollstaendigTests
         // Das meistbenutzte Formular der App — und bis zum 25.08.2026 von
         // keiner Rundweg-Pruefung beruehrt.
         new("Messung", "/api/grows/1/measurements", "/api/measurements/{id}", typeof(MeasurementUpsertRequest)),
+        // Seit 05.10.2026 laesst sich ein Journaleintrag aendern.
+        new("Journal", "/api/grows/1/journal", "/api/journal/{id}", typeof(JournalEntryUpdateRequest)),
 
         // Einzelstuecke: es gibt sie genau einmal, ohne Id.
         new("Kosten", null, "/api/costs/settings", typeof(CostsApiController.KostenEinstellungenRequest)),
@@ -148,6 +150,11 @@ public sealed class RundwegVollstaendigTests
             + "ORTSZEIT, die Antwort den Zeitpunkt. Die Zaehlung vergleicht nach "
             + "Namen und findet ihn deshalb nicht. Dass der Zeitpunkt ankommt, "
             + "prueft e2e/formular-rundweg.spec.ts am Messformular.",
+        ["Journal.OccurredAtLocal"] =
+            "Heisst in der Antwort occurredAtUtc, nicht occurredAtLocal: die Anfrage "
+            + "traegt ORTSZEIT, die Antwort den Zeitpunkt in Weltzeit — derselbe Fall wie "
+            + "Messung.TakenAtLocal. Dass der Zeitpunkt ankommt, prueft "
+            + "JournalBearbeitenTests.TitelArtUndZeitpunktLassenSichAendern.",
         ["Messung.WaterFlow"] =
             "Eine Aufzaehlung in Textkleidern (WaterFlowLevel). Ein unbekannter "
             + "Text faellt bewusst auf null zurueck, statt die Messung "

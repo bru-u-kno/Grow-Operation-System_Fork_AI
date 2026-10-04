@@ -79,6 +79,16 @@ public static class AuditExtensions
             Summary = title ?? entryType.ToString()
         });
 
+    public static void LogJournalUpdated(this AuditRepository repo, int growId, int entryId, string? title, JournalEntryType entryType)
+        => repo.Add(new AuditEntry
+        {
+            GrowId = growId,
+            EntityType = "JournalEntry",
+            EntityId = entryId,
+            Action = "Journal geändert",
+            Summary = $"'{title ?? entryType.ToString()}' wurde geändert."
+        });
+
     public static void LogPhotosUploaded(this AuditRepository repo, int growId, int measurementId, int count)
         => repo.Add(new AuditEntry
         {

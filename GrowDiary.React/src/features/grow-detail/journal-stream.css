@@ -22,7 +22,19 @@
   }
   .js-weg:hover { color: var(--danger-text); border-color: var(--danger); }
   .js-weg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .js-content > p { margin: 5px 0 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); }
+  .js-weg:disabled { cursor: default; opacity: .55; }
+  /* Bearbeiten und Entfernen als Paar am Zeilenende; auf dem Telefon bricht
+     das Paar als Ganzes in die naechste Zeile, statt einzeln zu tropfen. */
+  .js-aktionen { margin-left: auto; display: flex; gap: 6px; }
+  .js-aktionen .js-weg { margin-left: 0; }
+  .js-bearbeiten:hover { color: var(--accent-text); border-color: var(--accent); }
+  /* pre-line: ein Eintrag mit mehreren Zeilen (Wasserwechsel: je Zusatz eine)
+     stand bisher als ein Fliesstext da. */
+  .js-content > p { margin: 5px 0 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
+  .js-bearbeitung { grid-column: 1 / -1; min-width: 0; padding: 12px; border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel-2); }
+  .js-bearbeitung .js-hinweis { margin: 0; color: var(--muted); font-size: var(--fs-klein); line-height: 1.45; }
+  .js-knopfreihe { display: flex; flex-wrap: wrap; gap: 8px; }
+  .js-bearbeitung .js-fehler { margin: 0; color: var(--danger-text); font-size: var(--fs-klein); }
 
   .js-tag {
     font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;

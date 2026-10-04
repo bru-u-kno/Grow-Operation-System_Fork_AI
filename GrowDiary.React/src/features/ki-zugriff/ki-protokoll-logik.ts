@@ -42,6 +42,7 @@ export const AKTIONEN: ReadonlyArray<{ methode: string; muster: RegExp; getan: s
   { methode: 'DELETE', muster: /^\/api\/measurements\/\d+$/, getan: 'Messung gelöscht', versuch: 'Messung löschen' },
   { methode: 'POST', muster: /^\/api\/measurements\/\d+\/photos$/, getan: 'Foto zur Messung', versuch: 'Foto zur Messung' },
   { methode: 'POST', muster: /^\/api\/grows\/\d+\/journal$/, getan: 'Journal-Eintrag', versuch: 'Journal-Eintrag' },
+  { methode: 'PUT', muster: /^\/api\/journal\/\d+$/, getan: 'Journal-Eintrag geändert', versuch: 'Journal-Eintrag ändern' },
   { methode: 'DELETE', muster: /^\/api\/journal\/\d+$/, getan: 'Journal-Eintrag gelöscht', versuch: 'Journal-Eintrag löschen' },
   { methode: 'POST', muster: /^\/api\/grows\/\d+\/tasks$/, getan: 'Aufgabe angelegt', versuch: 'Aufgabe anlegen' },
   { methode: 'PATCH', muster: /^\/api\/tasks\/\d+\/status$/, getan: 'Aufgabe abgehakt oder geöffnet', versuch: 'Aufgabe abhaken oder öffnen' },

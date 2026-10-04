@@ -61,8 +61,8 @@ public sealed class JournalRepository
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO JournalEntries (GrowId, MeasurementId, Title, Body, EntryType, Source, OccurredAtUtc, CreatedAtUtc)
-            VALUES ($growId, $measurementId, $title, $body, $entryType, $source, $occurredAtUtc, $createdAtUtc);
+            INSERT INTO JournalEntries (GrowId, MeasurementId, Title, Body, EntryType, Source, OccurredAtUtc, CreatedAtUtc, UpdatedAtUtc)
+            VALUES ($growId, $measurementId, $title, $body, $entryType, $source, $occurredAtUtc, $createdAtUtc, $updatedAtUtc);
             SELECT last_insert_rowid();
         """;
         command.Parameters.AddWithValue("$growId", entry.GrowId);
@@ -73,7 +73,38 @@ public sealed class JournalRepository
         command.Parameters.AddWithValue("$source", entry.Source.ToString());
         command.Parameters.AddWithValue("$occurredAtUtc", entry.OccurredAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$createdAtUtc", entry.CreatedAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$updatedAtUtc", entry.UpdatedAtUtc is { } geaendert
+            ? geaendert.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
+            : DBNull.Value);
         return Convert.ToInt32((long)command.ExecuteScalar()!);
+    }
+
+    /// <summary>Titel, Text, Art und Zeitpunkt eines Eintrags ändern.</summary>
+    /// <remarks>
+    /// Grow, Messungsbezug, Herkunft und Anlagezeitpunkt bleiben — korrigiert
+    /// wird der Inhalt, nicht die Geschichte des Eintrags. Fotos hängen an der
+    /// Messung, nicht am Eintrag, und bleiben deshalb ebenfalls unberührt.
+    /// Setzt <see cref="JournalEntry.UpdatedAtUtc"/> auf jetzt.
+    /// </remarks>
+    /// <returns><c>false</c>, wenn es den Eintrag nicht gibt.</returns>
+    public bool Update(JournalEntry entry)
+    {
+        entry.UpdatedAtUtc = DateTime.UtcNow;
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE JournalEntries
+               SET Title = $title, Body = $body, EntryType = $entryType,
+                   OccurredAtUtc = $occurredAtUtc, UpdatedAtUtc = $updatedAtUtc
+             WHERE Id = $id;
+        """;
+        command.Parameters.AddWithValue("$id", entry.Id);
+        command.Parameters.AddWithValue("$title", (object?)entry.Title ?? DBNull.Value);
+        command.Parameters.AddWithValue("$body", (object?)entry.Body ?? DBNull.Value);
+        command.Parameters.AddWithValue("$entryType", entry.EntryType.ToString());
+        command.Parameters.AddWithValue("$occurredAtUtc", entry.OccurredAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$updatedAtUtc", entry.UpdatedAtUtc.Value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        return command.ExecuteNonQuery() == 1;
     }
 
     private static JournalEntry Map(SqliteDataReader reader)
@@ -87,7 +118,8 @@ public sealed class JournalRepository
             EntryType = Enum.TryParse<JournalEntryType>(reader["EntryType"]?.ToString(), out var type) ? type : JournalEntryType.Note,
             Source = Enum.TryParse<ValueOrigin>(reader["Source"]?.ToString(), out var source) ? source : ValueOrigin.Manual,
             OccurredAtUtc = ParseUtcOrDefault(reader["OccurredAtUtc"]),
-            CreatedAtUtc = ParseUtcOrDefault(reader["CreatedAtUtc"])
+            CreatedAtUtc = ParseUtcOrDefault(reader["CreatedAtUtc"]),
+            UpdatedAtUtc = reader["UpdatedAtUtc"] is DBNull or null ? null : ParseUtcOrDefault(reader["UpdatedAtUtc"])
         };
 
     private static DateTime ParseUtcOrDefault(object raw)

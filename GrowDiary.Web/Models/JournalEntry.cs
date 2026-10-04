@@ -11,4 +11,6 @@ public sealed class JournalEntry
     public ValueOrigin Source { get; set; } = ValueOrigin.Manual;
     public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    /// <summary>Wann der Eintrag zuletzt geändert wurde; <c>null</c> = nie.</summary>
+    public DateTime? UpdatedAtUtc { get; set; }
 }

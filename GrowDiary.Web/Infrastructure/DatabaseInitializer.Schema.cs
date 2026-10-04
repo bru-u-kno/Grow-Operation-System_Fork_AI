@@ -39,6 +39,10 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "Grows", "MediumDetail", "TEXT NULL");
         EnsureColumn(connection, "Grows", "ReservoirSize", "TEXT NULL");
         EnsureColumn(connection, "Measurements", "Source", "TEXT NOT NULL DEFAULT 'Manual'");
+        // Journaleintraege lassen sich seit dem 05.10.2026 aendern. Wann zuletzt,
+        // steht hier — leer heisst: nie geaendert. Bestandsdatenbanken (und
+        // aeltere Sicherungen nach dem Zurueckspielen) bekommen die Spalte nach.
+        EnsureColumn(connection, "JournalEntries", "UpdatedAtUtc", "TEXT NULL");
         EnsureColumn(connection, "Measurements", "PpfdMol", "REAL NULL");
         EnsureColumn(connection, "Measurements", "Co2Ppm", "REAL NULL");
         EnsureColumn(connection, "Photos", "Tag", "TEXT NOT NULL DEFAULT 'Overview'");

@@ -55,6 +55,21 @@ ein Eintrag zu derselben Messung zieht sie an sich. Bei
 Kamerabild ab (`SaveSnapshotAsync`: „Auto-Snapshot", Tag `Overview`, ohne
 Messung).
 
+**Einträge lassen sich bearbeiten und entfernen** (seit 05.10.2026 bzw.
+25.08.2026). „Bearbeiten" öffnet in der Zeile dasselbe Formular wie
+„+ Eintrag", vorbefüllt; „Änderungen speichern"/„Abbrechen", Escape bricht ab,
+der Fokus kehrt auf den Knopf zurück. `PUT /api/journal/{id}` ändert Titel,
+Text, Art und Zeitpunkt; **ein fehlendes Feld (`null`) bleibt, wie es ist**,
+ein leerer Text leert es. Herkunft, Messungsbezug und Fotos bleiben unberührt,
+`updatedAtUtc` hält fest, wann zuletzt geändert wurde, die Chronik bekommt
+„Journal geändert". Meilensteine (Keimung, Flip …) bietet „+ Eintrag" nicht an;
+beim Bearbeiten erscheint die eigene Art trotzdem in der Auswahl, damit
+Speichern sie nicht still zur Beobachtung macht. Ihr Zeitpunkt ist dort gesperrt:
+die Phase rechnet mit dem Datum am Grow (Flip, Finish), ein verschobenes
+Journaldatum wäre eine zweite Wahrheit. Eine unbekannte Art (etwa `99`) lehnen
+Anlegen und Ändern mit 400 ab. Anlass: ein Wasserwechsel mit
+„pH- Menge nicht notiert" ließ sich nicht korrigieren.
+
 **Grow MCP** gibt einem MCP-Klienten im Heimnetz 22 **lesende** Werkzeuge auf
 Grow OS, darunter `foto_ansehen` (Bild plus Zusammenhangs-Satz); sein Zweck
 gegenüber der Mappe sind Verlaufsfragen. **Die Mappe** (`/ki?tab=mappe`, alt `/berater`) ist ein ZIP
@@ -72,7 +87,7 @@ Prüffragen — und hält den Stand von jetzt fest.
 | Sicherung gilt als alt | 30 Tage (dort als Faustregel bezeichnet) | `WartungDueService.SicherungAlterTage` |
 | Vorwarnung vor Lebensdauer-Ende | 90 % | `WartungDueService.VorwarnAnteil` |
 | Foto-Upload | 10 MB; `.jpg .jpeg .png .webp` | `PhotoStorageService` |
-| Motiv-Tags / Eintragsarten | 9 Tags; 9 Arten im Formular, 14 im Enum | `Models/Enums.cs`; `JournalStreamSection.tsx` |
+| Motiv-Tags / Eintragsarten | 9 Tags; 9 Arten im Formular (beim Bearbeiten + der eigene Meilenstein), 14 im Enum | `Models/Enums.cs`; `journal-bearbeiten.ts` |
 | MCP: Ports | 5078 Ingress, 5079 Heimnetz | `GrowMcp/Tueren.cs` |
 | MCP: Werkzeuge, alle lesend; Bild höchstens | 22; 6 MB | `GrowMcp/Tools/GrowTools.cs` |
 | MCP: `messwert_verlauf` | 14 Tage voreingestellt (1–365); bis 2 Tage Einzelwerte, darüber Tageswerte | `GrowTools` |
@@ -82,8 +97,9 @@ Prüffragen — und hält den Stand von jetzt fest.
 
 ## Was es bewusst NICHT tut
 
-- **Kein Journal-Löschen** — kein DELETE-Endpunkt, Absicht; der E2E-Rundweg
-  schreibt deshalb „Rundweg" in den Titel, statt aufzuräumen.
+- **Ändern verschiebt nichts still.** `PUT /api/journal/{id}` lässt fehlende
+  Felder stehen — wer nur die vergessene Menge nachträgt, schiebt den Eintrag
+  nicht auf „jetzt" und macht keinen Wasserwechsel zur Notiz.
 - **Der Experte bekommt keine ungefragten Erinnerungen** („hat sich die Stille
   ausdrücklich bestellt", `SopDueService`). Der Pumpen-Wächter ignoriert die
   Stufe: Gefahr, keine Erinnerung.
@@ -107,8 +123,8 @@ Prüffragen — und hält den Stand von jetzt fest.
 | Aufgabenseite, Reihenfolge, Abhaken/Löschen | `GrowDiary.React/src/pages/MobileActionPage.tsx` |
 | Fällige Routinen + Begleitungsstufe (`FuerGrow`, `ZuletztGemacht`, `Stufe`) | `GrowDiary.Web/Services/SopDueService.cs` |
 | Wartungs-, Prüf- und Sicherungstermine (`Offen`, `LetzteSicherung`) | `GrowDiary.Web/Services/WartungDueService.cs` |
-| Stufe lesen/setzen, `due-sops`; Aufgaben; Journal (ohne DELETE) | `Api/Controllers/CompanionApiController.cs`, `TasksApiController.cs`, `JournalApiController.cs` |
-| Journalstrom + Formulare | `src/features/grow-detail/journal-stream.ts`, `JournalStreamSection.tsx` |
+| Stufe lesen/setzen, `due-sops`; Aufgaben; Journal (anlegen, ändern, entfernen) | `Api/Controllers/CompanionApiController.cs`, `TasksApiController.cs`, `JournalApiController.cs` |
+| Journalstrom + Formulare; Bearbeiten | `src/features/grow-detail/journal-stream.ts`, `JournalStreamSection.tsx`, `journal-bearbeiten.ts` |
 | Fotos ablegen, Schnappschuss, Prüfung; Bilder je Symptom | `Services/PhotoStorageService.cs`, `Api/Controllers/SymptomPhotosApiController.cs` |
 | MCP-Werkzeuge (alle 22) | `GrowMcp/Tools/GrowTools.cs` |
 | Welcher Port was darf; Schlüssel; Heimnetz-Prüfung | `GrowMcp/Tueren.cs`, `Program.cs`, `Services/TokenSpeicher.cs`, `Services/Heimnetzadresse.cs` |

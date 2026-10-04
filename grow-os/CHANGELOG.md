@@ -5,6 +5,31 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.170
+
+**Fork AI.** Journal-Einträge lassen sich korrigieren.
+
+- **„Bearbeiten" an jedem Eintrag:** Im Journal-Strom steht neben „Entfernen" jetzt „Bearbeiten". Es
+  öffnet in der Zeile dasselbe Formular wie „+ Eintrag", schon ausgefüllt — Art, Titel, Zeitpunkt,
+  Text. „Änderungen speichern" oder „Abbrechen" (auch mit Escape). Anlass: Ein Wasserwechsel stand
+  mit „pH- Menge nicht notiert" im Journal, und die Menge ließ sich nicht nachtragen; es gab nur
+  löschen und neu tippen.
+- **Nichts verschiebt sich still:** Wer nur den Text ändert, behält Zeitpunkt (auf die Sekunde), Art
+  und Herkunft. Meilensteine wie „Blüte eingeleitet" bleiben Meilensteine, auch wenn „+ Eintrag" sie
+  nicht anbietet. Fotos bleiben, wo sie waren.
+- **Mehrzeilige Einträge** stehen jetzt auch mehrzeilig im Strom, statt zu einem Absatz
+  zusammenzulaufen.
+- **Nachvollziehbar:** Jede Änderung steht in der Chronik des Grows („Journal geändert"), der
+  Eintrag merkt sich, wann er zuletzt geändert wurde, und unter „Was die KI zuletzt getan hat"
+  erscheint „Journal-Eintrag geändert".
+- **Für den eigenen KI-Assistenten:** Ändern geht über einen Schlüssel mit der Stufe
+  „Dokumentieren" (`PUT /api/journal/{id}`); nur genannte Felder ändern sich. Der Grow MCP Fork AI
+  bekommt dafür das Werkzeug `journal_aendern`.
+
+Gemessen an der gebauten App mit Demobestand: anlegen, bearbeiten, ein zweites Mal bearbeiten, neu
+laden — der Text steht da; Escape speichert nichts; bei 412 px Breite läuft nichts über, beide
+Knöpfe sind im Bild, helles und dunkles Thema.
+
 ## 2.0.0-forkai.169
 
 **Fork AI.** Jede Push-Meldung öffnet die Seite, auf der ihr Inhalt steht.
