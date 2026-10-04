@@ -60,14 +60,14 @@ function kopfUnterkante(): number {
  * den Rand aus `scroll-margin-top` (`.scroll-ziel`) und rollen mit
  * `window.scrollTo` — der Browser muss den Rand nicht selbst beachten.
  */
-export function insBildRollen(ziel: HTMLElement | null): void {
+export function insBildRollen(ziel: HTMLElement | null, art: ScrollBehavior = 'smooth'): void {
   if (!ziel?.isConnected) return
   auslaufZuruecksetzen()
   const rand = Math.max(parseFloat(getComputedStyle(ziel).scrollMarginTop) || 0, kopfUnterkante())
   const oben = Math.max(0, ziel.getBoundingClientRect().top + window.scrollY - rand)
   const auslauf = auslaufBerechnen(oben, document.documentElement.scrollHeight, window.innerHeight)
   if (auslauf > 0) document.documentElement.style.setProperty(VAR, `${auslauf}px`)
-  window.scrollTo({ top: oben, behavior: 'smooth' })
+  window.scrollTo({ top: oben, behavior: art })
 }
 
 /**
@@ -75,10 +75,10 @@ export function insBildRollen(ziel: HTMLElement | null): void {
  * Reiter ueber die URL, rendert der Router den neuen Inhalt erst im naechsten
  * Zug — vorher gemessen waere die Seitenhoehe die des alten Reiters.
  */
-export function spaeterInsBild(ziel: () => HTMLElement | null): () => void {
+export function spaeterInsBild(ziel: () => HTMLElement | null, art: ScrollBehavior = 'smooth'): () => void {
   let raf2 = 0
   const raf1 = requestAnimationFrame(() => {
-    raf2 = requestAnimationFrame(() => insBildRollen(ziel()))
+    raf2 = requestAnimationFrame(() => insBildRollen(ziel(), art))
   })
   return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
 }

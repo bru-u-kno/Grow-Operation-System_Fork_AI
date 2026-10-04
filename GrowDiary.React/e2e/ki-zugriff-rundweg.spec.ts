@@ -305,4 +305,67 @@ test.describe('Zugriff für KI-Assistenten', () => {
       for (const id of ids) await page.request.delete(`${WEG}/schluessel/${id}`)
     }
   })
+
+  /**
+   * Fork AI (A-003, 04.10.2026 abends): forkai.166 rollte per scrollIntoView —
+   * im Chromium hier richtig, in Brus HA-App lag der Kasten trotzdem ein Stück
+   * unter der Kopfleiste (dieselbe Falle wie F-049). Nachgestellt werden die
+   * zwei Unterschiede der App-Ansicht, die wir kennen: sie beachtet
+   * `scroll-margin-top` nicht, und die Kopfleiste ist bei größerer Schrift
+   * höher als der feste Rand. Das Stylesheet hier stellt die UMGEBUNG nach,
+   * nicht die Reparatur — die steckt im gebauten Stand.
+   * Verlangt wird: Kasten OBEN, direkt unter der Kopfleiste, ganz zu sehen —
+   * egal wie weit unten man beim Anlegen war. Dasselbe für „Nur diesen
+   * zeigen", das zur Liste „Was die KI zuletzt getan hat" rollt.
+   */
+  test('wie in der HA-App: Kasten und Protokoll landen oben unter der Kopfleiste', async ({ page }) => {
+    await page.setViewportSize({ width: 412, height: 732 })
+    const ids: number[] = []
+    try {
+      // Mehrere Schlüssel wie bei Bru — sonst ist die Seite zu kurz, um weit unten zu sein.
+      for (let i = 0; i < 4; i++) {
+        const r = await page.request.post(`${WEG}/schluessel`, { data: { name: `Vorrat ${i} ${marke()}`, stufen: ['Dokumentieren'], rueckfrageBei: [] } })
+        expect(r.ok()).toBe(true)
+        ids.push(((await r.json()) as { schluessel: { id: number } }).schluessel.id)
+      }
+      const bereich = await abschnitt(page)
+      await page.addStyleTag({ content: `
+        .scroll-ziel, .ki-protokoll { scroll-margin-top: 0 !important; }
+        .v1-mobile-nav { padding-bottom: 28px !important; }` })
+
+      async function obenUnterDerKopfleiste(el: Locator, was: string) {
+        await expect.poll(async () => el.evaluate((e) => {
+          const kopf = [...document.querySelectorAll<HTMLElement>('.v1-mobile-topbar, .v1-mobile-nav')]
+            .filter((k) => getComputedStyle(k).position === 'fixed')
+            .reduce((unten, k) => Math.max(unten, k.getBoundingClientRect().bottom), 0)
+          if (kopf <= 125) return `Kopfleiste nicht vergrößert (${kopf} px) — der Fall stellt nichts nach`
+          const r = e.getBoundingClientRect()
+          if (r.top < kopf - 1) return `Oberkante ${Math.round(r.top)} liegt unter der Kopfleiste (${Math.round(kopf)})`
+          if (r.top > kopf + 40) return `Oberkante ${Math.round(r.top)} steht nicht oben (Kopfleiste ${Math.round(kopf)})`
+          return 'oben'
+        }), { message: was, timeout: 5000 }).toBe('oben')
+      }
+
+      for (const durchgang of [1, 2]) {
+        await bereich.locator('[data-audit="ki-schluessel-neu"]').click()
+        const neu = bereich.locator('[data-audit="ki-schluessel-form"]')
+        await neu.getByLabel('Name des Schlüssels').fill(`App ${durchgang} ${marke()}`)
+        // Weit nach unten, wie beim Ausfüllen am Telefon.
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+        const antwort = page.waitForResponse((r) => r.request().method() === 'POST' && /\/api\/settings\/ki-zugriff\/schluessel$/.test(new URL(r.url()).pathname))
+        await neu.locator('[data-audit="ki-schluessel-anlegen"]').click()
+        ids.push(((await (await antwort).json()) as { schluessel: { id: number } }).schluessel.id)
+        const kasten = bereich.locator('[data-audit="ki-klartext"]')
+        await obenUnterDerKopfleiste(kasten, `Durchgang ${durchgang}: Klartext-Kasten`)
+        await expect(kasten.locator('[data-audit="ki-klartext-kopieren"]')).toBeInViewport({ ratio: 1 })
+        await expect(kasten).toBeFocused()
+      }
+
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await bereich.locator('[data-audit="ki-schluessel"]').first().getByRole('button', { name: 'Nur diesen zeigen' }).click()
+      await obenUnterDerKopfleiste(page.locator('#ki-protokoll'), 'Nur diesen zeigen: Protokoll')
+    } finally {
+      for (const id of ids) await page.request.delete(`${WEG}/schluessel/${id}`)
+    }
+  })
 })

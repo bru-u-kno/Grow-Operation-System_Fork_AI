@@ -5,6 +5,24 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.167
+
+**Fork AI.** Der neue KI-Schlüssel steht jetzt wirklich oben.
+
+- **Kasten oben unter der Kopfleiste, auch in der Home-Assistant-App:** forkai.166 rollte den Kasten
+  mit dem Klartext nach dem Anlegen ins Bild — im Browser richtig, in der Home-Assistant-App am
+  Handy lag er trotzdem ein Stück unter der Kopfleiste, und man musste nachscrollen. Die App
+  beachtet beim eingebauten Hinrollen den Abstand zur Kopfleiste nicht (derselbe Fehler wie einst
+  beim Kosten-Formular). Jetzt misst Grow OS die Kopfleiste selbst — auch wenn sie bei größerer
+  Schrift höher ist — und rollt den Kasten so, dass sein Titel direkt darunter steht, egal wie weit
+  unten man beim Anlegen war.
+- **„Nur diesen zeigen" landet ebenfalls oben:** Der Sprung zur Liste „Was die KI zuletzt getan
+  hat" hatte denselben Fehler und rollt jetzt genauso.
+
+Gemessen bei 412 × 732 Pixeln mit nachgestellter App-Ansicht (Kopfleiste 137 Pixel hoch, Abstand
+nicht beachtet): vorher lag die Oberkante des Kastens bei 102 — unter der Kopfleiste —, jetzt direkt
+darunter.
+
 ## 2.0.0-forkai.166
 
 **Fork AI.** Ein neuer KI-Schlüssel geht am Handy nicht mehr verloren.

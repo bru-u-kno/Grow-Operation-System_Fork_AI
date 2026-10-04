@@ -3,9 +3,9 @@ import { insBildHolen, rollArt } from './ins-bild'
 
 /**
  * Fork AI (A-003, 04.10.2026): Der Kasten mit dem Klartext eines neuen
- * Schlüssels wird nach dem Anlegen in den Blick gerollt und bekommt den Fokus.
- * Ob er am Handy wirklich im Bild steht, misst `e2e/ki-zugriff-rundweg.spec.ts`
- * bei 412 px — hier nur, was die Funktion verlangt.
+ * Schlüssels wird nach dem Anlegen oben unter die Kopfleiste gerollt und bekommt
+ * den Fokus. Ob er am Handy wirklich dort steht, misst
+ * `e2e/ki-zugriff-rundweg.spec.ts` — hier nur, was die Funktion verlangt.
  */
 
 function fenster(weniger: boolean) {
@@ -15,32 +15,39 @@ function fenster(weniger: boolean) {
 function ziel() {
   const aufrufe: string[] = []
   const el = {
-    scrollIntoView: (arg?: boolean | ScrollIntoViewOptions) => { aufrufe.push(`rollen ${JSON.stringify(arg)}`) },
+    scrollIntoView: () => { aufrufe.push('scrollIntoView') },
     focus: (arg?: FocusOptions) => { aufrufe.push(`fokus ${JSON.stringify(arg)}`) },
+  } as unknown as HTMLElement
+  const rollen = (z: () => HTMLElement | null, art: ScrollBehavior) => {
+    aufrufe.push(`rollen ${art} ${z() === el ? 'kasten' : 'anderes'}`)
+    return () => { aufrufe.push('abgebrochen') }
   }
-  return { el, aufrufe }
+  return { el, aufrufe, rollen }
 }
 
 describe('Klartext ins Bild holen', () => {
-  it('rollt sanft und setzt danach den Fokus, ohne dass der Fokus selbst springt', () => {
-    const { el, aufrufe } = ziel()
-    insBildHolen(el, fenster(false))
-    expect(aufrufe).toEqual([
-      'rollen {"block":"nearest","behavior":"smooth"}',
-      'fokus {"preventScroll":true}',
-    ])
+  it('setzt den Fokus ohne Sprung und rollt dann selbst — nie per scrollIntoView', () => {
+    const { el, aufrufe, rollen } = ziel()
+    insBildHolen(el, fenster(false), rollen)
+    expect(aufrufe).toEqual(['fokus {"preventScroll":true}', 'rollen smooth kasten'])
   })
 
   it('springt ohne Lauf, wenn „Bewegung reduzieren" eingestellt ist', () => {
-    const { el, aufrufe } = ziel()
-    insBildHolen(el, fenster(true))
-    expect(aufrufe[0]).toBe('rollen {"block":"nearest","behavior":"auto"}')
+    const { el, aufrufe, rollen } = ziel()
+    insBildHolen(el, fenster(true), rollen)
+    expect(aufrufe).toContain('rollen auto kasten')
     expect(rollArt(fenster(true))).toBe('auto')
     expect(rollArt(fenster(false))).toBe('smooth')
   })
 
+  it('gibt das Abbrechen weiter — der Effekt räumt beim Aushängen auf', () => {
+    const { el, aufrufe, rollen } = ziel()
+    insBildHolen(el, fenster(false), rollen)()
+    expect(aufrufe.at(-1)).toBe('abgebrochen')
+  })
+
   it('kommt ohne matchMedia und ohne Ziel aus', () => {
     expect(rollArt({} as Pick<Window, 'matchMedia'>)).toBe('smooth')
-    expect(() => insBildHolen(null)).not.toThrow()
+    expect(() => insBildHolen(null)()).not.toThrow()
   })
 })

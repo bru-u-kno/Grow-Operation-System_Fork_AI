@@ -13,6 +13,7 @@ import {
   warnungAblehnen, warnungBestaetigen, zustandWaehlen, type HoechstwerteEntwurf, type StufenWahl,
 } from './ki-zugriff-logik'
 import KiProtokoll from './KiProtokoll'
+import { insBildRollen } from '../../components/reiter-ins-bild'
 import { insBildHolen, rollArt } from './ins-bild'
 import { altesKopieren } from './kopieren'
 import './ki-zugriff.css'
@@ -66,7 +67,8 @@ export default function KiZugriffAbschnitt() {
   function nurDiesenZeigen(id: number) {
     setProtokollFilter((bisher) => (bisher === id ? null : id))
     // Auf dem Telefon liegt die Liste unter allen Schlüsseln — dorthin, wo sich etwas ändert.
-    document.getElementById('ki-protokoll')?.scrollIntoView?.({ block: 'start', behavior: rollArt() })
+    // Selbst gerollt statt scrollIntoView — sonst landet die Liste in der HA-App unter der Kopfleiste (ins-bild.ts).
+    insBildRollen(document.getElementById('ki-protokoll'), rollArt())
   }
 
   // Der Kasten mit dem Klartext hatte den Fokus — nach dem Ausblenden fiele er
@@ -500,11 +502,10 @@ export function KlartextAnzeige({ name, klartext, onAusblenden }: { name: string
   const satz = useId()
 
   // Am Handy liegt der Kasten nach dem Anlegen über der Bildkante (Fork AI,
-  // A-003, 04.10.2026) — beim Erscheinen hinrollen und den Fokus hineinsetzen.
+  // A-003, 04.10.2026) — beim Erscheinen oben unter die Kopfleiste rollen und
+  // den Fokus hineinsetzen (warum nicht scrollIntoView: ins-bild.ts).
   // Ein zweiter Schlüssel hängt den Kasten neu ein (`key` beim Aufrufer).
-  useEffect(() => {
-    insBildHolen(kasten.current)
-  }, [])
+  useEffect(() => insBildHolen(kasten.current), [])
 
   async function kopieren() {
     try {
