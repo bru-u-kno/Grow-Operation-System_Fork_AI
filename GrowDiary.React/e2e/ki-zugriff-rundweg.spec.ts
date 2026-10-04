@@ -276,6 +276,8 @@ test.describe('Zugriff für KI-Assistenten', () => {
           .filter((k) => getComputedStyle(k).position === 'fixed')
           .reduce((unten, k) => Math.max(unten, k.getBoundingClientRect().bottom), 0)
         const r = el.getBoundingClientRect()
+        // Mengenwächter: ohne gefundene Kopfleiste wäre „unter der Kopfleiste" immer wahr.
+        if (kopf <= 0) return 'keine feste Kopfleiste gefunden'
         return r.top >= kopf - 1 && r.bottom <= window.innerHeight + 1
       }), { message: 'Der Klartext-Kasten steht nicht ganz zwischen Kopfleiste und Unterkante.', timeout: 5000 }).toBe(true)
       await expect(kasten).toBeFocused()
@@ -294,6 +296,11 @@ test.describe('Zugriff für KI-Assistenten', () => {
       await anlegen(zweiter)
       await imBild(zweiter)
       await expect(bereich.locator('[data-audit="ki-klartext"]'), 'Der Kasten des ersten Schlüssels bleibt nicht stehen.').toHaveCount(1)
+
+      // Ausblenden: der Fokus fällt nicht auf <body>, sondern zurück auf „Neuer Schlüssel".
+      await bereich.locator('[data-audit="ki-klartext-ausblenden"]').click()
+      await expect(bereich.locator('[data-audit="ki-klartext"]')).toHaveCount(0)
+      await expect(bereich.locator('[data-audit="ki-schluessel-neu"]')).toBeFocused()
     } finally {
       for (const id of ids) await page.request.delete(`${WEG}/schluessel/${id}`)
     }

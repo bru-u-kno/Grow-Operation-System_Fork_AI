@@ -69,6 +69,14 @@ export default function KiZugriffAbschnitt() {
     document.getElementById('ki-protokoll')?.scrollIntoView?.({ block: 'start', behavior: rollArt() })
   }
 
+  // Der Kasten mit dem Klartext hatte den Fokus — nach dem Ausblenden fiele er
+  // auf <body>. Er geht zurück auf „Neuer Schlüssel" (A-003, 04.10.2026).
+  const neuKnopf = useRef<HTMLButtonElement>(null)
+  function klartextAusblenden() {
+    setAngelegt(null)
+    requestAnimationFrame(() => neuKnopf.current?.focus())
+  }
+
   function uebernehmen(seite: KiZugriffSeiteDto) {
     setGespeichertAktiv(seite.aktiv)
     setAktiv(seite.aktiv)
@@ -282,13 +290,13 @@ export default function KiZugriffAbschnitt() {
               <div className="ki-block-kopf">
                 <h3>Schlüssel</h3>
                 {!neuOffen && (
-                  <button type="button" className="ls-btn is-small" onClick={neuOeffnen} data-audit="ki-schluessel-neu">Neuer Schlüssel</button>
+                  <button ref={neuKnopf} type="button" className="ls-btn is-small" onClick={neuOeffnen} data-audit="ki-schluessel-neu">Neuer Schlüssel</button>
                 )}
               </div>
 
               {angelegt && (
                 // key: ein zweiter Schlüssel ist ein neuer Kasten — sonst stünde dort noch „Kopiert.“ vom ersten.
-                <KlartextAnzeige key={angelegt.id} name={angelegt.name} klartext={angelegt.klartext} onAusblenden={() => setAngelegt(null)} />
+                <KlartextAnzeige key={angelegt.id} name={angelegt.name} klartext={angelegt.klartext} onAusblenden={klartextAusblenden} />
               )}
 
               {neuOffen && (
@@ -492,11 +500,11 @@ export function KlartextAnzeige({ name, klartext, onAusblenden }: { name: string
   const satz = useId()
 
   // Am Handy liegt der Kasten nach dem Anlegen über der Bildkante (Fork AI,
-  // A-003, 04.10.2026) — bei jedem neuen Klartext hinrollen und den Fokus
-  // hineinsetzen, auch wenn der vorige Kasten noch offen war.
+  // A-003, 04.10.2026) — beim Erscheinen hinrollen und den Fokus hineinsetzen.
+  // Ein zweiter Schlüssel hängt den Kasten neu ein (`key` beim Aufrufer).
   useEffect(() => {
     insBildHolen(kasten.current)
-  }, [klartext])
+  }, [])
 
   async function kopieren() {
     try {
@@ -527,8 +535,11 @@ export function KlartextAnzeige({ name, klartext, onAusblenden }: { name: string
       <code className="ki-klartext-wert" data-audit="ki-klartext-wert">{klartext}</code>
       <p className="ki-klartext-satz" id={satz}>Wird nur jetzt angezeigt — danach nicht mehr.</p>
       <p className="ki-klartext-hinweis">Kopiere ihn jetzt in deinen Assistenten. Geht er verloren, lösche den Schlüssel und lege einen neuen an.</p>
-      {kopiert === 'ja' && <span className="ki-klartext-kopiert">Kopiert.</span>}
-      {kopiert === 'nein' && <span className="ki-fehler">Kopieren hat nicht geklappt — bitte den Schlüssel markieren und von Hand kopieren.</span>}
+      {/* Immer vorhanden: ein Live-Bereich sagt nur an, was NACH seinem Einhängen hineinkommt. */}
+      <div role="status" className="ki-klartext-rueckmeldung" data-audit="ki-klartext-rueckmeldung">
+        {kopiert === 'ja' && <span className="ki-klartext-kopiert">Kopiert.</span>}
+        {kopiert === 'nein' && <span className="ki-fehler">Kopieren hat nicht geklappt — bitte den Schlüssel markieren und von Hand kopieren.</span>}
+      </div>
       <div className="ki-knoepfe">
         <button type="button" className="ls-btn is-primary" onClick={() => void kopieren()} data-audit="ki-klartext-kopieren">Kopieren</button>
         <button type="button" className="ls-btn" onClick={onAusblenden} data-audit="ki-klartext-ausblenden">Erledigt, ausblenden</button>

@@ -275,6 +275,8 @@ describe('Klartext nur einmal', () => {
     expect(html).toContain(`<strong id="${titel}">Neuer Schlüssel „Claude`)
     expect(satz).toBeTruthy()
     expect(html).toContain(`<p class="ki-klartext-satz" id="${satz}">Wird nur jetzt angezeigt`)
+    // „Kopiert." braucht einen Live-Bereich, der schon VOR der Meldung im Baum steht.
+    expect(html).toMatch(/<div role="status"[^>]*data-audit="ki-klartext-rueckmeldung"[^>]*><\/div>/)
   })
 
   it('die Liste zeigt nie mehr als acht Zeichen nach gok_', () => {

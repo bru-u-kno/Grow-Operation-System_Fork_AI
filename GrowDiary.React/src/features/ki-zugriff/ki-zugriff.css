@@ -106,6 +106,7 @@
   }
   .ki-klartext-satz { margin: 0; font-weight: 600; font-size: var(--fs-text); color: var(--ink); }
   .ki-klartext-hinweis { margin: 0; font-size: var(--fs-text); line-height: 1.5; color: var(--muted); max-width: 68ch; }
+  .ki-klartext-rueckmeldung:empty { display: none; }
   .ki-klartext-kopiert { font-size: var(--fs-klein); color: var(--accent-text); }
 
   /* --- Was die KI zuletzt getan hat (Fork AI, A-003, 03.10.2026) --- */
