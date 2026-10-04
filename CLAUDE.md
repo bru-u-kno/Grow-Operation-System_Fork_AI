@@ -337,7 +337,12 @@ Wo eine Zahl gebraucht wird, die es schon gibt: **verweisen, nicht abtippen.**
 
 ## FACHLICHE REGELN
 
-- **Keine KI in der App.** Nie vorschlagen.
+- **Keine KI in der App.** Nie vorschlagen. Grow OS rechnet selbst und ruft
+  keine KI auf. Gewollt ist dagegen, den **eigenen Assistenten des Bedieners**
+  anzubinden (Einrichtung → KI-Assistent, `docs/ki-zugriff.md`): er kommt über
+  sein Konto bei Claude oder ChatGPT und einen Schlüssel aus Grow OS. Die meisten
+  Bediener haben den kostenlosen Plan oder ein Abo, keinen API-Schlüssel (Bru,
+  04.10.2026) — ein Weg, der einen API-Schlüssel verlangt, ist nie der Hauptweg.
 - **Faustregeln nur mit Etikett**, Empfehlungen nur mit Quelle. Eine Zahl, die
   niemand nachprüfen kann, ist schlechter als „zu wenig Daten".
 - **Alles auf Deutsch** — Kommentare, Bezeichner, Oberflächentexte **und die

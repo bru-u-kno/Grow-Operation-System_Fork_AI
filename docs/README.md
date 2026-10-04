@@ -31,9 +31,10 @@ Grow OS ist ein **Home-Assistant-Add-on** für RDWC/DWC-Anbau. Es kombiniert:
 - SOPs, Diagnose und Risiko-Ereignisse aus einer mitgelieferten Wissensbasis
 - Bedienung am Telefon direkt in der Home-Assistant-App
 
-**Keine KI in der App.** Wer eine eigene benutzen will, bekommt sie über das
-zweite Add-on **Grow MCP** (nur lesende Werkzeuge) oder als ZIP über die Seite
-„Mappe für eigene KI" — Export nach außen, nicht KI innen drin.
+**Keine KI in der App.** Wer eine eigene benutzen will, verbindet sie unter
+**Einrichtung → KI-Assistent**: über das eigene Konto bei Claude oder ChatGPT,
+mit einem Schlüssel aus Grow OS und nur so weit, wie er freigegeben ist — oder
+ohne Verbindung als ZIP („Mappe"). Grow OS ruft selbst keine KI auf.
 
 ## Wie man daran arbeitet
 

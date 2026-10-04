@@ -78,3 +78,17 @@
     white-space: pre-wrap;
   }
 }
+
+/* Fork AI (04.10.2026): Als Reiter hat die Mappe keinen eigenen Seitenkopf mehr —
+   die Grow-Auswahl stand dort als Aktion. Jetzt steht sie neben dem Einleitungssatz. */
+@layer pages {
+  .ab-kopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px 18px;
+    margin-bottom: 12px;
+  }
+  .ab-kopf .ab-text { flex: 1 1 32ch; margin: 0; }
+}

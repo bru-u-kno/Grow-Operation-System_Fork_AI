@@ -51,7 +51,7 @@ import { legacyRedirects } from './navigation'
 import { useNavCounts } from './useNavCounts'
 import { GrenzwerteSeite, HandySeite, PlanSeite, RulesCollectionPage } from './pages/collections'
 import { zielwerteZiel } from './navigation'
-import AdvisorPage from './pages/AdvisorPage'
+import { KiAssistentSeite } from './features/ki-assistent/KiAssistentSeite'
 import WaterProfilePage from './pages/WaterProfilePage'
 import StrainsPage from './pages/StrainsPage'
 import ArchivePage from './pages/ArchivePage'
@@ -170,7 +170,7 @@ function App() {
           {/* Sammelseiten: verwandte Bereiche unter Tabs statt als eigene Menuepunkte. */}
           <Route path="/regeln" element={<RulesCollectionPage />} />
           <Route path="/sorten" element={<StrainsPage />} />
-          <Route path="/berater" element={<AdvisorPage />} />
+          <Route path="/ki" element={<KiAssistentSeite />} />
           <Route path="/archiv" element={<ArchivePage />} />
 
           {/* Alte Pfade bleiben gueltig — Lesezeichen und Links aus HA-Dashboards. */}

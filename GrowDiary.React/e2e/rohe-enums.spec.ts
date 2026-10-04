@@ -153,8 +153,8 @@ const HINTER_EINEM_KLICK: Array<{ pfad: string, knopf: string, was: string }> = 
   { pfad: '/journal', knopf: '+ Eintrag', was: 'das Journal-Formular' },
   { pfad: '/sorten', knopf: '+ Sorte', was: 'das Sorten-Formular' },
   { pfad: '/zelte', knopf: 'Bearbeiten', was: 'das Zelt-Formular' },
-  // A-003: die Stufen-Häkchen eines neuen Schlüssels stehen erst nach dem Klick da.
-  { pfad: '/settings', knopf: 'Neuer Schlüssel', was: 'das Schlüssel-Formular' },
+  // A-003: die Stufen-Häkchen eines neuen Schlüssels stehen erst nach dem Klick da. Seit 04.10.2026 auf der Seite KI-Assistent.
+  { pfad: '/ki?tab=zugriff', knopf: 'Neuer Schlüssel', was: 'das Schlüssel-Formular' },
 ]
 
 /**

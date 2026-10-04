@@ -3,8 +3,9 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 import { gibSchloss, nimmSchloss } from './schloss'
 
 /**
- * Zugriff für KI-Assistenten (A-003): die drei Formulare des Abschnitts in den
- * Einstellungen werden ausgefüllt, abgeschickt und nach dem Neuladen
+ * Zugriff für KI-Assistenten (A-003): die drei Formulare des Abschnitts auf der
+ * Seite KI-Assistent (Reiter „Zugriff & Schlüssel“, bis forkai.164 in den
+ * Einstellungen) werden ausgefüllt, abgeschickt und nach dem Neuladen
  * wiedergefunden.
  *
  * <b>Was hier ein Rundweg heißt</b> (dieselbe Regel wie in
@@ -32,7 +33,7 @@ test.describe.configure({ mode: 'serial' })
 test.beforeEach(async () => { await nimmSchloss() })
 test.afterEach(() => { gibSchloss() })
 
-const SEITE = '/settings'
+const SEITE = '/ki?tab=zugriff'
 const WEG = '/api/settings/ki-zugriff'
 
 /** Ein Wert, der in diesem Lauf einmalig ist — sonst prüft der zweite Lauf den ersten. */

@@ -15,7 +15,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// prüft den <i>Renderer</i>, nicht den Bauer.</para>
 ///
 /// <para><b>Warum das zählt.</b> Diese Mappe ist der Weg, auf dem der Nutzer
-/// seine Lage einer eigenen KI vorlegt (<c>/berater</c>) — die App selbst hat
+/// seine Lage einer eigenen KI vorlegt (<c>/ki?tab=mappe</c>, alt <c>/berater</c>) — die App selbst hat
 /// keine. Ein Abschnitt, der als Überschrift ohne Inhalt hinausgeht, fällt
 /// niemandem auf: die Datei ist da, sie hat einen Namen, sie sieht vollständig
 /// aus. Beraten wird danach ohne die Regeln, ohne die Sollwerte oder ohne die

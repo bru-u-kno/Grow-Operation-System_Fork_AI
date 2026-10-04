@@ -156,7 +156,8 @@ Nur für Anfragen über einen Schlüssel, zusätzlich zu den Grenzen der Geräte
 
 ## Oberfläche
 
-Einstellungen → neuer Abschnitt **„Zugriff für KI-Assistenten"**: Hauptschalter,
+Einrichtung → **KI-Assistent** → Reiter **„Zugriff & Schlüssel"** (bis forkai.164 ein
+Abschnitt unten in den Einstellungen; Umzug und Reiter „Verbinden": `docs/referenz/ki-assistent.md`): Hauptschalter,
 Höchstwerte, Liste der Schlüssel (Name, Präfix, je freigegebener Stufe ein Schild
 „Dokumentieren · frei" bzw. „Geräte schalten · mit Rückfrage" — gesperrte Stufen
 erscheinen nicht —, zuletzt genutzt, Sperren, Löschen), „Neuer Schlüssel" und

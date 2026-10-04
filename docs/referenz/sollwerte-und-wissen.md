@@ -127,8 +127,9 @@ Alarme — sonst stünden auf zwei Bildschirmen zwei Antworten.
 - **Der Knowledge-Sync löscht nichts.** Eigene Dateien bleiben, geänderte werden
   nicht überschrieben; nicht als unverändert nachweisbare landen vorher als
   `*.user-backup` daneben.
-- **Keine KI.** Die Bibliothek ist zum Nachschlagen da; `/berater` packt das
-  Wissen zum Mitnehmen nach außen — Export, keine KI in der App.
+- **Keine KI.** Die Bibliothek ist zum Nachschlagen da; die Mappe
+  (`/ki?tab=mappe`, alt `/berater`) packt das Wissen zum Mitnehmen nach außen —
+  Export, keine KI in der App.
 
 ## Im Code
 

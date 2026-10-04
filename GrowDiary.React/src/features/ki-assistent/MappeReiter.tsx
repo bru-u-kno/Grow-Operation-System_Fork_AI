@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiFetch } from '../api'
-import { resolveUrl } from '../base'
-import { V1Alert, V1Card, V1Page, V1Section } from '../components/v1'
-import { GrowScopePicker } from '../features/grow-scope/GrowScopePicker'
-import { useSelectedGrow } from '../features/grow-scope/useSelectedGrow'
-import './advisor.css'
+import { apiFetch } from '../../api'
+import { resolveUrl } from '../../base'
+import { V1Alert, V1Card, V1Section } from '../../components/v1'
+import { GrowScopePicker } from '../grow-scope/GrowScopePicker'
+import { useSelectedGrow } from '../grow-scope/useSelectedGrow'
+import './mappe.css'
 
 /**
- * Der eigene KI-Berater — eine eigene Seite, kein Anhängsel.
+ * Reiter „Mappe" der Seite KI-Assistent — vorher eine eigene Seite unter
+ * Wissen (`/berater`). Fork AI (04.10.2026): alles zur eigenen KI steht jetzt
+ * an einer Stelle; die Mappe ist dort der Weg ganz ohne Verbindung.
  *
  * Vorher stand das unten auf der Grow-Seite, hinter allem anderen. Das ist
  * dieselbe Art von Verstecken, die schon einmal aufgeräumt wurde: Wer nicht
@@ -33,7 +35,7 @@ type Mappe = {
   dateien: { name: string; inhalt: string }[]
 }
 
-function AdvisorPage() {
+export function MappeReiter() {
   const { grows, growId, setGrowId, loading, error } = useSelectedGrow()
   const [mappe, setMappe] = useState<Mappe | null>(null)
   const [ladefehler, setLadefehler] = useState<string | null>(null)
@@ -66,12 +68,15 @@ function AdvisorPage() {
   const grow = grows.find((item) => String(item.id) === String(growId)) ?? null
 
   return (
-    <V1Page
-      eyebrow="Wissen"
-      title="Mappe für eigene KI"
-      subtitle="Grow OS rechnet selbst, ohne KI. Diese Seite packt das Fachwissen deiner Anlage in eine Datei — die gibst du einem KI-Assistenten deiner Wahl, wenn du einen willst."
-      action={<GrowScopePicker grows={grows} growId={growId} onChange={setGrowId} />}
-    >
+    <>
+      <div className="ab-kopf">
+        <p className="ab-text">
+          Grow OS rechnet selbst, ohne KI. Die Mappe packt das Fachwissen deiner Anlage in eine Datei —
+          die gibst du einem KI-Assistenten deiner Wahl, wenn du einen willst. Das geht mit jedem Plan,
+          auch dem kostenlosen.
+        </p>
+        <GrowScopePicker grows={grows} growId={growId} onChange={setGrowId} />
+      </div>
       {error && <V1Alert message={error} tone="critical" />}
       {ladefehler && <V1Alert message={ladefehler} tone="warn" />}
 
@@ -182,8 +187,6 @@ function AdvisorPage() {
           </V1Section>
         </>
       )}
-    </V1Page>
+    </>
   )
 }
-
-export default AdvisorPage

@@ -171,7 +171,7 @@ function GrowDetailPage() {
           {/* Nicht „KI-Berater": in Grow OS steckt keine KI. Der Reiter fuehrt
               zur Mappe, die man einem EIGENEN Agenten vorlegt — der Name muss
               das sagen, sonst sucht man eine Funktion, die es nicht gibt. */}
-          <Link className="gd-tab" to={`/berater${scope}`}>Mappe für eigene KI</Link>
+          <Link className="gd-tab" to={`/ki${scope}&tab=mappe`}>Mappe für eigene KI</Link>
         </nav>
 
         {/* Phasen-Timeline — dieselbe Rechnung wie auf der Live-Seite. */}

@@ -180,6 +180,11 @@ export const navGroups: NavGroup[] = [
       { to: '/home-assistant', label: 'Home Assistant (Verbindung)', end: true, keywords: 'ha entitäten verbindung integration mapping kamera token url' },
       { to: '/sensoren', label: 'Sensoren & Wartung (erfassen)', end: true, keywords: 'hardware geräte kalibrierung inventar wechseln lebensdauer wartung erfassen' },
       { to: '/handy', label: 'Handy', end: true, icon: '▯', short: 'Handy', keywords: 'handy push benachrichtigung benachrichtigungen meldung meldungen ruhezeit tagesbericht wächter smartphone mobil qr code startbildschirm lesezeichen app icon telefon aufs handy holen' },
+      // Fork AI (04.10.2026): alles zur eigenen KI an einer Stelle — Verbinden,
+      // Zugriff & Schlüssel (vorher unten in den Einstellungen) und die Mappe
+      // (vorher unter Wissen). In Grow OS steckt keine KI; die Seite verbindet
+      // den Assistenten des Bedieners, sie bringt keinen mit.
+      { to: '/ki', label: 'KI-Assistent', end: true, keywords: 'ki assistent agent claude chatgpt ollama connector mcp schlüssel zugriff api diktieren protokoll mappe export lagebericht prompt prüffragen berater' },
     ],
   },
   {
@@ -194,10 +199,8 @@ export const navGroups: NavGroup[] = [
       // Suchtreffer. Wer „Einkaufsliste" tippte, bekam „Nichts gefunden" —
       // ausgerechnet in der Lage, fuer die die Liste gemacht ist.
       { to: '/einkaufsliste', label: 'Einkaufsliste', end: true, icon: '☑', short: 'Einkauf', keywords: 'einkauf einkaufen kaufen material besorgen laden bestellen vorrat zubehör liste posten was brauche ich' },
-      // Nicht „KI-Berater": in Grow OS steckt keine KI. Die Seite packt das
-      // Fachwissen der Anlage zum Mitnehmen zusammen — der Name muss das
-      // sagen, sonst sucht man eine Funktion, die es nicht gibt.
-      { to: '/berater', label: 'Mappe für eigene KI', end: true, keywords: 'ki agent assistent chatgpt claude ollama mappe export lagebericht prompt prueffragen berater' },
+      // Die „Mappe für eigene KI" ist ein Reiter der Seite KI-Assistent
+      // (Einrichtung) geworden — Fork AI, 04.10.2026.
     ],
   },
 ]
@@ -255,6 +258,8 @@ export const legacyRedirects: Record<string, string> = {
   '/benachrichtigungen': '/handy?tab=push',
   // Die KI wurde entfernt; das Lesezeichen darf trotzdem nicht ins Leere laufen.
   '/assistent': '/regeln',
+  // Fork AI (04.10.2026): die Mappe ist ein Reiter der Seite KI-Assistent.
+  '/berater': '/ki?tab=mappe',
   '/phenohunt': '/sorten',
   '/hardware': '/sensoren',
   '/analyse': '/archiv',

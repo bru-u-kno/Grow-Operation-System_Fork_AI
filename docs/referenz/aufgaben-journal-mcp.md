@@ -11,9 +11,9 @@
 | Menü „Pflanzen" → „Journal & Fotos"; derselbe Strom im Grow | `/journal` → `GrowScopedSectionPage`; `/grows/<id>`, Abschnitt `journal` |
 | Begleitungsstufe (Voll · Wichtiges · Experte) | `/settings` (alt: `/einstellungen`) → `PUT /api/companion/settings` |
 | Eigene Fotos zu einem Symptom | `/wissen` → `SymptomPhotos.tsx` |
-| Menü „Wissen" → „Mappe für eigene KI" | `/berater` → `AdvisorPage` |
+| Menü „Einrichtung" → „KI-Assistent", Reiter „Mappe" (bis forkai.164 unter „Wissen") | `/ki?tab=mappe` (alt: `/berater`) → `MappeReiter`, siehe `ki-assistent.md` |
 | Grow MCP: Einrichtungsseite mit Schlüssel und fertigem Befehl | eigenes Add-on, HA-Seitenleiste (Ingress 5078) |
-| Grow MCP: die Schnittstelle selbst | `http://<heimnetz-adresse>:5079/mcp` |
+| Grow MCP: die Schnittstelle selbst | `http://<heimnetz-adresse>:5080/mcp` (5079 belegt der Grow MCP des Originals) |
 
 ## Was es tut
 

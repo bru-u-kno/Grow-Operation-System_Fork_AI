@@ -13,10 +13,12 @@ import {
   warnungAblehnen, warnungBestaetigen, zustandWaehlen, type HoechstwerteEntwurf, type StufenWahl,
 } from './ki-zugriff-logik'
 import KiProtokoll from './KiProtokoll'
+import { altesKopieren } from './kopieren'
 import './ki-zugriff.css'
 
 /**
- * Einstellungen → „Zugriff für KI-Assistenten" (A-003, Bauplan
+ * KI-Assistent → Reiter „Zugriff & Schlüssel" (bis forkai.164 in den
+ * Einstellungen; A-003, Bauplan
  * `docs/ki-zugriff.md`).
  *
  * Lädt sich selbst über `/api/settings/ki-zugriff` — schlägt der Rest der
@@ -513,17 +515,4 @@ export function KlartextAnzeige({ name, klartext, onAusblenden }: { name: string
       </div>
     </div>
   )
-}
-
-function altesKopieren(text: string) {
-  const feld = document.createElement('textarea')
-  feld.value = text
-  feld.setAttribute('readonly', '')
-  feld.style.position = 'fixed'
-  feld.style.opacity = '0'
-  document.body.appendChild(feld)
-  feld.select()
-  const ok = document.execCommand('copy')
-  feld.remove()
-  if (!ok) throw new Error('Kopieren abgelehnt')
 }

@@ -53,7 +53,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | Warum überhaupt keine Erinnerungen mehr kommen | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
 | Was eine eigene KI von Grow OS lesen darf — und warum sie nichts schalten kann | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
 
-## Die elf Seiten
+## Die vierzehn Seiten
 
 | Seite | Worum es geht |
 |---|---|
@@ -67,10 +67,10 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | [zelte-hydro-wasser.md](zelte-hydro-wasser.md) | Die Anlage: Zelte, Hydro-Systeme, eTape-Kalibrierung, Wasserprofil |
 | [home-assistant-und-automatik.md](home-assistant-und-automatik.md) | Anbindung, Entitäts-Zuordnung, Grenzwerte, Push, die fünf Hintergrunddienste |
 | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) | Aufgabenseite, Journal und Fotos, Grow MCP, Mappe für eigene KI |
+| [ki-assistent.md](ki-assistent.md) | Fork AI: die eine Stelle für die eigene KI — Verbinden über das eigene Konto, Zugriff & Schlüssel, Mappe |
 | [kosten.md](kosten.md) | Fork AI: Strom aus HA-Zählerständen je Grow und Phase, Verbrauchsartikel mit Nachfüllungen, Laufzeit-Prognose, Kosten je Tag/Pflanze |
 | [steuerung.md](steuerung.md) | Fork AI: Leitstand der Regelungen — CO₂-Sollwerte im Fork, Regelung in HA, Ziel fest oder als Prozentstaffel vom Phasenband, Klima-Vorrang, Tagesabschluss in Chronik und Kosten |
 | [geraete.md](geraete.md) | Fork AI: alle benutzten Entitäten nach Gerät sortiert — sechs Quellen eingesammelt, Hierarchie aus dem HA-Geräteregister (Controller und seine Ports), Marke je Verwendung; liest nur |
-| [steuerung.md](steuerung.md) | Fork AI: Leitstand der Regelungen — CO₂-Sollwerte im Fork, Regelung in HA, Ziel fest oder als Prozentstaffel vom Phasenband, Klima-Vorrang, Tagesabschluss in Chronik und Kosten |
 
 ## Wenn nichts davon passt
 

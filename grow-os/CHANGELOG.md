@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.165
+
+**Fork AI.** Alles zur eigenen KI steht jetzt an einer Stelle: **Einrichtung → KI-Assistent**.
+Bisher lag es an drei Orten — die Mappe unter „Wissen", der Zugriff für KI-Assistenten unten in den
+Einstellungen und die Einrichtung des Grow MCP in der Seitenleiste von Home Assistant. Wie man einen
+Assistenten überhaupt verbindet, stand nirgends in Grow OS.
+
+### KI-Assistent — drei Reiter
+- **Verbinden:** die Wege zu deinem eigenen Assistenten, Schritt für Schritt — Claude-App
+  (Windows, Mac, Android, iPhone, Browser; auch im kostenlosen Plan), Claude Code im Heimnetz,
+  ChatGPT und die Mappe ohne Verbindung. Jeder Weg läuft über **dein Konto** bei Claude oder
+  ChatGPT: Grow OS bekommt keine Zugangsdaten, ruft selbst keine KI auf, und einen API-Schlüssel
+  brauchst du nicht. Die Anweisung für die Claude-App zum Kopieren trägt schon den richtigen
+  Namen deines Add-ons.
+- **Zugriff & Schlüssel:** Hauptschalter, Höchstwerte, Schlüssel und „Was die KI zuletzt getan
+  hat" — unverändert, nur umgezogen. In den Einstellungen steht an der alten Stelle ein Wegweiser.
+- **Mappe:** die bisherige „Mappe für eigene KI". Alte Lesezeichen auf `/berater` landen hier, mit
+  dem gewählten Grow.
+
 ## 2.0.0-forkai.164
 
 **Fork AI.** Der Zugriff für KI-Assistenten wird übersichtlicher und reicht weiter: drei Schalter je

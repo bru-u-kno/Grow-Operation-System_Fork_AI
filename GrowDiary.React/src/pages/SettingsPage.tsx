@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import type { GrowSummary, SettingsOverviewDto } from '../types'
 import FileInput from '../components/FileInput'
-import KiZugriffAbschnitt from '../features/ki-zugriff/KiZugriffAbschnitt'
 import { useTheme } from '../useTheme'
 import { useNavBar } from '../useNavBar'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
@@ -368,12 +367,17 @@ function SettingsPage() {
         </div>
       )}
 
-      {/* A-003: eigener Abschnitt unter den drei Panels, über die volle
-          Breite — er trägt eine Liste und drei Formulare und wäre in einer
-          300-px-Spalte länger als alle anderen zusammen. Lädt sich selbst,
-          damit er auch dann bedienbar bleibt, wenn der Rest der Seite
-          nicht lädt. */}
-      <KiZugriffAbschnitt />
+      {/* Fork AI (04.10.2026): Der Zugriff für KI-Assistenten stand bis
+          forkai.164 hier in voller Länge. Er ist auf die Seite KI-Assistent
+          gezogen, zu Verbinden und Mappe — hier bleibt nur der Wegweiser,
+          damit niemand ihn an der alten Stelle vergeblich sucht. */}
+      <section className="ls-panel" data-audit="settings-ki-verweis">
+        <div className="ls-panel-head"><span className="ls-label">KI-Assistent</span></div>
+        <div className="co-row">
+          <span className="co-row-text">Eigenen Assistenten verbinden, Schlüssel und Protokoll</span>
+          <div className="co-row-end"><Link className="ls-btn is-small" to="/ki?tab=zugriff">Zum KI-Assistenten</Link></div>
+        </div>
+      </section>
     </V1Page>
   )
 }
