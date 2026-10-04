@@ -219,7 +219,7 @@ export default function KiZugriffAbschnitt() {
   return (
     <section className="ls-panel ki-zugriff" data-audit="settings-ki-zugriff" aria-labelledby="ki-zugriff-titel">
       <div className="ls-panel-head">
-        <span className="ls-label" id="ki-zugriff-titel">Zugriff für KI-Assistenten</span>
+        <span className="ls-label" id="ki-zugriff-titel">Schlüssel &amp; Freigaben</span>
         {!laedt && !ladeFehler && <V1Badge tone={gespeichertAktiv ? 'warn' : 'neutral'}>{gespeichertAktiv ? 'an' : 'aus'}</V1Badge>}
       </div>
 

@@ -279,7 +279,7 @@ describe('Klartext nur einmal', () => {
   it('der Abschnitt zeigt beim ersten Zeichnen keinen Klartext, nur den Ladezustand', () => {
     const html = renderToStaticMarkup(<KiZugriffAbschnitt />)
     expect(html).toContain('data-audit="settings-ki-zugriff"')
-    expect(sichtbarerText(html)).toContain('Zugriff für KI-Assistenten')
+    expect(sichtbarerText(html)).toContain('Schlüssel & Freigaben')
     expect(sichtbarerText(html)).toContain('Ab Werk ist das aus')
     expect(html).not.toContain('ki-klartext')
   })

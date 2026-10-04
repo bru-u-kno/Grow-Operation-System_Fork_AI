@@ -48,15 +48,16 @@ export function KiVerbinden() {
       <V1Section title="Dein Assistent, dein Konto">
         <V1Card>
           <p className="ab-text">
-            Grow OS rechnet selbst — ohne KI. Willst du trotzdem mit einem Assistenten über deine Anlage
-            sprechen oder ihm Messwerte diktieren, nutzt er <b>dein eigenes Konto</b> bei Claude oder ChatGPT.
+            Willst du mit einem Assistenten über deine Anlage sprechen oder ihm Messwerte diktieren, nutzt
+            er <b>dein eigenes Konto</b> bei Claude oder ChatGPT.
             Grow OS bekommt dafür keine Zugangsdaten und ruft selbst keine KI auf. Es kostet also nichts
             zusätzlich, und einen API-Schlüssel brauchst du nicht.
           </p>
           <p className="ab-text">
-            Umgekehrt bekommt dein Assistent einen <b>Schlüssel von hier</b>. Was er damit darf — eintragen,
-            planen, schalten — legst du unter <Link to="/ki?tab=zugriff">Zugriff &amp; Schlüssel</Link> fest.
-            Ab Werk ist alles aus, jede Änderung steht im Protokoll, und Sperren wirkt sofort.
+            Umgekehrt bekommt dein Assistent einen <b>Schlüssel von hier</b>. Was er damit <b>in Grow OS</b> darf
+            — eintragen, planen, schalten — legst du unter <Link to="/ki?tab=zugriff">Zugriff &amp; Schlüssel</Link>{' '}
+            fest. Ab Werk ist alles aus, jede Änderung über den Schlüssel steht im Protokoll, und Sperren wirkt
+            sofort.
           </p>
         </V1Card>
       </V1Section>
@@ -77,7 +78,8 @@ export function KiVerbinden() {
             </p>
             <ol className="ab-schritte">
               <li>Unter <Link to="/ki?tab=zugriff">Zugriff &amp; Schlüssel</Link> den Zugriff erlauben und einen
-                Schlüssel anlegen, etwa „Claude am Telefon“.</li>
+                Schlüssel anlegen, etwa „Claude am Telefon“. <b>Gleich kopieren</b> — er wird nur einmal
+                gezeigt und ist weg, sobald du den Reiter wechselst.</li>
               <li>In Home Assistant das Add-on <b>Home Assistant MCP Server</b> installieren, dazu für den Weg
                 von außen <b>Webhook Proxy for HA MCP</b> — beide aus dem Repository{' '}
                 <code>github.com/homeassistant-ai/ha-mcp</code>.</li>
@@ -91,6 +93,20 @@ export function KiVerbinden() {
               Der Schlüssel liegt dann in deinem Claude-Konto. Geht etwas schief, sperrst oder löschst du ihn
               hier — das wirkt bei der nächsten Anfrage.
             </p>
+            <div className="kv-warnung" role="note" data-audit="ki-weg-claude-app-warnung">
+              <strong>Wichtig: Dieser Connector geht an Grow OS vorbei.</strong>
+              <p>
+                Der Home Assistant MCP Server hat selbst <b>vollen Zugriff auf Home Assistant</b> — Geräte,
+                Automationen, Add-ons, Sicherungen, Neustart. Stufen, Höchstwerte und Protokoll von hier gelten
+                nur für das, was der Assistent <b>über Grow OS</b> tut, nicht für das, was er über diesen
+                Connector direkt in Home Assistant tut.
+              </p>
+              <p>
+                Die Adresse des Webhook Proxy ist geheim wie ein Passwort. Schalte im Add-on <b>Enable OAuth</b>{' '}
+                ein: Dann verlangt der Connector eine Anmeldung mit deinem Home-Assistant-Konto, und die Adresse
+                allein genügt nicht mehr.
+              </p>
+            </div>
           </Weg>
 
           <Weg
@@ -154,13 +170,19 @@ export function KiVerbinden() {
         </div>
       </V1Section>
 
-      <V1Section title="Was ein Schlüssel nie kann">
+      <V1Section title="Was ein Grow-OS-Schlüssel nie kann">
         <V1Card>
+          <p className="ab-text">
+            Das gilt für alles, was über Grow OS läuft — auch über den Grow MCP Fork AI. Ein Connector, der
+            selbst an Home Assistant geht (wie der Home Assistant MCP Server), hat eigene Rechte.
+          </p>
           <ul className="ab-schritte">
             <li>Schlüssel anlegen, ändern oder löschen — das geht nur hier in der Oberfläche.</li>
             <li>Eine Sicherung zurückspielen oder herunterladen.</li>
             <li>In Home Assistant: Neustart, Add-ons, Sicherungen, Schlösser, Alarmanlage, Benachrichtigungen
-              und Updates. Was nicht ausdrücklich als Gerät erlaubt ist, geht nie.</li>
+              und Updates. Was nicht ausdrücklich als Gerät erlaubt ist, geht nie. Ausnahme mit der Stufe
+              Verwaltung: Er kann Automationen, Skripte und Szenen auslösen — und die tun, was sie in Home
+              Assistant dürfen.</li>
             <li>Mehr dosieren oder öfter schalten als die Höchstwerte unter <Link to="/ki?tab=zugriff">Zugriff
               &amp; Schlüssel</Link> erlauben.</li>
           </ul>

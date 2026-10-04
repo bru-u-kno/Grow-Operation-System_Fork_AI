@@ -18,9 +18,12 @@ Assistenten überhaupt verbindet, stand nirgends in Grow OS.
   ChatGPT und die Mappe ohne Verbindung. Jeder Weg läuft über **dein Konto** bei Claude oder
   ChatGPT: Grow OS bekommt keine Zugangsdaten, ruft selbst keine KI auf, und einen API-Schlüssel
   brauchst du nicht. Die Anweisung für die Claude-App zum Kopieren trägt schon den richtigen
-  Namen deines Add-ons.
+  Namen deines Add-ons. Beim Weg über den Home Assistant MCP Server steht ausdrücklich dabei, dass
+  dieser Connector selbst vollen Zugriff auf Home Assistant hat — die Stufen und Grenzen von Grow OS
+  gelten nur für das, was über Grow OS läuft.
 - **Zugriff & Schlüssel:** Hauptschalter, Höchstwerte, Schlüssel und „Was die KI zuletzt getan
   hat" — unverändert, nur umgezogen. In den Einstellungen steht an der alten Stelle ein Wegweiser.
+  Meldungen an den Assistenten nennen den neuen Ort.
 - **Mappe:** die bisherige „Mappe für eigene KI". Alte Lesezeichen auf `/berater` landen hier, mit
   dem gewählten Grow.
 

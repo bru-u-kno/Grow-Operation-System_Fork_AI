@@ -7,7 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace GrowDiary.Web.Api.Controllers;
 
 /// <summary>
-/// Fork AI (A-003, 03.10.2026): Einstellungen → „Zugriff für KI-Assistenten".
+/// Fork AI (A-003, 03.10.2026): „Zugriff für KI-Assistenten" — seit 04.10.2026
+/// Einrichtung → KI-Assistent → Zugriff & Schlüssel (vorher in den Einstellungen).
 /// </summary>
 /// <remarks>
 /// <para>Die Schlüsselverwaltung liegt unter <c>/api/settings</c> — also auf einem

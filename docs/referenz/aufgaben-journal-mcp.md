@@ -57,7 +57,7 @@ Messung).
 
 **Grow MCP** gibt einem MCP-Klienten im Heimnetz 22 **lesende** Werkzeuge auf
 Grow OS, darunter `foto_ansehen` (Bild plus Zusammenhangs-Satz); sein Zweck
-gegenüber der Mappe sind Verlaufsfragen. **Die Mappe** (`/berater`) ist ein ZIP
+gegenüber der Mappe sind Verlaufsfragen. **Die Mappe** (`/ki?tab=mappe`, alt `/berater`) ist ein ZIP
 aus neun Markdown-Dateien — Anweisung, Lagebericht, fünf Wissensdateien,
 Prüffragen — und hält den Stand von jetzt fest.
 
@@ -97,7 +97,7 @@ Prüffragen — und hält den Stand von jetzt fest.
 - **Kein `hassio_role: manager`**, obwohl der Supervisor die Netzwerkadresse nur
   dann herausgibt: die Rolle dürfte jedes andere Add-on deinstallieren.
 - **Grow OS verschickt nichts von selbst**; die Mappe verlässt den Rechner nur
-  per „Herunterladen". Anweisung und Prüffragen stehen offen auf `/berater`,
+  per „Herunterladen". Anweisung und Prüffragen stehen offen auf `/ki?tab=mappe`,
   nicht nur im ZIP — „ungelesene Grenzen sind keine".
 
 ## Im Code

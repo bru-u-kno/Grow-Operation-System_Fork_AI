@@ -16,7 +16,7 @@ namespace GrowMcp.Tools;
 /// <para>Fork AI (A-004, 03.10.2026): Bis hierher war der Grow MCP nur lesend,
 /// mit Absicht — Grow OS liess aus dem Add-on-Netz nichts anderes zu. Seit
 /// forkai.163 kann der Betreiber in Grow OS Schlüssel für KI-Assistenten
-/// anlegen (Einstellungen → Zugriff für KI-Assistenten) und dort je Schlüssel
+/// anlegen (Einrichtung → KI-Assistent → Zugriff & Schlüssel) und dort je Schlüssel
 /// Stufen anhaken. Wer den Connector mit so einem Schlüssel einrichtet, bekommt
 /// diese Werkzeuge.</para>
 ///

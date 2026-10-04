@@ -29,7 +29,7 @@ public static class ForkFehler
 {
     /// <summary>Der Hinweis, wenn ein Werkzeug einen Fork-Schlüssel braucht und keiner da ist.</summary>
     public const string SchluesselNoetig =
-        "Zum Eintragen braucht es einen Schlüssel aus Grow OS: Einstellungen → Zugriff für KI-Assistenten. "
+        "Zum Eintragen braucht es einen Schlüssel aus Grow OS: Einrichtung → KI-Assistent → Zugriff & Schlüssel. "
         + "Diesen statt des MCP-Schlüssels in den Connector eintragen.";
 
     /// <summary>Eine Absage in einen Satz übersetzen.</summary>
@@ -50,7 +50,7 @@ public static class ForkFehler
 
             case 401:
                 text.Append(meldung ?? "Grow OS hat den Schlüssel nicht angenommen.");
-                text.Append(" Der Betreiber kann in Grow OS unter Einstellungen → Zugriff für KI-Assistenten "
+                text.Append(" Der Betreiber kann in Grow OS unter Einrichtung → KI-Assistent → Zugriff & Schlüssel "
                             + "nachsehen, ob der Schlüssel noch besteht, und sonst einen neuen anlegen.");
                 return text.ToString();
 

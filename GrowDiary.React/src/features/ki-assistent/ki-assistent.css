@@ -28,4 +28,19 @@
   /* Kurze Texte — ganz zeigen, kein Rollkasten im Rollbereich (Telefon). */
   .kv-kopierfeld .ab-anweisung { margin-top: 0; max-height: none; }
   .kv code { overflow-wrap: anywhere; }
+
+  /* Hinweis, dass ein Weg an Grow OS vorbeigeht (Prüfer 04.10.2026): eine
+     Grenze nur dort versprechen, wo sie durchgesetzt wird. */
+  .kv-warnung {
+    margin: 4px 0 10px;
+    padding: 10px 12px;
+    border-left: 2px solid var(--warn);
+    background: var(--sunk);
+    font: 400 var(--fs-klein)/1.6 var(--font-mono);
+    color: var(--muted);
+  }
+  .kv-warnung strong { display: block; margin-bottom: 4px; color: var(--warn-text); font-weight: 500; }
+  .kv-warnung p { margin: 0 0 6px; }
+  .kv-warnung p:last-child { margin-bottom: 0; }
+  .kv-warnung b { color: var(--ink); }
 }

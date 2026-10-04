@@ -43,7 +43,7 @@ Home Assistant backup first if you want to keep it.
 Ein KI-Assistent (etwa Claude über das Home-Assistant-MCP oder den Grow MCP Fork AI) kann
 Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
 
-1. **Einstellungen → Zugriff für KI-Assistenten:** „Zugriff erlauben" anhaken, speichern.
+1. **Einrichtung → KI-Assistent → Zugriff & Schlüssel:** „Zugriff erlauben" anhaken, speichern.
 2. **Neuer Schlüssel:** Namen vergeben und je Stufe wählen: **Gesperrt** (Grow OS lehnt ab),
    **Mit Rückfrage** (erlaubt, der Assistent soll dich aber vorher fragen) oder **Frei**.
    Vorbelegt ist Dokumentieren frei, alles andere gesperrt. „Geräte schalten" und

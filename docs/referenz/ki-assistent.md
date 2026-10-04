@@ -29,7 +29,7 @@ API-Schlüssel (Bru, 04.10.2026):
 
 | Weg | Plan | Wie |
 |---|---|---|
-| Claude-App (Windows, Mac, Android, iPhone, Browser) | kostenlos oder Abo | Connector → Add-on Home Assistant MCP Server mit Webhook Proxy → `ha_manage_app` im Proxy-Modus auf Grow OS, mit `gok_`-Schlüssel. Die Seite liefert die Projektanweisung mit dem echten Add-on-Namen (aus `/api/system/mobile-access`). |
+| Claude-App (Windows, Mac, Android, iPhone, Browser) | kostenlos oder Abo | Connector → Add-on Home Assistant MCP Server mit Webhook Proxy → `ha_manage_app` im Proxy-Modus auf Grow OS, mit `gok_`-Schlüssel. Die Seite liefert die Projektanweisung mit dem echten Add-on-Namen (aus `/api/system/mobile-access`). **Geht an Grow OS vorbei:** der HA MCP Server hat selbst vollen Zugriff auf Home Assistant; Stufen, Höchstwerte und Protokoll gelten nur für Anfragen über Grow OS. Die Seite sagt das und empfiehlt OAuth im Webhook Proxy. |
 | Claude Code im Heimnetz | Abo | Add-on Grow MCP Fork AI (Port 5080), im Befehl der `gok_`-Schlüssel statt des MCP-Schlüssels |
 | ChatGPT | Plus oder Pro | Entwicklermodus, derselbe Weg wie die Claude-App — ausdrücklich als nicht erprobt gekennzeichnet |
 | Mappe | jeder Plan | ohne Verbindung, Stand von jetzt |
@@ -51,6 +51,9 @@ vom Supervisor (`SupervisorInfoService`), Stufen und Höchstwerte aus
 - **Keinen Weg versprechen, den es noch nicht gibt.** Ein direkter Connector zu
   Grow OS (ohne Home Assistant MCP dazwischen) ist geplant, steht aber erst auf
   der Seite, wenn er funktioniert.
+- **Keine Grenze versprechen, die nicht greift.** „Was ein Grow-OS-Schlüssel nie kann"
+  gilt für Wege durch Grow OS (auch den Grow MCP Fork AI), nicht für einen Connector,
+  der selbst an Home Assistant geht — die Seite sagt das ausdrücklich (Prüfer 04.10.2026).
 - **Den Schlüssel nicht in die Anleitung schreiben.** Die Texte zum Kopieren
   tragen `gok_…` als Platzhalter; der Klartext erscheint nur einmal beim Anlegen.
 

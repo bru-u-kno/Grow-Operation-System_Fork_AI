@@ -1,5 +1,12 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.2
+
+**Der Weg zum Schlüssel stimmt wieder.** Grow OS Fork AI hat ab 2.0.0-forkai.165 eine eigene Seite
+für alles zur KI: **Einrichtung → KI-Assistent → Zugriff & Schlüssel**. Die Einrichtungsseite und die
+Hinweise an den Assistenten („Zum Eintragen braucht es einen Schlüssel aus Grow OS …") nannten noch
+„Einstellungen → Zugriff für KI-Assistenten". Nur Texte; was der Grow MCP kann, bleibt gleich.
+
 ## 0.2.0-forkai.1
 
 **Eintragen und Schalten — mit einem Schlüssel aus Grow OS.** Bisher konnte

@@ -72,7 +72,7 @@ public static class KiZugriffSperre
                     anfrage: new KiAnfrage(null, StatusCodes.Status403Forbidden, "ki_zugriff_aus"));
                 await FehlerSchreiben(context, StatusCodes.Status403Forbidden, "ki_zugriff_aus",
                     "Der Zugriff für KI-Assistenten ist in Grow OS ausgeschaltet "
-                    + "(Einstellungen → Zugriff für KI-Assistenten).");
+                    + "(Einrichtung → KI-Assistent → Zugriff & Schlüssel).");
                 return;
 
             case KiPruefung.Ungueltig:

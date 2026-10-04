@@ -69,7 +69,7 @@ IP wie `192.168.1.50`, zu finden in Home Assistant unter *Einstellungen → Syst
 Mit dem Schlüssel von der Einrichtungsseite liest Claude nur. Zum **Eintragen
 und Schalten** braucht es einen Schlüssel aus Grow OS selbst:
 
-1. In Grow OS **Einstellungen → Zugriff für KI-Assistenten** öffnen, den
+1. In Grow OS **Einrichtung → KI-Assistent → Zugriff & Schlüssel** öffnen, den
    Hauptschalter einschalten und einen **neuen Schlüssel** anlegen. Dabei die
    Stufen anhaken, die der Assistent haben soll (siehe unten). Der Schlüssel
    beginnt mit `gok_` und wird nur einmal angezeigt.

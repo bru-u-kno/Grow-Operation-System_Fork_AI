@@ -136,7 +136,7 @@ public sealed class DurchreichenTests : IAsyncLifetime
         // Eintragen geht nicht — und Grow OS wird gar nicht erst gefragt.
         var vorher = _fork.Anfragen.Count;
         var (_, text) = await AufrufenAsync(_mcpSchluessel, "messung_eintragen", new { growId = 1, ph = 5.8 });
-        Assert.Contains("Einstellungen → Zugriff für KI-Assistenten", text);
+        Assert.Contains("Einrichtung → KI-Assistent → Zugriff & Schlüssel", text);
         Assert.Equal(vorher, _fork.Anfragen.Count);
     }
 

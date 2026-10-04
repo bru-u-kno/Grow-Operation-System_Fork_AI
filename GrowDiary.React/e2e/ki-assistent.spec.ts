@@ -23,7 +23,7 @@ test('/berater leitet auf den Reiter Mappe und behält den Grow', async ({ page 
   await expect(page).toHaveURL(/\/ki\?(?=.*tab=mappe)(?=.*growId=1)/)
   await expect(page.locator('main h1').first()).toHaveText('KI-Assistent')
   await expect(page.locator('[data-audit="collection-tab-mappe"].active')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Berater-Mappe herunterladen' }))
+  await expect(page.getByRole('link', { name: 'Mappe herunterladen' }))
     .toHaveAttribute('href', /\/api\/agent-export\/grows\/1\/paket$/)
 })
 
@@ -31,7 +31,7 @@ test('Grow-Seite: der Reiter „Mappe für eigene KI" führt auf die Mappe diese
   await page.goto('/grows/1')
   await page.getByRole('link', { name: 'Mappe für eigene KI' }).click()
   await expect(page).toHaveURL(/\/ki\?(?=.*tab=mappe)(?=.*growId=1)/)
-  await expect(page.getByRole('link', { name: 'Berater-Mappe herunterladen' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Mappe herunterladen' })).toBeVisible()
 })
 
 test('Einstellungen: nur der Wegweiser, kein zweiter Zugriffs-Abschnitt', async ({ page }) => {
@@ -59,4 +59,6 @@ test('Verbinden: vier Wege, die Anweisung trägt den echten Namen des Add-ons', 
   await expect(anweisung).not.toContainText('<Name des Add-ons')
   // Der Schlüssel selbst steht nie in einer Anleitung — nur der Platzhalter.
   await expect(anweisung).toContainText('Bearer gok_…')
+  // Prüfer 04.10.2026: dieser Weg geht an Grow OS vorbei — das muss dabeistehen.
+  await expect(page.locator('[data-audit="ki-weg-claude-app-warnung"]')).toContainText('vollen Zugriff auf Home Assistant')
 })

@@ -71,16 +71,15 @@ export function MappeReiter() {
     <>
       <div className="ab-kopf">
         <p className="ab-text">
-          Grow OS rechnet selbst, ohne KI. Die Mappe packt das Fachwissen deiner Anlage in eine Datei —
-          die gibst du einem KI-Assistenten deiner Wahl, wenn du einen willst. Das geht mit jedem Plan,
-          auch dem kostenlosen.
+          Die Mappe packt das Fachwissen deiner Anlage in eine Datei — die gibst du einem KI-Assistenten
+          deiner Wahl, wenn du einen willst. Das geht mit jedem Plan, auch dem kostenlosen.
         </p>
         <GrowScopePicker grows={grows} growId={growId} onChange={setGrowId} />
       </div>
       {error && <V1Alert message={error} tone="critical" />}
       {ladefehler && <V1Alert message={ladefehler} tone="warn" />}
 
-      <V1Section title="Die Berater-Mappe">
+      <V1Section title="Die Mappe">
         <V1Card>
           <p className="ab-text">
             Die Mappe ist ein ZIP mit neun Textdateien. Darin: der aktuelle Stand deines Grows und
@@ -103,7 +102,7 @@ export function MappeReiter() {
           {grow && (
             <div className="v1-action-row">
               <a className="v1-button is-primary" href={resolveUrl(`/api/agent-export/grows/${grow.id}/paket`)}>
-                Berater-Mappe herunterladen
+                Mappe herunterladen
               </a>
               <a className="v1-button" href={resolveUrl(`/api/agent-export/grows/${grow.id}/download`)}>
                 Nur den Lagebericht
