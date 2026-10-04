@@ -30,8 +30,8 @@ namespace GrowDiary.Web.Services;
 ///   fällig. Das ist der Grund, warum es den Ablauf gibt. (Das Blütezelt 2
 ///   steht tiefer, siehe <see cref="Lage"/>.)</item>
 ///   <item><b>pH gegen die Dosierung.</b> Steigt täglich um rund 0,1, wird
-///   alle drei Tage heruntergezogen. Bleibt im Band — der pH darf im RDWC
-///   wandern —, aber man sieht, wer ihn hält.</item>
+///   alle drei Tage heruntergezogen. Bleibt im Band (5,85–6,09 gegen das Planziel
+///   5,8–6,2) — der pH darf im RDWC wandern —, aber man sieht, wer ihn hält.</item>
 ///   <item><b>Wassertemperatur an der Nachtabsenkung.</b> Jede Blütewoche rund
 ///   0,35 °C tiefer (die Rampe aus beta.32), dazu der Tag-Nacht-Gang.</item>
 ///   <item><b>Ein Kühlerausfall</b> von Tag −18 bis −14: das Wasser klettert
@@ -185,8 +185,16 @@ public static class Demoverlauf
         => (lage ?? Lage.Bluete).EcFrisch + SeitWasserwechsel(ortszeit) * 0.03 + (1 + Tagesgang(ortszeit)) * 0.006;
 
     /// <summary>pH — Sägezahn über drei Tage, steigt bei Licht schneller.</summary>
+    /// <remarks>
+    /// <para><b>Boden 5,85, nicht mehr 5,78 (04.10.2026).</b> Der Tiefstwert — frisch
+    /// dosiert, mitten in der Nacht — lag unter dem Planziel 5,8–6,2. Weil der
+    /// Live-Wert immer auf heute steht (frisch dosiert), war die Kachel in der halben
+    /// Nacht „daneben", und <c>e2e/demobestand-im-ziel.spec.ts</c> wurde je nach
+    /// Uhrzeit rot (CI-Lauf 37179321959 um 07:16 mit 5,79). Jetzt 5,85 bis 6,09 über
+    /// den ganzen Dosierzyklus; gehalten von <c>DemowerteImZielTests</c>.</para>
+    /// </remarks>
     public static double Ph(DateTime ortszeit)
-        => 5.78 + SeitDosierung(ortszeit) * 0.1 + (1 + Tagesgang(ortszeit)) * 0.02;
+        => 5.85 + SeitDosierung(ortszeit) * 0.1 + (1 + Tagesgang(ortszeit)) * 0.02;
 
     /// <summary>Wassertemperatur in °C — Nachtabsenkung, plus Kühlerausfall.</summary>
     public static double WasserTempC(DateTime ortszeit)

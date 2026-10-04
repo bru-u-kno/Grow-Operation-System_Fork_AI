@@ -99,4 +99,9 @@ public sealed record KiProtokollEintragDto(
     /// <summary>Die Art des Eintrags (<c>KiProtokollArt</c>) — ein Bezeichner, nicht zum Anzeigen.</summary>
     string Art,
     /// <summary>Der Satz aus dem Prüfprotokoll, deutsch.</summary>
-    string Beschreibung);
+    string Beschreibung,
+    /// <summary>
+    /// Fork AI (Prüferbefund 04.10.2026): bei <c>POST /api/ki-ha/dienst</c> der Dienst und
+    /// seine Entität, etwa <c>light.turn_on → light.zelt</c> — ohne <c>daten</c>; sonst null.
+    /// </summary>
+    string? HaDienst = null);

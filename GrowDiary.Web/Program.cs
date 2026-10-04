@@ -310,20 +310,10 @@ if (DemoData.IsEnabled)
             var was = Demobestand.Anlegen(demoScope.ServiceProvider);
             demoLogger.LogInformation("Testdaten: Demobestand angelegt — {Was}.", was);
 
-            // Fork AI (forkai.133): Die Testdaten-App bekommt für den laufenden Grow
-            // ein Düngeprogramm und sofort ihren Plan — sonst stünde die Seite „Plan"
-            // leer da (von der strengen Demobestands-Prüfung gefunden). Bewusst HIER
-            // und nicht in Demobestand.Anlegen: die Backend-Tests rechnen mit einem
-            // Bestand ohne Programm. Der Plan-Nachtrag oben lief VOR dem Bestand.
-            var demoLaufende = growsRepo.GetActiveGrows();
-            foreach (var g in demoLaufende.Where(g => string.IsNullOrWhiteSpace(g.FeedProgramId)))
-            {
-                g.FeedProgramId = Demobestand.Programm;
-                growsRepo.UpdateGrow(g);
-            }
-            var planDienst = demoScope.ServiceProvider.GetRequiredService<GrowDiary.Web.Services.GrowPlan.GrowPlanService>();
-            var demoPlaene = planDienst.FehlendePlaeneAnlegen(demoLaufende);
-            var demoWochen = planDienst.AlleNachziehen(demoLaufende, DateTime.Today);
+            // Fork AI (forkai.133): Düngeprogramm und Plan für die laufenden Grows —
+            // bewusst getrennt von Demobestand.Anlegen (Begründung dort). Der
+            // Plan-Nachtrag oben lief VOR dem Bestand.
+            var (demoPlaene, demoWochen) = Demobestand.PlaeneAnlegen(demoScope.ServiceProvider);
             demoLogger.LogInformation("Testdaten: {Anzahl} Grow-Plan angelegt, {Wochen} Woche(n) angehängt.", demoPlaene, demoWochen);
         }
 

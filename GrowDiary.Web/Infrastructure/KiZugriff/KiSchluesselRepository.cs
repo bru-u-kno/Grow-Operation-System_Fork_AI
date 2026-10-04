@@ -146,6 +146,12 @@ public sealed class KiSchluesselRepository : RepositoryBase
     /// Die alte Einstellung so lesen, wie forkai.163 sie gelesen hat: fehlt sie,
     /// die Vorbelegung; leer heisst nie; ein unbekannter Name wie fehlend.
     /// </summary>
+    /// <remarks>
+    /// <b>NULL ist „fehlt", nicht „leer".</b> forkai.163 las den Wert als Zeichenkette;
+    /// ein NULL in der Spalte kam dort als „nicht gesetzt" an und ergab die Vorbelegung
+    /// Grow planen. Bis zum Prüferbefund vom 04.10.2026 wurde DBNull hier zu „nie" —
+    /// der Assistent hätte danach bei keiner Stufe mehr gefragt.
+    /// </remarks>
     private static KiStufe? AlteEinstellungLesen(SqliteConnection verbindung, SqliteTransaction transaktion)
     {
         if (!TabelleDa(verbindung, transaktion, "AppSettings")) return AlteVorgabeRueckfrage;
@@ -154,7 +160,7 @@ public sealed class KiSchluesselRepository : RepositoryBase
         befehl.CommandText = "SELECT Value FROM AppSettings WHERE Key = $key;";
         befehl.Parameters.AddWithValue("$key", AlteEinstellungRueckfrage);
         var roh = befehl.ExecuteScalar();
-        if (roh is null) return AlteVorgabeRueckfrage;
+        if (roh is null or DBNull) return AlteVorgabeRueckfrage;
         var text = roh as string;
         if (string.IsNullOrWhiteSpace(text)) return null;
         return KiZugriffDienst.EinzelneStufe(text) ?? AlteVorgabeRueckfrage;

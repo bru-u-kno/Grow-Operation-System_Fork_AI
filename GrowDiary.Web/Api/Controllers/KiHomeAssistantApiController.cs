@@ -45,10 +45,13 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
     /// Sonst liefe die Prüfung „Entität passt zur Domain" ins Leere: <c>daten.entity_id</c>
     /// überschriebe <c>entityId</c> (siehe <see cref="HomeAssistantService.RufeEntitaetsDienstAsync"/>),
     /// und <c>area_id</c> schaltete einen ganzen Bereich auf einmal.
+    /// <c>entities</c> und <c>snapshot_entities</c> (seit 04.10.2026): <c>scene.apply</c>
+    /// und <c>scene.create</c> setzen damit beliebige Entitäten auf beliebige Zustände —
+    /// auch <c>lock.haustuer</c> auf „unlocked" (Leitplanke 7, <c>docs/sicherheits-leitplanken.md</c>).
     /// </remarks>
     public static readonly IReadOnlySet<string> ZielFelder = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "entity_id", "device_id", "area_id", "floor_id", "label_id", "target",
+        "entity_id", "device_id", "area_id", "floor_id", "label_id", "target", "entities", "snapshot_entities",
     };
 
     // Kleinbuchstaben, Ziffern, Unterstrich — so benennt Home Assistant Domains,
@@ -202,7 +205,8 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
 
     /// <summary>Einen Dienst von Home Assistant rufen.</summary>
     /// <remarks>
-    /// <para>Reihenfolge: Schlüssel, Form, Tabelle (nie → Verwaltung), Entität passt
+    /// <para>Reihenfolge: Schlüssel, Form, Protokoll-Angabe (Dienst und Entität, nie die
+    /// Daten), Tabelle (nie → Verwaltung; unbekannt ist nie), Entität passt
     /// zur Domain, Ziele nur über <c>entityId</c>, Home Assistant eingerichtet —
     /// dann erst der Aufruf. Die Stufe <see cref="KiStufe.GeraeteSchalten"/> und das
     /// Stundenfenster hat die Sperre zu diesem Zeitpunkt schon geprüft.</para>
@@ -236,17 +240,25 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
         {
             ModelState.AddModelError("dienst", "Bitte einen Dienst angeben, etwa „turn_on“ (Kleinbuchstaben, Ziffern, Unterstrich).");
         }
-        if (!ModelState.IsValid) return ValidationError("Der Dienstaufruf ist ungültig.");
+        if (!ModelState.IsValid) return Ungueltig();
+
+        // Fürs Protokoll: was in Home Assistant geschaltet werden sollte — auch wenn es
+        // gleich abgewiesen wird. Die Entität nur, wenn sie die Form einer Entität hat,
+        // und nie die Daten (Prüferbefund 04.10.2026).
+        KiZugriffSperre.HaDienstMerken(HttpContext, domain, dienst,
+            entityId is not null && EntityMuster.IsMatch(entityId) ? entityId : null);
 
         var regel = KiHaEinstufung.Einstufen(domain, dienst);
         if (regel.Urteil == KiHaUrteil.Nie)
         {
+            KiZugriffSperre.FehlercodeMerken(HttpContext, "ki_kein_zugriff");
             return ForbiddenError("ki_kein_zugriff",
                 $"{domain}.{dienst} ist über einen KI-Assistenten nie erreichbar: {regel.Grund}");
         }
         if (regel.Urteil == KiHaUrteil.Verwaltung && !kontext.Darf(KiStufe.Verwaltung))
         {
             var fehlt = KiZugriffSperre.StufeFehlt(KiStufe.Verwaltung);
+            KiZugriffSperre.FehlercodeMerken(HttpContext, fehlt.Code!);
             return ForbiddenError(fehlt.Code!, $"{fehlt.Meldung} ({domain}: {regel.Grund})");
         }
 
@@ -255,7 +267,7 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
         {
             ModelState.AddModelError("entityId",
                 $"Die Entität muss genau eine der Domain „{domain}“ sein, etwa „{domain}.zelt“ — „{entityId}“ passt nicht.");
-            return ValidationError("Der Dienstaufruf ist ungültig.");
+            return Ungueltig();
         }
 
         var ziele = request?.Daten?.Keys.Where(ZielFelder.Contains).ToList() ?? [];
@@ -263,7 +275,7 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
         {
             ModelState.AddModelError("daten",
                 $"Ziele gehen nur über „entityId“, nicht über {string.Join(", ", ziele.Select(z => $"„{z}“"))} in den Daten.");
-            return ValidationError("Der Dienstaufruf ist ungültig.");
+            return Ungueltig();
         }
 
         if (NichtEingerichtet(out var einstellungen) is { } aus) return aus;
@@ -302,6 +314,13 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
                 StatusCodes.Status401Unauthorized,
                 traceId: HttpContext?.TraceIdentifier));
 
+    /// <summary>400 für einen ungültigen Dienstaufruf — mit dem Code fürs Protokoll.</summary>
+    private ActionResult Ungueltig()
+    {
+        KiZugriffSperre.FehlercodeMerken(HttpContext, "validation_failed");
+        return ValidationError("Der Dienstaufruf ist ungültig.");
+    }
+
     /// <summary>503, wenn Grow OS keine Verbindung zu Home Assistant eingerichtet hat.</summary>
     /// <remarks>Im Testbetrieb (<see cref="DemoData.IsEnabled"/>) antwortet der Dienst selbst.</remarks>
     private ActionResult? NichtEingerichtet(out HomeAssistantSettings einstellungen)
@@ -309,6 +328,7 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
         einstellungen = _haEinstellungen.GetEffectiveHomeAssistantSettings();
         if (DemoData.IsEnabled || einstellungen.IsConfigured) return null;
 
+        KiZugriffSperre.FehlercodeMerken(HttpContext, "ha_nicht_eingerichtet");
         return StatusCode(StatusCodes.Status503ServiceUnavailable, ApiErrorFactory.Create(
             "ha_nicht_eingerichtet",
             "Grow OS hat keine Verbindung zu Home Assistant eingerichtet (Einstellungen → Home Assistant).",
@@ -317,9 +337,12 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
     }
 
     private ActionResult NichtErreichbar(string was)
-        => StatusCode(StatusCodes.Status502BadGateway, ApiErrorFactory.Create(
+    {
+        KiZugriffSperre.FehlercodeMerken(HttpContext, "ha_nicht_erreichbar");
+        return StatusCode(StatusCodes.Status502BadGateway, ApiErrorFactory.Create(
             "ha_nicht_erreichbar",
             $"{was} nicht von Home Assistant geholt werden — es antwortet gerade nicht oder lehnt ab.",
             StatusCodes.Status502BadGateway,
             traceId: HttpContext?.TraceIdentifier));
+    }
 }

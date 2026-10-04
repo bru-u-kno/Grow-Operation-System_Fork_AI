@@ -65,6 +65,33 @@ public static partial class Demobestand
     public static bool IstNoetig(GrowRepository grows) => grows.GetAllGrows().Count == 0;
 
     /// <summary>
+    /// Fork AI (forkai.133): Die Testdaten-App bekommt für die laufenden Grows ein
+    /// Düngeprogramm und sofort ihren Plan — sonst stünde die Seite „Plan" leer da.
+    /// </summary>
+    /// <remarks>
+    /// <para>Bewusst NICHT in <see cref="Anlegen"/>: die Backend-Tests rechnen mit
+    /// einem Bestand ohne Programm. Gerufen von <c>Program.cs</c> direkt nach dem
+    /// Bestand — und von <c>DemowerteImZielTests</c>, die die Live-Kacheln gegen
+    /// genau diese Pläne halten (bis 04.10.2026 stand der Code nur in Program.cs, und
+    /// ein Test hätte ihn abschreiben müssen).</para>
+    /// </remarks>
+    /// <returns>Wie viele Pläne angelegt und wie viele Wochen angehängt wurden.</returns>
+    public static (int Plaene, int Wochen) PlaeneAnlegen(IServiceProvider dienste)
+    {
+        var grows = dienste.GetRequiredService<GrowRepository>();
+        var laufende = grows.GetActiveGrows();
+        foreach (var g in laufende.Where(g => string.IsNullOrWhiteSpace(g.FeedProgramId)))
+        {
+            g.FeedProgramId = Programm;
+            grows.UpdateGrow(g);
+        }
+        var planDienst = dienste.GetRequiredService<GrowPlan.GrowPlanService>();
+        var plaene = planDienst.FehlendePlaeneAnlegen(laufende);
+        var wochen = planDienst.AlleNachziehen(laufende, DateTime.Today);
+        return (plaene, wochen);
+    }
+
+    /// <summary>
     /// Legt den ganzen Bestand an. Ruft nur, wer <see cref="IstNoetig"/> gefragt hat.
     /// </summary>
     /// <returns>Was angelegt wurde, für die Zeile im Protokoll.</returns>

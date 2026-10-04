@@ -48,6 +48,26 @@ public sealed class HomeAssistantService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Die Zustände eines Zelts im Testdatenmodus zu einem Zeitpunkt — genau so, wie
+    /// <see cref="GetStatesAsync"/> sie liefert.
+    /// </summary>
+    /// <remarks>
+    /// Öffentlich, damit <c>DemowerteImZielTests</c> die Live-Kacheln über jede
+    /// Minute des Tages gegen ihre Ziele halten kann, ohne die Umrechnung
+    /// nachzubauen (eine Wahrheit, 04.10.2026).
+    /// </remarks>
+    public Dictionary<string, HomeAssistantState> DemoZustaende(Tent tent, DateTime nowUtc)
+    {
+        // Auch die Testdaten laufen durch die Umrechnung. Sonst verhielte
+        // sich der Vorfuehrmodus anders als der Betrieb, und genau dort
+        // schaut man hin, bevor man etwas anschliesst.
+        var demo = DemoData.StatesFor(nowUtc, DemoData.LageFuer(tent));
+        AddLitersFromCentimeters(demo, tent);
+        WassersondenNullbild.AufZustaendeAnwenden(demo);
+        return demo;
+    }
+
     public async Task<Dictionary<string, HomeAssistantState>> GetStatesAsync(
         HomeAssistantSettings settings,
         Tent tent,
@@ -61,10 +81,7 @@ public sealed class HomeAssistantService
             // Auch die Testdaten laufen durch die Umrechnung. Sonst verhielte
             // sich der Vorfuehrmodus anders als der Betrieb, und genau dort
             // schaut man hin, bevor man etwas anschliesst.
-            var demo = DemoData.StatesFor(DateTime.UtcNow, DemoData.LageFuer(tent));
-            AddLitersFromCentimeters(demo, tent);
-            WassersondenNullbild.AufZustaendeAnwenden(demo);
-            return demo;
+            return DemoZustaende(tent, DateTime.UtcNow);
         }
 
         if (!settings.IsConfigured || tent.Sensors.Count == 0)
