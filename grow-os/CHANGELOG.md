@@ -27,7 +27,7 @@
   bekommt dafür das Werkzeug `journal_aendern`.
 
 Gemessen an der gebauten App mit Demobestand: anlegen, bearbeiten, ein zweites Mal bearbeiten, neu
-laden — der Text steht da; Escape speichert nichts; bei 412 px Breite läuft nichts über, beide
+laden — der Text steht da; Escape speichert nichts; bei 320 und 412 px Breite läuft nichts über, beide
 Knöpfe sind im Bild, helles und dunkles Thema.
 
 ## 2.0.0-forkai.169
