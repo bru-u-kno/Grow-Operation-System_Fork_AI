@@ -3,29 +3,29 @@ import { buildPanelUrl, judgeHost } from './mobile-link'
 
 describe('Adresse fürs Handy', () => {
   it('setzt Herkunft und Panel-Pfad zusammen', () => {
-    expect(buildPanelUrl('http://192.168.178.68:8123', '/hassio/ingress/local_grow_os'))
-      .toBe('http://192.168.178.68:8123/hassio/ingress/local_grow_os')
+    expect(buildPanelUrl('http://192.168.178.68:8123', '/app/local_grow_os'))
+      .toBe('http://192.168.178.68:8123/app/local_grow_os')
   })
 
   it('wirft den mitkopierten Ingress-Pfad weg', () => {
     // Wer die Adresse aus der Adresszeile kopiert, bringt genau den Pfad mit,
     // der hier nicht gebraucht wird — samt Token, das morgen tot ist.
-    expect(buildPanelUrl('http://ha.fritz.box:8123/api/hassio_ingress/abc123/dosierung', '/hassio/ingress/local_grow_os'))
-      .toBe('http://ha.fritz.box:8123/hassio/ingress/local_grow_os')
+    expect(buildPanelUrl('http://ha.fritz.box:8123/api/hassio_ingress/abc123/dosierung', '/app/local_grow_os'))
+      .toBe('http://ha.fritz.box:8123/app/local_grow_os')
   })
 
   it('ergänzt ein fehlendes Schema', () => {
-    expect(buildPanelUrl('192.168.178.68:8123', '/hassio/ingress/local_grow_os'))
-      .toBe('http://192.168.178.68:8123/hassio/ingress/local_grow_os')
+    expect(buildPanelUrl('192.168.178.68:8123', '/app/local_grow_os'))
+      .toBe('http://192.168.178.68:8123/app/local_grow_os')
   })
 
   it('behält https, wenn es dasteht', () => {
-    expect(buildPanelUrl('https://abc.ui.nabu.casa/', '/hassio/ingress/a0d7b954_grow_os'))
-      .toBe('https://abc.ui.nabu.casa/hassio/ingress/a0d7b954_grow_os')
+    expect(buildPanelUrl('https://abc.ui.nabu.casa/', '/app/a0d7b954_grow_os'))
+      .toBe('https://abc.ui.nabu.casa/app/a0d7b954_grow_os')
   })
 
   it('gibt bei leerer Eingabe nichts zurück', () => {
-    expect(buildPanelUrl('', '/hassio/ingress/local_grow_os')).toBeNull()
+    expect(buildPanelUrl('', '/app/local_grow_os')).toBeNull()
     expect(buildPanelUrl('http://ha:8123', '')).toBeNull()
   })
 })

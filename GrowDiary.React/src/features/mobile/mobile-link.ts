@@ -47,7 +47,7 @@ export function judgeHost(origin: string): HostVerdict {
 /**
  * Setzt Herkunft und Panel-Pfad zusammen.
  *
- * Der Pfad kommt vom Server (`/hassio/ingress/<slug>`), die Herkunft aus dem
+ * Der Pfad kommt vom Server (`/app/<slug>`), die Herkunft aus dem
  * Browser oder von Hand. Eine von Hand getippte Adresse hat oft einen
  * Schrägstrich am Ende oder gar kein Schema — beides wird hier geradegezogen,
  * statt es dem Nutzer als „ungültig" vor die Füsse zu werfen.

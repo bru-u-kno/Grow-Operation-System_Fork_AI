@@ -10,8 +10,9 @@ import '../features/mobile/mobile.css'
  *
  * Der Weg, der naheliegt, ist der falsche: die Adresse aus der Adresszeile
  * kopieren. Sie enthält ein Ingress-Token, das pro Anfrage wechselt — das
- * Lesezeichen ist am nächsten Tag tot. Stabil ist der Seitenleisten-Pfad, und
- * der ist schlicht der Add-on-Slug, den der Server beim Supervisor erfragt.
+ * Lesezeichen ist am nächsten Tag tot. Stabil ist /app/<slug> — das feste
+ * App-Panel von HA, das es auch ohne „In Seitenleiste anzeigen" gibt; den Slug
+ * erfragt der Server beim Supervisor (SupervisorInfoService.PanelPath).
  *
  * Was diese Seite ehrlicherweise NICHT liefert: eine App ohne Home-Assistant-
  * Rahmen. Grow OS läuft ausschliesslich hinter dem Ingress, und dort gehört die
@@ -96,11 +97,6 @@ export function AppEinrichten() {
                   <li>Im Browser-Menü <b>„Zum Home-Bildschirm hinzufügen"</b> wählen.</li>
                 </ol>
 
-                <V1Alert
-                  tone="neutral"
-                  message={'Voraussetzung: am Add-on muss „In Seitenleiste anzeigen" eingeschaltet sein. '
-                    + 'Nur dann legt Home Assistant überhaupt eine Adresse für Grow OS an — sonst führt der Code auf eine leere Seite.'} />
-
                 <V1Field
                   label="Adresse von Home Assistant"
                   hint="So, wie du Home Assistant im Netzwerk erreichst. Eine feste IP ist am zuverlässigsten.">
@@ -130,9 +126,9 @@ export function AppEinrichten() {
             <p className="mo-note">
               Weil sie nicht hält. Grow OS wird über den Ingress von Home Assistant ausgeliefert, und
               dieser Pfad trägt ein Token, das sich bei jeder Anfrage ändert. Als Lesezeichen abgelegt
-              führt er morgen ins Leere. Der Code oben zeigt stattdessen auf den Seitenleisten-Eintrag
-              <code>{access.panelPath}</code> — dieselbe Adresse, die du bekommst, wenn du Grow OS in
-              der Seitenleiste von Home Assistant anklickst. Die bleibt.
+              führt er morgen ins Leere. Der Code oben zeigt stattdessen auf{' '}
+              <code>{access.panelPath}</code> — dieselbe Adresse, die Home Assistant bei „Web-UI
+              öffnen" benutzt. Die bleibt, auch wenn Grow OS nicht in der Seitenleiste steht.
             </p>
             <p className="mo-note">
               Was dabei bleibt: der schmale Rahmen von Home Assistant um Grow OS herum, und das Icon

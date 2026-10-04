@@ -13,7 +13,7 @@ public sealed partial class SystemApiController
     /// das pro Anfrage wechselt — wer sich die Adresse aus der Adresszeile als
     /// Lesezeichen ablegt, hat morgen eine tote Kachel auf dem Startbildschirm.
     ///
-    /// Stabil ist der Panel-Pfad <c>/hassio/ingress/&lt;slug&gt;</c>. Zurückgegeben
+    /// Stabil ist der Pfad <c>/app/&lt;slug&gt;</c> (siehe <see cref="SupervisorInfoService.PanelPath"/>). Zurückgegeben
     /// wird nur der Pfad, nicht die volle Adresse: welcher Name für Home
     /// Assistant gilt, weiss der Server nicht — er kennt sich selbst nur als
     /// <c>http://supervisor/core</c>. Der Browser weiss es, denn er ist gerade

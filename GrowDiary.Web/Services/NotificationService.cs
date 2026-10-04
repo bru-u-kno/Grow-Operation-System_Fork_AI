@@ -49,16 +49,17 @@ public sealed class NotificationService
 
     /// <summary>
     /// Der HA-interne Pfad zur Grow-OS-Seite, oder null wenn Grow OS nicht als
-    /// Add-on laeuft (dann gibt es kein Panel, auf das man zeigen koennte).
+    /// Add-on laeuft (dann gibt es nichts, auf das man zeigen koennte).
     /// </summary>
     private async Task<string?> ZielPfadAsync(NotificationCategory category, CancellationToken ct)
     {
         if (_supervisor is null) return null;
-        var slug = await _supervisor.GetAddonSlugAsync(ct);
-        // Der Panel-Pfad ist „/<slug>", NICHT „/hassio/ingress/<slug>" — das
-        // Ingress-Token wechselt pro Anfrage und taugt nicht fuer einen Link.
-        return string.IsNullOrWhiteSpace(slug) ? null : $"/{slug}/{SeiteFuer(category)}";
+        return SupervisorInfoService.PanelPath(await _supervisor.GetAddonSlugAsync(ct), SeiteFuer(category));
     }
+
+    /// <summary>Der Link auf die Startseite (Live), für Tagesbericht und Testmeldung.</summary>
+    public async Task<string?> StartPfadAsync(CancellationToken ct)
+        => _supervisor is null ? null : SupervisorInfoService.PanelPath(await _supervisor.GetAddonSlugAsync(ct));
 
     public NotificationSettings GetSettings() => _settingsRepo.GetNotificationSettings();
 
@@ -120,8 +121,7 @@ public sealed class NotificationService
 
         var haSettings = _growRepository.GetEffectiveHomeAssistantSettings();
         // Der Tagesbericht ist ein Rundumblick — er fuehrt auf die Live-Seite.
-        var slug = _supervisor is null ? null : await _supervisor.GetAddonSlugAsync(cancellationToken);
-        var ziel = string.IsNullOrWhiteSpace(slug) ? null : $"/{slug}";
+        var ziel = await StartPfadAsync(cancellationToken);
         return await _homeAssistant.SendNotificationAsync(haSettings, settings.NotifyService!, title, message, cancellationToken, ziel);
     }
 }

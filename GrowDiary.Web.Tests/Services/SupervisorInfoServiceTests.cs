@@ -8,7 +8,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </summary>
 /// <remarks>
 /// Der Ingress-Pfad trägt ein Token, das pro Anfrage wechselt — ein Lesezeichen
-/// darauf stirbt. Stabil ist nur <c>/hassio/ingress/&lt;slug&gt;</c>. Raten geht
+/// darauf stirbt. Stabil ist nur <c>/app/&lt;slug&gt;</c>. Raten geht
 /// nicht: je nach Installationsweg heisst das Add-on <c>local_grow_os</c> oder
 /// <c>&lt;repo-hash&gt;_grow_os</c>.
 /// </remarks>
@@ -51,12 +51,22 @@ public sealed class SupervisorInfoServiceTests
     [Fact]
     public void TheSlugBecomesThePanelPath()
     {
-        // Home Assistant registriert das Panel mit frontend_url_path=<slug>
-        // (hassio/addon_panel.py) — die Adresse ist also schlicht der Slug.
-        // Der erste Anlauf zeigte auf /hassio/ingress/<slug>; dort findet die
-        // Oberflaeche kein Panel und zeichnet eine leere Seite.
-        Assert.Equal("/local_grow_os", SupervisorInfoService.PanelPath("local_grow_os"));
-        Assert.Equal("/a0d7b954_grow_os", SupervisorInfoService.PanelPath("a0d7b954_grow_os"));
+        // /app/<slug> ist das feste App-Panel von HA. /<slug> gibt es nur mit
+        // „In Seitenleiste anzeigen" — ohne das antwortete HA auf jeden Tipp
+        // auf eine Push-Meldung mit „404: Not Found" (04.10.2026).
+        Assert.Equal("/app/local_grow_os", SupervisorInfoService.PanelPath("local_grow_os"));
+        Assert.Equal("/app/a0d7b954_grow_os", SupervisorInfoService.PanelPath("a0d7b954_grow_os"));
+    }
+
+    [Theory]
+    [InlineData("aufgaben", "/app/d48160c2_grow_os_fork_ai/aufgaben")]
+    [InlineData("/sensoren", "/app/d48160c2_grow_os_fork_ai/sensoren")]
+    [InlineData("zelte/3", "/app/d48160c2_grow_os_fork_ai/zelte/3")]
+    [InlineData("", "/app/d48160c2_grow_os_fork_ai")]
+    [InlineData(null, "/app/d48160c2_grow_os_fork_ai")]
+    public void ASeiteHangsBehindTheSlug(string? seite, string erwartet)
+    {
+        Assert.Equal(erwartet, SupervisorInfoService.PanelPath("d48160c2_grow_os_fork_ai", seite));
     }
 
     [Theory]

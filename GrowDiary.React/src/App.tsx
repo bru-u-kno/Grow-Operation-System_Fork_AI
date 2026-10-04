@@ -49,6 +49,7 @@ import './styles/forkai-shell.css'
 import { AppShell } from './AppShell'
 import { legacyRedirects } from './navigation'
 import { useNavCounts } from './useNavCounts'
+import { useHaTiefenlink } from './useHaTiefenlink'
 import { GrenzwerteSeite, HandySeite, PlanSeite, RulesCollectionPage } from './pages/collections'
 import { zielwerteZiel } from './navigation'
 import { KiAssistentSeite } from './features/ki-assistent/KiAssistentSeite'
@@ -100,6 +101,8 @@ function LegacyRedirect({ to }: { to: string }) {
 
 function App() {
   const counts = useNavCounts()
+  // Tipp auf eine Push-Meldung: HA nennt die Seite, die App öffnet sie.
+  useHaTiefenlink()
 
   return (
     <AppShell counts={counts}>

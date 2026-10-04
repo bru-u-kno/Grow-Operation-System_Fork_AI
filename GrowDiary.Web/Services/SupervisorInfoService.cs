@@ -97,21 +97,31 @@ public sealed class SupervisorInfoService
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
-    /// <summary>Der stabile Panel-Pfad zu diesem Add-on, oder null ohne Slug.</summary>
+    /// <summary>
+    /// Der stabile Pfad zu diesem Add-on in Home Assistant, optional mit einer
+    /// Seite der App dahinter — oder null ohne Slug.
+    /// </summary>
     /// <remarks>
-    /// <b>Der Pfad ist schlicht der Slug.</b> Home Assistant registriert das
-    /// Seitenleisten-Panel eines Add-ons mit <c>frontend_url_path=&lt;slug&gt;</c>
-    /// (<c>homeassistant/components/hassio/addon_panel.py</c>) — die Adresse
-    /// lautet also <c>/&lt;slug&gt;</c>, nicht <c>/hassio/ingress/&lt;slug&gt;</c>.
+    /// <para><b>Der Pfad ist <c>/app/&lt;slug&gt;</c>.</b> Das ist das feste
+    /// App-Panel von Home Assistant (<c>hassio/__init__.py</c> registriert
+    /// <c>"app"</c>), über das auch „Web-UI öffnen" führt. Es gibt es immer.</para>
     ///
-    /// Das war der erste Anlauf hier, und er war falsch: unter
-    /// <c>/hassio/ingress/…</c> findet die Oberfläche kein Panel und zeichnet
-    /// eine leere Seite. Wer den Code scannte, bekam nichts zu sehen — kein
-    /// Fehler, nur nichts.
+    /// <para><b>Nicht <c>/&lt;slug&gt;</c>.</b> Das ist der Seitenleisten-Eintrag
+    /// (<c>addon_panel.py</c>, <c>frontend_url_path=&lt;slug&gt;</c>), und den
+    /// legt HA nur an, solange am Add-on „In Seitenleiste anzeigen" an ist. Ist
+    /// es aus, antwortet HA mit „404: Not Found" — so endete bis forkai.167
+    /// jeder Tipp auf eine Push-Meldung (04.10.2026), und der QR-Code auf der
+    /// Handy-Seite ebenso. Davor war schon <c>/hassio/ingress/&lt;slug&gt;</c>
+    /// falsch: dort zeichnete die Oberfläche eine leere Seite.</para>
     ///
-    /// Voraussetzung bleibt, dass am Add-on „In Seitenleiste anzeigen"
-    /// eingeschaltet ist: nur dafür legt Home Assistant überhaupt ein Panel an.
+    /// <para>Den Rest hinter dem Slug reicht HA per <c>postMessage</c> an die
+    /// App weiter (<c>home-assistant/properties</c>, <c>route.path</c>); dort
+    /// öffnet <c>useHaTiefenlink</c> die Seite.</para>
     /// </remarks>
-    public static string? PanelPath(string? slug)
-        => string.IsNullOrWhiteSpace(slug) ? null : $"/{slug}";
+    public static string? PanelPath(string? slug, string? seite = null)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+        var rest = seite?.Trim('/');
+        return string.IsNullOrEmpty(rest) ? $"/app/{slug}" : $"/app/{slug}/{rest}";
+    }
 }

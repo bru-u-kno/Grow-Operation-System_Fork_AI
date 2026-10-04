@@ -5,6 +5,27 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.168
+
+**Fork AI.** Ein Tipp auf eine Push-Meldung öffnet wieder Grow OS — und zwar die richtige Seite.
+
+- **Kein „404: Not Found" mehr:** Jede Meldung aufs Handy führte auf eine leere Seite mit „404: Not
+  Found". Der Link zeigte auf den Seitenleisten-Eintrag von Grow OS — den legt Home Assistant aber
+  nur an, solange am Add-on „In Seitenleiste anzeigen" eingeschaltet ist. Jetzt zeigt er auf
+  dieselbe Adresse wie „Web-UI öffnen" (`/app/…`), und die gibt es immer.
+- **Direkt zur Sache:** Grenzwert-, Risiko-, Pumpen- und Systemmeldungen öffnen „Aufgaben",
+  Kalibrierung, Wartung und Sensorausfall öffnen „Sensoren & Wartung", der Tagesbericht und die
+  Testmeldung öffnen „Live". Bisher hat Home Assistant den Teil hinter dem Add-on gar nicht an Grow OS
+  weitergegeben; jetzt fragt Grow OS ihn ab. Auch ein zweiter Tipp, während Grow OS schon offen ist,
+  springt wieder an die richtige Stelle.
+- **QR-Code auf der Seite „Handy":** zeigt ebenfalls auf die neue Adresse, also auch ohne
+  Seitenleisten-Eintrag.
+
+Gemessen an der gebauten App in einer nachgestellten Home-Assistant-Hülle: Kaltstart über den Link
+landet auf „Was jetzt zu tun ist", ein zweiter Tipp auf „Sensoren & Wartung", ein dritter von „Grows"
+aus wieder auf „Aufgaben". Zum Selbstprüfen: Seite „Handy", Reiter „Push", „Test-Push senden", dann auf
+die Meldung tippen.
+
 ## 2.0.0-forkai.167
 
 **Fork AI.** Der neue KI-Schlüssel steht jetzt wirklich oben.

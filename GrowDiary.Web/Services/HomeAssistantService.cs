@@ -763,7 +763,7 @@ public sealed class HomeAssistantService
     /// </summary>
     /// <param name="clickPath">
     /// Wohin der Tipp auf die Meldung fuehren soll, als HA-interner Pfad
-    /// (z. B. <c>/local_grow_os/aufgaben</c>). Leer = kein Ziel, dann oeffnet
+    /// (z. B. <c>/app/local_grow_os/aufgaben</c>). Leer = kein Ziel, dann oeffnet
     /// die App wie bisher ihre Startseite.
     /// </param>
     public async Task<bool> SendNotificationAsync(

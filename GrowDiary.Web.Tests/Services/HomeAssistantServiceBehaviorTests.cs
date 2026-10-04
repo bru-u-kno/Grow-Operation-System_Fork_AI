@@ -186,11 +186,11 @@ public sealed class HomeAssistantServiceBehaviorTests
         var handler = new RecordingHttpHandler((_, _) => RecordingHttpHandler.Json("[]"));
 
         await Service(handler).SendNotificationAsync(
-            Settings, "notify.mobile_app_pixel", "t", "m", default, "/local_grow_os/aufgaben");
+            Settings, "notify.mobile_app_pixel", "t", "m", default, "/app/local_grow_os/aufgaben");
 
         var body = Assert.Single(handler.Requests).Body;
-        Assert.Contains("\"clickAction\":\"/local_grow_os/aufgaben\"", body);
-        Assert.Contains("\"url\":\"/local_grow_os/aufgaben\"", body);
+        Assert.Contains("\"clickAction\":\"/app/local_grow_os/aufgaben\"", body);
+        Assert.Contains("\"url\":\"/app/local_grow_os/aufgaben\"", body);
     }
 
     [Fact]

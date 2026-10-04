@@ -87,8 +87,11 @@ public sealed class NotificationsApiController : ControllerBase
         }
 
         var settings = _repository.GetEffectiveHomeAssistantSettings();
+        // Mit Ziel, damit der Test auch den Tipp auf die Meldung prüft — der
+        // führte bis forkai.167 auf „404: Not Found", und kein Test sah es.
         var sent = await _homeAssistant.SendNotificationAsync(
-            settings, service, "🌱 Grow OS", "Test-Benachrichtigung — deine Push-Nachrichten sind richtig eingerichtet.", cancellationToken);
+            settings, service, "🌱 Grow OS", "Test-Benachrichtigung — deine Push-Nachrichten sind richtig eingerichtet.", cancellationToken,
+            await _notifications.StartPfadAsync(cancellationToken));
 
         return Ok(new { ok = sent });
     }
