@@ -47,6 +47,18 @@ async function kartenwerte(verlauf: Locator): Promise<string[]> {
   return verlauf.locator('[data-audit="verlauf-kartenwert"]').allInnerTexts()
 }
 
+/**
+ * Stellen, an die der Zeiger der Reihe nach geht, bis sich etwas ändert.
+ *
+ * Eine feste Stelle (früher 30 %) hängt an der Uhrzeit des Laufs: Im
+ * Demobestand haben Luftfeuchte und CO₂ nachts eine Hochebene. Lief das Tor
+ * kurz nach Mitternacht (Berlin), lagen „jetzt" und die Zeigerstelle beide
+ * darin — gleiche Werte, roter Lauf, obwohl der Zeiger folgte (04.10.2026,
+ * 22:21 UTC; mit forkai.168 genauso). Ein Diagramm, das GAR NICHT folgt,
+ * bleibt an jeder Stelle gleich und damit rot.
+ */
+const ZEIGER_STELLEN = [0.3, 0.1, 0.5, 0.7, 0.9, 0.2, 0.4, 0.6, 0.8]
+
 function konsoleSammeln(page: Page): string[] {
   const fehler: string[] = []
   page.on('console', (m) => { if (m.type() === 'error') fehler.push(m.text()) })
@@ -153,18 +165,30 @@ test.describe('Verlaufsdiagramm', () => {
     const kasten = (await bild.boundingBox())!
     expect(kasten.width, 'Das Diagramm ist keine 200 px breit — jeder Zeiger träfe denselben Punkt.').toBeGreaterThan(200)
     const jetzt = await kartenwerte(verlauf)
-
-    await page.mouse.move(kasten.x + kasten.width * 0.3, kasten.y + kasten.height / 2)
     const zeit = verlauf.locator('[data-audit="verlauf-zeigerzeit"]')
-    await expect(zeit).toHaveText(/^\d\d:\d\d$/)
-    const links = await kartenwerte(verlauf)
-    expect(links, 'Unter dem Zeiger zeigen die Karten noch die Werte von jetzt.').not.toEqual(jetzt)
-    // SVG-Text hat kein innerText — textContent.
-    const zeitLinks = (await zeit.textContent()) ?? ''
+    const zeigeAuf = async (anteil: number) => {
+      await page.mouse.move(kasten.x + kasten.width * anteil, kasten.y + kasten.height / 2)
+      await expect(zeit).toHaveText(/^\d\d:\d\d$/)
+      // SVG-Text hat kein innerText — textContent.
+      return { werte: await kartenwerte(verlauf), uhrzeit: (await zeit.textContent()) ?? '' }
+    }
 
-    await page.mouse.move(kasten.x + kasten.width * 0.8, kasten.y + kasten.height / 2)
-    await expect(zeit).not.toHaveText(zeitLinks)
-    expect(await kartenwerte(verlauf)).not.toEqual(links)
+    // Erste Stelle, an der die Karten etwas anderes zeigen als jetzt.
+    let links: { werte: string[]; uhrzeit: string } | null = null
+    for (const anteil of ZEIGER_STELLEN) {
+      const stand = await zeigeAuf(anteil)
+      if (JSON.stringify(stand.werte) !== JSON.stringify(jetzt)) { links = stand; break }
+    }
+    expect(links, 'Unter dem Zeiger zeigen die Karten an keiner Stelle andere Werte als jetzt.').not.toBeNull()
+
+    // Und eine zweite Stelle mit anderer Uhrzeit und anderen Werten — die
+    // Karten folgen dem Zeiger, nicht nur einmal.
+    let weiter = false
+    for (const anteil of ZEIGER_STELLEN) {
+      const stand = await zeigeAuf(anteil)
+      if (stand.uhrzeit !== links!.uhrzeit && JSON.stringify(stand.werte) !== JSON.stringify(links!.werte)) { weiter = true; break }
+    }
+    expect(weiter, 'Die Karten bleiben beim Weiterziehen des Zeigers stehen.').toBe(true)
 
     // Die Werte bleiben deutsch — und ohne Tausenderpunkt, wie die Kacheln („1020 ppm").
     for (const wert of await kartenwerte(verlauf)) {
@@ -449,13 +473,20 @@ test.describe('Verlaufsdiagramm', () => {
     const jetzt = await werte.allInnerTexts()
     await expect(verlauf.locator('[data-audit="verlauf-zeilen-zeit"]')).toHaveText(/^jetzt · \d\d:\d\d$/)
 
-    // Auf die LETZTE Zeile zeigen — die erste soll trotzdem folgen.
+    // Auf die LETZTE Zeile zeigen — die erste soll trotzdem folgen. Mehrere
+    // Stellen (ZEIGER_STELLEN): eine Zeile folgt, wenn sie an IRGENDEINER
+    // Stelle einen anderen Wert zeigt als jetzt.
     const kasten = (await zeilen.last().locator('[data-audit="verlauf-bild"]').boundingBox())!
-    await page.mouse.move(kasten.x + kasten.width * 0.3, kasten.y + kasten.height / 2)
-    await expect(verlauf.locator('[data-audit="verlauf-zeilen-zeit"]')).toHaveText(/^\d\d:\d\d$/)
-    await expect(verlauf.locator('[data-audit="verlauf-zeiger"]'), 'Nicht jede Zeile zeigt den Zeiger.').toHaveCount(anzahl)
-    const unterZeiger = await werte.allInnerTexts()
-    const geaendert = unterZeiger.filter((wert, i) => wert !== jetzt[i]).length
+    const gefolgt = new Set<number>()
+    for (const anteil of ZEIGER_STELLEN) {
+      await page.mouse.move(kasten.x + kasten.width * anteil, kasten.y + kasten.height / 2)
+      await expect(verlauf.locator('[data-audit="verlauf-zeilen-zeit"]')).toHaveText(/^\d\d:\d\d$/)
+      await expect(verlauf.locator('[data-audit="verlauf-zeiger"]'), 'Nicht jede Zeile zeigt den Zeiger.').toHaveCount(anzahl)
+      const unterZeiger = await werte.allInnerTexts()
+      unterZeiger.forEach((wert, i) => { if (wert !== jetzt[i]) gefolgt.add(i) })
+      if (gefolgt.size >= anzahl) break
+    }
+    const geaendert = gefolgt.size
     expect(geaendert, `Nur ${geaendert} von ${anzahl} Zeilen folgen dem Zeiger.`).toBeGreaterThanOrEqual(anzahl - 1)
     await verlauf.locator('[data-audit="verlauf-darstellung-zusammen"]').click()
   })

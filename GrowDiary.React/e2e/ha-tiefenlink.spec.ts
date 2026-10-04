@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Frame } from '@playwright/test'
+import { backendAntwortet, darfUeberspringen } from './pflicht'
 
 /**
  * Tipp auf eine Push-Meldung → die richtige Seite in Grow OS.
@@ -99,7 +100,8 @@ test.describe('Push-Link öffnet die Seite aus der Meldung', () => {
     expect(arten).not.toContain('home-assistant/unsubscribe-properties')
   })
 
-  test('Grenzwert-Meldung öffnet Live mit dem Zelt der Meldung, auch bei schon offenem Live', async ({ page }) => {
+  test('Grenzwert-Meldung öffnet Live mit dem Zelt der Meldung, auch bei schon offenem Live', async ({ page, request }) => {
+    darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend unter GROW_OS_URL — ohne Demobestand gibt es keine Zelte zum Wählen.')
     // forkai.168 schickte jede Grenzwert-Meldung auf „Aufgaben" — dort steht
     // keine Überschreitung. Jetzt: /live/<zelt>, und Live wählt dieses Zelt.
     const frame = await huelle(page, `/app/${SLUG}/aufgaben`)
