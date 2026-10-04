@@ -3,7 +3,7 @@ import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Badge, V1Empty, V1Skeleton } from '../../components/v1'
 import type { KiProtokollEintragDto } from '../../types'
 import { formatDateTime } from '../../utils'
-import { aktionText, ergebnisSchild, protokollWeg, schluesselText } from './ki-protokoll-logik'
+import { aktionText, ergebnisSchild, protokollWeg, schluesselText, zusammenfassen } from './ki-protokoll-logik'
 
 /** Der Satz, wenn noch nichts protokolliert ist. */
 export const LEER_SATZ = 'Noch nichts — sobald ein Assistent etwas einträgt, steht es hier.'
@@ -78,7 +78,7 @@ export function KiProtokollListe({ eintraege, filterName }: { eintraege: KiProto
   }
   return (
     <ul className="ki-protokoll-liste">
-      {eintraege.map((eintrag) => {
+      {zusammenfassen(eintraege).map(({ eintrag, anzahl }) => {
         const schild = ergebnisSchild(eintrag)
         return (
           <li key={eintrag.id} className="ki-protokoll-eintrag" data-audit="ki-protokoll-eintrag">
@@ -86,7 +86,10 @@ export function KiProtokollListe({ eintraege, filterName }: { eintraege: KiProto
               <strong className="ki-protokoll-aktion">{aktionText(eintrag)}</strong>
               <V1Badge tone={schild.ton}>{schild.text}</V1Badge>
             </div>
-            <div className="ki-zeit">{formatDateTime(eintrag.zeitpunktUtc)} · {schluesselText(eintrag)}</div>
+            <div className="ki-zeit">
+              {formatDateTime(eintrag.zeitpunktUtc)} · {schluesselText(eintrag)}
+              {anzahl > 1 ? <> · <span data-audit="ki-protokoll-anzahl">{anzahl}× hintereinander</span></> : null}
+            </div>
           </li>
         )
       })}

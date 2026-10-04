@@ -35,7 +35,7 @@ export const STUFEN_WARNUNG: Partial<Record<KiStufe, string>> = {
   GeraeteSchalten:
     'Mit „Geräte schalten" kann der Assistent Licht, Klima und Dosierpumpen sofort auslösen — '
     + 'auch wenn niemand hinsieht. Ein Missverständnis kann den Pflanzen schaden. '
-    + 'Die Höchstwerte unten gelten zusätzlich.',
+    + 'Die Höchstwerte oben gelten zusätzlich.',
   Verwaltung:
     'Mit „Verwaltung" kann der Assistent Einstellungen ändern, Sicherungen anlegen, '
     + 'Daten importieren und Stammdaten löschen. Vor dem Importieren und Löschen '

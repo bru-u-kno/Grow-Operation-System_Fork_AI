@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import type { KiProtokollEintragDto, KiSchluesselDto } from '../../types'
 import { SchluesselZeile } from './KiZugriffAbschnitt'
 import KiProtokoll, { KiProtokollListe, LEER_SATZ } from './KiProtokoll'
-import { AKTIONEN, aktionText, ergebnisSchild, kurzerPfad, protokollWeg, schluesselText } from './ki-protokoll-logik'
+import { AKTIONEN, aktionText, ergebnisSchild, kurzerPfad, protokollWeg, schluesselText, zusammenfassen } from './ki-protokoll-logik'
 
 /**
  * „Was die KI zuletzt getan hat" (A-003, Fork AI 03.10.2026) — ohne Browser.
@@ -251,5 +251,32 @@ describe('„Nur diesen zeigen" in der Schlüsselliste', () => {
     expect(sichtbarerText(zeile(true))).toContain('Alle zeigen')
     expect(sichtbarerText(zeile(true))).not.toContain('Nur diesen zeigen')
     expect(zeile(true)).toContain('aria-pressed="true"')
+  })
+})
+
+describe('Gleiche Einträge hintereinander', () => {
+  const falsch = (id: number) => eintrag({ id, schluesselId: null, schluesselName: null, methode: 'GET', pfad: '/api/ki-zugriff/ich', status: 401, fehlercode: 'ki_schluessel_ungueltig', erfolg: false })
+
+  it('fasst zehn gleiche Abweisungen zu einer Zeile mit Anzahl zusammen', () => {
+    const liste = Array.from({ length: 10 }, (_, i) => falsch(100 - i))
+    const gruppen = zusammenfassen(liste)
+    expect(gruppen).toHaveLength(1)
+    expect(gruppen[0].anzahl).toBe(10)
+    expect(gruppen[0].eintrag.id).toBe(100)
+    const html = renderToStaticMarkup(<KiProtokollListe eintraege={liste} filterName={null} />)
+    expect(html.match(/data-audit="ki-protokoll-eintrag"/g)).toHaveLength(1)
+    expect(html).toContain('10× hintereinander')
+  })
+
+  it('trennt, sobald etwas anderes dazwischen steht — die Reihenfolge bleibt', () => {
+    const anders = eintrag({ id: 50 })
+    const gruppen = zusammenfassen([falsch(3), falsch(2), anders, falsch(1)])
+    expect(gruppen.map((g) => g.anzahl)).toEqual([2, 1, 1])
+    expect(gruppen[1].eintrag.id).toBe(50)
+  })
+
+  it('eine einzelne Zeile trägt keine Anzahl', () => {
+    const html = renderToStaticMarkup(<KiProtokollListe eintraege={[falsch(1)]} filterName={null} />)
+    expect(html).not.toContain('hintereinander')
   })
 })

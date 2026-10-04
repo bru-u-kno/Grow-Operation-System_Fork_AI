@@ -155,3 +155,34 @@ export function schluesselText(eintrag: Pick<KiProtokollEintragDto, 'schluesselN
   if (eintrag.schluesselId != null) return 'gelöschter Schlüssel'
   return 'ohne gültigen Schlüssel'
 }
+
+/** Gleiche Einträge direkt hintereinander, zu einer Zeile zusammengefasst. */
+export interface ProtokollGruppe {
+  /** Der neueste Eintrag der Gruppe — die Liste kommt neueste zuerst. */
+  eintrag: KiProtokollEintragDto
+  anzahl: number
+}
+
+/**
+ * Fasst gleiche Einträge direkt hintereinander zusammen (03.10.2026).
+ *
+ * Zehn falsche Schlüssel in einer Minute füllten die ganze Liste mit zehn
+ * gleichen Zeilen und schoben alles andere aus dem Bild. „Gleich" heisst: was
+ * der Betreiber liest, ist gleich — Aktion, Ergebnis und Absender. Nur
+ * aufeinanderfolgende Einträge, damit die Reihenfolge stimmt.
+ */
+export function zusammenfassen(eintraege: readonly KiProtokollEintragDto[]): ProtokollGruppe[] {
+  const gruppen: ProtokollGruppe[] = []
+  let letzterSchluessel: string | null = null
+  for (const eintrag of eintraege) {
+    const schluessel = [aktionText(eintrag), ergebnisSchild(eintrag).text, schluesselText(eintrag)].join('\u0000')
+    const letzte = gruppen[gruppen.length - 1]
+    if (letzte && schluessel === letzterSchluessel) {
+      letzte.anzahl += 1
+    } else {
+      gruppen.push({ eintrag, anzahl: 1 })
+      letzterSchluessel = schluessel
+    }
+  }
+  return gruppen
+}
