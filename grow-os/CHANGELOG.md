@@ -5,6 +5,23 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.166
+
+**Fork AI.** Ein neuer KI-Schlüssel geht am Handy nicht mehr verloren.
+
+- **Der Klartext kommt ins Bild:** Nach „Neuer Schlüssel" → „Schlüssel anlegen" blieb die Ansicht am
+  Handy unten bei der Schlüsselliste stehen. Der grüne Kasten mit dem Schlüssel, „Kopieren" und
+  „Erledigt, ausblenden" lag oberhalb, unter der Kopfleiste — und der Schlüssel wird nur dieses eine
+  Mal gezeigt. Jetzt rollt die Seite den Kasten nach dem Anlegen ganz ins Bild, direkt unter die
+  Kopfleiste. Wer am Gerät „Bewegung reduzieren" eingestellt hat, bekommt den Sprung ohne Lauf.
+- **Ein Screenreader sagt ihn an:** Der Kasten bekommt nach dem Anlegen den Fokus und trägt seinen
+  Titel und den Satz „Wird nur jetzt angezeigt" als Beschreibung.
+- **Zweiter Schlüssel, frischer Kasten:** Wer gleich noch einen Schlüssel anlegt, sieht dessen Kasten
+  ohne das „Kopiert." vom ersten.
+
+Gemessen bei 412 × 732 Pixeln: vorher lag die Oberkante des Kastens bei 0, also unter der
+Kopfleiste; jetzt steht er ganz zwischen Kopfleiste und Unterkante.
+
 ## 2.0.0-forkai.165
 
 **Fork AI.** Alles zur eigenen KI steht jetzt an einer Stelle: **Einrichtung → KI-Assistent**.

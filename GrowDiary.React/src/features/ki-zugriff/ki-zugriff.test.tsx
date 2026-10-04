@@ -261,6 +261,22 @@ describe('Klartext nur einmal', () => {
     expect(sichtbarerText(html)).toContain('Kopieren')
   })
 
+  it('der Kasten ist fokussierbar, rollt unter der Kopfleiste ein und trägt seinen Titel als Namen', () => {
+    // Fork AI (A-003, 04.10.2026): nach dem Anlegen bekommt der Kasten den
+    // Fokus (ins-bild.ts) — ein Screenreader sagt dann Titel und den Satz an.
+    const html = renderToStaticMarkup(<KlartextAnzeige name="Claude" klartext={klartext} onAusblenden={() => {}} />)
+    const kasten = html.match(/<div[^>]*data-audit="ki-klartext"[^>]*>/)?.[0] ?? ''
+    expect(kasten).toContain('tabindex="-1"')
+    expect(kasten).toContain('role="region"')
+    expect(kasten).toMatch(/class="[^"]*\bscroll-ziel\b/)
+    const titel = kasten.match(/aria-labelledby="([^"]+)"/)?.[1]
+    const satz = kasten.match(/aria-describedby="([^"]+)"/)?.[1]
+    expect(titel).toBeTruthy()
+    expect(html).toContain(`<strong id="${titel}">Neuer Schlüssel „Claude`)
+    expect(satz).toBeTruthy()
+    expect(html).toContain(`<p class="ki-klartext-satz" id="${satz}">Wird nur jetzt angezeigt`)
+  })
+
   it('die Liste zeigt nie mehr als acht Zeichen nach gok_', () => {
     // Auch wenn das Backend einmal zu viel schickt — die Liste ist kein Ort
     // für einen Schlüssel.

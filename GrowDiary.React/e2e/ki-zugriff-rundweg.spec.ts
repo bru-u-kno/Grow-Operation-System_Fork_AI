@@ -237,4 +237,65 @@ test.describe('Zugriff für KI-Assistenten', () => {
     bereich = await abschnitt(page)
     await expect(bereich.locator('[data-audit="ki-schluessel"]', { hasText: name })).toHaveCount(0)
   })
+
+  /**
+   * Fork AI (A-003, 04.10.2026): Bru legte am Handy einen Schlüssel an, die
+   * Ansicht blieb unten stehen, und der Kasten mit dem Klartext lag über der
+   * Bildkante — er hielt den Schlüssel für verloren. Gemessen wird deshalb im
+   * schmalen Fenster (412 × 732 px, Telefon mit Browserleiste), ob der Kasten
+   * nach dem Anlegen unterhalb der festen Kopfleiste ganz im Bild steht und
+   * den Fokus hat. Ohne Reparatur lag er hier mit der Oberkante bei 0 — unter
+   * der Kopfleiste; bei 915 px Höhe lag er auch ohne Reparatur im Bild.
+   * Zweimal: das zweite Mal ohne Neuladen, vorher ganz nach unten gerollt und
+   * mit „Bewegung reduzieren" — der Kasten ist dann schon offen.
+   */
+  test('Klartext-Kasten kommt am Handy nach dem Anlegen ins Bild und bekommt den Fokus', async ({ page }) => {
+    await page.setViewportSize({ width: 412, height: 732 })
+    const bereich = await abschnitt(page)
+    const ids: number[] = []
+
+    async function anlegen(name: string) {
+      if (await bereich.locator('[data-audit="ki-schluessel-form"]').count() === 0) {
+        await bereich.locator('[data-audit="ki-schluessel-neu"]').click()
+      }
+      const neu = bereich.locator('[data-audit="ki-schluessel-form"]')
+      await neu.getByLabel('Name des Schlüssels').fill(name)
+      const antwort = page.waitForResponse((r) => r.request().method() === 'POST' && /\/api\/settings\/ki-zugriff\/schluessel$/.test(new URL(r.url()).pathname))
+      await neu.locator('[data-audit="ki-schluessel-anlegen"]').click()
+      const fertig = await antwort
+      expect(fertig.ok()).toBe(true)
+      ids.push(((await fertig.json()) as { schluessel: { id: number } }).schluessel.id)
+    }
+
+    async function imBild(name: string) {
+      const kasten = bereich.locator('[data-audit="ki-klartext"]')
+      await expect(kasten).toContainText(`Neuer Schlüssel „${name}`)
+      // Der sanfte Lauf braucht einen Moment — gemessen wird, wo er ankommt.
+      await expect.poll(async () => kasten.evaluate((el) => {
+        const kopf = [...document.querySelectorAll<HTMLElement>('.v1-mobile-topbar, .v1-mobile-nav')]
+          .filter((k) => getComputedStyle(k).position === 'fixed')
+          .reduce((unten, k) => Math.max(unten, k.getBoundingClientRect().bottom), 0)
+        const r = el.getBoundingClientRect()
+        return r.top >= kopf - 1 && r.bottom <= window.innerHeight + 1
+      }), { message: 'Der Klartext-Kasten steht nicht ganz zwischen Kopfleiste und Unterkante.', timeout: 5000 }).toBe(true)
+      await expect(kasten).toBeFocused()
+      await expect(kasten.locator('[data-audit="ki-klartext-kopieren"]')).toBeInViewport({ ratio: 1 })
+    }
+
+    try {
+      const erster = `Bild ${marke()}`
+      await anlegen(erster)
+      await imBild(erster)
+
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await bereich.locator('[data-audit="ki-schluessel-neu"]').click()
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      const zweiter = `Bild 2 ${marke()}`
+      await anlegen(zweiter)
+      await imBild(zweiter)
+      await expect(bereich.locator('[data-audit="ki-klartext"]'), 'Der Kasten des ersten Schlüssels bleibt nicht stehen.').toHaveCount(1)
+    } finally {
+      for (const id of ids) await page.request.delete(`${WEG}/schluessel/${id}`)
+    }
+  })
 })

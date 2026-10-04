@@ -94,6 +94,9 @@
     display: grid; gap: var(--s-2); min-width: 0;
     padding: var(--s-3); border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--accent-wash);
   }
+  /* Bekommt nach dem Anlegen den Fokus (ins-bild.ts) — sichtbar nur bei Tastaturbedienung. */
+  .ki-klartext:focus { outline: none; }
+  .ki-klartext:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .ki-klartext > strong { font-size: var(--fs-text); }
   .ki-klartext-wert {
     display: block; padding: var(--s-3); border: 1px solid var(--hair-2); border-radius: var(--r-sm);

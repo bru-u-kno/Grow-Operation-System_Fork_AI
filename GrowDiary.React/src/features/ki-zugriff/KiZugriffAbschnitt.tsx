@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Badge, V1Empty, V1Field, V1Skeleton, V1Switch } from '../../components/v1'
 import { KI_STUFEN, kiStufeName } from '../../deutsche-woerter'
@@ -13,6 +13,7 @@ import {
   warnungAblehnen, warnungBestaetigen, zustandWaehlen, type HoechstwerteEntwurf, type StufenWahl,
 } from './ki-zugriff-logik'
 import KiProtokoll from './KiProtokoll'
+import { insBildHolen, rollArt } from './ins-bild'
 import { altesKopieren } from './kopieren'
 import './ki-zugriff.css'
 
@@ -65,7 +66,7 @@ export default function KiZugriffAbschnitt() {
   function nurDiesenZeigen(id: number) {
     setProtokollFilter((bisher) => (bisher === id ? null : id))
     // Auf dem Telefon liegt die Liste unter allen Schlüsseln — dorthin, wo sich etwas ändert.
-    document.getElementById('ki-protokoll')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+    document.getElementById('ki-protokoll')?.scrollIntoView?.({ block: 'start', behavior: rollArt() })
   }
 
   function uebernehmen(seite: KiZugriffSeiteDto) {
@@ -286,7 +287,8 @@ export default function KiZugriffAbschnitt() {
               </div>
 
               {angelegt && (
-                <KlartextAnzeige name={angelegt.name} klartext={angelegt.klartext} onAusblenden={() => setAngelegt(null)} />
+                // key: ein zweiter Schlüssel ist ein neuer Kasten — sonst stünde dort noch „Kopiert.“ vom ersten.
+                <KlartextAnzeige key={angelegt.id} name={angelegt.name} klartext={angelegt.klartext} onAusblenden={() => setAngelegt(null)} />
               )}
 
               {neuOffen && (
@@ -485,6 +487,16 @@ export function SchluesselZeile({ eintrag, bearbeitet, onStufenAendern, onSperre
  */
 export function KlartextAnzeige({ name, klartext, onAusblenden }: { name: string; klartext: string; onAusblenden: () => void }) {
   const [kopiert, setKopiert] = useState<'ja' | 'nein' | null>(null)
+  const kasten = useRef<HTMLDivElement>(null)
+  const titel = useId()
+  const satz = useId()
+
+  // Am Handy liegt der Kasten nach dem Anlegen über der Bildkante (Fork AI,
+  // A-003, 04.10.2026) — bei jedem neuen Klartext hinrollen und den Fokus
+  // hineinsetzen, auch wenn der vorige Kasten noch offen war.
+  useEffect(() => {
+    insBildHolen(kasten.current)
+  }, [klartext])
 
   async function kopieren() {
     try {
@@ -502,10 +514,18 @@ export function KlartextAnzeige({ name, klartext, onAusblenden }: { name: string
   }
 
   return (
-    <div className="ki-klartext" data-audit="ki-klartext" role="status">
-      <strong>Neuer Schlüssel „{name}"</strong>
+    <div
+      ref={kasten}
+      className="ki-klartext scroll-ziel"
+      data-audit="ki-klartext"
+      role="region"
+      aria-labelledby={titel}
+      aria-describedby={satz}
+      tabIndex={-1}
+    >
+      <strong id={titel}>Neuer Schlüssel „{name}"</strong>
       <code className="ki-klartext-wert" data-audit="ki-klartext-wert">{klartext}</code>
-      <p className="ki-klartext-satz">Wird nur jetzt angezeigt — danach nicht mehr.</p>
+      <p className="ki-klartext-satz" id={satz}>Wird nur jetzt angezeigt — danach nicht mehr.</p>
       <p className="ki-klartext-hinweis">Kopiere ihn jetzt in deinen Assistenten. Geht er verloren, lösche den Schlüssel und lege einen neuen an.</p>
       {kopiert === 'ja' && <span className="ki-klartext-kopiert">Kopiert.</span>}
       {kopiert === 'nein' && <span className="ki-fehler">Kopieren hat nicht geklappt — bitte den Schlüssel markieren und von Hand kopieren.</span>}
