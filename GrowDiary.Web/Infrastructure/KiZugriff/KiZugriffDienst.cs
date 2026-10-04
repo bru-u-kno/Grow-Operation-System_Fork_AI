@@ -17,7 +17,10 @@ public enum KiPruefung
     Gesperrt,
     /// <summary>Der Hauptschalter ist aus. Geprüft wird dann gar nichts.</summary>
     ZugriffAus,
-    /// <summary>Diese Adresse hat zu oft falsch geraten und wird ohne Prüfung abgewiesen.</summary>
+    /// <summary>
+    /// Diese Adresse hat zu oft falsch geraten. Ein gültiger Schlüssel kommt trotzdem
+    /// durch (A-005); alles andere wird abgewiesen, ohne weiter zu zählen.
+    /// </summary>
     ZuVieleVersuche,
 }
 
@@ -29,8 +32,11 @@ public enum KiPruefung
 public sealed record KiPruefErgebnis(KiPruefung Ergebnis, KiZugriffKontext? Kontext = null, bool SperreBegonnen = false, int? GesperrterSchluesselId = null);
 
 /// <summary>Die Einstellungen der Seite „Zugriff für KI-Assistenten".</summary>
-/// <param name="RueckfrageAbStufe">Ab welcher Stufe der Assistent nachfragen soll; null = nie.</param>
-public sealed record KiZugriffEinstellungen(bool Aktiv, KiStufe? RueckfrageAbStufe, KiHoechstwerteDto Hoechstwerte);
+/// <remarks>
+/// Fork AI (A-005, 03.10.2026): Die globale Rückfrage („Vorher nachfragen ab …")
+/// ist weg — die Rückfrage steht je Schlüssel (<see cref="KiSchluessel.Rueckfrage"/>).
+/// </remarks>
+public sealed record KiZugriffEinstellungen(bool Aktiv, KiHoechstwerteDto Hoechstwerte);
 
 /// <summary>
 /// Fork AI (A-003, 03.10.2026): Schlüssel erzeugen, prüfen, Fehlversuche zählen.
@@ -45,7 +51,7 @@ public sealed record KiZugriffEinstellungen(bool Aktiv, KiStufe? RueckfrageAbStu
 /// <para><b>Die Fehlversuch-Sperre liegt im Speicher.</b> Ein Neustart setzt
 /// sie zurück; das ist hinnehmbar, denn wer raten will, braucht 2^256 Versuche
 /// und nicht zehn. Sie ist eine Bremse gegen ein durchdrehendes Add-on, keine
-/// Mauer.</para>
+/// Mauer — und sie trifft nie einen gültigen Schlüssel (siehe <see cref="Pruefen"/>).</para>
 ///
 /// <para>Singleton: die Zähler müssen über alle Anfragen hinweg gelten.</para>
 /// </remarks>
@@ -64,19 +70,22 @@ public sealed class KiZugriffDienst
     public static readonly TimeSpan SchaltFenster = TimeSpan.FromHours(1);
 
     // Schlüssel in AppSettings — so im Bauplan (docs/ki-zugriff.md).
+    // Die frühere Einstellung „ki-zugriff.rueckfrage-ab-stufe" liest nur noch die
+    // einmalige Übernahme (KiSchluesselRepository.SchemaSicherstellen).
     public const string EinstellungAktiv = "ki-zugriff.aktiv";
-    public const string EinstellungRueckfrage = "ki-zugriff.rueckfrage-ab-stufe";
     public const string EinstellungMaxDosis = "ki-zugriff.max-dosis-ml";
     public const string EinstellungMaxSchaltbefehle = "ki-zugriff.max-schaltbefehle-je-stunde";
 
-    // Vorbelegung: aus, Rückfrage ab GrowPlanen, 10 ml, 20 Befehle je Stunde.
+    // Vorbelegung: aus, 10 ml, 20 Befehle je Stunde.
     public const bool VorgabeAktiv = false;
-    public const KiStufe VorgabeRueckfrage = KiStufe.GrowPlanen;
     public const double VorgabeMaxDosisMl = 10;
     public const int VorgabeMaxSchaltbefehle = 20;
 
     /// <summary>Vorbelegung eines neuen Schlüssels, wenn keine Stufe angegeben ist.</summary>
     public const KiStufe VorgabeStufen = KiStufe.Dokumentieren;
+
+    /// <summary>Vorbelegung der Rückfrage eines neuen Schlüssels: bei keiner Stufe.</summary>
+    public const KiStufe VorgabeRueckfrage = KiStufe.Keine;
 
     private readonly KiSchluesselRepository _schluessel;
     private readonly AppSettingsRepository _einstellungen;
@@ -171,22 +180,22 @@ public sealed class KiZugriffDienst
         return wert.StartsWith(Vorsilbe, StringComparison.Ordinal) ? wert : null;
     }
 
-    public (KiSchluessel Schluessel, string Klartext) Anlegen(string name, KiStufe stufen)
+    public (KiSchluessel Schluessel, string Klartext) Anlegen(string name, KiStufe stufen, KiStufe rueckfrage = VorgabeRueckfrage)
     {
         var klartext = NeuerKlartext();
-        var id = _schluessel.Anlegen(name.Trim(), Praefix(klartext), Hash(klartext), stufen, Jetzt.UtcDateTime);
+        var id = _schluessel.Anlegen(name.Trim(), Praefix(klartext), Hash(klartext), stufen, rueckfrage, Jetzt.UtcDateTime);
         return (_schluessel.Hole(id)!, klartext);
     }
 
     public IReadOnlyList<KiSchluessel> Alle() => _schluessel.Alle();
     public KiSchluessel? Hole(int id) => _schluessel.Hole(id);
-    public bool Aendern(int id, string name, KiStufe stufen) => _schluessel.Aendern(id, name.Trim(), stufen);
+    public bool Aendern(int id, string name, KiStufe stufen, KiStufe rueckfrage) => _schluessel.Aendern(id, name.Trim(), stufen, rueckfrage);
     public bool Sperren(int id) => _schluessel.Sperren(id, Jetzt.UtcDateTime);
     public bool Loeschen(int id) => _schluessel.Loeschen(id);
     public void ZuletztGenutzt(int id) => _schluessel.ZuletztGenutzt(id, Jetzt.UtcDateTime);
 
     public static KiSchluesselDto ZuDto(KiSchluessel s)
-        => new(s.Id, s.Name, s.Praefix, StufenNamen(s.Stufen), s.ErstelltAmUtc, s.ZuletztGenutztAmUtc, s.GesperrtAmUtc);
+        => new(s.Id, s.Name, s.Praefix, StufenNamen(s.Stufen), StufenNamen(s.Rueckfrage & s.Stufen), s.ErstelltAmUtc, s.ZuletztGenutztAmUtc, s.GesperrtAmUtc);
 
     // -------------------------------------------------------------- Prüfen
 
@@ -194,21 +203,40 @@ public sealed class KiZugriffDienst
     /// Prüft einen Schlüssel aus einer Anfrage von <paramref name="ip"/>.
     /// </summary>
     /// <remarks>
-    /// Reihenfolge: gesperrte Adresse (ohne Prüfung), Hauptschalter (ohne
-    /// Prüfung — sonst wäre der ausgeschaltete Zugang ein Rate-Orakel), dann
-    /// Form, Präfix, Hash, Sperre des Schlüssels.
+    /// <para>Reihenfolge: Hauptschalter (ohne Prüfung — sonst wäre der
+    /// ausgeschaltete Zugang ein Rate-Orakel), dann Form, Präfix, Hash, Sperre
+    /// des Schlüssels.</para>
+    ///
+    /// <para><b>Die gesperrte Adresse trifft nie einen gültigen Schlüssel</b>
+    /// (Fork AI, A-005, 03.10.2026). Alle Anfragen über den Grow MCP und das
+    /// HA-MCP kommen von EINER Container-Adresse. Zehn erfundene Schlüssel aus
+    /// dem Heimnetz sperrten diese Adresse — und damit den echten Assistenten —
+    /// für 15 Minuten. Deshalb wird während einer Sperre trotzdem geprüft (ein
+    /// SHA-256 und ein zeitkonstanter Vergleich, billig): ein gültiger Schlüssel
+    /// kommt durch, alles andere bekommt weiter 429 und zählt nicht weiter.</para>
+    ///
+    /// <para>Das schwächt nichts: ein Schlüssel hat 256 Bit Zufall, Raten ist
+    /// aussichtslos, mit oder ohne Sperre. Die Sperre dient nur gegen Lärm im
+    /// Protokoll, nicht als Schutz gegen Raten — sie darf deshalb nie einen
+    /// gültigen Schlüssel treffen. Ein vom Betreiber gesperrter Schlüssel ist
+    /// kein gültiger: er bekommt während der Sperre 429 wie jeder falsche.</para>
     /// </remarks>
     public KiPruefErgebnis Pruefen(string? klartext, IPAddress? ip)
     {
         var adresse = AdressSchluessel(ip);
-        if (IstAdresseGesperrt(adresse)) return new(KiPruefung.ZuVieleVersuche);
+        var adresseGesperrt = IstAdresseGesperrt(adresse);
 
         var einstellungen = Einstellungen();
-        if (!einstellungen.Aktiv) return new(KiPruefung.ZugriffAus);
+        if (!einstellungen.Aktiv)
+        {
+            return new(adresseGesperrt ? KiPruefung.ZuVieleVersuche : KiPruefung.ZugriffAus);
+        }
 
         if (!HatSchluesselForm(klartext))
         {
-            return new(KiPruefung.Ungueltig, SperreBegonnen: FehlversuchZaehlen(adresse));
+            return adresseGesperrt
+                ? new(KiPruefung.ZuVieleVersuche)
+                : new(KiPruefung.Ungueltig, SperreBegonnen: FehlversuchZaehlen(adresse));
         }
 
         var berechnet = SHA256.HashData(Encoding.UTF8.GetBytes(klartext!));
@@ -218,17 +246,16 @@ public sealed class KiZugriffDienst
             if (HashGleich(kandidat.Hash, berechnet)) treffer = kandidat;
         }
 
-        if (treffer is null)
+        if (treffer is null || treffer.Gesperrt)
         {
-            return new(KiPruefung.Ungueltig, SperreBegonnen: FehlversuchZaehlen(adresse));
+            // Während der Sperre: abweisen, ohne weiter zu zählen.
+            if (adresseGesperrt) return new(KiPruefung.ZuVieleVersuche);
+            return treffer is null
+                ? new(KiPruefung.Ungueltig, SperreBegonnen: FehlversuchZaehlen(adresse))
+                : new(KiPruefung.Gesperrt, SperreBegonnen: FehlversuchZaehlen(adresse), GesperrterSchluesselId: treffer.Id);
         }
 
-        if (treffer.Gesperrt)
-        {
-            return new(KiPruefung.Gesperrt, SperreBegonnen: FehlversuchZaehlen(adresse), GesperrterSchluesselId: treffer.Id);
-        }
-
-        return new(KiPruefung.Gueltig, new KiZugriffKontext(treffer.Id, treffer.Name, treffer.Stufen, einstellungen.Hoechstwerte));
+        return new(KiPruefung.Gueltig, new KiZugriffKontext(treffer.Id, treffer.Name, treffer.Stufen, einstellungen.Hoechstwerte, treffer.Rueckfrage & treffer.Stufen));
     }
 
     private static bool HashGleich(string gespeichertHex, byte[] berechnet)
@@ -349,25 +376,18 @@ public sealed class KiZugriffDienst
             ? string.Equals(a, "true", StringComparison.OrdinalIgnoreCase)
             : VorgabeAktiv;
 
-        // Fehlt der Eintrag, gilt die Vorbelegung; ein leerer Eintrag heisst „nie".
-        var rueckfrageRoh = _einstellungen.GetValue(EinstellungRueckfrage);
-        KiStufe? rueckfrage = rueckfrageRoh is null
-            ? VorgabeRueckfrage
-            : string.IsNullOrWhiteSpace(rueckfrageRoh) ? null : EinzelneStufe(rueckfrageRoh) ?? VorgabeRueckfrage;
-
         // Von der App selbst geschrieben, also eine Maschinenzahl (Zahlenlesen, nie selbst umwandeln).
         var maxDosis = GrowDiary.Web.Services.Zahlenlesen.Maschine(_einstellungen.GetValue(EinstellungMaxDosis)) ?? VorgabeMaxDosisMl;
         var maxSchalt = int.TryParse(_einstellungen.GetValue(EinstellungMaxSchaltbefehle), NumberStyles.Integer, CultureInfo.InvariantCulture, out var s)
             ? s
             : VorgabeMaxSchaltbefehle;
 
-        return new KiZugriffEinstellungen(aktiv, rueckfrage, new KiHoechstwerteDto(maxDosis, maxSchalt));
+        return new KiZugriffEinstellungen(aktiv, new KiHoechstwerteDto(maxDosis, maxSchalt));
     }
 
     public void EinstellungenSpeichern(KiZugriffEinstellungen werte)
     {
         _einstellungen.SetValue(EinstellungAktiv, werte.Aktiv ? "true" : "false");
-        _einstellungen.SetValue(EinstellungRueckfrage, werte.RueckfrageAbStufe?.ToString() ?? string.Empty);
         _einstellungen.SetValue(EinstellungMaxDosis, werte.Hoechstwerte.MaxDosisMlJeBefehl.ToString("R", CultureInfo.InvariantCulture));
         _einstellungen.SetValue(EinstellungMaxSchaltbefehle, werte.Hoechstwerte.MaxSchaltbefehleJeStunde.ToString(CultureInfo.InvariantCulture));
     }

@@ -13,11 +13,16 @@ namespace GrowDiary.Web.Infrastructure.KiZugriff;
 /// Die Höchstwerte sind ein Abzug zum Zeitpunkt der Prüfung, damit ein
 /// Controller sie nicht selbst aus den Einstellungen lesen muss.
 /// </remarks>
+/// <param name="Rueckfrage">
+/// Fork AI (A-005, 03.10.2026): Bei diesen Stufen soll der Assistent vorher
+/// fragen — eine Bitte, durchsetzen kann Grow OS nur <paramref name="Stufen"/>.
+/// </param>
 public sealed record KiZugriffKontext(
     int SchluesselId,
     string SchluesselName,
     KiStufe Stufen,
-    KiHoechstwerteDto Hoechstwerte)
+    KiHoechstwerteDto Hoechstwerte,
+    KiStufe Rueckfrage = KiStufe.Keine)
 {
     public const string ItemKey = "GrowOs.KiZugriff";
 

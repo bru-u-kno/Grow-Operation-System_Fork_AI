@@ -6,12 +6,12 @@ import { feldText, istLeer, unlesbarMeldung, unlesbareFelder, zahlOderNull } fro
 /**
  * Zugriff für KI-Assistenten (A-003) — alles, was die Oberfläche entscheidet,
  * ohne React. Steht hier, damit es ohne Browser prüfbar ist
- * (`ki-zugriff.test.tsx`): ob ein Haken gesetzt wird, ob eine Warnung offen
- * ist, was aus einem getippten Höchstwert wird.
+ * (`ki-zugriff.test.tsx`): welcher Zustand eine Stufe hat, ob eine Warnung
+ * offen ist, was aus einem getippten Höchstwert wird.
  */
 
 /**
- * Stufen, die nur nach einem bestätigten Warnhinweis angehakt werden.
+ * Stufen, die nur nach einem bestätigten Warnhinweis freigegeben werden.
  *
  * Geräte schalten wirkt sofort an der Anlage (Licht, Klima, Dosierpumpe);
  * Verwaltung kann Einstellungen ändern, Sicherungen anlegen und
@@ -19,10 +19,10 @@ import { feldText, istLeer, unlesbarMeldung, unlesbareFelder, zahlOderNull } fro
  */
 export const RISKANTE_STUFEN: readonly KiStufe[] = ['GeraeteSchalten', 'Verwaltung']
 
-/** Vorbelegung eines neuen Schlüssels — wie im Bauplan: nur Dokumentieren. */
+/** Vorbelegung eines neuen Schlüssels — wie im Bauplan: nur Dokumentieren, frei. */
 export const VORBELEGUNG: readonly KiStufe[] = ['Dokumentieren']
 
-/** Was die jeweilige Stufe erlaubt, in einem halben Satz — steht unter dem Häkchen. */
+/** Was die jeweilige Stufe erlaubt, in einem halben Satz — steht neben dem Umschalter. */
 export const STUFEN_ERKLAERUNG: Record<KiStufe, string> = {
   Dokumentieren: 'Messungen, Journal, Aufgaben abhaken, Wartung, Kosten, Einkaufsliste',
   GrowPlanen: 'Phase wechseln, Zielwerte, Misch-, Licht- und Wochenplan, Pflanzen und Sorten',
@@ -49,51 +49,102 @@ export function istRiskant(stufe: KiStufe): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/* Häkchen mit Warnhinweis                                             */
+/* Drei Zustände je Stufe, mit Warnhinweis (Fork AI, A-005, 03.10.2026) */
 /* ------------------------------------------------------------------ */
 
 /**
- * Die Häkchen eines Schlüssels — und ob gerade ein Warnhinweis offen ist.
+ * Was ein Schlüssel bei einer Stufe darf.
  *
- * `offeneWarnung` ist die riskante Stufe, die angeklickt, aber noch nicht
- * bestätigt wurde. Solange sie offen ist, steht sie NICHT in `auswahl`:
- * ohne Bestätigung bleibt der Haken aus.
+ * - `gesperrt`: Grow OS lehnt ab.
+ * - `rueckfrage`: freigegeben, der Assistent soll aber vorher fragen.
+ * - `frei`: freigegeben, ohne Rückfrage.
+ *
+ * Über die Leitung: gesperrt = nicht in `stufen`; mit Rückfrage = in `stufen`
+ * und in `rueckfrageBei`; frei = nur in `stufen`.
+ */
+export type StufenZustand = 'gesperrt' | 'rueckfrage' | 'frei'
+
+/** Die drei Zustände in Anzeigereihenfolge, mit dem Wortlaut des Umschalters. */
+export const ZUSTAENDE: ReadonlyArray<{ wert: StufenZustand; text: string }> = [
+  { wert: 'gesperrt', text: 'Gesperrt' },
+  { wert: 'rueckfrage', text: 'Mit Rückfrage' },
+  { wert: 'frei', text: 'Frei' },
+]
+
+/** Der Wortlaut eines Zustands im Schild der Schlüsselliste: „Dokumentieren · frei". */
+export const ZUSTAND_IM_SCHILD: Record<Exclude<StufenZustand, 'gesperrt'>, string> = {
+  rueckfrage: 'mit Rückfrage',
+  frei: 'frei',
+}
+
+/**
+ * Die Zustände eines Schlüssels — und ob gerade ein Warnhinweis offen ist.
+ *
+ * `offeneWarnung` ist die riskante Stufe, die von Gesperrt auf Mit Rückfrage
+ * oder Frei gestellt, aber noch nicht bestätigt wurde, samt dem gewünschten
+ * Zustand. Solange sie offen ist, bleibt die Stufe in `zustaende` GESPERRT.
  */
 export interface StufenWahl {
-  auswahl: KiStufe[]
-  offeneWarnung: KiStufe | null
+  zustaende: Record<KiStufe, StufenZustand>
+  offeneWarnung: { stufe: KiStufe; ziel: Exclude<StufenZustand, 'gesperrt'> } | null
 }
 
-export function stufenWahl(auswahl: readonly KiStufe[] = VORBELEGUNG): StufenWahl {
-  return { auswahl: sortiert(auswahl), offeneWarnung: null }
-}
-
-/** Ein Häkchen wurde angeklickt. */
-export function stufeAnklicken(wahl: StufenWahl, stufe: KiStufe, an: boolean): StufenWahl {
-  if (!an) {
-    return {
-      auswahl: wahl.auswahl.filter((s) => s !== stufe),
-      offeneWarnung: wahl.offeneWarnung === stufe ? null : wahl.offeneWarnung,
-    }
+/** Aus dem, was über die Leitung kommt. Eine Rückfrage für eine gesperrte Stufe gibt es nicht. */
+export function stufenWahl(stufen: readonly string[] = VORBELEGUNG, rueckfrageBei: readonly string[] = []): StufenWahl {
+  const zustaende = {} as Record<KiStufe, StufenZustand>
+  for (const stufe of KI_STUFEN) {
+    zustaende[stufe] = !stufen.includes(stufe) ? 'gesperrt' : rueckfrageBei.includes(stufe) ? 'rueckfrage' : 'frei'
   }
-  if (wahl.auswahl.includes(stufe)) return wahl
-  if (istRiskant(stufe)) return { auswahl: wahl.auswahl, offeneWarnung: stufe }
-  return { auswahl: sortiert([...wahl.auswahl, stufe]), offeneWarnung: wahl.offeneWarnung }
+  return { zustaende, offeneWarnung: null }
 }
 
-/** „Freigeben" im Warnhinweis — erst jetzt kommt der Haken. */
+/**
+ * Ein Zustand wurde gewählt.
+ *
+ * Eine riskante Stufe von Gesperrt auf Mit Rückfrage oder Frei: erst der
+ * Warnhinweis, die Stufe bleibt gesperrt. Zwischen Mit Rückfrage und Frei
+ * fragt niemand — die Stufe ist schon freigegeben. Zurück auf Gesperrt geht
+ * immer und schliesst einen offenen Hinweis dieser Stufe.
+ */
+export function zustandWaehlen(wahl: StufenWahl, stufe: KiStufe, ziel: StufenZustand): StufenWahl {
+  const offen = wahl.offeneWarnung?.stufe === stufe ? null : wahl.offeneWarnung
+  const bisher = wahl.zustaende[stufe]
+  if (ziel !== 'gesperrt' && bisher === 'gesperrt' && istRiskant(stufe)) {
+    return { zustaende: wahl.zustaende, offeneWarnung: { stufe, ziel } }
+  }
+  if (bisher === ziel) return { zustaende: wahl.zustaende, offeneWarnung: offen }
+  return { zustaende: { ...wahl.zustaende, [stufe]: ziel }, offeneWarnung: offen }
+}
+
+/** „Freigeben" im Warnhinweis — erst jetzt gilt der gewählte Zustand. */
 export function warnungBestaetigen(wahl: StufenWahl): StufenWahl {
   if (wahl.offeneWarnung == null) return wahl
-  return { auswahl: sortiert([...wahl.auswahl, wahl.offeneWarnung]), offeneWarnung: null }
+  const { stufe, ziel } = wahl.offeneWarnung
+  return { zustaende: { ...wahl.zustaende, [stufe]: ziel }, offeneWarnung: null }
 }
 
-/** „Nicht freigeben" — der Haken bleibt aus. */
+/** „Nicht freigeben" — die Stufe bleibt gesperrt. */
 export function warnungAblehnen(wahl: StufenWahl): StufenWahl {
-  return { auswahl: wahl.auswahl, offeneWarnung: null }
+  return { zustaende: wahl.zustaende, offeneWarnung: null }
 }
 
-function sortiert(stufen: readonly KiStufe[]): KiStufe[] {
-  return KI_STUFEN.filter((s) => stufen.includes(s))
+/** Die Wahl als Rumpf: freigegebene Stufen und die mit Rückfrage, in fester Reihenfolge. */
+export function anfrageAus(wahl: StufenWahl): { stufen: KiStufe[]; rueckfrageBei: KiStufe[] } {
+  return {
+    stufen: KI_STUFEN.filter((s) => wahl.zustaende[s] !== 'gesperrt'),
+    rueckfrageBei: KI_STUFEN.filter((s) => wahl.zustaende[s] === 'rueckfrage'),
+  }
+}
+
+/**
+ * Die Schilder eines Schlüssels: je freigegebener Stufe „Name · frei" bzw.
+ * „Name · mit Rückfrage". Gesperrte Stufen erscheinen nicht.
+ */
+export function stufenSchilder(stufen: readonly string[], rueckfrageBei: readonly string[]): Array<{ stufe: KiStufe; zustand: Exclude<StufenZustand, 'gesperrt'>; text: string }> {
+  return KI_STUFEN.filter((s) => stufen.includes(s)).map((stufe) => {
+    const zustand = rueckfrageBei.includes(stufe) ? 'rueckfrage' as const : 'frei' as const
+    return { stufe, zustand, text: `${kiStufeName(stufe)} · ${ZUSTAND_IM_SCHILD[zustand]}` }
+  })
 }
 
 /* ------------------------------------------------------------------ */
@@ -121,12 +172,6 @@ export function praefixAnzeige(praefix: string): string {
   return `gok_${ohne.slice(0, 8)}…`
 }
 
-/** Die Auswahl der Rückfrage-Regel — Wert über die Leitung: `null` oder der Stufenname. */
-export const RUECKFRAGE_OPTIONEN: Array<{ wert: KiStufe | null; text: string }> = [
-  { wert: null, text: 'nie' },
-  ...KI_STUFEN.map((stufe) => ({ wert: stufe, text: `ab ${kiStufeName(stufe)}` })),
-]
-
 /* ------------------------------------------------------------------ */
 /* Höchstwerte                                                         */
 /* ------------------------------------------------------------------ */
@@ -144,7 +189,7 @@ export function hoechstwerteEntwurf(werte: { maxDosisMlJeBefehl: number; maxScha
 export const FELD = {
   maxDosis: 'maxdosismljebefehl',
   maxBefehle: 'maxschaltbefehlejestunde',
-  rueckfrage: 'rueckfrageabstufe',
+  rueckfrage: 'rueckfragebei',
   name: 'name',
   stufen: 'stufen',
 } as const

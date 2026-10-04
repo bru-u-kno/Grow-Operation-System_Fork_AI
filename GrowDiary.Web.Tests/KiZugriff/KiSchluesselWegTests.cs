@@ -168,8 +168,13 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
 
         await Erwarte(await App.AddonClient(adresse, falsch).PostAsync("/api/ki-test/dokumentieren", null),
             (HttpStatusCode)429, "ki_zu_viele_versuche");
-        // Gesperrt wird die Adresse, ohne zu prüfen — auch ein gültiger Schlüssel kommt nicht durch.
+        // Fork AI (A-005): Alle MCP-Anfragen kommen von EINER Container-Adresse — ein
+        // gültiger Schlüssel von dort kommt trotz der Sperre durch …
         await Erwarte(await App.AddonClient(adresse, gueltig).PostAsync("/api/ki-test/dokumentieren", null),
+            HttpStatusCode.OK);
+        await Erwarte(await App.AddonClient(adresse, gueltig).GetAsync("/api/ki-zugriff/ich"), HttpStatusCode.OK);
+        // … ein weiterer falscher nicht.
+        await Erwarte(await App.AddonClient(adresse, KiZugriffDienst.NeuerKlartext()).PostAsync("/api/ki-test/dokumentieren", null),
             (HttpStatusCode)429, "ki_zu_viele_versuche");
         // Eine andere Adresse bleibt unberührt.
         await Erwarte(await App.AddonClient("172.30.33.98", gueltig).PostAsync("/api/ki-test/dokumentieren", null),
@@ -254,7 +259,7 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
         var versuche = new (HttpMethod Methode, string Pfad, object? Inhalt)[]
         {
             (HttpMethod.Get, "/api/settings/ki-zugriff", null),
-            (HttpMethod.Put, "/api/settings/ki-zugriff", new { aktiv = true, rueckfrageAbStufe = (string?)null }),
+            (HttpMethod.Put, "/api/settings/ki-zugriff", new { aktiv = true }),
             (HttpMethod.Post, "/api/settings/ki-zugriff/schluessel", new { name = "Zweitschlüssel", stufen = AlleStufen }),
             (HttpMethod.Put, $"/api/settings/ki-zugriff/schluessel/{id}", new { name = "Umbenannt", stufen = AlleStufen }),
             (HttpMethod.Post, $"/api/settings/ki-zugriff/schluessel/{id}/sperren", null),
@@ -285,7 +290,7 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
         var ich = await App.AddonClient("172.30.33.23", klartext).GetFromJsonAsync<KiZugriffIchDto>("/api/ki-zugriff/ich");
         Assert.Equal("Claude am Telefon", ich!.SchluesselName);
         Assert.Equal(new[] { "Dokumentieren", "GeraeteSchalten" }, ich.Stufen);
-        Assert.Equal("GrowPlanen", ich.RueckfrageAbStufe);
+        Assert.Empty(ich.RueckfrageBei);
         Assert.Equal(10.0, ich.Hoechstwerte.MaxDosisMlJeBefehl);
 
         await Erwarte(await _ki.Oberflaeche().GetAsync("/api/ki-zugriff/ich"), HttpStatusCode.Unauthorized, "ki_schluessel_fehlt");
@@ -466,11 +471,53 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
         await Erwarte(antwort, HttpStatusCode.Created);
         var angelegt = (await antwort.Content.ReadFromJsonAsync<KiSchluesselAngelegtDto>())!;
         Assert.Equal(new[] { "Dokumentieren" }, angelegt.Schluessel.Stufen);
+        // Fork AI (A-005): ohne Angabe fragt ein neuer Schlüssel bei keiner Stufe.
+        Assert.Empty(angelegt.Schluessel.RueckfrageBei);
         Assert.Equal(angelegt.Klartext.Substring(4, 8), angelegt.Schluessel.Praefix);
 
-        var rueckfrage = await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new { aktiv = true, rueckfrageAbStufe = "Quatsch" });
-        await Erwarte(rueckfrage, HttpStatusCode.BadRequest, "validation_failed");
-        Assert.NotEmpty(Feld((await rueckfrage.Content.ReadFromJsonAsync<ApiError>())!, "RueckfrageAbStufe"));
+        // Rückfrage nur bei freigegebenen Stufen — sonst 400 mit Feldfehler RueckfrageBei.
+        var gesperrteRueckfrage = await Fehler(new { name = "Widerspruch", stufen = new[] { "Dokumentieren" }, rueckfrageBei = new[] { "GeraeteSchalten" } });
+        Assert.Contains("Geräte schalten", Feld(gesperrteRueckfrage, "RueckfrageBei").Single());
+        var unbekannteRueckfrage = await Fehler(new { name = "Unbekannt", stufen = new[] { "Dokumentieren" }, rueckfrageBei = new[] { "Quatsch" } });
+        Assert.Contains("Quatsch", Feld(unbekannteRueckfrage, "RueckfrageBei").Single());
+    }
+
+    [Fact]
+    public async Task RueckfrageJeSchluessel_KommtAnUndBleibt_AuchBeimZweitenAendern()
+    {
+        await _ki.SchalterAsync(true);
+        var oberflaeche = _ki.Oberflaeche();
+        var anlegen = await oberflaeche.PostAsJsonAsync("/api/settings/ki-zugriff/schluessel", new
+        {
+            name = "Drei Zustände",
+            stufen = new[] { "Dokumentieren", "GrowPlanen", "GeraeteSchalten" },
+            rueckfrageBei = new[] { "GrowPlanen" },
+        });
+        await Erwarte(anlegen, HttpStatusCode.Created);
+        var angelegt = (await anlegen.Content.ReadFromJsonAsync<KiSchluesselAngelegtDto>())!;
+        Assert.Equal(new[] { "GrowPlanen" }, angelegt.Schluessel.RueckfrageBei);
+        var ki = App.AddonClient("172.30.33.24", angelegt.Klartext);
+
+        // Zweimal ändern — der Fall „schon gespeichert" ist ein eigener.
+        foreach (var (stufen, rueckfrage) in new[]
+        {
+            (new[] { "Dokumentieren", "GrowPlanen", "GeraeteSchalten" }, new[] { "GrowPlanen", "GeraeteSchalten" }),
+            (new[] { "Dokumentieren", "Verwaltung" }, new[] { "Verwaltung" }),
+        })
+        {
+            var aendern = await oberflaeche.PutAsJsonAsync($"/api/settings/ki-zugriff/schluessel/{angelegt.Schluessel.Id}",
+                new { name = "Drei Zustände", stufen, rueckfrageBei = rueckfrage });
+            await Erwarte(aendern, HttpStatusCode.OK);
+
+            var seite = (await oberflaeche.GetFromJsonAsync<KiZugriffSeiteDto>("/api/settings/ki-zugriff"))!;
+            var zeile = seite.Schluessel.Single(s => s.Id == angelegt.Schluessel.Id);
+            Assert.Equal(stufen, zeile.Stufen);
+            Assert.Equal(rueckfrage, zeile.RueckfrageBei);
+
+            var ich = (await ki.GetFromJsonAsync<KiZugriffIchDto>("/api/ki-zugriff/ich"))!;
+            Assert.Equal(stufen, ich.Stufen);
+            Assert.Equal(rueckfrage, ich.RueckfrageBei);
+        }
     }
 
     [Fact]
@@ -480,25 +527,23 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
         try
         {
             // Zweimal speichern, mit verschiedenen Werten — der Zustand „schon gespeichert" ist ein eigener Fall.
-            foreach (var (rueckfrage, dosis, schalt) in new[] { ("Verwaltung", 2.5, 7), ((string?)null, 0.5, 0) })
+            foreach (var (dosis, schalt) in new[] { (2.5, 7), (0.5, 0) })
             {
                 var antwort = await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new
                 {
                     aktiv = true,
-                    rueckfrageAbStufe = rueckfrage,
                     hoechstwerte = new { maxDosisMlJeBefehl = dosis, maxSchaltbefehleJeStunde = schalt },
                 });
                 await Erwarte(antwort, HttpStatusCode.OK);
 
                 var seite = (await oberflaeche.GetFromJsonAsync<KiZugriffSeiteDto>("/api/settings/ki-zugriff"))!;
                 Assert.True(seite.Aktiv);
-                Assert.Equal(rueckfrage, seite.RueckfrageAbStufe);
                 Assert.Equal(dosis, seite.Hoechstwerte.MaxDosisMlJeBefehl);
                 Assert.Equal(schalt, seite.Hoechstwerte.MaxSchaltbefehleJeStunde);
             }
 
             // Ohne Höchstwerte bleiben die bisherigen.
-            await Erwarte(await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new { aktiv = false, rueckfrageAbStufe = "GrowPlanen" }), HttpStatusCode.OK);
+            await Erwarte(await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new { aktiv = false }), HttpStatusCode.OK);
             var danach = (await oberflaeche.GetFromJsonAsync<KiZugriffSeiteDto>("/api/settings/ki-zugriff"))!;
             Assert.False(danach.Aktiv);
             Assert.Equal(0.5, danach.Hoechstwerte.MaxDosisMlJeBefehl);
@@ -602,7 +647,6 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
         var antwort = await _ki.Oberflaeche().PutAsJsonAsync("/api/settings/ki-zugriff", new
         {
             aktiv = true,
-            rueckfrageAbStufe = "GrowPlanen",
             hoechstwerte = new { maxDosisMlJeBefehl = dosis, maxSchaltbefehleJeStunde = schalt },
         });
         await Erwarte(antwort, HttpStatusCode.BadRequest, "validation_failed");
@@ -620,7 +664,6 @@ public sealed class KiSchluesselWegTests : IClassFixture<KiZugriffApp>
                 await Erwarte(await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new
                 {
                     aktiv = true,
-                    rueckfrageAbStufe = (string?)null,
                     hoechstwerte = new { maxDosisMlJeBefehl = dosis, maxSchaltbefehleJeStunde = schalt },
                 }), HttpStatusCode.OK);
             }

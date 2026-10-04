@@ -42,7 +42,7 @@ public sealed class KiZugriffDienstTests : IDisposable
     }
 
     private void Einschalten(int maxSchalt = 20)
-        => _dienst.EinstellungenSpeichern(new KiZugriffEinstellungen(true, KiStufe.GrowPlanen, new(10, maxSchalt)));
+        => _dienst.EinstellungenSpeichern(new KiZugriffEinstellungen(true, new(10, maxSchalt)));
 
     // ------------------------------------------------------- Klartext, Hash
 
@@ -129,7 +129,6 @@ public sealed class KiZugriffDienstTests : IDisposable
     {
         var einstellungen = _dienst.Einstellungen();
         Assert.False(einstellungen.Aktiv);
-        Assert.Equal(KiStufe.GrowPlanen, einstellungen.RueckfrageAbStufe);
         Assert.Equal(10, einstellungen.Hoechstwerte.MaxDosisMlJeBefehl);
         Assert.Equal(20, einstellungen.Hoechstwerte.MaxSchaltbefehleJeStunde);
 
@@ -138,13 +137,34 @@ public sealed class KiZugriffDienstTests : IDisposable
     }
 
     [Fact]
-    public void RueckfrageNieBleibtNie()
+    public void HoechstwerteBleibenWieGespeichert()
     {
-        _dienst.EinstellungenSpeichern(new KiZugriffEinstellungen(true, null, new(2.5, 7)));
+        _dienst.EinstellungenSpeichern(new KiZugriffEinstellungen(true, new(2.5, 7)));
         var einstellungen = _dienst.Einstellungen();
-        Assert.Null(einstellungen.RueckfrageAbStufe);
         Assert.Equal(2.5, einstellungen.Hoechstwerte.MaxDosisMlJeBefehl);
         Assert.Equal(7, einstellungen.Hoechstwerte.MaxSchaltbefehleJeStunde);
+    }
+
+    // ------------------------------------------------- Rückfrage je Schlüssel (A-005)
+
+    [Fact]
+    public void RueckfrageStehtJeSchluessel_UndNurBeiFreigegebenenStufen()
+    {
+        Einschalten();
+        var (schluessel, klartext) = _dienst.Anlegen("Claude", KiStufe.Dokumentieren | KiStufe.GrowPlanen,
+            KiStufe.GrowPlanen | KiStufe.Verwaltung);
+
+        // Verwaltung ist nicht freigegeben — eine Rückfrage dafür wird nicht gespeichert.
+        Assert.Equal(KiStufe.GrowPlanen, schluessel.Rueckfrage);
+        Assert.Equal(new[] { "GrowPlanen" }, KiZugriffDienst.ZuDto(schluessel).RueckfrageBei);
+        Assert.Equal(KiStufe.GrowPlanen, _dienst.Pruefen(klartext, Nachbar).Kontext!.Rueckfrage);
+
+        // Stufe sperren nimmt die Rückfrage mit.
+        _dienst.Aendern(schluessel.Id, "Claude", KiStufe.Dokumentieren, KiStufe.GrowPlanen);
+        Assert.Equal(KiStufe.Keine, _dienst.Hole(schluessel.Id)!.Rueckfrage);
+
+        // Ein neuer Schlüssel ohne Angabe fragt bei keiner Stufe.
+        Assert.Equal(KiStufe.Keine, _dienst.Anlegen("Ohne", KiStufe.Dokumentieren).Schluessel.Rueckfrage);
     }
 
     [Fact]
@@ -179,17 +199,24 @@ public sealed class KiZugriffDienstTests : IDisposable
         Assert.Equal(KiPruefung.Ungueltig, zehnter.Ergebnis);
         Assert.True(zehnter.SperreBegonnen);
 
-        // Gesperrt, ohne zu prüfen — auch der gültige Schlüssel.
-        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen(gueltig, Nachbar).Ergebnis);
-        // Dieselbe Adresse als IPv4-in-IPv6.
-        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen(gueltig, Nachbar.MapToIPv6()).Ergebnis);
+        // Gesperrt: ein falscher Schlüssel bekommt ZuVieleVersuche — auch als IPv4-in-IPv6.
+        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen(falsch, Nachbar).Ergebnis);
+        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen(falsch, Nachbar.MapToIPv6()).Ergebnis);
+        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen("gok_kaputt", Nachbar).Ergebnis);
+        // Fork AI (A-005): der gültige kommt trotzdem durch — die Sperre trifft nie einen gültigen Schlüssel.
+        Assert.Equal(KiPruefung.Gueltig, _dienst.Pruefen(gueltig, Nachbar).Ergebnis);
+        Assert.Equal(KiPruefung.Gueltig, _dienst.Pruefen(gueltig, Nachbar.MapToIPv6()).Ergebnis);
+        Assert.True(_dienst.IstAdresseGesperrt(Nachbar), "Der gültige Schlüssel darf die Sperre nicht aufheben.");
         // Andere Adresse: frei.
         Assert.Equal(KiPruefung.Gueltig, _dienst.Pruefen(gueltig, IPAddress.Parse("172.30.33.6")).Ergebnis);
 
         _uhr.Jetzt += KiZugriffDienst.SperrDauer - TimeSpan.FromSeconds(1);
-        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen(gueltig, Nachbar).Ergebnis);
+        Assert.Equal(KiPruefung.ZuVieleVersuche, _dienst.Pruefen(falsch, Nachbar).Ergebnis);
 
+        // Die falschen Versuche während der Sperre haben nicht weitergezählt: nach Ablauf
+        // ist die Adresse frei, und ein einzelner Fehlversuch sperrt nicht sofort wieder.
         _uhr.Jetzt += TimeSpan.FromSeconds(2);
+        Assert.False(_dienst.IstAdresseGesperrt(Nachbar));
         Assert.Equal(KiPruefung.Gueltig, _dienst.Pruefen(gueltig, Nachbar).Ergebnis);
         // Nach der Sperre fängt die Zählung von vorn an: ein Fehlversuch sperrt nicht sofort wieder.
         Assert.Equal(KiPruefung.Ungueltig, _dienst.Pruefen(falsch, Nachbar).Ergebnis);

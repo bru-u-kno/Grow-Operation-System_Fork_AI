@@ -74,11 +74,11 @@ public sealed class SchreibWerkzeuge(GrowOsReader reader)
     /// Die Antwort von <c>GET api/ki-zugriff/ich</c> in Klartext.
     /// </summary>
     /// <remarks>
-    /// <para>Die Rückfrage-Regel ist im Umbau: heute liefert Grow OS
-    /// <c>rueckfrageAbStufe</c> (eine Stufe, ab der gefragt wird; <c>null</c> =
-    /// nie), bald <c>rueckfrageBei</c> (eine Liste von Stufen). Beides wird
-    /// gelesen; steht beides da, gilt die Liste — sie ist die neuere und
-    /// genauere Angabe.</para>
+    /// <para>Die Rückfrage-Regel: seit A-005 (03.10.2026) liefert Grow OS
+    /// <c>rueckfrageBei</c> (eine Liste von Stufen, je Schlüssel). Ein Fork aus
+    /// forkai.163 liefert noch <c>rueckfrageAbStufe</c> (eine Stufe, ab der
+    /// gefragt wird; <c>null</c> = nie). Beides wird gelesen; steht beides da,
+    /// gilt die Liste — sie ist die neuere und genauere Angabe.</para>
     /// <para>Öffentlich, damit beide Formen eine eigene Prüfung bekommen.</para>
     /// </remarks>
     public static string ZugriffBeschreiben(JsonElement ich)

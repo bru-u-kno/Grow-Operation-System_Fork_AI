@@ -3,13 +3,15 @@ namespace GrowDiary.Web.Api.Contracts;
 // Fork AI (A-003, 03.10.2026): Verträge für „Zugriff für KI-Assistenten".
 // Stufen gehen als Liste von Namen über die Leitung ("Dokumentieren",
 // "GrowPlanen", "GeraeteSchalten", "Verwaltung") — wie KiStufe heisst, ohne "Keine".
+//
+// Fork AI (A-005, 03.10.2026): Je Schlüssel und Stufe drei Zustände — gesperrt
+// (nicht in Stufen), mit Rückfrage (in Stufen UND in RueckfrageBei), frei (nur
+// in Stufen). Die globale Rückfrage-Regel „ab Stufe …" gibt es nicht mehr.
 
 /// <summary>Die ganze Seite in den Einstellungen.</summary>
 public sealed record KiZugriffSeiteDto(
     /// <summary>Hauptschalter. Aus: jeder Schlüssel wird abgewiesen, auch ein gültiger.</summary>
     bool Aktiv,
-    /// <summary>Ab welcher Stufe der Assistent vorher nachfragen soll; null = nie.</summary>
-    string? RueckfrageAbStufe,
     KiHoechstwerteDto Hoechstwerte,
     IReadOnlyList<KiSchluesselDto> Schluessel);
 
@@ -25,7 +27,10 @@ public sealed record KiSchluesselDto(
     string Name,
     /// <summary>Die ersten Zeichen des Schlüssels, zum Wiedererkennen — nie der ganze.</summary>
     string Praefix,
+    /// <summary>Freigegebene Stufen — frei und mit Rückfrage.</summary>
     IReadOnlyList<string> Stufen,
+    /// <summary>Fork AI (A-005): Bei diesen Stufen soll der Assistent vorher fragen. Immer eine Teilmenge von <see cref="Stufen"/>.</summary>
+    IReadOnlyList<string> RueckfrageBei,
     DateTime ErstelltAmUtc,
     DateTime? ZuletztGenutztAmUtc,
     DateTime? GesperrtAmUtc);
@@ -34,7 +39,6 @@ public sealed record KiSchluesselDto(
 public sealed class KiZugriffSpeichernRequest
 {
     public bool Aktiv { get; set; }
-    public string? RueckfrageAbStufe { get; set; }
     public KiHoechstwerteDto? Hoechstwerte { get; set; }
 }
 
@@ -47,6 +51,12 @@ public sealed class KiSchluesselRequest
     /// Vorbelegung Dokumentieren); eine ausdrücklich leere Liste ist ein Fehler.
     /// </summary>
     public List<string>? Stufen { get; set; }
+    /// <summary>
+    /// Fork AI (A-005, 03.10.2026): Bei diesen Stufen vorher fragen. Jede muss auch in
+    /// <see cref="Stufen"/> stehen (sonst 400 mit Feldfehler <c>RueckfrageBei</c>).
+    /// null = leer: beim Anlegen die Vorbelegung, beim Ändern „bei keiner".
+    /// </summary>
+    public List<string>? RueckfrageBei { get; set; }
 }
 
 /// <summary>Antwort auf das Anlegen — der einzige Moment, in dem der Schlüssel im Klartext existiert.</summary>
@@ -55,8 +65,10 @@ public sealed record KiSchluesselAngelegtDto(KiSchluesselDto Schluessel, string 
 /// <summary>GET /api/ki-zugriff/ich — was der anfragende Schlüssel darf.</summary>
 public sealed record KiZugriffIchDto(
     string SchluesselName,
+    /// <summary>Freigegeben — frei und mit Rückfrage.</summary>
     IReadOnlyList<string> Stufen,
-    string? RueckfrageAbStufe,
+    /// <summary>Fork AI (A-005): Bei diesen Stufen vorher den Betreiber fragen; leer = bei keiner.</summary>
+    IReadOnlyList<string> RueckfrageBei,
     KiHoechstwerteDto Hoechstwerte);
 
 /// <summary>

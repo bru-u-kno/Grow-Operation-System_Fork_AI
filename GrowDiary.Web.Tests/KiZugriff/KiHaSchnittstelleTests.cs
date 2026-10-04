@@ -396,7 +396,6 @@ public sealed class KiHaApp : IDisposable
         var antwort = await Oberflaeche().PutAsJsonAsync("/api/settings/ki-zugriff", new
         {
             aktiv,
-            rueckfrageAbStufe = "GrowPlanen",
             hoechstwerte = new { maxDosisMlJeBefehl = 10.0, maxSchaltbefehleJeStunde = maxSchaltbefehle },
         });
         antwort.EnsureSuccessStatusCode();

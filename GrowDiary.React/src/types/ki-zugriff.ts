@@ -17,7 +17,13 @@ export interface KiSchluesselDto {
   name: string
   /** Die ersten Zeichen nach `gok_` — nie der ganze Schlüssel. */
   praefix: string
+  /** Freigegebene Stufen — frei und mit Rückfrage. */
   stufen: KiStufe[]
+  /**
+   * Fork AI (A-005, 03.10.2026): Bei diesen Stufen soll der Assistent vorher
+   * fragen. Immer eine Teilmenge von `stufen`.
+   */
+  rueckfrageBei: KiStufe[]
   erstelltAmUtc: string
   zuletztGenutztAmUtc: string | null
   gesperrtAmUtc: string | null
@@ -26,8 +32,6 @@ export interface KiSchluesselDto {
 /** GET/PUT /api/settings/ki-zugriff */
 export interface KiZugriffSeiteDto {
   aktiv: boolean
-  /** Ab welcher Stufe der Assistent vorher nachfragen soll; `null` = nie. */
-  rueckfrageAbStufe: KiStufe | null
   hoechstwerte: KiHoechstwerteDto
   schluessel: KiSchluesselDto[]
 }
@@ -35,7 +39,6 @@ export interface KiZugriffSeiteDto {
 /** Rumpf von PUT /api/settings/ki-zugriff */
 export interface KiZugriffSpeichernRequest {
   aktiv: boolean
-  rueckfrageAbStufe: KiStufe | null
   hoechstwerte: KiHoechstwerteDto
 }
 
@@ -43,6 +46,8 @@ export interface KiZugriffSpeichernRequest {
 export interface KiSchluesselRequest {
   name: string
   stufen: KiStufe[]
+  /** Teilmenge von `stufen` — sonst 400 mit Feldfehler `RueckfrageBei`. */
+  rueckfrageBei: KiStufe[]
 }
 
 /** Antwort auf das Anlegen — der einzige Moment, in dem der Schlüssel im Klartext existiert. */

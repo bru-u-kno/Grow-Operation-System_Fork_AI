@@ -29,14 +29,43 @@
     padding: var(--s-3); border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--sunk);
   }
 
-  /* --- Stufen-Häkchen --- */
+  /* --- Stufen: je Zeile Name, Beschreibung, Gesperrt · Mit Rückfrage · Frei (Fork AI, A-005) --- */
   .ki-stufen { border: 0; margin: 0; padding: 0; display: grid; gap: var(--s-2); min-width: 0; }
   .ki-stufen legend {
     padding: 0; margin-bottom: var(--s-2);
     font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: 0.1em; color: var(--faint);
   }
   .ki-stufe { display: grid; gap: var(--s-2); min-width: 0; }
-  .ki-stufe .v1-switch { background: var(--panel); }
+  .ki-stufe-zeile {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-3);
+    min-width: 0; padding: 9px 11px; border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel);
+  }
+  .ki-stufe-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 220px; }
+  .ki-stufe-text strong { font-size: var(--fs-text); font-weight: 600; color: var(--ink); }
+  .ki-stufe-text small { font-size: var(--fs-klein); line-height: 1.4; color: var(--muted); }
+
+  /* Der Umschalter: ein Segment aus drei Radioknöpfen (Muster wie `.pr-nacht-wahl`). */
+  .ki-dreier {
+    display: flex; flex: 1 1 280px; max-width: 360px; min-width: 0;
+    border: 1px solid var(--hair-2); border-radius: var(--r-sm); overflow: hidden; background: var(--sunk);
+  }
+  .ki-dreier-wahl {
+    position: relative; flex: 1 1 0; min-width: 0; min-height: var(--h-sm);
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px 6px; font-size: var(--fs-klein); line-height: 1.2; text-align: center;
+    color: var(--muted); cursor: pointer;
+  }
+  .ki-dreier-wahl + .ki-dreier-wahl { border-left: 1px solid var(--hair-2); }
+  /* Das Kästchen selbst unsichtbar über der ganzen Fläche: Tippen trifft immer, Tastatur und Vorleser bleiben. */
+  .ki-dreier-wahl input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .ki-dreier-wahl:hover { color: var(--ink); }
+  .ki-dreier-wahl:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -3px; }
+  .ki-dreier-wahl.is-gesperrt:has(input:checked) { background: var(--panel-2); color: var(--ink); font-weight: 600; }
+  .ki-dreier-wahl.is-rueckfrage:has(input:checked) { background: var(--warn-wash); color: var(--warn-text); font-weight: 600; }
+  .ki-dreier-wahl.is-frei:has(input:checked) { background: var(--accent-wash); color: var(--accent-text); font-weight: 600; }
+  @media (pointer: coarse) {
+    .ki-dreier-wahl { min-height: var(--h-lg); }
+  }
 
   .ki-warnung {
     display: grid; gap: var(--s-2);

@@ -60,9 +60,10 @@ public static class KiZugriffSperre
         {
             case KiPruefung.ZuVieleVersuche:
                 context.Response.Headers.RetryAfter = ((int)KiZugriffDienst.SperrDauer.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                // Fork AI (A-005): ein gültiger Schlüssel kommt hier nie an — Begründung an KiZugriffDienst.Pruefen.
                 await FehlerSchreiben(context, StatusCodes.Status429TooManyRequests, "ki_zu_viele_versuche",
-                    "Zu viele ungültige Schlüssel von dieser Adresse. Grow OS nimmt von hier "
-                    + $"{KiZugriffDienst.SperrDauer.TotalMinutes:0} Minuten lang keinen Schlüssel an.");
+                    "Zu viele ungültige Schlüssel von dieser Adresse. Grow OS weist von hier "
+                    + $"{KiZugriffDienst.SperrDauer.TotalMinutes:0} Minuten lang jeden ungültigen Schlüssel ab; ein gültiger kommt weiter durch.");
                 return;
 
             case KiPruefung.ZugriffAus:

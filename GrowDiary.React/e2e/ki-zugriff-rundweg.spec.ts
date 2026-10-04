@@ -14,14 +14,15 @@ import { gibSchloss, nimmSchloss } from './schloss'
  *
  * <b>Dazu zwei Regeln, die nur dieser Abschnitt hat:</b>
  * <ul>
- *   <li>„Geräte schalten" und „Verwaltung" bekommen den Haken erst nach dem
- *       Warnhinweis — „Nicht freigeben" lässt ihn aus.</li>
+ *   <li>Je Stufe drei Zustände: Gesperrt · Mit Rückfrage · Frei (A-005).
+ *       „Geräte schalten" und „Verwaltung" verlassen Gesperrt erst nach dem
+ *       Warnhinweis — „Gesperrt lassen" lässt sie gesperrt.</li>
  *   <li>Der Klartext steht genau einmal da: nach dem Neuladen ist er weg, und
  *       die Liste zeigt nur seinen Anfang.</li>
  * </ul>
  *
- * <b>Diese Datei schreibt.</b> Sie stellt den Hauptschalter, die Rückfrage
- * und die Höchstwerte am Ende auf den Stand von vorher zurück und löscht den
+ * <b>Diese Datei schreibt.</b> Sie stellt den Hauptschalter und die
+ * Höchstwerte am Ende auf den Stand von vorher zurück und löscht den
  * Schlüssel, den sie angelegt hat (über die Oberfläche — auch das ist ein
  * Weg, der geprüft gehört). Das Schloss hält sie, damit kein paralleler Lauf
  * zwischen Speichern und Nachlesen schreibt.
@@ -60,9 +61,13 @@ async function abschnitt(seite: Page): Promise<Locator> {
   return bereich
 }
 
-/** Das Häkchen einer Stufe — über den sichtbaren Namen, nicht den Bezeichner. */
-function haken(formular: Locator, name: string): Locator {
-  return formular.locator('label.v1-switch', { hasText: name }).locator('input[type="checkbox"]')
+/**
+ * Fork AI (A-005, 03.10.2026): Ein Zustand im Umschalter einer Stufe — über
+ * die Radiogruppe, die der sichtbare Name der Stufe beschriftet, und den
+ * sichtbaren Wortlaut des Zustands. Nie über die Bezeichner.
+ */
+function wahl(formular: Locator, stufe: string, zustand: 'Gesperrt' | 'Mit Rückfrage' | 'Frei'): Locator {
+  return formular.getByRole('radiogroup', { name: stufe, exact: true }).getByRole('radio', { name: zustand, exact: true })
 }
 
 test.describe('Zugriff für KI-Assistenten', () => {
@@ -81,7 +86,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
     // Lauf nicht an bleiben. Je Fall und noch unter dem Schloss (innere
     // afterEach laufen vor der äusseren, die es zurückgibt).
     await page.request.put(WEG, {
-      data: { aktiv: vorher.aktiv, rueckfrageAbStufe: vorher.rueckfrageAbStufe, hoechstwerte: vorher.hoechstwerte },
+      data: { aktiv: vorher.aktiv, hoechstwerte: vorher.hoechstwerte },
     })
   })
 
@@ -89,8 +94,9 @@ test.describe('Zugriff für KI-Assistenten', () => {
     let bereich = await abschnitt(page)
     let formular = bereich.locator('[data-audit="ki-zugriff-form"]')
 
+    // Fork AI (A-005): die globale Rückfrage-Auswahl gibt es nicht mehr — die Rückfrage steht je Schlüssel.
+    await expect(formular.getByLabel('Vorher nachfragen')).toHaveCount(0)
     await formular.locator('label.v1-switch input[type="checkbox"]').check()
-    await formular.getByLabel('Vorher nachfragen').selectOption({ label: 'ab Geräte schalten' })
     await formular.getByLabel('Höchstens ml je Dosierbefehl').fill('7,5')
     await formular.getByLabel('Höchstens Befehle je Stunde').fill('13')
 
@@ -98,7 +104,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
       await formular.locator('[data-audit="ki-zugriff-speichern"]').click()
     })
     expect(rumpf.aktiv).toBe(true)
-    expect(rumpf.rueckfrageAbStufe, 'Die Rückfrage geht als Stufenname über die Leitung.').toBe('GeraeteSchalten')
+    expect(rumpf).not.toHaveProperty('rueckfrageAbStufe')
     // Deutsches Komma: „7,5" muss als 7.5 ankommen und nicht als 75 oder leer.
     expect(rumpf.hoechstwerte).toEqual({ maxDosisMlJeBefehl: 7.5, maxSchaltbefehleJeStunde: 13 })
 
@@ -106,23 +112,21 @@ test.describe('Zugriff für KI-Assistenten', () => {
     bereich = await abschnitt(page)
     formular = bereich.locator('[data-audit="ki-zugriff-form"]')
     await expect(formular.locator('label.v1-switch input[type="checkbox"]')).toBeChecked()
-    await expect(formular.getByLabel('Vorher nachfragen')).toHaveValue('GeraeteSchalten')
     await expect(formular.getByLabel('Höchstens ml je Dosierbefehl')).toHaveValue('7,5')
     await expect(formular.getByLabel('Höchstens Befehle je Stunde')).toHaveValue('13')
 
-    // Zweites Speichern ohne Neuladen dazwischen — „nie" heisst null.
-    await formular.getByLabel('Vorher nachfragen').selectOption({ label: 'nie' })
+    // Zweites Speichern ohne Neuladen dazwischen.
     await formular.getByLabel('Höchstens ml je Dosierbefehl').fill('2,5')
     const zweiter = await abgeschickt(page, 'PUT', /\/api\/settings\/ki-zugriff$/, async () => {
       await formular.locator('[data-audit="ki-zugriff-speichern"]').click()
     })
-    expect(zweiter.rueckfrageAbStufe).toBeNull()
     expect(zweiter.hoechstwerte).toEqual({ maxDosisMlJeBefehl: 2.5, maxSchaltbefehleJeStunde: 13 })
 
     bereich = await abschnitt(page)
     formular = bereich.locator('[data-audit="ki-zugriff-form"]')
-    await expect(formular.getByLabel('Vorher nachfragen')).toHaveValue('')
     await expect(formular.getByLabel('Höchstens ml je Dosierbefehl')).toHaveValue('2,5')
+    // Kein „ab" im Kopf des Abschnitts.
+    expect(await formular.innerText()).not.toMatch(/\bab\b/)
   })
 
   test('Rundweg: KiZugriffAbschnitt — Schlüssel anlegen, Klartext einmal, Stufen ändern, sperren, löschen', async ({ page }) => {
@@ -133,29 +137,31 @@ test.describe('Zugriff für KI-Assistenten', () => {
     await bereich.locator('[data-audit="ki-schluessel-neu"]').click()
     const neu = bereich.locator('[data-audit="ki-schluessel-form"]')
     await expect(neu).toBeVisible()
-    await expect(haken(neu, 'Dokumentieren'), 'Vorbelegung: nur Dokumentieren').toBeChecked()
-    await expect(haken(neu, 'Grow planen')).not.toBeChecked()
+    await expect(wahl(neu, 'Dokumentieren', 'Frei'), 'Vorbelegung: Dokumentieren frei').toBeChecked()
+    await expect(wahl(neu, 'Grow planen', 'Gesperrt')).toBeChecked()
+    await expect(wahl(neu, 'Verwaltung', 'Gesperrt')).toBeChecked()
 
     await neu.getByLabel('Name des Schlüssels').fill(name)
-    await haken(neu, 'Grow planen').check()
+    await wahl(neu, 'Grow planen', 'Mit Rückfrage').check()
 
-    // Warnhinweis: ohne Bestätigung bleibt der Haken aus.
-    await haken(neu, 'Geräte schalten').click()
+    // Warnhinweis: ohne Bestätigung bleibt die Stufe gesperrt.
+    await wahl(neu, 'Geräte schalten', 'Frei').click()
     await expect(neu.locator('[data-audit="ki-stufen-warnung"]')).toBeVisible()
-    await expect(haken(neu, 'Geräte schalten')).not.toBeChecked()
+    await expect(wahl(neu, 'Geräte schalten', 'Gesperrt')).toBeChecked()
     await neu.locator('[data-audit="ki-warnung-ablehnen"]').click()
     await expect(neu.locator('[data-audit="ki-stufen-warnung"]')).toHaveCount(0)
-    await expect(haken(neu, 'Geräte schalten')).not.toBeChecked()
+    await expect(wahl(neu, 'Geräte schalten', 'Gesperrt')).toBeChecked()
     // Zweiter Anlauf, diesmal freigeben.
-    await haken(neu, 'Geräte schalten').click()
+    await wahl(neu, 'Geräte schalten', 'Frei').click()
     await neu.locator('[data-audit="ki-warnung-bestaetigen"]').click()
-    await expect(haken(neu, 'Geräte schalten')).toBeChecked()
+    await expect(wahl(neu, 'Geräte schalten', 'Frei')).toBeChecked()
 
     const rumpf = await abgeschickt(page, 'POST', /\/api\/settings\/ki-zugriff\/schluessel$/, async () => {
       await neu.locator('[data-audit="ki-schluessel-anlegen"]').click()
     })
     expect(rumpf.name).toBe(name)
     expect(rumpf.stufen, 'Die Stufen gehen als Namen über die Leitung.').toEqual(['Dokumentieren', 'GrowPlanen', 'GeraeteSchalten'])
+    expect(rumpf.rueckfrageBei).toEqual(['GrowPlanen'])
 
     // Der Klartext — einmal, gut lesbar, mit dem Satz.
     const anzeige = bereich.locator('[data-audit="ki-klartext"]')
@@ -172,25 +178,44 @@ test.describe('Zugriff für KI-Assistenten', () => {
     let zeile = bereich.locator('[data-audit="ki-schluessel"]', { hasText: name })
     await expect(zeile).toHaveCount(1)
     await expect(zeile).toContainText(`${klartext.slice(0, 12)}…`)
-    await expect(zeile).toContainText('Grow planen')
-    await expect(zeile).toContainText('Geräte schalten')
+    await expect(zeile).toContainText('Dokumentieren · frei')
+    await expect(zeile).toContainText('Grow planen · mit Rückfrage')
+    await expect(zeile).toContainText('Geräte schalten · frei')
+    await expect(zeile, 'Gesperrte Stufen erscheinen nicht.').not.toContainText('Verwaltung')
     await expect(zeile).toContainText('noch nie')
 
     // --- ki-stufen-form ---
     await zeile.locator('[data-audit="ki-schluessel-stufen-aendern"]').click()
-    const stufen = zeile.locator('[data-audit="ki-stufen-form"]')
+    let stufen = zeile.locator('[data-audit="ki-stufen-form"]')
     await expect(stufen).toBeVisible()
-    await haken(stufen, 'Geräte schalten').uncheck()
-    await haken(stufen, 'Verwaltung').click()
+    await expect(wahl(stufen, 'Grow planen', 'Mit Rückfrage'), 'Das Formular zeigt den gespeicherten Zustand.').toBeChecked()
+    await wahl(stufen, 'Geräte schalten', 'Gesperrt').check()
+    await wahl(stufen, 'Verwaltung', 'Mit Rückfrage').click()
     await stufen.locator('[data-audit="ki-warnung-bestaetigen"]').click()
     const geaendert = await abgeschickt(page, 'PUT', /\/api\/settings\/ki-zugriff\/schluessel\/\d+$/, async () => {
       await stufen.locator('[data-audit="ki-stufen-speichern"]').click()
     })
     expect(geaendert.stufen).toEqual(['Dokumentieren', 'GrowPlanen', 'Verwaltung'])
+    expect(geaendert.rueckfrageBei).toEqual(['GrowPlanen', 'Verwaltung'])
+
+    // Zweites Ändern ohne Neuladen — der Zustand „schon gespeichert" ist ein eigener Fall.
+    await zeile.locator('[data-audit="ki-schluessel-stufen-aendern"]').click()
+    stufen = zeile.locator('[data-audit="ki-stufen-form"]')
+    await expect(wahl(stufen, 'Verwaltung', 'Mit Rückfrage')).toBeChecked()
+    // Zwischen Mit Rückfrage und Frei fragt niemand.
+    await wahl(stufen, 'Verwaltung', 'Frei').check()
+    await expect(stufen.locator('[data-audit="ki-stufen-warnung"]')).toHaveCount(0)
+    await wahl(stufen, 'Grow planen', 'Frei').check()
+    const zweimal = await abgeschickt(page, 'PUT', /\/api\/settings\/ki-zugriff\/schluessel\/\d+$/, async () => {
+      await stufen.locator('[data-audit="ki-stufen-speichern"]').click()
+    })
+    expect(zweimal.stufen).toEqual(['Dokumentieren', 'GrowPlanen', 'Verwaltung'])
+    expect(zweimal.rueckfrageBei).toEqual([])
 
     bereich = await abschnitt(page)
     zeile = bereich.locator('[data-audit="ki-schluessel"]', { hasText: name })
-    await expect(zeile).toContainText('Verwaltung')
+    await expect(zeile).toContainText('Verwaltung · frei')
+    await expect(zeile).toContainText('Grow planen · frei')
     await expect(zeile).not.toContainText('Geräte schalten')
 
     // Sperren — mit Rückfrage.

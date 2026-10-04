@@ -10,7 +10,7 @@ selbst ein. Bisher scheitert jedes Schreiben eines anderen Add-ons mit 403
 `admin_access_required`: aus dem internen Add-on-Netz ist nur GET erlaubt
 (`AdminAccessPolicy.IsInternalAddonRead`). Das bleibt so. Neu ist ein
 **Schlüssel**, den der Betreiber ausdrücklich anlegt und der genau die Stufen
-öffnet, die er anhakt.
+öffnet, die er freigibt.
 
 Gedacht ist der Fork auch für andere Betreiber. Deshalb: **ab Werk aus**,
 vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
@@ -24,8 +24,20 @@ vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 | GeraeteSchalten | 4 | Licht-Befehl, AC-Stufe, Dosierpumpe auslösen/stoppen, Probeschaltung, Steuerungs-Einstellungen, die sofort schalten |
 | Verwaltung | 8 | Einstellungen, Sicherung anlegen, Import/Export, Löschen von Stammdaten, HA-Automationen/Helfer anlegen, Pumpen einrichten und kalibrieren. Sicherung zurückspielen/herunterladen: nie über einen Schlüssel (Prüfer 03.10.2026) |
 
-Stufen bauen **nicht** aufeinander auf; jede wird einzeln angehakt.
-Vorbelegung eines neuen Schlüssels: nur Dokumentieren.
+Stufen bauen **nicht** aufeinander auf; jede wird einzeln eingestellt.
+
+**Drei Zustände je Schlüssel und Stufe** (Fork AI, A-005, 03.10.2026):
+
+| Zustand | über die Leitung | was gilt |
+|---|---|---|
+| Gesperrt | nicht in `stufen` | Grow OS lehnt ab (403 `ki_stufe_fehlt`) |
+| Mit Rückfrage | in `stufen` **und** in `rueckfrageBei` | erlaubt; der Assistent soll vorher fragen |
+| Frei | nur in `stufen` | erlaubt, ohne Rückfrage |
+
+Regel: `rueckfrageBei` ⊆ `stufen` (sonst 400 mit Feldfehler `RueckfrageBei`). Die Rückfrage
+ist eine Bitte an den Assistenten — durchsetzen kann der Fork nur „Gesperrt". Eine globale
+Rückfrage-Regel („Vorher nachfragen ab …") gibt es nicht mehr.
+Vorbelegung eines neuen Schlüssels: Dokumentieren frei, alles andere gesperrt.
 
 **Einstufen** (`GrowDiary.Web/Infrastructure/KiZugriff/KiStufe.cs`):
 - `[KiStufe(KiStufe.X)]` am Controller gilt für alle schreibenden Aktionen; an der Aktion gewinnt es.
@@ -75,8 +87,15 @@ der Dosier-Höchstwert). Bei ungültigem Schlüssel und ausgeschaltetem Zugriff
 ist kein Schlüssel bekannt; bei einem gesperrten schon. Einträge aus forkai.163
 haben die Spalten leer und erscheinen nur ungefiltert.
 
-Fehlversuche: je IP im Speicher; ab 10 Fehlversuchen in 10 Minuten wird diese IP
-15 Minuten lang sofort abgewiesen (429 `ki_zu_viele_versuche`), ohne zu prüfen.
+Fehlversuche: je IP im Speicher; ab 10 Fehlversuchen in 10 Minuten ist diese IP
+15 Minuten lang gesperrt. **Während der Sperre wird trotzdem geprüft** (Hash +
+`FixedTimeEquals`, billig): ein gültiger Schlüssel kommt durch, jeder ungültige oder
+gesperrte bekommt 429 `ki_zu_viele_versuche` und zählt nicht weiter (A-005, 03.10.2026).
+Grund: alle Anfragen über den Grow MCP und das HA-MCP kommen von EINER Container-IP —
+zehn erfundene Schlüssel aus dem Heimnetz sperrten sonst den echten Assistenten aus. Ein
+Schlüssel hat 256 Bit Zufall, Raten ist aussichtslos; die Sperre dient nur gegen Lärm im
+Protokoll und darf deshalb nie einen gültigen Schlüssel treffen. Bei ausgeschaltetem
+Hauptschalter bleibt es während der Sperre bei 429, ohne Prüfung.
 
 Die Schlüsselverwaltung (`/api/settings/ki-zugriff…`) liegt unter
 `/api/settings` (Verwaltungsweg) **und** trägt `[KeinKiZugriff]` — ein Schlüssel
@@ -86,16 +105,30 @@ mit Verwaltung darf Einstellungen ändern, aber nie Schlüssel.
 
 Tabelle `ForkKiSchluessel` (eigenes Schema wie `SteuerungRepository`):
 `Id INTEGER PK, Name TEXT, Praefix TEXT (die ersten 8 Zeichen nach gok_), Hash TEXT
-(SHA-256 hex des ganzen Klartexts), Stufen INTEGER, ErstelltAmUtc TEXT,
-ZuletztGenutztAmUtc TEXT NULL, GesperrtAmUtc TEXT NULL`.
+(SHA-256 hex des ganzen Klartexts), Stufen INTEGER, Rueckfrage INTEGER NOT NULL DEFAULT 0
+(Bits wie Stufen, immer ⊆ Stufen), ErstelltAmUtc TEXT, ZuletztGenutztAmUtc TEXT NULL,
+GesperrtAmUtc TEXT NULL`.
+
+**Übernahme aus forkai.163** (`KiSchluesselRepository.SchemaSicherstellen`): fehlt die
+Spalte `Rueckfrage`, wird sie angelegt, und jeder vorhandene Schlüssel bekommt einmalig
+`Rueckfrage = Stufen ∩ {alle Stufen ≥ bisherige ki-zugriff.rueckfrage-ab-stufe}`. Leerer
+Eintrag („nie") → 0; fehlender Eintrag → wie forkai.163 die Vorbelegung Grow planen (das
+hatte `/ich` dem Assistenten auch gesagt). Danach wird die alte Einstellung gelöscht und nie
+wieder gelesen; ausgelöst wird die Übernahme nur vom Fehlen der Spalte, läuft also einmal.
+Alles in einer Transaktion. Gehalten von `KiRueckfrageJeSchluesselTests`.
+
+**Zurückspielen:** `KiZustandBeimZurueckspielen` kopiert die Schlüsselzeilen ohne feste
+Spaltenliste (`SELECT *`, Spaltennamen aus dem Leser) und rüstet in der zurückgespielten
+Datei vorher das Schema nach — die Rückfrage reist also nicht mit einer alten Sicherung
+zurück. Eine Zählprüfung (`ZurueckspielenKopiertJedeSpalte_AuchDieRueckfrage`) wird rot,
+sobald der Zustand nicht jede Spalte der Tabelle trägt.
 SHA-256 genügt: der Schlüssel hat 256 Bit Zufall, ein langsamer Hash schützt nur
 schwache Passwörter. Vergleich mit `CryptographicOperations.FixedTimeEquals`.
 Gelöschte Schlüssel verschwinden ganz; gesperrte bleiben sichtbar.
 
-Einstellungen in `AppSettings` (Schlüssel `ki-zugriff.aktiv`,
-`ki-zugriff.rueckfrage-ab-stufe`, `ki-zugriff.max-dosis-ml`,
-`ki-zugriff.max-schaltbefehle-je-stunde`). Vorbelegung: aus, Rückfrage ab
-GrowPlanen, 10 ml, 20 Befehle/h.
+Einstellungen in `AppSettings` (Schlüssel `ki-zugriff.aktiv`, `ki-zugriff.max-dosis-ml`,
+`ki-zugriff.max-schaltbefehle-je-stunde`). Vorbelegung: aus, 10 ml, 20 Befehle/h.
+(`ki-zugriff.rueckfrage-ab-stufe` gab es bis forkai.163; siehe Übernahme oben.)
 
 ## Schnittstellen (Verträge: `Api/Contracts/KiZugriffContracts.cs`)
 
@@ -124,10 +157,14 @@ Nur für Anfragen über einen Schlüssel, zusätzlich zu den Grenzen der Geräte
 ## Oberfläche
 
 Einstellungen → neuer Abschnitt **„Zugriff für KI-Assistenten"**: Hauptschalter,
-Rückfrage-Regel (Auswahl: nie / ab Stufe …), Höchstwerte, Liste der Schlüssel
-(Name, Präfix, Stufen, zuletzt genutzt, Sperren, Löschen), „Neuer Schlüssel"
-(Name, Stufen-Häkchen; GeraeteSchalten und Verwaltung nur nach Bestätigung eines
-Warnhinweises). Nach dem Anlegen wird der Klartext **einmal** gezeigt, mit
+Höchstwerte, Liste der Schlüssel (Name, Präfix, je freigegebener Stufe ein Schild
+„Dokumentieren · frei" bzw. „Geräte schalten · mit Rückfrage" — gesperrte Stufen
+erscheinen nicht —, zuletzt genutzt, Sperren, Löschen), „Neuer Schlüssel" und
+„Stufen ändern": je Stufe eine Zeile mit Name, Beschreibung und dem dreiteiligen
+Umschalter **Gesperrt · Mit Rückfrage · Frei** (eine Radiogruppe je Stufe, beschriftet
+mit dem Stufennamen, Pfeiltasten wechseln). GeraeteSchalten und Verwaltung verlassen
+Gesperrt erst nach Bestätigung eines Warnhinweises; zwischen Mit Rückfrage und Frei
+fragt niemand. Nach dem Anlegen wird der Klartext **einmal** gezeigt, mit
 Kopieren-Knopf und dem Satz, dass er nicht wieder angezeigt wird.
 
 Unter der Schlüsselliste: **„Was die KI zuletzt getan hat"** (`KiProtokoll.tsx`)
@@ -137,9 +174,11 @@ bzw. Status. Je Schlüssel „Nur diesen zeigen", zurück über „Alle zeigen".
 
 ## Für den Assistenten
 
-`GET /api/ki-zugriff/ich` zuerst: welche Stufen frei sind, ab wann er nachfragen
-soll, welche Höchstwerte gelten. Die Rückfrage-Regel ist eine Bitte an den
-Assistenten — durchsetzen kann der Fork nur die Stufen.
+`GET /api/ki-zugriff/ich` zuerst: welche Stufen erlaubt sind (`stufen`), bei welchen
+er vorher fragen soll (`rueckfrageBei`, leer = bei keiner) und welche Höchstwerte gelten.
+Die Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann der Fork nur die
+Stufen. `zugriff_pruefen` im Grow MCP liest `rueckfrageBei` und zur Not noch das alte
+`rueckfrageAbStufe` eines Forks aus forkai.163.
 
 ## Home Assistant über den Fork
 

@@ -311,15 +311,34 @@ public sealed class SchreibWerkzeugeTests
     public void Nie_fragen_heisst_nie_fragen(string json)
         => Assert.Contains("Rückfrage: nie", Beschreiben(json));
 
+    /// <summary>
+    /// Fork AI (A-005, 03.10.2026): genau die Form, die Grow OS jetzt schickt —
+    /// <c>rueckfrageBei</c> je Schlüssel, kein <c>rueckfrageAbStufe</c> mehr.
+    /// </summary>
+    [Fact]
+    public void Die_Antwort_von_heute_ohne_rueckfrageAbStufe()
+    {
+        var text = Beschreiben("""
+            {"schluesselName":"Claude","stufen":["Dokumentieren","GrowPlanen","GeraeteSchalten"],"rueckfrageBei":["GrowPlanen"],
+             "hoechstwerte":{"maxDosisMlJeBefehl":10,"maxSchaltbefehleJeStunde":20}}
+            """);
+
+        Assert.Contains("Freigegeben: Dokumentieren, Grow planen, Geräte schalten.", text);
+        Assert.Contains("Nicht freigegeben: Verwaltung", text);
+        Assert.Contains("Vorher den Betreiber fragen bei: Grow planen.", text);
+        Assert.DoesNotContain("Grow OS sagt dazu nichts", text);
+    }
+
     [Fact]
     public async Task zugriff_pruefen_fragt_Grow_OS_mit_dem_Schluessel()
     {
         var fork = new ForkAttrappe().Antwort("GET", "api/ki-zugriff/ich", 200,
-            """{"schluesselName":"Claude","stufen":["Dokumentieren"],"rueckfrageAbStufe":null,"hoechstwerte":{"maxDosisMlJeBefehl":10,"maxSchaltbefehleJeStunde":20}}""");
+            """{"schluesselName":"Claude","stufen":["Dokumentieren"],"rueckfrageBei":[],"hoechstwerte":{"maxDosisMlJeBefehl":10,"maxSchaltbefehleJeStunde":20}}""");
 
         var text = await Werkzeugkasten.TextAsync("zugriff_pruefen", Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel));
 
         Assert.Contains("Freigegeben: Dokumentieren.", text);
+        Assert.Contains("Rückfrage: nie", text);
         Assert.Equal($"Bearer {Werkzeugkasten.ForkSchluessel}", Assert.Single(fork.VonWerkzeugen).Authorization);
     }
 }

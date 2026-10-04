@@ -65,17 +65,6 @@ public sealed class KiZugriffApiController : ApiControllerBase
 
         var bisher = _dienst.Einstellungen();
 
-        KiStufe? rueckfrage = null;
-        if (!string.IsNullOrWhiteSpace(request.RueckfrageAbStufe))
-        {
-            rueckfrage = KiZugriffDienst.EinzelneStufe(request.RueckfrageAbStufe);
-            if (rueckfrage is null)
-            {
-                ModelState.AddModelError(nameof(KiZugriffSpeichernRequest.RueckfrageAbStufe),
-                    $"Unbekannte Stufe „{request.RueckfrageAbStufe}“. Erlaubt: {ErlaubteStufen()} — oder leer für „nie“.");
-            }
-        }
-
         var hoechstwerte = request.Hoechstwerte ?? bisher.Hoechstwerte;
         // Dosis: mehr als 0 — eine Höchstdosis von 0 ml wäre ein verkleideter Schalter.
         // Schaltbefehle: 0 ist erlaubt und heisst „keine Schaltbefehle über einen Schlüssel".
@@ -95,7 +84,7 @@ public sealed class KiZugriffApiController : ApiControllerBase
             return ValidationError("Die Einstellungen für KI-Assistenten konnten nicht gespeichert werden.");
         }
 
-        _dienst.EinstellungenSpeichern(new KiZugriffEinstellungen(request.Aktiv, rueckfrage, hoechstwerte));
+        _dienst.EinstellungenSpeichern(new KiZugriffEinstellungen(request.Aktiv, hoechstwerte));
         if (bisher.Aktiv != request.Aktiv)
         {
             Protokollieren(request.Aktiv ? "ki-zugriff-eingeschaltet" : "ki-zugriff-ausgeschaltet",
@@ -109,15 +98,15 @@ public sealed class KiZugriffApiController : ApiControllerBase
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<KiSchluesselAngelegtDto> SchluesselAnlegen([FromBody] KiSchluesselRequest? request)
     {
-        if (!Pruefen(request, neu: true, out var name, out var stufen))
+        if (!Pruefen(request, neu: true, out var name, out var stufen, out var rueckfrage))
         {
             if (request is null) UnlesbareFelderUebersetzen();
             return ValidationError("Der Schlüssel konnte nicht angelegt werden.");
         }
 
-        var (schluessel, klartext) = _dienst.Anlegen(name, stufen);
+        var (schluessel, klartext) = _dienst.Anlegen(name, stufen, rueckfrage);
         Protokollieren("ki-schluessel-angelegt",
-            $"Schlüssel ‚{schluessel.Name}‘ ({schluessel.Praefix}…) angelegt, Stufen: {StufenText(schluessel.Stufen)}.");
+            $"Schlüssel ‚{schluessel.Name}‘ ({schluessel.Praefix}…) angelegt, {StufenText(schluessel)}.");
         return StatusCode(StatusCodes.Status201Created, new KiSchluesselAngelegtDto(KiZugriffDienst.ZuDto(schluessel), klartext));
     }
 
@@ -128,16 +117,16 @@ public sealed class KiZugriffApiController : ApiControllerBase
     public ActionResult<KiSchluesselDto> SchluesselAendern(int id, [FromBody] KiSchluesselRequest? request)
     {
         if (_dienst.Hole(id) is null) return NichtGefunden(id);
-        if (!Pruefen(request, neu: false, out var name, out var stufen))
+        if (!Pruefen(request, neu: false, out var name, out var stufen, out var rueckfrage))
         {
             if (request is null) UnlesbareFelderUebersetzen();
             return ValidationError("Der Schlüssel konnte nicht geändert werden.");
         }
 
-        _dienst.Aendern(id, name, stufen);
+        _dienst.Aendern(id, name, stufen, rueckfrage);
         var geaendert = _dienst.Hole(id)!;
         Protokollieren("ki-schluessel-geaendert",
-            $"Schlüssel ‚{geaendert.Name}‘ ({geaendert.Praefix}…) geändert, Stufen: {StufenText(geaendert.Stufen)}.");
+            $"Schlüssel ‚{geaendert.Name}‘ ({geaendert.Praefix}…) geändert, {StufenText(geaendert)}.");
         return Ok(KiZugriffDienst.ZuDto(geaendert));
     }
 
@@ -210,11 +199,10 @@ public sealed class KiZugriffApiController : ApiControllerBase
                 traceId: HttpContext?.TraceIdentifier));
         }
 
-        var einstellungen = _dienst.Einstellungen();
         return Ok(new KiZugriffIchDto(
             kontext.SchluesselName,
             KiZugriffDienst.StufenNamen(kontext.Stufen),
-            einstellungen.RueckfrageAbStufe?.ToString(),
+            KiZugriffDienst.StufenNamen(kontext.Rueckfrage & kontext.Stufen),
             kontext.Hoechstwerte));
     }
 
@@ -258,7 +246,6 @@ public sealed class KiZugriffApiController : ApiControllerBase
         var einstellungen = _dienst.Einstellungen();
         return new KiZugriffSeiteDto(
             einstellungen.Aktiv,
-            einstellungen.RueckfrageAbStufe?.ToString(),
             einstellungen.Hoechstwerte,
             _dienst.Alle().Select(KiZugriffDienst.ZuDto).ToList());
     }
@@ -270,13 +257,18 @@ public sealed class KiZugriffApiController : ApiControllerBase
     /// Name Pflicht, höchstens 60 Zeichen; mindestens eine Stufe, beim Anlegen wie
     /// beim Ändern. Nur ein neuer Schlüssel OHNE Stufen-Feld bekommt die
     /// Vorbelegung; eine ausdrücklich leere Liste ist ein Fehler — wer alle
-    /// Häkchen entfernt, will keinen Schlüssel, der nichts darf, sondern hat
+    /// Stufen sperrt, will keinen Schlüssel, der nichts darf, sondern hat
     /// sich vertan (oder will löschen).
+    /// <para>Fork AI (A-005, 03.10.2026): <c>RueckfrageBei</c> muss eine Teilmenge
+    /// der Stufen sein — „mit Rückfrage" heisst „freigegeben, aber vorher fragen".
+    /// Eine Rückfrage für eine gesperrte Stufe ist ein Widerspruch, kein Wunsch:
+    /// 400 statt stillem Beschneiden.</para>
     /// </remarks>
-    private bool Pruefen(KiSchluesselRequest? request, bool neu, out string name, out KiStufe stufen)
+    private bool Pruefen(KiSchluesselRequest? request, bool neu, out string name, out KiStufe stufen, out KiStufe rueckfrage)
     {
         name = request?.Name?.Trim() ?? string.Empty;
         stufen = KiStufe.Keine;
+        rueckfrage = KiZugriffDienst.VorgabeRueckfrage;
         if (request is null) return false;
 
         if (name.Length == 0)
@@ -314,6 +306,21 @@ public sealed class KiZugriffApiController : ApiControllerBase
             }
         }
 
+        if (request.RueckfrageBei is not null)
+        {
+            rueckfrage = KiZugriffDienst.StufenLesen(request.RueckfrageBei, out var unbekannt);
+            if (unbekannt.Count > 0)
+            {
+                ModelState.AddModelError(nameof(KiSchluesselRequest.RueckfrageBei),
+                    $"Unbekannte Stufe {string.Join(", ", unbekannt.Select(u => $"„{u}“"))}. Erlaubt: {ErlaubteStufen()}.");
+            }
+            else if ((rueckfrage & ~stufen) is var ohneFreigabe and not KiStufe.Keine)
+            {
+                ModelState.AddModelError(nameof(KiSchluesselRequest.RueckfrageBei),
+                    $"Rückfrage nur bei freigegebenen Stufen: {KiZugriffDienst.Anzeigename(ohneFreigabe)} ist gesperrt.");
+            }
+        }
+
         return ModelState.IsValid;
     }
 
@@ -347,8 +354,15 @@ public sealed class KiZugriffApiController : ApiControllerBase
 
     private static string ErlaubteStufen() => string.Join(", ", KiZugriffDienst.AlleStufen);
 
-    private static string StufenText(KiStufe stufen)
-        => stufen == KiStufe.Keine ? "keine" : KiZugriffDienst.Anzeigename(stufen);
+    /// <summary>„frei: Dokumentieren; mit Rückfrage: Grow planen" — für das Prüfprotokoll.</summary>
+    private static string StufenText(KiSchluessel schluessel)
+    {
+        var frei = schluessel.Stufen & ~schluessel.Rueckfrage;
+        var mitRueckfrage = schluessel.Stufen & schluessel.Rueckfrage;
+        return $"frei: {Text(frei)}; mit Rückfrage: {Text(mitRueckfrage)}";
+
+        static string Text(KiStufe stufen) => stufen == KiStufe.Keine ? "keine" : KiZugriffDienst.Anzeigename(stufen);
+    }
 
     private ActionResult NichtGefunden(int id)
         => NotFoundError("ki_schluessel_nicht_gefunden", $"Einen Schlüssel mit der Nummer {id} gibt es nicht.");

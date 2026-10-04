@@ -91,23 +91,29 @@ public sealed class KiPrueferBefundeTests : IClassFixture<KiZugriffApp>
         (await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new
         {
             aktiv = true,
-            rueckfrageAbStufe = "GrowPlanen",
             hoechstwerte = new { maxDosisMlJeBefehl = 10.0, maxSchaltbefehleJeStunde = 20 },
         })).EnsureSuccessStatusCode();
 
         var alt = await AnlegenAsync(oberflaeche, "vor der Sicherung");
+        // Fork AI (A-005): ein Schlüssel, der bleibt — seine Rückfrage ändert sich nach der Sicherung.
+        var bleibt = await AnlegenAsync(oberflaeche, "bleibt", ["Dokumentieren", "GrowPlanen"], ["Dokumentieren"]);
         var sicherung = await (await oberflaeche.PostAsync("/api/system/backup", null)).Content.ReadFromJsonAsync<BackupManifestDto>();
         Assert.NotNull(sicherung);
 
         // Nach der Sicherung: der alte Schlüssel gilt als verraten und wird gelöscht,
-        // ein neuer kommt dazu, der Zugriff wird enger.
+        // ein neuer kommt dazu, der Zugriff wird enger, die Rückfrage wandert.
         Assert.Equal(HttpStatusCode.NoContent, (await oberflaeche.DeleteAsync($"/api/settings/ki-zugriff/schluessel/{alt.Schluessel.Id}")).StatusCode);
         var neu = await AnlegenAsync(oberflaeche, "nach der Sicherung");
         (await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new
         {
             aktiv = true,
-            rueckfrageAbStufe = (string?)null,
             hoechstwerte = new { maxDosisMlJeBefehl = 2.5, maxSchaltbefehleJeStunde = 3 },
+        })).EnsureSuccessStatusCode();
+        (await oberflaeche.PutAsJsonAsync($"/api/settings/ki-zugriff/schluessel/{bleibt.Schluessel.Id}", new
+        {
+            name = "bleibt",
+            stufen = new[] { "Dokumentieren", "GrowPlanen" },
+            rueckfrageBei = new[] { "GrowPlanen" },
         })).EnsureSuccessStatusCode();
 
         var zurueck = await oberflaeche.PostAsync($"/api/system/backup/{sicherung!.FileName}/restore", null);
@@ -121,12 +127,21 @@ public sealed class KiPrueferBefundeTests : IClassFixture<KiZugriffApp>
         var ich = await mitNeuem.Content.ReadFromJsonAsync<KiZugriffIchDto>();
         Assert.Equal(2.5, ich!.Hoechstwerte.MaxDosisMlJeBefehl);
         Assert.Equal(3, ich.Hoechstwerte.MaxSchaltbefehleJeStunde);
-        Assert.Null(ich.RueckfrageAbStufe);
+        Assert.Empty(ich.RueckfrageBei);
+
+        // Die Rückfrage reist nicht mit der Sicherung zurück: es gilt die von nach der Sicherung.
+        var mitBleibendem = await app.AddonClient("172.30.33.45", bleibt.Klartext).GetFromJsonAsync<KiZugriffIchDto>("/api/ki-zugriff/ich");
+        Assert.Equal(new[] { "Dokumentieren", "GrowPlanen" }, mitBleibendem!.Stufen);
+        Assert.Equal(new[] { "GrowPlanen" }, mitBleibendem.RueckfrageBei);
+        var seite = await oberflaeche.GetFromJsonAsync<KiZugriffSeiteDto>("/api/settings/ki-zugriff");
+        Assert.Equal(new[] { "GrowPlanen" }, seite!.Schluessel.Single(s => s.Id == bleibt.Schluessel.Id).RueckfrageBei);
     }
 
-    private static async Task<KiSchluesselAngelegtDto> AnlegenAsync(HttpClient oberflaeche, string name)
+    private static async Task<KiSchluesselAngelegtDto> AnlegenAsync(HttpClient oberflaeche, string name,
+        string[]? stufen = null, string[]? rueckfrageBei = null)
     {
-        var antwort = await oberflaeche.PostAsJsonAsync("/api/settings/ki-zugriff/schluessel", new { name, stufen = new[] { "Dokumentieren" } });
+        var antwort = await oberflaeche.PostAsJsonAsync("/api/settings/ki-zugriff/schluessel",
+            new { name, stufen = stufen ?? ["Dokumentieren"], rueckfrageBei = rueckfrageBei ?? [] });
         Assert.Equal(HttpStatusCode.Created, antwort.StatusCode);
         return (await antwort.Content.ReadFromJsonAsync<KiSchluesselAngelegtDto>())!;
     }

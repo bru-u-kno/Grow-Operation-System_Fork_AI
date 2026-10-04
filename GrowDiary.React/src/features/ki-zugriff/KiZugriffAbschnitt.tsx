@@ -1,16 +1,16 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Badge, V1Empty, V1Field, V1Skeleton, V1Switch } from '../../components/v1'
 import { KI_STUFEN, kiStufeName } from '../../deutsche-woerter'
 import type {
-  KiSchluesselAngelegtDto, KiSchluesselDto, KiSchluesselRequest, KiStufe, KiZugriffSeiteDto,
+  KiSchluesselAngelegtDto, KiSchluesselDto, KiSchluesselRequest, KiZugriffSeiteDto,
   KiZugriffSpeichernRequest,
 } from '../../types'
 import { formatDate, formatDateTime } from '../../utils'
 import {
-  FELD, RUECKFRAGE_OPTIONEN, STUFEN_ERKLAERUNG, STUFEN_WARNUNG, feldFehlerJeFeld, hoechstwerteEntwurf,
-  hoechstwerteLesen, istRiskant, praefixAnzeige, sammelmeldung, stufeAnklicken, stufenWahl,
-  warnungAblehnen, warnungBestaetigen, type HoechstwerteEntwurf, type StufenWahl,
+  FELD, STUFEN_ERKLAERUNG, STUFEN_WARNUNG, ZUSTAENDE, anfrageAus, feldFehlerJeFeld, hoechstwerteEntwurf,
+  hoechstwerteLesen, istRiskant, praefixAnzeige, sammelmeldung, stufenSchilder, stufenWahl,
+  warnungAblehnen, warnungBestaetigen, zustandWaehlen, type HoechstwerteEntwurf, type StufenWahl,
 } from './ki-zugriff-logik'
 import KiProtokoll from './KiProtokoll'
 import './ki-zugriff.css'
@@ -22,8 +22,9 @@ import './ki-zugriff.css'
  * Lädt sich selbst über `/api/settings/ki-zugriff` — schlägt der Rest der
  * Einstellungsseite fehl, bleibt dieser Abschnitt bedienbar und umgekehrt.
  *
- * Drei Formulare: die Einstellungen (Hauptschalter, Rückfrage, Höchstwerte),
- * „Neuer Schlüssel" und „Stufen ändern" je Schlüssel. Der Klartext eines neuen
+ * Drei Formulare: die Einstellungen (Hauptschalter, Höchstwerte), „Neuer
+ * Schlüssel" und „Stufen ändern" je Schlüssel — dort je Stufe Gesperrt · Mit
+ * Rückfrage · Frei (Fork AI, A-005, 03.10.2026). Der Klartext eines neuen
  * Schlüssels lebt NUR im Zustand dieses Bauteils — nicht im Speicher des
  * Browsers, nicht in der Liste. Wer die Seite verlässt, sieht ihn nie wieder.
  */
@@ -34,7 +35,6 @@ export default function KiZugriffAbschnitt() {
 
   // --- Einstellungen ---
   const [aktiv, setAktiv] = useState(false)
-  const [rueckfrage, setRueckfrage] = useState<KiStufe | null>(null)
   const [hoechst, setHoechst] = useState<HoechstwerteEntwurf>({ maxDosisMl: '', maxBefehleJeStunde: '' })
   const [speichert, setSpeichert] = useState(false)
   const [einstFehler, setEinstFehler] = useState<string | null>(null)
@@ -69,7 +69,6 @@ export default function KiZugriffAbschnitt() {
   function uebernehmen(seite: KiZugriffSeiteDto) {
     setGespeichertAktiv(seite.aktiv)
     setAktiv(seite.aktiv)
-    setRueckfrage(seite.rueckfrageAbStufe)
     setHoechst(hoechstwerteEntwurf(seite.hoechstwerte))
     setSchluessel(seite.schluessel)
   }
@@ -105,7 +104,7 @@ export default function KiZugriffAbschnitt() {
     setEinstFehler(null)
     setEinstFelder({})
     try {
-      const rumpf: KiZugriffSpeichernRequest = { aktiv, rueckfrageAbStufe: rueckfrage, hoechstwerte: gelesen.werte }
+      const rumpf: KiZugriffSpeichernRequest = { aktiv, hoechstwerte: gelesen.werte }
       const seite = await apiFetch<KiZugriffSeiteDto>('/api/settings/ki-zugriff', { method: 'PUT', body: JSON.stringify(rumpf) })
       uebernehmen(seite)
       setEinstMeldung(seite.aktiv
@@ -113,7 +112,7 @@ export default function KiZugriffAbschnitt() {
         : 'Gespeichert. Der Zugriff ist aus — jeder Schlüssel wird abgewiesen.')
     } catch (caught) {
       setEinstFelder(feldFehlerJeFeld(caught))
-      setEinstFehler(sammelmeldung(caught, [FELD.maxDosis, FELD.maxBefehle, FELD.rueckfrage], 'Speichern fehlgeschlagen.'))
+      setEinstFehler(sammelmeldung(caught, [FELD.maxDosis, FELD.maxBefehle], 'Speichern fehlgeschlagen.'))
     } finally {
       setSpeichert(false)
     }
@@ -132,8 +131,9 @@ export default function KiZugriffAbschnitt() {
     setListenMeldung(null)
     const name = neuName.trim()
     const felder: Record<string, string> = {}
+    const auswahl = anfrageAus(neuWahl)
     if (name === '') felder[FELD.name] = 'Bitte einen Namen eintragen, z. B. „Claude am Telefon".'
-    if (neuWahl.auswahl.length === 0) felder[FELD.stufen] = 'Mindestens eine Stufe anhaken.'
+    if (auswahl.stufen.length === 0) felder[FELD.stufen] = 'Mindestens eine Stufe freigeben — mit Rückfrage oder frei.'
     if (neuWahl.offeneWarnung) felder[FELD.stufen] = 'Bitte erst den Warnhinweis beantworten.'
     if (Object.keys(felder).length > 0) {
       setNeuFelder(felder)
@@ -144,14 +144,14 @@ export default function KiZugriffAbschnitt() {
     setNeuFehler(null)
     setNeuFelder({})
     try {
-      const rumpf: KiSchluesselRequest = { name, stufen: neuWahl.auswahl }
+      const rumpf: KiSchluesselRequest = { name, ...auswahl }
       const neu = await apiFetch<KiSchluesselAngelegtDto>('/api/settings/ki-zugriff/schluessel', { method: 'POST', body: JSON.stringify(rumpf) })
       setSchluessel((liste) => [...liste.filter((s) => s.id !== neu.schluessel.id), neu.schluessel])
       setAngelegt({ id: neu.schluessel.id, name: neu.schluessel.name, klartext: neu.klartext })
       setNeuOffen(false)
     } catch (caught) {
       setNeuFelder(feldFehlerJeFeld(caught))
-      setNeuFehler(sammelmeldung(caught, [FELD.name, FELD.stufen], 'Der Schlüssel konnte nicht angelegt werden.'))
+      setNeuFehler(sammelmeldung(caught, [FELD.name, FELD.stufen, FELD.rueckfrage], 'Der Schlüssel konnte nicht angelegt werden.'))
     } finally {
       setLegtAn(false)
     }
@@ -166,12 +166,13 @@ export default function KiZugriffAbschnitt() {
     if (!bearbeitet) return
     const alt = schluessel.find((s) => s.id === bearbeitet.id)
     if (!alt) return
+    const auswahl = anfrageAus(bearbeitet.wahl)
     if (bearbeitet.wahl.offeneWarnung) { setBearbeitFehler('Bitte erst den Warnhinweis beantworten.'); return }
-    if (bearbeitet.wahl.auswahl.length === 0) { setBearbeitFehler('Mindestens eine Stufe anhaken — sonst lieber sperren.'); return }
+    if (auswahl.stufen.length === 0) { setBearbeitFehler('Mindestens eine Stufe freigeben — sonst lieber den Schlüssel sperren.'); return }
     setAendert(true)
     setBearbeitFehler(null)
     try {
-      const rumpf: KiSchluesselRequest = { name: alt.name, stufen: bearbeitet.wahl.auswahl }
+      const rumpf: KiSchluesselRequest = { name: alt.name, ...auswahl }
       const neu = await apiFetch<KiSchluesselDto>(`/api/settings/ki-zugriff/schluessel/${alt.id}`, { method: 'PUT', body: JSON.stringify(rumpf) })
       ersetzen(neu)
       setBearbeitet(null)
@@ -223,7 +224,7 @@ export default function KiZugriffAbschnitt() {
       <div className="ki-inhalt">
         <p className="ki-erklaerung">
           Mit einem Schlüssel kann ein KI-Assistent wie Claude selbst eintragen, was du ihm diktierst — etwa eine Messung
-          oder eine Notiz. Ab Werk ist das aus, und jeder Schlüssel kann nur, was du bei ihm anhakst.
+          oder eine Notiz. Ab Werk ist das aus, und jeder Schlüssel kann nur, was du bei ihm freigibst.
         </p>
 
         {laedt ? <V1Skeleton rows={3} label="Lade Zugriff für KI-Assistenten" /> : ladeFehler ? (
@@ -239,20 +240,6 @@ export default function KiZugriffAbschnitt() {
               />
 
               <div className="ki-felder">
-                <V1Field label="Vorher nachfragen" hint="Eine Bitte an den Assistenten — durchsetzen kann Grow OS nur die angehakten Stufen.">
-                  <select
-                    value={rueckfrage ?? ''}
-                    aria-label="Vorher nachfragen"
-                    aria-invalid={einstFelder[FELD.rueckfrage] ? true : undefined}
-                    onChange={(event) => setRueckfrage(event.target.value === '' ? null : event.target.value as KiStufe)}
-                  >
-                    {RUECKFRAGE_OPTIONEN.map((option) => (
-                      <option key={option.wert ?? 'nie'} value={option.wert ?? ''}>{option.text}</option>
-                    ))}
-                  </select>
-                  {einstFelder[FELD.rueckfrage] && <span className="ki-fehler">{einstFelder[FELD.rueckfrage]}</span>}
-                </V1Field>
-
                 <V1Field label="Höchstens ml je Dosierbefehl" hint="Die Grenze der Pumpe gilt zusätzlich.">
                   <input
                     inputMode="decimal"
@@ -313,7 +300,7 @@ export default function KiZugriffAbschnitt() {
                     />
                     {neuFelder[FELD.name] && <span className="ki-fehler">{neuFelder[FELD.name]}</span>}
                   </V1Field>
-                  <StufenAuswahl wahl={neuWahl} onWahl={setNeuWahl} fehler={neuFelder[FELD.stufen]} />
+                  <StufenAuswahl wahl={neuWahl} onWahl={setNeuWahl} fehler={neuFelder[FELD.stufen] ?? neuFelder[FELD.rueckfrage]} />
                   {neuFehler && <V1Alert message={neuFehler} tone="warn" />}
                   <div className="ki-knoepfe">
                     <button type="submit" className="ls-btn is-primary" disabled={legtAn} data-audit="ki-schluessel-anlegen">
@@ -336,7 +323,7 @@ export default function KiZugriffAbschnitt() {
                       key={eintrag.id}
                       eintrag={eintrag}
                       bearbeitet={bearbeitet?.id === eintrag.id}
-                      onStufenAendern={() => { setBearbeitFehler(null); setBearbeitet({ id: eintrag.id, wahl: stufenWahl(eintrag.stufen) }) }}
+                      onStufenAendern={() => { setBearbeitFehler(null); setBearbeitet({ id: eintrag.id, wahl: stufenWahl(eintrag.stufen, eintrag.rueckfrageBei ?? []) }) }}
                       onSperren={() => void sperren(eintrag)}
                       onLoeschen={() => void loeschen(eintrag)}
                       nurDieser={protokollFilter === eintrag.id}
@@ -373,44 +360,67 @@ export default function KiZugriffAbschnitt() {
 }
 
 /**
- * Die vier Stufen-Häkchen. Riskante Stufen (Geräte schalten, Verwaltung)
- * bekommen den Haken erst, wenn der Warnhinweis darunter bestätigt ist — die
- * Regel steht in `stufeAnklicken`, hier wird sie nur gezeigt.
+ * Je Stufe eine Zeile: Name, kurze Beschreibung und ein dreiteiliger
+ * Umschalter Gesperrt · Mit Rückfrage · Frei (Fork AI, A-005, 03.10.2026).
+ *
+ * Der Umschalter sind echte Radioknöpfe mit gemeinsamem Namen je Stufe: eine
+ * Tabulator-Station je Stufe, die Pfeiltasten wechseln den Zustand, und der
+ * Bildschirmleser liest „Grow planen, Optionsgruppe, Mit Rückfrage".
+ *
+ * Riskante Stufen (Geräte schalten, Verwaltung) wechseln von Gesperrt erst,
+ * wenn der Warnhinweis darunter bestätigt ist — die Regel steht in
+ * `zustandWaehlen`, hier wird sie nur gezeigt.
  */
 export function StufenAuswahl({ wahl, onWahl, fehler }: { wahl: StufenWahl; onWahl: (wahl: StufenWahl) => void; fehler?: string }) {
+  const id = useId()
   return (
     <fieldset className="ki-stufen" aria-invalid={fehler ? true : undefined}>
       <legend>Stufen</legend>
-      {KI_STUFEN.map((stufe) => (
-        <div key={stufe} className="ki-stufe">
-          <label className="v1-switch">
-            <input
-              type="checkbox"
-              checked={wahl.auswahl.includes(stufe)}
-              data-stufe={stufe}
-              onChange={(event) => onWahl(stufeAnklicken(wahl, stufe, event.target.checked))}
-            />
-            <span>
-              <strong>{kiStufeName(stufe)}</strong>
-              <small>{STUFEN_ERKLAERUNG[stufe]}{istRiskant(stufe) ? ' — nur nach Warnhinweis' : ''}</small>
-            </span>
-          </label>
-          {wahl.offeneWarnung === stufe && (
-            <div className="ki-warnung" role="alert" data-audit="ki-stufen-warnung">
-              <strong>Achtung: {kiStufeName(stufe)}</strong>
-              <p>{STUFEN_WARNUNG[stufe]}</p>
-              <div className="ki-knoepfe">
-                <button type="button" className="ls-btn is-small ki-warnung-ja" onClick={() => onWahl(warnungBestaetigen(wahl))} data-audit="ki-warnung-bestaetigen">
-                  Freigeben
-                </button>
-                <button type="button" className="ls-btn is-small" onClick={() => onWahl(warnungAblehnen(wahl))} data-audit="ki-warnung-ablehnen">
-                  Nicht freigeben
-                </button>
+      {KI_STUFEN.map((stufe) => {
+        const titel = `${id}-${stufe}-titel`
+        const erklaerung = `${id}-${stufe}-text`
+        const offen = wahl.offeneWarnung?.stufe === stufe ? wahl.offeneWarnung : null
+        return (
+          <div key={stufe} className="ki-stufe">
+            <div className="ki-stufe-zeile">
+              <div className="ki-stufe-text">
+                <strong id={titel}>{kiStufeName(stufe)}</strong>
+                <small id={erklaerung}>{STUFEN_ERKLAERUNG[stufe]}{istRiskant(stufe) ? ' — freigeben nur nach Warnhinweis' : ''}</small>
+              </div>
+              <div className="ki-dreier" role="radiogroup" aria-labelledby={titel} aria-describedby={erklaerung} data-audit="ki-stufe-umschalter" data-stufe={stufe}>
+                {ZUSTAENDE.map(({ wert, text }) => (
+                  <label key={wert} className={`ki-dreier-wahl is-${wert}`}>
+                    <input
+                      type="radio"
+                      name={`${id}-${stufe}`}
+                      value={wert}
+                      checked={wahl.zustaende[stufe] === wert}
+                      data-stufe={stufe}
+                      data-zustand={wert}
+                      onChange={() => onWahl(zustandWaehlen(wahl, stufe, wert))}
+                    />
+                    <span>{text}</span>
+                  </label>
+                ))}
               </div>
             </div>
-          )}
-        </div>
-      ))}
+            {offen && (
+              <div className="ki-warnung" role="alert" data-audit="ki-stufen-warnung">
+                <strong>Achtung: {kiStufeName(stufe)} auf „{ZUSTAENDE.find((z) => z.wert === offen.ziel)?.text}"</strong>
+                <p>{STUFEN_WARNUNG[stufe]}</p>
+                <div className="ki-knoepfe">
+                  <button type="button" className="ls-btn is-small ki-warnung-ja" onClick={() => onWahl(warnungBestaetigen(wahl))} data-audit="ki-warnung-bestaetigen">
+                    Freigeben
+                  </button>
+                  <button type="button" className="ls-btn is-small" onClick={() => onWahl(warnungAblehnen(wahl))} data-audit="ki-warnung-ablehnen">
+                    Gesperrt lassen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
       {fehler && <span className="ki-fehler">{fehler}</span>}
     </fieldset>
   )
@@ -436,11 +446,14 @@ export function SchluesselZeile({ eintrag, bearbeitet, onStufenAendern, onSperre
         {gesperrt && <V1Badge tone="critical">gesperrt</V1Badge>}
       </div>
       <code className="ki-praefix">{praefixAnzeige(eintrag.praefix)}</code>
-      <div className="ki-stufen-marken" aria-label="Freigegebene Stufen">
+      {/* Fork AI (A-005): je freigegebener Stufe „Name · frei" bzw. „Name · mit Rückfrage"; gesperrte fehlen. */}
+      <div className="ki-stufen-marken" role="group" aria-label="Freigegebene Stufen">
         {eintrag.stufen.length === 0
           ? <span className="ki-zeit">keine Stufe — nur lesen</span>
-          : KI_STUFEN.filter((s) => eintrag.stufen.includes(s)).map((s) => (
-            <V1Badge key={s} tone={istRiskant(s) ? 'warn' : 'neutral'}>{kiStufeName(s)}</V1Badge>
+          : stufenSchilder(eintrag.stufen, eintrag.rueckfrageBei ?? []).map(({ stufe, zustand, text }) => (
+            <V1Badge key={stufe} tone={istRiskant(stufe) ? 'warn' : 'neutral'}>
+              <span data-stufe={stufe} data-zustand={zustand}>{text}</span>
+            </V1Badge>
           ))}
       </div>
       <div className="ki-zeit">

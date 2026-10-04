@@ -40,7 +40,7 @@ function eintrag(teil: Partial<KiProtokollEintragDto> = {}): KiProtokollEintragD
 
 function schluessel(teil: Partial<KiSchluesselDto> = {}): KiSchluesselDto {
   return {
-    id: 7, name: 'Claude am Telefon', praefix: 'ab12cd34', stufen: ['Dokumentieren'],
+    id: 7, name: 'Claude am Telefon', praefix: 'ab12cd34', stufen: ['Dokumentieren'], rueckfrageBei: [],
     erstelltAmUtc: '2026-10-03T08:00:00Z', zuletztGenutztAmUtc: null, gesperrtAmUtc: null, ...teil,
   }
 }

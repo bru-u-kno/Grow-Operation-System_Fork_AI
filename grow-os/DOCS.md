@@ -44,11 +44,19 @@ Ein KI-Assistent (etwa Claude über das Home-Assistant-MCP oder den Grow MCP For
 Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
 
 1. **Einstellungen → Zugriff für KI-Assistenten:** „Zugriff erlauben" anhaken, speichern.
-2. **Neuer Schlüssel:** Namen vergeben, Stufen anhaken, anlegen. Den angezeigten Schlüssel
-   (`gok_…`) sofort kopieren — er wird nur dieses eine Mal gezeigt.
+2. **Neuer Schlüssel:** Namen vergeben und je Stufe wählen: **Gesperrt** (Grow OS lehnt ab),
+   **Mit Rückfrage** (erlaubt, der Assistent soll dich aber vorher fragen) oder **Frei**.
+   Vorbelegt ist Dokumentieren frei, alles andere gesperrt. „Geräte schalten" und
+   „Verwaltung" verlassen Gesperrt erst, wenn du den Warnhinweis bestätigst. Anlegen und den
+   angezeigten Schlüssel (`gok_…`) sofort kopieren — er wird nur dieses eine Mal gezeigt.
 3. Den Schlüssel deinem Assistenten geben. Er schickt ihn bei jeder Anfrage als
-   `Authorization: Bearer gok_…` mit; `GET /api/ki-zugriff/ich` sagt ihm, welche Stufen frei
-   sind, ab wann er nachfragen soll und welche Höchstwerte gelten.
+   `Authorization: Bearer gok_…` mit; `GET /api/ki-zugriff/ich` sagt ihm, welche Stufen
+   erlaubt sind, bei welchen er vorher fragen soll (`rueckfrageBei`) und welche Höchstwerte
+   gelten. Die Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann Grow OS nur
+   „Gesperrt".
+
+Die Rückfrage gilt je Schlüssel; eine Einstellung „Vorher nachfragen ab …" für alle gibt es
+nicht mehr. Beim Update wird sie einmalig auf jeden vorhandenen Schlüssel übertragen.
 
 | Stufe | Was der Assistent damit darf |
 |---|---|
@@ -60,3 +68,8 @@ Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
 Ein Schlüssel wird nur aus dem internen Add-on-Netz angenommen. Geht er verloren: sperren oder
 löschen und einen neuen anlegen. Was über einen Schlüssel geändert wurde, steht im
 Prüfprotokoll.
+
+Kommen von einer Adresse zehn ungültige Schlüssel in zehn Minuten, weist Grow OS von dort
+15 Minuten lang jeden ungültigen Schlüssel sofort ab (429). Ein gültiger Schlüssel kommt
+trotzdem durch — sonst könnten erfundene Schlüssel aus dem Heimnetz deinen echten Assistenten
+aussperren, denn alle Anfragen über den Grow MCP kommen von derselben Adresse.

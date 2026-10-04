@@ -5,15 +5,17 @@ import { KI_STUFEN } from '../../deutsche-woerter'
 import type { KiSchluesselDto, KiStufe } from '../../types'
 import KiZugriffAbschnitt, { KlartextAnzeige, SchluesselZeile, StufenAuswahl } from './KiZugriffAbschnitt'
 import {
-  FELD, RISKANTE_STUFEN, RUECKFRAGE_OPTIONEN, STUFEN_WARNUNG, VORBELEGUNG, feldFehlerJeFeld, hoechstwerteLesen,
-  praefixAnzeige, sammelmeldung, stufeAnklicken, stufenText, stufenWahl, warnungAblehnen, warnungBestaetigen,
+  FELD, RISKANTE_STUFEN, STUFEN_WARNUNG, VORBELEGUNG, ZUSTAENDE, anfrageAus, feldFehlerJeFeld, hoechstwerteLesen,
+  praefixAnzeige, sammelmeldung, stufenSchilder, stufenText, stufenWahl, warnungAblehnen, warnungBestaetigen,
+  zustandWaehlen, type StufenZustand,
 } from './ki-zugriff-logik'
 
 /**
  * Zugriff für KI-Assistenten (A-003) — die Oberfläche ohne Browser.
  *
  * Die Regeln, um die es geht:
- * - „Geräte schalten" und „Verwaltung" bekommen den Haken erst nach einem
+ * - Je Stufe drei Zustände: Gesperrt · Mit Rückfrage · Frei (A-005).
+ * - „Geräte schalten" und „Verwaltung" verlassen Gesperrt erst nach einem
  *   bestätigten Warnhinweis.
  * - Auf dem Schirm stehen die deutschen Stufen-Namen, nie die Bezeichner
  *   („GrowPlanen", „GeraeteSchalten").
@@ -38,6 +40,7 @@ function schluessel(teil: Partial<KiSchluesselDto> = {}): KiSchluesselDto {
     name: 'Claude am Telefon',
     praefix: 'ab12cd34',
     stufen: ['Dokumentieren', 'GrowPlanen'],
+    rueckfrageBei: [],
     erstelltAmUtc: '2026-10-03T08:00:00Z',
     zuletztGenutztAmUtc: null,
     gesperrtAmUtc: null,
@@ -45,7 +48,7 @@ function schluessel(teil: Partial<KiSchluesselDto> = {}): KiSchluesselDto {
   }
 }
 
-describe('Stufen-Häkchen mit Warnhinweis', () => {
+describe('Drei Zustände je Stufe, mit Warnhinweis', () => {
   it('sieht ihre Grundmenge: genau zwei riskante Stufen, jede mit Warntext', () => {
     // Ohne diesen Wächter liefen die Schleifen darunter bei leerer Menge
     // null Mal durch und wären grün.
@@ -55,68 +58,133 @@ describe('Stufen-Häkchen mit Warnhinweis', () => {
     }
   })
 
-  it('ist vorbelegt mit nur Dokumentieren', () => {
+  it('ist vorbelegt mit Dokumentieren frei, alles andere gesperrt', () => {
     expect(VORBELEGUNG).toEqual(['Dokumentieren'])
-    expect(stufenWahl()).toEqual({ auswahl: ['Dokumentieren'], offeneWarnung: null })
+    expect(stufenWahl()).toEqual({
+      zustaende: { Dokumentieren: 'frei', GrowPlanen: 'gesperrt', GeraeteSchalten: 'gesperrt', Verwaltung: 'gesperrt' },
+      offeneWarnung: null,
+    })
+    expect(anfrageAus(stufenWahl())).toEqual({ stufen: ['Dokumentieren'], rueckfrageBei: [] })
   })
 
-  it('hakt eine harmlose Stufe sofort an', () => {
-    const wahl = stufeAnklicken(stufenWahl(), 'GrowPlanen', true)
-    expect(wahl.auswahl).toEqual(['Dokumentieren', 'GrowPlanen'])
-    expect(wahl.offeneWarnung).toBeNull()
+  it('liest stufen und rueckfrageBei in drei Zustände — eine Rückfrage ohne Freigabe zählt nicht', () => {
+    const wahl = stufenWahl(['Dokumentieren', 'GrowPlanen'], ['GrowPlanen', 'Verwaltung'])
+    expect(wahl.zustaende).toEqual({ Dokumentieren: 'frei', GrowPlanen: 'rueckfrage', GeraeteSchalten: 'gesperrt', Verwaltung: 'gesperrt' })
+    expect(anfrageAus(wahl)).toEqual({ stufen: ['Dokumentieren', 'GrowPlanen'], rueckfrageBei: ['GrowPlanen'] })
+  })
+
+  it('stellt eine harmlose Stufe sofort um', () => {
+    const rueckfrage = zustandWaehlen(stufenWahl(), 'GrowPlanen', 'rueckfrage')
+    expect(rueckfrage.zustaende.GrowPlanen).toBe('rueckfrage')
+    expect(rueckfrage.offeneWarnung).toBeNull()
+    expect(anfrageAus(rueckfrage)).toEqual({ stufen: ['Dokumentieren', 'GrowPlanen'], rueckfrageBei: ['GrowPlanen'] })
+
+    const gesperrt = zustandWaehlen(rueckfrage, 'Dokumentieren', 'gesperrt')
+    expect(anfrageAus(gesperrt)).toEqual({ stufen: ['GrowPlanen'], rueckfrageBei: ['GrowPlanen'] })
   })
 
   for (const stufe of ['GeraeteSchalten', 'Verwaltung'] as KiStufe[]) {
-    it(`${stufe}: ohne Bestätigung bleibt der Haken aus`, () => {
-      const wahl = stufeAnklicken(stufenWahl(), stufe, true)
-      expect(wahl.auswahl, 'Der Haken ist da, obwohl niemand den Warnhinweis bestätigt hat.').not.toContain(stufe)
-      expect(wahl.offeneWarnung).toBe(stufe)
+    for (const ziel of ['rueckfrage', 'frei'] as const) {
+      it(`${stufe} → ${ziel}: ohne Bestätigung bleibt die Stufe gesperrt`, () => {
+        const wahl = zustandWaehlen(stufenWahl(), stufe, ziel)
+        expect(wahl.zustaende[stufe], 'Freigegeben, obwohl niemand den Warnhinweis bestätigt hat.').toBe('gesperrt')
+        expect(wahl.offeneWarnung).toEqual({ stufe, ziel })
+        expect(anfrageAus(wahl).stufen).not.toContain(stufe)
 
-      const abgelehnt = warnungAblehnen(wahl)
-      expect(abgelehnt.auswahl).not.toContain(stufe)
-      expect(abgelehnt.offeneWarnung).toBeNull()
-    })
+        const abgelehnt = warnungAblehnen(wahl)
+        expect(abgelehnt.zustaende[stufe]).toBe('gesperrt')
+        expect(abgelehnt.offeneWarnung).toBeNull()
+      })
 
-    it(`${stufe}: nach „Freigeben" ist der Haken da`, () => {
-      const wahl = warnungBestaetigen(stufeAnklicken(stufenWahl(), stufe, true))
-      expect(wahl.auswahl).toContain(stufe)
-      expect(wahl.offeneWarnung).toBeNull()
-    })
+      it(`${stufe} → ${ziel}: nach „Freigeben" gilt der gewählte Zustand`, () => {
+        const wahl = warnungBestaetigen(zustandWaehlen(stufenWahl(), stufe, ziel))
+        expect(wahl.zustaende[stufe]).toBe(ziel)
+        expect(wahl.offeneWarnung).toBeNull()
+      })
+    }
   }
 
+  it('zwischen Mit Rückfrage und Frei fragt niemand — die Stufe ist schon freigegeben', () => {
+    const vorhanden = stufenWahl(['Dokumentieren', 'GeraeteSchalten'], ['GeraeteSchalten'])
+    const frei = zustandWaehlen(vorhanden, 'GeraeteSchalten', 'frei')
+    expect(frei.zustaende.GeraeteSchalten).toBe('frei')
+    expect(frei.offeneWarnung).toBeNull()
+    const zurueck = zustandWaehlen(frei, 'GeraeteSchalten', 'rueckfrage')
+    expect(zurueck.zustaende.GeraeteSchalten).toBe('rueckfrage')
+    expect(zurueck.offeneWarnung).toBeNull()
+  })
+
   it('fragt beim zweiten Mal wieder — auch bei einem Schlüssel, der die Stufe schon hatte', () => {
-    // Bearbeiten eines Schlüssels mit Geräte schalten: abwählen geht ohne
-    // Rückfrage, wieder anhaken nicht.
+    // Bearbeiten eines Schlüssels mit Geräte schalten: sperren geht ohne
+    // Rückfrage, wieder freigeben nicht.
     const vorhanden = stufenWahl(['Dokumentieren', 'GeraeteSchalten'])
-    const ab = stufeAnklicken(vorhanden, 'GeraeteSchalten', false)
-    expect(ab.auswahl).toEqual(['Dokumentieren'])
-    expect(ab.offeneWarnung).toBeNull()
+    const gesperrt = zustandWaehlen(vorhanden, 'GeraeteSchalten', 'gesperrt')
+    expect(gesperrt.zustaende.GeraeteSchalten).toBe('gesperrt')
+    expect(gesperrt.offeneWarnung).toBeNull()
 
-    const wieder = stufeAnklicken(ab, 'GeraeteSchalten', true)
-    expect(wieder.auswahl).not.toContain('GeraeteSchalten')
-    expect(wieder.offeneWarnung).toBe('GeraeteSchalten')
+    const wieder = zustandWaehlen(gesperrt, 'GeraeteSchalten', 'frei')
+    expect(wieder.zustaende.GeraeteSchalten).toBe('gesperrt')
+    expect(wieder.offeneWarnung).toEqual({ stufe: 'GeraeteSchalten', ziel: 'frei' })
   })
 
-  it('schliesst die Warnung, wenn man den offenen Haken wieder abwählt', () => {
-    const offen = stufeAnklicken(stufenWahl(), 'Verwaltung', true)
-    const zu = stufeAnklicken(offen, 'Verwaltung', false)
-    expect(zu).toEqual({ auswahl: ['Dokumentieren'], offeneWarnung: null })
+  it('ein anderer Zustand derselben Stufe ändert nur das Ziel; Gesperrt schliesst den Hinweis', () => {
+    const offen = zustandWaehlen(stufenWahl(), 'Verwaltung', 'frei')
+    const anders = zustandWaehlen(offen, 'Verwaltung', 'rueckfrage')
+    expect(anders.offeneWarnung).toEqual({ stufe: 'Verwaltung', ziel: 'rueckfrage' })
+    expect(anders.zustaende.Verwaltung).toBe('gesperrt')
+
+    const zu = zustandWaehlen(anders, 'Verwaltung', 'gesperrt')
+    expect(zu).toEqual(stufenWahl())
   })
 
-  it('zeigt den Warnhinweis und lässt das Häkchen aus', () => {
-    const wahl = stufeAnklicken(stufenWahl(), 'GeraeteSchalten', true)
+  it('der Umschalter: je Stufe eine beschriftete Radiogruppe mit drei Radioknöpfen', () => {
+    const wahl = stufenWahl(['Dokumentieren', 'GrowPlanen'], ['GrowPlanen'])
+    const html = renderToStaticMarkup(<StufenAuswahl wahl={wahl} onWahl={() => {}} />)
+
+    const gruppen = html.match(/<div[^>]*role="radiogroup"[^>]*>/g) ?? []
+    expect(gruppen).toHaveLength(KI_STUFEN.length)
+    for (const gruppe of gruppen) {
+      // Beschriftet über den Namen der Stufe, beschrieben über ihre Erklärung.
+      const titel = /aria-labelledby="([^"]+)"/.exec(gruppe)?.[1]
+      expect(titel, `Radiogruppe ohne Beschriftung: ${gruppe}`).toBeTruthy()
+      expect(html).toContain(`id="${titel}"`)
+      expect(gruppe).toMatch(/aria-describedby="[^"]+"/)
+    }
+
+    for (const stufe of KI_STUFEN) {
+      const knoepfe = html.match(new RegExp(`<input[^>]*data-stufe="${stufe}"[^>]*>`, 'g')) ?? []
+      expect(knoepfe, `${stufe}: drei Radioknöpfe erwartet`).toHaveLength(3)
+      // Ein Name je Stufe — erst das macht die Pfeiltasten und den einen Tabulator-Halt.
+      const namen = new Set(knoepfe.map((k) => /name="([^"]+)"/.exec(k)?.[1]))
+      expect(namen.size).toBe(1)
+      expect(knoepfe.every((k) => k.includes('type="radio"'))).toBe(true)
+      const gewaehlt = knoepfe.filter((k) => /\schecked(=""|\s|>|\/)/.test(k)).map((k) => /data-zustand="([^"]+)"/.exec(k)?.[1])
+      expect(gewaehlt).toEqual([wahl.zustaende[stufe]])
+    }
+
+    const text = sichtbarerText(html)
+    for (const { text: wort } of ZUSTAENDE) expect(text).toContain(wort)
+    // Kein „ab" mehr — weder im Umschalter noch in den Erklärungen.
+    expect(text).not.toMatch(/\bab\b/)
+  })
+
+  it('zeigt den Warnhinweis und lässt die Stufe auf Gesperrt', () => {
+    const wahl = zustandWaehlen(stufenWahl(), 'GeraeteSchalten', 'rueckfrage')
     const html = renderToStaticMarkup(<StufenAuswahl wahl={wahl} onWahl={() => {}} />)
 
     expect(html).toContain('data-audit="ki-stufen-warnung"')
     expect(sichtbarerText(html)).toContain('sofort auslösen')
+    expect(sichtbarerText(html)).toContain('Achtung: Geräte schalten auf „Mit Rückfrage"')
     expect(sichtbarerText(html)).toContain('Freigeben')
+    expect(sichtbarerText(html)).toContain('Gesperrt lassen')
 
-    const geraete = /<input[^>]*data-stufe="GeraeteSchalten"[^>]*>/.exec(html)?.[0] ?? ''
-    expect(geraete, 'Häkchen für Geräte schalten nicht gefunden').not.toBe('')
-    expect(geraete, 'Das Häkchen ist gesetzt, solange die Warnung offen ist.').not.toContain('checked')
-
-    const doku = /<input[^>]*data-stufe="Dokumentieren"[^>]*>/.exec(html)?.[0] ?? ''
-    expect(doku).toContain('checked')
+    const gewaehlt = (stufe: KiStufe): StufenZustand | undefined => {
+      const knopf = (html.match(new RegExp(`<input[^>]*data-stufe="${stufe}"[^>]*>`, 'g')) ?? [])
+        .find((k) => /\schecked(=""|\s|>|\/)/.test(k))
+      return /data-zustand="([^"]+)"/.exec(knopf ?? '')?.[1] as StufenZustand | undefined
+    }
+    expect(gewaehlt('GeraeteSchalten'), 'Die Stufe ist freigegeben, solange die Warnung offen ist.').toBe('gesperrt')
+    expect(gewaehlt('Dokumentieren')).toBe('frei')
   })
 
   it('zeigt ohne offene Warnung keinen Warnhinweis', () => {
@@ -162,11 +230,19 @@ describe('Deutsche Stufen-Namen', () => {
     expect(text).toContain('Löschen')
   })
 
-  it('die Rückfrage-Auswahl: „nie" heisst null, sonst der Stufenname', () => {
-    expect(RUECKFRAGE_OPTIONEN[0]).toEqual({ wert: null, text: 'nie' })
-    expect(RUECKFRAGE_OPTIONEN.slice(1).map((o) => o.wert)).toEqual(KI_STUFEN)
-    expect(RUECKFRAGE_OPTIONEN.map((o) => o.text)).toEqual(
-      ['nie', 'ab Dokumentieren', 'ab Grow planen', 'ab Geräte schalten', 'ab Verwaltung'])
+  it('die Schilder sagen je Stufe frei oder mit Rückfrage — gesperrte fehlen', () => {
+    expect(stufenSchilder(['GeraeteSchalten', 'Dokumentieren', 'GrowPlanen'], ['GrowPlanen']).map((s) => s.text))
+      .toEqual(['Dokumentieren · frei', 'Grow planen · mit Rückfrage', 'Geräte schalten · frei'])
+
+    const text = sichtbarerText(renderToStaticMarkup(
+      <SchluesselZeile eintrag={schluessel({ stufen: ['Dokumentieren', 'GeraeteSchalten'], rueckfrageBei: ['GeraeteSchalten'] })}
+        bearbeitet={false} onStufenAendern={() => {}} onSperren={() => {}} onLoeschen={() => {}} />,
+    ))
+    expect(text).toContain('Dokumentieren · frei')
+    expect(text).toContain('Geräte schalten · mit Rückfrage')
+    expect(text).not.toContain('Grow planen')
+    expect(text).not.toContain('Verwaltung')
+    for (const roh of [...ROHE_BEZEICHNER, 'rueckfrage']) expect(text).not.toContain(roh)
   })
 
   it('stufenText reiht deutsch und in fester Reihenfolge', () => {

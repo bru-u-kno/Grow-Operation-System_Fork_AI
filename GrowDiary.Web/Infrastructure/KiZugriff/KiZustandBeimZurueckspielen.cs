@@ -16,26 +16,45 @@ namespace GrowDiary.Web.Infrastructure.KiZugriff;
 /// kein Datenbestand: nach dem Zurückspielen gilt, was <b>vorher</b> galt. Er wird
 /// vor dem Austausch der Datei gelesen und danach in die zurückgespielte
 /// Datenbank geschrieben, als Ganzes ersetzt.</para>
+///
+/// <para><b>Keine feste Spaltenliste</b> (A-005, 03.10.2026). Bis dahin stand
+/// hier eine; mit der Spalte <c>Rueckfrage</c> hätte jedes Zurückspielen die
+/// Rückfrage aller Schlüssel auf 0 gesetzt. Jetzt wird jede Spalte kopiert, die
+/// die Tabelle hat — eine neue Spalte reist von selbst mit. Gehalten von
+/// <c>KiZustandBeimZurueckspielenTests</c>.</para>
 /// </remarks>
 public static class KiZustandBeimZurueckspielen
 {
     private const string EinstellungsMuster = "ki-zugriff.%";
 
-    public sealed record Zustand(IReadOnlyList<object?[]> Schluessel, IReadOnlyList<(string Key, string? Value)> Einstellungen);
+    /// <param name="Spalten">Die Spaltennamen der Tabelle, in der Reihenfolge der Werte in <paramref name="Schluessel"/>.</param>
+    public sealed record Zustand(
+        IReadOnlyList<string> Spalten,
+        IReadOnlyList<object?[]> Schluessel,
+        IReadOnlyList<(string Key, string? Value)> Einstellungen);
 
     /// <summary>Den Zugriffs-Zustand der Datenbank an diesem Pfad lesen; fehlt die Tabelle, ist er leer.</summary>
+    /// <remarks>
+    /// Vor dem Lesen wird das Schema dieser Datei auf den Stand gebracht — sonst
+    /// fehlte einer Datenbank, deren Schlüssel seit dem Start niemand angefasst hat,
+    /// die Spalte <c>Rueckfrage</c> mit ihrer übernommenen Einstellung.
+    /// </remarks>
     public static Zustand Lesen(string datenbankPfad)
     {
+        var spalten = new List<string>();
         var schluessel = new List<object?[]>();
         var einstellungen = new List<(string, string?)>();
-        if (!File.Exists(datenbankPfad)) return new Zustand(schluessel, einstellungen);
+        if (!File.Exists(datenbankPfad)) return new Zustand(spalten, schluessel, einstellungen);
 
         using var verbindung = Oeffnen(datenbankPfad);
         if (TabelleDa(verbindung, "ForkKiSchluessel"))
         {
+            KiSchluesselRepository.SchemaSicherstellen(verbindung);
+
             using var befehl = verbindung.CreateCommand();
-            befehl.CommandText = "SELECT Id, Name, Praefix, Hash, Stufen, ErstelltAmUtc, ZuletztGenutztAmUtc, GesperrtAmUtc FROM ForkKiSchluessel ORDER BY Id;";
+            befehl.CommandText = "SELECT * FROM ForkKiSchluessel ORDER BY Id;";
             using var leser = befehl.ExecuteReader();
+            for (var i = 0; i < leser.FieldCount; i++) spalten.Add(leser.GetName(i));
             while (leser.Read())
             {
                 var zeile = new object?[leser.FieldCount];
@@ -53,7 +72,7 @@ public static class KiZustandBeimZurueckspielen
             while (leser.Read()) einstellungen.Add((leser.GetString(0), leser.IsDBNull(1) ? null : leser.GetString(1)));
         }
 
-        return new Zustand(schluessel, einstellungen);
+        return new Zustand(spalten, schluessel, einstellungen);
     }
 
     /// <summary>Den gelesenen Zustand in die Datenbank an diesem Pfad schreiben — ersetzt, was dort steht.</summary>
@@ -62,18 +81,24 @@ public static class KiZustandBeimZurueckspielen
         using var verbindung = Oeffnen(datenbankPfad);
         using var transaktion = verbindung.BeginTransaction();
 
-        Ausfuehren(verbindung, transaktion, KiSchluesselRepository.SchemaSql);
+        // Auch die Spalten nachrüsten: eine Sicherung aus forkai.163 hat keine Rueckfrage.
+        KiSchluesselRepository.SchemaSicherstellen(verbindung, transaktion);
         Ausfuehren(verbindung, transaktion, "DELETE FROM ForkKiSchluessel;");
-        foreach (var zeile in zustand.Schluessel)
+
+        if (zustand.Schluessel.Count > 0)
         {
-            using var befehl = verbindung.CreateCommand();
-            befehl.Transaction = transaktion;
-            befehl.CommandText = """
-                INSERT INTO ForkKiSchluessel (Id, Name, Praefix, Hash, Stufen, ErstelltAmUtc, ZuletztGenutztAmUtc, GesperrtAmUtc)
-                VALUES ($p0, $p1, $p2, $p3, $p4, $p5, $p6, $p7);
-                """;
-            for (var i = 0; i < 8; i++) befehl.Parameters.AddWithValue("$p" + i, zeile[i] ?? DBNull.Value);
-            befehl.ExecuteNonQuery();
+            // Die Namen stammen aus dem Schema der eigenen Datei, nicht aus einer Eingabe;
+            // in Anführungszeichen trotzdem, damit kein Name als Schlüsselwort gelesen wird.
+            var namen = string.Join(", ", zustand.Spalten.Select(s => "\"" + s.Replace("\"", "\"\"") + "\""));
+            var platzhalter = string.Join(", ", zustand.Spalten.Select((_, i) => "$p" + i));
+            foreach (var zeile in zustand.Schluessel)
+            {
+                using var befehl = verbindung.CreateCommand();
+                befehl.Transaction = transaktion;
+                befehl.CommandText = $"INSERT INTO ForkKiSchluessel ({namen}) VALUES ({platzhalter});";
+                for (var i = 0; i < zustand.Spalten.Count; i++) befehl.Parameters.AddWithValue("$p" + i, zeile[i] ?? DBNull.Value);
+                befehl.ExecuteNonQuery();
+            }
         }
 
         if (TabelleDa(verbindung, "AppSettings", transaktion))
