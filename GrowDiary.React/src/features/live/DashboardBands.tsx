@@ -1,8 +1,9 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { MetricPayload } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
-import { SensorChart } from '../../components/SensorChart'
 import { MetricTile } from './MetricTile'
+import { KachelVerlauf, KachelZeile } from './KachelVerlauf'
+import { kachelUmschalten, kachelVerlaufId, type OffeneKachel } from './kachel-zeile'
 import { Verlaufsdiagramm } from './Verlaufsdiagramm'
 import { decimalsForMetric } from './metric-tile-model'
 import { metricProvenance } from './live-model'
@@ -60,7 +61,10 @@ export function DashboardBands({
   const griff = useRef<{ sectionId: string; index: number } | null>(null)
   // Welche Kachel gerade ihre Historie zeigt — Tester-Wunsch: „auf eine
   // Kachel klicken und mehr Daten einsehen". Toggle, nichts Modales.
-  const [offeneMetrik, setOffeneMetrik] = useState<string | null>(null)
+  // Fork AI: nach Kachel, nicht nach Messwert — steht derselbe Wert in zwei
+  // Bereichen, klappt nur der auf, auf den getippt wurde.
+  const [offeneKachel, setOffeneKachel] = useState<OffeneKachel | null>(null)
+  const imBild = useCallback(() => setOffeneKachel((alt) => (alt?.insBild ? { ...alt, insBild: false } : alt)), [])
 
   const [dragged, setDragged] = useState<{ sectionId: string; index: number } | null>(null)
   const [over, setOver] = useState<string | null>(null)
@@ -124,8 +128,30 @@ export function DashboardBands({
 
           {!bereichZu && <>
 
-          <div className={classNames('gos-metric-row', editing && 'is-editing')}>
-            {section.tiles.map((tile, index) => {
+          <KachelZeile
+            className={classNames('gos-metric-row', editing && 'is-editing')}
+            offen={!editing && section.tiles.some((tile) => tile.id === offeneKachel?.kennung) ? offeneKachel : null}
+            onNeuGemessen={setOffeneKachel}
+            verlauf={(() => {
+              const tile = section.tiles.find((t) => t.id === offeneKachel?.kennung)
+              const metric = tile?.metricKey ? metricsByKey.get(tile.metricKey) : undefined
+              if (!tile?.metricKey || (trends.get(tile.metricKey)?.length ?? 0) < 2) return null
+              return (
+                <KachelVerlauf
+                  key={`verlauf-${tile.id}`}
+                  kennung={tile.id}
+                  metricKey={tile.metricKey}
+                  label={metric?.label ?? tile.label ?? tile.metricKey}
+                  tentId={tentId}
+                  metricsByKey={metricsByKey}
+                  trends={trends}
+                  onSchliessen={() => setOffeneKachel(null)}
+                  insBild={offeneKachel?.insBild === true}
+                  onImBild={imBild}
+                />
+              )
+            })()}
+            plaetze={section.tiles.map((tile, index) => {
               const metric = resolveTile(tile, metricsByKey, entityValues)
               const trend = tile.kind === 'Metric' && tile.metricKey ? trends.get(tile.metricKey) : undefined
               const kachelId = `kachel:${tile.id}`
@@ -133,6 +159,7 @@ export function DashboardBands({
               return (
                 <div
                   key={tile.id}
+                  data-kachel-platz={tile.id}
                   className={classNames(
                     'ls-tile-slot',
                     !editing && 'has-fold',
@@ -188,9 +215,10 @@ export function DashboardBands({
                     sourceNote={metricProvenance(metric).sourceNote}
                     stale={metricProvenance(metric).stale}
                     onOpen={!editing && tile.kind === 'Metric' && tile.metricKey && (trends.get(tile.metricKey)?.length ?? 0) > 1
-                      ? () => setOffeneMetrik(offeneMetrik === tile.metricKey ? null : tile.metricKey)
+                      ? () => setOffeneKachel(kachelUmschalten(offeneKachel, tile.id))
                       : undefined}
-                    open={offeneMetrik === tile.metricKey}
+                    open={offeneKachel?.kennung === tile.id}
+                    steuert={kachelVerlaufId(tile.id)}
                     eingeklappt={kachelZu}
                   />
                   )}
@@ -229,8 +257,7 @@ export function DashboardBands({
                 </div>
               )
             })}
-
-            {editing && (
+            nachher={editing && (
               // Das Ziel zum Fallenlassen. Ohne es weiss niemand, wohin eine
               // gezogene Kachel ueberhaupt darf — und ein leerer Bereich waere
               // sonst gar nicht zu befuellen.
@@ -242,23 +269,8 @@ export function DashboardBands({
                 hierher ziehen
               </div>
             )}
-          </div>
+          />
 
-          {/* Die aufgeklappte Historie einer Kachel — unter ihrer Zeile, nicht
-              modal: man will die Nachbarn zum Vergleich weiter sehen. */}
-          {offeneMetrik && section.tiles.some((tile) => tile.metricKey === offeneMetrik) && (() => {
-            const metric = metricsByKey.get(offeneMetrik)
-            const punkte = trends.get(offeneMetrik) ?? []
-            if (!metric || punkte.length < 2) return null
-            return (
-              <div className="ls-metric-detail" data-audit="metric-detail">
-                <SensorChart
-                  series={{ metricKey: offeneMetrik, label: metric.label, unit: metric.unit, points: punkte }}
-                  target={{ min: metric.targetMin, max: metric.targetMax }}
-                />
-              </div>
-            )
-          })()}
           </>}
         </div>
         )

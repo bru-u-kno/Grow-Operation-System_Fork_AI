@@ -70,7 +70,10 @@ describe('Schutzregeln des Live-Layouts', () => {
 
     for (const datei of ['LiveScreen.tsx', 'DashboardBands.tsx']) {
       expect(lies(datei), `${datei} reicht onOpen nicht an MetricTile durch`).toMatch(/onOpen=\{/)
-      expect(lies(datei), `${datei} zeigt keinen aufgeklappten Verlauf`).toContain('metric-detail')
+      // Fork AI (05.10.2026): beide zeigen das große Verlaufsdiagramm unter
+      // der Zeile der Kachel — nicht mehr das kleine Liniendiagramm.
+      expect(lies(datei), `${datei} zeigt keinen aufgeklappten Verlauf`).toMatch(/<KachelVerlauf\b/)
+      expect(lies(datei), `${datei} zeigt noch das alte Liniendiagramm`).not.toMatch(/<SensorChart\b/)
     }
   })
 
