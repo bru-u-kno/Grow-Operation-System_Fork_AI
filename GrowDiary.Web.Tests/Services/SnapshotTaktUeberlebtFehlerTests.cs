@@ -48,7 +48,10 @@ public sealed class SnapshotTaktUeberlebtFehlerTests
 
         Assert.Null(ausnahme);
         // Selbsttest: die Schritte liefen wirklich — und scheiterten jeder für sich.
-        Assert.Equal(4, mitschrift.Fehler.Count);
+        // Fünf: seit A-006 merkt sich der Takt vor dem Aufräumen die Sprünge
+        // fürs Tagebuch, als eigener Schritt.
+        Assert.Equal(5, mitschrift.Fehler.Count);
+        Assert.Contains(mitschrift.Fehler, f => f.Contains("Tagebuch-Spruenge"));
         Assert.Contains(mitschrift.Fehler, f => f.Contains("Messwerte erfassen"));
         Assert.Contains(mitschrift.Fehler, f => f.Contains("Tagesstatistik"));
     }

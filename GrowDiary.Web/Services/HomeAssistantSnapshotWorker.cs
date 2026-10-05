@@ -85,6 +85,11 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
         // ON CONFLICT … DO UPDATE, ein zweiter Versuch ist harmlos.
         if (now.Hour >= 2 && _lastAggregationDateLocal != today)
         {
+            // A-006: Spruenge fuer das Grow-Tagebuch festhalten, BEVOR die
+            // Rohwerte geloescht werden — danach ist eine Stufe von 25 Minuten
+            // in Min/Median/Max nicht mehr zu sehen. Eigener Schritt: scheitert
+            // er, laeuft das Aufraeumen trotzdem (sonst wuechse die Datenbank).
+            await SicherAsync("Tagebuch-Spruenge", () => SpruengeMerkenAsync(), stoppingToken);
             var ok = await SicherAsync("Tagesstatistik", async () =>
             {
                 await AggregateYesterdayAsync(stoppingToken);
@@ -396,6 +401,15 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
         }
 
         _logger.LogInformation("Tages-Aggregation abgeschlossen für {Date}", yesterday);
+        await Task.CompletedTask;
+    }
+
+    private async Task SpruengeMerkenAsync()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var tagebuch = scope.ServiceProvider.GetRequiredService<GrowDiary.Web.Services.Tagebuch.TagebuchService>();
+        var neu = tagebuch.ErkennenFuerAlleZelte(DateTime.UtcNow);
+        if (neu > 0) _logger.LogInformation("Tagebuch: {Anzahl} neue Spruenge im Sensorverlauf gemerkt.", neu);
         await Task.CompletedTask;
     }
 

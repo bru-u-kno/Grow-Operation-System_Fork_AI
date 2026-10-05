@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { navGroups } from './navigation'
+import { sichtbareGruppen } from './navigation'
 
 /**
  * Jede eigenständige Seite muss im Menü stehen.
@@ -38,10 +38,24 @@ describe('Menü-Vollständigkeit', () => {
     // Laufende Routinen wohnen bei den Aufgaben — dort arbeitet man sie ab.
     // Der Menüpunkt „SOPs & Bibliothek" führt bewusst zum Wissen, nicht hierher.
     ['/sops', 'Laufende Routinen stehen auf der Aufgabenseite, das Menü führt zur Bibliothek'],
+    // A-006: Das Grow-Tagebuch ist der Hauptweg. Tabelle und „+ Eintrag" bleiben
+    // eigene Seiten und werden aus dem Tagebuch verlinkt — geprüft unten.
+    ['/messungen', 'Abgelöst vom Tagebuch; die Tabelle ist von dort verlinkt'],
+    ['/journal', 'Abgelöst vom Tagebuch; „+ Eintrag" und Fotos sind von dort verlinkt'],
   ])
 
+  /** Diese Ausnahmen gelten nur, solange das Tagebuch wirklich auf sie verweist. */
+  const ausDemTagebuch = new Set(['/messungen', '/journal'])
+
   const routen = [...app.matchAll(/<Route path="([^"]+)" element={<GrowScopedSectionPage/g)].map((t) => t[1])
-  const imMenue = new Set(navGroups.flatMap((gruppe) => gruppe.items.map((punkt) => punkt.to)))
+  // Nur was das Menü ZEIGT: ein versteckter Eintrag steht in navGroups, aber in
+  // keinem Menü. Bis A-006 zählte er hier mit — ein Eintrag mit `versteckt`
+  // hätte die Prüfung still bestanden.
+  const imMenue = new Set(sichtbareGruppen().flatMap((gruppe) => gruppe.items.map((punkt) => punkt.to)))
+  // Ohne Kommentare: eine Erwähnung ist kein Link.
+  const tagebuch = readFileSync(new URL('./pages/TagebuchPage.tsx', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
 
   it('findet überhaupt Routen dieser Bauform', () => {
     // Sonst prüft der Test hier gar nichts und ist trotzdem grün — die Falle,
@@ -54,6 +68,10 @@ describe('Menü-Vollständigkeit', () => {
     if (grund) {
       it(`${route} steht mit Grund nicht im Menü: ${grund}`, () => {
         expect(imMenue.has(route)).toBe(false)
+        if (ausDemTagebuch.has(route)) {
+          expect(tagebuch, `${route} ist nicht mehr im Menü — dann muss das Tagebuch darauf verlinken.`)
+            .toMatch(new RegExp(`to=\\{\`${route}\\$\\{`))
+        }
       })
       continue
     }

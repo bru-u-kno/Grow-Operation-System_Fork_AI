@@ -112,8 +112,16 @@ export const navGroups: NavGroup[] = [
       //
       // Steht hinter der Diagnose, nicht hinter dem Journal: beide beantworten
       // dieselbe Frage — laeuft der Grow im gruenen Bereich?
-      { to: '/messungen', label: 'Messungen', end: true, icon: '∿', short: 'Verlauf', keywords: 'protokoll verlauf historie messwerte tabelle vergleich sensorwerte handmessung automatik ph ec' },
-      { to: '/journal', label: 'Journal & Fotos', end: true, icon: '✎', short: 'Journal', keywords: 'tagebuch notizen bilder verlauf' },
+      // Fork AI (A-006): Das Grow-Tagebuch löst „Messungen" und „Journal &
+      // Fotos" als Hauptweg ab — Messwerte, Wasserwechsel, Nachfüllen, Notizen
+      // und Fotos stehen dort nach Tagen. Das Wort „Verlauf" als Menüpunkt ist
+      // damit weg (Bru, 05.10.2026).
+      { to: '/tagebuch', label: 'Tagebuch', end: true, icon: '✎', short: 'Tagebuch', keywords: 'tagebuch grow-tagebuch verlauf historie protokoll messungen messwerte sensorwerte handmessung journal notizen fotos bilder wasserwechsel nachfüllen nachgefüllt addback auffällig sprung sensorkurven kurven' },
+      // Beide bleiben als eigene Seiten — dort wohnen Tabelle und Vergleich
+      // bzw. „+ Eintrag" —, im Menü aber nicht mehr. Erreichbar über die
+      // Links oben im Tagebuch, die Grow-Übersicht und die Suche.
+      { to: '/messungen', label: 'Messungen', end: true, versteckt: true, keywords: 'protokoll historie messwerte tabelle vergleich sensorwerte handmessung automatik ph ec' },
+      { to: '/journal', label: 'Journal & Fotos', end: true, versteckt: true, keywords: 'notizen bilder eintrag foto hochladen' },
       { to: '/sorten', label: 'Sorten & Pheno', end: true, icon: '❀', short: 'Sorten', keywords: 'strain genetik züchter keeper selektion' },
       // Steht VOR dem Archiv, weil es zeitlich davor liegt: nach der Ernte
       // laeuft das Aushaerten noch 30-60 Tage. Ins Archiv gehoert ein Lauf
@@ -237,7 +245,17 @@ export const barCandidates: NavLeaf[] = navGroups
  * Titelzeile. Sonst stuende dasselbe zweimal auf dem Schirm, wie vorher bei
  * „Messen“ als Reiter UND „Messung erfassen“ als Knopf.
  */
-export const defaultBarRoutes: string[] = ['/', '/messungen', '/wissen', '/kosten', '/aufgaben', '/steuerung']
+export const defaultBarRoutes: string[] = ['/', '/tagebuch', '/wissen', '/kosten', '/aufgaben', '/steuerung']
+
+/**
+ * Fork AI (A-006): Ziele, die aus der Leiste verschwunden sind, und wer sie
+ * dort ersetzt. Eine gespeicherte Leiste mit „/messungen" (Werkseinstellung
+ * bis A-006) verlöre den Platz sonst still — `useNavBar` setzt den Nachfolger ein.
+ */
+export const leistenNachfolger: Record<string, string> = {
+  '/messungen': '/tagebuch',
+  '/journal': '/tagebuch',
+}
 
 /**
  * Alte Pfade, die weiterhin funktionieren müssen.

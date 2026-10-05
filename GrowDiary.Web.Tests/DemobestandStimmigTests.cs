@@ -107,6 +107,56 @@ public sealed class DemobestandStimmigTests : IDisposable
     /// still ins Leere, wären alle anderen Prüfungen hier grün, ohne etwas
     /// gesehen zu haben.
     /// </remarks>
+    /// <summary>
+    /// Das Grow-Tagebuch (A-006) zeigt im Bestand GENAU eine Auffälligkeit —
+    /// das absichtliche Nachfüllen ohne Eintrag in Zelt 1.
+    /// </summary>
+    /// <remarks>
+    /// Jeder andere Sprung im Verlauf (Wasserwechsel um 07:00, pH-Nachstellen alle
+    /// drei Tage, in beiden Zelten) hat seinen Eintrag. Vor A-006 sprang die
+    /// Kurve um Mitternacht und der Wechsel stand um 07:00 — das Tagebuch hätte
+    /// jeden Wechsel als „dazu ist nichts eingetragen" gemeldet: der Bestand
+    /// widersprach der eigenen Regel der App. Unabhängig von der Uhrzeit, zu der
+    /// der Test läuft (Leitplanke 15): das Nachfüllen liegt immer 1–6 Tage zurück.
+    /// </remarks>
+    [Fact]
+    public void Das_Tagebuch_findet_genau_das_eine_Nachfuellen_ohne_Eintrag()
+    {
+        var rohwerte = _dienste.GetRequiredService<SensorReadingRepository>();
+        var jetzt = DateTime.UtcNow;
+        foreach (var zelt in _grows.GetTents())
+        {
+            foreach (var wert in DemoData.SeedHistory(zelt.Id, jetzt, DemoData.LageFuer(zelt)))
+            {
+                rohwerte.AddReading(wert);
+            }
+        }
+
+        var tagebuch = new GrowDiary.Web.Services.Tagebuch.TagebuchService(
+            _grows, _dienste.GetRequiredService<JournalRepository>(), rohwerte,
+            _dienste.GetRequiredService<TagebuchRepository>(), _dienste.GetRequiredService<LightRepository>(),
+            _dienste.GetRequiredService<DosingRepository>(), _dienste.GetRequiredService<KostenRepository>(),
+            _dienste.GetRequiredService<HardwareRepository>());
+
+        var erster = LaufenderGrow();
+        var auffaellig = tagebuch.Seite(erster.Id, null, 31, jetzt)!.Tage
+            .SelectMany(t => t.Ereignisse).Where(e => e.Art == "auffaellig").ToList();
+        var zeile = Assert.Single(auffaellig);
+        var befund = Assert.Single(zeile.Auffaellig!.Befunde);
+        Assert.Equal("reservoir-ec", befund.Messgroesse);
+        Assert.InRange(befund.Vorher - befund.Nachher, 0.11, 0.13);
+        Assert.Equal(DateOnly.FromDateTime(Demoverlauf.NachfuellenOhneEintrag()!.Value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            GrowDiary.Web.Services.Tagebuch.TagebuchService.OrtsTag(zeile.ZeitpunktUtc).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        // Selbsttest: die Erkennung SIEHT Sprünge im Bestand — Wechsel und
+        // pH-Nachstellen sind gemerkt, nur eben erklärt.
+        var gemerkt = _dienste.GetRequiredService<TagebuchRepository>().Lesen(erster.TentId!.Value, jetzt.AddDays(-8), jetzt);
+        Assert.True(gemerkt.Count >= 3, $"Nur {gemerkt.Count} Sprünge erkannt — die Prüfung sieht ihre Grundmenge nicht.");
+
+        var zweiter = Laufende().Single(g => g.Id != erster.Id);
+        Assert.DoesNotContain(tagebuch.Seite(zweiter.Id, null, 31, jetzt)!.Tage.SelectMany(t => t.Ereignisse), e => e.Art == "auffaellig");
+    }
+
     [Fact]
     public void Der_Bestand_legt_wirklich_etwas_an()
     {

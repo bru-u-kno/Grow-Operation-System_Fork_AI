@@ -445,6 +445,9 @@ public sealed class GrowRepository
     public bool DeleteChangeout(int growId, int id)
         => _addbackRepository.DeleteChangeout(growId, id);
 
+    public bool DeleteAddbackLog(int growId, int id)
+        => _addbackRepository.DeleteAddbackLog(growId, id);
+
     public List<ChangeoutEntry> GetChangeoutsForGrow(int growId)
         => _addbackRepository.GetChangeoutsForGrow(growId);
 

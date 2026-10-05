@@ -136,11 +136,63 @@ public static class Demoverlauf
         return Math.Sin(2 * Math.PI * (ortszeit.TimeOfDay.TotalHours - mitte + 6) / 24);
     }
 
-    /// <summary>Tage seit dem letzten Wasserwechsel (0 bis 6).</summary>
+    /// <summary>Tage seit dem letzten Wasserwechsel (0 bis 6) — nach Kalendertag.</summary>
+    /// <remarks>Für die Frage „ist dieser TAG ein Wechseltag?". Die Kurve fragt <see cref="ImWasserzyklus"/>.</remarks>
     public static int SeitWasserwechsel(DateTime ortszeit) => Alter(ortszeit) % WasserwechselAlleTage;
 
-    /// <summary>Tage seit der letzten Dosierung (0 bis 2).</summary>
+    /// <summary>Tage seit der letzten Dosierung (0 bis 2) — nach Kalendertag.</summary>
     public static int SeitDosierung(DateTime ortszeit) => Alter(ortszeit) % DosierAlleTage;
+
+    /// <summary>Um diese Stunde wird gewechselt und pH nachgestellt — Ortszeit.</summary>
+    /// <remarks>
+    /// <para><b>Vorher sprang die Kurve um Mitternacht</b>, eingetragen war der
+    /// Wechsel aber um 07:00 (Changeout und Messung mit Haken). Sieben Stunden
+    /// Abstand zwischen Sensor und Eintrag: das Grow-Tagebuch (A-006) meldete
+    /// jeden Wechsel als „dazu ist nichts eingetragen" — der Bestand widersprach
+    /// der eigenen Regel der App. Jetzt springt die Kurve genau dann, wenn der
+    /// Eintrag sagt, dass gewechselt wurde.</para>
+    /// </remarks>
+    public const int WechselStunde = 7;
+
+    /// <summary>Wo der Wasser-Sägezahn zu diesem Zeitpunkt steht: 0 ab dem Wechsel um 07:00.</summary>
+    public static int ImWasserzyklus(DateTime ortszeit) => Alter(ortszeit.AddHours(-WechselStunde)) % WasserwechselAlleTage;
+
+    /// <summary>Wo der pH-Sägezahn steht: 0 ab dem Nachstellen um 07:00.</summary>
+    public static int ImDosierzyklus(DateTime ortszeit) => Alter(ortszeit.AddHours(-WechselStunde)) % DosierAlleTage;
+
+    /// <summary>Um so viel senkt das Nachfüllen ohne Eintrag den EC.</summary>
+    public const double NachfuellenEcSenkung = 0.12;
+
+    /// <summary>
+    /// Ein Nachfüllen, zu dem nichts eingetragen ist — der Fall, den das
+    /// Grow-Tagebuch als „Auffällig" zeigen soll (Brus 03.10.2026, EC 1,74 → 1,61).
+    /// </summary>
+    /// <remarks>
+    /// <para>Immer um 16:55 Ortszeit am jüngsten zurückliegenden Tag (1 bis 6
+    /// Tage zurück), an dem der Wasserzyklus bei Tag 4 oder später steht. So
+    /// liegt es <b>immer</b> in den sieben Tagen Rohwerte — gleich, an welchem
+    /// Tag der Bestand angelegt wird —, und der EC bleibt im Planziel 1,5–1,7:
+    /// ab Tag 4 steht er bei mindestens 1,64, nach dem Nachfüllen bei 1,52.</para>
+    /// <para>Nur in Zelt 1 (<see cref="Lage.Bluete"/>); bis zum nächsten Wechsel.</para>
+    /// </remarks>
+    public static DateTime? NachfuellenOhneEintrag()
+    {
+        for (var zurueck = 1; zurueck <= 6; zurueck++)
+        {
+            var zeitpunkt = DateTime.Today.AddDays(-zurueck).AddHours(16).AddMinutes(55);
+            if (ImWasserzyklus(zeitpunkt) >= 4) return zeitpunkt;
+        }
+
+        return null;
+    }
+
+    /// <summary>Liegt dieser Zeitpunkt zwischen dem Nachfüllen ohne Eintrag und dem nächsten Wechsel?</summary>
+    private static bool Nachgefuellt(DateTime ortszeit, Lage? lage)
+    {
+        if ((lage ?? Lage.Bluete) != Lage.Bluete || NachfuellenOhneEintrag() is not { } ab || ortszeit < ab) return false;
+        var naechsterWechsel = ab.Date.AddDays(WasserwechselAlleTage - ImWasserzyklus(ab)).AddHours(WechselStunde);
+        return ortszeit < naechsterWechsel;
+    }
 
     /// <summary>Die wievielte Blütewoche, als Bruch.</summary>
     private static double Bluetewoche(DateTime ortszeit) => Alter(ortszeit) / 7.0;
@@ -182,7 +234,8 @@ public static class Demoverlauf
     /// 1,5–1,7 — genau dann ist der Wasserwechsel fällig.
     /// </remarks>
     public static double Ec(DateTime ortszeit, Lage? lage = null)
-        => (lage ?? Lage.Bluete).EcFrisch + SeitWasserwechsel(ortszeit) * 0.03 + (1 + Tagesgang(ortszeit)) * 0.006;
+        => (lage ?? Lage.Bluete).EcFrisch + ImWasserzyklus(ortszeit) * 0.03 + (1 + Tagesgang(ortszeit)) * 0.006
+           - (Nachgefuellt(ortszeit, lage) ? NachfuellenEcSenkung : 0);
 
     /// <summary>pH — Sägezahn über drei Tage, steigt bei Licht schneller.</summary>
     /// <remarks>
@@ -194,7 +247,7 @@ public static class Demoverlauf
     /// den ganzen Dosierzyklus; gehalten von <c>DemowerteImZielTests</c>.</para>
     /// </remarks>
     public static double Ph(DateTime ortszeit)
-        => 5.85 + SeitDosierung(ortszeit) * 0.1 + (1 + Tagesgang(ortszeit)) * 0.02;
+        => 5.85 + ImDosierzyklus(ortszeit) * 0.1 + (1 + Tagesgang(ortszeit)) * 0.02;
 
     /// <summary>Wassertemperatur in °C — Nachtabsenkung, plus Kühlerausfall.</summary>
     public static double WasserTempC(DateTime ortszeit)
@@ -239,11 +292,17 @@ public static class Demoverlauf
         => (lage ?? Lage.Bluete).FeuchteMitte - Tagesgang(ortszeit) * 1.5;
 
     /// <summary>ORP in mV — faellt zwischen den HOCl-Gaben ab.</summary>
-    public static double OrpMv(DateTime ortszeit) => 437 - SeitDosierung(ortszeit) * 19;
+    /// <remarks>
+    /// 18 mV je Tag, nicht mehr 19 (A-006): seit die Gabe um 07:00 kommt statt
+    /// um Mitternacht, steht der dritte Tag morgens bis 07:00 noch an — bei 19
+    /// waren das 399 mV gegen das Planziel 400–450, und die Kachel war jeden
+    /// Morgen „daneben" (DemowerteImZielTests).
+    /// </remarks>
+    public static double OrpMv(DateTime ortszeit) => 437 - ImDosierzyklus(ortszeit) * 18;
 
     /// <summary>Fuellstand in Litern — faellt ueber die Woche, springt beim Wechsel zurueck.</summary>
     public static double FuellstandLiter(DateTime ortszeit)
-        => 96 - SeitWasserwechsel(ortszeit) * 2.4 - (1 + Tagesgang(ortszeit)) * 0.55;
+        => 96 - ImWasserzyklus(ortszeit) * 2.4 - (1 + Tagesgang(ortszeit)) * 0.55;
 
     /// <summary>Derselbe Pegel als Zentimeter — was ein eTape misst.</summary>
     /// <remarks>

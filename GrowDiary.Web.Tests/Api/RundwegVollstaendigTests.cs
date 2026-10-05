@@ -278,6 +278,12 @@ public sealed class RundwegVollstaendigTests
     /// <summary>Verträge ohne Rundweg — mit ausgeschriebenem Grund.</summary>
     private static readonly Dictionary<string, string> NichtGefahren = new(StringComparer.Ordinal)
     {
+        ["TagebuchVerwerfenRequest"] =
+            "Ein Schalter, kein Formular: \u201eWar nichts\u201c setzt oder loescht nur den Zeitpunkt "
+            + "VerworfenAmUtc einer Auffaelligkeit. Es gibt kein Feld, das zurueckkommen koennte; "
+            + "der Rundweg (setzen, neu lesen, weg; zuruecknehmen, wieder da) steht in "
+            + "TagebuchServiceTests.WarNichts_BleibtGemerkt_UndLaesstSichZuruecknehmen und in "
+            + "e2e/tagebuch.spec.ts.",
         ["UpdateAutoMeasurementConfigRequest"] =
             "Der Demobestand legt keine Auto-Messung an; ohne Bestand faehrt der "
             + "Rundweg ins Leere und waere gruen, ohne etwas zu pruefen.",

@@ -65,8 +65,13 @@ export function artenFuer(entryType: string): ReadonlyArray<{ value: string; lab
   return meilenstein ? [...EINTRAG_ARTEN, { value: entryType, label: meilenstein }] : EINTRAG_ARTEN
 }
 
-/** Ein gespeicherter Eintrag als vorbefülltes Formular. */
-export function alsFelder(entry: JournalEntryDto): EintragFelder {
+/**
+ * Ein gespeicherter Eintrag als vorbefülltes Formular.
+ *
+ * Nimmt nur die vier Felder, die es liest — das Grow-Tagebuch (A-006) hat den
+ * Eintrag in seiner eigenen Form und bearbeitet ihn mit demselben Formular.
+ */
+export function alsFelder(entry: Pick<JournalEntryDto, 'title' | 'body' | 'entryType' | 'occurredAtUtc'>): EintragFelder {
   return {
     title: entry.title ?? '',
     body: entry.body ?? '',

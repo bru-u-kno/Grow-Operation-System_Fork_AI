@@ -399,6 +399,31 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         return CreatedAtAction(nameof(GetChangeouts), new { id }, created.ToDto());
     }
 
+    /// <summary>Einen falsch eingetragenen Addback oder ein Nachfüllen entfernen.</summary>
+    /// <remarks>
+    /// Seit A-006 lässt sich ein Nachfüllen aus dem Grow-Tagebuch eintragen
+    /// („Nachfüllen eintragen" an einer Auffälligkeit). Wer dort verklickt,
+    /// muss es loswerden können — bis dahin gab es für diese Tabelle nur
+    /// Anlegen.
+    /// </remarks>
+    [HttpDelete("{id:int}/addback/logs/{logId:int}")]
+    [KiStufe(KiStufe.Dokumentieren)]
+    [KiSicherungVorher]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
+    public IActionResult DeleteAddbackLog(int id, int logId)
+    {
+        if (_repository.GetGrow(id) is null)
+        {
+            return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
+        }
+
+        return _repository.DeleteAddbackLog(id, logId)
+            ? NoContent()
+            : NotFoundError("addback_log_not_found",
+                $"Zu diesem Grow gibt es keinen Addback-Eintrag mit Id {logId}.");
+    }
+
     /// <summary>Einen falsch eingetragenen Wasserwechsel entfernen.</summary>
     /// <remarks>
     /// Es gab keinen Weg zurueck. Solange die Mahnung diese Tabelle nicht las,

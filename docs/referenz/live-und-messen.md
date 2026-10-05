@@ -8,7 +8,8 @@
 |---|---|
 | Live | `/` — Menü „Jetzt → Live" (`navigation.ts`) |
 | Messen (Formular) | `/messung` — Menü „Jetzt → Messen" |
-| Messungen (Protokoll) | `/messungen` — Menü „Pflanzen → Messungen" |
+| Grow-Tagebuch (A-006) | `/tagebuch` — Menü „Pflanzen → Tagebuch" |
+| Messungen (Protokoll) | `/messungen` — seit A-006 nicht mehr im Menü; Link „Messungen als Tabelle" oben im Tagebuch, Suche |
 | Dasselbe Protokoll im Grow | Abschnitt `measurements` in `/grows/:growId` |
 | Eine Messung bearbeiten | `/grows/measurements/:measurementId/edit` |
 | Kamera | Bühne auf der Live-Seite; Snapshot-Knopf im Messformular |
@@ -24,6 +25,10 @@ Fehlt ein Sensor, fällt die Kachel auf die letzte Messung zurück, **je Kennzah
 **Messen.** 21 Zahlenfelder mit Lesbarkeitsprüfung, dazu Phase, Herkunft, Notiz, Fotos und Kamera-Snapshot. „Aus Home Assistant übernehmen" füllt aus den gemappten Sensoren vor (`pullLive` über `/api/live/tents/{id}`); `LiveCheckPanel` prüft beim Tippen gegen dieselben Zielbereiche wie die Kacheln.
 
 **Protokoll.** Jede Zeile wird gegen die Sollwerte **ihrer eigenen Phase** beurteilt — fünf `AssessmentVerdict`-Fälle, die als „im Ziel", „über dem Ziel", „unter dem Ziel", der blanke Grund (kein Ziel) und „den Wert kann es nicht geben" erscheinen; darüber die Bilanz. Ab 1000 px Tabelle, darunter Zeitachse.
+
+**Tagebuch.** Alles eines Grows nach Tagen, neueste oben (`GET /api/grows/{id}/tagebuch?bis=&tage=7`, `TagebuchService`): Messungen als Zellen mit Herkunft „Sensor"/„von Hand" (Handmessung gegen den Sensor ±10 min abgeglichen), Wasserwechsel als Vorgang (Changeout + Messung mit Lösungswechsel-Haken + Journal „Wasserwechsel" innerhalb einer Stunde = eine Zeile mit vorher | nachher | Änderung), Nachfüllen/Addback, Dosierungen, Journal mit Bearbeiten/Entfernen, Fotos, gebuchter Verbrauch. Tag und Uhrzeit rechnet der Server in Ortszeit. Je Tag „▸ Sensorkurven" (beim Öffnen immer zu, nicht gespeichert; `GET …/tagebuch/kurven?tag=`): EC, pH, Wasser, Luft, Feuchte, VPD mit Min–Max, Licht aus den Schaltflanken (sonst Lichtplan), Ereignis-Striche. Älter als die Rohwerte (7 Tage) gibt es nur Tageswerte — die Seite sagt das.
+
+**Auffällig.** Sprünge im Becken (EC, pH, Wasserstand) ohne passenden Eintrag (`Sprungerkennung`): zwei ruhige Abschnitte von je 45 min, dazwischen höchstens 60 min Übergang. Gemerkt in `ForkTagebuchAuffaelligkeiten` beim Öffnen und jede Nacht vor dem Aufräumen der Rohwerte. „Nachfüllen eintragen", „Notiz dazu", „War nichts" (`PUT /api/tagebuch/auffaelligkeiten/{id}`).
 
 ## Die Zahlen und woher sie kommen
 
@@ -45,6 +50,15 @@ Fehlt ein Sensor, fällt die Kachel auf die letzte Messung zurück, **je Kennzah
 | Physikalische Grenzen | pH 0–14 · EC 0–10 · Wasser −5…60 °C · Luft −20…60 °C · rF 0–100 % · DO 0–20 · ORP ±1000 · CO₂ 0–30000 · PPFD 0–3000 · VPD 0–20 · Luftstrom 0–300 | `MeasurementSanityService.PhysikalischeGrenzen` — die Wahrheit, sperrt beim Speichern |
 | Dieselben Grenzen beim Tippen | nur 8 der 11 Größen (ohne PPFD, VPD, Luftstrom) | `live-check-model.ts` (`PHYSIK`) — **abgetippt, kein Test hält die beiden Tabellen gleich** |
 | „Außerhalb des Laufs" | vor Start −1 Tag oder nach jetzt +1 h | `MeasurementAssessmentService.Assess` |
+
+### Tagebuch
+| Zahl | Wert | Herkunft |
+|---|---|---|
+| EC-Sprung | ab 5 % des Werts davor, mind. 0,05 | Faustregel: so viel verdünnt 1/20 des Beckens Wasser (`Sprungerkennung.EcAnteil`) |
+| pH-Sprung | ab 0,2 | halbe Breite des Komfortbands 5,8–6,2 (`DeviationAnalyzerService.PhComfort*`) |
+| Wasserstand-Sprung | ab 5 % | dieselbe 1/20-Regel |
+| Erklärendes Fenster | 1 h davor bis 3 h danach | Faustregel: eingetragen wird nach der Arbeit (Brus Wechsel 04.10.: Sensor 16:44, Eintrag 17:30) |
+| Abgleich Hand/Sensor | ±0,1 pH, ±0,1 EC, ±1 °C | Herstellerangabe Bluelab Guardian Monitor |
 
 ## Was es bewusst NICHT tut
 
