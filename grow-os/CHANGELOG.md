@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.173
+
+**Fork AI.** Das neue Grow-Tagebuch: alles rund um den Grow an einer Stelle.
+
+- **Neues Tagebuch** (Menü „Pflanzen → Tagebuch"): nach Tagen, neueste oben — Messwerte vom Sensor
+  und von Hand, Wasserwechsel, Nachfüllen, Dosierungen, Notizen, Fotos und gebuchter Verbrauch.
+  Filter: Alles · Messwerte · Wasser · Notizen & Fotos.
+- **Wasserwechsel als ein Eintrag:** Ein Wechsel aus dem Ablauf steht als eine Zeile mit vorher |
+  nachher | Änderung (EC, pH, Wasser, DO, ORP), den Zugaben und „Vorgang öffnen". „Entfernen" nimmt
+  den ganzen Vorgang mit.
+- **Sensorkurven je Tag:** „▸ Sensorkurven" klappt sechs Kurven auf (EC, pH, Wasser, Luft, Feuchte,
+  VPD) mit Tiefst- und Höchstwert, Lichtphase und Strichen für Wasserwechsel, Nachfüllen und
+  Notizen. Beim Öffnen ist jeder Tag zu; „Alle Kurven" klappt alles auf einmal auf. Älter als
+  7 Tage gibt es nur noch Tageswerte — das steht dann dabei.
+- **„Auffällig":** Springt EC, pH oder Wasserstand, ohne dass etwas eingetragen ist, fragt das
+  Tagebuch nach („EC fiel in 25 Minuten um 0,14 — Nachgefüllt?") — mit „Nachfüllen eintragen"
+  (vorbelegt), „Notiz dazu" oder „War nichts". Gemeldet ab 5 % EC bzw. 0,2 pH in höchstens einer
+  Stunde; Kalibrierungen und passende Dosierungen zählen als Erklärung.
+- **Handmessung gegen Sensor:** Unter jeder Handmessung steht, was der Sensor zur selben Zeit
+  zeigte — „passt" oder wie weit es abweicht.
+- „Messungen" und „Journal & Fotos" sind nicht mehr im Menü; beide sind oben im Tagebuch verlinkt
+  und über die Suche zu finden. In der Leiste oben steht „Tagebuch" statt „Verlauf".
+- Ein Nachfüll-Eintrag (Addback) lässt sich wieder entfernen.
+
+Geprüft: Backend 2966 Tests, darunter die Sprungerkennung mit den echten Sensorwerten vom 03.10.;
+744 Prüfungen gegen die laufende App bei 320 bis 1280 px in beiden Themen.
+
 ## 2.0.0-forkai.172
 
 **Fork AI.** Der Wasserwechsel ist jetzt ein einziger Ablauf — messen, ansetzen, messen, speichern.

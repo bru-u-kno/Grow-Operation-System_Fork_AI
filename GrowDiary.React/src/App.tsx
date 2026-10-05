@@ -29,6 +29,7 @@ import ReleasePage from './pages/ReleasePage'
 import SettingsPage from './pages/SettingsPage'
 import TentDetailPage from './pages/TentDetailPage'
 import TentsPage from './pages/TentsPage'
+import TagebuchPage from './pages/TagebuchPage'
 // Reihenfolge zaehlt: die Konventionen zuerst, dann die Seitenregeln, die sie
 // fuer ihre Seite praezisieren. Alle ungeschichtet, wie sie es in rc2-overrides
 // auch waren.
@@ -156,6 +157,7 @@ function App() {
           <Route path="/hydro/:setupId" element={<HydroDetailPage />} />
           <Route path="/home-assistant" element={<HomeAssistantPage />} />
           <Route path="/handy" element={<HandySeite />} />
+          <Route path="/tagebuch" element={<TagebuchPage />} />
           <Route path="/messungen" element={<GrowScopedSectionPage title="Messungen" section="measurements" />} />
           <Route path="/diagnose" element={<GrowScopedSectionPage title="Diagnose" section="diagnosis" />} />
           <Route path="/journal" element={<GrowScopedSectionPage title="Journal & Fotos" section="journal" />} />

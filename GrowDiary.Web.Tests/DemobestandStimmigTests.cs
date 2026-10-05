@@ -101,6 +101,63 @@ public sealed class DemobestandStimmigTests : IDisposable
         return laufend;
     }
 
+    /// <summary>
+    /// Das Grow-Tagebuch (A-006) zeigt im Bestand GENAU eine Auffälligkeit —
+    /// das absichtliche Nachfüllen ohne Eintrag in Zelt 1.
+    /// </summary>
+    /// <remarks>
+    /// Jeder andere Sprung im Verlauf (Wasserwechsel um 07:00, pH-Nachstellen alle
+    /// drei Tage, in beiden Zelten) hat seinen Eintrag. Vor A-006 sprang die
+    /// Kurve um Mitternacht und der Wechsel stand um 07:00 — das Tagebuch hätte
+    /// jeden Wechsel als „dazu ist nichts eingetragen" gemeldet: der Bestand
+    /// widersprach der eigenen Regel der App. Unabhängig von der Uhrzeit, zu der
+    /// der Test läuft (Leitplanke 15): das Nachfüllen liegt immer 1–6 Tage zurück.
+    /// </remarks>
+    [Fact]
+    public void Das_Tagebuch_findet_genau_das_eine_Nachfuellen_ohne_Eintrag()
+    {
+        var rohwerte = _dienste.GetRequiredService<SensorReadingRepository>();
+        var jetzt = DateTime.UtcNow;
+        foreach (var zelt in _grows.GetTents())
+        {
+            foreach (var wert in DemoData.SeedHistory(zelt.Id, jetzt, DemoData.LageFuer(zelt)))
+            {
+                rohwerte.AddReading(wert);
+            }
+        }
+
+        var tagebuch = new GrowDiary.Web.Services.Tagebuch.TagebuchService(
+            _grows, _dienste.GetRequiredService<JournalRepository>(), rohwerte,
+            _dienste.GetRequiredService<TagebuchRepository>(), _dienste.GetRequiredService<LightRepository>(),
+            _dienste.GetRequiredService<DosingRepository>(), _dienste.GetRequiredService<KostenRepository>(),
+            _dienste.GetRequiredService<HardwareRepository>(),
+            _dienste.GetRequiredService<WasserwechselVorgangRepository>());
+
+        var erster = LaufenderGrow();
+        var auffaellig = tagebuch.Seite(erster.Id, null, 31, jetzt)!.Tage
+            .SelectMany(t => t.Ereignisse).Where(e => e.Art == "auffaellig").ToList();
+        var zeile = Assert.Single(auffaellig);
+        // EC zuerst; der Wasserstand steigt beim Nachfüllen mit (Demoverlauf.NachfuellenLiter).
+        var befund = zeile.Auffaellig!.Befunde[0];
+        Assert.Equal("reservoir-ec", befund.Messgroesse);
+        Assert.Contains(zeile.Auffaellig.Befunde, b => b.Messgroesse == "reservoir-level-cm" && b.Nachher > b.Vorher);
+        Assert.InRange(befund.Vorher - befund.Nachher, 0.11, 0.13);
+        Assert.Equal(DateOnly.FromDateTime(Demoverlauf.NachfuellenOhneEintrag()!.Value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            GrowDiary.Web.Services.Tagebuch.TagebuchService.OrtsTag(zeile.ZeitpunktUtc).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        // Selbsttest: die Erkennung hat gemerkt, was sie zeigt. Mehr lässt sich
+        // nicht zu jeder Uhrzeit verlangen: ob der letzte Wechsel (alle 7 Tage um
+        // 07:00) noch in den sieben Tagen Rohwerte liegt, hängt davon ab, wann
+        // der Test läuft — die erste Fassung verlangte drei Sprünge und wurde im
+        // Tor um 06:30 rot (Leitplanke 15). Erklärt-und-trotzdem-gemerkt prüft
+        // TagebuchServiceTests mit festen Zeitpunkten.
+        var gemerkt = _dienste.GetRequiredService<TagebuchRepository>().Lesen(erster.TentId!.Value, jetzt.AddDays(-8), jetzt);
+        Assert.Contains(gemerkt, g => g.Id == befund.Id);
+
+        var zweiter = Laufende().Single(g => g.Id != erster.Id);
+        Assert.DoesNotContain(tagebuch.Seite(zweiter.Id, null, 31, jetzt)!.Tage.SelectMany(t => t.Ereignisse), e => e.Art == "auffaellig");
+    }
+
     /// <summary>Der Bestand legt überhaupt etwas an.</summary>
     /// <remarks>
     /// Der Mengenwächter für alles Folgende: liefe <see cref="Demobestand.Anlegen"/>

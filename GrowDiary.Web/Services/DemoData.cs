@@ -563,11 +563,14 @@ public static class DemoData
     /// </remarks>
     public static IEnumerable<TentSensorReading> SeedHistory(int tentId, DateTime nowUtc, Demoverlauf.Lage? lage = null)
     {
-        // Zwei Auflösungen. Die letzten zwei Tage im Viertelstundentakt —
-        // dort schaut man auf die Kurve und will sie glatt sehen. Davor
+        // Zwei Auflösungen. Die letzten sieben Tage im Viertelstundentakt —
+        // so lange behält die echte Anlage ihre Rohwerte, und das
+        // Grow-Tagebuch (A-006) erkennt Sprünge nur, wo Werte höchstens 15
+        // Minuten auseinanderliegen. Bis A-006 waren es zwei Tage: ob der
+        // Bestand einen Wechsel zeigte, hing dann vom Wochentag ab. Davor
         // stündlich: 42 Tage im Viertelstundentakt wären rund 48 000 Zeilen
         // je Zelt, und im 30-Tage-Diagramm sieht man den Unterschied nicht.
-        const int FeinBisStunden = 48;
+        const int FeinBisStunden = 7 * 24;
 
         for (var minuten = HistoryHours * 60; minuten > 0; minuten -= 15)
         {

@@ -8,7 +8,7 @@
 | Was | Wo |
 |---|---|
 | Menü „Jetzt" → „Aufgaben"; Badge `count`, Handy-Leiste, Ziel der meisten Push-Nachrichten | `/aufgaben` (alt: `/action`) → `MobileActionPage` |
-| Menü „Pflanzen" → „Journal & Fotos"; derselbe Strom im Grow | `/journal` → `GrowScopedSectionPage`; `/grows/<id>`, Abschnitt `journal` |
+| Seit A-006 nicht mehr im Menü (Hauptweg ist „Pflanzen" → „Tagebuch"); Link „Journal & Fotos" im Tagebuch, derselbe Strom im Grow | `/journal` → `GrowScopedSectionPage`; `/grows/<id>`, Abschnitt `journal` |
 | Begleitungsstufe (Voll · Wichtiges · Experte) | `/settings` (alt: `/einstellungen`) → `PUT /api/companion/settings` |
 | Eigene Fotos zu einem Symptom | `/wissen` → `SymptomPhotos.tsx` |
 | Menü „Einrichtung" → „KI-Assistent", Reiter „Mappe" (bis forkai.164 unter „Wissen") | `/ki?tab=mappe` (alt: `/berater`) → `MappeReiter`, siehe `ki-assistent.md` |

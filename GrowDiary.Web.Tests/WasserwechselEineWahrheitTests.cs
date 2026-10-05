@@ -41,6 +41,12 @@ public sealed class WasserwechselEineWahrheitTests
             "Der Testbestand SETZT die Markierung beim Säen, er liest sie nicht. "
             + "Er ist die Quelle der Daten, gegen die alles andere prüft.",
 
+        ["TagebuchService.cs"] =
+            "Das Grow-Tagebuch (A-006) zeigt JEDE Messung mit Haken an ihrem Tag — als Teil des "
+            + "Wasserwechsel-Vorgangs oder mit dem Vermerk Lösungswechsel — und nimmt sie als "
+            + "Eintrag, der einen Sprung im Sensorverlauf erklärt. Einen „letzten Wechsel“ rechnet "
+            + "es nicht aus; dafür bleibt Wasserwechsel.cs die eine Antwort.",
+
         ["MeasurementRepository.cs"] =
             "Trägt die Spalte in beide Richtungen — Zeile lesen, Zeile schreiben "
             + "(`measurement.SolutionChange ? 1 : 0` im INSERT). Ein Transportweg "

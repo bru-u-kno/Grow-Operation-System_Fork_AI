@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from './api'
-import { barCandidates, defaultBarRoutes, type NavLeaf } from './navigation'
+import { barCandidates, defaultBarRoutes, leistenNachfolger, type NavLeaf } from './navigation'
 
 type NavBarDto = { items: string[] | null; dashboardPath: string }
 
@@ -25,7 +25,8 @@ function toLeaves(routes: string[]): NavLeaf[] {
   // hinterlaesst damit keine tote Kachel.
   const found: NavLeaf[] = []
   for (const route of routes) {
-    const leaf = barCandidates.find((item) => item.to === route)
+    const ziel = leistenNachfolger[route] ?? route
+    const leaf = barCandidates.find((item) => item.to === ziel)
     if (leaf && !found.includes(leaf)) found.push(leaf)
   }
   return found

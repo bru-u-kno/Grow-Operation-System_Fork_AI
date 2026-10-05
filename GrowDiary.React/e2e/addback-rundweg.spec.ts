@@ -210,6 +210,9 @@ test.describe('Nachfüll-Rundweg', () => {
 
     await page.locator('[data-audit="addback-weiter-2"]').click()
     await expect(ablauf.getByLabel('Nachgefüllt in Litern')).toHaveValue('20')
+    // Nur Wasser: keine Plan-Zeilen. Sonst hinge der Fall an Kosten-Artikeln, die
+    // parallel laufende Rundwege anlegen und wieder löschen (gefunden im gemeinsamen Lauf).
+    await ablauf.getByLabel('Art des Nachfüllens').selectOption('TopOff')
     await page.locator('[data-audit="addback-weiter-3"]').click()
     await expect(ablauf.getByPlaceholder('z. B. 1,15')).toHaveValue('1,61')
     await expect(ablauf.getByPlaceholder(/Warum nachgefüllt/)).toHaveValue(marke)

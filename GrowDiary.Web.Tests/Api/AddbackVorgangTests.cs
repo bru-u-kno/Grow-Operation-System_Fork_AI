@@ -220,6 +220,35 @@ public sealed class AddbackVorgangTests
     }
 
     /// <summary>
+    /// Im Grow-Tagebuch steht das Nachfüllen als EIN Ereignis: Messungen, Buchungen
+    /// und Tagebuchzeile hängen am Eintrag, nicht noch einmal als eigene Zeilen.
+    /// </summary>
+    [Fact]
+    public async Task DasTagebuchBuendeltDenVorgang()
+    {
+        var growId = EigenerGrow();
+        var client = _app.IngressClient();
+        var vorgang = await Anlegen(client, growId, VollesNachfuellen(Zeit(DateTime.Now.AddHours(-2))));
+
+        var seite = await client.GetFromJsonAsync<TagebuchSeiteDto>($"/api/grows/{growId}/tagebuch", Json);
+        var ereignisse = seite!.Tage.SelectMany(t => t.Ereignisse).ToList();
+        Assert.True(ereignisse.Count >= 1, "Das Tagebuch zeigt nichts — der Fall sähe nichts.");
+
+        var nachfuellen = Assert.Single(ereignisse, e => e.Art == "addback");
+        Assert.Equal(vorgang.Id, nachfuellen.Addback!.VorgangId);
+        Assert.Equal(3, nachfuellen.Posten.Count);
+        Assert.Equal(1.75, nachfuellen.Addback.Vorher!.Ec);
+        Assert.Equal(7.6, nachfuellen.Addback.Vorher.SauerstoffMgL);
+        Assert.Equal(430, nachfuellen.Addback.Nachher!.OrpMv);
+        Assert.Equal(vorgang.Tagebuch!.Id, nachfuellen.Addback.Journal!.Id);
+
+        // Nicht doppelt: keine eigene Messzeile, keine eigene Notiz, keine Verbrauchszeile.
+        Assert.DoesNotContain(ereignisse, e => e.Schluessel == $"messung-{vorgang.Vorher!.Id}" || e.Schluessel == $"messung-{vorgang.Nachher!.Id}");
+        Assert.DoesNotContain(ereignisse, e => e.Schluessel == $"notiz-{vorgang.Tagebuch.Id}");
+        Assert.DoesNotContain(ereignisse, e => e.Art == "verbrauch");
+    }
+
+    /// <summary>
     /// Der Löschweg am Eintrag (<c>DELETE /addback/logs/{id}</c>, vom Tagebuch benutzt)
     /// nimmt den ganzen Vorgang — ein Weg, nicht zwei.
     /// </summary>

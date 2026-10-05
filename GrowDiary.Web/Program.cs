@@ -132,6 +132,9 @@ builder.Services.AddScoped<SteuerungGeraeteService>();
 builder.Services.AddScoped<BluelabGrenzenService>();
 builder.Services.AddHostedService<BluelabGrenzenWorker>();
 // Fork AI (forkai.22): Geraetesicht ueber die bestehenden Entity-Quellen.
+// A-006: Grow-Tagebuch — gemerkte Spruenge und der Tagesstrom.
+builder.Services.AddSingleton<TagebuchRepository>();
+builder.Services.AddScoped<GrowDiary.Web.Services.Tagebuch.TagebuchService>();
 builder.Services.AddSingleton<GeraeteRepository>();
 builder.Services.AddSingleton<HomeAssistantRegistryService>();
 builder.Services.AddScoped<GeraeteUebersichtService>();

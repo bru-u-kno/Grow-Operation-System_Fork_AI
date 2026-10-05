@@ -164,7 +164,11 @@ public static partial class Demobestand
         // Ein zweiter laufender Grow in einem zweiten Zelt am selben Zaehler, dazu
         // Strom-Quelle, Preis und Zaehlerstaende (Demobestand.Strom.cs) — sonst
         // stand die Kostenseite auf „Keine Strom-Quelle".
-        ZweitesZeltAnlegen(grows, hydro, setups, zweiteSorte.Id);
+        var zweiterGrow = ZweitesZeltAnlegen(grows, hydro, setups, zweiteSorte.Id);
+        // Auch dort springen die Sensoren beim Wechsel und beim pH-Nachstellen —
+        // ohne Einträge stünde jeder Sprung im Tagebuch als „Auffällig" (A-006).
+        WasserwechselAnlegen(addback, zweiterGrow, Demoverlauf.Lage.Spaetbluete);
+        PhNachstellenAnlegen(journal, zweiterGrow.Id);
         var staende = StromAnlegen(dienste.GetRequiredService<AppSettingsRepository>(),
             dienste.GetRequiredService<KostenRepository>(), grows);
 
@@ -364,7 +368,7 @@ public static partial class Demobestand
         return geplant < jetztUtc ? geplant : jetztUtc;
     }
 
-    private static void WasserwechselAnlegen(AddbackRepository addback, GrowRun grow)
+    private static void WasserwechselAnlegen(AddbackRepository addback, GrowRun grow, Demoverlauf.Lage? lage = null)
     {
         var heute = DateTime.Today;
 
@@ -390,15 +394,17 @@ public static partial class Demobestand
                 PerformedAtUtc = WechselZeitpunkt(wann, DateTime.UtcNow),
                 PercentChanged = komplett ? 100 : 50,
                 VolumeChangedLiters = komplett ? 100 : 50,
-                /* Am Tag des Wechsels selbst ist der Verlauf schon wieder auf
-                   Anfang — Demoverlauf.Ec rechnet ueber SeitWasserwechsel, und
-                   das ist an diesem Tag 0. Gemessen wird deshalb am ABEND
-                   davor, wenn der EC am hoechsten steht. Sonst stuende hier
-                   "1,02 → 1,02": ein Wechsel, der nichts bewirkt hat. */
-                EcBefore = Math.Round(Demoverlauf.Ec(wann.AddDays(-1).AddHours(20)), 2),
-                EcAfter = 1.02,
-                PhBefore = 6.2,
-                PhAfter = 5.8,
+                /* Vorher und nachher aus DEMSELBEN Verlauf wie die Sensoren:
+                   eine Viertelstunde vor dem Wechsel um 07:00 und genau um
+                   07:00 (Demoverlauf.WechselStunde). Bis A-006 stand hier
+                   „EcAfter 1,02, PhAfter 5,8" — seit der Lage je Zelt
+                   (03.10.2026) zeigten die Sensoren nach dem Wechsel aber
+                   1,52. Das Grow-Tagebuch stellt beides nebeneinander; zwei
+                   Wahrheiten für denselben Wechsel wären dort sofort zu sehen. */
+                EcBefore = Math.Round(Demoverlauf.Ec(wann.AddHours(Demoverlauf.WechselStunde).AddMinutes(-15), lage), 2),
+                EcAfter = Math.Round(Demoverlauf.Ec(wann.AddHours(Demoverlauf.WechselStunde), lage), 2),
+                PhBefore = Math.Round(Demoverlauf.Ph(wann.AddHours(Demoverlauf.WechselStunde).AddMinutes(-15)), 2),
+                PhAfter = Math.Round(Demoverlauf.Ph(wann.AddHours(Demoverlauf.WechselStunde)), 2),
                 WaterUsed = grow.WaterSource,
                 Notes = komplett
                     ? "Testdaten: kompletter Reset, Becken geschrubbt."
@@ -704,6 +710,39 @@ public static partial class Demobestand
                 Source = ValueOrigin.Manual,
                 // Echtes UTC: die Spalte heisst OccurredAtUtc.
                 OccurredAtUtc = DateTime.UtcNow.AddDays(-vorTagen),
+            });
+        }
+
+        PhNachstellenAnlegen(journal, growId);
+    }
+
+    /// <summary>
+    /// Das pH-Nachstellen alle drei Tage als Journaleintrag — um 07:00, wenn
+    /// der Verlauf um 0,2 springt (<see cref="Demoverlauf.Ph"/>).
+    /// </summary>
+    /// <remarks>
+    /// Ohne Eintrag meldete das Grow-Tagebuch (A-006) jeden dieser Sprünge als
+    /// „dazu ist nichts eingetragen" — der Bestand widerspräche der eigenen
+    /// Regel der App. An Wechseltagen erklärt der Wechsel den Sprung schon.
+    /// Für beide laufenden Grows: beide Zelte lesen dieselbe pH-Kurve.
+    /// </remarks>
+    private static void PhNachstellenAnlegen(JournalRepository journal, int growId)
+    {
+        for (var zurueck = Demoverlauf.TageRueckwaerts; zurueck >= 0; zurueck--)
+        {
+            var tag = DateTime.Today.AddDays(-zurueck);
+            var um = tag.AddHours(Demoverlauf.WechselStunde);
+            if (um > DateTime.Now) continue;
+            if (Demoverlauf.ImDosierzyklus(um) != 0 || Demoverlauf.ImWasserzyklus(um) == 0) continue;
+
+            journal.Create(new JournalEntry
+            {
+                GrowId = growId,
+                Title = "pH nachgestellt, HOCl gegeben",
+                Body = "Testdaten: pH− bis 5,85, ORP mit HOCl wieder auf rund 437 mV.",
+                EntryType = JournalEntryType.Action,
+                Source = ValueOrigin.Manual,
+                OccurredAtUtc = um.ToUniversalTime(),
             });
         }
     }
