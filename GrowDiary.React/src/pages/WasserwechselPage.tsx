@@ -49,6 +49,9 @@ export default function WasserwechselPage() {
   const [gespeichert, setGespeichert] = useState<{ text: string; hinweis: string | null } | null>(null)
   const [suche] = useSearchParams()
   const markiert = Number(suche.get('vorgang')) || null
+  // `?schritt=2` öffnet den Ablauf auf einem Schritt — für Links und für die
+  // Oberflächen-Prüfungen, die sonst nur Schritt 1 sähen (e2e/seiten.ts).
+  const startSchritt = Number(suche.get('schritt'))
   // Ein Link auf einen Vorgang (aus dem Tagebuch): gibt es ihn noch? Ein
   // geloeschter Vorgang soll das sagen, statt still nichts hervorzuheben.
   const [fehlendeVorgaenge, setFehlendeVorgaenge] = useState<number[]>([])
@@ -121,6 +124,7 @@ export default function WasserwechselPage() {
               key={`${grow.id}-${ablaufNummer}`}
               growId={grow.id}
               stand={stand}
+              startSchritt={ablaufNummer === 0 && [1, 2, 3, 4].includes(startSchritt) ? startSchritt as 1 | 2 | 3 | 4 : 1}
               onGespeichert={(vorgang, hinweis) => {
                 setGespeichert({ text: `Wasserwechsel gespeichert — mit ${teileText(vorgang)}.`, hinweis })
                 setAblaufNummer((wert) => wert + 1)

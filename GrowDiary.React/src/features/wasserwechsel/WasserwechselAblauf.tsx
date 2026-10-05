@@ -73,12 +73,14 @@ function fehlerText(caught: unknown, ersatz: string): string {
  * Die Vorschläge rechnet das Backend (`GET …/mixing-plan/vorschlag`) — hier
  * wird nichts davon nachgerechnet.
  */
-export function WasserwechselAblauf({ growId, stand, onGespeichert }: {
+export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeichert }: {
   growId: number
+  /** Auf welchem Schritt der Ablauf beginnt (`?schritt=`). */
+  startSchritt?: Schritt
   stand: WasserwechselStandDto | null
   onGespeichert: (vorgang: WasserwechselVorgangDto, hinweis: string | null) => void
 }) {
-  const [schritt, setSchritt] = useState<Schritt>(1)
+  const [schritt, setSchritt] = useState<Schritt>(startSchritt)
   const [zeitpunkt, setZeitpunkt] = useState(() => toLocalInputValue())
 
   // Schritt 1 — vorher

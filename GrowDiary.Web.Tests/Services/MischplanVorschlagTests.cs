@@ -165,15 +165,15 @@ public sealed class MischplanVorschlagTests
     }
 
     [Theory]
-    [InlineData("CalMag Agent", MischplanRolle.CalMag)]
-    [InlineData("CaMg", MischplanRolle.CalMag)]
+    [InlineData("CalMag Agent", MischplanRolle.CalMagMittel)]
+    [InlineData("CaMg", MischplanRolle.CalMagMittel)]
     [InlineData("Aqua Flores A", MischplanRolle.Grundduenger)]
     [InlineData("Bloom B", MischplanRolle.Grundduenger)]
     [InlineData("PK 13/14", MischplanRolle.Grundduenger)]
     [InlineData("PK", MischplanRolle.Grundduenger)]
-    [InlineData("Cannaboost", MischplanRolle.Zusatz)]
-    [InlineData("Cleanse", MischplanRolle.Zusatz)]
-    [InlineData("Rhizotonic", MischplanRolle.Zusatz)]
+    [InlineData("Cannaboost", MischplanRolle.ZusatzImPlan)]
+    [InlineData("Cleanse", MischplanRolle.ZusatzImPlan)]
+    [InlineData("Rhizotonic", MischplanRolle.ZusatzImPlan)]
     public void RollenAusDenNamenImWissen(string komponente, MischplanRolle erwartet)
         => Assert.Equal(erwartet, MischplanVorschlagRechnung.Rolle(komponente));
 }

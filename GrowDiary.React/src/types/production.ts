@@ -208,7 +208,7 @@ export interface CreateChangeoutRequest {
  * ------------------------------------------------------------------------- */
 
 /** Rolle einer Zeile im Mischplan — bestimmt, wie der Vorschlag rechnet. */
-export type MischplanRolle = 'Grundduenger' | 'CalMag' | 'Zusatz'
+export type MischplanRolle = 'Grundduenger' | 'CalMagMittel' | 'ZusatzImPlan'
 
 export interface MischplanVorschlagZeile {
   komponente: string

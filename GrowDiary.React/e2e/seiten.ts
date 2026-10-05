@@ -87,6 +87,14 @@ const DETAILSEITEN = [
   // Livewerte — also Zahlen, schmale Zeilen und Kollisionsgefahr auf dem Handy.
   '/geraete?reiter=rollen',
 
+  // A-006: der Wasserwechsel-Ablauf hat vier Schritte; aus dem Menü sieht jede
+  // Prüfung nur den ersten. Die übrigen drei tragen die Mischplan-Tabelle, den
+  // Vorher-Nachher-Vergleich und die Tagebuch-Vorschau — Zahlen und schmale
+  // Spalten, also genau das, was am Handy kollidiert.
+  '/wasserwechsel?growId=1&schritt=2',
+  '/wasserwechsel?growId=1&schritt=3',
+  '/wasserwechsel?growId=1&schritt=4',
+
   // Fork AI (forkai.136): `/steuerung/cropsteering` entfällt — Crop Steering
   // ist stillgelegt, die Adresse leitet zum Chiller weiter.
 

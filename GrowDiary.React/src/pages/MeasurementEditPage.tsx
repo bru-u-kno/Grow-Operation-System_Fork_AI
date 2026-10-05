@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import type { GrowDetail, GrowStage, MeasurementDto, MeasurementUpsertPayload, PhotoAssetDto, PhotoTag, ValueOrigin } from '../types'
 import { formatDateTime, toLocalInputValue } from '../utils'
@@ -250,9 +250,10 @@ function MeasurementEditPage() {
                   <span>Lösungswechsel dokumentiert</span>
                 </label>
               ) : (
-                <p className="meas-edit__hinweis" data-audit="messung-weg-zum-wasserwechsel">
-                  Wasser gewechselt? Das trägst du im <Link to={`/wasserwechsel?growId=${measurement?.growId ?? ''}`}>Wasserwechsel-Ablauf</Link> ein — mit Messung vorher und nachher, Verbrauch und Tagebuch.
-                </p>
+                <div className="meas-edit__hinweis" data-audit="messung-weg-zum-wasserwechsel">
+                  <p>Wasser gewechselt? Das trägst du im Wasserwechsel-Ablauf ein — mit Messung vorher und nachher, Verbrauch und Tagebuch.</p>
+                  <V1LinkButton to={`/wasserwechsel?growId=${measurement?.growId ?? ''}`}>Wasserwechsel eintragen</V1LinkButton>
+                </div>
               )}
             </V1Section>
 

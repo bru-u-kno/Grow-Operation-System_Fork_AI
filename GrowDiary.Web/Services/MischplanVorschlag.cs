@@ -12,10 +12,12 @@ public enum MischplanRolle
     Grundduenger,
 
     /// <summary>CalMag — folgt dem Calcium im Ausgangswasser.</summary>
-    CalMag,
+    /// <remarks>Nicht „CalMag": so heißt das Produkt, und rohe-enums.spec.ts würde jedes
+    /// „CalMag" auf einer Seite für einen rohen Enum-Wert halten.</remarks>
+    CalMagMittel,
 
     /// <summary>Alles übrige im Plan (Booster, Enzyme, Wurzelmittel).</summary>
-    Zusatz,
+    ZusatzImPlan,
 }
 
 /// <summary>Eine Zeile des Vorschlags.</summary>
@@ -128,12 +130,12 @@ public static partial class MischplanVorschlagRechnung
     {
         var flach = Regex.Replace(komponente.ToLowerInvariant(), "[^a-z0-9]", "");
         if (flach.Contains("calmag") || flach == "camg" || flach.StartsWith("camg") || flach.Contains("calimagic"))
-            return MischplanRolle.CalMag;
+            return MischplanRolle.CalMagMittel;
 
         var woerter = Regex.Split(komponente.Trim().ToLowerInvariant(), @"\s+");
         if (woerter.Length > 1 && woerter[^1] is "a" or "b") return MischplanRolle.Grundduenger;
         if (woerter.Contains("pk") || flach.StartsWith("pk")) return MischplanRolle.Grundduenger;
-        return MischplanRolle.Zusatz;
+        return MischplanRolle.ZusatzImPlan;
     }
 
     /// <summary>
@@ -225,10 +227,10 @@ public static partial class MischplanVorschlagRechnung
             var text = item.MinMlPerLiter == item.MaxMlPerLiter
                 ? Zahl(item.MinMlPerLiter, "0.##")
                 : $"{Zahl(item.MinMlPerLiter, "0.##")}–{Zahl(item.MaxMlPerLiter, "0.##")}";
-            var faktor = rolle == MischplanRolle.CalMag ? calMagFaktor : 1;
+            var faktor = rolle == MischplanRolle.CalMagMittel ? calMagFaktor : 1;
             var menge = Math.Round(proLiter * liter * faktor, 0, MidpointRounding.AwayFromZero);
             var treffer = ArtikelFuer(item.Component, artikel);
-            string? hinweis = rolle == MischplanRolle.CalMag && faktor == 0
+            string? hinweis = rolle == MischplanRolle.CalMagMittel && faktor == 0
                 ? "entfällt — Calcium aus dem Leitungswasser"
                 : item.MinMlPerLiter != item.MaxMlPerLiter ? $"Plan {text} ml/L — gerechnet mit der Mitte" : null;
             return new MischplanVorschlagZeile(item.Component, rolle, proLiter, text, menge,
@@ -251,7 +253,7 @@ public static partial class MischplanVorschlagRechnung
             spalte?.PhMin,
             spalte?.PhMax,
             zeilen,
-            zeilen.Any(z => z.Rolle == MischplanRolle.CalMag) ? calMagHinweis : null,
+            zeilen.Any(z => z.Rolle == MischplanRolle.CalMagMittel) ? calMagHinweis : null,
             luecke);
     }
 
