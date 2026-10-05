@@ -31,8 +31,10 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         Services.Knowledge.KnowledgeBaseLoader wissen,
         WasserwechselStandService wasserwechselStand,
         WaterProfileStore? waterProfile = null,
-        Services.GrowPlan.GrowPlanService? plaene = null)
+        Services.GrowPlan.GrowPlanService? plaene = null,
+        WasserwechselVorgangRepository? vorgaenge = null)
     {
+        _vorgaenge = vorgaenge;
         _plaene = plaene;
         _repository = repository;
         _harvestRepository = harvestRepository;
@@ -47,6 +49,9 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
     private readonly WasserwechselStandService _wasserwechselStand;
 
     private readonly WaterProfileStore? _waterProfile;
+
+    // A-006: ein Wechsel aus dem Ablauf gehoert zu einem Vorgang — Loeschen nimmt ihn ganz.
+    private readonly WasserwechselVorgangRepository? _vorgaenge;
 
     // Fork AI (Grow-Plan): die Ernte schließt den Grow ab — dann wird sein Plan eingefroren.
     private readonly Services.GrowPlan.GrowPlanService? _plaene;
@@ -74,17 +79,21 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         }
 
         var profil = _waterProfile?.Get();
+        var art = quelle;
         if (profil is null)
         {
             return (quelle, null);
         }
 
-        // Bei Osmose zaehlt der Wert NACH der Anlage, sonst der aus dem Bericht.
-        var mikroSiemens = quelle == WaterSource.RO
-            ? profil.TreatedConductivityUsCm
-            : profil.TreatedConductivityUsCm ?? profil.ConductivityUsCm;
-
-        return (quelle, mikroSiemens is { } us ? Math.Round(us / 1000, 3) : null);
+        // A-006 (Befund des Prüfers): eine Rechnung für den Wasser-EC, nicht
+        // zwei. Bis hierhin nahm diese Stelle bei Leitungswasser den Wert NACH
+        // der eigenen Aufbereitung, der Mischplan-Vorschlag den aus dem Bericht —
+        // gleiches Profil, zwei Zahlen. Gilt jetzt überall: Leitung = Bericht,
+        // Osmose = eigener Messwert nach der Aufbereitung, sonst 0. Bei einer
+        // Mischung kennt diese Stelle den Anteil nicht — dann kein erfundener Wert.
+        if (art == WaterSource.Mixed) return (quelle, null);
+        var (ec, _) = MischplanVorschlagRechnung.WasserEc(profil, art, art == WaterSource.RO ? 1 : 0);
+        return (quelle, ec);
     }
 
     [HttpGet("{id:int}/addback")]
@@ -440,6 +449,14 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         if (_repository.GetGrow(id) is null)
         {
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
+        }
+
+        // A-006: gehoert der Wechsel zu einem Vorgang, geht der ganze Vorgang —
+        // sonst blieben Messungen, Buchungen und Tagebuchzeile ohne ihren Wechsel stehen.
+        if (_vorgaenge?.ZumWechsel(id, changeoutId) is { } vorgang)
+        {
+            _vorgaenge.Loeschen(id, vorgang.Id);
+            return NoContent();
         }
 
         return _repository.DeleteChangeout(id, changeoutId)

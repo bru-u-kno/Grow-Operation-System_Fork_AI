@@ -42,6 +42,12 @@ public sealed class WasserAmpelService
     // 1 °dH = 17,848 mg/L CaCO3; 1 mmol/L CaCO3 = 5,6 °dH. Reine Umrechnung.
     private const double MgProDh = 17.848;
 
+    /// <summary>
+    /// Bis hierhin (ausschließlich) gilt Wasser als „weich" — WRMG § 9, Härtebereich weich unter 8,4 °dH.
+    /// </summary>
+    /// <remarks>Öffentlich, weil der Wasserwechsel-Vorschlag (A-006) dieselbe Grenze für CalMag liest.</remarks>
+    public const double WeichBisDh = 8.4;
+
     private const string QuellePsu =
         "Penn State Extension, „Interpreting Irrigation Water Tests\"";
     private const string QuelleWrmg =
@@ -93,12 +99,12 @@ public sealed class WasserAmpelService
         // Gesamthärte: gesetzliche Einordnung plus die Hydro-Lesart.
         if (profil.TotalHardnessDh is { } gh)
         {
-            var bereich = gh < 8.4 ? "weich" : gh <= 14 ? "mittel" : "hart";
+            var bereich = gh < WeichBisDh ? "weich" : gh <= 14 ? "mittel" : "hart";
             var (stufe, satz) = gh switch
             {
-                < 8.4 when duengerLiefertCalMag => ("gut",
+                < WeichBisDh when duengerLiefertCalMag => ("gut",
                     "Weiches Wasser — im RDWC der Idealfall: du bestimmst Calcium und Magnesium allein über den Dünger."),
-                < 8.4 => ("hinweis",
+                < WeichBisDh => ("hinweis",
                     "Weiches Wasser bringt kaum Calcium und Magnesium mit — das muss dein Dünger liefern (CalMag)."),
                 <= 14 => ("hinweis",
                     "Mittlere Härte: das Wasser bringt Calcium und Magnesium schon mit. Beim CalMag entsprechend zurückhaltender dosieren."),

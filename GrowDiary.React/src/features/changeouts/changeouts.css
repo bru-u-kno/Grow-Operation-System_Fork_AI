@@ -88,3 +88,30 @@
      dieser Zeile, aber es muss ihn geben. */
   .changeouts-weg { justify-self: end; }
 }
+
+/* A-006: was an einem Vorgang hängt, und der Vorgang, auf den ein Link zeigt. */
+@layer features {
+  .changeouts-vorgang { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-etikett); }
+  .v1-list-row.is-markiert { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-sm); }
+  .ww-ablauf-section { margin-bottom: 14px; }
+}
+@layer features {
+  /* Die Zeile als Raster statt Flex: am Handy brach das Datum Zeichen für Zeichen
+     um („05 .1 0. 20 26"), weil die lange Beschreibung daneben allen Platz nahm. */
+  .changeouts-section .v1-list-row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "datum text art weg"; align-items: center;
+  }
+  .changeouts-section .v1-list-row > strong { grid-area: datum; white-space: nowrap; }
+  .changeouts-section .v1-list-row > span { grid-area: text; min-width: 0; overflow-wrap: anywhere; }
+  .changeouts-section .v1-list-row > em { grid-area: art; }
+  .changeouts-section .v1-list-row > .changeouts-weg { grid-area: weg; }
+  @media (max-width: 640px) {
+    .changeouts-section .v1-list-row {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas: "datum art weg" "text text text"; row-gap: 6px;
+    }
+    /* 320 px: Datum darf umbrechen, statt unter den Knopf zu laufen. */
+    .changeouts-section .v1-list-row > strong { white-space: normal; min-width: 0; }
+  }
+}

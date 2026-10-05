@@ -61,11 +61,9 @@ test('ein Wasserwechsel laesst sich auf einen vergangenen Tag buchen', async ({ 
      den fremden Grow und zaehlte an /api/grows/1/changeouts nach: einmal in
      neun Laeufen rot, ohne dass sich am Code etwas geaendert haette. */
   await page.goto('/wasserwechsel?growId=1', { waitUntil: 'networkidle' })
-  const bereich = page.locator('.changeouts-section')
-  await bereich.scrollIntoViewIfNeeded()
-  await bereich.getByRole('button', { name: /Wechsel erfassen/ }).click()
-
-  const formular = page.locator('[data-audit="changeout-form"]')
+  /* Seit A-006 (05.10.2026) ist das Formular der Ablauf in vier Schritten;
+     „Wann" steht in Schritt 1, ganz oben. */
+  const formular = page.locator('[data-audit="wasserwechsel-ablauf"]')
   await expect(formular).toBeVisible()
 
   /* Das Datumsfeld — der Kern dieser Prüfung. Ohne es landet jeder Eintrag
@@ -77,13 +75,14 @@ test('ein Wasserwechsel laesst sich auf einen vergangenen Tag buchen', async ({ 
   /* Drei Tage zurück. Nicht „gestern": bei einem Lauf um Mitternacht wäre
      gestern womöglich heute, und der Fall bewiese nichts. */
   const dreiTage = new Date(Date.now() - 3 * 24 * 3600 * 1000)
-  const iso = dreiTage.toISOString().slice(0, 10)
-  const istDatum = await wann.getAttribute('type') === 'date'
-  await wann.fill(istDatum ? iso : `${iso}T12:00`)
+  const iso = `${dreiTage.getFullYear()}-${String(dreiTage.getMonth() + 1).padStart(2, '0')}-${String(dreiTage.getDate()).padStart(2, '0')}`
+  await wann.fill(`${iso}T12:00`)
 
-  await formular.locator('input').filter({ hasText: '' }).first().waitFor()
-  await formular.getByPlaceholder('z. B. 50').fill('60')
-  await formular.getByRole('button', { name: /speichern/i }).click()
+  // Die Literzahl steht auf dem Anlagevolumen; ohne Zugaben speichern.
+  await page.getByRole('button', { name: '2 · Ansetzen', exact: true }).click()
+  await expect(formular.getByLabel('Neues Wasser in Litern')).not.toHaveValue('')
+  await page.getByRole('button', { name: '4 · Speichern', exact: true }).click()
+  await formular.locator('[data-audit="wasserwechsel-speichern"]').click()
 
   let angelegt: number | null = null
   try {
@@ -111,6 +110,7 @@ test('ein Wasserwechsel laesst sich auf einen vergangenen Tag buchen', async ({ 
        Aufraeumzeile, von der niemand nachgeprueft hat, dass sie raeumt, ist
        keine. */
     if (angelegt != null) {
+      // Seit A-006 nimmt dieser Weg den ganzen Vorgang mit (Messungen, Buchungen, Tagebuch).
       const weg = await request.delete(`/api/grows/1/changeouts/${angelegt}`)
       expect(weg.ok(),
         `Der Testeintrag ${angelegt} liess sich nicht entfernen (HTTP ${weg.status()}). `

@@ -1,4 +1,5 @@
-import type { MotherHealthStatus, PlantRole, PlantStatus, QuarantineResult, SetupStatus, SetupType, StrainDominance } from './shared'
+import type { MotherHealthStatus, PlantRole, PlantStatus, QuarantineResult, SetupStatus, SetupType, StrainDominance, WaterSource } from './shared'
+import type { JournalEntryDto, MeasurementDto } from './grow'
 
 export type TentType = 'Production' | 'Mother' | 'Quarantine' | 'Propagation' | 'MultiPurpose'
 export type TentStatus = 'Active' | 'Archived'
@@ -168,6 +169,8 @@ export interface ChangeoutDto {
   phAfter: number | null
   notes: string | null
   createdAtUtc: string
+  /** A-006: ob der Wechsel die Erinnerung neu startet; Altdaten true. */
+  erinnerungNeuStarten?: boolean
 }
 
 /**
@@ -197,4 +200,105 @@ export interface CreateChangeoutRequest {
   phBefore?: number | null
   phAfter?: number | null
   notes?: string | null
+}
+
+/* ---------------------------------------------------------------------------
+ * A-006: der Wasserwechsel als ein Vorgang. Verträge aus
+ * `Api/Contracts/WasserwechselVorgangContracts.cs` und `Services/MischplanVorschlag.cs`.
+ * ------------------------------------------------------------------------- */
+
+/** Rolle einer Zeile im Mischplan — bestimmt, wie der Vorschlag rechnet. */
+export type MischplanRolle = 'Grundduenger' | 'CalMagMittel' | 'ZusatzImPlan'
+
+export interface MischplanVorschlagZeile {
+  komponente: string
+  rolle: MischplanRolle
+  mlProLiter: number
+  mlProLiterText: string
+  vorschlagMl: number
+  artikelId: number | null
+  artikelName: string | null
+  artikelEinheit: string | null
+  hinweis: string | null
+}
+
+/** Der Plan dieser Woche, auf Liter und Wasser gerechnet — `GET /api/grows/{id}/mixing-plan/vorschlag`. */
+export interface MischplanVorschlag {
+  programmName: string | null
+  spalteLabel: string | null
+  anlageLiter: number | null
+  liter: number
+  wasser: WaterSource
+  osmoseAnteil: number
+  wasserEcVorschlag: number | null
+  wasserEcQuelle: string
+  wasserEc: number | null
+  ecZielDuenger: number | null
+  ecZielGesamt: number | null
+  phMin: number | null
+  phMax: number | null
+  zeilen: MischplanVorschlagZeile[]
+  calMagHinweis: string | null
+  luecke: string | null
+}
+
+export interface SensorWertDto { wert: number; zeitUtc: string }
+
+/** Was die Sensoren kurz vor einem Zeitpunkt zeigten — `GET /api/grows/{id}/wasserwechsel/sensor`. */
+export interface WasserwechselSensorDto {
+  zeitpunktUtc: string
+  fensterMinuten: number
+  ec: SensorWertDto | null
+  ph: SensorWertDto | null
+  wasserTemp: SensorWertDto | null
+  hinweis: string | null
+}
+
+export interface VorgangMessungRequest {
+  zeitpunktLokal?: string | null
+  herkunft?: 'Sensor' | 'Hand' | 'gemischt'
+  sensorZeitUtc?: string | null
+  reservoirEc?: number | null
+  reservoirPh?: number | null
+  reservoirWaterTempC?: number | null
+  dissolvedOxygenMgL?: number | null
+  orpMv?: number | null
+}
+
+export interface VorgangBuchungRequest {
+  artikelId?: number | null
+  /** Tap = Leitungswasser, RO = Osmosewasser; nur ohne artikelId. */
+  wasser?: 'Tap' | 'RO' | null
+  menge: number
+}
+
+export interface WasserwechselVorgangRequest {
+  zeitpunktLokal: string | null
+  art: ChangeoutKind
+  liter: number | null
+  wasser: WaterSource
+  osmoseProzent: number | null
+  wasserEcMsCm: number | null
+  vorher: VorgangMessungRequest | null
+  nachher: VorgangMessungRequest | null
+  buchungen: VorgangBuchungRequest[]
+  erinnerungNeuStarten: boolean
+  notiz: string | null
+  tagebuch: { titel: string; text: string } | null
+}
+
+export interface VorgangBuchungDto { id: number; artikelId: number; artikelName: string; einheit: string; menge: number }
+
+export interface WasserwechselVorgangDto {
+  id: number
+  growId: number
+  erstelltAmUtc: string
+  wechsel: ChangeoutDto | null
+  vorher: MeasurementDto | null
+  nachher: MeasurementDto | null
+  buchungen: VorgangBuchungDto[]
+  tagebuch: JournalEntryDto | null
+  osmoseProzent: number | null
+  vorherHerkunft: string | null
+  vorherSensorZeitUtc: string | null
 }

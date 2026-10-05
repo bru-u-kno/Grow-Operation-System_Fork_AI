@@ -67,6 +67,26 @@ public static class Wasserwechsel
         return Juengster(ausMessung, ausFormular);
     }
 
+    /// <summary>
+    /// Der letzte Wechsel für die <b>Lösung selbst</b> (UTC) — auch einer, der die
+    /// Erinnerung nicht neu startet.
+    /// </summary>
+    /// <remarks>
+    /// Für die Dosierung (A-006, Befund des Prüfers): nach jedem Wechsel puffert
+    /// frisches Wasser anders, das Lernfenster muss dort schneiden — gleich, ob
+    /// der Bediener den Wechsel für die Erinnerung zählen lässt. Die Erinnerung
+    /// selbst (Stand, Mahnung, Trend) liest <see cref="ZuletztUtc"/> bzw.
+    /// <see cref="ZuletztOrtszeit"/>.
+    /// </remarks>
+    public static DateTime? ZuletztFuerDieLoesungUtc(
+        IEnumerable<Measurement>? messungen,
+        IEnumerable<ChangeoutEntry>? wechsel)
+    {
+        var ausMessung = AusMessungen(messungen)?.ToUniversalTime();
+        var ausFormular = wechsel?.Select(w => (DateTime?)w.PerformedAtUtc).DefaultIfEmpty(null).Max();
+        return Juengster(ausMessung, ausFormular);
+    }
+
     private static DateTime? AusMessungen(IEnumerable<Measurement>? messungen)
         => messungen is null
             ? null
@@ -75,10 +95,18 @@ public static class Wasserwechsel
                 .DefaultIfEmpty(null)
                 .Max();
 
+    /// <remarks>
+    /// Seit A-006 (05.10.2026) zählt ein Wechsel nur, wenn er die Erinnerung
+    /// neu startet (<see cref="ChangeoutEntry.ErinnerungNeuStarten"/>). Altdaten
+    /// tragen dort <c>true</c> und zählen wie bisher. Der Vorgang setzt dann auch
+    /// <c>SolutionChange</c> an seiner Messung „nachher" nicht — sonst käme der
+    /// abgeschaltete Wechsel über die Messung wieder herein.
+    /// </remarks>
     private static DateTime? AusWechseln(IEnumerable<ChangeoutEntry>? wechsel)
         => wechsel is null
             ? null
-            : wechsel.Select(w => (DateTime?)w.PerformedAtUtc)
+            : wechsel.Where(w => w.ErinnerungNeuStarten)
+                .Select(w => (DateTime?)w.PerformedAtUtc)
                 .DefaultIfEmpty(null)
                 .Max();
 

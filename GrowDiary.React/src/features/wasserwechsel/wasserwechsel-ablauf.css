@@ -1,0 +1,89 @@
+/* Wasserwechsel-Ablauf (A-006) — nach dem freigegebenen Mockup (archiv/a006, Runde 3/4).
+   Farben nur aus Token: beide Themen. Das Telefon (320–768 px) bricht um, statt überzulaufen. */
+@layer features {
+  .wa-ablauf { display: grid; gap: 14px; }
+  .wa-felder { margin-top: 12px; }
+  .wa-weiter { display: flex; justify-content: flex-end; margin-top: 14px; }
+  .wa-hinweis { color: var(--muted); font-size: var(--fs-klein); margin: 0; }
+
+  /* Schritt 1: die Sensorwerte „vorher" */
+  .wa-sensorbox { margin-top: 12px; border: 1px solid var(--hair); border-radius: var(--r); padding: 12px; background: var(--panel-2); display: grid; gap: 10px; justify-items: start; }
+  .wa-herkunft { font: 400 var(--fs-etikett)/1.2 var(--font-mono); color: var(--muted); padding: 3px 6px; border: 1px solid var(--hair); border-radius: var(--r-pill); }
+  .wa-gross { display: flex; gap: 12px 28px; flex-wrap: wrap; }
+  .wa-gross small, .wa-ziel small { display: block; color: var(--muted); font-size: var(--fs-etikett); text-transform: uppercase; letter-spacing: .08em; }
+  .wa-gross b { font: 600 var(--fs-zahl)/1.1 var(--font-mono); white-space: nowrap; }
+
+  /* Schritt 2: Ziel, Tabelle, Vorschlag-Knöpfe */
+  .wa-ziel { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 10px; margin: 14px 0 10px; }
+  .wa-ziel > div { border: 1px solid var(--hair); border-radius: var(--r-sm); padding: 8px 10px; background: var(--panel-2); min-width: 0; }
+  .wa-ziel b { font: 600 var(--fs-text)/1.4 var(--font-mono); }
+  .wa-ziel b.is-warn { color: var(--warn-text); }
+  .wa-ziel em { display: block; font-style: normal; color: var(--muted); font-size: var(--fs-etikett); }
+
+  .wa-feldhinweis { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+  .wa-tabelle-kopf { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 14px; font-size: var(--fs-klein); color: var(--warn-text); }
+  .wa-kopf-knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+  .v1-button.wa-klein { min-height: var(--h-md); padding: 0 10px; font-size: var(--fs-klein); }
+
+  .wa-tabelle, .wa-vergleich { display: grid; margin-top: 8px; border: 1px solid var(--hair); border-radius: var(--r-sm); overflow: hidden; }
+  .wa-vergleich { margin: 12px 0 14px; }
+  .wa-tr { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(0, 1fr) 72px; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--hair); font-size: var(--fs-klein); }
+  .wa-tr:last-child { border-bottom: 0; }
+  .wa-tr > span { min-width: 0; }
+  .wa-tr small { display: block; color: var(--muted); font-size: var(--fs-etikett); }
+  .wa-th { background: var(--panel-2); color: var(--muted); font-size: var(--fs-etikett); text-transform: uppercase; letter-spacing: .06em; }
+  .wa-tr.is-zusatz { background: var(--sunk); }
+  .wa-tr.is-null b { color: var(--muted); text-decoration: line-through; }
+  .wa-vorschlag { font-family: var(--font-mono); white-space: nowrap; }
+  .wa-eingabe-zelle { display: grid; gap: 3px; justify-items: start; }
+  .wa-eingabe { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+  .wa-eingabe input { width: 100%; max-width: 80px; min-height: var(--h-md); font-family: var(--font-mono); background: var(--sunk); color: var(--text); border: 1px solid var(--hair-2); border-radius: var(--r-sm); padding: 0 8px; }
+  .wa-eingabe input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wa-eingabe input[readonly] { color: var(--muted); }
+  .wa-tr input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--accent); }
+  .wa-artikel { margin-top: 4px; max-width: 100%; min-height: var(--h-md); font-size: var(--fs-klein); }
+
+  /* Geändert = gelb markiert; unlesbar = rot umrandet */
+  .wa-eingabe input.is-geaendert, .wa-ablauf .v1-field input.is-geaendert { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
+  .wa-ablauf input.is-unlesbar { border-color: var(--danger); }
+
+  .wa-zurueck { display: inline-flex; align-items: center; min-height: 26px; padding: 0 7px; border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+    background: transparent; color: var(--accent-text); font: 400 var(--fs-etikett)/1.2 var(--font-mono); cursor: pointer; text-align: left; }
+  .wa-zurueck:hover { border-color: var(--accent); }
+  .wa-zurueck:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wa-zurueck.is-meins { color: var(--warn-text); }
+  @media (pointer: coarse) { .wa-zurueck { min-height: var(--h-lg); } }
+
+  .wa-knoepfe { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .wa-produkt-wahl { min-height: var(--h-md); max-width: 100%; }
+
+  /* Schritt 3: Vergleich vorher/nachher */
+  .wa-vergleich .wa-tr { grid-template-columns: minmax(64px, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr); font-family: var(--font-mono); }
+  .wa-vergleich .wa-tr > span { white-space: nowrap; }
+  /* Zwei Klassen + Kind: sonst gewinnt die nowrap-Regel darüber und „nicht gemessen" wird abgeschnitten. */
+  .wa-vergleich .wa-tr > .wa-diff { white-space: normal; overflow-wrap: anywhere; }
+  .wa-vt-name { color: var(--muted); }
+  .wa-vt-name small { display: block; line-height: 1.1; color: var(--faint); }
+  .wa-diff { color: var(--muted); }
+  .wa-abgleich { color: var(--muted); font-size: var(--fs-klein); margin: 8px 0 0; }
+
+  /* Schritt 4 */
+  .wa-liste { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 8px; font-size: var(--fs-text); overflow-wrap: anywhere; }
+  .wa-vorschau-zeile { margin: 6px 0 12px; padding: 10px 12px; border: 1px dashed var(--hair-2); border-radius: var(--r-sm); overflow-wrap: anywhere; }
+  .wa-tag { font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--info-text); margin-right: 6px; }
+  .wa-vorschau-zeile p { margin: 4px 0 0; font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted); }
+
+  @media (max-width: 560px) {
+    /* Handy: Name über die ganze Breite, darunter Vorschlag · Eingabe · Buchen. */
+    .wa-tabelle .wa-th { display: none; }
+    /* Name und Vorschlag je über die ganze Breite, darunter Eingabe · Buchen.
+       Neben der Eingabe war für „Vorschlag 562 ml" bei 320 px kein Platz („Vorschl|ag"). */
+    .wa-tabelle .wa-tr { grid-template-columns: minmax(0, 1fr) 36px; row-gap: 4px; }
+    .wa-tabelle .wa-tr > span:first-child, .wa-tabelle .wa-tr > .wa-vorschlag { grid-column: 1 / -1; }
+    .wa-tabelle .wa-tr > .wa-vorschlag { color: var(--muted); }
+    .wa-tabelle .wa-vorschlag::before { content: 'Vorschlag '; color: var(--muted); font-family: var(--font-sans); }
+    .wa-vergleich .wa-tr { grid-template-columns: minmax(52px, .9fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+    .wa-vergleich .wa-th { text-transform: none; letter-spacing: 0; }
+    .wa-vergleich .wa-th > span { overflow-wrap: anywhere; }
+  }
+}

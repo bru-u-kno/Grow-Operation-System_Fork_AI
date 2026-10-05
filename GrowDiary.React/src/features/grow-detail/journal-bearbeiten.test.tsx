@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { JournalEntryDto } from '../../types'
 import { EintragFelderFormular, JournalStreamSection } from './JournalStreamSection'
-import { EINTRAG_ARTEN, MEILENSTEIN_ARTEN, aenderungsAnfrage, alsFelder, artenFuer, eintragFehler, istMeilenstein, textZeilen } from './journal-bearbeiten'
+import { ABLAUF_ARTEN, EINTRAG_ARTEN, MEILENSTEIN_ARTEN, aenderungsAnfrage, alsFelder, artenFuer, eintragFehler, istMeilenstein, textZeilen } from './journal-bearbeiten'
 import { emptyJournalForm, emptyPhotoForm, emptyTaskForm } from './grow-detail-model'
 
 /**
@@ -69,8 +69,24 @@ describe('Die Anfrage', () => {
 
 describe('Die Art bleibt erhalten', () => {
   it('sieht ihre Grundmenge', () => {
-    expect(EINTRAG_ARTEN.length).toBeGreaterThanOrEqual(9)
+    // A-006: „Wasserwechsel" und „Fütterung" setzt nur noch ein Ablauf — 9 − 2.
+    expect(EINTRAG_ARTEN.length).toBeGreaterThanOrEqual(7)
     expect(Object.keys(MEILENSTEIN_ARTEN).length).toBeGreaterThanOrEqual(5)
+    expect(Object.keys(ABLAUF_ARTEN).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('bietet Wasserwechsel und Fütterung nicht frei an — nur der Ablauf setzt sie (A-006)', () => {
+    const frei = EINTRAG_ARTEN.map((a) => a.value)
+    expect(frei).not.toContain('ReservoirChange')
+    expect(frei).not.toContain('Feeding')
+    // Ein vorhandener Eintrag behält beim Bearbeiten seine Art — Altdaten bleiben, was sie sind.
+    for (const art of Object.keys(ABLAUF_ARTEN)) {
+      expect(artenFuer(art).map((a) => a.value), art).toContain(art)
+    }
+    const html = renderToStaticMarkup(
+      <EintragFelderFormular werte={{ ...alsFelder(eintrag()), entryType: 'ReservoirChange' }} onChange={() => {}} />,
+    )
+    expect(html).toMatch(/<option value="ReservoirChange" selected="">Wasserwechsel<\/option>/)
   })
 
   it('bietet einen Meilenstein beim Bearbeiten an, statt ihn still zur Beobachtung zu machen', () => {

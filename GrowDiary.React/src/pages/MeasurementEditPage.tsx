@@ -240,10 +240,21 @@ function MeasurementEditPage() {
                   <textarea rows={3} value={draft.notes} onChange={(event) => setDraft((current) => current ? { ...current, notes: event.target.value } : current)} />
                 </V1Field>
               </div>
-              <label className="meas-edit__check">
-                <input type="checkbox" checked={draft.solutionChange} onChange={(event) => setDraft((current) => current ? { ...current, solutionChange: event.target.checked } : current)} />
-                <span>Lösungswechsel dokumentiert</span>
-              </label>
+              {/* A-006: der Haken „Lösungswechsel" ist kein Weg mehr, einen Wechsel
+                  einzutragen — das macht der Wasserwechsel-Ablauf mit Verbrauch und
+                  Tagebuch. Steht der Haken an einer älteren Messung (oder an der
+                  Messung „nachher" eines Vorgangs), bleibt er sichtbar und zählt weiter. */}
+              {measurement?.solutionChange ? (
+                <label className="meas-edit__check">
+                  <input type="checkbox" checked={draft.solutionChange} onChange={(event) => setDraft((current) => current ? { ...current, solutionChange: event.target.checked } : current)} />
+                  <span>Lösungswechsel dokumentiert</span>
+                </label>
+              ) : (
+                <div className="meas-edit__hinweis" data-audit="messung-weg-zum-wasserwechsel">
+                  <p>Wasser gewechselt? Das trägst du im Wasserwechsel-Ablauf ein — mit Messung vorher und nachher, Verbrauch und Tagebuch.</p>
+                  <V1LinkButton to={`/wasserwechsel?growId=${measurement?.growId ?? ''}`}>Wasserwechsel eintragen</V1LinkButton>
+                </div>
+              )}
             </V1Section>
 
             {fieldSections.map((section) => (

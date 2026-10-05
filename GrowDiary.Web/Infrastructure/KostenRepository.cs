@@ -111,6 +111,10 @@ public sealed class KostenRepository : RepositoryBase
         {
             ("ForkVerbrauchsartikel", "AufGrowBuchen", "INTEGER NOT NULL DEFAULT 0"),
             ("ForkVerbraeuche", "MessungId", "INTEGER NULL"),
+            // A-006 (05.10.2026): die Buchung gehoert zu einem Wasserwechsel-
+            // Vorgang. Loescht man den Vorgang, gehen seine Buchungen mit —
+            // bei einer Messung allein blieben sie bisher stehen.
+            ("ForkVerbraeuche", "VorgangId", "INTEGER NULL"),
             // Mehrere Zaehler (je Zelt einer): der Stand traegt, von welchem er
             // stammt. Altstaende bleiben NULL und zaehlen zum gemeinsamen
             // Zaehler — einen anderen gab es vorher nicht (StromQuelle.ZaehlerVonStand).
@@ -166,7 +170,14 @@ public sealed class KostenRepository : RepositoryBase
     public int CreateArtikel(Verbrauchsartikel artikel)
     {
         using var connection = Open();
+        return CreateArtikel(artikel, connection, null);
+    }
+
+    /// <summary>Einen Artikel auf einer fremden Verbindung anlegen — der Wasserwechsel-Vorgang legt „Osmosewasser" beim ersten Mal an (A-006).</summary>
+    internal static int CreateArtikel(Verbrauchsartikel artikel, SqliteConnection connection, SqliteTransaction? transaction)
+    {
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO ForkVerbrauchsartikel (Name, Hersteller, Produkt, PreisEur, Einheit, Gebinde, TentId, Notiz, Aktiv, AufGrowBuchen, CreatedAtUtc)
             VALUES ($name, $hersteller, $produkt, $preisEur, $einheit, $gebinde, $tentId, $notiz, $aktiv, $aufGrowBuchen, $createdAtUtc);
@@ -426,15 +437,33 @@ public sealed class KostenRepository : RepositoryBase
     public int CreateVerbrauch(Verbrauch v)
     {
         using var connection = Open();
+        return CreateVerbrauch(v, connection, null);
+    }
+
+    /// <summary>
+    /// Die eigenen Tabellen anlegen bzw. nachziehen, ohne etwas zu lesen —
+    /// für Aufrufer, die danach auf eigener Verbindung schreiben (Wasserwechsel-Vorgang).
+    /// </summary>
+    public void SchemaSicherstellen()
+    {
+        using var connection = Open();
+    }
+
+    /// <summary>Eine Buchung auf einer fremden Verbindung — für den Wasserwechsel-Vorgang (A-006).</summary>
+    /// <remarks>Vorher <see cref="SchemaSicherstellen"/> rufen, sonst fehlt womöglich die Spalte <c>VorgangId</c>.</remarks>
+    internal static int CreateVerbrauch(Verbrauch v, SqliteConnection connection, SqliteTransaction? transaction)
+    {
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
-            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, MessungId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
-            VALUES ($artikelId, $growId, $messungId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
+            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, MessungId, VorgangId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
+            VALUES ($artikelId, $growId, $messungId, $vorgangId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$artikelId", v.ArtikelId);
         command.Parameters.AddWithValue("$growId", (object?)v.GrowId ?? DBNull.Value);
         command.Parameters.AddWithValue("$messungId", (object?)v.MessungId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$vorgangId", (object?)v.VorgangId ?? DBNull.Value);
         command.Parameters.AddWithValue("$zeitpunktUtc", ToStorageUtc(v.ZeitpunktUtc));
         command.Parameters.AddWithValue("$menge", v.Menge);
         command.Parameters.AddWithValue("$quelle", v.Quelle);
@@ -468,6 +497,7 @@ public sealed class KostenRepository : RepositoryBase
         ArtikelId = Convert.ToInt32(reader["ArtikelId"], CultureInfo.InvariantCulture),
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
         MessungId = reader["MessungId"] is DBNull ? null : Convert.ToInt32(reader["MessungId"], CultureInfo.InvariantCulture),
+        VorgangId = HasColumn(reader, "VorgangId") && reader["VorgangId"] is not DBNull ? Convert.ToInt32(reader["VorgangId"], CultureInfo.InvariantCulture) : null,
         ZeitpunktUtc = ParseStoredUtcDateTime(reader["ZeitpunktUtc"].ToString()) ?? DateTime.UtcNow,
         Menge = Convert.ToDouble(reader["Menge"], CultureInfo.InvariantCulture),
         Quelle = reader["Quelle"].ToString() ?? "manuell",

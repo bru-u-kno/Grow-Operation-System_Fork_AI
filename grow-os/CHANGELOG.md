@@ -5,6 +5,33 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.172
+
+**Fork AI.** Der Wasserwechsel ist jetzt ein einziger Ablauf — messen, ansetzen, messen, speichern.
+
+- **Ein Speichern statt vier Eingaben.** Bisher musste ein Wasserwechsel getrennt als Messung mit
+  Haken „Lösungswechsel", als Wechsel, als Verbrauch und im Journal erfasst werden. Auf
+  „Wasserwechsel" führt jetzt ein Ablauf in vier Schritten (Vorher · Ansetzen · Nachher · Speichern);
+  ein Speichern legt Wechsel, Messung vorher und nachher, die Verbrauchsbuchungen und die
+  Tagebuchzeile zusammen an. Löschen nimmt alles davon wieder mit.
+- **„Vorher" kommt vom Sensor.** EC, pH und Wassertemperatur der letzten 30 Minuten vor dem
+  Wechsel werden übernommen; eigene Werte ersetzen sie. DO und ORP lassen sich von Hand eintragen
+  und stehen im Vorher-Nachher-Vergleich.
+- **Der Mischplan rechnet mit deinem Wasser.** Vorschläge stehen auf die eingegebene Literzahl;
+  der EC des Ausgangswassers kommt aus dem Wasserprofil (Leitung), ist 0 (Osmose) oder anteilig
+  (Mischung) und wird zum EC-Ziel gerechnet — bisher rechnete der Plan immer auf Osmosewasser, das
+  Ziel wirkte bei Leitungswasser zu niedrig. CalMag folgt dem Calcium im Wasser.
+- **Vorschlag oder deine Werte.** Die Felder stehen auf dem Vorschlag; geänderte sind markiert.
+  „↺ Vorschlag" setzt zurück, „↶ deins" holt den eigenen Wert wieder — einzeln oder alle auf einmal.
+- **Verbrauch und Kosten gehen von selbst**, auch das Wasser (Leitung oder Osmose; der Artikel
+  „Osmosewasser" wird beim ersten Mal angelegt).
+- **Keine Doppelungen mehr in der Oberfläche:** Im Messformular ersetzt ein Knopf „Wasserwechsel
+  eintragen" den Haken „Lösungswechsel"; die Journal-Arten Wasserwechsel und Fütterung setzt nur
+  noch der Ablauf. Ältere Einträge bleiben, wie sie sind, und zählen weiter.
+
+Geprüft: Backend 2928 Tests, Oberfläche 839 Tests, 537 Prüfungen gegen die laufende App bei
+320 bis 1280 px in beiden Themen, darunter Speichern, zweites Speichern, Neuladen und Löschen.
+
 ## 2.0.0-forkai.171
 
 **Fork AI.** Push-Meldungen öffnen Grow OS ohne die weiße Kopfleiste von Home Assistant.

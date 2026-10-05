@@ -250,6 +250,9 @@ public sealed class Verbrauch
     /// </summary>
     public int? MessungId { get; set; }
 
+    /// <summary>Der Wasserwechsel-Vorgang, zu dem die Buchung gehört (A-006) — er nimmt sie beim Löschen mit.</summary>
+    public int? VorgangId { get; set; }
+
     public DateTime ZeitpunktUtc { get; set; } = DateTime.UtcNow;
     public double Menge { get; set; }
     /// <summary>Woher die Buchung stammt, z. B. <c>co2-steuerung</c> oder <c>manuell</c>.</summary>
