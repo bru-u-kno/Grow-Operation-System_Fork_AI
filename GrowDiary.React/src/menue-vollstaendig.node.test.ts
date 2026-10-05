@@ -69,6 +69,8 @@ describe('Menü-Vollständigkeit', () => {
       it(`${route} steht mit Grund nicht im Menü: ${grund}`, () => {
         expect(imMenue.has(route)).toBe(false)
         if (ausDemTagebuch.has(route)) {
+          // Der Ersatz muss selbst sichtbar im Menü stehen — sonst führt kein Weg mehr hin.
+          expect(imMenue.has('/tagebuch'), '/tagebuch ist der Hauptweg, steht aber in keinem sichtbaren Menü.').toBe(true)
           expect(tagebuch, `${route} ist nicht mehr im Menü — dann muss das Tagebuch darauf verlinken.`)
             .toMatch(new RegExp(`to=\\{\`${route}\\$\\{`))
         }

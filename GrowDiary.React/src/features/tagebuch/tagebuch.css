@@ -31,7 +31,7 @@
   .tb-kachel-kopf { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; font-size: var(--fs-klein); }
   .tb-kachel-kopf span { color: var(--muted); }
   .tb-kachel-kopf b { font: 600 var(--fs-klein)/1.3 var(--font-mono); margin-left: auto; white-space: nowrap; }
-  .tb-kachel-kopf b.is-leer { font-weight: 400; color: var(--faint); }
+  .tb-kachel-kopf b.is-leer { font-weight: 400; color: var(--muted); }
   .tb-kachel-kopf small { color: var(--faint); font-size: var(--fs-etikett); white-space: nowrap; }
   .tb-kachel-tag { margin: 6px 0 2px; color: var(--muted); font: 400 var(--fs-etikett)/1.3 var(--font-mono); }
 
@@ -60,7 +60,7 @@
   .js-content > p.tb-vermerk { margin: 4px 0 0; color: var(--info-text); font: 500 var(--fs-etikett)/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
   .js-content > p.tb-abgleich { color: var(--accent-text); font-size: var(--fs-klein); margin: 6px 0 0; }
   .js-content > p.tb-abgleich.is-daneben { color: var(--warn-text); }
-  .js-content > p.tb-regel { color: var(--faint); font-size: var(--fs-etikett); margin: 4px 0 0; }
+  .js-content > p.tb-regel { color: var(--muted); font-size: var(--fs-etikett); margin: 4px 0 0; }
   .js-content > p.tb-zahlen, .tb-vorgang > p.tb-zahlen { font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--text); margin: 6px 0 0; }
 
   .tb-zellen { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; margin-top: 8px; }
@@ -82,7 +82,7 @@
   .tb-vt-diff { color: var(--muted); }
   .tb-vt-diff.is-runter { color: var(--info-text); }
   .tb-vt-diff.is-hoch { color: var(--warn-text); }
-  .tb-vt-zeile > .tb-vt-leer { white-space: normal; font-size: var(--fs-etikett); line-height: 1.2; }
+  .tb-vt-zeile > .tb-vt-leer { grid-column: 2 / -1; white-space: normal; font-size: var(--fs-etikett); line-height: 1.2; }
   .tb-kurz { display: none; }
   .tb-unsichtbar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -95,6 +95,7 @@
   .tb-vorgang-notiz { border-top: 1px dashed var(--hair); padding-top: 8px; }
   .tb-vorgang-notiz > p { margin: 5px 0 0; font-size: var(--fs-klein); color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
 
+  .tb-row a.js-weg { display: inline-flex; align-items: center; text-decoration: none; }
   .tb-link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
   .tb-knoepfe { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .v1-button.tb-klein { min-height: var(--h-md); padding: 0 10px; font-size: var(--fs-klein); }

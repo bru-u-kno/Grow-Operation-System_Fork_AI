@@ -46,7 +46,9 @@ function Inhalt({ growId, e, onGeaendert }: { growId: string; e: TagebuchEreigni
             ton="muted"
             titel={e.titel}
             herkunft={herkunft}
-            aktionen={<Link className="js-weg js-bearbeiten" to={`/grows/measurements/${m.id}/edit`} aria-label={`Messung von ${e.uhrzeit} Uhr bearbeiten`}>Bearbeiten</Link>}
+            // Nur Handmessungen: die vom Sensor korrigiert man in der Tabelle,
+            // ein Knopf an jeder Automatik-Zeile wäre Lärm.
+            aktionen={m.herkunft === 'sensor' ? undefined : <Link className="js-weg js-bearbeiten" to={`/grows/measurements/${m.id}/edit`} aria-label={`Messung von ${e.uhrzeit} Uhr bearbeiten`}>Bearbeiten</Link>}
           />
           {m.loesungswechsel && <p className="tb-vermerk">Lösungswechsel</p>}
           <WerteZellen zellenListe={zellen(m.werte)} />
@@ -187,11 +189,17 @@ function Vorgang({ growId, w, posten, onGeaendert }: { growId: string; w: Tagebu
           return (
             <div key={z.feld} className="tb-vt-zeile" role="row">
               <span className="tb-vt-name" role="rowheader">{z.name}{z.einheit && <small>{z.einheit}</small>}</span>
-              <span role="cell">{a != null ? zahl(a, z.nachkomma) : '—'}</span>
-              <span role="cell"><b>{b != null ? zahl(b, z.nachkomma) : '—'}</b></span>
-              {a == null && b == null
-                ? <span role="cell" className="tb-vt-diff tb-vt-leer">nicht gemessen</span>
-                : <span role="cell" className={`tb-vt-diff${diff ? ` is-${diff.richtung}` : ''}`}>{diff?.text ?? ''}</span>}
+              {a == null && b == null ? (
+                // Über alle drei Spalten: in der schmalen Änderungsspalte ragte
+                // „nicht gemessen" bei 320 px über den Rand.
+                <span role="cell" className="tb-vt-diff tb-vt-leer">nicht gemessen</span>
+              ) : (
+                <>
+                  <span role="cell">{a != null ? zahl(a, z.nachkomma) : '—'}</span>
+                  <span role="cell"><b>{b != null ? zahl(b, z.nachkomma) : '—'}</b></span>
+                  <span role="cell" className={`tb-vt-diff${diff ? ` is-${diff.richtung}` : ''}`}>{diff?.text ?? ''}</span>
+                </>
+              )}
             </div>
           )
         })}

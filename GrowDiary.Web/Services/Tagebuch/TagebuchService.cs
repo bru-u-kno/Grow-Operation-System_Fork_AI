@@ -311,7 +311,7 @@ public sealed class TagebuchService
             var pumpe = pumpen.TryGetValue(d.PumpId, out var pp) ? pp.Name : $"Pumpe {d.PumpId}";
             var ml = DosingService.HoechstensGegeben(d);
             liste.Add(new Roh(utc, "dosierung", 3, () => Ereignis(
-                $"dosis-{d.Id}", "dosierung", utc, $"Dosierung {pumpe}", wasser: true,
+                $"dosis-{d.Id}", "dosierung", utc, pumpe, wasser: true,
                 dosis: new TagebuchDosisDto(d.Id, pumpe, ml, d.ValueBefore, d.ValueAfter, d.Trigger != DoseTrigger.Manual))));
         }
 
