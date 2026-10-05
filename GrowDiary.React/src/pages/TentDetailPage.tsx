@@ -123,7 +123,7 @@ function TentDetailPage() {
           <div className="v1-info-grid compact">
             {mapMetrics(live?.metrics ?? [], tentMetricDefinitions.slice(0, 5)).map((metric) => <Info key={metric.key} label={metric.label} value={formatMetricValue(metric)} />)}
           </div>
-          <div className="v1-action-row">{grows[0] ? <V1LinkButton to={`/grows/${grows[0].id}/addback`} variant="primary">Addback</V1LinkButton> : <V1LinkButton to="/grows/new" variant="primary">Grow starten</V1LinkButton>}<V1LinkButton to="/messung">Messung</V1LinkButton></div>
+          <div className="v1-action-row">{grows[0] ? <V1LinkButton to={`/addback?growId=${grows[0].id}`} variant="primary">Addback</V1LinkButton> : <V1LinkButton to="/grows/new" variant="primary">Grow starten</V1LinkButton>}<V1LinkButton to="/messung">Messung</V1LinkButton></div>
         </V1Card>
 
         <V1Card className="v1-live-now-card">

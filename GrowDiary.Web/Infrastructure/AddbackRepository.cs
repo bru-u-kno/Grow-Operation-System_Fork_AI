@@ -22,13 +22,25 @@ public sealed class AddbackRepository : RepositoryBase
             throw new InvalidOperationException($"HydroSetup with id {entry.HydroSetupId.Value} does not exist.");
         }
 
+        using var connection = OpenConnection();
+        return CreateAddbackLog(entry, connection, null);
+    }
+
+    /// <summary>
+    /// Den Addback-Eintrag auf einer fremden Verbindung anlegen — für den
+    /// Nachfüll-Vorgang (A-006, Etappe 3), der Eintrag, Messungen, Buchungen
+    /// und Tagebuch in EINER Transaktion schreibt.
+    /// </summary>
+    /// <remarks>Grow und Anlage prüft der Aufrufer; die Werte-Prüfung läuft hier wie oben.</remarks>
+    internal static AddbackLogEntry CreateAddbackLog(AddbackLogEntry entry, SqliteConnection connection, SqliteTransaction? transaction)
+    {
         ValidateAddbackLog(entry);
         entry.PerformedAtUtc = entry.PerformedAtUtc == default ? DateTime.UtcNow : entry.PerformedAtUtc;
         entry.CreatedAtUtc = DateTime.UtcNow;
         entry.Notes = NormalizeOptional(entry.Notes);
 
-        using var connection = OpenConnection();
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO AddbackLogs (
                 GrowId, HydroSetupId, Kind, PerformedAtUtc, ReservoirLiters,
@@ -142,6 +154,17 @@ public sealed class AddbackRepository : RepositoryBase
             items.Add(MapChangeout(reader));
         }
         return items;
+    }
+
+    /// <summary>Einen Addback-/Nachfüll-Eintrag entfernen — nur in seinem Grow.</summary>
+    public bool DeleteAddbackLog(int growId, int id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM AddbackLogs WHERE Id = $id AND GrowId = $growId;";
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$growId", growId);
+        return command.ExecuteNonQuery() > 0;
     }
 
     /// <summary>

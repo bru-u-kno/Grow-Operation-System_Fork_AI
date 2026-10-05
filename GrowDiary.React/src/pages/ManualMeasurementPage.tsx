@@ -445,7 +445,7 @@ function ManualMeasurementPage() {
       }
 
       setMessage('Messung gespeichert.' + gabenHinweis)
-      navigate(after === 'addback' ? `/grows/${selectedGrowId}/addback` : `/grows/${selectedGrowId}`)
+      navigate(after === 'addback' ? `/addback?growId=${selectedGrowId}` : `/grows/${selectedGrowId}`)
     } catch (caught) {
       setError(formatApiError(caught, 'Messung konnte nicht gespeichert werden.'))
     } finally {

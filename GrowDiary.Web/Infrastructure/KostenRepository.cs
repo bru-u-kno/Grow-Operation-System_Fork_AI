@@ -115,6 +115,9 @@ public sealed class KostenRepository : RepositoryBase
             // Vorgang. Loescht man den Vorgang, gehen seine Buchungen mit —
             // bei einer Messung allein blieben sie bisher stehen.
             ("ForkVerbraeuche", "VorgangId", "INTEGER NULL"),
+            // A-006 Etappe 3: dasselbe für den Nachfüll-Vorgang (eigene Spalte,
+            // siehe Verbrauch.AddbackVorgangId).
+            ("ForkVerbraeuche", "AddbackVorgangId", "INTEGER NULL"),
             // Mehrere Zaehler (je Zelt einer): der Stand traegt, von welchem er
             // stammt. Altstaende bleiben NULL und zaehlen zum gemeinsamen
             // Zaehler — einen anderen gab es vorher nicht (StromQuelle.ZaehlerVonStand).
@@ -456,14 +459,15 @@ public sealed class KostenRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, MessungId, VorgangId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
-            VALUES ($artikelId, $growId, $messungId, $vorgangId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
+            INSERT INTO ForkVerbraeuche (ArtikelId, GrowId, MessungId, VorgangId, AddbackVorgangId, ZeitpunktUtc, Menge, Quelle, Notiz, CreatedAtUtc)
+            VALUES ($artikelId, $growId, $messungId, $vorgangId, $addbackVorgangId, $zeitpunktUtc, $menge, $quelle, $notiz, $createdAtUtc);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$artikelId", v.ArtikelId);
         command.Parameters.AddWithValue("$growId", (object?)v.GrowId ?? DBNull.Value);
         command.Parameters.AddWithValue("$messungId", (object?)v.MessungId ?? DBNull.Value);
         command.Parameters.AddWithValue("$vorgangId", (object?)v.VorgangId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$addbackVorgangId", (object?)v.AddbackVorgangId ?? DBNull.Value);
         command.Parameters.AddWithValue("$zeitpunktUtc", ToStorageUtc(v.ZeitpunktUtc));
         command.Parameters.AddWithValue("$menge", v.Menge);
         command.Parameters.AddWithValue("$quelle", v.Quelle);
@@ -498,6 +502,7 @@ public sealed class KostenRepository : RepositoryBase
         GrowId = reader["GrowId"] is DBNull ? null : Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
         MessungId = reader["MessungId"] is DBNull ? null : Convert.ToInt32(reader["MessungId"], CultureInfo.InvariantCulture),
         VorgangId = HasColumn(reader, "VorgangId") && reader["VorgangId"] is not DBNull ? Convert.ToInt32(reader["VorgangId"], CultureInfo.InvariantCulture) : null,
+        AddbackVorgangId = HasColumn(reader, "AddbackVorgangId") && reader["AddbackVorgangId"] is not DBNull ? Convert.ToInt32(reader["AddbackVorgangId"], CultureInfo.InvariantCulture) : null,
         ZeitpunktUtc = ParseStoredUtcDateTime(reader["ZeitpunktUtc"].ToString()) ?? DateTime.UtcNow,
         Menge = Convert.ToDouble(reader["Menge"], CultureInfo.InvariantCulture),
         Quelle = reader["Quelle"].ToString() ?? "manuell",

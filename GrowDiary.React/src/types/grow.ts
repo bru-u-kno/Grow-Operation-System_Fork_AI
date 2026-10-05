@@ -511,6 +511,9 @@ export interface AddbackLogDto {
   litersAdded: number | null
   newReservoirVolumeLiters: number | null
   usedHydroSetupVolume: boolean
+  /** Womit aufgefüllt wurde — `null` heißt „nicht festgehalten". */
+  waterUsed?: WaterSource | null
+  waterEcMsCm?: number | null
   notes: string | null
   createdAtUtc: string
 }

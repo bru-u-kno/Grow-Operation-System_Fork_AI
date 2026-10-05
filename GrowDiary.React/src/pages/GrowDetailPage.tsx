@@ -130,7 +130,7 @@ function GrowDetailPage() {
         action={(
           <div className="v1-action-row" data-audit="grow-management-actions">
             <V1Badge tone={statusTone}>{formatGrowStatus(grow.status)}</V1Badge>
-            <V1LinkButton to={`/grows/${grow.id}/addback`}>Addback</V1LinkButton>
+            <V1LinkButton to={`/addback?growId=${grow.id}`}>Addback</V1LinkButton>
             {canConfirmRooting && (
               <V1Button disabled={Boolean(saving)} onClick={() => void handleGrowAction('rooting')}>
                 {saving === 'action-rooting' ? 'Trägt ein…' : 'Bewurzelung abgeschlossen'}

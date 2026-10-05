@@ -67,7 +67,9 @@ const DETAILSEITEN = [
      die Routen aus App.tsx ab. */
   '/messungen/new',
   '/grows/1/harvest',
-  '/grows/1/addback',
+  '/addback?growId=1&schritt=2',
+  '/addback?growId=1&schritt=3',
+  '/addback?growId=1&schritt=4',
   '/zelte/new',
   '/hydro/new',
   '/dosierung/neu',

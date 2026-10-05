@@ -253,6 +253,15 @@ public sealed class Verbrauch
     /// <summary>Der Wasserwechsel-Vorgang, zu dem die Buchung gehört (A-006) — er nimmt sie beim Löschen mit.</summary>
     public int? VorgangId { get; set; }
 
+    /// <summary>Der Nachfüll-Vorgang, zu dem die Buchung gehört (A-006, Etappe 3) — er nimmt sie beim Löschen mit.</summary>
+    /// <remarks>
+    /// Eine eigene Spalte und nicht <see cref="VorgangId"/>: die Kennungen der
+    /// beiden Vorgang-Tabellen zählen unabhängig voneinander hoch. Eine
+    /// gemeinsame Spalte hätte die Buchungen von Wechsel 3 und Nachfüllen 3
+    /// verwechselt — und beim Löschen des einen die des anderen mitgenommen.
+    /// </remarks>
+    public int? AddbackVorgangId { get; set; }
+
     public DateTime ZeitpunktUtc { get; set; } = DateTime.UtcNow;
     public double Menge { get; set; }
     /// <summary>Woher die Buchung stammt, z. B. <c>co2-steuerung</c> oder <c>manuell</c>.</summary>

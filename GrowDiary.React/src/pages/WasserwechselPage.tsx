@@ -3,11 +3,10 @@ import { useSearchParams } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import { V1Alert, V1Card, V1Empty, V1Page, V1Skeleton } from '../components/v1'
 import { ChangeoutsPanel } from '../features/changeouts/ChangeoutsPanel'
-import { teileText } from '../features/wasserwechsel/ablauf-rechnung'
 import { WasserwechselStand } from '../features/changeouts/WasserwechselStand'
 import { GrowScopePicker } from '../features/grow-scope/GrowScopePicker'
 import { useSelectedGrow } from '../features/grow-scope/useSelectedGrow'
-import { WasserwechselAblauf } from '../features/wasserwechsel/WasserwechselAblauf'
+import { VorgangAblauf } from '../features/vorgang/VorgangAblauf'
 import type { WasserwechselStandDto, WasserwechselVorgangDto } from '../types'
 import '../features/changeouts/changeouts.css'
 
@@ -31,7 +30,7 @@ import '../features/changeouts/changeouts.css'
  * nicht Wasser austauschen.
  *
  * <b>Seit A-006 (05.10.2026)</b> steht hier der Ablauf in vier Schritten
- * (`WasserwechselAblauf`): ein Speichern legt Wechsel, Messung vorher und
+ * (`VorgangAblauf`): ein Speichern legt Wechsel, Messung vorher und
  * nachher, Verbrauch und Tagebuchzeile als einen Vorgang an. Das alte
  * Formular ist weg; die Liste darunter zeigt die bisherigen Wechsel, Altdaten
  * eingeschlossen. `?vorgang=<id>` hebt einen Vorgang hervor (Link aus dem
@@ -120,13 +119,14 @@ export default function WasserwechselPage() {
           {gespeichert?.hinweis && <V1Alert message={gespeichert.hinweis} tone="warn" />}
 
           <div className="ww-ablauf-section">
-            <WasserwechselAblauf
+            <VorgangAblauf
+              art="wasserwechsel"
               key={`${grow.id}-${ablaufNummer}`}
               growId={grow.id}
               stand={stand}
               startSchritt={ablaufNummer === 0 && [1, 2, 3, 4].includes(startSchritt) ? startSchritt as 1 | 2 | 3 | 4 : 1}
-              onGespeichert={(vorgang, hinweis) => {
-                setGespeichert({ text: `Wasserwechsel gespeichert — mit ${teileText(vorgang)}.`, hinweis })
+              onGespeichert={(teile, hinweis) => {
+                setGespeichert({ text: `Wasserwechsel gespeichert — mit ${teile}.`, hinweis })
                 setAblaufNummer((wert) => wert + 1)
                 // Ein neuer Wechsel verschiebt den Stand — sonst stuenden oben
                 // 9 Tage, waehrend unten der Eintrag von eben steht.

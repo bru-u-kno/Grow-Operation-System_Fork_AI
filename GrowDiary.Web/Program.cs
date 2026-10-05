@@ -115,6 +115,7 @@ builder.Services.AddScoped<GrowCostService>();
 // Fork AI (forkai.6): Kosten-Seite
 builder.Services.AddSingleton<KostenRepository>();
 builder.Services.AddSingleton<WasserwechselVorgangRepository>(); // A-006: Wasserwechsel als ein Vorgang
+builder.Services.AddSingleton<AddbackVorgangRepository>(); // A-006 Etappe 3: Nachfüllen als ein Vorgang
 // Fork AI (forkai.77): Verbrauch je Artikel ueber einen Zeitraum.
 builder.Services.AddScoped<VerbrauchsansichtService>();
 builder.Services.AddScoped<KostenSeiteService>();

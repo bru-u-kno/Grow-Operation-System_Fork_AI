@@ -1,5 +1,4 @@
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
-import AddbackHubPage from './pages/AddbackHubPage'
 import AddbackPage from './pages/AddbackPage'
 import { GrowScopedSectionPage } from './pages/GrowScopedSectionPage'
 import GettingStartedPage from './pages/GettingStartedPage'
@@ -37,7 +36,6 @@ import './styles/conventions.css'
 import './features/tents/tents.css'
 import './features/measurement/measurement.css'
 import './features/grows/grows.css'
-import './features/addback/addback.css'
 import './features/live/live-rc2.css'
 import './features/grows/grows-rc2.css'
 import './styles/primitives-rc2.css'
@@ -102,6 +100,17 @@ function LiveZeltWeiterleitung() {
   return <Navigate to="/" replace state={Number.isInteger(id) && id > 0 ? { zeltId: id } : undefined} />
 }
 
+/**
+ * Der frühere Addback-Assistent je Grow — seit A-006 Etappe 3 ein Ablauf auf /addback.
+ *
+ * Links von Grow-, Zelt- und Live-Seite zeigten hierher; sie landen jetzt im
+ * Ablauf mit diesem Grow. Die Suchparameter gehen mit (Vorbelegung, Schritt).
+ */
+function AddbackWeiterleitung() {
+  const { growId } = useParams()
+  return <LegacyRedirect to={`/addback?growId=${encodeURIComponent(growId ?? '')}`} />
+}
+
 function LegacyRedirect({ to }: { to: string }) {
   const { search } = useLocation()
   const [path, targetQuery] = to.split('?')
@@ -124,7 +133,7 @@ function App() {
           <Route path="/" element={<LiveDashboardPage />} />
           <Route path="/live" element={<Navigate to="/" replace />} />
           <Route path="/live/:zeltId" element={<LiveZeltWeiterleitung />} />
-          <Route path="/addback" element={<AddbackHubPage />} />
+          <Route path="/addback" element={<AddbackPage />} />
           <Route path="/wasserwechsel" element={<WasserwechselPage />} />
           <Route path="/aufgaben" element={<MobileActionPage />} />
           <Route path="/action" element={<Navigate to="/aufgaben" replace />} />
@@ -134,7 +143,7 @@ function App() {
           <Route path="/messungen/new" element={<Navigate to="/messung" replace />} />
           <Route path="/grows/:growId" element={<GrowDetailPage />} />
           <Route path="/grows/:growId/setup" element={<GrowSetupPage />} />
-          <Route path="/grows/:growId/addback" element={<AddbackPage />} />
+          <Route path="/grows/:growId/addback" element={<AddbackWeiterleitung />} />
           <Route path="/grows/:growId/harvest" element={<HarvestPage />} />
           <Route path="/grows/measurements/:measurementId/edit" element={<MeasurementEditPage />} />
           <Route path="/zelte" element={<TentsPage />} />

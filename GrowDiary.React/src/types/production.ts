@@ -1,5 +1,5 @@
 import type { MotherHealthStatus, PlantRole, PlantStatus, QuarantineResult, SetupStatus, SetupType, StrainDominance, WaterSource } from './shared'
-import type { JournalEntryDto, MeasurementDto } from './grow'
+import type { AddbackLogDto, AddbackLogKind, JournalEntryDto, MeasurementDto } from './grow'
 
 export type TentType = 'Production' | 'Mother' | 'Quarantine' | 'Propagation' | 'MultiPurpose'
 export type TentStatus = 'Active' | 'Archived'
@@ -294,6 +294,41 @@ export interface WasserwechselVorgangDto {
   growId: number
   erstelltAmUtc: string
   wechsel: ChangeoutDto | null
+  vorher: MeasurementDto | null
+  nachher: MeasurementDto | null
+  buchungen: VorgangBuchungDto[]
+  tagebuch: JournalEntryDto | null
+  osmoseProzent: number | null
+  vorherHerkunft: string | null
+  vorherSensorZeitUtc: string | null
+}
+
+/* ---------------------------------------------------------------------------
+ * A-006 Etappe 3: das Nachfüllen als ein Vorgang. Verträge aus
+ * `Api/Contracts/AddbackVorgangContracts.cs`. Messung, Buchung und
+ * Tagebuchzeile haben dieselbe Form wie beim Wasserwechsel.
+ * ------------------------------------------------------------------------- */
+
+export interface AddbackVorgangRequest {
+  zeitpunktLokal: string | null
+  art: AddbackLogKind
+  liter: number | null
+  wasser: WaterSource
+  osmoseProzent: number | null
+  wasserEcMsCm: number | null
+  ecZiel: number | null
+  vorher: VorgangMessungRequest | null
+  nachher: VorgangMessungRequest | null
+  buchungen: VorgangBuchungRequest[]
+  notiz: string | null
+  tagebuch: { titel: string; text: string } | null
+}
+
+export interface AddbackVorgangDto {
+  id: number
+  growId: number
+  erstelltAmUtc: string
+  eintrag: AddbackLogDto | null
   vorher: MeasurementDto | null
   nachher: MeasurementDto | null
   buchungen: VorgangBuchungDto[]

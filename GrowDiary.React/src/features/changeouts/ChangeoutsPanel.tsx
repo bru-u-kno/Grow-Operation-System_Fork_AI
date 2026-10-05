@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiFetch, ApiRequestError } from '../../api'
 import type { ChangeoutDto, WasserwechselVorgangDto } from '../../types'
-import { teileText } from '../wasserwechsel/ablauf-rechnung'
+import { teileText } from '../vorgang/ablauf-rechnung'
 import { V1Alert, V1Empty, V1Section, V1Skeleton } from '../../components/v1'
 import { classNames, formatDateTime, formatNumber } from '../../utils'
 import './changeouts.css'
@@ -15,7 +15,7 @@ function pair(before: number | null, after: number | null): string {
  * Die bisherigen Wasserwechsel eines Grows — Liste und Löschen.
  *
  * <b>Seit A-006 (05.10.2026) ohne eigenes Formular.</b> Eingetragen wird im
- * Ablauf darüber (`WasserwechselAblauf`), der Wechsel, Messungen, Verbrauch und
+ * Ablauf darüber (`VorgangAblauf`), der Wechsel, Messungen, Verbrauch und
  * Tagebuch in einem Vorgang anlegt. Ein zweites Formular für dieselbe Handlung
  * wäre ein Befund, kein Feature (CLAUDE.md).
  *

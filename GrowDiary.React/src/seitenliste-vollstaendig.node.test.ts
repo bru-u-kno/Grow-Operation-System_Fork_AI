@@ -37,6 +37,8 @@ const OHNE_EIGENE_SEITE: Record<string, string> = {
   '/steuerung/geraete': 'Alte Adresse (bis forkai.133) — leitet auf den Reiter Rollen der Geräteseite um.',
   '/cropsteering': 'Crop Steering ist seit forkai.136 stillgelegt — leitet auf Steuerung → Chiller um.',
   '/steuerung/cropsteering': 'Crop Steering ist seit forkai.136 stillgelegt — leitet auf Steuerung → Chiller um.',
+  '/grows/:growId/addback': 'Alter Addback-Assistent (bis A-006 Etappe 3) — leitet auf /addback?growId= um; '
+    + 'die Seite steht dort mit allen vier Schritten in e2e/seiten.ts.',
 }
 
 function routenAusApp(): string[] {

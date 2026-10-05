@@ -1,8 +1,9 @@
-import type { MischplanRolle, WasserwechselVorgangDto, WaterSource } from '../../types'
-import { zahlOderNull } from '../../zahlenfeld'
+import type { AddbackLogKind, MischplanRolle, VorgangBuchungDto, WaterSource } from '../../types'
+import { toLocalInputValue } from '../../utils'
+import { maschinenZahl, zahlOderNull } from '../../zahlenfeld'
 
 /**
- * Wasserwechsel-Ablauf (A-006) — die Regeln ohne Oberfläche.
+ * Vorgang-Ablauf (A-006) — Wasserwechsel und Nachfüllen — die Regeln ohne Oberfläche.
  *
  * Was hier steht, ist nur die Buchhaltung des Formulars: welche Werte der
  * Nutzer geändert hat, was zurückgeholt werden kann, welche Zeilen gebucht
@@ -10,6 +11,9 @@ import { zahlOderNull } from '../../zahlenfeld'
  * Backend** (`MischplanVorschlagRechnung`) — Wasser-EC, EC-Ziel, CalMag. Hier
  * wird keine dieser Zahlen ein zweites Mal gerechnet.
  */
+
+/** Wie ein Nachfüllen heißt — im Titel der Tagebuchzeile und in der Liste. */
+export const NACHFUELL_ART: Record<AddbackLogKind, string> = { Addback: 'Addback', TopOff: 'Nachfüllen', Correction: 'Korrektur' }
 
 /** Eine Zeile der Ansetz-Tabelle. */
 export type AblaufZeile = {
@@ -120,6 +124,8 @@ export function aenderung(vorher: number | null, nachher: number | null, stellen
 }
 
 export type TagebuchWerte = {
+  /** „Wasserwechsel", „Addback" oder „Nachfüllen" — das erste Wort des Titels. */
+  titel: string
   liter: number
   wasserName: string
   vorher: { ec: number | null; ph: number | null; wt: number | null; do: number | null; orp: number | null }
@@ -159,11 +165,11 @@ export function tagebuchZeile(w: TagebuchWerte): { titel: string; text: string }
     w.notiz.trim(),
   ].filter((zeile) => zeile !== '')
 
-  return { titel: `Wasserwechsel ${zahl(w.liter, Number.isInteger(w.liter) ? 0 : 1)} L ${w.wasserName}`, text: zeilen.join('\n') }
+  return { titel: `${w.titel} ${zahl(w.liter, Number.isInteger(w.liter) ? 0 : 1)} L ${w.wasserName}`, text: zeilen.join('\n') }
 }
 
 /** „2 Messwerten, 6 Buchungen und der Tagebuchzeile" — was am Vorgang hängt. */
-export function teileText(vorgang: WasserwechselVorgangDto): string {
+export function teileText(vorgang: { vorher: unknown; nachher: unknown; buchungen: VorgangBuchungDto[]; tagebuch: unknown }): string {
   const messwerte = [vorgang.vorher, vorgang.nachher].filter(Boolean).length
   const teile = [
     messwerte > 0 ? `${messwerte} ${messwerte === 1 ? 'Messwert' : 'Messwerten'}` : null,
@@ -172,4 +178,73 @@ export function teileText(vorgang: WasserwechselVorgangDto): string {
   ].filter((teil): teil is string => teil != null)
   if (teile.length === 0) return 'nichts weiter'
   return teile.length === 1 ? teile[0] : `${teile.slice(0, -1).join(', ')} und ${teile[teile.length - 1]}`
+}
+
+/**
+ * EC im Tank nach dem Nachfüllen — Mischrechnung.
+ *
+ * Rest × EC vorher + Nachgefüllt × EC der Lösung, geteilt durch die Summe.
+ * Etikett auf der Seite: „Mischrechnung" — der EC zweier Lösungen mischt sich
+ * näherungsweise nach Volumen; was wirklich herauskommt, sagt das Messgerät
+ * im Schritt „Nachher". `null`, wenn eine Zahl fehlt oder der Tank leer war.
+ */
+export function ecTankDanach(restLiter: number | null, ecVorher: number | null, liter: number | null, ecLoesung: number | null): number | null {
+  if (restLiter == null || ecVorher == null || liter == null || ecLoesung == null) return null
+  if (restLiter < 0 || liter <= 0 || restLiter + liter <= 0) return null
+  return (restLiter * ecVorher + liter * ecLoesung) / (restLiter + liter)
+}
+
+/** Werte, mit denen ein Link den Ablauf vorbelegt (`/addback?…`). */
+export type Vorbelegung = {
+  /** Für das Feld „Wann", Ortszeit `yyyy-MM-ddTHH:mm`. */
+  zeitpunkt: string | null
+  liter: string | null
+  wasser: WaterSource | null
+  vorher: { ec: number | null; ph: number | null; wt: number | null }
+  nachher: { ec: number | null; ph: number | null; wt: number | null }
+  /** Woher die vorbelegten Messwerte stammen. Standard: Sensor (die Auffälligkeiten im Tagebuch kommen von dort). */
+  quelle: 'Sensor' | 'Hand'
+  notiz: string | null
+}
+
+/**
+ * Liest die Vorbelegung aus dem Link — `null`, wenn der Link nichts vorbelegt.
+ *
+ * Die Adresse ist ein Vertrag mit dem Grow-Tagebuch („Nachfüllen eintragen"
+ * an einer Auffälligkeit) und mit jedem, der einen Link baut:
+ *
+ * `/addback?growId=1&zeitpunkt=2026-10-03T14:55:00Z&ecVorher=1.75&ecNachher=1.61&liter=20`
+ *
+ * - `zeitpunkt`: ISO mit Zone (`…Z`, `+02:00`) oder Ortszeit `yyyy-MM-ddTHH:mm`
+ * - `liter`, `ecVorher`, `phVorher`, `wtVorher`, `ecNachher`, `phNachher`, `wtNachher`: Zahlen in
+ *   Maschinenform (`1.75`), gelesen mit `maschinenZahl` — nicht deutsch: „1.75" ist 1,75, nicht 175
+ * - `wasser`: `Tap`, `RO` oder `Mixed`
+ * - `quelle`: `sensor` (Standard) oder `hand` — woher die Messwerte stammen
+ * - `notiz`: freier Text
+ */
+export function vorbelegungAusLink(suche: URLSearchParams): Vorbelegung | null {
+  const schluessel = ['zeitpunkt', 'liter', 'wasser', 'ecVorher', 'phVorher', 'wtVorher', 'ecNachher', 'phNachher', 'wtNachher', 'notiz']
+  if (!schluessel.some((s) => (suche.get(s) ?? '').trim() !== '')) return null
+
+  let zeitpunkt: string | null = null
+  const roh = suche.get('zeitpunkt')?.trim()
+  if (roh) {
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(roh)) zeitpunkt = roh
+    else {
+      const datum = new Date(roh)
+      if (!Number.isNaN(datum.getTime())) zeitpunkt = toLocalInputValue(datum)
+    }
+  }
+
+  const liter = maschinenZahl(suche.get('liter'))
+  const wasser = suche.get('wasser')
+  return {
+    zeitpunkt,
+    liter: liter != null && liter > 0 ? zahl(liter, Number.isInteger(liter) ? 0 : 1) : null,
+    wasser: wasser === 'Tap' || wasser === 'RO' || wasser === 'Mixed' ? wasser : null,
+    vorher: { ec: maschinenZahl(suche.get('ecVorher')), ph: maschinenZahl(suche.get('phVorher')), wt: maschinenZahl(suche.get('wtVorher')) },
+    nachher: { ec: maschinenZahl(suche.get('ecNachher')), ph: maschinenZahl(suche.get('phNachher')), wt: maschinenZahl(suche.get('wtNachher')) },
+    quelle: suche.get('quelle')?.toLowerCase() === 'hand' ? 'Hand' : 'Sensor',
+    notiz: suche.get('notiz')?.trim() || null,
+  }
 }

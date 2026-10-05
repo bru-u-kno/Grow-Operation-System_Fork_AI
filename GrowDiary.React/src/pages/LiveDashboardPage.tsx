@@ -235,7 +235,7 @@ function LiveDashboardPage() {
         when: 'fällig',
         title: `Addback · EC ${ec.numericValue.toFixed(2).replace('.', ',')} \u2192 ${ec.targetMax.toFixed(2).replace('.', ',')}`,
         action: 'Start',
-        to: `/grows/${primaryGrow.id}/addback`,
+        to: `/addback?growId=${primaryGrow.id}`,
         due: true,
       })
     }
