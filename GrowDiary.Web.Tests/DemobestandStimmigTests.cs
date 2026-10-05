@@ -130,7 +130,8 @@ public sealed class DemobestandStimmigTests : IDisposable
             _grows, _dienste.GetRequiredService<JournalRepository>(), rohwerte,
             _dienste.GetRequiredService<TagebuchRepository>(), _dienste.GetRequiredService<LightRepository>(),
             _dienste.GetRequiredService<DosingRepository>(), _dienste.GetRequiredService<KostenRepository>(),
-            _dienste.GetRequiredService<HardwareRepository>());
+            _dienste.GetRequiredService<HardwareRepository>(),
+            _dienste.GetRequiredService<WasserwechselVorgangRepository>());
 
         var erster = LaufenderGrow();
         var auffaellig = tagebuch.Seite(erster.Id, null, 31, jetzt)!.Tage

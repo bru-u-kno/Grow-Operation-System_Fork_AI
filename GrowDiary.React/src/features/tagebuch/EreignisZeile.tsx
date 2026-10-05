@@ -62,7 +62,8 @@ function Inhalt({ growId, e, onGeaendert }: { growId: string; e: TagebuchEreigni
     case 'wechsel':
       return (
         <>
-          <Kopf tag="Wasserwechsel" ton="info" titel={e.titel} herkunft="Vorgang" />
+          <Kopf tag="Wasserwechsel" ton="info" titel={e.titel} herkunft={e.wechsel!.vorgangId != null ? 'Vorgang' : null}
+            aktionen={e.wechsel!.vorgangId != null ? <VorgangEntfernen growId={growId} vorgangId={e.wechsel!.vorgangId} titel={e.titel} onGeaendert={onGeaendert} /> : undefined} />
           <Vorgang growId={growId} w={e.wechsel!} posten={e.posten} onGeaendert={onGeaendert} />
           <Fotos fotos={e.fotos} />
         </>
@@ -216,29 +217,33 @@ function Vorgang({ growId, w, posten, onGeaendert }: { growId: string; w: Tagebu
       <Posten liste={posten} titel="Zugaben" />
       <p className="tb-gebucht">
         {posten.length > 0 && <>✓ {posten.length === 1 ? '1 Posten' : `${posten.length} Posten`} im Verbrauch gebucht · </>}
-        <Link className="tb-link" to={`/wasserwechsel?growId=${growId}`}>Vorgang öffnen</Link>
+        {w.vorgangId != null
+          ? <Link className="tb-link" to={`/wasserwechsel?growId=${growId}&vorgang=${w.vorgangId}`}>Vorgang öffnen</Link>
+          : <Link className="tb-link" to={`/wasserwechsel?growId=${growId}`}>Zum Wasserwechsel</Link>}
       </p>
       {w.notiz && <p className="tb-notiz">{w.notiz}</p>}
-      {w.journal && <NotizImVorgang notiz={w.journal} onGeaendert={onGeaendert} />}
+      {w.journal && <NotizImVorgang notiz={w.journal} onGeaendert={onGeaendert} imVorgang={w.vorgangId != null} />}
     </div>
   )
 }
 
 /** Der Journaleintrag eines Wechsels — im Vorgang, mit Bearbeiten und Entfernen. */
-function NotizImVorgang({ notiz, onGeaendert }: { notiz: TagebuchNotizDto; onGeaendert: () => void | Promise<void> }) {
+function NotizImVorgang({ notiz, onGeaendert, imVorgang }: { notiz: TagebuchNotizDto; onGeaendert: () => void | Promise<void>; imVorgang: boolean }) {
   return (
     <div className="tb-vorgang-notiz">
-      <NotizInhalt notiz={notiz} titel={notiz.titel ?? ''} fotos={[]} onGeaendert={onGeaendert} eingebettet />
+      <NotizInhalt notiz={notiz} titel={notiz.titel ?? ''} fotos={[]} onGeaendert={onGeaendert} eingebettet ohneEntfernen={imVorgang} />
     </div>
   )
 }
 
-function NotizInhalt({ notiz, titel, fotos, onGeaendert, eingebettet }: {
+function NotizInhalt({ notiz, titel, fotos, onGeaendert, eingebettet, ohneEntfernen }: {
   notiz: TagebuchNotizDto
   titel: string
   fotos: PhotoAssetDto[]
   onGeaendert: () => void | Promise<void>
   eingebettet?: boolean
+  /** Im Vorgang: entfernt wird der ganze Vorgang, nicht eine seiner Zeilen. */
+  ohneEntfernen?: boolean
 }) {
   const [bearbeiten, setBearbeiten] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -266,7 +271,7 @@ function NotizInhalt({ notiz, titel, fotos, onGeaendert, eingebettet }: {
           <>
             <button type="button" className="js-weg js-bearbeiten" aria-expanded={bearbeiten} disabled={bearbeiten}
               aria-label={`Eintrag „${name}" bearbeiten`} onClick={() => setBearbeiten(true)}>Bearbeiten</button>
-            <button type="button" className="js-weg" aria-label={`Eintrag „${name}" entfernen`} onClick={() => void entfernen()}>Entfernen</button>
+            {!ohneEntfernen && <button type="button" className="js-weg" aria-label={`Eintrag „${name}" entfernen`} onClick={() => void entfernen()}>Entfernen</button>}
           </>
         )}
       />
@@ -314,6 +319,29 @@ function AddbackInhalt({ growId, e, onGeaendert }: { growId: string; e: Tagebuch
       {teile.length > 0 && <p className="tb-zahlen">{teile.join(' · ')}</p>}
       {a.notiz && <p>{a.notiz}</p>}
       {fehler && <p className="tb-fehler" role="alert">{fehler}</p>}
+    </>
+  )
+}
+
+/**
+ * Einen Wasserwechsel-Vorgang entfernen — als Ganzes: Wechsel, Messungen,
+ * Buchungen und Tagebuchzeile gehen mit (DELETE aus dem Wasserwechsel-Ablauf).
+ */
+function VorgangEntfernen({ growId, vorgangId, titel, onGeaendert }: { growId: string; vorgangId: number; titel: string; onGeaendert: () => void | Promise<void> }) {
+  const [fehler, setFehler] = useState<string | null>(null)
+  async function entfernen() {
+    if (!window.confirm(`„${titel}" mit allem entfernen — Messungen, Buchungen und Tagebuchzeile gehen mit?`)) return
+    try {
+      await apiFetch(`/api/grows/${growId}/wasserwechsel/${vorgangId}`, { method: 'DELETE' })
+      await onGeaendert()
+    } catch (caught) {
+      setFehler(formatApiError(caught, 'Der Wasserwechsel konnte nicht entfernt werden.'))
+    }
+  }
+  return (
+    <>
+      <button type="button" className="js-weg" aria-label={`${titel} mit allem entfernen`} onClick={() => void entfernen()}>Entfernen</button>
+      {fehler && <span className="tb-fehler" role="alert">{fehler}</span>}
     </>
   )
 }

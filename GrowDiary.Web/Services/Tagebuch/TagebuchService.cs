@@ -81,6 +81,7 @@ public sealed class TagebuchService
 
     private readonly GrowRepository _grows;
     private readonly JournalRepository _journal;
+    private readonly WasserwechselVorgangRepository _vorgaenge;
     private readonly SensorReadingRepository _rohwerte;
     private readonly TagebuchRepository _auffaellig;
     private readonly LightRepository _licht;
@@ -96,7 +97,8 @@ public sealed class TagebuchService
         LightRepository licht,
         DosingRepository dosierung,
         KostenRepository kosten,
-        HardwareRepository hardware)
+        HardwareRepository hardware,
+        WasserwechselVorgangRepository vorgaenge)
     {
         _grows = grows;
         _journal = journal;
@@ -106,6 +108,7 @@ public sealed class TagebuchService
         _dosierung = dosierung;
         _kosten = kosten;
         _hardware = hardware;
+        _vorgaenge = vorgaenge;
     }
 
     /* ------------------------------------------------------------------ */
@@ -215,7 +218,11 @@ public sealed class TagebuchService
             : [];
         var pumpen = grow.TentId is { } z ? _dosierung.GetPumps(z).ToDictionary(p => p.Id) : new Dictionary<int, DosingPump>();
 
-        var postenJeMessung = buchungen.Where(b => b.MessungId is not null)
+        // Buchungen eines Vorgangs gehören zum Vorgang — nicht noch einmal an eine Messung oder als eigene Zeile.
+        var postenJeVorgang = buchungen.Where(b => b.VorgangId is not null)
+            .GroupBy(b => b.VorgangId!.Value)
+            .ToDictionary(g => g.Key, g => g.Select(b => Posten(b, artikel)).ToList());
+        var postenJeMessung = buchungen.Where(b => b.MessungId is not null && b.VorgangId is null)
             .GroupBy(b => b.MessungId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(b => Posten(b, artikel)).ToList());
         var fotosJeMessung = fotos.Where(f => f.MeasurementId is not null)
@@ -225,38 +232,66 @@ public sealed class TagebuchService
         // Fotos einer Messung stehen beim Journaleintrag, der auf sie zeigt — wie im Journal-Strom.
         var fotosBeimEintrag = journal.Where(j => j.MeasurementId is not null).Select(j => j.MeasurementId!.Value).ToHashSet();
 
-        // --- Wasserwechsel: ein Vorgang aus Wechsel, Lösungswechsel-Messung und Journal.
-        var gebuendelteMessungen = new HashSet<int>();
-        var gebuendelteEintraege = new HashSet<int>();
-        foreach (var c in wechsel)
+        // --- Wasserwechsel. Seit forkai.172 legt der Ablauf einen Vorgang an
+        // (Changeout, Messung vorher/nachher, Journal, Buchungen) — dann bündelt
+        // der Vorgang selbst. Für Altdaten bleibt die Stunde-Nähe (VorgangNahe).
+        var vorgaenge = _vorgaenge.FuerGrow(grow.Id).Where(v => v.ChangeoutId is not null)
+            .ToDictionary(v => v.ChangeoutId!.Value);
+        var messungNachId = messungen.ToDictionary(m => m.Id);
+        var journalNachId = journal.ToDictionary(j => j.Id);
+        var gebuendelteMessungen = vorgaenge.Values
+            .SelectMany(v => new[] { v.MessungVorherId, v.MessungNachherId }).OfType<int>().ToHashSet();
+        var gebuendelteEintraege = vorgaenge.Values.Select(v => v.JournalId).OfType<int>().ToHashSet();
+        foreach (var c in wechsel.OrderBy(c => vorgaenge.ContainsKey(c.Id) ? 0 : 1))
         {
             var utc = Utc(c.PerformedAtUtc);
-            var messung = messungen
-                .Where(m => m.SolutionChange && !gebuendelteMessungen.Contains(m.Id) && Abstand(MessUtc(m), utc) <= VorgangNahe)
-                .OrderBy(m => Abstand(MessUtc(m), utc))
-                .FirstOrDefault();
-            var eintrag = journal
-                .Where(j => j.EntryType == JournalEntryType.ReservoirChange && !gebuendelteEintraege.Contains(j.Id) && Abstand(Utc(j.OccurredAtUtc), utc) <= VorgangNahe)
-                .OrderBy(j => Abstand(Utc(j.OccurredAtUtc), utc))
-                .FirstOrDefault();
-            if (messung is not null) gebuendelteMessungen.Add(messung.Id);
-            if (eintrag is not null) gebuendelteEintraege.Add(eintrag.Id);
+            Measurement? vorherMessung = null;
+            Measurement? messung;
+            JournalEntry? eintrag;
+            List<TagebuchPostenDto> posten;
+            if (vorgaenge.TryGetValue(c.Id, out var vorgang))
+            {
+                vorherMessung = vorgang.MessungVorherId is { } mv && messungNachId.TryGetValue(mv, out var a) ? a : null;
+                messung = vorgang.MessungNachherId is { } mn && messungNachId.TryGetValue(mn, out var b) ? b : null;
+                eintrag = vorgang.JournalId is { } jid && journalNachId.TryGetValue(jid, out var e) ? e : null;
+                posten = postenJeVorgang.TryGetValue(vorgang.Id, out var pv) ? pv : [];
+            }
+            else
+            {
+                messung = messungen
+                    .Where(m => m.SolutionChange && !gebuendelteMessungen.Contains(m.Id) && Abstand(MessUtc(m), utc) <= VorgangNahe)
+                    .OrderBy(m => Abstand(MessUtc(m), utc))
+                    .FirstOrDefault();
+                eintrag = journal
+                    .Where(j => j.EntryType == JournalEntryType.ReservoirChange && !gebuendelteEintraege.Contains(j.Id) && Abstand(Utc(j.OccurredAtUtc), utc) <= VorgangNahe)
+                    .OrderBy(j => Abstand(Utc(j.OccurredAtUtc), utc))
+                    .FirstOrDefault();
+                if (messung is not null) gebuendelteMessungen.Add(messung.Id);
+                if (eintrag is not null) gebuendelteEintraege.Add(eintrag.Id);
+                posten = messung is not null && postenJeMessung.TryGetValue(messung.Id, out var p) ? p : [];
+            }
 
-            var posten = messung is not null && postenJeMessung.TryGetValue(messung.Id, out var p) ? p : [];
-            var bilder = messung is not null && fotosJeMessung.TryGetValue(messung.Id, out var f) ? f : [];
+            var bilder = new[] { vorherMessung, messung }.OfType<Measurement>()
+                .SelectMany(m => fotosJeMessung.TryGetValue(m.Id, out var f) ? f : []).ToList();
+            var vorher = vorherMessung is not null
+                ? Werte(vorherMessung) with { Ph = vorherMessung.ReservoirPh ?? c.PhBefore, Ec = vorherMessung.ReservoirEc ?? c.EcBefore }
+                : new TagebuchWerteDto(c.PhBefore, c.EcBefore, null, null, null, null, null, null, null, null);
+            var nachher = messung is not null
+                ? Werte(messung) with { Ph = messung.ReservoirPh ?? c.PhAfter, Ec = messung.ReservoirEc ?? c.EcAfter }
+                : new TagebuchWerteDto(c.PhAfter, c.EcAfter, null, null, null, null, null, null, null, null);
+            var vorgangId = vorgang?.Id;
             liste.Add(new Roh(utc, "wechsel", 3, () => Ereignis(
                 $"wechsel-{c.Id}", "wechsel", utc, WechselTitel(c), wasser: true,
                 wechsel: new TagebuchWechselDto(
                     c.Id,
+                    vorgangId,
                     c.Kind == ChangeoutKind.Full,
                     c.VolumeChangedLiters,
                     c.PercentChanged,
                     c.WaterUsed?.ToString(),
                     c.WaterEcMsCm,
-                    new TagebuchWerteDto(c.PhBefore, c.EcBefore, null, null, null, null, null, null, null, null),
-                    messung is not null
-                        ? Werte(messung) with { Ph = messung.ReservoirPh ?? c.PhAfter, Ec = messung.ReservoirEc ?? c.EcAfter }
-                        : new TagebuchWerteDto(c.PhAfter, c.EcAfter, null, null, null, null, null, null, null, null),
+                    vorher,
+                    nachher,
                     messung?.Id,
                     Leer(c.Notes),
                     eintrag is not null ? Notiz(eintrag) : null),
@@ -326,7 +361,7 @@ public sealed class TagebuchService
         }
 
         // --- Gebuchter Verbrauch ohne Messung (CO₂-Steuerung, Nachträge)
-        foreach (var gruppe in buchungen.Where(b => b.MessungId is null).GroupBy(b => Utc(b.ZeitpunktUtc)))
+        foreach (var gruppe in buchungen.Where(b => b.MessungId is null && b.VorgangId is null).GroupBy(b => Utc(b.ZeitpunktUtc)))
         {
             var utc = gruppe.Key;
             var posten = gruppe.Select(b => Posten(b, artikel)).ToList();

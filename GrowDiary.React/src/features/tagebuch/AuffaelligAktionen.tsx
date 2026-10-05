@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Button, V1Field } from '../../components/v1'
 import type { CreateAddbackLogRequest, JournalEntryType, TagebuchSprungDto, WaterSource } from '../../types'
-import { feldText, unlesbareFelder, unlesbarMeldung, zahlOderNull } from '../../zahlenfeld'
+import { unlesbareFelder, unlesbarMeldung, zahlOderNull } from '../../zahlenfeld'
 import { EintragFelderFormular } from '../grow-detail/JournalStreamSection'
 import { eintragFehler, type EintragFelder } from '../grow-detail/journal-bearbeiten'
+import { nachfuellenVorbelegung, nachfuellenWeg } from './nachfuellen-weg'
 import { alsEingabeZeit, sprungSatz } from './tagebuch-modell'
 
 type Modus = 'nachfuellen' | 'notiz' | null
@@ -27,6 +29,7 @@ export function AuffaelligAktionen({ growId, befunde, onGespeichert }: {
   befunde: TagebuchSprungDto[]
   onGespeichert: () => void | Promise<void>
 }) {
+  const navigate = useNavigate()
   const [modus, setModus] = useState<Modus>(null)
   const [verworfen, setVerworfen] = useState(false)
   const [laeuft, setLaeuft] = useState(false)
@@ -47,6 +50,16 @@ export function AuffaelligAktionen({ growId, befunde, onGespeichert }: {
     }
   }
 
+  /** Der Weg kommt aus `nachfuellen-weg.ts` — dort, und nur dort, wird er umgestellt. */
+  function nachfuellenOeffnen() {
+    const weg = nachfuellenWeg(growId, nachfuellenVorbelegung(befunde))
+    if (weg.art === 'adresse') {
+      navigate(weg.to)
+      return
+    }
+    setModus(modus === 'nachfuellen' ? null : 'nachfuellen')
+  }
+
   if (verworfen) {
     return (
       <p className="tb-verworfen" role="status">
@@ -61,7 +74,7 @@ export function AuffaelligAktionen({ growId, befunde, onGespeichert }: {
   return (
     <>
       <div className="tb-knoepfe">
-        <V1Button className="tb-klein" audit="tagebuch-nachfuellen" disabled={laeuft} onClick={() => setModus(modus === 'nachfuellen' ? null : 'nachfuellen')}>
+        <V1Button className="tb-klein" audit="tagebuch-nachfuellen" disabled={laeuft} onClick={nachfuellenOeffnen}>
           Nachfüllen eintragen
         </V1Button>
         <V1Button className="tb-klein" audit="tagebuch-notiz-dazu" disabled={laeuft} onClick={() => setModus(modus === 'notiz' ? null : 'notiz')}>
@@ -82,34 +95,17 @@ export function AuffaelligAktionen({ growId, befunde, onGespeichert }: {
   )
 }
 
-/** Der Wert eines Befunds dieser Messgröße — für die Vorbelegung, mit Komma. */
-function wert(befunde: TagebuchSprungDto[], messgroesse: string, seite: 'vorher' | 'nachher'): string {
-  const b = befunde.find((x) => x.messgroesse === messgroesse)
-  return b ? feldText(Number(b[seite].toFixed(2))) : ''
-}
-
-function literAusPegel(befunde: TagebuchSprungDto[]): string {
-  const pegel = befunde.find((b) => b.messgroesse === 'reservoir-level' && b.nachher > b.vorher)
-  return pegel ? feldText(Math.round((pegel.nachher - pegel.vorher) * 10) / 10) : ''
-}
-
 function NachfuellenFormular({ growId, befunde, onAbbrechen, onGespeichert }: {
   growId: string
   befunde: TagebuchSprungDto[]
   onAbbrechen: () => void
   onGespeichert: () => void | Promise<void>
 }) {
-  const erster = befunde[0]
-  const [felder, setFelder] = useState({
-    zeitpunkt: alsEingabeZeit(erster.endeUtc),
-    // Hat der Wasserstand (in Litern) mitgesprungen, ist das die Menge.
-    liter: literAusPegel(befunde),
-    wasser: '',
-    ecVorher: wert(befunde, 'reservoir-ec', 'vorher'),
-    ecNachher: wert(befunde, 'reservoir-ec', 'nachher'),
-    phVorher: wert(befunde, 'reservoir-ph', 'vorher'),
-    phNachher: wert(befunde, 'reservoir-ph', 'nachher'),
-    notiz: `Nachgetragen aus dem Tagebuch: ${befunde.map(sprungSatz).join(' · ')}.`,
+  const [felder, setFelder] = useState(() => {
+    const { zeitpunktUtc, zeitpunktOrtszeit: _ortszeit, ...rest } = nachfuellenVorbelegung(befunde)
+    void _ortszeit
+    // Das Formular schickt UTC — das Feld steht deshalb in der Uhr des Browsers.
+    return { ...rest, zeitpunkt: alsEingabeZeit(zeitpunktUtc), wasser: '' }
   })
   const [speichert, setSpeichert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)

@@ -298,3 +298,51 @@ test('Handy: alles aufgeklappt, Formular offen — nichts ragt über den Rand (3
   }
   expect(gemessen).toHaveLength(8)
 })
+
+test('Wasserwechsel aus dem Ablauf: ein Vorgang im Tagebuch — Werte, Posten, Link, und Entfernen nimmt alles mit', async ({ page }) => {
+  await oeffnen(page)
+  // Gestern 10:00 Ortszeit — fern vom Nachfüllen ohne Eintrag, damit es nichts erklärt.
+  const gestern = new Date(Date.now() - 86_400_000)
+  const lokal = `${gestern.getFullYear()}-${String(gestern.getMonth() + 1).padStart(2, '0')}-${String(gestern.getDate()).padStart(2, '0')}T10:00`
+  const angelegt = await page.request.post('/api/grows/1/wasserwechsel', {
+    data: {
+      zeitpunktLokal: lokal, art: 'Full', liter: 100, wasser: 'Tap', erinnerungNeuStarten: false,
+      vorher: { zeitpunktLokal: lokal, herkunft: 'hand', reservoirEc: 1.66, reservoirPh: 6.08 },
+      nachher: { zeitpunktLokal: lokal, reservoirEc: 1.52, reservoirPh: 5.86, orpMv: 444, dissolvedOxygenMgL: 8.2 },
+      buchungen: [{ wasser: 'Tap', menge: 100 }],
+      tagebuch: { titel: MARKE, text: 'Vorgang aus dem Rundweg' },
+    },
+  })
+  expect(angelegt.ok(), await angelegt.text()).toBeTruthy()
+  const vorgang = await angelegt.json() as { id: number; wechsel: { id: number } }
+  let entfernt = false
+  try {
+    await page.reload({ waitUntil: 'networkidle' })
+    const zeile = page.locator(`[data-schluessel="wechsel-${vorgang.wechsel.id}"]`)
+    await expect(zeile).toContainText('Vorgang')
+    await expect(zeile.locator('.tb-vt')).toContainText('444')
+    await expect(zeile.locator('.tb-vt')).toContainText('8,2')
+    await expect(zeile.locator('.tb-vt')).toContainText('1,66')
+    await expect(zeile.locator('.tb-posten')).toContainText('100 L')
+    await expect(zeile.getByRole('link', { name: 'Vorgang öffnen' })).toHaveAttribute('href', new RegExp(`vorgang=${vorgang.id}`))
+    // Das Journal des Vorgangs steht IM Vorgang, nicht noch einmal einzeln — und ohne eigenes Entfernen.
+    await expect(zeile).toContainText(MARKE)
+    await expect(page.locator('[data-audit="tagebuch-ereignis-notiz"]').filter({ hasText: MARKE })).toHaveCount(0)
+    await expect(zeile.getByRole('button', { name: `Eintrag „${MARKE}" entfernen` })).toHaveCount(0)
+
+    await zeile.getByRole('link', { name: 'Vorgang öffnen' }).click()
+    await expect(page).toHaveURL(new RegExp(`/wasserwechsel\\?growId=1&vorgang=${vorgang.id}`))
+    await page.goBack({ waitUntil: 'networkidle' })
+
+    page.once('dialog', (d) => void d.accept())
+    await gesendet(page, 'DELETE', new RegExp(`/api/grows/1/wasserwechsel/${vorgang.id}$`),
+      () => page.locator(`[data-schluessel="wechsel-${vorgang.wechsel.id}"]`).getByRole('button', { name: /mit allem entfernen$/ }).click())
+    entfernt = true
+    await page.reload({ waitUntil: 'networkidle' })
+    await expect(page.locator(`[data-schluessel="wechsel-${vorgang.wechsel.id}"]`)).toHaveCount(0)
+    await expect(page.getByText(MARKE)).toHaveCount(0)
+    expect((await page.request.get(`/api/grows/1/wasserwechsel/${vorgang.id}`)).status()).toBe(404)
+  } finally {
+    if (!entfernt) await page.request.delete(`/api/grows/1/wasserwechsel/${vorgang.id}`)
+  }
+})

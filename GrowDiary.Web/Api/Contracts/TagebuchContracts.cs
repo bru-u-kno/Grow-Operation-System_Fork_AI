@@ -90,6 +90,7 @@ public sealed record TagebuchAbgleichDto(
 
 /// <summary>Ein Wasserwechsel mit allem, was dazu eingetragen ist.</summary>
 /// <param name="ChangeoutId">Der Satz aus „Wasserwechsel".</param>
+/// <param name="VorgangId">Der Vorgang aus dem Wasserwechsel-Ablauf (seit forkai.172) — null bei Altdaten.</param>
 /// <param name="Komplett">Komplett- oder Teilwechsel.</param>
 /// <param name="Wasser">„Leitungswasser", „Osmosewasser", „Mischung" — null = nicht festgehalten.</param>
 /// <param name="MessungId">Die Messung mit dem Lösungswechsel-Haken, die dazugehört.</param>
@@ -97,6 +98,7 @@ public sealed record TagebuchAbgleichDto(
 /// <param name="Journal">Der Journaleintrag „Wasserwechsel", der dazugehört.</param>
 public sealed record TagebuchWechselDto(
     int ChangeoutId,
+    int? VorgangId,
     bool Komplett,
     double? Liter,
     double? Prozent,

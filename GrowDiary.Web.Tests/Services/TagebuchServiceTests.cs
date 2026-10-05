@@ -43,7 +43,8 @@ public sealed class TagebuchServiceTests : IDisposable
         _hardware = new HardwareRepository(_paths);
         _licht = new LightRepository(_paths);
         _dienst = new TagebuchService(_grows, _journal, _rohwerte, new TagebuchRepository(_paths), _licht,
-            new DosingRepository(_paths), new KostenRepository(_paths), _hardware);
+            new DosingRepository(_paths), new KostenRepository(_paths), _hardware,
+            new WasserwechselVorgangRepository(_paths, new KostenRepository(_paths)));
 
         _zelt = _grows.CreateTent(new Tent { Name = "Zelt-RDWC", TentType = TentType.Production }).Id;
         _grow = _grows.CreateGrow(new GrowRun
@@ -341,6 +342,60 @@ public sealed class TagebuchServiceTests : IDisposable
         Assert.Equal("Wasserwechsel RDWC 160 L", wechsel.Wechsel.Journal!.Titel);
         Assert.Equal("Tap", wechsel.Wechsel.Wasser);
         Assert.True(wechsel.Wasser);
+    }
+
+    [Fact]
+    public void Wasserwechsel_ausDemAblauf_BuendeltUeberDenVorgang_NichtUeberDieUhrzeit()
+    {
+        // Der Vorgang aus forkai.172: Messung vorher zwei Stunden VOR dem Wechsel
+        // (außerhalb der Stunden-Nähe für Altdaten) — sie gehört trotzdem dazu.
+        var kosten = new KostenRepository(_paths);
+        var duenger = kosten.CreateArtikel(new Verbrauchsartikel { Name = "Aqua Flores A", Einheit = "ml" });
+        var um = new DateTime(2026, 10, 4, 15, 30, 0, DateTimeKind.Utc);
+        var vorgang = new WasserwechselVorgangRepository(_paths, kosten).Anlegen(new WasserwechselVorgangEntwurf
+        {
+            GrowId = _grow,
+            Wechsel = new ChangeoutEntry { GrowId = _grow, PerformedAtUtc = um, Kind = ChangeoutKind.Full, VolumeChangedLiters = 160 },
+            Vorher = new Measurement { GrowId = _grow, TakenAt = um.AddHours(-2).ToLocalTime(), Source = ValueOrigin.Manual, ReservoirEc = 1.63, ReservoirPh = 6.12, ReservoirWaterTempC = 20.0 },
+            Nachher = new Measurement { GrowId = _grow, TakenAt = um.ToLocalTime(), Source = ValueOrigin.Manual, ReservoirEc = 1.15, ReservoirPh = 6.15, OrpMv = 450, DissolvedOxygenMgL = 8.1 },
+            Buchungen = [new VorgangBuchungEntwurf(duenger, null, 180)],
+        });
+        // Eine fremde Messung mit Haken nahe am Wechsel — die Altdaten-Regel hätte sie genommen.
+        _messungen.CreateMeasurement(new Measurement { GrowId = _grow, TakenAt = um.AddMinutes(20).ToLocalTime(), Source = ValueOrigin.Manual, SolutionChange = true, ReservoirEc = 9.99 });
+
+        var alle = Seite().Alle.ToList();
+        var wechsel = Assert.Single(alle, e => e.Art == "wechsel").Wechsel!;
+        Assert.Equal(vorgang.Id, wechsel.VorgangId);
+        Assert.Equal(vorgang.MessungNachherId, wechsel.MessungId);
+        Assert.Equal(1.63, wechsel.Vorher.Ec);
+        Assert.Equal(20.0, wechsel.Vorher.WasserC);
+        Assert.Equal(450, wechsel.Nachher.OrpMv);
+        Assert.Equal(8.1, wechsel.Nachher.SauerstoffMgL);
+        var posten = Assert.Single(Assert.Single(alle, e => e.Art == "wechsel").Posten);
+        Assert.Equal("Aqua Flores A", posten.Name);
+        // Die Messungen des Vorgangs stehen nicht noch einmal einzeln da, die fremde schon.
+        var einzeln = alle.Where(e => e.Art == "messung").Select(e => e.Messung!.Werte.Ec).ToList();
+        Assert.Equal([9.99], einzeln);
+        // Und die Buchung nicht noch einmal als „Verbrauch".
+        Assert.DoesNotContain(alle, e => e.Art == "verbrauch");
+    }
+
+    [Fact]
+    public void Vorgang_ohneMessungNachher_SeineBuchungenStehenNurImVorgang()
+    {
+        // Ohne Messung nachher hängen die Buchungen an keiner Messung — nur am Vorgang.
+        var kosten = new KostenRepository(_paths);
+        var wasser = kosten.CreateArtikel(new Verbrauchsartikel { Name = "Leitungswasser", Einheit = "L" });
+        new WasserwechselVorgangRepository(_paths, kosten).Anlegen(new WasserwechselVorgangEntwurf
+        {
+            GrowId = _grow,
+            Wechsel = new ChangeoutEntry { GrowId = _grow, PerformedAtUtc = new DateTime(2026, 10, 4, 15, 30, 0, DateTimeKind.Utc), Kind = ChangeoutKind.Full },
+            Buchungen = [new VorgangBuchungEntwurf(wasser, null, 160)],
+        });
+
+        var alle = Seite().Alle.ToList();
+        Assert.Equal("Leitungswasser", Assert.Single(Assert.Single(alle, e => e.Art == "wechsel").Posten).Name);
+        Assert.DoesNotContain(alle, e => e.Art == "verbrauch");
     }
 
     [Fact]

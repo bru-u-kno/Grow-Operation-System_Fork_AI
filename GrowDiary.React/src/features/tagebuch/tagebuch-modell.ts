@@ -1,5 +1,5 @@
 import type { TagebuchEreignisDto, TagebuchNotizDto, TagebuchSprungDto, TagebuchWerteDto } from '../../types'
-import { EINTRAG_ARTEN, MEILENSTEIN_ARTEN } from '../grow-detail/journal-bearbeiten'
+import { ABLAUF_ARTEN, EINTRAG_ARTEN, MEILENSTEIN_ARTEN } from '../grow-detail/journal-bearbeiten'
 import { zahl } from '../live/verlauf-modell'
 
 /**
@@ -57,7 +57,8 @@ export type Ton = 'accent' | 'warn' | 'info' | 'muted'
 export function notizEtikett(notiz: TagebuchNotizDto): { tag: string; ton: Ton } {
   const meilenstein = MEILENSTEIN_ARTEN[notiz.entryType]
   if (meilenstein) return { tag: 'Meilenstein', ton: 'accent' }
-  const name = EINTRAG_ARTEN.find((art) => art.value === notiz.entryType)?.label ?? 'Notiz'
+  // Wasserwechsel und Fütterung setzt seit forkai.172 nur der Ablauf — ihr Name steht in ABLAUF_ARTEN.
+  const name = EINTRAG_ARTEN.find((art) => art.value === notiz.entryType)?.label ?? ABLAUF_ARTEN[notiz.entryType] ?? 'Notiz'
   const ton: Ton = notiz.entryType === 'Problem' || notiz.entryType === 'Observation'
     ? 'warn'
     : notiz.entryType === 'ReservoirChange' || notiz.entryType === 'Feeding' ? 'info' : 'muted'

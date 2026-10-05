@@ -46,6 +46,8 @@ export interface TagebuchNotizDto {
 
 export interface TagebuchWechselDto {
   changeoutId: number
+  /** Der Vorgang aus dem Wasserwechsel-Ablauf (forkai.172) — null bei Altdaten. */
+  vorgangId: number | null
   komplett: boolean
   liter: number | null
   prozent: number | null

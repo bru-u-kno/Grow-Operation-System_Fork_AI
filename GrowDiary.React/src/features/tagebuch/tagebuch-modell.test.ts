@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TagebuchEreignisDto } from '../../types'
-import { aenderung, markenFuer, passtZumFilter, tagTitel, wasserName, zellen } from './tagebuch-modell'
+import { aenderung, markenFuer, notizEtikett, passtZumFilter, tagTitel, wasserName, zellen } from './tagebuch-modell'
 
 function ereignis(teil: Partial<TagebuchEreignisDto>): TagebuchEreignisDto {
   return {
@@ -52,5 +52,13 @@ describe('Grow-Tagebuch — Modell', () => {
     expect(wasserName('Tap')).toBe('Leitungswasser')
     expect(wasserName('RO')).toBe('Osmose / VE-Wasser')
     expect(wasserName(null)).toBeNull()
+  })
+
+  it('Etikett: Wasserwechsel aus dem Ablauf heißt so, auch wenn „+ Eintrag" die Art nicht mehr anbietet', () => {
+    const n = (entryType: string) => notizEtikett({ id: 1, entryType, titel: null, text: null, occurredAtUtc: '', automatisch: false })
+    expect(n('ReservoirChange')).toEqual({ tag: 'Wasserwechsel', ton: 'info' })
+    expect(n('Feeding').tag).toBe('Fütterung')
+    expect(n('Observation')).toEqual({ tag: 'Beobachtung', ton: 'warn' })
+    expect(n('FlipToFlower').tag).toBe('Meilenstein')
   })
 })
