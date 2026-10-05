@@ -85,4 +85,5 @@ public sealed record ChangeoutDto(
     WaterSource? WaterUsed,
     double? WaterEcMsCm,
     string? Notes,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    bool ErinnerungNeuStarten = true);

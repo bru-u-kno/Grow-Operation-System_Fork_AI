@@ -47,15 +47,57 @@ public sealed class MischplanService
     private readonly GrowRepository _grows;
     private readonly HydroSetupRepository _setups;
     private readonly KnowledgeBaseLoader _wissen;
+    private readonly WaterProfileStore? _wasserprofil;
+    private readonly KostenRepository? _kosten;
 
     public MischplanService(
         GrowRepository grows,
         HydroSetupRepository setups,
-        KnowledgeBaseLoader wissen)
+        KnowledgeBaseLoader wissen,
+        WaterProfileStore? wasserprofil = null,
+        KostenRepository? kosten = null)
     {
         _grows = grows;
         _setups = setups;
         _wissen = wissen;
+        _wasserprofil = wasserprofil;
+        _kosten = kosten;
+    }
+
+    /// <summary>
+    /// Der Plan dieser Woche als Vorschlag für einen Wasserwechsel (A-006) —
+    /// auf die Liter, das Wasser und den Wasser-EC gerechnet.
+    /// </summary>
+    /// <remarks>
+    /// Programm und Spalte kommen von denselben Stellen wie beim Mischplan oben
+    /// (<see cref="ProgrammFuerGrow(GrowRun, IEnumerable{NutrientProgramDefinition})"/>,
+    /// <see cref="SpalteFuer(FeedChartDefinition, GrowRun)"/>); gerechnet wird in
+    /// <see cref="MischplanVorschlagRechnung"/>.
+    /// </remarks>
+    /// <returns><c>null</c>, wenn es den Grow nicht gibt.</returns>
+    public MischplanVorschlag? Vorschlag(int growId, double liter, WaterSource wasser, double? osmoseProzent, double? wasserEcEigen)
+    {
+        var grow = _grows.GetGrow(growId);
+        if (grow is null) return null;
+
+        var plan = FuerGrow(growId)!;
+        var programm = ProgrammFuerGrow(grow, _wissen.NutrientPrograms);
+        var spalte = programm?.FeedChart is { Columns.Count: > 0 } chart ? SpalteFuer(chart, grow) : null;
+        var luecke = spalte is null
+            ? plan.Luecke ?? "Für die aktuelle Phase kennt das Chart keine Spalte."
+            : null;
+
+        return MischplanVorschlagRechnung.Rechnen(
+            programm?.Name,
+            spalte,
+            luecke,
+            plan.VolumenLiter,
+            _wasserprofil?.Get(),
+            _kosten?.GetArtikel() ?? [],
+            liter,
+            wasser,
+            osmoseProzent,
+            wasserEcEigen);
     }
 
     /// <summary>

@@ -84,24 +84,36 @@ public sealed class AddbackRepository : RepositoryBase
             throw new InvalidOperationException($"HydroSetup with id {entry.HydroSetupId.Value} does not exist.");
         }
 
+        using var connection = OpenConnection();
+        return CreateChangeout(entry, connection, null);
+    }
+
+    /// <summary>
+    /// Den Wechsel auf einer fremden Verbindung anlegen — für den
+    /// Wasserwechsel-Vorgang (A-006), der Wechsel, Messungen, Buchungen und
+    /// Tagebuch in EINER Transaktion schreibt.
+    /// </summary>
+    /// <remarks>Grow und Anlage prüft der Aufrufer; die Werte-Prüfung läuft hier wie oben.</remarks>
+    internal static ChangeoutEntry CreateChangeout(ChangeoutEntry entry, SqliteConnection connection, SqliteTransaction? transaction)
+    {
         ValidateChangeout(entry);
         entry.PerformedAtUtc = entry.PerformedAtUtc == default ? DateTime.UtcNow : entry.PerformedAtUtc;
         entry.CreatedAtUtc = DateTime.UtcNow;
         entry.Notes = NormalizeOptional(entry.Notes);
 
-        using var connection = OpenConnection();
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO ChangeoutEntries (
                 GrowId, HydroSetupId, Kind, PerformedAtUtc, VolumeChangedLiters,
                 PercentChanged, EcBefore, EcAfter, PhBefore, PhAfter,
-                WaterUsed, WaterEcMsCm,
+                WaterUsed, WaterEcMsCm, ErinnerungNeuStarten,
                 Notes, CreatedAtUtc
             )
             VALUES (
                 $growId, $hydroSetupId, $kind, $performedAtUtc, $volumeChangedLiters,
                 $percentChanged, $ecBefore, $ecAfter, $phBefore, $phAfter,
-                $waterUsed, $waterEcMsCm,
+                $waterUsed, $waterEcMsCm, $erinnerungNeuStarten,
                 $notes, $createdAtUtc
             );
             SELECT last_insert_rowid();
@@ -225,6 +237,11 @@ public sealed class AddbackRepository : RepositoryBase
                 ? Enum.TryParse<WaterSource>(cq, out var cQuelle) ? cQuelle : null
                 : null,
             WaterEcMsCm = HasColumn(reader, "WaterEcMsCm") ? NullableDouble(reader["WaterEcMsCm"]) : null,
+            // Altdaten (vor A-006) haben die Spalte erst nach dem Nachziehen —
+            // und dann mit 1: jeder alte Wechsel zählt weiter für die Erinnerung.
+            ErinnerungNeuStarten = !HasColumn(reader, "ErinnerungNeuStarten")
+                || reader["ErinnerungNeuStarten"] is DBNull or null
+                || Convert.ToInt32(reader["ErinnerungNeuStarten"], CultureInfo.InvariantCulture) == 1,
             Notes = NullString(reader["Notes"]),
             CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"]?.ToString()) ?? DateTime.UtcNow
         };
@@ -266,6 +283,7 @@ public sealed class AddbackRepository : RepositoryBase
         AddNullable(command, "$phAfter", entry.PhAfter);
         command.Parameters.AddWithValue("$waterUsed", (object?)entry.WaterUsed?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$waterEcMsCm", (object?)entry.WaterEcMsCm ?? DBNull.Value);
+        command.Parameters.AddWithValue("$erinnerungNeuStarten", entry.ErinnerungNeuStarten ? 1 : 0);
         command.Parameters.AddWithValue("$notes", (object?)entry.Notes ?? DBNull.Value);
         command.Parameters.AddWithValue("$createdAtUtc", ToStorageUtc(entry.CreatedAtUtc));
     }

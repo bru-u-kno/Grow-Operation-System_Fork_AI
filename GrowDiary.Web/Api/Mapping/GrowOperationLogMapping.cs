@@ -41,5 +41,6 @@ public static class GrowOperationLogMapping
         entry.WaterUsed,
         entry.WaterEcMsCm,
         entry.Notes,
-        entry.CreatedAtUtc);
+        entry.CreatedAtUtc,
+        entry.ErinnerungNeuStarten);
 }

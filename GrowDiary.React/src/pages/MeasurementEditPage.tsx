@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import type { GrowDetail, GrowStage, MeasurementDto, MeasurementUpsertPayload, PhotoAssetDto, PhotoTag, ValueOrigin } from '../types'
 import { formatDateTime, toLocalInputValue } from '../utils'
@@ -240,10 +240,20 @@ function MeasurementEditPage() {
                   <textarea rows={3} value={draft.notes} onChange={(event) => setDraft((current) => current ? { ...current, notes: event.target.value } : current)} />
                 </V1Field>
               </div>
-              <label className="meas-edit__check">
-                <input type="checkbox" checked={draft.solutionChange} onChange={(event) => setDraft((current) => current ? { ...current, solutionChange: event.target.checked } : current)} />
-                <span>Lösungswechsel dokumentiert</span>
-              </label>
+              {/* A-006: der Haken „Lösungswechsel" ist kein Weg mehr, einen Wechsel
+                  einzutragen — das macht der Wasserwechsel-Ablauf mit Verbrauch und
+                  Tagebuch. Steht der Haken an einer älteren Messung (oder an der
+                  Messung „nachher" eines Vorgangs), bleibt er sichtbar und zählt weiter. */}
+              {measurement?.solutionChange ? (
+                <label className="meas-edit__check">
+                  <input type="checkbox" checked={draft.solutionChange} onChange={(event) => setDraft((current) => current ? { ...current, solutionChange: event.target.checked } : current)} />
+                  <span>Lösungswechsel dokumentiert</span>
+                </label>
+              ) : (
+                <p className="meas-edit__hinweis" data-audit="messung-weg-zum-wasserwechsel">
+                  Wasser gewechselt? Das trägst du im <Link to={`/wasserwechsel?growId=${measurement?.growId ?? ''}`}>Wasserwechsel-Ablauf</Link> ein — mit Messung vorher und nachher, Verbrauch und Tagebuch.
+                </p>
+              )}
             </V1Section>
 
             {fieldSections.map((section) => (

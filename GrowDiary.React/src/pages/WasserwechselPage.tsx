@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import { V1Alert, V1Card, V1Empty, V1Page, V1Skeleton } from '../components/v1'
 import { ChangeoutsPanel } from '../features/changeouts/ChangeoutsPanel'
+import { teileText } from '../features/wasserwechsel/ablauf-rechnung'
 import { WasserwechselStand } from '../features/changeouts/WasserwechselStand'
 import { GrowScopePicker } from '../features/grow-scope/GrowScopePicker'
 import { useSelectedGrow } from '../features/grow-scope/useSelectedGrow'
-import type { WasserwechselStandDto } from '../types'
+import { WasserwechselAblauf } from '../features/wasserwechsel/WasserwechselAblauf'
+import type { WasserwechselStandDto, WasserwechselVorgangDto } from '../types'
 import '../features/changeouts/changeouts.css'
 
 /**
@@ -26,6 +29,13 @@ import '../features/changeouts/changeouts.css'
  * <b>umgezogen</b>; auf /addback steht jetzt nur noch der Stand mit einem Weg
  * hierher. Nachfüllen und Wechseln sind zwei Handlungen — Wasser dazugeben ist
  * nicht Wasser austauschen.
+ *
+ * <b>Seit A-006 (05.10.2026)</b> steht hier der Ablauf in vier Schritten
+ * (`WasserwechselAblauf`): ein Speichern legt Wechsel, Messung vorher und
+ * nachher, Verbrauch und Tagebuchzeile als einen Vorgang an. Das alte
+ * Formular ist weg; die Liste darunter zeigt die bisherigen Wechsel, Altdaten
+ * eingeschlossen. `?vorgang=<id>` hebt einen Vorgang hervor (Link aus dem
+ * Tagebuch).
  */
 export default function WasserwechselPage() {
   const { grows, growId, setGrowId, loading, error } = useSelectedGrow()
@@ -34,6 +44,15 @@ export default function WasserwechselPage() {
   const [stand, setStand] = useState<WasserwechselStandDto | null>(null)
   const [standFehler, setStandFehler] = useState<string | null>(null)
   const [neuGeladen, setNeuGeladen] = useState(0)
+  // Nach dem Speichern beginnt ein frischer Vorgang — neu gerechnet, nichts gemerkt (Bru).
+  const [ablaufNummer, setAblaufNummer] = useState(0)
+  const [gespeichert, setGespeichert] = useState<{ text: string; hinweis: string | null } | null>(null)
+  const [suche] = useSearchParams()
+  const markiert = Number(suche.get('vorgang')) || null
+  // Ein Link auf einen Vorgang (aus dem Tagebuch): gibt es ihn noch? Ein
+  // geloeschter Vorgang soll das sagen, statt still nichts hervorzuheben.
+  const [fehlendeVorgaenge, setFehlendeVorgaenge] = useState<number[]>([])
+  const vorgangFehlt = markiert != null && fehlendeVorgaenge.includes(markiert)
 
   const growId2 = grow?.id ?? null
   useEffect(() => {
@@ -55,15 +74,29 @@ export default function WasserwechselPage() {
     return () => controller.abort()
   }, [growId2, neuGeladen])
 
+  useEffect(() => {
+    if (growId2 == null || markiert == null) return
+    const controller = new AbortController()
+    apiFetch<WasserwechselVorgangDto>(`/api/grows/${growId2}/wasserwechsel/${markiert}`, { signal: controller.signal })
+      .then(() => setFehlendeVorgaenge((alt) => alt.filter((id) => id !== markiert)))
+      .catch((caught) => {
+        if (!controller.signal.aborted && caught instanceof ApiRequestError && caught.status === 404) {
+          setFehlendeVorgaenge((alt) => [...alt, markiert])
+        }
+      })
+    return () => controller.abort()
+  }, [growId2, markiert, neuGeladen])
+
   return (
     <V1Page
       eyebrow="Jetzt"
       title="Wasserwechsel"
-      subtitle="Wann zuletzt gewechselt wurde — und der Eintrag für den, den du gerade gemacht hast."
+      subtitle="Ein Ablauf: vorher, ansetzen, nachher. Verbrauch und Tagebuch gehen mit."
       action={<GrowScopePicker grows={grows} growId={growId} onChange={setGrowId} />}
     >
       {error && <V1Alert message={error} tone="critical" />}
       {standFehler && <V1Alert message={standFehler} tone="warn" />}
+      {vorgangFehlt && <V1Alert message="Diesen Wasserwechsel gibt es nicht mehr — er wurde entfernt." tone="neutral" />}
 
       {loading ? (
         <V1Skeleton rows={4} label="Lade Wasserwechsel" />
@@ -80,13 +113,31 @@ export default function WasserwechselPage() {
             </V1Card>
           )}
 
-          {/* Ein nachgetragener Wechsel verschiebt den Stand — sonst stuenden
-              oben 9 Tage, waehrend unten der Eintrag von gestern steht. */}
+          {gespeichert && <V1Alert title="Gespeichert" message={gespeichert.text} tone="ok" />}
+          {gespeichert?.hinweis && <V1Alert message={gespeichert.hinweis} tone="warn" />}
+
+          <div className="ww-ablauf-section">
+            <WasserwechselAblauf
+              key={`${grow.id}-${ablaufNummer}`}
+              growId={grow.id}
+              stand={stand}
+              onGespeichert={(vorgang, hinweis) => {
+                setGespeichert({ text: `Wasserwechsel gespeichert — mit ${teileText(vorgang)}.`, hinweis })
+                setAblaufNummer((wert) => wert + 1)
+                // Ein neuer Wechsel verschiebt den Stand — sonst stuenden oben
+                // 9 Tage, waehrend unten der Eintrag von eben steht.
+                setNeuGeladen((wert) => wert + 1)
+                window.scrollTo({ top: 0 })
+              }}
+            />
+          </div>
+
           <ChangeoutsPanel
             growId={grow.id}
             growName={grow.name}
-            offenBeiStart={stand?.zustand === 'faellig' || stand?.zustand === 'ueberfaellig'}
-            onGespeichert={() => setNeuGeladen((wert) => wert + 1)}
+            neuLaden={neuGeladen}
+            markiert={markiert}
+            onGeaendert={() => { setGespeichert(null); setNeuGeladen((wert) => wert + 1) }}
             leerHinweis={leerHinweis(stand)}
           />
         </>
@@ -106,6 +157,6 @@ export default function WasserwechselPage() {
 function leerHinweis(stand: WasserwechselStandDto | null): string | undefined {
   if (stand?.zuletztUtc == null) return undefined
   const wann = new Date(stand.zuletztUtc).toLocaleDateString('de-DE')
-  return `Der letzte belegte Wechsel (${wann}) kommt aus einer Messung — dort war „Lösungswechsel" angehakt. `
-    + 'Über dieses Formular ist noch keiner eingetragen; beide zählen gleich.'
+  return `Der letzte belegte Wechsel (${wann}) kommt aus einer älteren Messung — dort war „Lösungswechsel" angehakt. `
+    + 'Er zählt weiter; hier eingetragen ist noch keiner.'
 }

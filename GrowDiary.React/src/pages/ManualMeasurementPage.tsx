@@ -7,7 +7,7 @@ import { resolveUrl } from '../base'
 import type { GrowStage, GrowSummary, HydroStyle, MeasurementDto, MeasurementUpsertPayload, MetricPayload, PhotoTag, TentDto, TentLivePayload, ValueOrigin } from '../types'
 import type { HomeAssistantEntity } from '../types/hardware'
 import FileInput from '../components/FileInput'
-import { V1Alert, V1Badge, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton, V1Switch } from '../components/v1'
+import { V1Alert, V1Badge, V1Button, V1Card, V1Empty, V1Field, V1Page, V1Section, V1Skeleton } from '../components/v1'
 import { LiveCheckPanel } from '../features/measurement/LiveCheckPanel'
 import { checkDraft, type CheckSeverity } from '../features/measurement/live-check-model'
 import '../features/measurement/measurement-edit.css'
@@ -574,7 +574,15 @@ function ManualMeasurementPage() {
                       </select>
                     </V1Field>
                   )}
-                  <V1Switch label="Lösungswechsel" checked={draft.solutionChange} onChange={(checked) => patch({ solutionChange: checked })} hint="Reservoir oder Nährlösung vollständig gewechselt." />
+                  {/* A-006: kein Haken „Lösungswechsel" mehr. Ein Wechsel ist ein eigener
+                      Vorgang (Messung vorher/nachher, Verbrauch, Tagebuch) — vier Stellen für
+                      eine Handlung waren der Anlass. Altdaten mit dem Haken zählen weiter
+                      (Services/Wasserwechsel.cs). */}
+                  <p className="ms-weg-wasserwechsel" data-audit="messung-weg-zum-wasserwechsel">
+                    Wasser gewechselt? Das trägst du im{' '}
+                    <Link to={selectedGrowId != null ? `/wasserwechsel?growId=${selectedGrowId}` : '/wasserwechsel'}>Wasserwechsel-Ablauf</Link>{' '}
+                    ein — mit Messung vorher und nachher, Verbrauch und Tagebuch in einem Schritt.
+                  </p>
                   <V1Field label="Notiz" wide>
                     <textarea rows={4} value={draft.notes} onChange={(event) => patch({ notes: event.target.value })} placeholder="Blattbild, Wurzeln, Geruch, Korrektur..." />
                   </V1Field>

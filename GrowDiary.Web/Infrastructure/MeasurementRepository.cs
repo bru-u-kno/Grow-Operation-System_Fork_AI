@@ -97,11 +97,26 @@ public sealed class MeasurementRepository : RepositoryBase
 
     public int CreateMeasurement(Measurement measurement)
     {
+        using var connection = OpenConnection();
+        return CreateMeasurement(measurement, connection, null);
+    }
+
+    /// <summary>
+    /// Dieselbe Anlage auf einer fremden Verbindung — für Vorgänge, die mehrere
+    /// Tabellen in EINER Transaktion schreiben (Wasserwechsel-Vorgang, A-006).
+    /// </summary>
+    /// <remarks>
+    /// Bewusst dieselbe Methode wie oben und keine zweite INSERT-Zeile: zwei
+    /// Spaltenlisten für dieselbe Tabelle laufen auseinander, sobald jemand ein
+    /// Messfeld ergänzt.
+    /// </remarks>
+    internal static int CreateMeasurement(Measurement measurement, SqliteConnection connection, SqliteTransaction? transaction)
+    {
         measurement.CreatedAtUtc = DateTime.UtcNow;
         measurement.UpdatedAtUtc = DateTime.UtcNow;
 
-        using var connection = OpenConnection();
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO Measurements
             (

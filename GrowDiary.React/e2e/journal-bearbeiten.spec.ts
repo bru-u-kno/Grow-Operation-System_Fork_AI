@@ -61,7 +61,10 @@ test('Rundweg: journal-edit-form — Eintrag korrigieren, zweimal, und wiederfin
   // Anlegen über das Formular, das der Nutzer auch nimmt.
   await page.locator('[data-audit="journal-add-entry"]').click()
   const neu = page.locator('[data-audit="journal-entry-form"]')
-  await neu.locator('select').first().selectOption('ReservoirChange')
+  /* Seit A-006 (05.10.2026) bietet „+ Eintrag" die Art Wasserwechsel nicht mehr an —
+     die setzt nur der Wasserwechsel-Ablauf. Der Fall bleibt derselbe: eine Notiz
+     mit fehlender Menge wird korrigiert. */
+  await neu.locator('select').first().selectOption('Action')
   await neu.getByLabel('Titel', { exact: true }).fill(MARKE)
   await neu.getByLabel('Text', { exact: true }).fill('CANNA pH- Pro Bloom: Menge nicht notiert')
   const angelegt = await gesendet(page, 'POST', /\/journal$/,
@@ -76,7 +79,7 @@ test('Rundweg: journal-edit-form — Eintrag korrigieren, zweimal, und wiederfin
   await expect(formular.getByLabel('Titel', { exact: true })).toBeFocused()
   await expect(formular.locator('textarea')).toHaveValue('CANNA pH- Pro Bloom: Menge nicht notiert')
   await expect(formular.locator('select').first(), 'Die Art kam nicht vorbefüllt an.')
-    .toHaveValue('ReservoirChange')
+    .toHaveValue('Action')
 
   const korrigiert = 'CANNA pH- Pro Bloom: ca. 25 ml\nPurolyt: 200 ml direkt nach dem Wechsel → ORP 450 mV'
   await formular.locator('textarea').fill(korrigiert)
@@ -84,7 +87,7 @@ test('Rundweg: journal-edit-form — Eintrag korrigieren, zweimal, und wiederfin
     () => formular.getByRole('button', { name: 'Änderungen speichern' }).click())
   eintragId = Number(erstes.url.match(/\/api\/journal\/(\d+)$/)![1])
   expect(erstes.rumpf.body).toBe(korrigiert)
-  expect(erstes.rumpf.entryType, 'Die Art ging beim Speichern verloren.').toBe('ReservoirChange')
+  expect(erstes.rumpf.entryType, 'Die Art ging beim Speichern verloren.').toBe('Action')
   expect(erstes.rumpf.occurredAtLocal,
     'Der Zeitpunkt wurde nicht angefasst und darf nicht mitgehen — sonst verliert der Eintrag seine Sekunden.')
     .toBeNull()

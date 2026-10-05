@@ -75,10 +75,18 @@ public static class Wasserwechsel
                 .DefaultIfEmpty(null)
                 .Max();
 
+    /// <remarks>
+    /// Seit A-006 (05.10.2026) zählt ein Wechsel nur, wenn er die Erinnerung
+    /// neu startet (<see cref="ChangeoutEntry.ErinnerungNeuStarten"/>). Altdaten
+    /// tragen dort <c>true</c> und zählen wie bisher. Der Vorgang setzt dann auch
+    /// <c>SolutionChange</c> an seiner Messung „nachher" nicht — sonst käme der
+    /// abgeschaltete Wechsel über die Messung wieder herein.
+    /// </remarks>
     private static DateTime? AusWechseln(IEnumerable<ChangeoutEntry>? wechsel)
         => wechsel is null
             ? null
-            : wechsel.Select(w => (DateTime?)w.PerformedAtUtc)
+            : wechsel.Where(w => w.ErinnerungNeuStarten)
+                .Select(w => (DateTime?)w.PerformedAtUtc)
                 .DefaultIfEmpty(null)
                 .Max();
 

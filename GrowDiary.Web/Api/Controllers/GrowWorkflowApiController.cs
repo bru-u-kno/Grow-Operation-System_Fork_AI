@@ -31,8 +31,10 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         Services.Knowledge.KnowledgeBaseLoader wissen,
         WasserwechselStandService wasserwechselStand,
         WaterProfileStore? waterProfile = null,
-        Services.GrowPlan.GrowPlanService? plaene = null)
+        Services.GrowPlan.GrowPlanService? plaene = null,
+        WasserwechselVorgangRepository? vorgaenge = null)
     {
+        _vorgaenge = vorgaenge;
         _plaene = plaene;
         _repository = repository;
         _harvestRepository = harvestRepository;
@@ -47,6 +49,9 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
     private readonly WasserwechselStandService _wasserwechselStand;
 
     private readonly WaterProfileStore? _waterProfile;
+
+    // A-006: ein Wechsel aus dem Ablauf gehoert zu einem Vorgang — Loeschen nimmt ihn ganz.
+    private readonly WasserwechselVorgangRepository? _vorgaenge;
 
     // Fork AI (Grow-Plan): die Ernte schließt den Grow ab — dann wird sein Plan eingefroren.
     private readonly Services.GrowPlan.GrowPlanService? _plaene;
@@ -415,6 +420,14 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         if (_repository.GetGrow(id) is null)
         {
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
+        }
+
+        // A-006: gehoert der Wechsel zu einem Vorgang, geht der ganze Vorgang —
+        // sonst blieben Messungen, Buchungen und Tagebuchzeile ohne ihren Wechsel stehen.
+        if (_vorgaenge?.ZumWechsel(id, changeoutId) is { } vorgang)
+        {
+            _vorgaenge.Loeschen(id, vorgang.Id);
+            return NoContent();
         }
 
         return _repository.DeleteChangeout(id, changeoutId)

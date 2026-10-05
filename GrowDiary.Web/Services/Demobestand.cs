@@ -154,6 +154,12 @@ public static partial class Demobestand
         BereicheAnlegen(grows, setups, hauptSorte.Id, zweiteSorte.Id);
         Co2FlascheAnlegen(dienste.GetRequiredService<KostenRepository>(), journal,
             zelt.Id, laufend.Id, growGorillaGlue);
+        // A-006: Dünger des Programms, Leitungswasser und ein Wasserprofil — sonst
+        // zeigte der Wasserwechsel-Ablauf in der Testdaten-App keine einzige Buchung.
+        DuengerUndWasserAnlegen(dienste.GetRequiredService<KostenRepository>(),
+            // Der Store sitzt auf den App-Einstellungen; ueber sie gebaut, damit auch
+            // Aufrufer mit nur den Ablagen (DemobestandStimmigTests) ihn haben.
+            new WaterProfileStore(dienste.GetRequiredService<AppSettingsRepository>()), laufend.Id);
 
         // Ein zweiter laufender Grow in einem zweiten Zelt am selben Zaehler, dazu
         // Strom-Quelle, Preis und Zaehlerstaende (Demobestand.Strom.cs) — sonst

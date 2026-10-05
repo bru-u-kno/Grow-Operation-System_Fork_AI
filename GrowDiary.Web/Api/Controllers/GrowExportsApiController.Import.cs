@@ -328,6 +328,9 @@ public sealed partial class GrowExportsApiController
             EcAfter = dto.EcAfter,
             PhBefore = dto.PhBefore,
             PhAfter = dto.PhAfter,
+            // A-006: der Schalter reist mit; aeltere Exporte kennen ihn nicht und
+            // liefern den Standard true — so zaehlten sie vorher auch.
+            ErinnerungNeuStarten = dto.ErinnerungNeuStarten,
             Notes = dto.Notes
         };
 

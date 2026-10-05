@@ -73,6 +73,9 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "AddbackLogs", "WaterEcMsCm", "REAL NULL");
         EnsureColumn(connection, "ChangeoutEntries", "WaterUsed", "TEXT NULL");
         EnsureColumn(connection, "ChangeoutEntries", "WaterEcMsCm", "REAL NULL");
+        // A-006 (05.10.2026): ob ein Wechsel die Erinnerung neu startet. Altdaten
+        // bekommen 1 — sie zaehlten bisher alle, und dabei bleibt es.
+        EnsureColumn(connection, "ChangeoutEntries", "ErinnerungNeuStarten", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(connection, "Grows", "FeedProgramId", "TEXT NULL");
         EnsureColumn(connection, "Grows", "UseFeedChartTargets", "INTEGER NOT NULL DEFAULT 0");
         // Alarmgrenzen duerfen dem Wochenplan folgen (10.09.2026). Der Vorgabewert

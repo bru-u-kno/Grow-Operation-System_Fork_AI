@@ -21,9 +21,20 @@ export const EINTRAG_ARTEN: ReadonlyArray<{ value: JournalEntryType; label: stri
   { value: 'Solution', label: 'Lösung' },
   { value: 'Training', label: 'Training' },
   { value: 'Transplant', label: 'Umtopfen' },
-  { value: 'Feeding', label: 'Fütterung' },
-  { value: 'ReservoirChange', label: 'Wasserwechsel' },
 ]
+
+/**
+ * Arten, die seit A-006 (05.10.2026) nur noch ein Ablauf setzt: der
+ * Wasserwechsel-Vorgang („Wasserwechsel") und künftig das Nachfüllen
+ * („Fütterung"). Frei angelegt standen sie neben dem Wechsel selbst — eine
+ * Handlung an zwei Stellen. Beim Bearbeiten eines vorhandenen Eintrags kennt
+ * die Auswahl sie weiter, sonst würde „Änderungen speichern" die Art still
+ * auf die erste Option setzen.
+ */
+export const ABLAUF_ARTEN: Readonly<Record<string, string>> = {
+  ReservoirChange: 'Wasserwechsel',
+  Feeding: 'Fütterung',
+}
 
 /**
  * Meilensteine legt die App selbst an (Keimung, Flip …) — „+ Eintrag" bietet
@@ -61,8 +72,8 @@ export function textZeilen(text: string): number {
 /** Die Auswahl für eine Art — ergänzt um sie selbst, wenn es ein Meilenstein ist. */
 export function artenFuer(entryType: string): ReadonlyArray<{ value: string; label: string }> {
   if (EINTRAG_ARTEN.some((art) => art.value === entryType)) return EINTRAG_ARTEN
-  const meilenstein = MEILENSTEIN_ARTEN[entryType]
-  return meilenstein ? [...EINTRAG_ARTEN, { value: entryType, label: meilenstein }] : EINTRAG_ARTEN
+  const vorhanden = MEILENSTEIN_ARTEN[entryType] ?? ABLAUF_ARTEN[entryType]
+  return vorhanden ? [...EINTRAG_ARTEN, { value: entryType, label: vorhanden }] : EINTRAG_ARTEN
 }
 
 /** Ein gespeicherter Eintrag als vorbefülltes Formular. */

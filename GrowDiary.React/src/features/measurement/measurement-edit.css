@@ -8,6 +8,9 @@
 
   .meas-edit__check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--fs-text); }
   .meas-edit__check input { width: 18px; height: 18px; }
+  /* A-006: Weg vom Messformular zum Wasserwechsel-Ablauf (statt Haken „Lösungswechsel"). */
+  .meas-edit__hinweis, .ms-weg-wasserwechsel { grid-column: 1 / -1; margin: 4px 0 0; color: var(--muted); font-size: var(--fs-klein); }
+  .meas-edit__hinweis a, .ms-weg-wasserwechsel a { color: var(--accent-text); }
 
   .meas-edit__photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 110px), 1fr)); gap: 8px; }
   .meas-edit__photos img {

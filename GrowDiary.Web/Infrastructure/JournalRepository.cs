@@ -57,9 +57,16 @@ public sealed class JournalRepository
 
     public int Create(JournalEntry entry)
     {
-        entry.CreatedAtUtc = DateTime.UtcNow;
         using var connection = OpenConnection();
+        return Create(entry, connection, null);
+    }
+
+    /// <summary>Den Eintrag auf einer fremden Verbindung anlegen — für den Wasserwechsel-Vorgang (A-006).</summary>
+    internal static int Create(JournalEntry entry, SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        entry.CreatedAtUtc = DateTime.UtcNow;
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO JournalEntries (GrowId, MeasurementId, Title, Body, EntryType, Source, OccurredAtUtc, CreatedAtUtc, UpdatedAtUtc)
             VALUES ($growId, $measurementId, $title, $body, $entryType, $source, $occurredAtUtc, $createdAtUtc, $updatedAtUtc);
