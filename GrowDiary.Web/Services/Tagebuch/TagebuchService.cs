@@ -312,7 +312,9 @@ public sealed class TagebuchService
             var ml = DosingService.HoechstensGegeben(d);
             liste.Add(new Roh(utc, "dosierung", 3, () => Ereignis(
                 $"dosis-{d.Id}", "dosierung", utc, pumpe, wasser: true,
-                dosis: new TagebuchDosisDto(d.Id, pumpe, ml, d.ValueBefore, d.ValueAfter, d.Trigger != DoseTrigger.Manual))));
+                dosis: new TagebuchDosisDto(d.Id, pumpe, ml,
+                    pumpen.TryGetValue(d.PumpId, out var p2) ? p2.MetricKey switch { "reservoir-ph" => "pH", "reservoir-ec" => "EC", _ => null } : null,
+                    d.ValueBefore, d.ValueAfter, d.Trigger != DoseTrigger.Manual))));
         }
 
         // --- Lose Fotos (ohne Messung)
@@ -488,6 +490,18 @@ public sealed class TagebuchService
                 continue;
             }
 
+            // Ohne eigenen VPD-Sensor rechnet die Live-Seite VPD aus Luft und
+            // Feuchte (GrowDashboardComposer → VpdCalculator) — hier genauso,
+            // aus den Rohwerten derselben Minute.
+            if (schluessel == "vpd" && VpdAusLuftUndFeuchte(zelt, vonUtc, bisUtc, tag) is { Count: > 0 } gerechnet)
+            {
+                irgendRoh = true;
+                var werte = gerechnet.Select(p => p.Wert).Order().ToList();
+                kurven.Add(new TagebuchKurveDto(schluessel, name + " (gerechnet)", einheitKurz, nachkomma,
+                    werte[0], werte[werte.Count / 2], werte[^1], gerechnet));
+                continue;
+            }
+
             var stat = _rohwerte.GetDailyStats(zelt, schluessel, tag, tag).FirstOrDefault();
             if (stat is not null)
             {
@@ -501,6 +515,27 @@ public sealed class TagebuchService
 
         var (licht, quelle) = Lichtphasen(zelt, tag, vonUtc, bisUtc);
         return new TagebuchKurvenDto(datum, irgendRoh ? "roh" : irgendTag ? "tag" : "keine", kurven, licht, quelle);
+    }
+
+    /// <summary>VPD je Zeitpunkt, an dem Luft und Feuchte beide gemessen wurden (höchstens 2 Minuten auseinander).</summary>
+    private List<TagebuchPunktDto> VpdAusLuftUndFeuchte(int zelt, DateTime vonUtc, DateTime bisUtc, DateOnly tag)
+    {
+        var luft = _rohwerte.GetReadings(zelt, "temperature", vonUtc, bisUtc.AddTicks(-1));
+        var feuchte = _rohwerte.GetReadings(zelt, "humidity", vonUtc, bisUtc.AddTicks(-1));
+        // Mit dem Blattversatz des Zelts — derselbe Wert wie auf der Live-Kachel.
+        var blatt = _grows.GetTent(zelt)?.LeafTempOffsetC ?? 0;
+        var punkte = new List<TagebuchPunktDto>();
+        foreach (var l in luft)
+        {
+            var f = feuchte.MinBy(x => (x.CapturedAtUtc - l.CapturedAtUtc).Duration());
+            if (f is null || (f.CapturedAtUtc - l.CapturedAtUtc).Duration() > TimeSpan.FromMinutes(2)) continue;
+            if (VpdCalculator.Calculate(l.Value, f.Value, blatt) is { } vpd)
+            {
+                punkte.Add(new TagebuchPunktDto(Minute(l.CapturedAtUtc, tag), Math.Round(vpd, 3)));
+            }
+        }
+
+        return punkte;
     }
 
     /// <summary>
@@ -593,6 +628,7 @@ public sealed class TagebuchService
             string.IsNullOrWhiteSpace(einheit) ? null : einheit.Trim(), SprungNachkomma(a.MetricKey),
             a.Vorher, a.Nachher, a.BeginnUtc, a.EndeUtc,
             a.BeginnUtc.ToLocalTime().ToString("HH:mm", Invariant), a.EndeUtc.ToLocalTime().ToString("HH:mm", Invariant),
+            a.BeginnUtc.ToLocalTime().ToString("yyyy-MM-ddTHH:mm", Invariant), a.EndeUtc.ToLocalTime().ToString("yyyy-MM-ddTHH:mm", Invariant),
             (int)Math.Round((a.EndeUtc - a.BeginnUtc).TotalMinutes), Sprungerkennung.Regel(a.MetricKey));
     }
 

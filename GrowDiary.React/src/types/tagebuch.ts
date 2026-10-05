@@ -76,6 +76,8 @@ export interface TagebuchDosisDto {
   id: number
   pumpe: string
   ml: number
+  /** „pH", „EC" — null bei eigenem Mittel. */
+  messgroesse: string | null
   vorher: number | null
   nachher: number | null
   automatisch: boolean
@@ -99,6 +101,9 @@ export interface TagebuchSprungDto {
   endeUtc: string
   beginnUhrzeit: string
   endeUhrzeit: string
+  /** yyyy-MM-ddTHH:mm in Ortszeit der Anlage — für Felder, die der Server als Ortszeit liest. */
+  beginnOrtszeit: string
+  endeOrtszeit: string
   dauerMinuten: number
   regel: string
 }

@@ -132,6 +132,17 @@ public sealed class AddbackRepository : RepositoryBase
         return items;
     }
 
+    /// <summary>Einen Addback-/Nachfüll-Eintrag entfernen — nur in seinem Grow.</summary>
+    public bool DeleteAddbackLog(int growId, int id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM AddbackLogs WHERE Id = $id AND GrowId = $growId;";
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$growId", growId);
+        return command.ExecuteNonQuery() > 0;
+    }
+
     /// <summary>
     /// Einen Wasserwechsel wieder entfernen.
     /// </summary>
@@ -148,17 +159,6 @@ public sealed class AddbackRepository : RepositoryBase
     /// dass etwas gemeldet wurde.</para>
     /// </remarks>
     /// <returns><c>true</c>, wenn wirklich eine Zeile verschwunden ist.</returns>
-    /// <summary>Einen Addback-/Nachfüll-Eintrag entfernen — nur in seinem Grow.</summary>
-    public bool DeleteAddbackLog(int growId, int id)
-    {
-        using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM AddbackLogs WHERE Id = $id AND GrowId = $growId;";
-        command.Parameters.AddWithValue("$id", id);
-        command.Parameters.AddWithValue("$growId", growId);
-        return command.ExecuteNonQuery() > 0;
-    }
-
     public bool DeleteChangeout(int growId, int id)
     {
         using var connection = OpenConnection();

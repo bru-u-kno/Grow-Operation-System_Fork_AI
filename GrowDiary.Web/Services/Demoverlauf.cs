@@ -301,8 +301,18 @@ public static class Demoverlauf
     public static double OrpMv(DateTime ortszeit) => 437 - ImDosierzyklus(ortszeit) * 18;
 
     /// <summary>Fuellstand in Litern — faellt ueber die Woche, springt beim Wechsel zurueck.</summary>
-    public static double FuellstandLiter(DateTime ortszeit)
-        => 96 - ImWasserzyklus(ortszeit) * 2.4 - (1 + Tagesgang(ortszeit)) * 0.55;
+    /// <remarks>
+    /// Das Nachfüllen ohne Eintrag (<see cref="NachfuellenOhneEintrag"/>) hebt ihn um
+    /// <see cref="NachfuellenLiter"/> — rund 8 %, passend zur EC-Senkung um 0,12 bei
+    /// 1,64–1,71 (7 %). Ohne das sänke der EC durch Wasser, das nie ins Becken kam
+    /// (Prüfer 05.10.2026).
+    /// </remarks>
+    public static double FuellstandLiter(DateTime ortszeit, Lage? lage = null)
+        => 96 - ImWasserzyklus(ortszeit) * 2.4 - (1 + Tagesgang(ortszeit)) * 0.55
+           + (Nachgefuellt(ortszeit, lage) ? NachfuellenLiter : 0);
+
+    /// <summary>So viel Wasser kam beim Nachfüllen ohne Eintrag dazu.</summary>
+    public const double NachfuellenLiter = 7;
 
     /// <summary>Derselbe Pegel als Zentimeter — was ein eTape misst.</summary>
     /// <remarks>
@@ -311,7 +321,7 @@ public static class Demoverlauf
     /// 100-Liter-Beckens, damit sich der Kalibrier-Assistent durchspielen
     /// laesst.
     /// </remarks>
-    public static double FuellstandCm(DateTime ortszeit) => FuellstandLiter(ortszeit) / 3.1;
+    public static double FuellstandCm(DateTime ortszeit, Lage? lage = null) => FuellstandLiter(ortszeit, lage) / 3.1;
 
     /// <summary>PPFD — null, solange das Licht aus ist.</summary>
     public static double Ppfd(DateTime ortszeit)
@@ -347,7 +357,7 @@ public static class Demoverlauf
         "reservoir-ph" => Math.Round(Ph(ortszeit), 2),
         "reservoir-ec" => Math.Round(Ec(ortszeit, lage), 2),
         "reservoir-temp" => Math.Round(WasserTempC(ortszeit), 1),
-        "reservoir-level-cm" => Math.Round(FuellstandCm(ortszeit), 1),
+        "reservoir-level-cm" => Math.Round(FuellstandCm(ortszeit, lage), 1),
         "orp" => Math.Round(OrpMv(ortszeit), 0),
         "dissolved-oxygen" => Math.Round(SauerstoffMgL(ortszeit), 1),
         _ => null,

@@ -204,6 +204,62 @@ public sealed class TagebuchServiceTests : IDisposable
     }
 
     [Fact]
+    public void Duengerdosis_ErklaertSteigendenEc_AberKeinenFallenden()
+    {
+        var dosierung = new DosingRepository(_paths);
+        var duenger = dosierung.InsertPump(new DosingPump { TentId = _zelt, Name = "Dünger A", Purpose = DosingPurpose.Nutrient, HaEntityId = "switch.a", MlPerMinute = 45 });
+        dosierung.InsertEvent(new DoseEvent { PumpId = duenger, TentId = _zelt, GrowId = _grow, OccurredAtUtc = new DateTime(2026, 10, 3, 14, 20, 0, DateTimeKind.Utc), Trigger = DoseTrigger.Manual, Outcome = DoseOutcome.Done, RequestedMl = 20, DosedMl = 20 });
+
+        // Brus Fall FÄLLT: Dünger hebt den EC — er erklärt kein Nachfüllen mit Wasser.
+        BrusRohwerteEinspielen();
+        Assert.Single(Seite().Auffaellig);
+
+        // Derselbe Verlauf gespiegelt, also STEIGEND: genau das bewirkt eine Düngergabe.
+        _rohwerte.DeleteOlderThan(DateTime.UtcNow.AddYears(1));
+        new TagebuchRepository(_paths).Verwerfen(Assert.Single(Seite().Auffaellig).Auffaellig!.Befunde[0].Id, DateTime.UtcNow);
+        foreach (var w in SprungerkennungTests.BrusNachfuellen())
+        {
+            _rohwerte.AddReading(new TentSensorReading { TentId = _zelt, MetricKey = "reservoir-ec", Value = 3.48 - w.Wert, CapturedAtUtc = w.Utc.AddDays(-1) });
+        }
+        var steigend = _dienst.Erkennen(_zelt, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), Jetzt);
+        Assert.Equal(1, steigend);
+        dosierung.InsertEvent(new DoseEvent { PumpId = duenger, TentId = _zelt, GrowId = _grow, OccurredAtUtc = new DateTime(2026, 10, 2, 14, 20, 0, DateTimeKind.Utc), Trigger = DoseTrigger.Manual, Outcome = DoseOutcome.Done, RequestedMl = 20, DosedMl = 20 });
+        Assert.Empty(Seite().Auffaellig);
+    }
+
+    [Fact]
+    public void PhKalibrierung_UnterdruecktKeinenEcSprung()
+    {
+        BrusRohwerteEinspielen();
+        var sonde = _hardware.CreateHardwareItem(new HardwareItem { Name = "pH-Sonde", Category = "Sensor", TentId = _zelt });
+        _hardware.CreateCalibrationEvent(new CalibrationEvent
+        {
+            HardwareItemId = sonde.Id,
+            CalibrationType = CalibrationEventType.Ph,
+            Status = CalibrationEventStatus.Completed,
+            Title = "pH kalibriert",
+            PerformedAtUtc = new DateTime(2026, 10, 3, 14, 20, 0, DateTimeKind.Utc),
+        });
+
+        Assert.Single(Seite().Auffaellig);
+    }
+
+    [Fact]
+    public void Vpd_OhneEigenenSensor_WirdAusLuftUndFeuchteGerechnet()
+    {
+        var um = new DateTime(2026, 10, 3, 10, 0, 0, DateTimeKind.Utc);
+        _rohwerte.AddReading(new TentSensorReading { TentId = _zelt, MetricKey = "temperature", Value = 25, CapturedAtUtc = um });
+        _rohwerte.AddReading(new TentSensorReading { TentId = _zelt, MetricKey = "humidity", Value = 50, CapturedAtUtc = um.AddSeconds(20) });
+
+        var vpd = _dienst.Kurven(_grow, new DateOnly(2026, 10, 3))!.Kurven.Single(k => k.Schluessel == "vpd");
+        var punkt = Assert.Single(vpd.Punkte);
+        // Mit dem Blattversatz des Zelts — derselbe Wert wie auf der Live-Kachel.
+        var blatt = _grows.GetTent(_zelt)!.LeafTempOffsetC;
+        Assert.Equal(GrowDiary.Web.Services.VpdCalculator.Calculate(25, 50, blatt)!.Value, punkt.Wert, 3);
+        Assert.Equal("VPD (gerechnet)", vpd.Name);
+    }
+
+    [Fact]
     public void Verbrauchsbuchung_OhneMessung_ErklaertNichts()
     {
         BrusRohwerteEinspielen();

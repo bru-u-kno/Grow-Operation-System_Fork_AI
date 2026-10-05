@@ -71,7 +71,7 @@ function Inhalt({ growId, e, onGeaendert }: { growId: string; e: TagebuchEreigni
       return <AddbackInhalt growId={growId} e={e} onGeaendert={onGeaendert} />
     case 'dosierung': {
       const d = e.dosis!
-      const werte = d.vorher != null && d.nachher != null ? ` · ${zahl(d.vorher, 2)} → ${zahl(d.nachher, 2)}` : ''
+      const werte = d.vorher != null && d.nachher != null ? ` · ${d.messgroesse ? `${d.messgroesse} ` : ''}${zahl(d.vorher, 2)} → ${zahl(d.nachher, 2)}` : ''
       return (
         <>
           <Kopf tag="Dosierung" ton="info" titel={e.titel} herkunft={d.automatisch ? 'automatisch' : 'von Hand'} />

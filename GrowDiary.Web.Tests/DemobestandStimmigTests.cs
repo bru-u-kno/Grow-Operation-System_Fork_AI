@@ -101,12 +101,6 @@ public sealed class DemobestandStimmigTests : IDisposable
         return laufend;
     }
 
-    /// <summary>Der Bestand legt überhaupt etwas an.</summary>
-    /// <remarks>
-    /// Der Mengenwächter für alles Folgende: liefe <see cref="Demobestand.Anlegen"/>
-    /// still ins Leere, wären alle anderen Prüfungen hier grün, ohne etwas
-    /// gesehen zu haben.
-    /// </remarks>
     /// <summary>
     /// Das Grow-Tagebuch (A-006) zeigt im Bestand GENAU eine Auffälligkeit —
     /// das absichtliche Nachfüllen ohne Eintrag in Zelt 1.
@@ -142,8 +136,10 @@ public sealed class DemobestandStimmigTests : IDisposable
         var auffaellig = tagebuch.Seite(erster.Id, null, 31, jetzt)!.Tage
             .SelectMany(t => t.Ereignisse).Where(e => e.Art == "auffaellig").ToList();
         var zeile = Assert.Single(auffaellig);
-        var befund = Assert.Single(zeile.Auffaellig!.Befunde);
+        // EC zuerst; der Wasserstand steigt beim Nachfüllen mit (Demoverlauf.NachfuellenLiter).
+        var befund = zeile.Auffaellig!.Befunde[0];
         Assert.Equal("reservoir-ec", befund.Messgroesse);
+        Assert.Contains(zeile.Auffaellig.Befunde, b => b.Messgroesse == "reservoir-level-cm" && b.Nachher > b.Vorher);
         Assert.InRange(befund.Vorher - befund.Nachher, 0.11, 0.13);
         Assert.Equal(DateOnly.FromDateTime(Demoverlauf.NachfuellenOhneEintrag()!.Value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             GrowDiary.Web.Services.Tagebuch.TagebuchService.OrtsTag(zeile.ZeitpunktUtc).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
@@ -161,6 +157,12 @@ public sealed class DemobestandStimmigTests : IDisposable
         Assert.DoesNotContain(tagebuch.Seite(zweiter.Id, null, 31, jetzt)!.Tage.SelectMany(t => t.Ereignisse), e => e.Art == "auffaellig");
     }
 
+    /// <summary>Der Bestand legt überhaupt etwas an.</summary>
+    /// <remarks>
+    /// Der Mengenwächter für alles Folgende: liefe <see cref="Demobestand.Anlegen"/>
+    /// still ins Leere, wären alle anderen Prüfungen hier grün, ohne etwas
+    /// gesehen zu haben.
+    /// </remarks>
     [Fact]
     public void Der_Bestand_legt_wirklich_etwas_an()
     {

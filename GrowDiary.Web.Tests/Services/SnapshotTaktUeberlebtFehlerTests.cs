@@ -52,6 +52,12 @@ public sealed class SnapshotTaktUeberlebtFehlerTests
         // fürs Tagebuch, als eigener Schritt.
         Assert.Equal(5, mitschrift.Fehler.Count);
         Assert.Contains(mitschrift.Fehler, f => f.Contains("Tagebuch-Spruenge"));
+        // Die Sprünge werden VOR dem Aufräumen der Rohwerte gemerkt — danach
+        // wäre eine Stufe von 25 Minuten nicht mehr zu sehen.
+        Assert.True(
+            mitschrift.Fehler.FindIndex(f => f.Contains("Tagebuch-Spruenge"))
+            < mitschrift.Fehler.FindIndex(f => f.Contains("Tagesstatistik")),
+            "Die Sprünge müssen vor dem Aufräumen (Schritt Tagesstatistik) gemerkt werden.");
         Assert.Contains(mitschrift.Fehler, f => f.Contains("Messwerte erfassen"));
         Assert.Contains(mitschrift.Fehler, f => f.Contains("Tagesstatistik"));
     }

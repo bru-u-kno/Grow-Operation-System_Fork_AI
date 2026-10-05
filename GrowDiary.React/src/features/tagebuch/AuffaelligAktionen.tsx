@@ -88,6 +88,11 @@ function wert(befunde: TagebuchSprungDto[], messgroesse: string, seite: 'vorher'
   return b ? feldText(Number(b[seite].toFixed(2))) : ''
 }
 
+function literAusPegel(befunde: TagebuchSprungDto[]): string {
+  const pegel = befunde.find((b) => b.messgroesse === 'reservoir-level' && b.nachher > b.vorher)
+  return pegel ? feldText(Math.round((pegel.nachher - pegel.vorher) * 10) / 10) : ''
+}
+
 function NachfuellenFormular({ growId, befunde, onAbbrechen, onGespeichert }: {
   growId: string
   befunde: TagebuchSprungDto[]
@@ -97,7 +102,8 @@ function NachfuellenFormular({ growId, befunde, onAbbrechen, onGespeichert }: {
   const erster = befunde[0]
   const [felder, setFelder] = useState({
     zeitpunkt: alsEingabeZeit(erster.endeUtc),
-    liter: '',
+    // Hat der Wasserstand (in Litern) mitgesprungen, ist das die Menge.
+    liter: literAusPegel(befunde),
     wasser: '',
     ecVorher: wert(befunde, 'reservoir-ec', 'vorher'),
     ecNachher: wert(befunde, 'reservoir-ec', 'nachher'),
@@ -190,7 +196,10 @@ function NotizFormular({ growId, befunde, onAbbrechen, onGespeichert }: {
   const [felder, setFelder] = useState<EintragFelder>({
     entryType: 'Observation',
     title: `${erster.name}-Sprung ${erster.beginnUhrzeit}–${erster.endeUhrzeit} Uhr`,
-    occurredAtLocal: alsEingabeZeit(erster.beginnUtc),
+    // Ortszeit der Anlage vom Server: das Journal liest `occurredAtLocal` als
+    // solche. Aus dem Browser gerechnet stand bei anderer Zeitzone die falsche
+    // Stunde im Feld (Prüfer 05.10.2026).
+    occurredAtLocal: erster.beginnOrtszeit,
     body: `Vom Sensor erkannt: ${befunde.map(sprungSatz).join(' · ')}. `,
   })
   const [speichert, setSpeichert] = useState(false)

@@ -119,10 +119,12 @@ public sealed record TagebuchAddbackDto(
     string? Wasser,
     string? Notiz);
 
+/// <param name="Messgroesse">Woran die Pumpe arbeitet: „pH", „EC" — null bei eigenem Mittel.</param>
 public sealed record TagebuchDosisDto(
     int Id,
     string Pumpe,
     double Ml,
+    string? Messgroesse,
     double? Vorher,
     double? Nachher,
     bool Automatisch);
@@ -148,6 +150,7 @@ public sealed record TagebuchAuffaelligDto(IReadOnlyList<TagebuchSprungDto> Befu
 /// <param name="Name">„EC".</param>
 /// <param name="BeginnUtc">Letzter ruhiger Wert davor.</param>
 /// <param name="EndeUtc">Erster ruhiger Wert danach.</param>
+/// <param name="BeginnOrtszeit">yyyy-MM-ddTHH:mm in Ortszeit der Anlage — für Formularfelder, die der Server als Ortszeit liest.</param>
 /// <param name="Regel">Ab wann gemeldet wird — mit Etikett.</param>
 public sealed record TagebuchSprungDto(
     int Id,
@@ -161,6 +164,8 @@ public sealed record TagebuchSprungDto(
     DateTime EndeUtc,
     string BeginnUhrzeit,
     string EndeUhrzeit,
+    string BeginnOrtszeit,
+    string EndeOrtszeit,
     int DauerMinuten,
     string Regel);
 

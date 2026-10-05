@@ -1,3 +1,5 @@
+using GrowDiary.Web.Infrastructure;
+
 namespace GrowDiary.Web.Services.Tagebuch;
 
 /// <summary>Ein Wert aus dem Sensorverlauf, wie die Erkennung ihn braucht.</summary>
@@ -126,14 +128,22 @@ public static class Sprungerkennung
         _ => null,
     };
 
-    /// <summary>Die Regel in einem Satz — so steht sie in der Oberfläche.</summary>
-    public static string Regel(string metricKey) => metricKey switch
+    /// <summary>Die Regel in einem Satz — so steht sie in der Oberfläche, aus denselben Zahlen wie die Schwelle.</summary>
+    public static string Regel(string metricKey)
     {
-        "reservoir-ec" => "Gemeldet ab 5 % EC-Änderung in höchstens einer Stunde (Faustregel: so viel verdünnt 1/20 des Beckens Wasser).",
-        "reservoir-ph" => "Gemeldet ab 0,2 pH in höchstens einer Stunde (Faustregel: ein halbes Zielband 5,8–6,2 auf einmal).",
-        "reservoir-level" or "reservoir-level-cm" => "Gemeldet ab 5 % Wasserstand in höchstens einer Stunde (Faustregel: 1/20 des Beckens).",
-        _ => string.Empty,
-    };
+        var de = AppCulture.German;
+        var fenster = HoechstensUebergang.TotalMinutes >= 60 && HoechstensUebergang.TotalMinutes % 60 == 0
+            ? (HoechstensUebergang.TotalMinutes == 60 ? "einer Stunde" : $"{HoechstensUebergang.TotalHours.ToString("0", de)} Stunden")
+            : $"{HoechstensUebergang.TotalMinutes.ToString("0", de)} Minuten";
+        var teil = (int)Math.Round(1 / EcAnteil);
+        return metricKey switch
+        {
+            "reservoir-ec" => $"Gemeldet ab {(EcAnteil * 100).ToString("0.#", de)} % EC-Änderung (mindestens {EcMindestens.ToString("0.00", de)} mS/cm) in höchstens {fenster} (Faustregel: so viel verdünnt 1/{teil} des Beckens Wasser).",
+            "reservoir-ph" => $"Gemeldet ab {PhSchwelle.ToString("0.0#", de)} pH in höchstens {fenster} (Faustregel: ein halbes Zielband {DeviationAnalyzerService.PhComfortMin.ToString("0.0", de)}–{DeviationAnalyzerService.PhComfortMax.ToString("0.0", de)} auf einmal).",
+            "reservoir-level" or "reservoir-level-cm" => $"Gemeldet ab {(PegelAnteil * 100).ToString("0.#", de)} % Wasserstand in höchstens {fenster} (Faustregel: 1/{(int)Math.Round(1 / PegelAnteil)} des Beckens).",
+            _ => string.Empty,
+        };
+    }
 
     /// <summary>Alle Sprünge einer Messgröße in diesem Verlauf.</summary>
     /// <param name="metricKey">Die Messgröße.</param>
