@@ -20,7 +20,6 @@ Priorisiert nach Redesign-Aufwand.
 ### Hoher Aufwand / Kernflüsse
 | Seite | Route | Zweck | Größe |
 |---|---|---|---|
-| AddbackPage | `/grows/:id/addback` | 6-Schritt-Wizard Reservoir-Pflege + Dosier-Berechnung | 630 |
 | HydroPage | `/hydro`, `/hydro/new` | Liste + Wizard + RDWC-Visualpreview, Dependency-Blocking | 448 |
 | GrowDetailPage | `/grows/:id` | Multi-Tab Grow (Overview/Diagnose/SOPs/Messungen/Journal/Automation) | 366 |
 | GrowSetupPage | `/grows/new`, `/grows/:id/setup` | 6-Schritt-Wizard Grow anlegen/bearbeiten | 168 |
@@ -36,7 +35,7 @@ Priorisiert nach Redesign-Aufwand.
 | GrowsPage | `/grows` | Grow-Grid + CRUD | 264 |
 | ReleasePage | `/release` | Grow Export/Import | 241 |
 | MobileActionPage | `/aufgaben` | Aktions-Hub (Risiken/Tasks/Wartung) + Risk-Aktionen | 240 |
-| AddbackHubPage | `/addback` | Nächste Addback-Aufgabe + Protokoll-Historie | 234 |
+| AddbackPage | `/addback` | Nachfüllen als Vorgang (VorgangAblauf) + bisherige Einträge | 160 |
 | SettingsPage | `/settings` | Backup + System-/HA-/Index-Export | 230 |
 | TentDetailPage | `/zelte/:id` | Zelt-Live + Räume/Hydro/Grows/Pflanzen | 167 |
 | LiveDashboardPage | `/` | Live-Dashboard pro Zelt (Desktop/Mobile getrennt) | 126 |

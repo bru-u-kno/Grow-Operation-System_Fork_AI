@@ -507,7 +507,7 @@ export function VorgangAblauf({ art, growId, stand = null, startSchritt = 1, vor
   )
 
   const sensorHerkunftText = vorbelegtVorher
-    ? 'Vom Sensor, aus dem Tagebuch'
+    ? 'Vom Sensor, aus dem Link'
     : `Vom Sensor, ${sensorZeit ? `${uhrzeit(sensorZeit)} Uhr` : 'kurz davor'}`
 
   return (
@@ -525,7 +525,7 @@ export function VorgangAblauf({ art, growId, stand = null, startSchritt = 1, vor
       {schritt === 1 && (
         <V1Section title="Vorher — was ist im Tank?">
           {vorbelegung && (
-            <V1Alert tone="neutral" message="Zeitpunkt und Werte sind aus dem Tagebuch übernommen. Prüf sie und ergänze, was fehlt." />
+            <V1Alert tone="neutral" message="Vorbelegt aus dem Link — etwa vom Tagebuch („Nachfüllen eintragen“). Prüf Zeitpunkt und Werte und ergänze, was fehlt." />
           )}
           <div className="v1-form-grid wa-felder">
             <V1Field label="Wann" hint={t.wannHinweis}>
@@ -744,7 +744,7 @@ export function VorgangAblauf({ art, growId, stand = null, startSchritt = 1, vor
 
       {schritt === 3 && (
         <V1Section title={t.titel3}>
-          {nachherVomSensor && <p className="wa-hinweis">EC, pH und Wasser sind die Sensorwerte aus dem Tagebuch — überschreib sie, wenn du selbst gemessen hast.</p>}
+          {nachherVomSensor && <p className="wa-hinweis">EC, pH und Wasser sind Sensorwerte aus dem Link — überschreib sie, wenn du selbst gemessen hast.</p>}
           <div className="v1-form-grid wa-felder">
             {messFeld(nachher, setNachher, 'ec', 'EC', 'mS/cm', 'z. B. 1,15')}
             {messFeld(nachher, setNachher, 'ph', 'pH', '', 'z. B. 6,1')}
