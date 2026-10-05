@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.175
+
+**Fork AI.** Die Luft außerhalb des Zelts als eigene Messwerte, wie „Aussen" in der AC-Infinity-App.
+
+- **Drei neue Messgrößen:** „Außen Temp.", „Außen RLF" und „Außen VPD". Gemeint ist die Raumluft um
+  das Zelt, etwa der eingebaute Fühler am Controller, nicht die Luft von draußen. Zuordnen unter
+  Home Assistant → Gruppe Zelt. Ab der Zuordnung schreibt Grow OS die Werte mit wie alle anderen.
+- **Im Verlaufsdiagramm:** Die drei Karten stehen direkt hinter Luft, RLF und VPD und lassen sich
+  ein- und ausblenden. So liegen innen und außen zum Vergleich nebeneinander.
+- **Als Kachel:** Über „Anpassen" lässt sich jeder der drei Werte als eigene Kachel anlegen, ohne
+  Zielband. Das VPD im Zelt wird nie aus der Raumluft gerechnet.
+- Der Lagebericht für den eigenen KI-Assistenten nennt die Raumluft, sobald sie gemessen wird.
+
 ## 2.0.0-forkai.174
 
 **Fork AI.** Tipp auf eine Live-Kachel zeigt jetzt das große Verlaufsdiagramm, direkt unter der Kachel.
