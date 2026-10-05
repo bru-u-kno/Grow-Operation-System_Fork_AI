@@ -154,9 +154,14 @@ test('Auffällig: „War nichts" — Rückgängig, dann wirklich, und nach dem N
   await expect(zeile.locator('[data-audit="tagebuch-war-nichts"]')).toBeVisible()
 
   // Zweites Mal — und neu laden: serverseitig gemerkt.
-  const antwort = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/tagebuch\/auffaelligkeiten\/\d+$/.test(r.url()))
+  // Eine Zeile kann mehrere Befunde tragen (EC und Wasserstand) — jede Id merken.
+  const mitschreiben = (r: import('@playwright/test').Response) => {
+    if (r.request().method() === 'PUT' && /\/api\/tagebuch\/auffaelligkeiten\/\d+$/.test(r.url())) verworfeneIds.push(Number(r.url().split('/').pop()))
+  }
+  page.on('response', mitschreiben)
   await zeile.locator('[data-audit="tagebuch-war-nichts"]').click()
-  verworfeneIds.push(Number((await antwort).url().split('/').pop()))
+  await expect(zeile.getByRole('status')).toContainText('Ausgeblendet')
+  page.off('response', mitschreiben)
   await page.reload({ waitUntil: 'networkidle' })
   await expect(auffaellig(page)).toHaveCount(0)
 
@@ -168,6 +173,8 @@ test('Auffällig: „War nichts" — Rückgängig, dann wirklich, und nach dem N
   verworfeneIds.length = 0
   await page.reload({ waitUntil: 'networkidle' })
   await expect(auffaellig(page)).toHaveCount(1)
+  // Alle Befunde der Zeile sind zurück — nicht nur der erste.
+  await expect(auffaellig(page)).toContainText('Wasserstand')
 })
 
 test('Rundweg: AuffaelligAktionen — Notiz dazu und Nachfüllen eintragen, beide erklären den Sprung', async ({ page }) => {
