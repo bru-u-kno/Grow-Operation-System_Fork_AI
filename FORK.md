@@ -206,6 +206,11 @@ Danach Home Assistant neu starten. In der Seitenleiste erscheint ein neuer
 Eintrag, der Grow OS bildschirmfüllend öffnet; der alte Add-on-Eintrag bleibt
 daneben bestehen.
 
+**Push-Meldungen öffnen dann dieses Panel** (seit forkai.171): Grow OS fragt Home
+Assistant per `get_panels`, ob es ein Ingress-Panel mit `ui_mode: normal` für den
+eigenen Slug gibt, und schickt den Tipp auf `/<panel>?index=<seite>`
+(`IngressPanelService`). Gibt es keins, bleibt es bei `/app/<slug>/<seite>`.
+
 **Das ist freiwillig.** Ohne die Integration funktioniert alles genauso — die
 Titelzeile erkennt selbst, ob die HA-Kopfleiste über ihr liegt, und lässt dann
 den Namenszug weg, damit er nicht zweimal untereinander steht

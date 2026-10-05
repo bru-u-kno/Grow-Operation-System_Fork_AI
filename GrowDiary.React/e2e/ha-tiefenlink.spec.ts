@@ -182,4 +182,65 @@ test.describe('Push-Link öffnet die Seite aus der Meldung', () => {
     await page.waitForTimeout(500)
     expect(await appPfad(frame)).toBe('/')
   })
+
+  test('Ingress-Panel ohne HA-Kopfleiste: ?index= öffnet die Seite, auch bei schon offenem Panel', async ({ page }) => {
+    // hass_ingress (FORK.md, „ohne die Kopfleiste"): der Link heißt
+    // /<panel>?index=<seite> (IngressPanelService). Beim ersten Öffnen lädt das
+    // Panel die Seite selbst in den iframe; ist es schon offen, lädt es nichts
+    // neu, und das HA-Frontend meldet nur „location-changed" (05.10.2026).
+    await page.goto('/icons/' + 'gibt-es-nicht.txt').catch(() => undefined)
+    await page.evaluate(() => {
+      history.replaceState(null, '', '/growos?index=aufgaben')
+      document.documentElement.innerHTML =
+        '<body style="margin:0"><iframe id="f" src="/aufgaben" style="width:400px;height:800px;border:0"></iframe></body>'
+    })
+    await expect.poll(() => page.frames().length).toBeGreaterThan(1)
+    const frame = page.frames().find((f) => f !== page.mainFrame())!
+    const haAdresse = () => page.evaluate(() => location.pathname + location.search)
+    const tippeIngress = (seite: string) =>
+      page.evaluate((s) => {
+        history.pushState(null, '', `/growos?index=${encodeURIComponent(s)}`)
+        window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false } }))
+      }, seite)
+
+    // Erstes Öffnen: Seite steht, ?index= ist aus der HA-Adresse wieder weg.
+    await expect.poll(() => appPfad(frame)).toBe('/aufgaben')
+    await expect(frame.getByRole('heading', { level: 1 })).toContainText('Was jetzt zu tun ist')
+    await expect.poll(haAdresse).toBe('/growos')
+
+    // Weiterblättern, dann zweiter Tipp bei offenem Panel.
+    await blaettere(frame, '/grows')
+    await tippeIngress('live/1')
+    await expect.poll(() => appPfad(frame)).toBe('/')
+    await expect.poll(haAdresse).toBe('/growos')
+
+    // Dritter Tipp auf dieselbe Art Meldung, von woanders aus.
+    await blaettere(frame, '/grows')
+    await tippeIngress('sensoren')
+    await expect.poll(() => appPfad(frame)).toBe('/sensoren')
+    await blaettere(frame, '/grows')
+    await tippeIngress('sensoren')
+    await expect.poll(() => appPfad(frame)).toBe('/sensoren')
+
+    // Ein Seitenwechsel in HA ohne ?index= lässt die App, wo sie ist.
+    await blaettere(frame, '/grows')
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('location-changed', { detail: {} })))
+    await page.waitForTimeout(300)
+    expect(await appPfad(frame)).toBe('/grows')
+
+    // Wechsel zu einem anderen Panel mit ?index=: gehört nicht uns — App bleibt, index bleibt.
+    await page.evaluate(() => {
+      history.pushState(null, '', '/anderes?index=sensoren')
+      window.dispatchEvent(new CustomEvent('location-changed', { detail: {} }))
+    })
+    await page.waitForTimeout(300)
+    expect(await appPfad(frame)).toBe('/grows')
+    expect(await haAdresse()).toBe('/anderes?index=sensoren')
+    await page.evaluate(() => history.replaceState(null, '', '/growos'))
+
+    // Kein fremder Pfad über ?index=.
+    await tippeIngress('//boese.example/x')
+    await page.waitForTimeout(300)
+    expect(await appPfad(frame)).toBe('/grows')
+  })
 })

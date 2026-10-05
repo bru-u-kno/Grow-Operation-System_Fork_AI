@@ -124,4 +124,18 @@ public sealed class SupervisorInfoService
         var rest = seite?.Trim('/');
         return string.IsNullOrEmpty(rest) ? $"/app/{slug}" : $"/app/{slug}/{rest}";
     }
+
+    /// <summary>
+    /// Der Pfad zu einem Ingress-Panel ohne HA-Kopfleiste
+    /// (<see cref="IngressPanelService"/>), optional mit einer Seite der App.
+    /// </summary>
+    /// <remarks>
+    /// <c>hass_ingress</c> nimmt die Seite nur als <c>?index=</c> an, nicht als
+    /// Pfad hinter dem Panel — ein Pfad dahinter wählt dort ein Unter-Panel.
+    /// </remarks>
+    public static string IngressPanelPfad(string panel, string? seite = null)
+    {
+        var rest = seite?.Trim('/');
+        return string.IsNullOrEmpty(rest) ? $"/{panel}" : $"/{panel}?index={Uri.EscapeDataString(rest)}";
+    }
 }

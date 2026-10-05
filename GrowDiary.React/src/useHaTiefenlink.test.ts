@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { tiefenlinkAus } from './useHaTiefenlink'
+import { indexSeiteAus, tiefenlinkAus } from './useHaTiefenlink'
 
 // So schickt das HA-Frontend (20260826.7) die Route über das generische
 // App-Panel /app/<slug>/<rest>: computeRouteTail trennt Slug und Rest.
@@ -37,5 +37,27 @@ describe('tiefenlinkAus', () => {
     expect(tiefenlinkAus({ type: 'home-assistant/navigate', route: { prefix: '/app/x', path: '/aufgaben' } })).toBeNull()
     expect(tiefenlinkAus({ type: 'home-assistant/properties' })).toBeNull()
     expect(tiefenlinkAus(eigenschaften(undefined, '/aufgaben'))).toBeNull()
+  })
+})
+
+// hass_ingress liest ?index= aus der HA-Adresse (IngressPanelService baut den Link).
+describe('indexSeiteAus', () => {
+  it('liest die Seite aus ?index=', () => {
+    expect(indexSeiteAus('?index=live%2F3')).toBe('/live/3')
+    expect(indexSeiteAus('?index=live/3')).toBe('/live/3')
+    expect(indexSeiteAus('?index=aufgaben')).toBe('/aufgaben')
+    expect(indexSeiteAus('?x=1&index=%2Fsensoren%2F')).toBe('/sensoren')
+  })
+
+  it('ohne ?index= gibt es nichts zu öffnen', () => {
+    expect(indexSeiteAus('')).toBeNull()
+    expect(indexSeiteAus('?index=')).toBeNull()
+    expect(indexSeiteAus('?andere=live')).toBeNull()
+  })
+
+  it('lässt nur schlichte App-Pfade durch', () => {
+    for (const index of ['//boese.example/x', 'x?y=1', '../config', 'a b', 'javascript:alert(1)', 'a//b']) {
+      expect(indexSeiteAus(`?index=${encodeURIComponent(index)}`)).toBeNull()
+    }
   })
 })

@@ -63,7 +63,7 @@ public sealed class PushZielJeMeldungTests : IDisposable
             ? RecordingHttpHandler.Json($$$"""{"result":"ok","data":{"slug":"{{{Slug}}}"}}""")
             : RecordingHttpHandler.Json("[]"));
 
-    private NotificationService Benachrichtigung(RecordingHttpHandler handler)
+    private NotificationService Benachrichtigung(RecordingHttpHandler handler, IngressPanelService? ingressPanel = null)
     {
         var fabrik = new StubHttpClientFactory(handler);
         return new NotificationService(
@@ -71,7 +71,44 @@ public sealed class PushZielJeMeldungTests : IDisposable
             _growRepository,
             new HomeAssistantService(fabrik, NullLogger<HomeAssistantService>.Instance),
             NullLogger<NotificationService>.Instance,
-            new SupervisorInfoService(fabrik, NullLogger<SupervisorInfoService>.Instance));
+            new SupervisorInfoService(fabrik, NullLogger<SupervisorInfoService>.Instance),
+            ingressPanel);
+    }
+
+    /// <summary>Home Assistant mit einem Ingress-Panel ohne Kopfleiste für dieses Add-on — oder ohne.</summary>
+    private static IngressPanelService IngressPanel(bool vorhanden) => new(
+        NullLogger<IngressPanelService>.Instance,
+        TimeProvider.System,
+        (_, _) => Task.FromResult<System.Text.Json.JsonElement?>(System.Text.Json.JsonDocument.Parse(vorhanden
+            ? """{"growos":{"component_name":"custom","url_path":"growos","config":{"addon":"SLUG","ui_mode":"normal","index":"","_panel_custom":{"name":"ha-panel-ingress"}}}}""".Replace("SLUG", Slug)
+            : """{"lovelace":{"component_name":"lovelace","url_path":"lovelace","config":{}}}""").RootElement.Clone()));
+
+    [Fact]
+    public async Task Mit_Ingress_Panel_fuehrt_der_Tipp_dorthin_ohne_HA_Kopfleiste()
+    {
+        // Bru öffnet Grow OS am Handy über dieses Panel (05.10.2026); /app/<slug>
+        // zeigt die weiße HA-Leiste darüber.
+        var handler = Handler();
+        var alarme = new AlertEvaluationService(_rules, Benachrichtigung(handler, IngressPanel(vorhanden: true)), NullLogger<AlertEvaluationService>.Instance);
+
+        await alarme.EvaluateAsync(_tent, new Dictionary<string, HomeAssistantState>
+        {
+            ["reservoir-ph"] = new HomeAssistantState { State = "5", NumericValue = 5.0 },
+        });
+
+        var body = Push(handler);
+        Assert.Contains($"\"clickAction\":\"/growos?index=live%2F{_tent.Id}\"", body);
+        Assert.Contains($"\"url\":\"/growos?index=live%2F{_tent.Id}\"", body);
+    }
+
+    [Fact]
+    public async Task Ohne_Ingress_Panel_bleibt_es_beim_App_Panel()
+    {
+        var handler = Handler();
+
+        Assert.True(await Benachrichtigung(handler, IngressPanel(vorhanden: false)).SendAsync(NotificationCategory.System, "t", "m"));
+
+        Assert.Contains($"\"clickAction\":\"/app/{Slug}/aufgaben\"", Push(handler));
     }
 
     private static string Push(RecordingHttpHandler handler)

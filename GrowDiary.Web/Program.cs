@@ -75,6 +75,7 @@ builder.Services.AddSingleton<DeviationRiskEventSyncService>();
 builder.Services.AddSingleton<RiskEventSopRecommender>();
 builder.Services.AddSingleton<HomeAssistantService>();
 builder.Services.AddSingleton<SupervisorInfoService>();
+builder.Services.AddSingleton<IngressPanelService>();
 // Neustart nach dem Zurückspielen einer Sicherung (offene Punkte 03.10.2026, B8).
 builder.Services.AddSingleton<IAppNeustart, SupervisorNeustart>();
 // Der Kalibrierlauf haelt seine Sitzung im Speicher — deshalb Singleton.

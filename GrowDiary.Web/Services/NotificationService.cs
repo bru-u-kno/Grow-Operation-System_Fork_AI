@@ -16,19 +16,22 @@ public sealed class NotificationService
     private readonly ILogger<NotificationService> _logger;
 
     private readonly SupervisorInfoService? _supervisor;
+    private readonly IngressPanelService? _ingressPanel;
 
     public NotificationService(
         NotificationSettingsRepository settingsRepo,
         GrowRepository growRepository,
         HomeAssistantService homeAssistant,
         ILogger<NotificationService> logger,
-        SupervisorInfoService? supervisor = null)
+        SupervisorInfoService? supervisor = null,
+        IngressPanelService? ingressPanel = null)
     {
         _settingsRepo = settingsRepo;
         _growRepository = growRepository;
         _homeAssistant = homeAssistant;
         _logger = logger;
         _supervisor = supervisor;
+        _ingressPanel = ingressPanel;
     }
 
     /// <summary>Die Seite, auf der die Meldung steht, je Meldungsart — wenn der Absender keine genauere kennt.</summary>
@@ -73,10 +76,24 @@ public sealed class NotificationService
     /// Der HA-interne Pfad zur Grow-OS-Seite, oder null wenn Grow OS nicht als
     /// Add-on laeuft (dann gibt es nichts, auf das man zeigen koennte).
     /// </summary>
+    /// <remarks>
+    /// Gibt es ein Ingress-Panel ohne HA-Kopfleiste für dieses Add-on, zeigt
+    /// der Link dorthin — so öffnet der Bediener Grow OS sonst auch
+    /// (<see cref="IngressPanelService"/>, 05.10.2026). Sonst das App-Panel.
+    /// </remarks>
     private async Task<string?> ZielPfadAsync(string seite, CancellationToken ct)
     {
         if (_supervisor is null) return null;
-        return SupervisorInfoService.PanelPath(await _supervisor.GetAddonSlugAsync(ct), seite);
+        var slug = await _supervisor.GetAddonSlugAsync(ct);
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+
+        if (_ingressPanel is not null
+            && await _ingressPanel.PanelAsync(_growRepository.GetEffectiveHomeAssistantSettings(), slug, ct) is { } panel)
+        {
+            return SupervisorInfoService.IngressPanelPfad(panel, seite);
+        }
+
+        return SupervisorInfoService.PanelPath(slug, seite);
     }
 
     /// <summary>Der Link auf Live, für Tagesbericht und Testmeldung.</summary>

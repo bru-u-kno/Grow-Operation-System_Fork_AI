@@ -5,6 +5,24 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.171
+
+**Fork AI.** Push-Meldungen öffnen Grow OS ohne die weiße Kopfleiste von Home Assistant.
+
+- **Wer Grow OS über ein eigenes Panel ohne Kopfleiste öffnet** (HACS-Integration „Ingress",
+  `ui_mode: normal`, siehe FORK.md), landet beim Tipp auf eine Meldung jetzt genau dort — auf der
+  Seite der Meldung, bildschirmfüllend. Bisher öffnete der Tipp seit forkai.168 zwar die richtige
+  Seite, aber im normalen App-Fenster von Home Assistant mit der weißen Leiste darüber.
+- **Auch bei schon offenem Grow OS:** Ist das Panel offen und man blättert woanders hin, springt ein
+  weiterer Tipp trotzdem auf die Seite der neuen Meldung.
+- **Ohne ein solches Panel bleibt alles wie bisher.** Grow OS fragt Home Assistant selbst, ob es das
+  Panel gibt (alle zehn Minuten neu), und wählt nur eines, das auf diese App zeigt und keine
+  Kopfleiste hat.
+
+Gemessen an der gebauten App im nachgestellten Panel: erster Tipp, Weiterblättern, zweiter und
+dritter Tipp auf dieselbe Art Meldung — jedes Mal die richtige Seite; ein ungültiges Ziel wird
+übergangen.
+
 ## 2.0.0-forkai.170
 
 **Fork AI.** Journal-Einträge lassen sich korrigieren.

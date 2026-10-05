@@ -11,7 +11,13 @@
    (frontend: src/panels/app/ha-panel-app.ts).
 
    Bis forkai.167 hat sich die App nicht angemeldet; jeder Tipp endete
-   ohnehin vorher in „404: Not Found", weil der Link auf /<slug> zeigte. */
+   ohnehin vorher in „404: Not Found", weil der Link auf /<slug> zeigte.
+
+   Zweiter Weg (05.10.2026): Wer Grow OS über ein Panel der HACS-Integration
+   „Ingress" ohne HA-Kopfleiste öffnet, bekommt den Link /<panel>?index=<seite>
+   (IngressPanelService). Beim ersten Öffnen lädt hass_ingress die Seite selbst
+   in den iframe. Ist das Panel schon offen, lädt es nichts neu — dann liest
+   die App ?index= aus der HA-Adresse (gleiche Herkunft) und öffnet die Seite. */
 
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -39,6 +45,17 @@ export function tiefenlinkAus(nachricht: unknown): HaTiefenlink | null {
   if (typeof path !== 'string' || typeof prefix !== 'string') return null
   if (!APP_PFAD.test(path) || !APP_PFAD.test(prefix)) return null
   return { pfad: path, praefix: prefix }
+}
+
+/**
+ * Liest aus der Abfrage der HA-Adresse die Seite, die ein Ingress-Panel öffnen
+ * soll (`?index=live/3` → „/live/3") — oder null ohne gültige Seite.
+ */
+export function indexSeiteAus(suche: string): string | null {
+  const index = new URLSearchParams(suche).get('index')
+  if (!index) return null
+  const pfad = `/${index.replace(/^\/+|\/+$/g, '')}`
+  return APP_PFAD.test(pfad) ? pfad : null
 }
 
 /**
@@ -83,6 +100,43 @@ export function useHaTiefenlink(): void {
     return () => {
       window.removeEventListener('message', empfangen)
       eltern.postMessage({ type: 'home-assistant/unsubscribe-properties' }, herkunft)
+    }
+  }, [])
+
+  // Ingress-Panel (hass_ingress): die Seite steht als ?index= in der HA-Adresse.
+  useEffect(() => {
+    if (window.parent === window) return
+    const eltern = window.parent
+    try {
+      void eltern.location.search
+    } catch {
+      return // fremde Herkunft — nicht Home Assistant über uns
+    }
+
+    // Nur die Adresse des eigenen Panels: wechselt HA zu einem anderen Panel mit
+    // ?index=, lebt dieser iframe noch einen Augenblick — sein index gehört dem
+    // anderen Panel und darf weder gelesen noch gelöscht werden (Prüfer 05.10.2026).
+    const panelPfad = eltern.location.pathname
+
+    const pruefen = () => {
+      if (eltern.location.pathname !== panelPfad) return
+      const seite = indexSeiteAus(eltern.location.search)
+      if (!seite) return
+      navigateRef.current(seite, { replace: true })
+      // ?index= wieder entfernen: sonst öffnet ein Neuladen die alte Seite, und
+      // ein zweiter Tipp auf dieselbe Art Meldung änderte die Adresse nicht.
+      const adresse = new URL(eltern.location.href)
+      adresse.searchParams.delete('index')
+      eltern.history.replaceState(eltern.history.state, '', adresse.pathname + adresse.search + adresse.hash)
+    }
+
+    pruefen()
+    // Das HA-Frontend meldet jeden Seitenwechsel als „location-changed".
+    eltern.addEventListener('location-changed', pruefen)
+    eltern.addEventListener('popstate', pruefen)
+    return () => {
+      eltern.removeEventListener('location-changed', pruefen)
+      eltern.removeEventListener('popstate', pruefen)
     }
   }, [])
 }
