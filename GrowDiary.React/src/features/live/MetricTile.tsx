@@ -24,6 +24,8 @@ export type MetricTileProps = {
   onOpen?: () => void
   /** Ob die Historie dieser Kachel gerade offen ist. */
   open?: boolean
+  /** Kennung des aufgeklappten Verlaufs, solange er offen ist (`aria-controls`). */
+  steuert?: string
   /** Herkunft des Werts, wenn er NICHT live ist — „Hand · vor 2 Std“. Neutral, keine Warnung. */
   sourceNote?: string
   /** Die letzten 24 Stunden. Vorhanden = Kurve statt Zielband. */
@@ -104,7 +106,7 @@ function useMinutentakt(aktiv: boolean): Date {
  * Kachelzahl nicht zur Spaltenzahl passt.
  */
 export function MetricTile({
-  label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open,
+  label, value, unit, targetMin = null, targetMax = null, critical, decimals, footer, display, stale, trend, targetNote, sourceNote, onOpen, open, steuert,
   dayMin = null, dayMax = null, nightMin = null, nightMax = null, targetPhase = null,
   statusText = null, lightOnAt = null, lightOffAt = null, lightUtcOffsetMinutes = null, lightIsOn = false,
   alarmMin = null, alarmMax = null, eingeklappt = false,
@@ -166,6 +168,7 @@ export function MetricTile({
       role={onOpen ? 'button' : undefined}
       tabIndex={onOpen ? 0 : undefined}
       aria-expanded={onOpen ? open === true : undefined}
+      aria-controls={onOpen && open ? steuert : undefined}
       aria-label={onOpen ? `${label}: Verlauf ${open ? 'schließen' : 'anzeigen'}` : undefined}
       onClick={onOpen}
       onKeyDown={onOpen ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen() } } : undefined}

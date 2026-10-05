@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.174
+
+**Fork AI.** Tipp auf eine Live-Kachel zeigt jetzt das große Verlaufsdiagramm, direkt unter der Kachel.
+
+- **Verlauf unter der Kachel statt weit darunter:** Bisher erschien nach einem Tipp auf eine
+  Kachel ein kleines Liniendiagramm unter dem ganzen Bereich. Am Telefon lag es dadurch rund
+  1100 px tiefer, außerhalb des Bildschirms, und es sah aus, als passiere nichts. Jetzt steht der
+  Verlauf direkt unter der Zeile der angetippten Kachel und rollt ins Bild. Nach dem Drehen des
+  Telefons wandert er mit.
+- **Das große Verlaufsdiagramm statt des kleinen:** Der angetippte Wert erscheint groß mit Zielband,
+  Lichtspur, Zeitraum (1 Std bis 7 Tage), Blättern, Zoom und Max/Min/Ø. Oben lassen sich weitere
+  Werte dazuschalten. „Schließen" oder ein zweiter Tipp auf die Kachel klappt ihn wieder zu.
+- Ein Wisch zum Scrollen über eine Kachel öffnet nichts, das tut nur ein Tipp.
+
 ## 2.0.0-forkai.173
 
 **Fork AI.** Das neue Grow-Tagebuch: alles rund um den Grow an einer Stelle.

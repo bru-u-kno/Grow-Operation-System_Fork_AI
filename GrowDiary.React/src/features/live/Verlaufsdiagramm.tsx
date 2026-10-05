@@ -74,7 +74,7 @@ function bandBei(stuecke: BandStueck[], t: number): BandStueck | null {
  * `verlauf-flaechen.tsx`, die Gesten in `useVerlaufGesten.ts`.
  */
 export function Verlaufsdiagramm({
-  tileId, tentId, metricKeys, metricsByKey, tag,
+  tileId, tentId, metricKeys, metricsByKey, tag, nurWert = null,
 }: {
   tileId: string
   tentId: number | null
@@ -83,22 +83,33 @@ export function Verlaufsdiagramm({
   metricsByKey: Map<string, MetricPayload>
   /** Die 24 h Rohwerte, die die Live-Seite ohnehin lädt (`useTentSparklines`). */
   tag: Map<string, HistoryPoint[]>
+  /**
+   * Fork AI: von einer Messwert-Kachel aus geöffnet — dieser eine Wert groß
+   * (Einzeln, im Fokus), die anderen bleiben oben zum Dazuschalten.
+   *
+   * Dann wird NICHTS gemerkt: wer auf „Luft" tippt, will Luft sehen, nicht
+   * die Auswahl vom letzten Mal, als er von dort aus noch drei Werte
+   * dazugeschaltet hatte.
+   */
+  nurWert?: string | null
 }) {
   const schluessel = speicherSchluessel(tileId, metricKeys)
-  const [gemerkt] = useState(() => gemerktLesen(schluessel))
+  const merken = nurWert == null
+  const [gemerkt] = useState(() => (merken ? gemerktLesen(schluessel) : {}))
   const [an, setAn] = useState<string[]>(() => gemerkt.an ?? metricKeys)
-  const [darstellung, setDarstellung] = useState<Darstellung>(gemerkt.darstellung ?? 'zusammen')
-  const [fokus, setFokus] = useState<string | null>(null)
+  const [darstellung, setDarstellung] = useState<Darstellung>(gemerkt.darstellung ?? (nurWert ? 'einzeln' : 'zusammen'))
+  const [fokus, setFokus] = useState<string | null>(nurWert)
   const [ansicht, setAnsicht] = useState<Ansicht>({ art: 'zeitraum', id: '24h' })
   const [gewaehlt, setGewaehlt] = useState<ZeitraumId>('24h')
   const [zeiger, setZeiger] = useState<number | null>(null)
   const [breite, setBreite] = useState(0)
 
   useEffect(() => {
+    if (!merken) return
     try {
       localStorage.setItem(schluessel, JSON.stringify({ an, darstellung } satisfies Gemerkt))
     } catch { /* ohne Speicher geht alles, nur gemerkt wird nichts */ }
-  }, [schluessel, an, darstellung])
+  }, [merken, schluessel, an, darstellung])
 
   /* ---------- Daten ---------- */
 

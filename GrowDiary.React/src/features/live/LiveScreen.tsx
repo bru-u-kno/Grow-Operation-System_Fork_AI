@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { GrowSummary, KuehlerLivePayload, MetricPayload, RiskEventDto, TentDto } from '../../types'
 import type { HistoryPoint } from '../../components/SensorChart'
-import { SensorChart } from '../../components/SensorChart'
+import { KachelVerlauf, KachelZeile } from './KachelVerlauf'
+import { kachelUmschalten, kachelVerlaufId, type OffeneKachel } from './kachel-zeile'
 import { PhasenErinnerung } from '../grows/PhasenErinnerung'
 import { V1Sheet } from '../../components/V1Sheet'
 import {
@@ -124,7 +125,7 @@ export function LiveScreen({
     () => new Map([...(alleMetriken ?? []), ...climate, ...hydro].map((metric) => [metric.key, metric])),
     [alleMetriken, climate, hydro],
   )
-  const [offeneMetrik, setOffeneMetrik] = useState<string | null>(null)
+  const [offeneMetrik, setOffeneMetrik] = useState<OffeneKachel | null>(null)
 
   /* Fork AI: „⋯" neben dem Messen-Knopf. Die selten gebrauchten Handlungen
      (Addback, Anpassen, Zeltwechsel) liegen darunter, damit die Kopfzeile auf
@@ -346,8 +347,8 @@ export function LiveScreen({
           />
         ) : (
           <>
-            <MetricBand id="klima" title="Klima" metrics={climate} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} einklappen={einklappen} />
-            <MetricBand id="hydro" title="Hydroponik · Nährlösung" metrics={hydro} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} einklappen={einklappen} />
+            <MetricBand id="klima" title="Klima" metrics={climate} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} einklappen={einklappen} tentId={tent?.id ?? null} metricsByKey={metricsByKey} />
+            <MetricBand id="hydro" title="Hydroponik · Nährlösung" metrics={hydro} trends={trends} offeneMetrik={offeneMetrik} setOffeneMetrik={setOffeneMetrik} einklappen={einklappen} tentId={tent?.id ?? null} metricsByKey={metricsByKey} />
           </>
         )}
       </section>
@@ -535,7 +536,7 @@ export function LiveScreen({
  * der Zeile, nicht als Fenster darüber — man will die Nachbarkacheln zum
  * Vergleich weiter sehen.
  */
-function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik, einklappen }: {
+function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik, einklappen, tentId, metricsByKey }: {
   /** Kennung fürs Einklappen — fest, weil die Standard-Bänder keine Layout-Id haben. */
   id: string
   title: string
@@ -548,17 +549,19 @@ function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik,
    * aufgeklappt sein: einer im Klima, einer in der Nährlösung. Gemeint ist
    * aber „der eine, den ich gerade ansehe".
    */
-  offeneMetrik: string | null
-  setOffeneMetrik: (key: string | null) => void
+  offeneMetrik: OffeneKachel | null
+  setOffeneMetrik: (offen: OffeneKachel | null) => void
   einklappen: Einklappen
+  /** Für das Nachladen der 7 Tage im Verlaufsdiagramm. */
+  tentId: number | null
+  metricsByKey: Map<string, MetricPayload>
 }) {
   if (metrics.length === 0) return null
 
   const bereichId = `bereich:${id}`
   const bereichZu = einklappen.istZu(bereichId)
 
-  const offene = offeneMetrik ? metrics.find((m) => m.key === offeneMetrik) : null
-  const punkte = offeneMetrik ? (trends.get(offeneMetrik) ?? []) : []
+  const offene = metrics.find((m) => m.key === offeneMetrik?.kennung) ?? null
 
   return (
     <>
@@ -567,8 +570,25 @@ function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik,
         klappe={{ zu: bereichZu, bilanz: bereichsBilanz(metrics), onUmschalten: () => einklappen.umschalten(bereichId) }}
       />
       {!bereichZu && <>
-      <div className="gos-metric-row">
-        {metrics.map((metric) => {
+      <KachelZeile
+        className="gos-metric-row"
+        offen={offene ? offeneMetrik : null}
+        onNeuGemessen={setOffeneMetrik}
+        verlauf={offene && (trends.get(offene.key)?.length ?? 0) > 1 && (
+          <KachelVerlauf
+            key={`verlauf-${offene.key}`}
+            kennung={offene.key}
+            metricKey={offene.key}
+            label={offene.label}
+            tentId={tentId}
+            metricsByKey={metricsByKey}
+            trends={trends}
+            onSchliessen={() => setOffeneMetrik(null)}
+            insBild={offeneMetrik?.insBild === true}
+            onImBild={() => setOffeneMetrik(offeneMetrik ? { ...offeneMetrik, insBild: false } : null)}
+          />
+        )}
+        plaetze={metrics.map((metric) => {
           const herkunft = metricProvenance(metric)
           // Klickbar nur mit Verlauf: eine Kachel, die sich als Knopf anbietet
           // und dann nichts zeigt, ist schlimmer als eine, die stumm bleibt.
@@ -578,7 +598,7 @@ function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik,
           // Derselbe Platz wie in den eigenen Bereichen: die Klappe liegt
           // neben der Kachel, nicht in ihr — die Kachel ist selbst ein Knopf.
           return (
-            <div key={metric.key} className="ls-tile-slot has-fold" style={{ flex: '1 1 150px' }}>
+            <div key={metric.key} data-kachel-platz={metric.key} className="ls-tile-slot has-fold" style={{ flex: '1 1 150px' }}>
             <MetricTile
               label={metric.label}
               value={metric.numericValue}
@@ -604,24 +624,18 @@ function MetricBand({ id, title, metrics, trends, offeneMetrik, setOffeneMetrik,
               lightIsOn={metric.value === 'An'}
               sourceNote={herkunft.sourceNote}
               stale={herkunft.stale}
-              onOpen={hatVerlauf ? () => setOffeneMetrik(offeneMetrik === metric.key ? null : metric.key) : undefined}
-              open={offeneMetrik === metric.key}
+              onOpen={hatVerlauf
+                ? () => setOffeneMetrik(kachelUmschalten(offeneMetrik, metric.key))
+                : undefined}
+              open={offeneMetrik?.kennung === metric.key}
+              steuert={kachelVerlaufId(metric.key)}
               eingeklappt={kachelZu}
             />
             <KachelKlappe zu={kachelZu} name={metric.label} onUmschalten={() => einklappen.umschalten(kachelId)} />
             </div>
           )
         })}
-      </div>
-
-      {offene && punkte.length > 1 && (
-        <div className="ls-metric-detail" data-audit="metric-detail">
-          <SensorChart
-            series={{ metricKey: offene.key, label: offene.label, unit: offene.unit, points: punkte }}
-            target={{ min: offene.targetMin, max: offene.targetMax }}
-          />
-        </div>
-      )}
+      />
       </>}
     </>
   )
