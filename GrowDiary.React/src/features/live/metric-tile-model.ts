@@ -171,8 +171,10 @@ export function decimalsForMetric(key: string): number {
     case 'reservoir-ph':
     case 'reservoir-ec':
     case 'vpd':
+    case 'outside-vpd':
       return 2
     case 'temperature':
+    case 'outside-temperature':
     case 'reservoir-temp':
     case 'dissolved-oxygen':
     case 'reservoir-level-cm':

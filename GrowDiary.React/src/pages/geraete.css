@@ -160,6 +160,8 @@
 }
 .gr-messkopf b { flex: 0 0 auto; font-family: var(--font-mono); font-size: var(--fs-text); color: var(--accent-text); }
 .gr-messkopf b.is-leer { color: var(--faint); }
+/* Ein Satz, wo das Etikett allein missverständlich wäre („Außen" = um das Zelt). */
+.gr-messhinweis { margin: 0 0 var(--s-2); font-size: var(--fs-klein); line-height: 1.4; color: var(--muted); }
 
 /* forkai.41: Reiter „Wartung" — Titel links, Frist rechts. */
 .gr-wartung { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--hair); }

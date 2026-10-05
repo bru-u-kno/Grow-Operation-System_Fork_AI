@@ -11,7 +11,25 @@ import { haWert } from '../../utils'
  */
 type GroupKey = 'tent' | 'reservoir' | 'hardware'
 
-export type EntityDefinition = { metricType: SensorMetricType; label: string; group: GroupKey; placeholder: string; importance: 'core' | 'optional'; unit?: string }
+export type EntityDefinition = {
+  metricType: SensorMetricType
+  label: string
+  group: GroupKey
+  placeholder: string
+  importance: 'core' | 'optional'
+  unit?: string
+  /** Ein Satz unter der Zeile, wo das Etikett allein missverständlich wäre. */
+  hinweis?: string
+}
+
+/**
+ * Der Satz zu den Außenwerten — einmal, weil er an drei Zeilen steht.
+ *
+ * „Außen" heißt hier die Luft um das Zelt (wie „Aussen" in der App des
+ * AC-Infinity-Controllers), nicht die Luft von draußen: die liest die
+ * Zuluft-Steuerung über eigene Entitäten.
+ */
+const AUSSEN_HINWEIS = 'Luft außerhalb des Zelts, z. B. der Sensor am Controller — nicht die Luft von draußen.'
 
 export const groups: Array<{ key: GroupKey; label: string }> = [
   { key: 'tent', label: 'Zelt' },
@@ -26,6 +44,9 @@ export const definitions: EntityDefinition[] = [
   { metricType: 'Ppfd', label: 'PPFD', group: 'tent', placeholder: 'sensor.lampe_ppfd', unit: 'µmol/m²/s', importance: 'optional' },
   { metricType: 'Co2', label: 'CO₂', group: 'tent', placeholder: 'sensor.zelt_co2', unit: 'ppm', importance: 'optional' },
   { metricType: 'LightStatus', label: 'Licht', group: 'tent', placeholder: 'switch.licht', importance: 'optional' },
+  { metricType: 'OutsideTemperature', label: 'Außen Temp.', group: 'tent', placeholder: 'sensor.controller_temperatur', unit: '°C', importance: 'optional', hinweis: AUSSEN_HINWEIS },
+  { metricType: 'OutsideHumidity', label: 'Außen RLF', group: 'tent', placeholder: 'sensor.controller_luftfeuchtigkeit', unit: '%', importance: 'optional', hinweis: AUSSEN_HINWEIS },
+  { metricType: 'OutsideVpd', label: 'Außen VPD', group: 'tent', placeholder: 'sensor.controller_vpd', unit: 'kPa', importance: 'optional', hinweis: AUSSEN_HINWEIS },
   { metricType: 'ReservoirPh', label: 'pH', group: 'reservoir', placeholder: 'sensor.rdwc_ph', importance: 'core' },
   { metricType: 'ReservoirEc', label: 'EC', group: 'reservoir', placeholder: 'sensor.rdwc_ec', unit: 'mS/cm', importance: 'core' },
   { metricType: 'ReservoirWaterTemp', label: 'Wassertemp', group: 'reservoir', placeholder: 'sensor.rdwc_wassertemperatur', unit: '°C', importance: 'core' },
@@ -60,6 +81,9 @@ const suggestionFilters: Partial<Record<SensorMetricType, { domains?: string[]; 
   PumpCirculation: { domains: ['switch', 'input_boolean'] },
   PumpAir: { domains: ['switch', 'input_boolean'] },
   Chiller: { domains: ['climate', 'switch'] },
+  OutsideTemperature: { domains: ['sensor'], deviceClass: 'temperature' },
+  OutsideHumidity: { domains: ['sensor'], deviceClass: 'humidity' },
+  OutsideVpd: { domains: ['sensor'] },
 }
 
 export function suggestionsForMetric(entities: HomeAssistantEntity[], metricType: SensorMetricType): HomeAssistantEntity[] {

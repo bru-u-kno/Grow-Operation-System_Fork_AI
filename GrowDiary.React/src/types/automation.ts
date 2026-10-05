@@ -163,6 +163,9 @@ export type SensorMetricType =
   | 'Chiller'
   | 'UpsBattery'
   | 'UpsStatus'
+  | 'OutsideTemperature'
+  | 'OutsideHumidity'
+  | 'OutsideVpd'
 export type LightControllerType = 'AcInfinityPro69' | 'AcInfinityCloudline' | 'GenericRelay' | 'Manual' | 'Other'
 export type HvacControllerType = 'AcInfinityPro69' | 'AcInfinityCloudline' | 'GenericRelay' | 'Manual' | 'Other'
 

@@ -66,6 +66,10 @@ public sealed class DemoDataTests
         ["reservoir-level-cm"] = (5, 60),
         ["orp"] = (200, 600),
         ["dissolved-oxygen"] = (4, 10),     // die untere Spitze ist derselbe Ausfall
+        // Die Raumluft um das Zelt: ein bewohnter Raum, kein Keller, keine Sauna.
+        ["outside-temperature"] = (12, 30),
+        ["outside-humidity"] = (25, 85),
+        ["outside-vpd"] = (0.2, 2.5),
     };
 
     /// <summary>

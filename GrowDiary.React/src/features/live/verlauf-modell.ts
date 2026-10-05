@@ -55,6 +55,15 @@ export const KURVEN_FARBEN: Readonly<Record<string, string>> = {
   'reservoir-level': '#65a30d',
   orp: '#14b8a6',
   'dissolved-oxygen': '#64748b',
+  // Die Luft außerhalb des Zelts: dunkler als die übrigen, damit sie neben den
+  // Innenwerten nicht verschwimmt. Ausgesucht über den Farbabstand zu allen
+  // elf oben (CIE-Lab ≥ 22, so weit wie die engsten Paare der Tabelle) und den
+  // Kontrast in BEIDEN Themen, gemessen am gebauten Stand gegen den Grund der
+  // Kurven (hell rgb(246,249,246), dunkel rgba(14,22,19,.92)): hell
+  // 4,6 / 3,5 / 4,7, dunkel 3,7 / 5,0 / 3,7 — alle drei über 3:1 für Linien.
+  'outside-temperature': '#a16207',
+  'outside-humidity': '#3b82f6',
+  'outside-vpd': '#15803d',
 }
 
 const RESERVE = ['#8b5cf6', '#0891b2', '#d97706', '#be123c', '#4d7c0f']

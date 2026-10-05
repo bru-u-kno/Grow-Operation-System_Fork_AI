@@ -494,7 +494,24 @@ public enum SensorMetricType
     PumpAirPower,
     Chiller,
     UpsBattery,
-    UpsStatus
+    UpsStatus,
+    /// <summary>
+    /// Lufttemperatur AUSSERHALB des Zelts — der Raum, in dem es steht, z. B. der
+    /// eingebaute Sensor eines AC-Infinity-Controllers („Aussen Temp" in dessen App).
+    /// </summary>
+    /// <remarks>
+    /// Nicht die Luft von draußen: die liest die Zuluft-Steuerung über eigene
+    /// Entitäten (<c>ZuluftSteuerungService</c>).
+    /// <para><b>Nur am Ende anhängen.</b> Zuordnung und Geräte speichern den
+    /// Namen, die Zelt-Momentaufnahme eines Grows (<c>Grows.TentSnapshotJson</c>)
+    /// aber die <i>Zahl</i>. Umsortieren verschöbe archivierte Grows still auf
+    /// andere Messgrößen; gehalten von <c>SensorMetricTypeZahlenTests</c>.</para>
+    /// </remarks>
+    OutsideTemperature,
+    /// <summary>Relative Luftfeuchte außerhalb des Zelts (Raumluft), siehe <see cref="OutsideTemperature"/>.</summary>
+    OutsideHumidity,
+    /// <summary>VPD der Luft außerhalb des Zelts (Raumluft), wie der Controller es meldet.</summary>
+    OutsideVpd
 }
 
 public enum LightControllerType

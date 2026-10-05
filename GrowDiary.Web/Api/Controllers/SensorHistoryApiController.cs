@@ -19,7 +19,18 @@ public sealed class SensorHistoryApiController : ApiControllerBase
     public const string Raw = "raw";
 
     private const int MaxDays = 365;
-    private const int MaxMetrics = 12;
+    /// <summary>Wie viele Messgrößen ein Abruf höchstens liefert — der Rest fällt still weg.</summary>
+    /// <remarks>
+    /// <para>16 statt 12 seit den Außenwerten (Raumluft am Controller): die
+    /// Live-Seite holt alle Kurven des Verlaufsdiagramms in EINEM Abruf
+    /// (<c>VERLAUFS_METRIKEN</c>, jetzt 14). Mit 12 wären die beiden letzten
+    /// ohne Fehlermeldung abgeschnitten worden — ihre Wertekarten fehlten
+    /// einfach. Die Grenze bleibt, weil jede Messgröße eine eigene Abfrage über
+    /// bis zu sieben Tage Rohwerte ist; 16 lässt zwei Plätze Luft.</para>
+    /// <para>Gehalten von <c>messgroessen-vollstaendig.test.ts</c>: die
+    /// Liste der Oberfläche muss hier hineinpassen.</para>
+    /// </remarks>
+    public const int MaxMetrics = 16;
 
     private readonly GrowRepository _repository;
     private readonly SensorReadingRepository _readings;

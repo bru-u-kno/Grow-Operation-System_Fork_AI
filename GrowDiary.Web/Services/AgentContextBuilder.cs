@@ -114,6 +114,13 @@ public sealed class AgentContextBuilder
         ("vpd", "VPD", "kPa"),
         ("co2", "CO₂", "ppm"),
         ("ppfd", "PPFD", "µmol/m²/s"),
+        // Die Raumluft um das Zelt (z. B. der Fühler am Controller) — ohne Ziel,
+        // aber der Grund, warum das Zeltklima ist, wie es ist. Ausgeschrieben,
+        // damit der Assistent sie nicht für die Luft im Zelt oder von draußen hält.
+        // Ohne Messwert fällt die Zeile weg (siehe BuildMetrics).
+        ("outside-temperature", "Raumluft außerhalb des Zelts: Temperatur", "°C"),
+        ("outside-humidity", "Raumluft außerhalb des Zelts: Luftfeuchte", "%"),
+        ("outside-vpd", "Raumluft außerhalb des Zelts: VPD", "kPa"),
     ];
 
     public AgentContext? Build(int growId, DateTime nowUtc)

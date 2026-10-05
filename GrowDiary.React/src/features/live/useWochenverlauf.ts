@@ -14,7 +14,7 @@ export type Wochenverlauf = {
  * Die Rohwerte der letzten sieben Tage — erst, wenn jemand sie braucht.
  *
  * Die 24 Stunden lädt die Live-Seite ohnehin (`useTentSparklines`). Sieben
- * Tage sind bei fünf Minuten Takt und elf Messgrößen gut 20 000 Punkte; die
+ * Tage sind bei fünf Minuten Takt und vierzehn Messgrößen gut 28 000 Punkte; die
  * holt die Verlaufs-Kachel nur, wenn „7 Tage" gewählt oder über die 24 h
  * hinaus zurückgeblättert wird — und dann einmal, nicht bei jedem Blättern.
  */

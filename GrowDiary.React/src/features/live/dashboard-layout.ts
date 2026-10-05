@@ -41,6 +41,11 @@ export const KNOWN_METRICS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'co2', label: 'CO₂' },
   { key: 'ppfd', label: 'PPFD' },
   { key: 'light-cycle', label: 'Licht' },
+  // Die Luft um das Zelt (z. B. der Sensor am Controller) — nicht die von draußen.
+  // Dieselben Namen wie im Verlauf und in den Meldungen (AlertEvaluationService.MetricDisplay).
+  { key: 'outside-temperature', label: 'Außen Temp.' },
+  { key: 'outside-humidity', label: 'Außen RLF' },
+  { key: 'outside-vpd', label: 'Außen VPD' },
   { key: 'reservoir-ph', label: 'pH' },
   { key: 'reservoir-ec', label: 'EC' },
   { key: 'reservoir-temp', label: 'Wassertemperatur' },

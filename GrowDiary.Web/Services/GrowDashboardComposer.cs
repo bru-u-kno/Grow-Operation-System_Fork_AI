@@ -261,6 +261,20 @@ public sealed class GrowDashboardComposer
             cards.Add(co2);
         }
 
+        // Die Luft AUSSERHALB des Zelts — der Raum, z. B. der eingebaute Sensor am
+        // AC-Infinity-Controller. Nur mit zugeordnetem, liefernden Sensor: wer
+        // keinen hat, bekaeme sonst drei leere Kacheln, und „N Sensoren live"
+        // zaehlte nichts, was nicht wirklich misst. Ohne Ziel — die Raumluft ist
+        // die Umgebung, an der das Zeltklima haengt, nicht etwas, das Grow OS
+        // auf ein Band bringen will. Beschriftung und Einheit aus derselben
+        // Tabelle wie Verlauf und Meldungen.
+        foreach (var aussen in AussenSchluessel)
+        {
+            if (!states.ContainsKey(aussen)) continue;
+            var (beschriftung, einheit) = AlertEvaluationService.MetricDisplay(aussen);
+            cards.Add(Build(beschriftung, aussen, _ => null, explicitUnit: einheit.Trim()));
+        }
+
         var hasActiveHydro = tent.ActiveGrows.Any(g => g.IrrigationType == IrrigationType.ActiveHydro);
 
         // A reservoir metric is shown when its sensor is mapped and Home Assistant returns a
@@ -400,6 +414,15 @@ public sealed class GrowDashboardComposer
 
         return cards;
     }
+
+    /// <summary>Die Schlüssel der Raumluft-Werte außerhalb des Zelts, in Kachel-Reihenfolge.</summary>
+    /// <remarks>Über die Zuordnungstabelle aufgelöst, nicht abgetippt.</remarks>
+    private static readonly string[] AussenSchluessel =
+    [
+        TentSensorMetricKeyMap.Resolve(SensorMetricType.OutsideTemperature),
+        TentSensorMetricKeyMap.Resolve(SensorMetricType.OutsideHumidity),
+        TentSensorMetricKeyMap.Resolve(SensorMetricType.OutsideVpd),
+    ];
 
     /// <summary>
     /// Gibt Temperatur und Luftfeuchte ihr Zielband — zurückgerechnet aus dem
@@ -701,6 +724,10 @@ public sealed class GrowDashboardComposer
             "reservoir-level" => value.ToString("0.0"),
             "ppfd"            => value.ToString("0"),
             "ups-battery"     => value.ToString("0"),
+            // Außen wie innen: Temperatur auf ein Zehntel, Feuchte ganz, VPD auf zwei Stellen.
+            "outside-temperature" => value.ToString("0.0"),
+            "outside-humidity"    => value.ToString("0"),
+            "outside-vpd"         => value.ToString("0.00"),
             _                 => value.ToString("0.#")
         };
     }

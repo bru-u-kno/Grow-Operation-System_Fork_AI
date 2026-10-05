@@ -8,9 +8,17 @@ import type { HistoryPoint, TentHistory } from '../../components/SensorChart'
  * Exportiert, weil die Verlaufs-Kachel dieselbe Liste braucht: einen Wert
  * anzubieten, der nie eine Linie ergibt (etwa „Licht", ein Zustand), waere eine
  * leere Zusage.
+ *
+ * Alles in EINEM Abruf — die Liste muss deshalb in die Obergrenze des
+ * Endpunkts passen (`SensorHistoryApiController.MaxMetrics`), sonst fallen die
+ * letzten Werte still weg. Gehalten von `messgroessen-vollstaendig.test.ts`.
  */
 export const VERLAUFS_METRIKEN = [
-  'temperature', 'humidity', 'vpd', 'co2', 'ppfd',
+  'temperature', 'humidity', 'vpd',
+  // Die Luft außerhalb des Zelts direkt hinter der innen — so liegen die
+  // Karten, die man vergleicht, nebeneinander.
+  'outside-temperature', 'outside-humidity', 'outside-vpd',
+  'co2', 'ppfd',
   'reservoir-ph', 'reservoir-ec', 'reservoir-temp', 'reservoir-level', 'orp', 'dissolved-oxygen',
 ] as const
 

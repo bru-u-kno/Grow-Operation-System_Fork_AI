@@ -27,6 +27,10 @@ public static class TentSensorMetricKeyMap
             SensorMetricType.Chiller => "chiller",
             SensorMetricType.UpsBattery => "ups-battery",
             SensorMetricType.UpsStatus => "ups-status",
+            // „outside", nicht „outdoor": die Luft um das Zelt, nicht die von draußen.
+            SensorMetricType.OutsideTemperature => "outside-temperature",
+            SensorMetricType.OutsideHumidity => "outside-humidity",
+            SensorMetricType.OutsideVpd => "outside-vpd",
             _ => metricType.ToString()
         };
 }

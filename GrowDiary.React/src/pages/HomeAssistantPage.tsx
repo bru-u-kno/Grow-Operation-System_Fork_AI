@@ -244,6 +244,7 @@ function HomeAssistantPage() {
                         : sensor.haEntityId.trim() === ''
                           ? <span className="co-row-value is-faint">nicht gemappt</span>
                           : <span className="co-row-value">gemappt</span>}
+                      {definition.hinweis && <span className="ha-metric-hinweis">{definition.hinweis}</span>}
                     </div>
                   )
                 })}

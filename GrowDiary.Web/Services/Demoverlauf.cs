@@ -331,6 +331,31 @@ public static class Demoverlauf
     public static double Co2Ppm(DateTime ortszeit)
         => LichtBrennt(ortszeit) ? 760 - Tagesgang(ortszeit) * 90 : 900;
 
+    /// <summary>Der Gang der Raumluft: +1 um 16:00, −1 um 04:00 — die Sonne, nicht die Lampe.</summary>
+    /// <remarks>
+    /// Außerhalb des Zelts heizt die LED nicht; der Raum folgt dem Tag draußen
+    /// und der Heizung, gedämpft. Deshalb eine eigene Kurve und nicht
+    /// <see cref="Tagesgang"/> — sonst liefe die Raumluft im Takt der Lampe mit.
+    /// </remarks>
+    private static double Raumgang(DateTime ortszeit)
+        => Math.Sin(2 * Math.PI * (ortszeit.TimeOfDay.TotalHours - 10) / 24);
+
+    /// <summary>Lufttemperatur außerhalb des Zelts in °C — ein beheizter Raum, 19 bis 21 °C.</summary>
+    public static double AussenTempC(DateTime ortszeit) => 20 + Raumgang(ortszeit) * 1.0;
+
+    /// <summary>Luftfeuchte außerhalb des Zelts in % — 56 bis 64 %, sinkt, wenn der Raum wärmer wird.</summary>
+    public static double AussenFeuchtePercent(DateTime ortszeit) => 60 - Raumgang(ortszeit) * 4;
+
+    /// <summary>VPD der Raumluft in kPa — aus Temperatur und Feuchte, ohne Blatt-Versatz.</summary>
+    /// <remarks>
+    /// Mit derselben Formel wie die Kacheln (<see cref="VpdCalculator"/>) und
+    /// aus den gerundeten Werten, die auch als Sensor erscheinen — sonst passten
+    /// die drei Außenkarten im Verlauf nicht zueinander.
+    /// </remarks>
+    public static double AussenVpdKpa(DateTime ortszeit)
+        => VpdCalculator.Calculate(
+            Math.Round(AussenTempC(ortszeit), 1), Math.Round(AussenFeuchtePercent(ortszeit), 0)) ?? 0;
+
     /* ------------------------------------------------------------------ */
     /* Die Bruecke zu den Sensor-Schluesseln                                */
     /* ------------------------------------------------------------------ */
@@ -360,6 +385,9 @@ public static class Demoverlauf
         "reservoir-level-cm" => Math.Round(FuellstandCm(ortszeit, lage), 1),
         "orp" => Math.Round(OrpMv(ortszeit), 0),
         "dissolved-oxygen" => Math.Round(SauerstoffMgL(ortszeit), 1),
+        "outside-temperature" => Math.Round(AussenTempC(ortszeit), 1),
+        "outside-humidity" => Math.Round(AussenFeuchtePercent(ortszeit), 0),
+        "outside-vpd" => Math.Round(AussenVpdKpa(ortszeit), 2),
         _ => null,
     };
 
@@ -374,13 +402,15 @@ public static class Demoverlauf
         "temperature", "humidity", "co2", "ppfd",
         "reservoir-ph", "reservoir-ec", "reservoir-temp", "reservoir-level-cm",
         "orp", "dissolved-oxygen",
+        "outside-temperature", "outside-humidity", "outside-vpd",
     ];
 
     /// <summary>Die Einheit zu einem Schlüssel — leer, wo es keine gibt (pH).</summary>
     public static string? Einheit(string metricKey) => metricKey switch
     {
-        "temperature" or "reservoir-temp" => "°C",
-        "humidity" => "%",
+        "temperature" or "reservoir-temp" or "outside-temperature" => "°C",
+        "humidity" or "outside-humidity" => "%",
+        "outside-vpd" => "kPa",
         "co2" => "ppm",
         "ppfd" => "µmol/m²/s",
         "reservoir-ec" => "mS/cm",

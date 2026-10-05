@@ -96,6 +96,29 @@ public sealed class DieMappeFuerDieKiIstNichtLeerTests : IDisposable
         Assert.Contains("White Widow", lage.Markdown);
     }
 
+    /// <summary>Die Raumluft um das Zelt steht im Lagebericht — ausgeschrieben, nicht als „Außen".</summary>
+    /// <remarks>
+    /// Der Prüfer vom 05.10.2026: die Außenwerte des Controllers kamen in den
+    /// Verlauf, aber nicht zum Assistenten des Bedieners. Und „Außen" allein
+    /// läse ein Assistent als Luft von draußen.
+    /// </remarks>
+    [Fact]
+    public void DieRaumluftAusserhalbDesZelts_StehtImLagebericht()
+    {
+        var zeltId = _grows.GetGrow(_growId)!.TentId!.Value;
+        new SensorReadingRepository(_pfade).AddReading(new TentSensorReading
+        {
+            TentId = zeltId, MetricKey = "outside-temperature", Value = 19.4, Unit = "°C",
+            CapturedAtUtc = DateTime.UtcNow.AddMinutes(-3),
+        });
+
+        var lage = Mappe()!.Files.Single(d => d.Name.Contains("lagebericht")).Markdown;
+
+        Assert.Contains("| Raumluft außerhalb des Zelts: Temperatur | 19,4 °C |", lage);
+        // Ohne Messwert keine Zeile: die Feuchte wurde nicht geliefert.
+        Assert.DoesNotContain("Raumluft außerhalb des Zelts: Luftfeuchte", lage);
+    }
+
     /// <summary>Ohne Grow gibt es keine Mappe — und keine leere.</summary>
     /// <remarks>
     /// Eine Mappe voller Wissen ohne Lagebericht wäre schlimmer als keine: sie

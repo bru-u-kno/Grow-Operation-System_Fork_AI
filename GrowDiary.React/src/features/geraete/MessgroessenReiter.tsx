@@ -130,6 +130,7 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
                     <span>{definition.label}{definition.unit ? ` (${definition.unit})` : ''}</span>
                     <b className={wert ? undefined : 'is-leer'}>{wert ?? '—'}</b>
                   </div>
+                  {definition.hinweis && <p className="gr-messhinweis">{definition.hinweis}</p>}
                   <V1Select
                     label=""
                     ariaLabel={definition.label}

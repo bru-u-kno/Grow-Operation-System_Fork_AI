@@ -21,6 +21,10 @@
   .ha-layout .co-row > .ls-btn { flex: 0 0 96px; text-align: right; }
   .ha-metric { flex: 0 0 110px; font-size: var(--fs-text); }
   .ha-metric small { color: var(--faint); font-size: var(--fs-etikett); }
+  /* Der Satz unter einer Zeile, deren Etikett allein missverständlich wäre
+     („Außen" = um das Zelt, nicht draußen). Eigene Zeile über die volle
+     Breite — in den 110 px der Beschriftung bräuchte er fünf Zeilen. */
+  .ha-metric-hinweis { flex: 1 1 100%; order: 2; font-size: var(--fs-klein); line-height: 1.4; color: var(--muted); }
   .ha-entity-input {
     flex: 1 1 160px; min-width: 0; min-height: 28px; padding: 0 8px;
     border: 1px solid var(--hair); border-radius: 6px;

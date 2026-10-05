@@ -40,6 +40,11 @@ public sealed class TentSensorHardwareSyncService
         [SensorMetricType.Vpd] = ("VPD-Sensor", HardwareItemCriticality.Medium),
         [SensorMetricType.Co2] = ("CO₂-Sensor", HardwareItemCriticality.Medium),
         [SensorMetricType.Ppfd] = ("PPFD-Sensor", HardwareItemCriticality.Medium),
+        // Bewusst NICHT die Außenwerte (OutsideTemperature/-Humidity/-Vpd): das ist
+        // meist der eingebaute Fühler des Controllers, ohne Kalibrierung und ohne
+        // eigene Wartung. Drei Einträge unter „Sensoren" für ein Gerät, das schon
+        // als Controller geführt wird, wären Rauschen. Ein Ausfall wird trotzdem
+        // gemeldet — die Ausfallprüfung geht über die Zuordnung, nicht über diese Liste.
     };
 
     /// <summary>Default calibration cadence per probe type; null = not calibrated on a schedule.</summary>

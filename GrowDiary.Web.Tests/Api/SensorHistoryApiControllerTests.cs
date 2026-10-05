@@ -43,6 +43,6 @@ public sealed class SensorHistoryApiControllerTests
     {
         var many = string.Join(',', Enumerable.Range(0, 30).Select(i => $"metric-{i}"));
 
-        Assert.Equal(12, SensorHistoryApiController.ParseMetrics(many).Count);
+        Assert.Equal(SensorHistoryApiController.MaxMetrics, SensorHistoryApiController.ParseMetrics(many).Count);
     }
 }
