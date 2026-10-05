@@ -141,6 +141,20 @@ test.describe('Wasserwechsel-Rundweg', () => {
     await ablauf.getByRole('combobox', { name: 'Wasser' }).selectOption('RO')
     await expect(ablauf.getByLabel('Aqua Vega A eingesetzt'), 'Der zweite Vorgang erbte den Wert „120" vom ersten.')
       .not.toHaveValue('120')
+    // Befund des Prüfers: ein Foto ohne Messung „nachher" ging still verloren.
+    await schritt(page, '3 · Nachher')
+    await ablauf.getByPlaceholder('z. B. 1,15').fill('1,2')
+    await ablauf.locator('input[type="file"]').setInputFiles({ name: 'tank.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') })
+    await ablauf.getByPlaceholder('z. B. 1,15').fill('')
+    await schritt(page, '4 · Speichern')
+    let abgeschickt = false
+    const horcher = (r: { url: () => string; method: () => string }) => { if (/\/wasserwechsel$/.test(r.url()) && r.method() === 'POST') abgeschickt = true }
+    page.on('request', horcher)
+    await page.locator('[data-audit="wasserwechsel-speichern"]').click()
+    await expect(ablauf.getByText(/Das Foto braucht die Messung „nachher"/)).toBeVisible()
+    page.off('request', horcher)
+    expect(abgeschickt, 'Mit Foto, aber ohne Messung „nachher" wurde trotzdem gespeichert — das Foto wäre verloren.').toBe(false)
+    await ablauf.getByRole('button', { name: '✕ Foto herausnehmen' }).click()
     await schritt(page, '4 · Speichern')
     const zweiter = await speichern(page)
     expect(zweiter.wechsel.waterUsed).toBe('RO')

@@ -100,9 +100,12 @@ export function wasserZeilen(liter: number, wasser: WaterSource, osmoseAnteil: n
   const runden = (wert: number) => Math.round(wert * 10) / 10
   if (wasser === 'RO') return [{ wasser: 'RO', name: 'Osmosewasser', menge: runden(liter) }]
   if (wasser === 'Mixed') {
+    // Leitung = Rest: zwei einzeln gerundete Teile ergaben 68,8 + 68,8 = 137,6 L
+    // bei 137,5 L angesetzt (Befund des Prüfers) — gebucht wird, was angesetzt wurde.
+    const osmose = runden(liter * osmoseAnteil)
     return [
-      { wasser: 'RO', name: 'Osmosewasser', menge: runden(liter * osmoseAnteil) },
-      { wasser: 'Tap', name: 'Leitungswasser', menge: runden(liter * (1 - osmoseAnteil)) },
+      { wasser: 'RO', name: 'Osmosewasser', menge: osmose },
+      { wasser: 'Tap', name: 'Leitungswasser', menge: runden(liter - osmose) },
     ].filter((z) => z.menge > 0) as Array<{ wasser: 'Tap' | 'RO'; name: string; menge: number }>
   }
   return [{ wasser: 'Tap', name: 'Leitungswasser', menge: runden(liter) }]
@@ -135,7 +138,7 @@ export function tagebuchZeile(w: TagebuchWerte): { titel: string; text: string }
     if (vor == null && nach == null) return null
     const v = vor == null ? '—' : zahl(vor, stellen)
     const n = nach == null ? '—' : zahl(nach, stellen)
-    return `${name} ${v} → ${n}${einheit}`
+    return `${name} ${v} → ${n}${einheit.replace(' ', '\u00a0')}`
   }
   const werte = [
     paar('EC', w.vorher.ec, w.nachher.ec, 2),
@@ -147,7 +150,8 @@ export function tagebuchZeile(w: TagebuchWerte): { titel: string; text: string }
 
   const zugaben = w.zugaben
     .filter((z) => z.menge > 0)
-    .map((z) => `${z.name} ${zahl(z.menge, Number.isInteger(z.menge) ? 0 : 1)} ${z.einheit}`)
+    // Geschütztes Leerzeichen: „180 | ml" brach in der Vorschau auseinander (Prüfer).
+    .map((z) => `${z.name} ${zahl(z.menge, Number.isInteger(z.menge) ? 0 : 1)}\u00a0${z.einheit}`)
 
   const zeilen = [
     werte.join(' · '),

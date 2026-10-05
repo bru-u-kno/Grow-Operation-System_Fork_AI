@@ -157,8 +157,14 @@ public static partial class MischplanVorschlagRechnung
         if (profil?.CalciumMgL is not { } calcium)
             return (1, "Im Wasserprofil steht kein Calcium-Wert — CalMag deshalb wie bei Osmose nach Plan. Trag den Wert unter Wasserprofil nach.");
 
-        if (profil.TotalHardnessDh is { } gh && gh < WasserAmpelService.WeichBisDh)
-            return (1, $"Dein Leitungswasser ist weich ({Zahl(gh, "0.#")} °dH) und bringt kaum Calcium mit — CalMag nach Plan.");
+        // Steht keine Gesamthärte im Profil, wird sie aus Calcium und Magnesium
+        // umgerechnet (1 °dH = 7,147 mg/L Ca = 4,336 mg/L Mg — reine Umrechnung).
+        // Fehlt Magnesium, zählt nur das Calcium: das macht das Wasser eher weicher,
+        // also eher CalMag — die sichere Seite (Befund des Prüfers: 5 mg/L Calcium
+        // ohne Härte-Angabe hieß vorher „kein CalMag").
+        var gh = profil.TotalHardnessDh ?? calcium / CalciumMgProDh + (profil.MagnesiumMgL ?? 0) / MagnesiumMgProDh;
+        if (gh < WasserAmpelService.WeichBisDh)
+            return (1, $"Dein Leitungswasser ist weich ({Zahl(gh, "0.#")} °dH{(profil.TotalHardnessDh is null ? ", aus Calcium und Magnesium gerechnet" : "")}) und bringt kaum Calcium mit — CalMag nach Plan.");
 
         var magnesium = profil.MagnesiumMgL is { } mg ? $" und {Zahl(mg, "0.#")} mg/L Magnesium" : string.Empty;
         if (wasser == WaterSource.Mixed)
@@ -256,6 +262,12 @@ public static partial class MischplanVorschlagRechnung
             zeilen.Any(z => z.Rolle == MischplanRolle.CalMagMittel) ? calMagHinweis : null,
             luecke);
     }
+
+    /// <summary>mg/L Calcium je °dH (1 °dH = 10 mg/L CaO = 7,147 mg/L Ca).</summary>
+    private const double CalciumMgProDh = 7.147;
+
+    /// <summary>mg/L Magnesium je °dH (1 °dH = 4,336 mg/L Mg).</summary>
+    private const double MagnesiumMgProDh = 4.336;
 
     private static string Zahl(double wert, string format) => wert.ToString(format, AppCulture.German);
 }

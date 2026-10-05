@@ -116,6 +116,19 @@ public sealed class MischplanVorschlagTests
     }
 
     [Fact]
+    public void OhneHaerteAngabeRechnetDieHaerteAusCalciumUndMagnesium()
+    {
+        // Befund des Prüfers: 5 mg/L Calcium ohne Gesamthärte hieß „kein CalMag".
+        var weich = Rechnen(WaterSource.Tap, profil: new WaterProfile { ConductivityUsCm = 100, CalciumMgL = 5 });
+        Assert.Equal(80, Zeile(weich, "CalMag Agent").VorschlagMl);
+        Assert.Contains("aus Calcium und Magnesium gerechnet", weich.CalMagHinweis);
+
+        // Görlitz ohne Härte-Angabe: 66,7/7,147 + 8,1/4,336 ≈ 11,2 °dH — nicht weich, CalMag entfällt.
+        var mittel = Rechnen(WaterSource.Tap, profil: new WaterProfile { ConductivityUsCm = 500, CalciumMgL = 66.7, MagnesiumMgL = 8.1 });
+        Assert.Equal(0, Zeile(mittel, "CalMag Agent").VorschlagMl);
+    }
+
+    [Fact]
     public void OhneCalciumImProfilWirdNichtsWeggelassen()
     {
         var v = Rechnen(WaterSource.Tap, profil: new WaterProfile { ConductivityUsCm = 500 });

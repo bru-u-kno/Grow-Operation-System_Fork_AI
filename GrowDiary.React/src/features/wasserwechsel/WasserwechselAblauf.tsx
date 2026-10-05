@@ -301,6 +301,12 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     ]))
     if (unlesbar) { setFehler(unlesbar); return }
     if (literZahl == null || literZahl <= 0) { setFehler('Wie viele Liter hast du neu angesetzt? Trag sie in Schritt 2 ein.'); setSchritt(2); return }
+    // Ein Foto hängt an der Messung „nachher" — ohne sie ginge es still verloren (Befund des Prüfers).
+    if (fotos.length > 0 && !nachherHatWerte) {
+      setFehler('Das Foto braucht die Messung „nachher" — trag dort mindestens einen Wert ein oder nimm das Foto heraus.')
+      setSchritt(3)
+      return
+    }
 
     const messung = (werte: typeof vorher, extraFelder: Partial<VorgangMessungRequest>): VorgangMessungRequest | null =>
       Object.values(werte).some((w) => w != null)
@@ -608,8 +614,10 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
             <textarea rows={3} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Warum so angesetzt, was aufgefallen ist …" />
           </V1Field>
           <V1Field label="Foto" wide hint={nachherHatWerte ? 'Hängt an der Messung „nachher".' : 'Ein Foto hängt an der Messung „nachher" — trag dafür mindestens einen Wert ein.'}>
-            <FileInput accept="image/*" disabled={!nachherHatWerte} fileNames={fotos.map((f) => f.name)} label="+ Foto" onFiles={setFotos} />
+            <FileInput accept="image/*" disabled={!nachherHatWerte && fotos.length === 0} fileNames={fotos.map((f) => f.name)} label="+ Foto" onFiles={setFotos} />
           </V1Field>
+          {/* Außerhalb des Felds: ein Knopf in einem <label> öffnet sonst den Dateidialog mit. */}
+          {fotos.length > 0 && <button type="button" className="wa-zurueck" onClick={() => setFotos([])}>✕ Foto herausnehmen</button>}
           {weiter(4)}
         </V1Section>
       )}
@@ -627,7 +635,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
             </li>
             <li>
               {zugaben.length > 0 ? '✓' : '–'} <b>{zugaben.length} {zugaben.length === 1 ? 'Verbrauchsbuchung' : 'Verbrauchsbuchungen'}</b>
-              {zugaben.length > 0 && ` → Kosten: ${zugaben.map((z) => `${z.name} ${zahl(z.menge, Number.isInteger(z.menge) ? 0 : 1)} ${z.einheit}`).join(' · ')}`}
+              {zugaben.length > 0 && ` → Kosten: ${zugaben.map((z) => `${z.name} ${zahl(z.menge, Number.isInteger(z.menge) ? 0 : 1)}\u00a0${z.einheit}`).join(' · ')}`}
             </li>
             {wasserGebucht.some((w) => (w.wasser === 'RO' && osmoseArtikelFehlt) || (w.wasser === 'Tap' && leitungArtikelFehlt)) && (
               <li>✓ <b>Neuer Artikel</b> „{wasserGebucht.find((w) => (w.wasser === 'RO' && osmoseArtikelFehlt) || (w.wasser === 'Tap' && leitungArtikelFehlt))!.name}" unter Kosten (Preis je Liter dort nachtragen)</li>
@@ -643,7 +651,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
           <V1Switch label="Wasserwechsel-Erinnerung neu starten" checked={erinnerung} onChange={setErinnerung}
             hint={erinnerung
               ? (stand && naechsterWechsel ? `Nächster Wechsel fällig in ${stand.intervallTage} Tagen (${naechsterWechsel}).` : 'Die Erinnerung zählt ab diesem Wechsel.')
-              : 'Der Wechsel wird eingetragen, zählt aber nicht für die Erinnerung — etwa ein kleiner Teilwechsel.'} />
+              : 'Der Wechsel wird eingetragen, zählt aber nicht für die Erinnerung — etwa ein kleiner Teilwechsel. Die Dosierung rechnet trotzdem ab hier mit frischem Wasser.'} />
           <p className="wa-hinweis">Später löschen: immer den ganzen Vorgang — Messwerte, Buchungen und Tagebuchzeile gehen mit.</p>
           <div className="wa-weiter">
             <V1Button type="submit" variant="primary" disabled={speichert || sensorLaedt} audit="wasserwechsel-speichern">

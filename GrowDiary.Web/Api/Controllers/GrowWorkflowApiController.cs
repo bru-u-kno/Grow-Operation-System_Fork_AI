@@ -79,17 +79,21 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         }
 
         var profil = _waterProfile?.Get();
+        var art = quelle;
         if (profil is null)
         {
             return (quelle, null);
         }
 
-        // Bei Osmose zaehlt der Wert NACH der Anlage, sonst der aus dem Bericht.
-        var mikroSiemens = quelle == WaterSource.RO
-            ? profil.TreatedConductivityUsCm
-            : profil.TreatedConductivityUsCm ?? profil.ConductivityUsCm;
-
-        return (quelle, mikroSiemens is { } us ? Math.Round(us / 1000, 3) : null);
+        // A-006 (Befund des Prüfers): eine Rechnung für den Wasser-EC, nicht
+        // zwei. Bis hierhin nahm diese Stelle bei Leitungswasser den Wert NACH
+        // der eigenen Aufbereitung, der Mischplan-Vorschlag den aus dem Bericht —
+        // gleiches Profil, zwei Zahlen. Gilt jetzt überall: Leitung = Bericht,
+        // Osmose = eigener Messwert nach der Aufbereitung, sonst 0. Bei einer
+        // Mischung kennt diese Stelle den Anteil nicht — dann kein erfundener Wert.
+        if (art == WaterSource.Mixed) return (quelle, null);
+        var (ec, _) = MischplanVorschlagRechnung.WasserEc(profil, art, art == WaterSource.RO ? 1 : 0);
+        return (quelle, ec);
     }
 
     [HttpGet("{id:int}/addback")]

@@ -73,6 +73,9 @@ describe('Wasser und Tagebuch', () => {
       { wasser: 'RO', name: 'Osmosewasser', menge: 48 },
       { wasser: 'Tap', name: 'Leitungswasser', menge: 112 },
     ])
+    // Die Summe bleibt die angesetzte Menge (Befund: 68,8 + 68,8 = 137,6 bei 137,5 L).
+    const teile = wasserZeilen(137.5, 'Mixed', 0.5)
+    expect(teile.reduce((summe, t) => summe + t.menge, 0)).toBeCloseTo(137.5, 5)
   })
 
   it('zeigt Änderungen mit Vorzeichen auf deutsch', () => {
@@ -92,6 +95,6 @@ describe('Wasser und Tagebuch', () => {
       notiz: 'Bewusst unter Plan.',
     })
     expect(titel).toBe('Wasserwechsel 160 L Leitungswasser')
-    expect(text).toBe('EC 1,63 → 1,15 · pH 6,12 → 6,15 · Wasser 20,0 → 18,1 °C · ORP — → 450 mV\nZugaben: Leitungswasser 160 L · Aqua Flores A 180 ml\nBewusst unter Plan.')
+    expect(text).toBe('EC 1,63 → 1,15 · pH 6,12 → 6,15 · Wasser 20,0 → 18,1\u00a0°C · ORP — → 450\u00a0mV\nZugaben: Leitungswasser 160\u00a0L · Aqua Flores A 180\u00a0ml\nBewusst unter Plan.')
   })
 })

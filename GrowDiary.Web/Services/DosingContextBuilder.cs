@@ -123,7 +123,8 @@ public sealed class DosingContextBuilder
         // Diese Stelle las als EINZIGE beide Belege — und trug die Logik als
         // eigene Kopie. Seit dem 31.08.2026 steht sie einmal in Wasserwechsel,
         // und die drei anderen Leser sehen dasselbe.
-        return Wasserwechsel.ZuletztUtc(
+        // A-006: auch ein Wechsel ohne Erinnerung schneidet das Lernfenster.
+        return Wasserwechsel.ZuletztFuerDieLoesungUtc(
             _repository.GetMeasurementsForGrow(grow.Id),
             _addback?.GetChangeoutsForGrow(grow.Id));
     }

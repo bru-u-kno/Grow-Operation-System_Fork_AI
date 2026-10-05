@@ -303,6 +303,62 @@ public sealed class WasserwechselVorgangTests
         Assert.Empty(Dienst<WasserwechselVorgangRepository>().FuerGrow(growId));
     }
 
+    /// <summary>Befund des Prüfers: Löschen und Lesen gehen nie über die Grenze des Grows.</summary>
+    [Fact]
+    public async Task EinFremderGrowLoeschtNichts()
+    {
+        var eigenerGrow = EigenerGrow();
+        var fremderGrow = EigenerGrow();
+        var client = _app.IngressClient();
+        var vorgang = await Anlegen(client, eigenerGrow, VollerVorgang(Zeit(DateTime.Now.AddHours(-2))));
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/grows/{fremderGrow}/wasserwechsel/{vorgang.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/grows/{fremderGrow}/changeouts/{vorgang.Wechsel!.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/grows/{fremderGrow}/wasserwechsel/{vorgang.Id}")).StatusCode);
+
+        // Alles steht noch.
+        Assert.NotNull(Dienst<WasserwechselVorgangRepository>().Get(eigenerGrow, vorgang.Id));
+        Assert.NotNull(Dienst<GrowRepository>().GetMeasurement(vorgang.Nachher!.Id));
+        Assert.Equal(3, Dienst<KostenRepository>().GetVerbraeuche().Count(v => v.VorgangId == vorgang.Id));
+
+        // Auch das Repository selbst schützt — nicht nur der Controller.
+        Assert.False(Dienst<WasserwechselVorgangRepository>().Loeschen(fremderGrow, vorgang.Id));
+        Assert.Contains(Dienst<GrowRepository>().GetChangeoutsForGrow(eigenerGrow), w => w.Id == vorgang.Wechsel.Id);
+    }
+
+    /// <summary>
+    /// Befund des Prüfers: der Wasser-EC hatte zwei Rechnungen — der alte Wechsel-Weg nahm bei
+    /// Leitungswasser den aufbereiteten Wert, der Vorschlag den aus dem Bericht.
+    /// </summary>
+    [Fact]
+    public async Task DerWasserEcIstUeberallDieselbeZahl()
+    {
+        var growId = EigenerGrow();
+        var client = _app.IngressClient();
+        var store = Dienst<WaterProfileStore>();
+        var vorher = store.Get();
+        try
+        {
+            store.Save(new WaterProfile { SourceLabel = "Prüfer", ConductivityUsCm = 500, TreatedConductivityUsCm = 30, CalciumMgL = 60 });
+
+            var vorschlag = await client.GetFromJsonAsync<MischplanVorschlag>($"/api/grows/{growId}/mixing-plan/vorschlag?liter=100&wasser=Tap", Json);
+            var wechsel = await client.PostAsJsonAsync($"/api/grows/{growId}/changeouts", new { kind = "Full", waterUsed = "Tap" }, Json);
+            Assert.True(wechsel.IsSuccessStatusCode, await wechsel.Content.ReadAsStringAsync());
+            var dto = (await wechsel.Content.ReadFromJsonAsync<ChangeoutDto>(Json))!;
+
+            Assert.Equal(0.5, vorschlag!.WasserEcVorschlag);
+            Assert.Equal(vorschlag.WasserEcVorschlag, dto.WaterEcMsCm);
+
+            var osmose = await client.PostAsJsonAsync($"/api/grows/{growId}/changeouts", new { kind = "Full", waterUsed = "RO" }, Json);
+            var osmoseVorschlag = await client.GetFromJsonAsync<MischplanVorschlag>($"/api/grows/{growId}/mixing-plan/vorschlag?liter=100&wasser=RO", Json);
+            Assert.Equal(osmoseVorschlag!.WasserEcVorschlag, (await osmose.Content.ReadFromJsonAsync<ChangeoutDto>(Json))!.WaterEcMsCm);
+        }
+        finally
+        {
+            if (vorher is not null) store.Save(vorher);
+        }
+    }
+
     // ---------------------------------------------------- Zählung der Messfelder
 
     /// <summary>Jedes Zahlenfeld der Vorgangs-Messung — Grundmenge per Reflexion.</summary>
