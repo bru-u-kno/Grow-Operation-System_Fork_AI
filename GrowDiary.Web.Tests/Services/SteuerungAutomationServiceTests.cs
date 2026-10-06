@@ -120,7 +120,8 @@ public class SteuerungAutomationServiceTests
         foreach (var datei in dateien)
         {
             var modul = Path.GetFileName(Path.GetDirectoryName(datei))!;
-            var zuordnung = SteuerungGeraeteRollen.FuerModul(modul)
+            // Auch die mitbenutzten Rollen (Zusatz-Entfeuchter: Zelt-Fuehler und Licht).
+            var zuordnung = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(modul)
                 .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
 
             var vorlage = (JsonObject)JsonNode.Parse(File.ReadAllText(datei))!;

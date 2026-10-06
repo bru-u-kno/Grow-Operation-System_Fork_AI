@@ -6,6 +6,7 @@ import { V1Select } from '../../components/V1Select'
 import type { V1Option } from '../../components/V1Select'
 import type { HomeAssistantEntity } from '../../types'
 import type { GeraeteSeite, GeraetZeile } from '../steuerung/steuerung-typen'
+import { EntfeuchterNamen } from './EntfeuchterNamen'
 import { haWert } from '../../utils'
 import '../steuerung/steuerung.css'
 
@@ -155,6 +156,9 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
           )
         })}
       </div>
+
+      {/* A-009: Der Anzeigename gilt für beide Entfeuchter — er steht bei beiden Steuerungen. */}
+      {(modul?.modul === 'entfeuchter' || modul?.modul === 'entfeuchter-zusatz') && <EntfeuchterNamen />}
 
       {modul && GRUPPEN.filter((gruppe) => modul.zeilen.some((zeile) => zeile.gruppe === gruppe.key)).map((gruppe) => {
         const zeilen = modul.zeilen.filter((zeile) => zeile.gruppe === gruppe.key)

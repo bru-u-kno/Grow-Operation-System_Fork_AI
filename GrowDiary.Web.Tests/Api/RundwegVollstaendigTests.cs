@@ -314,6 +314,16 @@ public sealed class RundwegVollstaendigTests
             + "Pruefungen: AUS muss unter EIN liegen, die Temperatur max. zwischen 15 und 35 Grad, "
             + "der Modus ist \"plan\" oder \"fest\" - das PUT lehnt ab. Dass kein Feld beim "
             + "Speichern verlorengeht, faehrt EntfeuchterEinstellungenTests.",
+        // Fork AI (A-009)
+        ["EntfeuchterZusatzAenderung"] =
+            "Eine ÄNDERUNG, kein Formularstand: alle Felder sind optional, geschrieben wird nur, was "
+            + "vorkommt. Die feste Probe (1) kollidiert mit den Wertebereichen (Folge-Abstand 0,5 bis 3 K, "
+            + "Hilfsstärke ist ein Name), und die Antwort ist der ganze Stand, nicht das Gesendete. Dass "
+            + "genau ein Feld ankommt und nichts sonst sich bewegt, fahren EntfeuchterZusatzSpeichernTests "
+            + "(auch zweimal speichern) und EntfeuchterZusatzApiTests.",
+        ["EntfeuchterNamenAenderung"] =
+            "Zwei Namen, bei denen „fehlt“ und „null“ verschiedenes heißen (Name bleibt / Vorgabe). Die "
+            + "feste Probe kennt den Unterschied nicht. Fahren EntfeuchterZusatzApiTests.",
         // Fork AI
         ["ChillerEinstellungen"] =
             "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Bei den Zieltemperaturen "

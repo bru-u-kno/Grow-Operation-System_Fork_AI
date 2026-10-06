@@ -6,6 +6,7 @@ import LichtDetail from '../features/steuerung/LichtDetail'
 import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
 import EntfeuchterDetail from '../features/steuerung/EntfeuchterDetail'
+import EntfeuchterZusatzDetail from '../features/steuerung/EntfeuchterZusatzDetail'
 import { CO2_REITER, minuten, probeWerte, tagKurz, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
@@ -105,6 +106,10 @@ export default function SteuerungPage() {
 
   if (modul === 'entfeuchter') {
     return <EntfeuchterDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+  }
+
+  if (modul === 'entfeuchter-zusatz') {
+    return <EntfeuchterZusatzDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
   if (modul === 'zuluft') {

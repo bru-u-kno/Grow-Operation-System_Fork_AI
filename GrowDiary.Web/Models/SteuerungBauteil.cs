@@ -155,12 +155,14 @@ public static class SteuerungBauteile
     private const string Zuluft = "zuluft";
     private const string Chiller = "chiller";
     private const string Entfeuchter = "entfeuchter";
+    private const string EntfeuchterZusatz = SteuerungGeraeteRollen.ZusatzModul;
 
     // Rollen, an denen Bauteile hängen — Schreibweise wie in SteuerungGeraeteRollen.
     private static readonly string[] BrauchtAbluft = { "abluft_stufe" };
     private static readonly string[] BrauchtRh = { "rh" };
     private static readonly string[] BrauchtCanopy = { "canopy" };
     private static readonly string[] BrauchtStufe = { "port_stufe" };
+    private static readonly string[] BrauchtZusatzLeistung = { "zusatz_leistung" };
 
     /// <summary>Alle Bauteile aller Steuerungen.</summary>
     public static IReadOnlyList<Bauteil> Alle { get; } = new Bauteil[]
@@ -476,6 +478,91 @@ public static class SteuerungBauteile
             "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
         new(Entfeuchter, "automation.rdwc_trotec_nachtregelung_port_7_dehumi", "RDWC Trotec Regelung", BauteilArt.Automation,
             "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft."),
+
+        // ====================================================================
+        // Zusatz-Entfeuchter — Fork AI (A-009). Ein zweiter Trotec an einer
+        // Shelly-Steckdose, Folgegerät neben dem Entfeuchter. Die Höchsttemperatur
+        // und die Plan-Schwellen (sensor.trotec_temp_max_aktiv, vpd_ziel_*,
+        // sensor.trotec_feuchte_*_aktiv) gehören dem Entfeuchter und dem Plan und
+        // stehen deshalb NICHT hier: die Vorlagen lesen sie nur.
+        // Die Helfer-Kennungen sind die, die bei Bru schon laufen.
+        // ====================================================================
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_vpd_hysterese", "Trotec Zelt VPD Hysterese", BauteilArt.Zahl,
+            "Abstand des VPD-Bands um das Plan-Ziel: EIN unter Ziel minus Wert, AUS über Ziel plus Wert.",
+            Min: 0.05, Max: 0.6, Schritt: 0.05, Einheit: "kPa"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_mindestlaufzeit", "Trotec Zelt Mindestlaufzeit", BauteilArt.Zahl,
+            "Vorher schaltet ihn erreichter VPD oder erreichte Feuchte nicht ab. Übertemperatur schon.",
+            Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_mindestpause", "Trotec Zelt Mindestpause", BauteilArt.Zahl,
+            "So lange bleibt er nach dem Ausschalten mindestens aus (Kompressorschutz).",
+            Min: 1, Max: 120, Schritt: 1, Einheit: "min"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_folge_abstand", "Trotec Zelt Folge Abstand", BauteilArt.Zahl,
+            "Der Zusatz geht so viel früher aus als die Höchsttemperatur — nur wenn das Führungsgerät läuft.",
+            Min: 0.5, Max: 3, Schritt: 0.5, Einheit: "K"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_wieder_ein_abstand", "Trotec Zelt Wieder Ein Abstand", BauteilArt.Zahl,
+            "Wieder an erst so viel unter der Folge-AUS-Temperatur.",
+            Min: 0.5, Max: 3, Schritt: 0.5, Einheit: "K"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_zuschalt_verzogerung", "Trotec Zelt Zuschalt Verzogerung", BauteilArt.Zahl,
+            "So lange muss das Führungsgerät laufen, bevor der Zusatz zuschaltet. Läuft es nicht, startet der Zusatz sofort.",
+            Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
+        new(EntfeuchterZusatz, "input_boolean.trotec_zelt_tagbetrieb_erlauben", "Trotec Zelt Tagbetrieb erlauben", BauteilArt.Schalter,
+            "Aus: nur in der Dunkelphase."),
+        new(EntfeuchterZusatz, "input_boolean.trotec_zelt_nacht_durchlaufen", "Trotec Zelt Nacht durchlaufen", BauteilArt.Schalter,
+            "An: nachts läuft er, bis das Zelt zu warm wird — ohne Feuchte-Schwellen."),
+
+        // --- Meldung „zieht nichts" -----------------------------------------
+        new(EntfeuchterZusatz, "input_boolean.trotec_zelt_melden", "Trotec Zelt Melden", BauteilArt.Schalter,
+            "Melden, wenn der Zusatz an ist, aber nichts zieht (z. B. voller Tank).",
+            Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“."),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_melde_grenze_w", "Trotec Zelt Melde Grenze W", BauteilArt.Zahl,
+            "Darunter zieht er nichts. Normalbetrieb gemessen 300 bis 335 W.",
+            Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.",
+            Min: 5, Max: 200, Schritt: 5, Einheit: "W"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_melde_dauer_min", "Trotec Zelt Melde Dauer Min", BauteilArt.Zahl,
+            "So lange muss es bestehen, bevor gemeldet wird.",
+            Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.",
+            Min: 1, Max: 60, Schritt: 1, Einheit: "min"),
+        new(EntfeuchterZusatz, "input_number.trotec_zelt_melde_wiederholung_h", "Trotec Zelt Melde Wiederholung H", BauteilArt.Zahl,
+            "Wiederholung, solange es besteht.",
+            Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.",
+            Min: 1, Max: 24, Schritt: 1, Einheit: "h"),
+
+        // --- Rechenwerte ----------------------------------------------------
+        // Alle vier lesen, was der Plan und der Entfeuchter liefern; fehlt eines
+        // davon, sind sie „nicht verfügbar" — und die Regelung schaltet dann
+        // nicht ein (numeric_state gegen eine fehlende Entität ist falsch).
+        new(EntfeuchterZusatz, "sensor.trotec_zelt_vpd_ein_schwelle", "Trotec Zelt VPD EIN Schwelle", BauteilArt.RechenSensor,
+            "Tag: EIN unter dieser VPD — Plan-Ziel unten minus Hysterese.",
+            Einheit: "kPa", Zustandsklasse: "measurement",
+            Vorlage: "{{ (states('input_number.vpd_ziel_unten') | float - states('input_number.trotec_zelt_vpd_hysterese') | float) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('input_number.vpd_ziel_unten') and has_value('input_number.trotec_zelt_vpd_hysterese') }}"),
+        new(EntfeuchterZusatz, "sensor.trotec_zelt_vpd_aus_schwelle", "Trotec Zelt VPD AUS Schwelle", BauteilArt.RechenSensor,
+            "Tag: AUS über dieser VPD — Plan-Ziel Abschaltung plus Hysterese.",
+            Einheit: "kPa", Zustandsklasse: "measurement",
+            Vorlage: "{{ (states('input_number.vpd_ziel_abschaltung') | float + states('input_number.trotec_zelt_vpd_hysterese') | float) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('input_number.vpd_ziel_abschaltung') and has_value('input_number.trotec_zelt_vpd_hysterese') }}"),
+        new(EntfeuchterZusatz, "sensor.trotec_zelt_folge_aus_temperatur", "Trotec Zelt Folge AUS Temperatur", BauteilArt.RechenSensor,
+            "Darüber geht der Zusatz aus, solange das Führungsgerät läuft: aktive Höchsttemperatur minus Folge-Abstand.",
+            Einheit: "°C", Zustandsklasse: "measurement",
+            Vorlage: "{{ (states('sensor.trotec_temp_max_aktiv') | float - states('input_number.trotec_zelt_folge_abstand') | float) | round(1) }}",
+            Verfuegbarkeit: "{{ has_value('sensor.trotec_temp_max_aktiv') and has_value('input_number.trotec_zelt_folge_abstand') }}"),
+        new(EntfeuchterZusatz, "sensor.trotec_zelt_wieder_ein_temperatur", "Trotec Zelt Wieder EIN Temperatur", BauteilArt.RechenSensor,
+            "Wieder an erst darunter: Folge-AUS-Temperatur minus Wieder-ein-Abstand.",
+            Einheit: "°C", Zustandsklasse: "measurement",
+            Vorlage: "{{ (states('sensor.trotec_zelt_folge_aus_temperatur') | float - states('input_number.trotec_zelt_wieder_ein_abstand') | float) | round(1) }}",
+            Verfuegbarkeit: "{{ has_value('sensor.trotec_zelt_folge_aus_temperatur') and has_value('input_number.trotec_zelt_wieder_ein_abstand') }}"),
+
+        // --- Automationen ---------------------------------------------------
+        // Die Regelung steht bei Bru handgebaut unter dieser Kennung; eine vom
+        // Fork angelegte heißt automation.zusatz_entfeuchter_regelung und wird
+        // über ihre Konfigurations-Kennung gefunden.
+        new(EntfeuchterZusatz, "automation.rdwc_trotec_zelt_shelly_plan_regelung", "Zusatz-Entfeuchter Regelung", BauteilArt.Automation,
+            "Schaltet den Zusatz-Entfeuchter nach dem Plan — und nie so, dass beide Entfeuchter gleichzeitig ausgehen.",
+            VorlagenDatei: "regelung"),
+        new(EntfeuchterZusatz, "automation.zusatz_entfeuchter_zieht_nichts", "Zusatz-Entfeuchter zieht nichts", BauteilArt.Automation,
+            "Meldet, wenn der Zusatz an ist, aber kaum Leistung aufnimmt (z. B. voller Tank).",
+            Pflicht: false, HaengtAn: BrauchtZusatzLeistung,
+            OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.", VorlagenDatei: "meldung"),
     };
 
     /// <summary>

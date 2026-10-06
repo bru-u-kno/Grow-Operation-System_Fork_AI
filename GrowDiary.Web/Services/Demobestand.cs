@@ -126,6 +126,7 @@ public static partial class Demobestand
         AlarmregelAnlegen(alarme, zelt.Id);
         LichtplanAnlegen(grows, zelt.Id);
         LichtRollenZuordnen(dienste.GetRequiredService<SteuerungRepository>());
+        EntfeuchterRollenZuordnen(dienste.GetRequiredService<SteuerungRepository>());
         LichtflankenAnlegen(dienste.GetRequiredService<LightRepository>(), zelt.Id, DateTime.Now);
         VerlaufsKachelAnlegen(dienste.GetRequiredService<DashboardLayoutRepository>(), zelt.Id);
         SensorenZuordnen(grows, zelt.Id);
@@ -1086,6 +1087,43 @@ public static partial class Demobestand
         einstellungen.BlueteEin = Demoverlauf.LichtAnUhr;
         einstellungen.BlueteAus = Demoverlauf.LichtAusUhr;
         steuerung.SetEinstellungen(LichtSteuerungService.Modul, einstellungen);
+    }
+
+    /// <summary>Beide Entfeuchter im Testbestand: das Führungsgerät und der Zusatz an der Shelly-Steckdose.</summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (A-009, 06.10.2026).</b> Der Testbestand hatte keinen
+    /// Entfeuchter. Die neue Seite „Zusatz-Entfeuchter" hängt an beiden — am
+    /// Führungsgerät (es läuft oder nicht) und am Zusatz — und ihre Namen,
+    /// Zustände und die Meldung „zieht nichts" waren am Bestand nie zu sehen.</para>
+    /// <para>Zelt-Fühler und Licht des Zusatzes sind die des Entfeuchters
+    /// (<see cref="SteuerungGeraeteRollen.MitbenutztVon"/>): es gibt nur eine
+    /// Zuordnung je Gerät.</para>
+    /// </remarks>
+    private static void EntfeuchterRollenZuordnen(SteuerungRepository steuerung)
+    {
+        foreach (var (rolle, entitaet) in new (string, string?)[]
+                 {
+                     (EntfeuchterSteuerungService.Rollen.ZeltFeuchte, DemoData.EntitaetFuer(SensorMetricType.Humidity)),
+                     (EntfeuchterSteuerungService.Rollen.ZeltTemp, DemoData.EntitaetFuer(SensorMetricType.AirTemperature)),
+                     (EntfeuchterSteuerungService.Rollen.ZeltVpd, DemoData.EntitaetFuer(SensorMetricType.Vpd)),
+                     (EntfeuchterSteuerungService.Rollen.PortSchalter, DemoData.EntfeuchterFuehrungModus),
+                     (EntfeuchterSteuerungService.Rollen.PortZustand, DemoData.EntfeuchterFuehrungZustand),
+                     (EntfeuchterSteuerungService.Rollen.LichtZustand, DemoData.LichtZustand),
+                 })
+        {
+            if (entitaet is not null) steuerung.SetGeraet(EntfeuchterSteuerungService.Modul, rolle, entitaet);
+        }
+
+        foreach (var (rolle, entitaet) in new[]
+                 {
+                     (EntfeuchterZusatzSteuerungService.Rollen.ZusatzSchalter, DemoData.ZusatzSchalter),
+                     (EntfeuchterZusatzSteuerungService.Rollen.ZusatzLeistung, DemoData.ZusatzLeistung),
+                     (EntfeuchterZusatzSteuerungService.Rollen.ZusatzEnergie, DemoData.ZusatzEnergie),
+                     (EntfeuchterZusatzSteuerungService.Rollen.FuehrungZustand, DemoData.EntfeuchterFuehrungModus),
+                 })
+        {
+            steuerung.SetGeraet(EntfeuchterZusatzSteuerungService.Modul, rolle, entitaet);
+        }
     }
 
     /// <summary>

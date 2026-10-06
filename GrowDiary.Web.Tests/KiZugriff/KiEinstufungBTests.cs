@@ -67,6 +67,10 @@ public sealed class KiEinstufungBTests
         ["SteuerungApiController.Co2Speichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.ZuluftSpeichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.EntfeuchterSpeichern"] = "GeraeteSchalten, Verwaltung",
+        // Fork AI (A-009): Speichern schreibt Helfer, schaltet die Automation und kann den
+        // Zusatz ausschalten (Hilfe „aus") — wie der Entfeuchter. Die Namen sind nur Anzeige.
+        ["SteuerungApiController.EntfeuchterZusatzSpeichern"] = "GeraeteSchalten, Verwaltung",
+        ["SteuerungApiController.EntfeuchterNamenSpeichern"] = "Verwaltung",
         ["SteuerungApiController.ChillerSpeichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.LichtSpeichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.LichtBefehl"] = "GeraeteSchalten",

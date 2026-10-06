@@ -30,13 +30,16 @@ public sealed class AutomationsVorlagenStimmigTests
         => (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(Wurzel, modul, vorlage + ".json")))!;
 
     /// <summary>Jede Rolle des Moduls mit einer gültigen, unterscheidbaren Entität ihrer ersten Domäne.</summary>
+    // Fork AI (A-009): auch die Rollen, die ein Modul von einem anderen mitbenutzt — sonst
+    // bleibt der Platzhalter der Zusatz-Entfeuchter-Vorlage stehen, Fuellen liefert null, und
+    // die Zaehlungen unten ueberspringen sie, ohne dass es jemand merkt.
     private static Dictionary<string, string> AlleRollen(string modul)
-        => SteuerungGeraeteRollen.FuerModul(modul)
+        => SteuerungGeraeteRollen.FuerModulMitMitbenutzten(modul)
             .ToDictionary(r => r.Schluessel, r => $"{r.Domains[0]}.probe_{r.Schluessel}", StringComparer.Ordinal);
 
     private static Dictionary<string, string> OhneOptionale(string modul)
     {
-        var pflicht = SteuerungGeraeteRollen.FuerModul(modul).Where(r => r.Pflicht).Select(r => r.Schluessel).ToHashSet();
+        var pflicht = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(modul).Where(r => r.Pflicht).Select(r => r.Schluessel).ToHashSet();
         return AlleRollen(modul).Where(p => pflicht.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
     }
 

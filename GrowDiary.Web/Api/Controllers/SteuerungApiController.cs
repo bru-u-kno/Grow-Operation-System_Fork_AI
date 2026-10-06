@@ -34,6 +34,7 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly ZuluftSteuerungService _zuluft;
     private readonly ChillerSteuerungService _chiller;
     private readonly EntfeuchterSteuerungService _entfeuchter;
+    private readonly EntfeuchterZusatzSteuerungService _zusatz;
     private readonly GrowRepository _grows;
     private readonly HomeAssistantService _ha;
     private readonly HomeAssistantSettingsRepository _haSettings;
@@ -46,13 +47,14 @@ public sealed class SteuerungApiController : ApiControllerBase
     private readonly SteuerungAbsicherungService _absicherung;
     private readonly SteuerungProbeService _probe;
 
-    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, EntfeuchterSteuerungService entfeuchter, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungAbsicherungService absicherung, SteuerungProbeService probe)
+    public SteuerungApiController(Co2SteuerungService co2, LichtSteuerungService licht, ZuluftSteuerungService zuluft, ChillerSteuerungService chiller, EntfeuchterSteuerungService entfeuchter, EntfeuchterZusatzSteuerungService zusatz, GrowRepository grows, HomeAssistantService ha, HomeAssistantSettingsRepository haSettings, KostenRepository kosten, SteuerungGeraeteService geraete, SteuerungBestandService bestand, SteuerungHelferService helfer, SteuerungRechenwertService rechenwerte, SteuerungAutomationService automationen, SteuerungAbsicherungService absicherung, SteuerungProbeService probe)
     {
         _co2 = co2;
         _licht = licht;
         _zuluft = zuluft;
         _chiller = chiller;
         _entfeuchter = entfeuchter;
+        _zusatz = zusatz;
         _grows = grows;
         _ha = ha;
         _haSettings = haSettings;
@@ -77,6 +79,8 @@ public sealed class SteuerungApiController : ApiControllerBase
         var zuluft = await _zuluft.LiveAsync(ct);
         var chiller = await _chiller.LiveAsync(ct);
         var entfeuchter = await _entfeuchter.LiveAsync(ct);
+        var zusatzLive = await _zusatz.LiveAsync(ct, mitEnergie: false);
+        var zusatzStand = await _zusatz.EinstellungenAsync(ct);
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var nachId = entities.ToDictionary(x => x.EntityId, x => x, StringComparer.OrdinalIgnoreCase);
@@ -105,6 +109,18 @@ public sealed class SteuerungApiController : ApiControllerBase
                 Kurz: $"{(Text(EntfeuchterSteuerungService.Entitaeten.VpdRegelung) == "on" ? "VPD-Modus" : "Fest")} · ein ab {F(entfeuchter.EinAktivProzent, " %", "0.0")} · aus unter {F(entfeuchter.AusAktivProzent, " %", "0.0")}",
                 Wert: F(entfeuchter.FeuchteProzent, " %", "0.0"),
                 Unterzeile: $"{(entfeuchter.PortAn == true ? "entfeuchtet" : "bereit")} · VPD {F(entfeuchter.Vpd, "", "0.00")}",
+                HatDetail: true),
+            // Fork AI (A-009): Der Zusatz-Entfeuchter (Shelly) neben dem Entfeuchter.
+            // Der Titel ist der Anzeigename — kein „Port 7" fest im Text.
+            new(
+                Kennung: "entfeuchter-zusatz",
+                Titel: zusatzLive.ZusatzName,
+                Status: ZusatzStatus(zusatzLive, zusatzStand),
+                Kurz: $"{ZusatzHilfeText(zusatzStand)} · {(zusatzLive.AutomatikAn == true && EntfeuchterZusatzSteuerungService.AutomatikWirksam(zusatzStand) ? "Automatik an" : "Automatik aus")} · folgt {zusatzLive.FuehrungName}",
+                Wert: F(zusatzLive.LeistungW, " W"),
+                Unterzeile: zusatzLive.ZiehtNichts == true ? "zieht nichts"
+                    : zusatzLive.ZusatzAn == true ? "entfeuchtet"
+                    : zusatzLive.ZusatzAn == false ? "bereit" : "Zustand unbekannt",
                 HatDetail: true),
             new(
                 Kennung: "chiller",
@@ -285,6 +301,94 @@ public sealed class SteuerungApiController : ApiControllerBase
         if (seite.Result is OkObjectResult ok && ok.Value is EntfeuchterSeiteDto dto) return Ok(dto with { HaAngenommen = erreicht });
         return seite;
     }
+
+    // ------------------------------------------------- Zusatz-Entfeuchter
+
+    /// <summary>
+    /// Fork AI (A-009): Die Seite „Zusatz-Entfeuchter" — Einstellungen und Livebild
+    /// des zweiten Entfeuchters (Shelly). Geregelt wird in Home Assistant.
+    /// </summary>
+    [HttpGet("entfeuchter-zusatz")]
+    [ProducesResponseType(typeof(EntfeuchterZusatzSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EntfeuchterZusatzSeiteDto>> EntfeuchterZusatz(CancellationToken ct)
+    {
+        // Vor dem Lesen merken: das Lesen übernimmt die Werte aus den Helfern und
+        // speichert sie — danach wäre „übernommen" nie mehr wahr.
+        var ausHomeAssistant = _zusatz.Gespeichert is null;
+        var geraete = _geraete.EntitiesFuerModul(EntfeuchterZusatzSteuerungService.Modul);
+        return Ok(new EntfeuchterZusatzSeiteDto(await _zusatz.EinstellungenAsync(ct), await _zusatz.LiveAsync(ct))
+        {
+            AusHomeAssistantUebernommen = ausHomeAssistant,
+            GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
+            GeraeteGesamt = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(EntfeuchterZusatzSteuerungService.Modul).Count,
+        });
+    }
+
+    /// <summary>
+    /// Speichert NUR die Felder, die im Body vorkommen. Alles andere — auch die
+    /// gemeinsame Höchsttemperatur des Entfeuchters — bleibt unangetastet.
+    /// </summary>
+    [HttpPut("entfeuchter-zusatz")]
+    [KiStufe(KiStufe.Verwaltung | KiStufe.GeraeteSchalten)]
+    [ProducesResponseType(typeof(EntfeuchterZusatzSeiteDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EntfeuchterZusatzSeiteDto>> EntfeuchterZusatzSpeichern([FromBody] EntfeuchterZusatzAenderung request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("entfeuchter_zusatz_invalid", "Es wurde nichts übergeben.");
+        var (gespeichert, fehler, erreicht) = await _zusatz.SpeichernAsync(request, ct);
+        if (gespeichert is null)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+
+        var seite = await EntfeuchterZusatz(ct);
+        if (seite.Result is OkObjectResult ok && ok.Value is EntfeuchterZusatzSeiteDto dto)
+        {
+            return Ok(dto with { HaAngenommen = erreicht, AusHomeAssistantUebernommen = false });
+        }
+        return seite;
+    }
+
+    /// <summary>Die Anzeigenamen der beiden Entfeuchter-Geräte; Vorgabe ist der Gerätename aus Home Assistant.</summary>
+    [HttpGet("entfeuchter-namen")]
+    [ProducesResponseType(typeof(EntfeuchterNamenDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EntfeuchterNamenDto>> EntfeuchterNamen(CancellationToken ct)
+        => Ok(await _zusatz.NamenAsync(ct));
+
+    /// <summary>Nur die genannten Namen ändern; leer oder null setzt auf die Vorgabe, ein fehlendes Feld lässt den Namen.</summary>
+    [HttpPut("entfeuchter-namen")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [ProducesResponseType(typeof(EntfeuchterNamenDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EntfeuchterNamenDto>> EntfeuchterNamenSpeichern([FromBody] EntfeuchterNamenAenderung request, CancellationToken ct)
+    {
+        if (request is null) return BadRequestError("entfeuchter_namen_invalid", "Es wurde nichts übergeben.");
+        var fehler = _zusatz.NamenSpeichern(request);
+        if (fehler.Count > 0)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+        return Ok(await _zusatz.NamenAsync(ct));
+    }
+
+    /// <summary>Die Statuszeile der Übersicht: „warn" bei „zieht nichts" oder zu warmem Zelt.</summary>
+    private static string ZusatzStatus(EntfeuchterZusatzLive live, EntfeuchterZusatzEinstellungen e)
+    {
+        var grenze = live.TagPhase switch { true => live.TempMaxTagC, false => live.TempMaxNachtC, _ => null };
+        var zuWarm = live.TempC is { } t && grenze is { } g && t > g;
+        if (live.ZiehtNichts == true || zuWarm) return "warn";
+        if (live.AutomatikAn == false || !EntfeuchterZusatzSteuerungService.AutomatikWirksam(e)) return "aus";
+        return live.ZusatzAn == true ? "an" : "aus";
+    }
+
+    private static string ZusatzHilfeText(EntfeuchterZusatzEinstellungen e) => EntfeuchterZusatzHilfe.Erkennen(e) switch
+    {
+        EntfeuchterZusatzHilfe.Aus => "aus",
+        EntfeuchterZusatzHilfe.Sparsam => "sparsam",
+        EntfeuchterZusatzHilfe.Normal => "normal",
+        EntfeuchterZusatzHilfe.Kraeftig => "kräftig",
+        _ => "eigene Werte",
+    };
 
     // -------------------------------------------------------------- Chiller
 
@@ -670,6 +774,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         "zuluft" => "Zuluft · Keller",
         "chiller" => "Water Chiller",
         "entfeuchter" => "Entfeuchter",
+        "entfeuchter-zusatz" => "Zusatz-Entfeuchter",
         "bluelab" => "Bluelab · Gerätealarm",
         "cropsteering" => "Crop Steering",
         _ => modul,

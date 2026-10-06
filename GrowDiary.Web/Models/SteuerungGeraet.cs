@@ -232,7 +232,44 @@ public static class SteuerungGeraeteRollen
         new("entfeuchter", "licht_zustand", "Lampe · Zustand", GruppeUmfeld,
             "binary_sensor.klein_abluft_zustand", new[] { "binary_sensor", "switch", "light" },
             Hinweis: "Entscheidet zwischen Tag- und Nachtschwellen."),
+
+        // Fork AI (A-009, 06.10.2026): Zusatz-Entfeuchter — ein zweiter Trotec an
+        // einer Shelly-Steckdose. Zelt-Fühler und Licht werden NICHT noch einmal
+        // zugeordnet, sondern aus dem Modul „entfeuchter" mitbenutzt
+        // (siehe MitbenutztVon).
+        new(ZusatzModul, "zusatz_schalter", "Zusatz-Entfeuchter · schalten", GruppeSchalten,
+            "switch.grow_dehumi_tent", new[] { "switch", "input_boolean" },
+            Hinweis: "Die Steckdose (Shelly), an der der zweite Entfeuchter hängt."),
+        new(ZusatzModul, "zusatz_leistung", "Zusatz-Entfeuchter · Leistung", GruppeMessen,
+            "sensor.grow_dehumi_tent_leistung", new[] { "sensor" }, Pflicht: false, Einheit: "W",
+            Hinweis: "Zeigt, ob er wirklich zieht. Ohne sie entfällt die Meldung „zieht nichts“."),
+        new(ZusatzModul, "zusatz_energie", "Zusatz-Entfeuchter · Energie", GruppeMessen,
+            "sensor.grow_dehumi_tent_energie", new[] { "sensor" }, Pflicht: false, Einheit: "kWh",
+            Hinweis: "Zählerstand der Steckdose — daraus rechnet die Seite „Energie heute“."),
+        new(ZusatzModul, "fuehrung_zustand", "Führungsgerät · Zustand", GruppeMessen,
+            "select.rdwc_dehumi_aktiver_modus", new[] { "select", "switch", "input_boolean", "binary_sensor" },
+            Hinweis: "Das Gerät aus „Entfeuchter“ (bei AC Infinity der Modus-Auswahlpunkt On/Off). Der Zusatz schaltet nur zu oder ab, solange es läuft — beide gehen nie gleichzeitig aus."),
     };
+
+    /// <summary>Die Kennung des Zusatz-Entfeuchters.</summary>
+    public const string ZusatzModul = "entfeuchter-zusatz";
+
+    /// <summary>
+    /// Fork AI (A-009): Rollen, die ein Modul von einem anderen mitbenutzt — keine
+    /// doppelte Zuordnung. Zelt-Fühler und Licht des Zusatz-Entfeuchters sind die
+    /// des Entfeuchters.
+    /// </summary>
+    public static IReadOnlyList<(string Quelle, string Rolle)> MitbenutztVon(string modul)
+        => string.Equals(modul, ZusatzModul, StringComparison.OrdinalIgnoreCase)
+            ? [("entfeuchter", "zelt_rh"), ("entfeuchter", "zelt_temp"), ("entfeuchter", "zelt_vpd"), ("entfeuchter", "licht_zustand")]
+            : [];
+
+    /// <summary>Die eigenen Rollen eines Moduls und die mitbenutzten.</summary>
+    public static IReadOnlyList<GeraeteRolle> FuerModulMitMitbenutzten(string modul)
+        => FuerModul(modul)
+            .Concat(MitbenutztVon(modul).Select(m => Finden(m.Quelle, m.Rolle)
+                ?? throw new InvalidOperationException($"{m.Quelle}/{m.Rolle} gibt es nicht — Tippfehler in MitbenutztVon.")))
+            .ToList();
 
 
     public static IReadOnlyList<GeraeteRolle> FuerModul(string modul)

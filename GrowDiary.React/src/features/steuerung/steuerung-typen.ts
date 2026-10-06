@@ -408,6 +408,105 @@ export const ENTFEUCHTER_REITER: Array<{ value: EntfeuchterReiter; label: string
   { value: 'betrieb', label: 'Betrieb' },
 ]
 
+// ------------------------------------------------- Zusatz-Entfeuchter (A-009)
+
+/**
+ * A-009: Der Zusatz-Entfeuchter (Shelly-Steckdose am Zelt) — Spiegel von
+ * `EntfeuchterZusatzSeiteDto`, Vertrag in `archiv/a009/VERTRAG.md`.
+ *
+ * <b>Führen und Folgen.</b> Das bestehende Gerät (die Seite „Entfeuchter") führt,
+ * der Zusatz folgt. Die Höchsttemperatur ist EINE gemeinsame Einstellung: die
+ * `tempMax*`-Felder sind dieselben wie in {@link EntfeuchterEinstellungen}.
+ */
+export type ZusatzHilfe = 'aus' | 'sparsam' | 'normal' | 'kraeftig' | 'eigene'
+
+export type ZusatzMeldung = {
+  aktiv: boolean
+  grenzeW: number
+  dauerMin: number
+  wiederholungH: number
+}
+
+export type ZusatzAblauf = 'tank' | 'schlauch'
+
+export type EntfeuchterZusatzEinstellungen = {
+  hilfe: ZusatzHilfe
+  automatikAktiv: boolean
+  tagbetriebErlauben: boolean
+  nachtDurchlaufen: boolean
+  vpdHystereseKpa: number
+  zuschaltVerzoegerungMin: number
+  folgeAbstandK: number
+  wiederEinAbstandK: number
+  mindestlaufzeitMin: number
+  mindestpauseMin: number
+  meldung: ZusatzMeldung
+  ablauf: ZusatzAblauf
+  tempMaxTagModus: TempMaxModus
+  tempMaxTagAbstandK: number
+  tempMaxTagFestC: number
+  tempMaxNachtModus: TempMaxModus
+  tempMaxNachtAbstandK: number
+  tempMaxNachtFestC: number
+}
+
+/** Alles, was Home Assistant nicht liefert, ist `null` — nie eine erfundene 0. */
+export type EntfeuchterZusatzLive = {
+  haErreichbar: boolean
+  fuehrungName: string
+  zusatzName: string
+  planWoche: string | null
+  planLuftTagC: number | null
+  planLuftNachtC: number | null
+  tempMaxTagC: number | null
+  tempMaxNachtC: number | null
+  folgeAusTagC: number | null
+  folgeAusNachtC: number | null
+  wiederEinTagC: number | null
+  wiederEinNachtC: number | null
+  tempC: number | null
+  feuchteProzent: number | null
+  vpd: number | null
+  tagPhase: boolean | null
+  /** Welche Größe der Fork schaltet: VPD-Ziel, sonst Plan-Feuchte, sonst keine. */
+  schaltgroesse: 'vpd' | 'feuchte' | 'keine' | null
+  vpdZiel: number | null
+  vpdEinSchwelle: number | null
+  vpdAusSchwelle: number | null
+  feuchteEinProzent: number | null
+  feuchteAusProzent: number | null
+  zusatzAn: boolean | null
+  zusatzOnline: boolean | null
+  leistungW: number | null
+  energieHeuteKwh: number | null
+  fuehrungAn: boolean | null
+  ziehtNichts: boolean | null
+  planUnvollstaendig: boolean | null
+  automatikAn: boolean | null
+}
+
+export type EntfeuchterZusatzSeite = {
+  einstellungen: EntfeuchterZusatzEinstellungen
+  live: EntfeuchterZusatzLive
+  geraeteZugeordnet: number
+  geraeteGesamt: number
+  ausHomeAssistantUebernommen: boolean
+  haAngenommen: boolean | null
+}
+
+/** PUT-Körper: gleiche Feldnamen, alle optional — geschrieben wird nur, was drinsteht. */
+export type EntfeuchterZusatzAenderung = Partial<Omit<EntfeuchterZusatzEinstellungen, 'meldung'>> & {
+  meldung?: Partial<ZusatzMeldung>
+}
+
+/** Anzeigename je Entfeuchter-Gerät; `vorgabe` ist der Name der Entität in Home Assistant. */
+export type EntfeuchterName = { anzeigename: string; vorgabe: string }
+
+export type EntfeuchterNamen = { fuehrung: EntfeuchterName; zusatz: EntfeuchterName }
+
+/** PUT-Körper der Namen: leer oder `null` heißt „zurück auf die Vorgabe". */
+export type EntfeuchterNamenAenderung = { fuehrung?: string | null; zusatz?: string | null }
+
 // ----------------------------------------------------------------- Chiller
 
 export type ChillerEinstellungen = {

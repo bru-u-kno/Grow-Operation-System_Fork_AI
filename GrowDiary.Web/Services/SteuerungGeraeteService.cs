@@ -75,6 +75,18 @@ public sealed class SteuerungGeraeteService
                 : Rueckfall(rolle);
             ergebnis[rolle.Schluessel] = Aufloesen(wert);
         }
+
+        // Fork AI (A-009): Rollen, die dieses Modul von einem anderen mitbenutzt
+        // (Zelt-Fühler und Licht des Zusatz-Entfeuchters). Gelesen werden die
+        // Zuordnungen des Quell-Moduls — es gibt nur eine Wahrheit je Gerät.
+        foreach (var (quelle, schluessel) in SteuerungGeraeteRollen.MitbenutztVon(modul))
+        {
+            var rolle = SteuerungGeraeteRollen.Finden(quelle, schluessel);
+            var eigen = _repo.GetGeraete(quelle)
+                .FirstOrDefault(g => string.Equals(g.Rolle, schluessel, StringComparison.OrdinalIgnoreCase))?.EntityId;
+            var wert = string.IsNullOrWhiteSpace(eigen) ? Rueckfall(rolle) : eigen;
+            ergebnis[schluessel] = Aufloesen(wert);
+        }
         return ergebnis;
     }
 

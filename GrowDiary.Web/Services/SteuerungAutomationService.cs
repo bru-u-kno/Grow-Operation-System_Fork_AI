@@ -40,7 +40,7 @@ public sealed class SteuerungAutomationService
     /// Die Herkunftsmarke samt Fassung, etwa <c>Herkunft: fork-ai/co2/dosierung/4</c>.
     /// </summary>
     private static readonly Regex FassungMuster = new(
-        @"Herkunft: fork-ai/(?<modul>[a-z0-9_]+)/(?<vorlage>[a-z0-9_]+)/(?<fassung>\d+)",
+        @"Herkunft: fork-ai/(?<modul>[a-z0-9_-]+)/(?<vorlage>[a-z0-9_]+)/(?<fassung>\d+)",
         RegexOptions.CultureInvariant);
 
     private readonly HomeAssistantService _ha;

@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
 import { ENTFEUCHTER_REITER } from './steuerung-typen'
-import type { EntfeuchterEinstellungen, EntfeuchterReiter, EntfeuchterSeite, SteuerungModul, TempMaxModus } from './steuerung-typen'
+import type { EntfeuchterEinstellungen, EntfeuchterReiter, EntfeuchterSeite, SteuerungModul } from './steuerung-typen'
 import { HYSTERESE_STUFEN, bandBerechnen, hystereseStufe, tempMax, zahl } from './entfeuchter-band'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
-import { feldFehlerAus, leereZahlenfelder, modusFehler, ohneLuecken, zahlAusFeld } from './feld-fehler'
+import { feldFehlerAus, leereZahlenfelder, ohneLuecken } from './feld-fehler'
+import { TempMaxBlock, Zahl } from './SteuerungsFelder'
 import { useFehlerZeigen } from './fehler-reiter'
 
 /**
@@ -405,93 +406,6 @@ function Lesen({ label, hinweis, herkunft, wert }: { label: string; hinweis?: st
         <small className="ef-herkunft">{herkunft}</small>
       </span>
       <span className="st-nurlesen">{wert}</span>
-    </div>
-  )
-}
-
-/** Temperatur max. für Tag oder Nacht: „Plan +" Abstand oder „Fest". */
-function TempMaxBlock({ titel, planText, modus, abstand, fest, plan, ergebnis, onModus, onAbstand, onFest, fehlerAbstand, fehlerFest }: {
-  titel: string
-  planText: string
-  modus: TempMaxModus
-  abstand: number
-  fest: number
-  plan: number | null
-  ergebnis: number
-  onModus: (m: TempMaxModus) => void
-  onAbstand: (v: number) => void
-  onFest: (v: number) => void
-  fehlerAbstand?: string
-  fehlerFest?: string
-}) {
-  // Ein Fehler am Feld, das der Modus ausblendet, nennt Feld und Modus.
-  const fehler = modusFehler(modus, {
-    plan: { feld: 'Abstand zum Plan', modus: 'Plan +', fehler: fehlerAbstand },
-    fest: { feld: 'Fester Wert', modus: 'Fest', fehler: fehlerFest },
-  })
-  return (
-    <div className="ef-tempmax">
-      <div className="st-feldzeile">
-        <span className="st-etikett">
-          {titel}
-          <small>{planText}</small>
-          {fehler && <span className="st-fehler">{fehler}</span>}
-        </span>
-        <span className="ef-stufen" role="radiogroup" aria-label={`Temperatur max. ${titel}`}>
-          <button type="button" role="radio" className="st-chip" aria-checked={modus === 'plan'} aria-current={modus === 'plan'} onClick={() => onModus('plan')}>Plan +</button>
-          <button type="button" role="radio" className="st-chip" aria-checked={modus === 'fest'} aria-current={modus === 'fest'} onClick={() => onModus('fest')}>Fest</button>
-        </span>
-      </div>
-      {modus === 'plan' ? (
-        <>
-          <Zahl label="Abstand zum Plan" hinweis="Wandert mit der Planwoche." einheit="K" wert={abstand} min={0} max={15} schritt={0.5} onChange={onAbstand} />
-          <p className="ef-formel">
-            {plan == null ? `Ohne Plan: fester Wert ${zahl(fest)} °C` : `${zahl(plan)} + ${zahl(abstand)} = `}
-            {plan != null && <b>{zahl(ergebnis)} °C</b>}
-          </p>
-        </>
-      ) : (
-        <Zahl label="Fester Wert" hinweis="Bleibt, egal welche Woche." einheit="°C" wert={fest} min={15} max={35} schritt={0.5} onChange={onFest} />
-      )}
-    </div>
-  )
-}
-
-/** Ein Zahlenfeld im Box-Modus — kein Schieberegler, am Telefon trifft man damit keinen Wert. */
-function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChange, fehler }: {
-  label: string
-  hinweis: string
-  einheit?: string
-  wert: number
-  min: number
-  max: number
-  schritt: number
-  onChange: (wert: number) => void
-  fehler?: string
-}) {
-  return (
-    <div className="st-feldzeile">
-      <span className="st-etikett">
-        {label}
-        <small>{hinweis}</small>
-        {fehler && <span className="st-fehler">{fehler}</span>}
-      </span>
-      <span className="st-eingaben">
-        <input
-          type="number"
-          inputMode="decimal"
-          min={min}
-          max={max}
-          step={schritt}
-          aria-label={label}
-          value={Number.isFinite(wert) ? wert : ''}
-          onChange={(e) => {
-            const neu = zahlAusFeld(e.target.value)
-            if (neu != null) onChange(neu)
-          }}
-        />
-        {einheit && <span className="st-einheit">{einheit}</span>}
-      </span>
     </div>
   )
 }

@@ -1,0 +1,486 @@
+{
+  "alias": "Zusatz-Entfeuchter Regelung",
+  "description": "Folgegeraet neben dem Fuehrungsgeraet (Entfeuchter, Rolle fuehrung_zustand). Schaltet den Zusatz-Entfeuchter (Shelly) nach den Zielwerten des Plans: TAG (Licht an) VPD-Band um das Plan-Ziel (EIN unter sensor.trotec_zelt_vpd_ein_schwelle, AUS ueber sensor.trotec_zelt_vpd_aus_schwelle); nennt der Plan kein VPD-Ziel, gelten die Plan-Feuchte-Schwellen auch am Tag; NACHT Feuchte nach sensor.trotec_feuchte_ein_aktiv / _aus_aktiv, oder - mit Nacht durchlaufen - nur die Temperaturgrenze. ZUSAMMENSPIEL: Beide Geraete duerfen nie gleichzeitig ausgehen. 1) Zuschalten erst, wenn die Fuehrung mindestens input_number.trotec_zelt_zuschalt_verzogerung Minuten laeuft - ist sie aus, startet der Zusatz sofort. 2) Waerme: Der Zusatz geht schon bei sensor.trotec_zelt_folge_aus_temperatur (= sensor.trotec_temp_max_aktiv minus input_number.trotec_zelt_folge_abstand) aus, aber nur, wenn die Fuehrung laeuft; laeuft sie nicht, bleibt er bis zur Grenze an. 3) Wieder an erst unter sensor.trotec_zelt_wieder_ein_temperatur (= Folge-AUS minus input_number.trotec_zelt_wieder_ein_abstand), nach input_number.trotec_zelt_mindestpause. 4) Abschalten wegen VPD/Feuchte nur, wenn die Fuehrung laeuft (mindestens ein Geraet bleibt), und erst nach input_number.trotec_zelt_mindestlaufzeit. Uebertemperatur ueber der Grenze schaltet immer sofort ab. Voraussetzung: sensor.trotec_temp_max_aktiv und die Plan-Sensoren des Entfeuchters; fehlen sie, schaltet die Regelung nicht ein. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter-zusatz/regelung/1.",
+  "mode": "single",
+  "max_exceeded": "silent",
+  "triggers": [
+    {
+      "trigger": "time_pattern",
+      "minutes": "/1",
+      "id": "pruefung"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "[[licht_zustand]]",
+      "not_from": [
+        "unavailable",
+        "unknown"
+      ],
+      "not_to": [
+        "unavailable",
+        "unknown"
+      ],
+      "id": "licht"
+    },
+    {
+      "trigger": "homeassistant",
+      "event": "start"
+    }
+  ],
+  "conditions": [],
+  "actions": [
+    {
+      "choose": [
+        {
+          "alias": "AUS: ueber der Temperaturgrenze (sofort)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "on"
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "above": "sensor.trotec_temp_max_aktiv"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_off",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "AUS Folge: Waerme (Fuehrungsgeraet laeuft weiter)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[fuehrung_zustand]]",
+              "state": [
+                "On",
+                "on"
+              ]
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "above": "sensor.trotec_zelt_folge_aus_temperatur"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_off",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "wenn": "zelt_vpd",
+          "alias": "AUS Tag: VPD ueber Plan-Abschaltung (nach Mindestlaufzeit, nur wenn die Fuehrung laeuft)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[fuehrung_zustand]]",
+              "state": [
+                "On",
+                "on"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "on",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestlaufzeit') | int(15) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_vpd]]",
+              "above": "sensor.trotec_zelt_vpd_aus_schwelle"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_off",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "AUS Tag: Tagbetrieb nicht erlaubt (nach Mindestlaufzeit, nur wenn die Fuehrung laeuft)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "input_boolean.trotec_zelt_tagbetrieb_erlauben",
+              "state": "off"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[fuehrung_zustand]]",
+              "state": [
+                "On",
+                "on"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "on",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestlaufzeit') | int(15) }}"
+              }
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_off",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "AUS Tag: Feuchte unter Plan-AUS, wenn der Plan kein VPD-Ziel nennt (nach Mindestlaufzeit, nur wenn die Fuehrung laeuft)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "on"
+            },
+            {
+              "condition": "or",
+              "alias": "Plan nennt kein VPD-Ziel (oder es gibt keinen VPD-Fuehler)",
+              "conditions": [
+                {
+                  "condition": "template",
+                  "alias": "Plan nennt kein VPD-Ziel",
+                  "value_template": "{{ not (has_value('sensor.trotec_zelt_vpd_ein_schwelle') and has_value('sensor.trotec_zelt_vpd_aus_schwelle')) }}"
+                },
+                {
+                  "wennNicht": "zelt_vpd",
+                  "condition": "template",
+                  "value_template": "{{ true }}"
+                }
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[fuehrung_zustand]]",
+              "state": [
+                "On",
+                "on"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "on",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestlaufzeit') | int(15) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_rh]]",
+              "below": "sensor.trotec_feuchte_aus_aktiv"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_off",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "AUS Nacht: Feuchte unter Plan-AUS (nur ohne Nacht durchlaufen; nach Mindestlaufzeit, nur wenn die Fuehrung laeuft)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "off"
+            },
+            {
+              "condition": "state",
+              "entity_id": "input_boolean.trotec_zelt_nacht_durchlaufen",
+              "state": "off"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[fuehrung_zustand]]",
+              "state": [
+                "On",
+                "on"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "on",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestlaufzeit') | int(15) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_rh]]",
+              "below": "sensor.trotec_feuchte_aus_aktiv"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_off",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "wenn": "zelt_vpd",
+          "alias": "EIN Tag: VPD unter Plan-Ziel (Mindestpause, kuehl genug, Fuehrung traegt schon oder ist aus)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "input_boolean.trotec_zelt_tagbetrieb_erlauben",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "off",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestpause') | int(10) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_vpd]]",
+              "below": "sensor.trotec_zelt_vpd_ein_schwelle"
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_zelt_wieder_ein_temperatur"
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "state": [
+                    "Off",
+                    "off"
+                  ]
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "state": [
+                    "On",
+                    "on"
+                  ],
+                  "for": {
+                    "minutes": "{{ states('input_number.trotec_zelt_zuschalt_verzogerung') | int(10) }}"
+                  }
+                }
+              ]
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_on",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN Tag: Feuchte ueber Plan-EIN, wenn der Plan kein VPD-Ziel nennt (Mindestpause, kuehl genug, Fuehrung traegt schon oder ist aus)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "input_boolean.trotec_zelt_tagbetrieb_erlauben",
+              "state": "on"
+            },
+            {
+              "condition": "or",
+              "alias": "Plan nennt kein VPD-Ziel (oder es gibt keinen VPD-Fuehler)",
+              "conditions": [
+                {
+                  "condition": "template",
+                  "alias": "Plan nennt kein VPD-Ziel",
+                  "value_template": "{{ not (has_value('sensor.trotec_zelt_vpd_ein_schwelle') and has_value('sensor.trotec_zelt_vpd_aus_schwelle')) }}"
+                },
+                {
+                  "wennNicht": "zelt_vpd",
+                  "condition": "template",
+                  "value_template": "{{ true }}"
+                }
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "off",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestpause') | int(10) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_rh]]",
+              "above": "sensor.trotec_feuchte_ein_aktiv"
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_zelt_wieder_ein_temperatur"
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "state": [
+                    "Off",
+                    "off"
+                  ]
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "state": [
+                    "On",
+                    "on"
+                  ],
+                  "for": {
+                    "minutes": "{{ states('input_number.trotec_zelt_zuschalt_verzogerung') | int(10) }}"
+                  }
+                }
+              ]
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_on",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN Nacht: Feuchte ueber Plan-EIN, oder durchlaufen (Mindestpause, kuehl genug, Fuehrung traegt schon oder ist aus)",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "off"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[zusatz_schalter]]",
+              "state": "off",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_zelt_mindestpause') | int(10) }}"
+              }
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.trotec_zelt_nacht_durchlaufen",
+                  "state": "on"
+                },
+                {
+                  "condition": "numeric_state",
+                  "entity_id": "[[zelt_rh]]",
+                  "above": "sensor.trotec_feuchte_ein_aktiv"
+                }
+              ]
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_zelt_wieder_ein_temperatur"
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "state": [
+                    "Off",
+                    "off"
+                  ]
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "state": [
+                    "On",
+                    "on"
+                  ],
+                  "for": {
+                    "minutes": "{{ states('input_number.trotec_zelt_zuschalt_verzogerung') | int(10) }}"
+                  }
+                }
+              ]
+            }
+          ],
+          "sequence": [
+            {
+              "action": "homeassistant.turn_on",
+              "target": {
+                "entity_id": "[[zusatz_schalter]]"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

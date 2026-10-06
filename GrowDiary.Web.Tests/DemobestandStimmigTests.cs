@@ -322,6 +322,67 @@ public sealed class DemobestandStimmigTests : IDisposable
         Assert.Equal(Demoverlauf.LichtAusUhr, einstellungen.BlueteAus);
     }
 
+    /// <summary>
+    /// Beide Entfeuchter sind im Testbestand zugeordnet — das Führungsgerät und der
+    /// Zusatz —, und der Zusatz benutzt Zelt-Fühler und Licht des Entfeuchters mit.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (A-009, 06.10.2026).</b> Der Testbestand hatte keinen
+    /// Entfeuchter; die Seite „Zusatz-Entfeuchter" stand dort auf „Zustand
+    /// unbekannt", und das Zusammenspiel beider Geräte war nie zu sehen.</para>
+    /// <para>Gezählt wird über die Rollen (<see cref="SteuerungGeraeteRollen"/>), nicht
+    /// über eine Liste: kommt eine Rolle dazu, fehlt sie hier sofort. Aufgelöst wird
+    /// über denselben Dienst wie in der App — so sieht der Test auch die
+    /// mitbenutzten Rollen, wie die App sie sieht.</para>
+    /// </remarks>
+    [Fact]
+    public void Beide_Entfeuchter_sind_auf_bekannte_Entitaeten_zugeordnet()
+    {
+        var steuerung = _dienste.GetRequiredService<SteuerungRepository>();
+        var geraete = new SteuerungGeraeteService(steuerung);
+
+        // Gelesen wird, was im Bestand GESPEICHERT ist — nicht, was die Auflösung ergibt: ohne
+        // App-Einstellungen fällt sie auf die Vorgaben einer fremden Anlage zurück und täuschte
+        // eine Zuordnung vor.
+        var zusatzEigen = SteuerungGeraeteRollen.FuerModul(EntfeuchterZusatzSteuerungService.Modul);
+        var entfeuchterPflicht = SteuerungGeraeteRollen.FuerModul(EntfeuchterSteuerungService.Modul).Where(r => r.Pflicht).ToList();
+        Assert.True(zusatzEigen.Count >= 4, $"Nur {zusatzEigen.Count} Zusatz-Rollen gefunden — die Zählung sieht ihre Grundmenge nicht.");
+        Assert.True(entfeuchterPflicht.Count >= 5, $"Nur {entfeuchterPflicht.Count} Pflicht-Rollen des Entfeuchters gefunden.");
+
+        var fehler = new List<string>();
+        void Pruefen(string modul, IEnumerable<GeraeteRolle> rollen)
+        {
+            var gespeichert = steuerung.GetGeraete(modul).ToDictionary(g => g.Rolle, g => g.EntityId);
+            foreach (var rolle in rollen)
+            {
+                if (!gespeichert.TryGetValue(rolle.Schluessel, out var entitaet) || string.IsNullOrWhiteSpace(entitaet))
+                {
+                    fehler.Add($"{modul}/{rolle.Schluessel}: nicht zugeordnet");
+                    continue;
+                }
+                if (DemoData.EntityState(entitaet, DateTime.UtcNow) is null)
+                    fehler.Add($"{modul}/{rolle.Schluessel}: {entitaet} kennt der Testbestand nicht");
+                if (!rolle.Domains.Contains(entitaet.Split('.', 2)[0]))
+                    fehler.Add($"{modul}/{rolle.Schluessel}: {entitaet} hat nicht die Domäne {string.Join("/", rolle.Domains)}");
+            }
+        }
+
+        Pruefen(EntfeuchterZusatzSteuerungService.Modul, zusatzEigen);
+        Pruefen(EntfeuchterSteuerungService.Modul, entfeuchterPflicht);
+        Assert.True(fehler.Count == 0, "Entfeuchter im Testbestand: " + string.Join("; ", fehler));
+
+        // Eine Zuordnung je Gerät: Fühler und Licht des Zusatzes SIND die des Entfeuchters. (Der VPD-Fühler
+        // ist optional, und der Testbestand hat keinen — er fehlt dann an beiden Stellen.)
+        var zusatz = geraete.EntitiesFuerModul(EntfeuchterZusatzSteuerungService.Modul);
+        var entfeuchter = geraete.EntitiesFuerModul(EntfeuchterSteuerungService.Modul);
+        foreach (var (quelle, rolle) in SteuerungGeraeteRollen.MitbenutztVon(EntfeuchterZusatzSteuerungService.Modul))
+        {
+            Assert.Equal(EntfeuchterSteuerungService.Modul, quelle);
+            Assert.True(zusatz.ContainsKey(rolle), $"{rolle}: der Zusatz sieht die mitbenutzte Rolle nicht");
+            Assert.Equal(entfeuchter[rolle], zusatz[rolle]);
+        }
+    }
+
     /// <summary>Lichtplan, Lichtkurve und Zeit-Entitäten nennen dieselbe Uhrzeit.</summary>
     /// <remarks>
     /// Drei Stellen, an denen dieselbe Uhrzeit steht — Lichtplan des Zelts,

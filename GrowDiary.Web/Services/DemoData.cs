@@ -110,6 +110,47 @@ public static class DemoData
     /// <summary>Ist der Controller-Port erreichbar? — Licht-Rolle „Lampe · Port online".</summary>
     public const string LichtPortOnline = "binary_sensor.demo_licht_status";
 
+    // --- Fork AI (A-009, 06.10.2026): zwei Entfeuchter im Testbestand --------------
+    // Der Bestand hatte keinen. Ohne sie zeigt die Seite „Zusatz-Entfeuchter" im
+    // Testbetrieb nur „Zustand unbekannt", und weder das Zusammenspiel (Führung läuft /
+    // läuft nicht) noch die Anzeigenamen sind je zu sehen.
+
+    /// <summary>Das Führungsgerät: ein AC-Infinity-Port, dessen Modus als <c>select</c> „On"/„Off" meldet.</summary>
+    public const string EntfeuchterFuehrungModus = "select.demo_entfeuchter_modus";
+
+    /// <summary>Läuft das Führungsgerät wirklich? Rolle „Entfeuchter · Zustand".</summary>
+    public const string EntfeuchterFuehrungZustand = "binary_sensor.demo_entfeuchter_zustand";
+
+    /// <summary>Die Shelly-Steckdose des Zusatz-Entfeuchters.</summary>
+    public const string ZusatzSchalter = "switch.demo_zusatz_entfeuchter";
+
+    /// <summary>Was der Zusatz-Entfeuchter gerade aufnimmt, in W.</summary>
+    public const string ZusatzLeistung = "sensor.demo_zusatz_entfeuchter_leistung";
+
+    /// <summary>Der Zählerstand der Zusatz-Steckdose, in kWh.</summary>
+    public const string ZusatzEnergie = "sensor.demo_zusatz_entfeuchter_energie";
+
+    /// <summary>Normalbetrieb eines Trotec: gemessen 300–335 W.</summary>
+    private const double ZusatzBetriebW = 312;
+
+    /// <summary>Beide Entfeuchter laufen in der Dunkelphase; am Tag nimmt die Lüftung die Feuchte mit.</summary>
+    public static bool ZusatzLaeuft(DateTime nowUtc) => !LightOn(nowUtc);
+
+    /// <summary>
+    /// Der Zählerstand des Zusatz-Entfeuchters — das Integral seiner Leistung seit
+    /// <see cref="StromAnker"/>, eine reine Funktion der Zeit wie <see cref="StromZaehlerKwh"/>.
+    /// </summary>
+    public static double ZusatzEnergieKwh(DateTime nowUtc)
+    {
+        var ort = nowUtc.ToLocalTime();
+        var tage = Math.Max(0, (ort.Date - StromAnker).Days);
+        var dunkelJeTag = Enumerable.Range(0, 24).Count(h => !Demoverlauf.LichtBrennt(StromAnker.AddHours(h)));
+        var dunkelHeute = Enumerable.Range(0, 24).Sum(h => !Demoverlauf.LichtBrennt(ort.Date.AddHours(h))
+            ? Math.Clamp((ort - ort.Date.AddHours(h)).TotalHours, 0, 1)
+            : 0);
+        return 7 + (tage * dunkelJeTag + dunkelHeute) * ZusatzBetriebW / 1000.0;
+    }
+
     /// <summary>Der gemeinsame kWh-Zähler im Testbestand — die Steckdosenleiste vor beiden Blütezelten.</summary>
     /// <remarks>
     /// <para><b>Der Anlass (02.10.2026).</b> Der Testbestand hatte keine
@@ -435,6 +476,47 @@ public static class DemoData
             };
         }
 
+        // Fork AI (A-009): die beiden Entfeuchter. Was jemand geschaltet hat, steht
+        // oben im Schaltbrett und hat schon gewonnen.
+        foreach (var (kennung, zustand, name) in new[]
+                 {
+                     (EntfeuchterFuehrungModus, "On", "Demo Entfeuchter · Aktiver Modus"),
+                     (EntfeuchterFuehrungZustand, "on", "Demo Entfeuchter · Zustand"),
+                     (ZusatzSchalter, ZusatzLaeuft(nowUtc) ? "on" : "off", "Demo Zusatz-Entfeuchter"),
+                 })
+        {
+            if (!string.Equals(entityId, kennung, StringComparison.OrdinalIgnoreCase)) continue;
+
+            return new HomeAssistantState
+            {
+                EntityId = kennung,
+                State = zustand,
+                FriendlyName = name,
+                LastChanged = nowUtc,
+                LastUpdated = nowUtc,
+            };
+        }
+
+        foreach (var (kennung, wert, einheit, name) in new[]
+                 {
+                     (ZusatzLeistung, ZusatzLaeuft(nowUtc) ? ZusatzBetriebW : 0.0, "W", "Demo Zusatz-Entfeuchter · Leistung"),
+                     (ZusatzEnergie, Math.Round(ZusatzEnergieKwh(nowUtc), 3), "kWh", "Demo Zusatz-Entfeuchter · Energie"),
+                 })
+        {
+            if (!string.Equals(entityId, kennung, StringComparison.OrdinalIgnoreCase)) continue;
+
+            return new HomeAssistantState
+            {
+                EntityId = kennung,
+                State = wert.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                NumericValue = wert,
+                UnitOfMeasurement = einheit,
+                FriendlyName = name,
+                LastChanged = nowUtc,
+                LastUpdated = nowUtc,
+            };
+        }
+
         if (string.Equals(entityId, LichtModus, StringComparison.OrdinalIgnoreCase))
         {
             return new HomeAssistantState
@@ -515,7 +597,8 @@ public static class DemoData
         // Die benannten Geraete: ohne sie steht im Testbetrieb keine Steckdose
         // und kein Dimmfeld in der Auswahl — und dann laesst sich weder der
         // Kuehler noch der AC-Versuch ueberhaupt einrichten.
-        foreach (var kennung in new[] { LichtLeistung, LichtModus, LichtEinZeit, LichtAusZeit, LichtZustand, LichtPortOnline, StromZaehler, StromLeistung })
+        foreach (var kennung in new[] { LichtLeistung, LichtModus, LichtEinZeit, LichtAusZeit, LichtZustand, LichtPortOnline, StromZaehler, StromLeistung,
+                                       EntfeuchterFuehrungModus, EntfeuchterFuehrungZustand, ZusatzSchalter, ZusatzLeistung, ZusatzEnergie })
         {
             var zustand = EntityState(kennung, nowUtc);
             if (zustand is null) continue;

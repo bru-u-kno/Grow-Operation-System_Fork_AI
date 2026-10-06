@@ -235,3 +235,53 @@
   .st-regel { margin: var(--s-2) 0 var(--s-1); padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: var(--accent-wash);
     font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-etikett); color: var(--muted); line-height: 1.7; }
 }
+
+/* A-009: Zusatz-Entfeuchter — gelber Änderungs-Kasten, „Empfohlen"-Zeilen, Bänder mit Zonen.
+   Das Skalenband selbst teilt sich die `ef-*`-Klassen mit dem Entfeuchter; hier steht nur,
+   was der Zusatz zusätzlich braucht. Nur Token, damit helles und dunkles Schema mitziehen. */
+@layer components {
+  .ez-aender {
+    padding: var(--s-3); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); border-radius: var(--r-lg);
+    background: var(--warn-wash); color: var(--ink); font-size: var(--fs-text); line-height: 1.5;
+  }
+  .ez-aender > b { display: block; margin-bottom: var(--s-1); color: var(--warn-text); }
+  .ez-aender ul { margin: var(--s-1) 0 var(--s-2); padding-left: var(--s-4); }
+  .ez-aender li { margin-bottom: var(--s-1); overflow-wrap: anywhere; }
+  .ez-aender li b { color: var(--ink); }
+  .ez-aender li small { color: var(--muted); font-size: var(--fs-etikett); }
+
+  /* „Empfohlen: …" mit Zurücksetzen — unter dem Feld, das es betrifft. */
+  .ez-empf { margin: calc(-1 * var(--s-2)) 0 var(--s-3); font-size: var(--fs-etikett); color: var(--faint); }
+  .ez-empf.is-abweichend { color: var(--warn-text); }
+  .st-feldzeile.is-gestapelt > .ez-empf { margin: var(--s-2) 0 0; }
+  .ez-empf button {
+    margin-left: var(--s-2); min-height: 2rem; padding: 0 var(--s-3); border: 1px solid var(--hair-2); border-radius: 999px;
+    background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-etikett); cursor: pointer;
+  }
+  .ef-tempmax.is-geaendert input[type='number'] { border-color: var(--warn); }
+
+  .ez-bandtitel {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px var(--s-3); margin-top: var(--s-3);
+    font-family: var(--font-mono); font-size: var(--fs-etikett); letter-spacing: .08em; text-transform: uppercase; color: var(--faint);
+  }
+  .ez-bandtitel + .ef-skala { margin-top: 0; }
+
+  /* Zonen links und rechts vom Mittelfeld: EIN grün, AUS gelb. */
+  .ez-zone { position: absolute; top: var(--s-4); height: var(--s-2); box-sizing: border-box; }
+  .ez-zone.is-ein { background: var(--accent-wash); border: 1px solid var(--accent-dim); }
+  .ez-zone.is-aus { background: var(--warn-wash); border: 1px solid var(--warn); }
+  .ef-strich.is-ziel { background: var(--faint); height: calc(var(--s-4) - var(--s-1)); top: calc(var(--s-4) - 1px); }
+  .ef-strich.is-max { background: var(--warn); }
+  .ef-ist.is-warm { background: var(--warn); }
+  .ef-ist.is-warm em { color: var(--warn-text); }
+  .ef-zustand b.is-warn { color: var(--warn-text); }
+
+  .ez-klapp { border: 1px solid var(--hair); border-radius: var(--r-sm); padding: var(--s-3); background: var(--surface); }
+  .ez-erweitert > .st-gruppe:first-child { margin-top: 0; }
+
+  /* Namen der Entfeuchter (Geräte & Entitäten › Rollen). */
+  .ez-namen .st-feldzeile.is-gestapelt > .ez-namen-zeile { margin-top: var(--s-2); }
+  .ez-namen-zeile { display: flex; align-items: center; gap: var(--s-2); }
+  .ez-namen-zeile .v1-button { flex: 0 0 auto; }
+  .ez-namen-zeile input { flex: 1 1 auto; min-width: 0; }
+}
