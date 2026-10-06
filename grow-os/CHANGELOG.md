@@ -5,6 +5,26 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.178
+
+**Fork AI.** Neue Steuerung „Zusatz-Entfeuchter": ein zweiter Entfeuchter (an einer Shelly-Steckdose) arbeitet mit dem Hauptgerät zusammen — und beide gehen nicht mehr gleichzeitig aus.
+
+- **Was war:** Standen zwei Entfeuchter im Zelt, hingen beide an derselben Temperaturgrenze und gingen fast im selben Moment aus.
+  Am Abend des 06.10. lief so in 220 Minuten 32 Minuten lang gar kein Gerät, die Luftfeuchte stieg dabei um bis zu 12 Punkte.
+- **Jetzt:** Das Hauptgerät führt und läuft möglichst durch, der Zusatz hilft nur dazu. Er geht 1 K früher aus als das
+  Hauptgerät, kommt erst nach dem Abkühlen wieder und schaltet erst zu, wenn das Hauptgerät schon eine Weile läuft.
+  Ist das Hauptgerät aus, startet der Zusatz sofort. Bei Übertemperatur gehen beide aus.
+- **Einfach zu bedienen:** Oben stehen nur die Höchsttemperaturen (Tag/Nacht), die Hilfsstärke (aus, sparsam, normal, kräftig)
+  und die Automatik. Alle Einzelwerte sind unter „Erweitert" eingeklappt, jedes Feld nennt seine Empfehlung. Ein gelber Kasten zeigt vor dem
+  Speichern, was sich ändert — und gespeichert wird **nur das**, nichts anderes wird mitgeschrieben.
+- **Höchsttemperatur nur einmal:** Die Seite ändert dieselben Felder wie die Entfeuchter-Seite (kein zweiter Wert). Beim Speichern geht nur der
+  geänderte Helfer nach Home Assistant — kein Überschreiben mit einem alten Stand.
+- **Meldung „zieht nichts":** Ist der Shelly an, das Gerät nimmt aber über mehrere Minuten fast keine Leistung auf, kommt eine Meldung an die in den
+  Meldungs-Einstellungen gewählte Adresse, mit Wiederholung. Ob ein voller Tank wirklich so aussieht, ist noch nicht beobachtet.
+- **Gerätenamen zentral:** Die Namen der beiden Entfeuchter pflegst du unter Geräte & Entitäten; alle Texte benutzen sie.
+- **Anlegen in Home Assistant:** Helfer, Rechenwerte und Automationen legt der Fork per Vorlage an. Eine von Hand gebaute Regelung bleibt unangetastet
+  (dann den Hinweis „Fremd" beachten).
+
 ## 2.0.0-forkai.177
 
 **Fork AI.** „Veggie" und „Blüte" funktionieren auch, wenn das Licht gerade auf „An" oder „Aus" steht.
