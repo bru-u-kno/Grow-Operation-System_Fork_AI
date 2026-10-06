@@ -13,6 +13,17 @@ Erfolg heißt:
 2. Nach jedem Lauf — auch nach Abbruch, Fehler oder Neustart — ist alles wieder wie vorher.
 3. Bru bekommt eine Empfehlung der KI und übernimmt sie nur nach Bestätigung.
 
+## Eigentliches Ziel (Bru, 2026-10-06, nachgetragen)
+Die Probeläufe dienen dazu, dass der Fork Brus System so weit **kennenlernt**, dass es die **Zielwerte aus dem Plan annähernd einhält**.
+Der einzelne Lauf ist ein Baustein; dazu kommt eine Ansicht **Kenntnisstand**:
+- **Zielabgleich:** je Wert (Luftfeuchte, Temperatur, VPD, Wassertemperatur …) und Phase (Licht an/aus): Anteil der Zeit im Zielband
+  (aus dem echten Verlauf) und Einschätzung erreichbar / knapp / Lücke; Ziele kommen aus den Zielwerten des Plans.
+- **Gelernte Wirkung je Gerät:** Änderung je Minute beim Abschalten, Reaktionszeit, Zahl und Qualität der Läufe.
+- **Abdeckung:** Gerät × Lichtphase — wo Messungen fehlen.
+- **Nächster Probelauf:** Vorschlag, der die größte Lücke schließt (Gerät, Dauer, günstige Uhrzeit); startet nie von allein.
+- **Vorschläge zur Zielerreichung:** Einstellungsänderungen mit Schätzung der Wirkung; nur per Klick übernommen.
+Mockup: `~/mockups/probelauf.html` (Ansicht 5 „Kenntnisstand").
+
 ## Festgelegt (Bru, 2026-10-06)
 - Wirkung real am Zelt; akzeptiert, solange die Grenzen halten.
 - Nach dem Lauf: Auswertung **plus** KI-Empfehlung, nichts wird ohne Bestätigung übernommen.
