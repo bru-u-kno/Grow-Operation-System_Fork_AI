@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.181
+
+**Fork AI.** Probelauf: Die vorgeschlagenen Grenzen sind jetzt „Pflanzenziel plus Spielraum" und lassen einen Start überhaupt zu.
+
+- **Was war:** In forkai.180 waren die Grenzen genau die Ziele des Plans. In deiner Anlage hieß das nachts: Luftfeuchte max. 51 % bei 52,8 % Istwert und ein VPD-Band von 1,4 bis 1,4 —
+  ein Lauf wäre vor dem Start abgelehnt worden.
+- **Jetzt:** Luftfeuchte max. = Ziel + 4 Punkte, Temperatur max. = Ziel + 1,5 K, VPD-Band = Ziel ± 0,5 kPa. Die Ziele regeln, die Grenzen sichern. Du kannst sie unter „Erweitert" ändern.
+
 ## 2.0.0-forkai.180
 
 **Fork AI.** Neue Seite „Probelauf" (Betrieb → Probelauf): Eine Steuerung für 10, 20 oder 30 Minuten abschalten und sehen, wie sich Luftfeuchte, Temperatur und VPD entwickeln.

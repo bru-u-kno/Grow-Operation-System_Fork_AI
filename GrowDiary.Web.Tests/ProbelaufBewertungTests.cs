@@ -67,6 +67,34 @@ public sealed class ProbelaufBewertungTests
     public void Pruefen_FuehlerLosOhneGrenzeFuerDenWert_IstEgal()
         => Assert.Null(ProbelaufBewertung.Pruefen(new ProbelaufGrenzen(null, 27.5, null, null), Wert(0, feuchte: null), TimeSpan.FromMinutes(10)));
 
+    // ----------------------------------------------------------- Voreinstellung
+
+    [Fact]
+    public void GrenzenAusZielen_LegtSpielraumUeberDasPflanzenziel()
+    {
+        // Die Werte aus Brus Anlage am 07.10.2026 (Nacht, Blütewoche 7): Ziel 51 %, 24 °C, VPD-Band 1,4 bis 1,4.
+        var g = ProbelaufBewertung.GrenzenAusZielen(51, 24, 1.4, 1.4);
+
+        Assert.Equal(55, g.FeuchteMax);
+        Assert.Equal(25.5, g.TempMax);
+        Assert.Equal(0.9, g.VpdMin);
+        Assert.Equal(1.9, g.VpdMax);
+        // … und der Istwert dieser Nacht (52,8 % / 22 °C / VPD 1,08) liegt damit innerhalb: der Lauf kann starten.
+        Assert.Null(ProbelaufBewertung.Pruefen(g, Wert(0, feuchte: 52.8, temp: 22, vpd: 1.08), TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void GrenzenAusZielen_FehlendeZieleBleibenUnueberwacht()
+    {
+        var g = ProbelaufBewertung.GrenzenAusZielen(null, null, null, null);
+
+        Assert.Equal(new ProbelaufGrenzen(null, null, null, null), g);
+    }
+
+    [Fact]
+    public void GrenzenAusZielen_VpdUntergrenzeWirdNieNegativ()
+        => Assert.True(ProbelaufBewertung.GrenzenAusZielen(null, null, 0.3, 1.0).VpdMin > 0);
+
     // ------------------------------------------------------------- Kennzahlen
 
     private static List<ProbelaufMesswerte> Reihe(int vonMinute, int bisMinute, Func<int, double> feuchte)

@@ -100,11 +100,7 @@ public sealed class ProbelaufMessung : IProbelaufMessung
     public async Task<ProbelaufGrenzen> VoreinstellungAsync(CancellationToken ct)
     {
         var live = await _entfeuchter.LiveAsync(ct);
-        return new ProbelaufGrenzen(
-            FeuchteMax: live.RhObergrenzeProzent,
-            TempMax: live.TempMaxAktivC,
-            VpdMin: live.VpdUnten,
-            VpdMax: live.VpdOben);
+        return ProbelaufBewertung.GrenzenAusZielen(live.RhObergrenzeProzent, live.TempMaxAktivC, live.VpdUnten, live.VpdOben);
     }
 }
 

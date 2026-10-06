@@ -49,6 +49,31 @@ public static class ProbelaufBewertung
         return null;
     }
 
+    /// <summary>Spielraum der vorgeschlagenen Grenzen über dem Pflanzenziel: Luftfeuchte in Prozentpunkten.</summary>
+    public const double SpielraumFeuchte = 4;
+
+    /// <summary>… Temperatur in Kelvin.</summary>
+    public const double SpielraumTemp = 1.5;
+
+    /// <summary>… VPD in kPa, nach beiden Seiten.</summary>
+    public const double SpielraumVpd = 0.5;
+
+    /// <summary>
+    /// Die vorgeschlagenen Grenzen: Pflanzenziel <b>plus Spielraum</b>.
+    /// </summary>
+    /// <remarks>
+    /// Die Ziele des Plans sind Regelziele. Ein Probelauf soll sie bewusst überschreiten dürfen — sonst bräche
+    /// er sofort ab (bei einem Ziel von 51 % Luftfeuchte und einem Istwert von 52,8 % schon vor dem Start) — und
+    /// ein VPD-Band der Breite null (Unten = Oben = 1,4) ließe keinen Wert zu. Die Grenze ist die Sicherheit, nicht das Ziel.
+    /// Fehlt ein Ziel (<c>null</c>), wird der Wert nicht überwacht.
+    /// </remarks>
+    public static ProbelaufGrenzen GrenzenAusZielen(double? rhMax, double? tempMax, double? vpdUnten, double? vpdOben)
+        => new(
+            FeuchteMax: rhMax + SpielraumFeuchte,
+            TempMax: tempMax + SpielraumTemp,
+            VpdMin: vpdUnten is { } u ? Math.Round(Math.Max(0.1, u - SpielraumVpd), 2) : null,
+            VpdMax: vpdOben is { } o ? Math.Round(o + SpielraumVpd, 2) : null);
+
     private static ProbelaufVerletzung FuehlerAus(string groesse)
         => new(groesse, $"Der Fühler für {groesse} meldet seit über einer Minute nichts — ohne Sicht aufs Zelt läuft kein Probelauf weiter.");
 

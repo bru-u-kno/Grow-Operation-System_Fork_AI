@@ -185,7 +185,7 @@ function Formular(p: {
         onChange={(e) => p.setGrenzen({ ...p.grenzen, [name]: e.target.value })}
         aria-label={beschriftung}
       />
-      {vorgabe != null && <em>Empfohlen · aus deinen Pflanzenzielen</em>}
+      {vorgabe != null && <em>Empfohlen · Pflanzenziel plus Spielraum</em>}
     </label>
   )
 
