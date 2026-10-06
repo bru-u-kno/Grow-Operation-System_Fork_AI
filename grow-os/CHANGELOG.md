@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.176
+
+**Fork AI.** Die Knöpfe − und + bei der Leistungsstufe des LED-Lichts funktionieren wieder mehrfach hintereinander.
+
+- **Was war:** Die Knöpfe zählten vom gemeldeten Wert der Leuchte weiter. Home Assistant meldet eine neue
+  Stufe aber erst beim nächsten Abruf der AC-Infinity-Cloud. Bis dahin schickte jeder Klick dasselbe Ziel
+  (6 → 7, 7, 7 …), und die Anzeige bewegte sich nicht. Eine getippte Zahl war nie betroffen.
+- **Jetzt:** Die Seite merkt sich die zuletzt gesendete Stufe und zählt davon weiter, bis der
+  Leuchtenwert nachgezogen hat. Messbar: dreimal „+" hintereinander schickt 7, 8, 9.
+
 ## 2.0.0-forkai.175
 
 **Fork AI.** Die Luft außerhalb des Zelts als eigene Messwerte, wie „Aussen" in der AC-Infinity-App.
