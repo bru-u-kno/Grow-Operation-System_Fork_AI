@@ -571,6 +571,9 @@ public sealed class KiHaApp : IDisposable
             },
         };
 
+        // Fork AI (A-011): Wie ein Anwender: zuerst „KI-Funktionen" an, sonst gibt es die KI-Seiten nicht.
+        App.Services.GetRequiredService<GrowDiary.Web.Infrastructure.KiZugriff.KiHauptschalter>().Setzen(true);
+
         App.Services.GetRequiredService<HomeAssistantSettingsRepository>().SaveHomeAssistantSettings(new HomeAssistantSettings
         {
             BaseUrl = HaAttrappe.Adresse,

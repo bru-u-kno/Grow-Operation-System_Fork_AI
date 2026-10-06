@@ -52,6 +52,16 @@ public static class KiZugriffSperre
     /// </summary>
     public static async Task SchluesselWegAsync(HttpContext context, Func<Task> weiter)
     {
+        // Fork AI (A-011): Der Hauptschalter „KI-Funktionen" steht über allem — bei „aus" wird ein
+        // Schlüssel gar nicht erst geprüft, egal welche Stufen er hat.
+        if (!context.RequestServices.GetRequiredService<KiHauptschalter>().Aktiv)
+        {
+            Protokollieren(context, KiProtokollArt.ZugriffAus, $"Schlüssel abgewiesen, KI-Funktionen sind aus: {context.Request.Method} {context.Request.Path}", "warning", false,
+                anfrage: new KiAnfrage(null, StatusCodes.Status403Forbidden, KiHauptschalter.FehlerCode));
+            await FehlerSchreiben(context, StatusCodes.Status403Forbidden, KiHauptschalter.FehlerCode, KiHauptschalter.FehlerText);
+            return;
+        }
+
         var dienst = context.RequestServices.GetRequiredService<KiZugriffDienst>();
         var klartext = KiZugriffDienst.SchluesselAusKopf(context.Request);
         var ergebnis = dienst.Pruefen(klartext, context.Connection.RemoteIpAddress);

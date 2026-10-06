@@ -53,6 +53,11 @@ export type NavLeaf = {
    * Steuerung abgelöst. Beide bleiben über ihre Adresse und die Suche erreichbar.
    */
   versteckt?: boolean
+  /**
+   * Fork AI (A-011): gehört zu den KI-Funktionen und verschwindet, wenn der
+   * globale Schalter „KI-Funktionen" aus ist (Menü, Suche, Mehr-Blatt).
+   */
+  ki?: boolean
 }
 
 export type NavGroup = {
@@ -68,9 +73,9 @@ export type NavGroup = {
  * lesen dasselbe, damit ein verstecktes Ziel nicht an einem der drei Orte
  * stehenbleibt.
  */
-export function sichtbareGruppen(gruppen: NavGroup[] = navGroups): NavGroup[] {
+export function sichtbareGruppen(gruppen: NavGroup[] = navGroups, kiAktiv = true): NavGroup[] {
   return gruppen
-    .map((gruppe) => ({ ...gruppe, items: gruppe.items.filter((item) => !item.versteckt) }))
+    .map((gruppe) => ({ ...gruppe, items: gruppe.items.filter((item) => !item.versteckt && (kiAktiv || !item.ki)) }))
     .filter((gruppe) => gruppe.items.length > 0)
 }
 
@@ -192,7 +197,7 @@ export const navGroups: NavGroup[] = [
       // Zugriff & Schlüssel (vorher unten in den Einstellungen) und die Mappe
       // (vorher unter Wissen). In Grow OS steckt keine KI; die Seite verbindet
       // den Assistenten des Bedieners, sie bringt keinen mit.
-      { to: '/ki', label: 'KI-Assistent', end: true, keywords: 'ki assistent agent claude chatgpt ollama connector mcp schlüssel zugriff api diktieren protokoll mappe export lagebericht prompt prüffragen berater' },
+      { to: '/ki', label: 'KI-Assistent', end: true, ki: true, keywords: 'ki assistent agent claude chatgpt ollama connector mcp schlüssel zugriff api diktieren protokoll mappe export lagebericht prompt prüffragen berater' },
     ],
   },
   {
@@ -284,12 +289,19 @@ export const legacyRedirects: Record<string, string> = {
   '/action': '/aufgaben',
 }
 
-export const searchablePages = navGroups.flatMap((group) =>
-  group.items.map((item) => ({
-    label: item.label,
-    route: item.to,
-    keywords: `${group.label} ${item.keywords ?? ''}`,
-  })))
+/** Fork AI (A-011): die durchsuchbaren Seiten — bei „KI aus" ohne die KI-Seiten. */
+export function suchbareSeiten(kiAktiv = true) {
+  return navGroups.flatMap((group) =>
+    group.items
+      .filter((item) => kiAktiv || !item.ki)
+      .map((item) => ({
+        label: item.label,
+        route: item.to,
+        keywords: `${group.label} ${item.keywords ?? ''}`,
+      })))
+}
+
+export const searchablePages = suchbareSeiten(true)
 
 export function isNavLeafActive(item: NavLeaf, pathname: string): boolean {
   return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)

@@ -95,7 +95,10 @@ public sealed class WasserwechselVorgangTests
     {
         var growId = EigenerGrow();
         var client = _app.IngressClient();
+        // Nie vor Mitternacht: zwischen 00:00 und 02:00 läge „vor zwei Stunden" gestern, und der Stand
+        // zählte dann einen Tag statt null (Fund 07.10.2026, Gate lief um 00:32).
         var wann = DateTime.Now.AddHours(-2);
+        if (wann.Date < DateTime.Now.Date) wann = DateTime.Now.Date;
 
         var vorgang = await Anlegen(client, growId, VollerVorgang(Zeit(wann)));
 

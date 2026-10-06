@@ -28,6 +28,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [Route("api/settings/ki-zugriff")]
 [Produces("application/json")]
 [KeinKiZugriff("Die Schlüsselverwaltung — sonst könnte sich ein Schlüssel selbst Stufen geben oder einen zweiten erzeugen.")]
+[NurMitKi]
 public sealed class KiZugriffApiController : ApiControllerBase
 {
     private readonly KiZugriffDienst _dienst;

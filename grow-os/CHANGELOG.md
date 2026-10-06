@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.179
+
+**Fork AI.** Neuer Schalter „KI-Funktionen": Wer keine KI will, schaltet sie für den ganzen Fork aus.
+
+- **Wo:** Ganz oben unter Einstellungen, mit „An" und „Aus".
+- **Aus heißt aus:** Die Seite „KI-Assistent", die „Mappe für eigene KI" im Grow, der Verweis in den Einstellungen und der Eintrag in der Suche
+  verschwinden. Der Zugriff von außen per Schlüssel wird abgewiesen (Meldung „KI-Funktionen sind ausgeschaltet"), auch mit allen Stufen.
+  Deine KI-Einstellungen und Schlüssel bleiben gespeichert, beim Einschalten ist alles wieder da.
+- **Voreinstellung:** Neue Installationen starten mit „KI aus". Wo der Zugriff für KI-Assistenten schon eingeschaltet war, bleibt die KI an —
+  nach dem Update verschwindet nichts.
+- **„KI an" öffnet nichts von selbst:** Der Zugriff von außen bleibt eine eigene Entscheidung auf der Seite „KI-Assistent".
+- **Nur ein Mensch schaltet:** Ein Schlüssel kann die KI nicht selbst einschalten.
+
 ## 2.0.0-forkai.178
 
 **Fork AI.** Neue Steuerung „Zusatz-Entfeuchter": ein zweiter Entfeuchter (an einer Shelly-Steckdose) arbeitet mit dem Hauptgerät zusammen — und beide gehen nicht mehr gleichzeitig aus.

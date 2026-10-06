@@ -2,11 +2,12 @@
    Aus App.tsx herausgezogen: Shell + Navigation + Kontextleiste.
    App.tsx enthaelt danach nur noch <Routes>. */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import { AppSearch } from './components/AppSearch'
 import { auslaufZuruecksetzen } from './components/reiter-ins-bild'
-import { isNavLeafActive, navGroups, searchablePages, sichtbareGruppen } from './navigation'
+import { isNavLeafActive, navGroups, sichtbareGruppen, suchbareSeiten } from './navigation'
+import { useKiAktiv } from './ki-aktiv'
 import { useTheme } from './useTheme'
 import { useHomeAssistantHealth } from './useHomeAssistantHealth'
 import { useDemoMode } from './useDemoMode'
@@ -37,6 +38,9 @@ export function AppShell({ children, counts }: Props) {
   const [erfassenOpen, setErfassenOpen] = useState(false)
   const [anpassenOpen, setAnpassenOpen] = useState(false)
   const { items: barItems, dashboardPath, save: saveBar, reset: resetBar } = useNavBar()
+  // Fork AI (A-011): bei „KI aus" weder KI-Menüpunkte noch KI-Seiten in der Suche.
+  const { aktiv: kiAktiv } = useKiAktiv()
+  const searchablePages = useMemo(() => suchbareSeiten(kiAktiv), [kiAktiv])
   const frame = useHomeAssistantFrame()
 
   // Beim Seitenwechsel schliesst alles Aufgeklappte. Sonst haengt das Menue
@@ -116,7 +120,7 @@ export function AppShell({ children, counts }: Props) {
 
         <AppSearch pages={searchablePages} />
 
-        {sichtbareGruppen().map((group) => (
+        {sichtbareGruppen(undefined, kiAktiv).map((group) => (
           <nav key={group.id} className="v1-nav-group" aria-label={group.label}>
             <div className="v1-nav-group-head">{group.label}</div>
             {group.items.map((item) => (
@@ -299,7 +303,7 @@ export function AppShell({ children, counts }: Props) {
           >
             ⚙ Einstellungen
           </NavLink>
-          {sichtbareGruppen().map((group) => (
+          {sichtbareGruppen(undefined, kiAktiv).map((group) => (
             <section key={group.id}>
               <div className="v1-nav-group-head">{group.label}</div>
               <div className="v1-mobile-more-grid">

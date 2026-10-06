@@ -14,6 +14,7 @@ import { GrowPlantsCard } from '../features/grow-detail/GrowPlantsCard'
 import { PhasenErinnerung } from '../features/grows/PhasenErinnerung'
 import { samenName } from '../deutsche-woerter'
 import type { GrowDeviationDto } from '../types'
+import { useKiAktiv } from '../ki-aktiv'
 import { resolveUrl } from '../base'
 import { apiFetch } from '../api'
 
@@ -25,6 +26,7 @@ const noop = async () => {}
 // below, pre-selected to this grow. No drilling into a grow to find features.
 function GrowDetailPage() {
   const { growId } = useParams()
+  const { aktiv: kiAktiv } = useKiAktiv() // Fork AI (A-011): die Mappe für eigene KI gibt es nur bei KI an
   const navigate = useNavigate()
   const [pflanzenSorten, setPflanzenSorten] = useState<string[]>([])
   // Wie viele Pflanzen wirklich erfasst sind. Die Kachel zeigte bisher die
@@ -171,7 +173,7 @@ function GrowDetailPage() {
           {/* Nicht „KI-Berater": in Grow OS steckt keine KI. Der Reiter fuehrt
               zur Mappe, die man einem EIGENEN Agenten vorlegt — der Name muss
               das sagen, sonst sucht man eine Funktion, die es nicht gibt. */}
-          <Link className="gd-tab" to={`/ki${scope}&tab=mappe`}>Mappe für eigene KI</Link>
+          {kiAktiv && <Link className="gd-tab" to={`/ki${scope}&tab=mappe`}>Mappe für eigene KI</Link>}
         </nav>
 
         {/* Phasen-Timeline — dieselbe Rechnung wie auf der Live-Seite. */}
