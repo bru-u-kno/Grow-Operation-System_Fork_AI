@@ -492,7 +492,7 @@ public static class SteuerungBauteile
             Min: 0.05, Max: 0.6, Schritt: 0.05, Einheit: "kPa"),
         new(EntfeuchterZusatz, "input_number.trotec_zelt_mindestlaufzeit", "Trotec Zelt Mindestlaufzeit", BauteilArt.Zahl,
             "Vorher schaltet ihn erreichter VPD oder erreichte Feuchte nicht ab. Übertemperatur schon.",
-            Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
+            Min: 1, Max: 120, Schritt: 1, Einheit: "min"),
         new(EntfeuchterZusatz, "input_number.trotec_zelt_mindestpause", "Trotec Zelt Mindestpause", BauteilArt.Zahl,
             "So lange bleibt er nach dem Ausschalten mindestens aus (Kompressorschutz).",
             Min: 1, Max: 120, Schritt: 1, Einheit: "min"),

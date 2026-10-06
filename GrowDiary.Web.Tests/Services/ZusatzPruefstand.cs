@@ -31,6 +31,12 @@ public sealed class ZusatzPruefstand : IDisposable
     /// <summary>Was Home Assistant als Verlauf liefert (Rohtext der Antwort); leer = „[]".</summary>
     public string Verlauf { get; set; } = "[]";
 
+    /// <summary>Was Home Assistant auf einen Dienstaufruf antwortet — 500 lässt jedes Schreiben scheitern.</summary>
+    /// <summary>Seit wann ein Zustand gilt (<c>last_changed</c>); ohne Eintrag: seit drei Stunden.</summary>
+    public Dictionary<string, DateTime> Seit { get; } = new(StringComparer.Ordinal);
+
+    public HttpStatusCode DienstAntwort { get; set; } = HttpStatusCode.OK;
+
     public ZusatzPruefstand(bool bruStand = true)
     {
         _wurzel = Path.Combine(Path.GetTempPath(), "ZusatzPruefstand_" + Guid.NewGuid().ToString("N"));
@@ -50,7 +56,7 @@ public sealed class ZusatzPruefstand : IDisposable
             if (anfrage.Method == HttpMethod.Get && pfad.Contains("/api/history/period", StringComparison.Ordinal))
                 return RecordingHttpHandler.Json(Verlauf);
             if (anfrage.Method == HttpMethod.Post && pfad.Contains("/api/services/", StringComparison.Ordinal))
-                return RecordingHttpHandler.Json("[]");
+                return RecordingHttpHandler.Json("[]", DienstAntwort);
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         });
 
@@ -120,6 +126,9 @@ public sealed class ZusatzPruefstand : IDisposable
     public void Setze(string entitaet, string zustand, string? name = null, string? einheit = null, string? kennung = null)
         => Zustaende[entitaet] = (zustand, name, einheit, kennung);
 
+    /// <summary>Die Zuordnung einer Rolle des Zusatz-Entfeuchters ändern.</summary>
+    public void Ordne(string rolle, string entitaet) => Repo.SetGeraet(EntfeuchterZusatzSteuerungService.Modul, rolle, entitaet);
+
     private string StatesJson()
     {
         var sb = new StringBuilder("[");
@@ -136,7 +145,7 @@ public sealed class ZusatzPruefstand : IDisposable
             {
                 ["entity_id"] = id,
                 ["state"] = state,
-                ["last_changed"] = "2026-10-06T20:00:00+00:00",
+                ["last_changed"] = Seit.GetValueOrDefault(id, DateTime.UtcNow.AddHours(-3)).ToString("o"),
                 ["attributes"] = attribute,
             }.ToJsonString());
         }

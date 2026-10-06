@@ -117,6 +117,10 @@ public sealed class EntfeuchterZusatzApiTests
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Equal(neuerWert, antwort["einstellungen"]!["mindestlaufzeitMin"]!.GetValue<int>());
         Assert.False(antwort["ausHomeAssistantUebernommen"]!.GetValue<bool>());
+        // Die App läuft hier ohne Home Assistant: der Helfer ließ sich nicht schreiben — das sagt die Antwort
+        // aus dem echten Schreibergebnis, nicht „true" aus Gewohnheit.
+        Assert.False(antwort["haAngenommen"]!.GetValue<bool>());
+        Assert.NotNull(antwort["hinweise"]);
 
         var nachher = await Lesen(Seite);
         Assert.Equal(["mindestlaufzeitMin"], Unterschiede(vorher["einstellungen"], nachher["einstellungen"]));
@@ -126,6 +130,16 @@ public sealed class EntfeuchterZusatzApiTests
         Assert.Equal(HttpStatusCode.OK, status2);
         var danach = await Lesen(Seite);
         Assert.Empty(Unterschiede(nachher["einstellungen"], danach["einstellungen"]));
+    }
+
+    [Fact]
+    public async Task Speichern_EinReinesForkFeld_SchreibtNichtsNachHomeAssistant_HaAngenommenIstNull()
+    {
+        var (status, antwort) = await Schreiben(Seite, """{"ablauf":"schlauch"}""");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("schlauch", antwort["einstellungen"]!["ablauf"]!.GetValue<string>());
+        Assert.True(antwort.ContainsKey("haAngenommen") && antwort["haAngenommen"] is null);
     }
 
     [Fact]
@@ -164,6 +178,8 @@ public sealed class EntfeuchterZusatzApiTests
     [Theory]
     [InlineData("""{"folgeAbstandK":9}""", "folgeAbstandK")]
     [InlineData("""{"mindestpauseMin":0}""", "mindestpauseMin")]
+    [InlineData("""{"mindestlaufzeitMin":0}""", "mindestlaufzeitMin")]
+    [InlineData("""{"mindestlaufzeitMin":121}""", "mindestlaufzeitMin")]
     [InlineData("""{"vpdHystereseKpa":0.01}""", "vpdHystereseKpa")]
     [InlineData("""{"meldung":{"grenzeW":500}}""", "grenzeW")]
     [InlineData("""{"hilfe":"turbo"}""", "hilfe")]

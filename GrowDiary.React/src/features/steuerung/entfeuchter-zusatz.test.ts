@@ -15,6 +15,7 @@ import {
   istGeaendert,
   leereFelder,
   namenAenderung,
+  planHinweisZeigen,
   statusHinweis,
   tempGrenzen,
   temperaturBand,
@@ -347,6 +348,17 @@ describe('Zustandswort und Hinweis', () => {
     expect(zustandWort({ ...LIVE, zusatzOnline: false }, geladen, false).text).toBe('offline')
   })
 
+  it('„zieht nichts" hängt allein am Befund des Servers, nicht am Schaltzustand', () => {
+    expect(zustandWort({ ...LIVE, ziehtNichts: true, zusatzAn: false }, geladen, false)).toEqual({ text: 'an, zieht nichts', ton: 'warn' })
+    expect(zustandWort({ ...LIVE, ziehtNichts: false, leistungW: 3 }, geladen, false).text).toBe('entfeuchtet')
+    expect(statusHinweis({ ...LIVE, ziehtNichts: false, leistungW: 3 }, BRU, tempGrenzen(BRU, 26.5), ersteBand(LIVE, BRU))).not.toContain('Zieht nichts')
+  })
+
+  it('stellt die Ursache als Frage, nicht als Tatsache', () => {
+    const text = statusHinweis({ ...LIVE, ziehtNichts: true }, BRU, tempGrenzen(BRU, 26.5), ersteBand(LIVE, BRU))
+    expect(text).toContain('Tank voll oder Gerät ausgeschaltet?')
+  })
+
   it('sagt „unbekannt", wenn Home Assistant den Zustand nicht liefert', () => {
     expect(zustandWort({ ...LIVE, zusatzAn: null }, geladen, false).text).toBe('Zustand unbekannt')
   })
@@ -366,6 +378,15 @@ describe('Zustandswort und Hinweis', () => {
     expect(statusHinweis({ ...LIVE, ziehtNichts: true }, BRU, g, eins)).toContain('unter 60 W')
     expect(statusHinweis({ ...LIVE, tagPhase: false }, BRU, g, ersteBand({ ...LIVE, tagPhase: false }, BRU)))
       .toContain('Nachts durchlaufen: er läuft, bis das Zelt über 25,5 °C steigt')
+  })
+})
+
+describe('Warnungen', () => {
+  it('„Plan unvollständig" erscheint nie zusammen mit „Home Assistant antwortet nicht"', () => {
+    expect(planHinweisZeigen({ haErreichbar: true, planUnvollstaendig: true })).toBe(true)
+    expect(planHinweisZeigen({ haErreichbar: false, planUnvollstaendig: true })).toBe(false)
+    expect(planHinweisZeigen({ haErreichbar: true, planUnvollstaendig: false })).toBe(false)
+    expect(planHinweisZeigen({ haErreichbar: true, planUnvollstaendig: null })).toBe(false)
   })
 })
 

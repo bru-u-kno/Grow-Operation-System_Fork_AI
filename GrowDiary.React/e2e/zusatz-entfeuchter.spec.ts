@@ -73,7 +73,7 @@ async function backendVorgeben(page: Page, live: Json = {}): Promise<Stand> {
   const antwort = () => ({
     einstellungen: stand.einstellungen,
     live: { ...LIVE, ...live },
-    geraeteZugeordnet: 7, geraeteGesamt: 7, ausHomeAssistantUebernommen: false, haAngenommen: null,
+    geraeteZugeordnet: 8, geraeteGesamt: 8, ausHomeAssistantUebernommen: false, haAngenommen: null,
   })
   await page.route(/\/api\/steuerung$/, (route) => route.fulfill({ json: MODULE }))
   await page.route(/\/api\/steuerung\/entfeuchter-zusatz$/, async (route) => {
@@ -132,7 +132,32 @@ test('die Seite lädt: Chip, Statuskarte mit zwei Bändern, Einstellungen — un
   await page.getByRole('button', { name: /Erweitert/ }).click()
   await expect(page.getByText('Zuschalten erst nach')).toBeVisible()
   const text = await page.locator('main.v1-page').innerText()
-  expect(text).not.toMatch(/Port\s*7|Aufstellung|Feste Schwellen|Kreislauf/i)
+  expect(text).not.toMatch(/Port\s*7|Aufstellung|Feste Schwellen|Kreislauf|Normalbetrieb|Mindestens ein Gerät läuft|So läuft immer eins/i)
+  // Die Regel zum Führungsgerät steht als Satz mit dem Namen, ohne den Wert „immer".
+  await expect(page.locator('[data-audit="zusatz-fuehrung-regel"]'))
+    .toHaveText('Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät RDWC Dehumi läuft.')
+  // Die beiden Schalter sagen, womit sie wirken.
+  await expect(page.locator('.v1-switch', { hasText: 'Nachts durchlaufen' })).toContainText('Wirkt mit der vom Fork angelegten Regelung.')
+  await expect(page.locator('.v1-switch', { hasText: 'Auch tagsüber entfeuchten' })).toContainText('Wirkt mit der vom Fork angelegten Regelung.')
+  // Der Meldungsweg ist der, den der Fork wirklich hat, und die Ursache eine Frage.
+  await expect(page.getByText('Als Meldung in Home Assistant und als Push an die in den Meldungs-Einstellungen gewählte Adresse.')).toBeVisible()
+  await expect(page.getByText(/Push aufs Handy|Meldungsliste/)).toHaveCount(0)
+  await expect(page.locator('.v1-switch', { hasText: 'Melden, wenn der Shelly an ist' })).toContainText('Tank voll oder Gerät ausgeschaltet? Gerade nimmt Dehumi RDWC Tent 313 W auf.')
+})
+
+test('ohne Verbindung zu Home Assistant steht nur der HA-Hinweis, nie zusätzlich „Plan unvollständig"', async ({ page }) => {
+  await backendVorgeben(page, { haErreichbar: false, planUnvollstaendig: true, schaltgroesse: 'keine' })
+  await seiteOeffnen(page)
+  const seite = page.locator('main.v1-page')
+  await expect(seite).toContainText('Home Assistant antwortet nicht')
+  await expect(seite).not.toContainText('Plan unvollständig')
+})
+
+test('„zieht nichts" erscheint nur, wenn der Server es meldet — auch bei kleiner Leistung', async ({ page }) => {
+  await backendVorgeben(page, { ziehtNichts: false, leistungW: 3 })
+  await seiteOeffnen(page)
+  await expect(page.locator('main.v1-page')).not.toContainText('zieht nichts')
+  await expect(page.locator('.ef-band')).toContainText('entfeuchtet')
 })
 
 test('ein Feld ändern: der gelbe Kasten nennt nur dieses Feld, Speichern schickt nur dieses Feld — zweimal', async ({ page }) => {

@@ -24,6 +24,7 @@ import {
   temperaturBand,
   tempGrenzen,
   unbekannteFehler,
+  planHinweisZeigen,
   zustandWort,
 } from './entfeuchter-zusatz'
 import type { ZusatzBand } from './entfeuchter-zusatz'
@@ -239,7 +240,7 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
       {live.automatikAn === false && (
         <V1Alert tone="warn" title="Automatik aus" message={`Die Regelung ist angehalten. ${zusatz} bleibt, wie er gerade steht.`} />
       )}
-      {live.planUnvollstaendig === true && (
+      {planHinweisZeigen(live) && (
         <V1Alert tone="warn" title="Plan unvollständig" message="Der Plan liefert weder ein VPD-Ziel noch eine Luftfeuchte — der Fork findet keine Größe, nach der er schalten könnte. Bitte den Plan ergänzen." />
       )}
       {live.ziehtNichts === true && (
@@ -424,33 +425,33 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
             label="Nachts durchlaufen"
             checked={entwurf.nachtDurchlaufen}
             onChange={(an) => setz('nachtDurchlaufen', an)}
-            hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach dem VPD-Band takten."
+            hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach dem VPD-Band takten. Wirkt mit der vom Fork angelegten Regelung."
           />
           <V1Switch
             label="Auch tagsüber entfeuchten"
             checked={entwurf.tagbetriebErlauben}
             onChange={(an) => setz('tagbetriebErlauben', an)}
-            hint="Aus: nur in der Dunkelphase."
+            hint="Aus: nur in der Dunkelphase. Wirkt mit der vom Fork angelegten Regelung."
           />
 
           <p className="st-gruppe">Zusammenspiel mit {fuehrung}</p>
           <Zahl label="Zuschalten erst nach" hinweis={`So lange muss ${fuehrung} laufen, bevor ${zusatz} mithilft. Ist ${fuehrung} aus, startet der Zusatz sofort.`} einheit="min" wert={entwurf.zuschaltVerzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => setzEinzel('zuschaltVerzoegerungMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'zuschaltVerzoegerungMin')} />
-          <Zahl label="Zusatz geht früher aus" hinweis={`Bei ${zahl(grenzen.max)} °C geht ${fuehrung} aus, der Zusatz schon bei ${zahl(grenzen.folgeAus)}. So läuft immer eins.`} einheit="K" wert={entwurf.folgeAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('folgeAbstandK', v)} fehler={fehlerZu(feldFehler, 'folgeAbstandK')} />
+          <Zahl label="Zusatz geht früher aus" hinweis={`Bei ${zahl(grenzen.max)} °C geht ${fuehrung} aus, der Zusatz schon bei ${zahl(grenzen.folgeAus)}.`} einheit="K" wert={entwurf.folgeAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('folgeAbstandK', v)} fehler={fehlerZu(feldFehler, 'folgeAbstandK')} />
           <Zahl label="Wieder einschalten erst, wenn es kühler ist" hinweis={`Weiterer Abstand unter dem Abschaltwert (jetzt ${zahl(grenzen.wiederEin)} °C). Verhindert das Takten an der Grenze.`} einheit="K" wert={entwurf.wiederEinAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('wiederEinAbstandK', v)} fehler={fehlerZu(feldFehler, 'wiederEinAbstandK')} />
           <Zahl label="Mindestlaufzeit" hinweis="Vorher schaltet ihn erreichtes VPD nicht ab. Übertemperatur schon." einheit="min" wert={entwurf.mindestlaufzeitMin} min={0} max={60} schritt={1} onChange={(v) => setz('mindestlaufzeitMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'mindestlaufzeitMin')} />
           <Zahl label="Mindestpause" hinweis="Kompressorschutz." einheit="min" wert={entwurf.mindestpauseMin} min={1} max={120} schritt={1} onChange={(v) => setzEinzel('mindestpauseMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'mindestpauseMin')} />
-          <Lesen label="Mindestens ein Gerät läuft" hinweis={`Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn ${fuehrung} läuft.`} wert="immer" />
+          <p className="st-hinweis" data-audit="zusatz-fuehrung-regel">Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät {fuehrung} läuft.</p>
 
           <p className="st-gruppe">Meldung „zieht nichts"</p>
           <V1Switch
             label="Melden, wenn der Shelly an ist, das Gerät aber nichts zieht"
             checked={entwurf.meldung.aktiv}
             onChange={(an) => setzMeldung('aktiv', an)}
-            hint={live.leistungW == null ? 'Z. B. Tank voll.' : `Z. B. Tank voll. Gerade nimmt ${zusatz} ${zahl(live.leistungW, 0)} W auf.`}
+            hint={live.leistungW == null ? 'Tank voll oder Gerät ausgeschaltet?' : `Tank voll oder Gerät ausgeschaltet? Gerade nimmt ${zusatz} ${zahl(live.leistungW, 0)} W auf.`}
           />
           <Zahl label="Meldung unter" hinweis={'Leistung, ab der es als „zieht nichts" gilt.'} einheit="W" wert={entwurf.meldung.grenzeW} min={5} max={200} schritt={5} onChange={(v) => setzMeldung('grenzeW', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.grenzeW')} />
           <Zahl label="Meldung nach" hinweis="So lange muss es anhalten, bevor gemeldet wird." einheit="min" wert={entwurf.meldung.dauerMin} min={1} max={60} schritt={1} onChange={(v) => setzMeldung('dauerMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.dauerMin')} />
-          <Zahl label="Meldung wiederholen alle" hinweis="Solange das Problem besteht. Als Push aufs Handy und als Eintrag in der Meldungsliste. Nie bei ausgeschaltetem Shelly." einheit="h" wert={entwurf.meldung.wiederholungH} min={1} max={24} schritt={1} onChange={(v) => setzMeldung('wiederholungH', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.wiederholungH')} />
+          <Zahl label="Meldung wiederholen alle" hinweis="Solange das Problem besteht. Als Meldung in Home Assistant und als Push an die in den Meldungs-Einstellungen gewählte Adresse. Nie bei ausgeschaltetem Shelly." einheit="h" wert={entwurf.meldung.wiederholungH} min={1} max={24} schritt={1} onChange={(v) => setzMeldung('wiederholungH', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.wiederholungH')} />
 
           <p className="st-gruppe">Kondenswasser</p>
           <div className="st-feldzeile">

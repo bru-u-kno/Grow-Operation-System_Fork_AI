@@ -1,7 +1,9 @@
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
+using GrowDiary.Web.Tests.TestFakes;
 
 namespace GrowDiary.Web.Tests.Services;
 
@@ -242,11 +244,13 @@ public sealed class EntfeuchterZusatzVorlagenTests
         var z = rollen["zusatz_schalter"];
         var leistung = rollen["zusatz_leistung"];
 
-        // Auslöser: Leistung unter der Grenze seit N Minuten.
+        // Auslöser: Leistung unter der Grenze seit N Minuten — und der Start von Home Assistant
+        // (ein Neustart verliert die laufende Wiederholung; besteht es noch, beginnt sie neu).
         var ausloeser = meldung["triggers"]!.AsArray().Cast<JsonObject>().ToList();
         Assert.Contains(ausloeser, t => t["trigger"]!.ToString() == "numeric_state" && t["entity_id"]!.ToString() == leistung
             && t["below"]!.ToString() == "input_number.trotec_zelt_melde_grenze_w"
             && t["for"]!.ToJsonString().Contains("trotec_zelt_melde_dauer_min"));
+        Assert.Contains(ausloeser, t => t["trigger"]!.ToString() == "homeassistant" && t["event"]!.ToString() == "start");
 
         // Bedingungen: Meldung eingeschaltet, Shelly an, Leistung unter der Grenze.
         var bedingungen = meldung["conditions"]!.AsArray().Cast<JsonObject>().ToList();
@@ -258,19 +262,22 @@ public sealed class EntfeuchterZusatzVorlagenTests
         var wiederholung = Objekte(meldung["actions"]).Single(o => o["repeat"] is not null)["repeat"]!.AsObject();
         Assert.Equal(bedingungen.Count, wiederholung["while"]!.AsArray().Count);
         Assert.Contains(z, wiederholung["while"]!.ToJsonString());
-        // … im Abstand der eingestellten Stunden, und prüft vor jeder Wiederholung noch einmal.
+        // … im Abstand der eingestellten Stunden, und prüft vor jeder Wiederholung noch einmal — mit
+        // „if", nicht mit einer Bedingung: die bräche den ganzen Lauf ab, und die Entwarnung unten bliebe aus.
         var schritte = wiederholung["sequence"]!.AsArray().Cast<JsonObject>().ToList();
         Assert.Contains("trotec_zelt_melde_wiederholung_h", schritte[0]["timeout"]!.ToJsonString());
         Assert.True(schritte[0]["continue_on_timeout"]!.GetValue<bool>());
-        Assert.Equal("template", schritte[1]["condition"]!.ToString());
-        Assert.Contains(z, schritte[1]["value_template"]!.ToString());
+        Assert.NotNull(schritte[1]["if"]);
+        Assert.Equal(bedingungen.Count, schritte[1]["if"]!.AsArray().Count);
+        Assert.Contains(z, schritte[1]["if"]!.ToJsonString());
+        Assert.DoesNotContain(schritte, o => o["condition"] is not null);
 
         // Ohne Messwert wird nichts erraten: ein fehlender Wert beendet die Meldung.
         Assert.Contains("float(999999)", schritte[0]["wait_template"]!.ToString());
     }
 
     [Fact]
-    public void Meldung_GehtInDieMeldungslisteUndAufsHandy_UndEinFehlenderPushStopptNichts()
+    public void Meldung_GehtInDieMeldungslisteUndAufsHandy_EinFehlenderPushStopptNichts_UndDieEntwarnungRaeumtAuf()
     {
         var aktionen = Objekte(Gefuellt("meldung")["actions"]).Where(o => o["action"] is not null).ToList();
 
@@ -280,8 +287,105 @@ public sealed class EntfeuchterZusatzVorlagenTests
         Assert.Equal(2, push.Count);
         Assert.All(push, p => Assert.True(p["continue_on_error"]!.GetValue<bool>()));
         // Dieselbe Nachricht-ID: die Wiederholung ersetzt den Eintrag, sie stapelt keine.
-        Assert.Single(liste.Select(l => l["data"]!["notification_id"]!.ToString()).Distinct());
+        var id = Assert.Single(liste.Select(l => l["data"]!["notification_id"]!.ToString()).Distinct());
         Assert.Contains("zieht nichts", liste[0]["data"]!["title"]!.ToString());
+
+        // Entwarnung: derselbe Eintrag wird wieder entfernt — als LETZTE Aktion, nach der Schleife.
+        var letzte = Gefuellt("meldung")["actions"]!.AsArray().Last()!.AsObject();
+        Assert.Equal("persistent_notification.dismiss", letzte["action"]!.ToString());
+        Assert.Equal(id, letzte["data"]!["notification_id"]!.ToString());
+    }
+
+    [Fact]
+    public void Meldung_NenntNurDenGemessenenWert_KeinenFestenNormalwert()
+    {
+        var text = Wirksam(Gefuellt("meldung"));
+        Assert.DoesNotContain("Normalbetrieb", text);
+        Assert.DoesNotContain("300", text);
+        // Der gemessene Wert steht drin.
+        Assert.Contains(Rollen()["zusatz_leistung"], text);
+        Assert.Contains("W auf.", text);
+    }
+
+    [Fact]
+    public void Meldung_PushAdresse_IstEineVariable_FehltSieGiltDieSammelgruppe()
+    {
+        // In der Vorlagen-Datei steht der Platzhalter, keine feste Adresse.
+        var roh = File.ReadAllText(Path.Combine(SteuerungAutomationService.VorlagenWurzel, Modul, "meldung.json"));
+        Assert.Contains("[[push_dienst]]", roh);
+        Assert.DoesNotContain("\"notify.notify\"", roh);
+
+        // Ohne Angabe: notify.notify.
+        Assert.Contains("\"action\":\"notify.notify\"", Gefuellt("meldung").ToJsonString());
+
+        // Mit der im Fork eingestellten Adresse: die.
+        var rollen = Rollen();
+        rollen["push_dienst"] = "notify.mobile_app_bruno_smartphone_1";
+        var mit = SteuerungAutomationService.Fuellen(Laden("meldung"), rollen)!.ToJsonString();
+        Assert.Contains("\"action\":\"notify.mobile_app_bruno_smartphone_1\"", mit);
+        Assert.DoesNotContain("notify.notify", mit);
+    }
+
+    [Fact]
+    public async Task Anlegen_NimmtDiePushAdresseAusDenBenachrichtigungenDesForks()
+    {
+        var wurzel = Path.Combine(Path.GetTempPath(), "ZusatzMeldung_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(wurzel);
+        try
+        {
+            var pfade = new AppPaths(wurzel);
+            TestDatabase.Initialize(pfade);
+
+            // Eingestellt: genau diese Adresse landet in der angelegten Automation.
+            new NotificationSettingsRepository(pfade).SaveNotificationSettings(new NotificationSettings { NotifyService = "notify.mobile_app_bruno_smartphone_1" });
+            var (bilanz, configs) = await AnlegenAsync(pfade);
+            Assert.Equal(SteuerungAutomationService.Stand.Angelegt, bilanz.Einzeln.Single(e => e.Name == "meldung").Stand);
+            var angelegt = configs["fork_ai_entfeuchter-zusatz_meldung"].ToJsonString();
+            Assert.Contains("\"action\":\"notify.mobile_app_bruno_smartphone_1\"", angelegt);
+            Assert.DoesNotContain("notify.notify", angelegt);
+            Assert.DoesNotContain("[[", angelegt);
+
+            // Nichts eingestellt: die Sammelgruppe.
+            new NotificationSettingsRepository(pfade).SaveNotificationSettings(new NotificationSettings { NotifyService = null });
+            var (_, ohne) = await AnlegenAsync(pfade);
+            Assert.Contains("\"action\":\"notify.notify\"", ohne["fork_ai_entfeuchter-zusatz_meldung"].ToJsonString());
+
+            // Die Datenbank nicht lesbar (kein Schema): kein Absturz, die Sammelgruppe.
+            var leer = new AppPaths(Path.Combine(wurzel, "ohne-datenbank"));
+            Directory.CreateDirectory(Path.Combine(wurzel, "ohne-datenbank"));
+            var (bilanz3, ohneDb) = await AnlegenAsync(leer);
+            Assert.Equal(SteuerungAutomationService.Stand.Angelegt, bilanz3.Einzeln.Single(e => e.Name == "meldung").Stand);
+            Assert.Contains("\"action\":\"notify.notify\"", ohneDb["fork_ai_entfeuchter-zusatz_meldung"].ToJsonString());
+        }
+        finally
+        {
+            try { Directory.Delete(wurzel, recursive: true); } catch { /* egal */ }
+        }
+    }
+
+    private static async Task<(SteuerungAutomationService.Bilanz Bilanz, Dictionary<string, JsonObject> Configs)> AnlegenAsync(AppPaths pfade)
+    {
+        var configs = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+        var handler = new RecordingHttpHandler((anfrage, inhalt) =>
+        {
+            var pfad = anfrage.RequestUri!.AbsolutePath;
+            if (pfad == "/api/states") return RecordingHttpHandler.Json("[]");
+            const string config = "/api/config/automation/config/";
+            if (!pfad.StartsWith(config, StringComparison.Ordinal)) return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
+            var id = pfad[config.Length..];
+            if (anfrage.Method == HttpMethod.Post)
+            {
+                configs[id] = (JsonObject)JsonNode.Parse(inhalt!)!;
+                return RecordingHttpHandler.Json("""{"result":"ok"}""");
+            }
+            return configs.TryGetValue(id, out var c)
+                ? RecordingHttpHandler.Json(c.ToJsonString())
+                : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
+        });
+        var ha = new HomeAssistantService(new StubHttpClientFactory(handler), Microsoft.Extensions.Logging.Abstractions.NullLogger<HomeAssistantService>.Instance);
+        var bilanz = await new SteuerungAutomationService(ha, Microsoft.Extensions.Logging.Abstractions.NullLogger<SteuerungAutomationService>.Instance, pfade)
+            .AnlegenAsync(Modul, Rollen(), new HomeAssistantSettings { Enabled = true, BaseUrl = "http://ha.local:8123", AccessToken = "t" }, nurVorschau: false);
+        return (bilanz, configs);
     }
 
     // ------------------------------------------------------ Katalog und Vorlagen

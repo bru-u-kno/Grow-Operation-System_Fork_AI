@@ -502,6 +502,16 @@ export function temperaturBand(g: TempGrenzen, tempC: number | null, fuehrungNam
   })
 }
 
+/**
+ * Zeigt die Seite „Plan unvollständig"? Nie zusammen mit „Home Assistant
+ * antwortet nicht": ohne Verbindung sind die Plan-Werte nur nicht angekommen —
+ * unvollständig ist dann nichts, und zwei Warnungen für eine Ursache wären eine
+ * zu viel.
+ */
+export function planHinweisZeigen(live: Pick<EntfeuchterZusatzLive, 'haErreichbar' | 'planUnvollstaendig'>): boolean {
+  return live.haErreichbar && live.planUnvollstaendig === true
+}
+
 // ------------------------------------------------------------- Zustandswort
 
 export type Zustand = { text: string; ton: 'an' | 'warn' | 'neutral' }
@@ -515,7 +525,9 @@ export function zustandWort(live: EntfeuchterZusatzLive, geladen: Pick<Einstellu
   if (live.automatikAn === false || !geladen.automatikAktiv) return { text: 'Automatik aus', ton: 'neutral' }
   if (geladen.hilfe === 'aus') return { text: 'Zusatz aus (Hilfe aus)', ton: 'neutral' }
   if (live.zusatzOnline === false) return { text: 'offline', ton: 'warn' }
-  if (live.zusatzAn === true) return live.ziehtNichts === true ? { text: 'an, zieht nichts', ton: 'warn' } : { text: 'entfeuchtet', ton: 'an' }
+  // „Zieht nichts" hängt allein am Befund des Servers (er rechnet Dauer und Meldung.aktiv mit ein).
+  if (live.ziehtNichts === true) return { text: 'an, zieht nichts', ton: 'warn' }
+  if (live.zusatzAn === true) return { text: 'entfeuchtet', ton: 'an' }
   if (live.zusatzAn === false) return zuWarm ? { text: 'zu warm — aus', ton: 'warn' } : { text: 'bereit', ton: 'neutral' }
   return { text: 'Zustand unbekannt', ton: 'neutral' }
 }
@@ -545,7 +557,7 @@ export function statusHinweis(
   eins: { band: ZusatzBand | null; art: 'vpd' | 'feuchte' | null },
 ): string {
   if (live.ziehtNichts === true) {
-    return `Zieht nichts: der Shelly meldet an, die Leistung liegt unter ${zahl(e.meldung.grenzeW, 0)} W. Prüfen, ob der Tank voll ist oder das Gerät ausgeschaltet.`
+    return `Zieht nichts: der Shelly meldet an, die Leistung liegt unter ${zahl(e.meldung.grenzeW, 0)} W. Tank voll oder Gerät ausgeschaltet?`
   }
   if (live.tagPhase === false && e.nachtDurchlaufen) {
     return `Nachts durchlaufen: er läuft, bis das Zelt über ${zahl(g.folgeAus)} °C steigt, und startet wieder unter ${zahl(g.wiederEin)} °C.`

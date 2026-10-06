@@ -236,7 +236,7 @@ public sealed record EntfeuchterZusatzLive(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] double? LeistungW,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] double? EnergieHeuteKwh,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool? FuehrungAn,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool? ZiehtNichts,
+    bool ZiehtNichts,
     bool PlanUnvollstaendig,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool? AutomatikAn);
 
@@ -251,6 +251,9 @@ public sealed record EntfeuchterZusatzSeiteDto(EntfeuchterZusatzEinstellungen Ei
 
     public int GeraeteZugeordnet { get; init; }
     public int GeraeteGesamt { get; init; }
+
+    /// <summary>Was beim Speichern nicht ausgeführt werden konnte (z. B. der Shelly ließ sich nicht ausschalten) — leer, wenn alles ging.</summary>
+    public IReadOnlyList<string> Hinweise { get; init; } = [];
 }
 
 // ------------------------------------------------------------------- Namen

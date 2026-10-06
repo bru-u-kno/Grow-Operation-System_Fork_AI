@@ -19,14 +19,15 @@ namespace GrowDiary.Web.Services;
 /// 06.10.2026, als ein Speichern unbemerkt die Tag-Grenze von 26,5 auf 29 °C
 /// zurücksetzte: <see cref="EntfeuchterZusatzAenderung"/> trägt nur die Felder,
 /// die jemand angefasst hat. Im Fork wird nur das geändert, und nach Home
-/// Assistant geht nur, was sich dabei tatsächlich verändert hat.</para>
+/// Assistant gehen nur die genannten Felder — die aber immer, auch bei gleichem
+/// Fork-Wert (Home Assistant kann abweichen).</para>
 ///
 /// <para><b>Die Höchsttemperatur gehört dem Entfeuchter.</b> Ein Speichern mit
 /// <c>tempMax*</c>-Feldern lädt den gespeicherten Stand der
-/// <see cref="EntfeuchterEinstellungen"/>, ändert nur die genannten Felder und
-/// schreibt über den vorhandenen Weg
-/// (<see cref="EntfeuchterSteuerungService.SpeichernAsync"/>) — alle anderen
-/// Entfeuchter-Felder bleiben, wie sie sind.</para>
+/// <see cref="EntfeuchterEinstellungen"/>, führt NUR die genannten Felder nach und schreibt nach
+/// Home Assistant NUR die genannten Helfer (<c>set_value</c>). Der Speicherweg des Entfeuchters
+/// (<see cref="EntfeuchterSteuerungService.SpeichernAsync"/>) schreibt alle seine Helfer aus dem
+/// Fork-Stand und schaltet VPD-Regelung, Tagbetrieb und die Port-7-Automation — er wird hier nie aufgerufen.</para>
 ///
 /// <para><b>Nichts erfinden.</b> Was Home Assistant nicht liefert, ist im
 /// Livebild <c>null</c> — nie 0, nie „aus".</para>
@@ -190,9 +191,17 @@ public sealed class EntfeuchterZusatzSteuerungService
     {
         var f = new Dictionary<string, string>();
 
-        void Bereich(string feld, double? wert, double min, double max, string text)
+        // Die Bereiche sind die der Helfer im Katalog — dieselbe Quelle, aus der der Fork sie anlegt und
+        // auf die er beim Schreiben begrenzt. Was Home Assistant ablehnen würde, nimmt der Fork nicht an.
+        void Bereich(string feld, double? wert, string helfer, string name, string einheit)
         {
-            if (wert is { } w && (!double.IsFinite(w) || w < min || w > max)) f[feld] = text;
+            if (wert is not { } w) return;
+            var (min, max) = SteuerungBauteile.Spanne(helfer);
+            if (!double.IsFinite(w) || w < min || w > max)
+            {
+                var de = CultureInfo.GetCultureInfo("de-DE");
+                f[feld] = $"{name}: {min.ToString("0.##", de)} bis {max.ToString("0.##", de)} {einheit}.";
+            }
         }
 
         if (a.Hilfe is not null && !EntfeuchterZusatzHilfe.Zulaessig.Contains(a.Hilfe))
@@ -204,18 +213,18 @@ public sealed class EntfeuchterZusatzSteuerungService
             f[nameof(a.Ablauf)] = "Ablauf: Tank oder Ablaufschlauch.";
         }
 
-        Bereich(nameof(a.FolgeAbstandK), a.FolgeAbstandK, 0.5, 3, "Folge-Abstand: 0,5 bis 3 K.");
-        Bereich(nameof(a.WiederEinAbstandK), a.WiederEinAbstandK, 0.5, 3, "Wieder-ein-Abstand: 0,5 bis 3 K.");
-        Bereich(nameof(a.ZuschaltVerzoegerungMin), a.ZuschaltVerzoegerungMin, 0, 60, "Zuschalt-Verzögerung: 0 bis 60 Minuten.");
-        Bereich(nameof(a.MindestlaufzeitMin), a.MindestlaufzeitMin, 0, 60, "Mindestlaufzeit: 0 bis 60 Minuten.");
-        Bereich(nameof(a.MindestpauseMin), a.MindestpauseMin, 1, 120, "Mindestpause: 1 bis 120 Minuten.");
-        Bereich(nameof(a.VpdHystereseKpa), a.VpdHystereseKpa, 0.05, 0.6, "VPD-Abstand: 0,05 bis 0,6 kPa.");
+        Bereich(nameof(a.FolgeAbstandK), a.FolgeAbstandK, Entitaeten.FolgeAbstand, "Folge-Abstand", "K");
+        Bereich(nameof(a.WiederEinAbstandK), a.WiederEinAbstandK, Entitaeten.WiederEinAbstand, "Wieder-ein-Abstand", "K");
+        Bereich(nameof(a.ZuschaltVerzoegerungMin), a.ZuschaltVerzoegerungMin, Entitaeten.ZuschaltVerzoegerung, "Zuschalt-Verzögerung", "Minuten");
+        Bereich(nameof(a.MindestlaufzeitMin), a.MindestlaufzeitMin, Entitaeten.Mindestlaufzeit, "Mindestlaufzeit", "Minuten");
+        Bereich(nameof(a.MindestpauseMin), a.MindestpauseMin, Entitaeten.Mindestpause, "Mindestpause", "Minuten");
+        Bereich(nameof(a.VpdHystereseKpa), a.VpdHystereseKpa, Entitaeten.VpdHysterese, "VPD-Abstand", "kPa");
 
         if (a.Meldung is { } m)
         {
-            Bereich("Meldung." + nameof(m.GrenzeW), m.GrenzeW, 5, 200, "Leistungsgrenze: 5 bis 200 W.");
-            Bereich("Meldung." + nameof(m.DauerMin), m.DauerMin, 1, 60, "Dauer: 1 bis 60 Minuten.");
-            Bereich("Meldung." + nameof(m.WiederholungH), m.WiederholungH, 1, 24, "Wiederholung: 1 bis 24 Stunden.");
+            Bereich("Meldung." + nameof(m.GrenzeW), m.GrenzeW, Entitaeten.MeldeGrenze, "Leistungsgrenze", "W");
+            Bereich("Meldung." + nameof(m.DauerMin), m.DauerMin, Entitaeten.MeldeDauer, "Dauer", "Minuten");
+            Bereich("Meldung." + nameof(m.WiederholungH), m.WiederholungH, Entitaeten.MeldeWiederholung, "Wiederholung", "Stunden");
         }
 
         return f;
@@ -314,20 +323,36 @@ public sealed class EntfeuchterZusatzSteuerungService
     private static EntfeuchterZusatzEinstellungen Kopie(EntfeuchterZusatzEinstellungen e)
         => JsonSerializer.Deserialize<EntfeuchterZusatzEinstellungen>(JsonSerializer.Serialize(e, Json), Json)!;
 
+    /// <summary>Was ein Speichern ergeben hat.</summary>
+    /// <param name="Gespeichert">Der neue Stand — null bei Feldfehlern (dann wurde nichts geschrieben).</param>
+    /// <param name="Fehler">Die Feldfehler.</param>
+    /// <param name="HaErreicht">
+    /// Aus den echten Schreibergebnissen: <c>true</c>, wenn Home Assistant jeden Aufruf angenommen hat,
+    /// <c>false</c>, wenn einer scheiterte oder Home Assistant nicht eingerichtet ist — und <c>null</c>,
+    /// wenn gar nichts nach Home Assistant zu schreiben war.
+    /// </param>
+    /// <param name="Hinweise">Was nicht ausgeführt werden konnte, ohne dass ein Feld falsch wäre.</param>
+    public sealed record SpeicherErgebnis(
+        EntfeuchterZusatzEinstellungen? Gespeichert,
+        Dictionary<string, string> Fehler,
+        bool? HaErreicht,
+        IReadOnlyList<string> Hinweise)
+    {
+        public void Deconstruct(out EntfeuchterZusatzEinstellungen? gespeichert, out Dictionary<string, string> fehler, out bool? haErreicht)
+            => (gespeichert, fehler, haErreicht) = (Gespeichert, Fehler, HaErreicht);
+    }
+
     /// <summary>
-    /// Prüft, speichert und schreibt nach Home Assistant — <b>nur die genannten Felder</b>.
+    /// Prüft, speichert und schreibt nach Home Assistant — <b>nur die genannten Felder</b>, und die
+    /// genannten <b>immer</b> (auch wenn der Fork-Stand schon denselben Wert trägt: Home Assistant
+    /// kann abweichen).
     /// </summary>
-    /// <returns>
-    /// Der neue Stand (null bei Feldfehlern — dann wurde nichts geschrieben), die Feldfehler,
-    /// und ob Home Assistant alles angenommen hat, was geschrieben werden musste.
-    /// </returns>
-    public async Task<(EntfeuchterZusatzEinstellungen? Gespeichert, Dictionary<string, string> Fehler, bool HaErreicht)> SpeichernAsync(
-        EntfeuchterZusatzAenderung a, CancellationToken ct)
+    public async Task<SpeicherErgebnis> SpeichernAsync(EntfeuchterZusatzAenderung a, CancellationToken ct)
     {
         var fehler = Pruefen(a);
         // Schon an den eigenen Feldern gescheitert und keine gemeinsame Höchsttemperatur
         // dabei: nichts lesen, nichts anfassen.
-        if (fehler.Count > 0 && !a.BetrifftTempMax) return (null, fehler, false);
+        if (fehler.Count > 0 && !a.BetrifftTempMax) return new(null, fehler, null, []);
 
         var aktuell = await EinstellungenAsync(ct);
         var neu = Anwenden(aktuell, a);
@@ -336,7 +361,7 @@ public sealed class EntfeuchterZusatzSteuerungService
         if (a.BetrifftTempMax)
         {
             hoechstTemp = TempMaxEinarbeiten(await _entfeuchter.EinstellungenAsync(ct), a);
-            // Nur die TempMax-Felder: ob der Rest des Entfeuchters stimmt, prüft dessen Speichern.
+            // Nur die TempMax-Felder: der Rest des Entfeuchters geht uns nichts an.
             foreach (var (feld, text) in EntfeuchterSteuerungService.Pruefen(hoechstTemp)
                          .Where(p => p.Key.StartsWith("TempMax", StringComparison.Ordinal)))
             {
@@ -344,57 +369,87 @@ public sealed class EntfeuchterZusatzSteuerungService
             }
         }
 
-        if (fehler.Count > 0) return (null, fehler, false);
+        if (fehler.Count > 0) return new(null, fehler, null, []);
 
-        var erreicht = true;
+        // Die gemeinsame Höchsttemperatur: im Fork-Stand des Entfeuchters NUR diese Felder nachführen
+        // (hoechstTemp ist der gespeicherte Stand mit genau den genannten Feldern geändert) — und nach
+        // Home Assistant NUR die genannten Helfer. Der Speicherweg des Entfeuchters (alle Helfer, VPD-
+        // Regelung, Tagbetrieb, Automation) ist hier ausdrücklich NICHT der richtige.
+        var tempMaxSchreiben = new List<(string Domaene, string Dienst, string Entitaet, double? Wert)>();
         if (hoechstTemp is not null)
         {
-            var (gespeichert, entfeuchterFehler, entfeuchterErreicht) = await _entfeuchter.SpeichernAsync(hoechstTemp, ct);
-            if (gespeichert is null) return (null, entfeuchterFehler, false);
-            erreicht &= entfeuchterErreicht;
-            MitHoechsttemperatur(neu, gespeichert);
+            _repo.SetEinstellungen(EntfeuchterSteuerungService.Modul, hoechstTemp);
+            MitHoechsttemperatur(neu, hoechstTemp);
+            tempMaxSchreiben.AddRange(TempMaxSchreibliste(hoechstTemp, a, _wochenplan.PlanLuft()));
         }
 
         neu.Hilfe = EntfeuchterZusatzHilfe.Erkennen(neu);
         _repo.SetEinstellungen(Modul, neu);
-        erreicht &= await NachHomeAssistantSchreibenAsync(aktuell, neu, ct);
-        return (neu, fehler, erreicht);
+        var (erreicht, hinweise) = await NachHomeAssistantSchreibenAsync(aktuell, neu, a, tempMaxSchreiben, ct);
+        return new(neu, fehler, erreicht, hinweise);
     }
 
     /// <summary>
-    /// Was beim Wechsel von <paramref name="alt"/> auf <paramref name="neu"/> in Home
-    /// Assistant geschrieben werden muss — nur Geändertes. Eigene Methode, damit der
-    /// Test „nur ein Feld" an der Stelle ansetzen kann, an der die Entscheidung fällt.
+    /// Die Helfer der gemeinsamen Höchsttemperatur, die ein Speichern nach Home Assistant schreibt —
+    /// <b>nur die, deren Felder im Body stehen</b>: Tag, wenn ein Tag-Feld vorkommt, Nacht entsprechend.
+    /// Der Wert ist der gültige Sollwert (Plan-Luft + Abstand oder fest), auf die Spanne des Helfers begrenzt.
     /// </summary>
-    public static IReadOnlyList<(string Domaene, string Dienst, string Entitaet, double? Wert)> Schreibliste(
-        EntfeuchterZusatzEinstellungen alt, EntfeuchterZusatzEinstellungen neu)
+    public static IReadOnlyList<(string Domaene, string Dienst, string Entitaet, double? Wert)> TempMaxSchreibliste(
+        EntfeuchterEinstellungen e, EntfeuchterZusatzAenderung a, (string Woche, double LuftTagC, double LuftNachtC)? plan)
     {
         var liste = new List<(string, string, string, double?)>();
-
-        void Zahl(string entity, double vorher, double nachher)
+        if (a.TempMaxTagModus is not null || a.TempMaxTagAbstandK is not null || a.TempMaxTagFestC is not null)
         {
-            if (Math.Abs(vorher - nachher) < 1e-9) return;
+            liste.Add(("input_number", "set_value", EntfeuchterSteuerungService.Entitaeten.TempMaxTag,
+                EntfeuchterSteuerungService.TempMaxFuer(EntfeuchterSteuerungService.Entitaeten.TempMaxTag,
+                    e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC)));
+        }
+        if (a.TempMaxNachtModus is not null || a.TempMaxNachtAbstandK is not null || a.TempMaxNachtFestC is not null)
+        {
+            liste.Add(("input_number", "set_value", EntfeuchterSteuerungService.Entitaeten.TempMaxNacht,
+                EntfeuchterSteuerungService.TempMaxFuer(EntfeuchterSteuerungService.Entitaeten.TempMaxNacht,
+                    e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC)));
+        }
+        return liste;
+    }
+
+    /// <summary>
+    /// Was beim Wechsel von <paramref name="alt"/> auf <paramref name="neu"/> in Home Assistant
+    /// geschrieben werden muss: was sich geändert hat — und, wenn die Änderung <paramref name="a"/>
+    /// bekannt ist, <b>zusätzlich jedes Feld, das im Body stand</b> (auch bei gleichem Wert). Eine
+    /// Voreinstellung zählt als Nennung ihrer fünf Werte. Eigene Methode, damit die Tests an der Stelle
+    /// ansetzen können, an der die Entscheidung fällt.
+    /// </summary>
+    public static IReadOnlyList<(string Domaene, string Dienst, string Entitaet, double? Wert)> Schreibliste(
+        EntfeuchterZusatzEinstellungen alt, EntfeuchterZusatzEinstellungen neu, EntfeuchterZusatzAenderung? a = null)
+    {
+        var liste = new List<(string, string, string, double?)>();
+        var staerke = a?.Hilfe is { } h && EntfeuchterZusatzHilfe.Finden(h) is not null;
+
+        void Zahl(string entity, double vorher, double nachher, bool genannt)
+        {
+            if (!genannt && Math.Abs(vorher - nachher) < 1e-9) return;
             liste.Add(("input_number", "set_value", entity, SteuerungBauteile.AufSpanne(entity, nachher)));
         }
 
-        void Schalter(string entity, bool vorher, bool nachher)
+        void Schalter(string entity, bool vorher, bool nachher, bool genannt)
         {
-            if (vorher == nachher) return;
+            if (!genannt && vorher == nachher) return;
             liste.Add(("input_boolean", nachher ? "turn_on" : "turn_off", entity, null));
         }
 
-        Zahl(Entitaeten.VpdHysterese, alt.VpdHystereseKpa, neu.VpdHystereseKpa);
-        Zahl(Entitaeten.Mindestlaufzeit, alt.MindestlaufzeitMin, neu.MindestlaufzeitMin);
-        Zahl(Entitaeten.Mindestpause, alt.MindestpauseMin, neu.MindestpauseMin);
-        Zahl(Entitaeten.FolgeAbstand, alt.FolgeAbstandK, neu.FolgeAbstandK);
-        Zahl(Entitaeten.WiederEinAbstand, alt.WiederEinAbstandK, neu.WiederEinAbstandK);
-        Zahl(Entitaeten.ZuschaltVerzoegerung, alt.ZuschaltVerzoegerungMin, neu.ZuschaltVerzoegerungMin);
-        Schalter(Entitaeten.Tagbetrieb, alt.TagbetriebErlauben, neu.TagbetriebErlauben);
-        Schalter(Entitaeten.NachtDurchlaufen, alt.NachtDurchlaufen, neu.NachtDurchlaufen);
-        Schalter(Entitaeten.Melden, alt.Meldung.Aktiv, neu.Meldung.Aktiv);
-        Zahl(Entitaeten.MeldeGrenze, alt.Meldung.GrenzeW, neu.Meldung.GrenzeW);
-        Zahl(Entitaeten.MeldeDauer, alt.Meldung.DauerMin, neu.Meldung.DauerMin);
-        Zahl(Entitaeten.MeldeWiederholung, alt.Meldung.WiederholungH, neu.Meldung.WiederholungH);
+        Zahl(Entitaeten.VpdHysterese, alt.VpdHystereseKpa, neu.VpdHystereseKpa, staerke || a?.VpdHystereseKpa is not null);
+        Zahl(Entitaeten.Mindestlaufzeit, alt.MindestlaufzeitMin, neu.MindestlaufzeitMin, a?.MindestlaufzeitMin is not null);
+        Zahl(Entitaeten.Mindestpause, alt.MindestpauseMin, neu.MindestpauseMin, staerke || a?.MindestpauseMin is not null);
+        Zahl(Entitaeten.FolgeAbstand, alt.FolgeAbstandK, neu.FolgeAbstandK, staerke || a?.FolgeAbstandK is not null);
+        Zahl(Entitaeten.WiederEinAbstand, alt.WiederEinAbstandK, neu.WiederEinAbstandK, staerke || a?.WiederEinAbstandK is not null);
+        Zahl(Entitaeten.ZuschaltVerzoegerung, alt.ZuschaltVerzoegerungMin, neu.ZuschaltVerzoegerungMin, staerke || a?.ZuschaltVerzoegerungMin is not null);
+        Schalter(Entitaeten.Tagbetrieb, alt.TagbetriebErlauben, neu.TagbetriebErlauben, a?.TagbetriebErlauben is not null);
+        Schalter(Entitaeten.NachtDurchlaufen, alt.NachtDurchlaufen, neu.NachtDurchlaufen, a?.NachtDurchlaufen is not null);
+        Schalter(Entitaeten.Melden, alt.Meldung.Aktiv, neu.Meldung.Aktiv, a?.Meldung?.Aktiv is not null);
+        Zahl(Entitaeten.MeldeGrenze, alt.Meldung.GrenzeW, neu.Meldung.GrenzeW, a?.Meldung?.GrenzeW is not null);
+        Zahl(Entitaeten.MeldeDauer, alt.Meldung.DauerMin, neu.Meldung.DauerMin, a?.Meldung?.DauerMin is not null);
+        Zahl(Entitaeten.MeldeWiederholung, alt.Meldung.WiederholungH, neu.Meldung.WiederholungH, a?.Meldung?.WiederholungH is not null);
         return liste;
     }
 
@@ -402,16 +457,27 @@ public sealed class EntfeuchterZusatzSteuerungService
     public static bool AutomatikWirksam(EntfeuchterZusatzEinstellungen e)
         => e.AutomatikAktiv && e.Hilfe != EntfeuchterZusatzHilfe.Aus;
 
-    private async Task<bool> NachHomeAssistantSchreibenAsync(
-        EntfeuchterZusatzEinstellungen alt, EntfeuchterZusatzEinstellungen neu, CancellationToken ct)
+    /// <summary>Nur diese Domänen schaltet der Fork aus, wenn die Hilfsstärke „aus" ist — sie kennen <c>turn_off</c> ohne Nebenwirkung.</summary>
+    public static bool IstSchaltbar(string? entityId)
+        => SteuerungGeraeteService.Domain(entityId) is "switch" or "input_boolean";
+
+    private async Task<(bool? Erreicht, IReadOnlyList<string> Hinweise)> NachHomeAssistantSchreibenAsync(
+        EntfeuchterZusatzEinstellungen alt, EntfeuchterZusatzEinstellungen neu, EntfeuchterZusatzAenderung a,
+        IReadOnlyList<(string Domaene, string Dienst, string Entitaet, double? Wert)> tempMax, CancellationToken ct)
     {
-        var liste = Schreibliste(alt, neu);
-        var automatikWechsel = AutomatikWirksam(alt) != AutomatikWirksam(neu);
-        var hilfeAusGesetzt = neu.Hilfe == EntfeuchterZusatzHilfe.Aus && alt.Hilfe != EntfeuchterZusatzHilfe.Aus;
-        if (liste.Count == 0 && !automatikWechsel && !hilfeAusGesetzt) return true;
+        var liste = Schreibliste(alt, neu, a).Concat(tempMax).ToList();
+        var automatikGenannt = a.AutomatikAktiv is not null || a.Hilfe is not null;
+        var automatikSchreiben = automatikGenannt || AutomatikWirksam(alt) != AutomatikWirksam(neu);
+        var ausSchalten = a.Hilfe == EntfeuchterZusatzHilfe.Aus;
+        var hinweise = new List<string>();
+        if (liste.Count == 0 && !automatikSchreiben && !ausSchalten) return (null, hinweise);
 
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        if (!settings.IsConfigured) return false;
+        if (!settings.IsConfigured)
+        {
+            if (ausSchalten) hinweise.Add("Home Assistant ist nicht eingerichtet — der Zusatz-Entfeuchter wurde nicht ausgeschaltet.");
+            return (false, hinweise);
+        }
 
         var alles = true;
         foreach (var (domaene, dienst, entitaet, wert) in liste)
@@ -420,7 +486,7 @@ public sealed class EntfeuchterZusatzSteuerungService
                 wert is { } w ? new Dictionary<string, object> { ["value"] = w } : null);
         }
 
-        if (automatikWechsel)
+        if (automatikSchreiben)
         {
             var kennungen = AutomatikKennungen(await _ha.GetEntitiesAsync(settings, ct));
             foreach (var automation in kennungen)
@@ -430,15 +496,30 @@ public sealed class EntfeuchterZusatzSteuerungService
             }
         }
 
-        // „aus" heißt: der Zusatz bleibt aus — nicht nur „die Regelung greift nicht ein".
-        if (hilfeAusGesetzt && _geraete.Entity(Modul, Rollen.ZusatzSchalter) is { } schalter
-            && SteuerungGeraeteService.Domain(schalter) is { } domaene2)
+        // „aus" heißt: der Zusatz bleibt aus — nicht nur „die Regelung greift nicht ein". Geschaltet wird
+        // nur ein switch oder input_boolean; alles andere (ein select, ein Klima-Gerät …) kennt kein
+        // einfaches Aus, und ein falsch gedeuteter Befehl wäre schlimmer als keiner.
+        if (ausSchalten)
         {
-            alles &= await _ha.CallEntityServiceAsync(settings, domaene2, "turn_off", schalter, ct);
+            var schalter = _geraete.Entity(Modul, Rollen.ZusatzSchalter);
+            if (schalter is null)
+            {
+                hinweise.Add("Dem Zusatz-Entfeuchter ist kein Schalter zugeordnet — er wurde nicht ausgeschaltet.");
+                alles = false;
+            }
+            else if (!IstSchaltbar(schalter))
+            {
+                hinweise.Add($"„{schalter}“ ist kein switch und kein input_boolean — der Zusatz-Entfeuchter wurde nicht ausgeschaltet.");
+                alles = false;
+            }
+            else
+            {
+                alles &= await _ha.CallEntityServiceAsync(settings, SteuerungGeraeteService.Domain(schalter)!, "turn_off", schalter, ct);
+            }
         }
 
         if (!alles) _logger.LogWarning("Zusatz-Entfeuchter: nicht alles in Home Assistant angenommen.");
-        return alles;
+        return (alles, hinweise);
     }
 
     // ---------------------------------------------------------- Automation
@@ -508,7 +589,9 @@ public sealed class EntfeuchterZusatzSteuerungService
             LeistungW: Zahl(Rolle(Rollen.ZusatzLeistung)),
             EnergieHeuteKwh: energieHeute,
             FuehrungZustand: Text(Rolle(Rollen.FuehrungZustand)),
-            AutomatikAn: entities.Count > 0 ? AutomatikAn(entities) : null));
+            AutomatikAn: entities.Count > 0 ? AutomatikAn(entities) : null,
+            ZusatzSeitUtc: Rolle(Rollen.ZusatzSchalter) is { } schalterId && nachId.TryGetValue(schalterId, out var schalterZustand)
+                ? schalterZustand.LastChangedUtc : null));
     }
 
     /// <summary>Was das Livebild aus Home Assistant und dem Plan braucht — gelesen, nicht gerechnet.</summary>
@@ -529,7 +612,9 @@ public sealed class EntfeuchterZusatzSteuerungService
         double? LeistungW,
         double? EnergieHeuteKwh,
         string? FuehrungZustand,
-        bool? AutomatikAn);
+        bool? AutomatikAn,
+        DateTime? ZusatzSeitUtc = null,
+        DateTime? JetztUtc = null);
 
     /// <summary>
     /// Das Livebild aus den gelesenen Werten und den Einstellungen. Rein rechnend —
@@ -553,14 +638,14 @@ public sealed class EntfeuchterZusatzSteuerungService
             : EntfeuchterZusatzSchaltgroesse.Keine;
 
         var zusatzAn = AnAus(x.ZusatzZustand);
-        // Nur bei laufendem Shelly und gemessener Leistung. Aus heißt „zieht nichts" nie —
-        // und ohne Messwert wird nichts erraten.
-        bool? ziehtNichts = zusatzAn switch
-        {
-            false => false,
-            true when x.LeistungW is { } w => w < e.Meldung.GrenzeW,
-            _ => null,
-        };
+        // „Zieht nichts": der Zusatz läuft seit mindestens der eingestellten Dauer (die Anlaufphase eines
+        // Kompressors zählt nicht), die Leistung liegt unter der Grenze, und die Meldung ist eingeschaltet.
+        // Fehlt etwas davon — Zustand, Zeitpunkt, Messwert —, ist es false: es wird nichts geraten.
+        var jetzt = x.JetztUtc ?? DateTime.UtcNow;
+        var ziehtNichts = e.Meldung.Aktiv
+                          && zusatzAn == true
+                          && x.ZusatzSeitUtc is { } seit && jetzt - seit >= TimeSpan.FromMinutes(e.Meldung.DauerMin)
+                          && x.LeistungW is { } w && w < e.Meldung.GrenzeW;
 
         return new EntfeuchterZusatzLive(
             HaErreichbar: x.HaErreichbar,
@@ -591,7 +676,8 @@ public sealed class EntfeuchterZusatzSteuerungService
             EnergieHeuteKwh: x.EnergieHeuteKwh,
             FuehrungAn: AnAus(x.FuehrungZustand),
             ZiehtNichts: ziehtNichts,
-            PlanUnvollstaendig: groesse == EntfeuchterZusatzSchaltgroesse.Keine,
+            // Nur mit Home Assistant am Hörer: ohne Verbindung wissen wir nichts über den Plan.
+            PlanUnvollstaendig: x.HaErreichbar && groesse == EntfeuchterZusatzSchaltgroesse.Keine,
             AutomatikAn: x.AutomatikAn);
     }
 

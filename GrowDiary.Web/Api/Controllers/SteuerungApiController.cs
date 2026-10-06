@@ -334,17 +334,18 @@ public sealed class SteuerungApiController : ApiControllerBase
     public async Task<ActionResult<EntfeuchterZusatzSeiteDto>> EntfeuchterZusatzSpeichern([FromBody] EntfeuchterZusatzAenderung request, CancellationToken ct)
     {
         if (request is null) return BadRequestError("entfeuchter_zusatz_invalid", "Es wurde nichts übergeben.");
-        var (gespeichert, fehler, erreicht) = await _zusatz.SpeichernAsync(request, ct);
-        if (gespeichert is null)
+        var ergebnis = await _zusatz.SpeichernAsync(request, ct);
+        if (ergebnis.Gespeichert is null)
         {
-            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            foreach (var (feld, meldung) in ergebnis.Fehler) ModelState.AddModelError(feld, meldung);
             return ValidationError();
         }
 
         var seite = await EntfeuchterZusatz(ct);
         if (seite.Result is OkObjectResult ok && ok.Value is EntfeuchterZusatzSeiteDto dto)
         {
-            return Ok(dto with { HaAngenommen = erreicht, AusHomeAssistantUebernommen = false });
+            // haAngenommen: aus den echten Schreibergebnissen — null, wenn nichts zu schreiben war.
+            return Ok(dto with { HaAngenommen = ergebnis.HaErreicht, AusHomeAssistantUebernommen = false, Hinweise = ergebnis.Hinweise });
         }
         return seite;
     }

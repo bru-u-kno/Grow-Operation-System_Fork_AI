@@ -1,6 +1,6 @@
 {
   "alias": "Zusatz-Entfeuchter zieht nichts",
-  "description": "Meldet, wenn der Zusatz-Entfeuchter an ist, die Leistung aber seit input_number.trotec_zelt_melde_dauer_min Minuten unter input_number.trotec_zelt_melde_grenze_w liegt (z. B. voller Tank). Eintrag in der Meldungsliste von Home Assistant und Push ueber notify.notify (alle eingerichteten Empfaenger); Wiederholung alle input_number.trotec_zelt_melde_wiederholung_h Stunden, solange es besteht. Nie bei ausgeschaltetem Zusatz, nie bei fehlendem Messwert. Ausschalten: input_boolean.trotec_zelt_melden. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter-zusatz/meldung/1.",
+  "description": "Meldet, wenn der Zusatz-Entfeuchter an ist, die Leistung aber seit input_number.trotec_zelt_melde_dauer_min Minuten unter input_number.trotec_zelt_melde_grenze_w liegt (z. B. voller Tank). Eintrag in der Meldungsliste von Home Assistant und Push an die Adresse, die im Fork unter Benachrichtigungen eingestellt ist (sonst die Sammelgruppe „notify“ von Home Assistant); Wiederholung alle input_number.trotec_zelt_melde_wiederholung_h Stunden, solange es besteht; bei Entwarnung wird der Eintrag wieder entfernt. Nie bei ausgeschaltetem Zusatz, nie bei fehlendem Messwert. Ausschalten: input_boolean.trotec_zelt_melden. Die Push-Adresse wird beim Anlegen eingesetzt; aendert sie sich, die Vorlage erneut anlegen. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter-zusatz/meldung/2. Seit Fassung 2 (06.10.2026): Push-Adresse aus dem Fork statt fest einer Sammelgruppe, Start von Home Assistant loest aus, Entwarnung entfernt die Meldung, kein fester Normalwert im Text.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [
@@ -19,6 +19,10 @@
       "for": {
         "minutes": "{{ states('input_number.trotec_zelt_melde_dauer_min') | int(5) }}"
       }
+    },
+    {
+      "trigger": "homeassistant",
+      "event": "start"
     }
   ],
   "conditions": [
@@ -44,15 +48,15 @@
       "data": {
         "notification_id": "fork_ai_entfeuchter_zusatz_zieht_nichts",
         "title": "Grow: Zusatz-Entfeuchter zieht nichts",
-        "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf (Normalbetrieb etwa 300 W). Tank voll oder Gerät ausgeschaltet?"
+        "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf. Tank voll oder Gerät ausgeschaltet?"
       }
     },
     {
-      "action": "notify.notify",
+      "action": "[[push_dienst]]",
       "continue_on_error": true,
       "data": {
         "title": "Grow: Zusatz-Entfeuchter zieht nichts",
-        "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf (Normalbetrieb etwa 300 W). Tank voll oder Gerät ausgeschaltet?"
+        "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf. Tank voll oder Gerät ausgeschaltet?"
       }
     },
     {
@@ -84,27 +88,51 @@
             "continue_on_timeout": true
           },
           {
-            "condition": "template",
             "alias": "Besteht es noch?",
-            "value_template": "{{ not (not is_state('input_boolean.trotec_zelt_melden', 'on') or not is_state('[[zusatz_schalter]]', 'on') or states('[[zusatz_leistung]]') | float(999999) >= states('input_number.trotec_zelt_melde_grenze_w') | float(60)) }}"
-          },
-          {
-            "action": "persistent_notification.create",
-            "data": {
-              "notification_id": "fork_ai_entfeuchter_zusatz_zieht_nichts",
-              "title": "Grow: Zusatz-Entfeuchter zieht nichts",
-              "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf (Normalbetrieb etwa 300 W). Tank voll oder Gerät ausgeschaltet?"
-            }
-          },
-          {
-            "action": "notify.notify",
-            "continue_on_error": true,
-            "data": {
-              "title": "Grow: Zusatz-Entfeuchter zieht nichts",
-              "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf (Normalbetrieb etwa 300 W). Tank voll oder Gerät ausgeschaltet?"
-            }
+            "if": [
+              {
+                "condition": "state",
+                "entity_id": "input_boolean.trotec_zelt_melden",
+                "state": "on"
+              },
+              {
+                "condition": "state",
+                "entity_id": "[[zusatz_schalter]]",
+                "state": "on"
+              },
+              {
+                "condition": "numeric_state",
+                "entity_id": "[[zusatz_leistung]]",
+                "below": "input_number.trotec_zelt_melde_grenze_w"
+              }
+            ],
+            "then": [
+              {
+                "action": "persistent_notification.create",
+                "data": {
+                  "notification_id": "fork_ai_entfeuchter_zusatz_zieht_nichts",
+                  "title": "Grow: Zusatz-Entfeuchter zieht nichts",
+                  "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf. Tank voll oder Gerät ausgeschaltet?"
+                }
+              },
+              {
+                "action": "[[push_dienst]]",
+                "continue_on_error": true,
+                "data": {
+                  "title": "Grow: Zusatz-Entfeuchter zieht nichts",
+                  "message": "{{ state_attr('[[zusatz_schalter]]', 'friendly_name') or 'Zusatz-Entfeuchter' }} ist an, nimmt aber nur {{ states('[[zusatz_leistung]]') | float(0) | round(0) | int }} W auf. Tank voll oder Gerät ausgeschaltet?"
+                }
+              }
+            ]
           }
         ]
+      }
+    },
+    {
+      "alias": "Entwarnung: Eintrag entfernen",
+      "action": "persistent_notification.dismiss",
+      "data": {
+        "notification_id": "fork_ai_entfeuchter_zusatz_zieht_nichts"
       }
     }
   ]

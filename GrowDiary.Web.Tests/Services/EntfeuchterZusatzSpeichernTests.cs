@@ -74,14 +74,15 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
     }
 
     [Fact]
-    public async Task ZweimalSpeichern_DasZweiteMalSchreibtNichtsUndAendertNichts()
+    public async Task ZweimalSpeichern_DerStandBleibtGleich_DieGenanntenFelderGehenJedesMalNachHomeAssistant()
     {
         var dienst = _stand.Zusatz();
         await dienst.EinstellungenAsync(CancellationToken.None);
 
         var aenderung = new EntfeuchterZusatzAenderung { FolgeAbstandK = 2, TagbetriebErlauben = false };
         var (erstes, _, _) = await dienst.SpeichernAsync(aenderung, CancellationToken.None);
-        Assert.True(_stand.Schreibaufrufe().Count >= 2, "Das erste Speichern hat nichts geschrieben — der Test sieht es nicht.");
+        var ersteAufrufe = _stand.Schreibaufrufe().Select(a => a.Entitaet).Order().ToList();
+        Assert.Equal(2, ersteAufrufe.Count);
         _stand.Vergessen();
 
         var (zweites, fehler, erreicht) = await dienst.SpeichernAsync(aenderung, CancellationToken.None);
@@ -89,11 +90,58 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Empty(fehler);
         Assert.True(erreicht);
         Assert.Empty(ZusatzPruefstand.Unterschiede(erstes!, zweites!));
-        Assert.Empty(_stand.Schreibaufrufe());
+        // Der Fork-Stand trägt die Werte schon — Home Assistant kann aber abweichen (jemand hat dort gedreht):
+        // was im Body steht, wird deshalb jedes Mal geschrieben, und nur das.
+        Assert.Equal(ersteAufrufe, _stand.Schreibaufrufe().Select(a => a.Entitaet).Order().ToList());
     }
 
     [Fact]
-    public async Task TempMaxLeitetWeiter_AndereEntfeuchterFelderBleibenUnberuehrt()
+    public async Task EinFeldGleichZumForkStand_WirdTrotzdemGeschrieben_WeilHomeAssistantAbweichenKann()
+    {
+        var dienst = _stand.Zusatz();
+        var vorher = await dienst.EinstellungenAsync(CancellationToken.None);
+        _stand.Vergessen();
+
+        // Bru hat den Helfer in Home Assistant von Hand auf 3 gestellt; der Fork-Stand sagt weiter 15.
+        var (nachher, _, erreicht) = await dienst.SpeichernAsync(
+            new EntfeuchterZusatzAenderung { MindestlaufzeitMin = vorher.MindestlaufzeitMin }, CancellationToken.None);
+
+        Assert.Empty(ZusatzPruefstand.Unterschiede(vorher, nachher!));
+        var einzig = Assert.Single(_stand.Schreibaufrufe());
+        Assert.Equal(EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit, einzig.Entitaet);
+        Assert.Equal(15, einzig.Daten["value"]!.GetValue<double>());
+        Assert.True(erreicht);
+    }
+
+    [Fact]
+    public async Task HaAngenommen_KommtAusDenEchtenSchreibergebnissen()
+    {
+        var dienst = _stand.Zusatz();
+        await dienst.EinstellungenAsync(CancellationToken.None);
+
+        // Nichts nach Home Assistant zu schreiben (ein reines Fork-Feld): weder „ja" noch „nein".
+        var nichts = await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { Ablauf = EntfeuchterZusatzAblauf.Schlauch }, CancellationToken.None);
+        Assert.Empty(_stand.Schreibaufrufe());
+        Assert.Null(nichts.HaErreicht);
+
+        // Geschrieben und angenommen.
+        var gut = await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { MindestpauseMin = 12 }, CancellationToken.None);
+        Assert.Single(_stand.Schreibaufrufe());
+        Assert.True(gut.HaErreicht);
+
+        // Home Assistant lehnt ab: der Fork-Stand ist gespeichert, aber „angenommen" ist false.
+        _stand.DienstAntwort = System.Net.HttpStatusCode.InternalServerError;
+        var schlecht = await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { MindestpauseMin = 13 }, CancellationToken.None);
+        Assert.False(schlecht.HaErreicht);
+        Assert.Equal(13, dienst.Gespeichert!.MindestpauseMin);
+
+        // Ein einziger abgelehnter Aufruf unter mehreren genügt.
+        var gemischt = await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { Hilfe = "kraeftig" }, CancellationToken.None);
+        Assert.False(gemischt.HaErreicht);
+    }
+
+    [Fact]
+    public async Task TempMax_SchreibtNurDenGenanntenHelfer_KeinAndererEntfeuchterHelferKeinSchalter()
     {
         var dienst = _stand.Zusatz();
         var vorher = await dienst.EinstellungenAsync(CancellationToken.None);
@@ -102,8 +150,6 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         // Rest weicht vom Werkswert ab — sonst fiele ein zurückgesetztes Feld nicht auf.
         Assert.Equal(26.5, entfeuchterVorher.TempMaxTagFestC);
         var werk = new EntfeuchterEinstellungen();
-        Assert.Equal(["tempMaxTagFestC"], ZusatzPruefstand.Unterschiede(werk, entfeuchterVorher)
-            .Where(p => p.StartsWith("tempMax", StringComparison.Ordinal)).ToList());
         Assert.True(ZusatzPruefstand.Unterschiede(werk, entfeuchterVorher).Count >= 10,
             "Der Entfeuchter-Stand des Tests gleicht der Werkseinstellung — er würde ein Zurücksetzen nicht bemerken.");
         _stand.Vergessen();
@@ -114,30 +160,58 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Empty(fehler);
         Assert.True(erreicht);
 
-        // Der Entfeuchter-Stand: GENAU die Tag-Grenze ist anders.
+        // Home Assistant: GENAU ein Aufruf — die Tag-Grenze. Kein anderer Helfer, kein turn_on/turn_off
+        // (VPD-Regelung, Tagbetrieb, die Port-7-Automation bleiben, wie sie sind).
+        var aufrufe = _stand.Schreibaufrufe();
+        var einzig = Assert.Single(aufrufe);
+        Assert.Equal(("input_number/set_value", EntfeuchterSteuerungService.Entitaeten.TempMaxTag), (einzig.Dienst, einzig.Entitaet));
+        Assert.Equal(27, einzig.Daten["value"]!.GetValue<double>());
+        Assert.DoesNotContain(aufrufe, a => a.Dienst.Contains("turn_", StringComparison.Ordinal));
+
+        // Der Entfeuchter-Stand im Fork: GENAU die Tag-Grenze ist anders.
         var entfeuchterNachher = _stand.Repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul)!;
         Assert.Equal(["tempMaxTagFestC"], ZusatzPruefstand.Unterschiede(entfeuchterVorher, entfeuchterNachher));
         Assert.Equal(27, entfeuchterNachher.TempMaxTagFestC);
-        Assert.Equal(25, entfeuchterNachher.TempMaxNachtFestC);
+        Assert.Equal(entfeuchterVorher.TempMaxNachtFestC, entfeuchterNachher.TempMaxNachtFestC);
 
         // Der Zusatz-Stand: dieselbe Grenze, sonst nichts.
         Assert.Equal(["tempMaxTagFestC"], ZusatzPruefstand.Unterschiede(vorher, nachher!));
-
-        // Home Assistant bekommt die Tag-Grenze — und die anderen Entfeuchter-Helfer mit
-        // ihren BISHERIGEN Werten (nicht mit Werkseinstellungen).
-        var aufrufe = _stand.Schreibaufrufe();
-        double Wert(string entitaet) => aufrufe.Last(a => a.Entitaet == entitaet).Daten["value"]!.GetValue<double>();
-        Assert.Equal(27, Wert(EntfeuchterSteuerungService.Entitaeten.TempMaxTag));
-        Assert.Equal(25, Wert(EntfeuchterSteuerungService.Entitaeten.TempMaxNacht));
-        Assert.Equal(6, Wert(EntfeuchterSteuerungService.Entitaeten.Hysterese));
-        Assert.Equal(58, Wert(EntfeuchterSteuerungService.Entitaeten.FeuchteEinTag));
-        Assert.Equal(61, Wert(EntfeuchterSteuerungService.Entitaeten.FeuchteEinNacht));
-        // Die eigenen Helfer des Zusatzes gehen NICHT mit.
-        Assert.DoesNotContain(aufrufe, a => a.Entitaet.StartsWith("input_number.trotec_zelt_", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task Voreinstellung_SchreibtNurDieHelfer_DieSichWirklichAendern()
+    public async Task TempMax_NachtUndModus_SchreibenNurDenNachtHelfer_ImPlanModusMitPlanLuft()
+    {
+        var dienst = _stand.Zusatz();
+        await dienst.EinstellungenAsync(CancellationToken.None);
+        _stand.Vergessen();
+
+        // Ohne laufenden Plan gilt im Modus „plan" der feste Wert — der Helfer bekommt ihn, nichts erfundenes.
+        await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { TempMaxNachtFestC = 24, TempMaxNachtModus = TempMaxModus.Plan }, CancellationToken.None);
+
+        var einzig = Assert.Single(_stand.Schreibaufrufe());
+        Assert.Equal(EntfeuchterSteuerungService.Entitaeten.TempMaxNacht, einzig.Entitaet);
+        Assert.Equal(24, einzig.Daten["value"]!.GetValue<double>());
+        var gespeichert = _stand.Repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul)!;
+        Assert.Equal(TempMaxModus.Plan, gespeichert.TempMaxNachtModus);
+        Assert.Equal(26.5, gespeichert.TempMaxTagFestC);
+    }
+
+    [Fact]
+    public async Task TempMaxZusammenMitEigenenFeldern_SchreibtBeides_UndSonstNichts()
+    {
+        var dienst = _stand.Zusatz();
+        await dienst.EinstellungenAsync(CancellationToken.None);
+        _stand.Vergessen();
+
+        await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { TempMaxTagFestC = 27, FolgeAbstandK = 2 }, CancellationToken.None);
+
+        Assert.Equal(
+            new[] { EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand, EntfeuchterSteuerungService.Entitaeten.TempMaxTag }.Order(),
+            _stand.Schreibaufrufe().Select(a => a.Entitaet).Order());
+    }
+
+    [Fact]
+    public async Task Voreinstellung_SchreibtIhreFuenfHelfer_SonstNichts()
     {
         var dienst = _stand.Zusatz();
         await dienst.EinstellungenAsync(CancellationToken.None);
@@ -148,14 +222,17 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
 
         Assert.Empty(fehler);
         Assert.Equal(EntfeuchterZusatzHilfe.Sparsam, EntfeuchterZusatzHilfe.Erkennen(nachher!));
-        // Von „normal" auf „sparsam": Folge-Abstand, VPD-Abstand, Zuschaltung, Pause ändern sich —
-        // der Wieder-ein-Abstand (1 K) ist in beiden gleich und wird nicht geschrieben.
+        // Eine Voreinstellung nennt ihre fünf Werte — alle fünf gehen nach Home Assistant, auch der
+        // Wieder-ein-Abstand (1 K), der von „normal" auf „sparsam" gleich bleibt. Sonst nichts.
         var geschrieben = _stand.Schreibaufrufe().Select(a => a.Entitaet).Order().ToList();
         Assert.Equal(new[]
         {
+            // Die Stärke steht im Body, also wird auch der Zustand der Regelung (an) geschrieben.
+            "automation.rdwc_trotec_zelt_shelly_plan_regelung",
             EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand,
             EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause,
             EntfeuchterZusatzSteuerungService.Entitaeten.VpdHysterese,
+            EntfeuchterZusatzSteuerungService.Entitaeten.WiederEinAbstand,
             EntfeuchterZusatzSteuerungService.Entitaeten.ZuschaltVerzoegerung,
         }.Order(), geschrieben);
     }
@@ -187,6 +264,39 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
             new EntfeuchterZusatzAenderung { Hilfe = EntfeuchterZusatzHilfe.Normal }, CancellationToken.None);
         Assert.Equal(EntfeuchterZusatzHilfe.Normal, EntfeuchterZusatzHilfe.Erkennen(wieder!));
         Assert.Contains(_stand.Schreibaufrufe(), a => a.Dienst == "automation/turn_on" && a.Entitaet == "automation.rdwc_trotec_zelt_shelly_plan_regelung");
+    }
+
+    [Fact]
+    public async Task HilfeAus_SchaltetNurSwitchOderInputBooleanAus_SonstHinweisUndKeinBefehl()
+    {
+        var dienst = _stand.Zusatz();
+        await dienst.EinstellungenAsync(CancellationToken.None);
+
+        // Ein Schalter, der kein switch ist (ein select kennt „turn_off" nicht): kein Befehl an ihn.
+        _stand.Ordne("zusatz_schalter", "select.komischer_schalter");
+        _stand.Setze("select.komischer_schalter", "On");
+        _stand.Vergessen();
+
+        var ergebnis = await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { Hilfe = EntfeuchterZusatzHilfe.Aus }, CancellationToken.None);
+
+        var aufrufe = _stand.Schreibaufrufe();
+        Assert.DoesNotContain(aufrufe, a => a.Entitaet == "select.komischer_schalter");
+        Assert.DoesNotContain(aufrufe, a => a.Dienst.EndsWith("/turn_off", StringComparison.Ordinal) && !a.Dienst.StartsWith("automation/", StringComparison.Ordinal));
+        // Die Regelung wird trotzdem angehalten, und der Aufrufer erfährt, was nicht ging.
+        Assert.Contains(aufrufe, a => a.Dienst == "automation/turn_off");
+        Assert.False(ergebnis.HaErreicht);
+        var hinweis = Assert.Single(ergebnis.Hinweise);
+        Assert.Contains("select.komischer_schalter", hinweis);
+        Assert.NotNull(ergebnis.Gespeichert);
+
+        // Mit einem input_boolean geht es.
+        _stand.Ordne("zusatz_schalter", "input_boolean.zusatz");
+        _stand.Setze("input_boolean.zusatz", "on");
+        _stand.Vergessen();
+        var gut = await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { Hilfe = EntfeuchterZusatzHilfe.Aus }, CancellationToken.None);
+        Assert.Contains(_stand.Schreibaufrufe(), a => a is { Dienst: "input_boolean/turn_off", Entitaet: "input_boolean.zusatz" });
+        Assert.Empty(gut.Hinweise);
+        Assert.True(gut.HaErreicht);
     }
 
     [Fact]
@@ -278,14 +388,22 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
     }
 
     [Fact]
-    public async Task Livebild_ZiehtNichts_WennDerShellyAnIstUndDieLeistungUnterDerGrenzeLiegt()
+    public async Task Livebild_ZiehtNichts_ErstWennDerShellySeitDerEingestelltenDauerAnIst()
     {
         _stand.Setze("sensor.grow_dehumi_tent_leistung", "3.0", "Dehumi RDWC Tent Leistung", "W");
 
+        // Seit drei Stunden an (Standard des Prüfstands), 3 W: zieht nichts.
         var live = await _stand.Zusatz().LiveAsync(CancellationToken.None);
-
         Assert.True(live.ZiehtNichts);
         Assert.Equal(3.0, live.LeistungW);
+
+        // Erst seit einer Minute an: Anlaufphase, noch keine Meldung (Dauer 5 min).
+        _stand.Seit["switch.grow_dehumi_tent"] = DateTime.UtcNow.AddMinutes(-1);
+        Assert.False((await _stand.Zusatz().LiveAsync(CancellationToken.None)).ZiehtNichts);
+
+        // Seit sechs Minuten: jetzt ja.
+        _stand.Seit["switch.grow_dehumi_tent"] = DateTime.UtcNow.AddMinutes(-6);
+        Assert.True((await _stand.Zusatz().LiveAsync(CancellationToken.None)).ZiehtNichts);
     }
 
     [Fact]
@@ -307,7 +425,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Null(live.LeistungW);
         Assert.Null(live.EnergieHeuteKwh);
         Assert.Null(live.FuehrungAn);
-        Assert.Null(live.ZiehtNichts);
+        Assert.False(live.ZiehtNichts);
         Assert.Null(live.AutomatikAn);
         Assert.Null(live.VpdZiel);
         Assert.Null(live.VpdEinSchwelle);

@@ -43,15 +43,27 @@ public sealed class SteuerungAutomationService
         @"Herkunft: fork-ai/(?<modul>[a-z0-9_-]+)/(?<vorlage>[a-z0-9_]+)/(?<fassung>\d+)",
         RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// Fork AI (A-009): Platzhalter für die Push-Adresse (<c>notify.mobile_app_…</c>), die der Fork
+    /// unter „Benachrichtigungen" kennt. Keine Geräte-Rolle: er wird beim Anlegen aus den
+    /// <see cref="NotificationSettings"/> gefüllt.
+    /// </summary>
+    public const string PushPlatzhalter = "push_dienst";
+
+    /// <summary>Wohin gepusht wird, wenn der Fork keine Adresse kennt: die Sammelgruppe von Home Assistant.</summary>
+    public const string PushRueckfall = "notify.notify";
+
     private readonly HomeAssistantService _ha;
     private readonly ILogger<SteuerungAutomationService> _log;
     private readonly string _vorlagenWurzel;
+    private readonly AppPaths _pfade;
 
     public SteuerungAutomationService(HomeAssistantService ha, ILogger<SteuerungAutomationService> log, AppPaths pfade)
     {
         _ha = ha;
         _log = log;
         _vorlagenWurzel = VorlagenWurzel;
+        _pfade = pfade;
         SicherungsOrdner = SteuerungSicherungsOrdner.Fuer(pfade);
     }
 
@@ -154,7 +166,7 @@ public sealed class SteuerungAutomationService
                 continue;
             }
 
-            var fertig = Fuellen(vorlage, zuordnung);
+            var fertig = Fuellen(vorlage, MitPushAdresse(vorlage, zuordnung));
             if (fertig is null)
             {
                 einzeln.Add(new Ergebnis(kennung, name, Stand.OhneGeraet,
@@ -208,6 +220,43 @@ public sealed class SteuerungAutomationService
     }
 
     /// <summary>
+    /// Die Push-Adresse, die der Fork kennt, als Vorlagen-Variable — nur für Vorlagen, die sie
+    /// brauchen (die anderen lesen die Datenbank nicht an).
+    /// </summary>
+    private IReadOnlyDictionary<string, string> MitPushAdresse(JsonObject vorlage, IReadOnlyDictionary<string, string> zuordnung)
+    {
+        if (!vorlage.ToJsonString().Contains($"[[{PushPlatzhalter}]]", StringComparison.Ordinal)) return zuordnung;
+
+        string? konfiguriert = null;
+        try
+        {
+            konfiguriert = new NotificationSettingsRepository(_pfade).GetNotificationSettings().NotifyService;
+        }
+        catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or IOException)
+        {
+            _log.LogWarning(ex, "Die Push-Adresse ließ sich nicht lesen — die Vorlage nimmt {Rueckfall}.", PushRueckfall);
+        }
+
+        var mit = new Dictionary<string, string>(zuordnung, StringComparer.Ordinal)
+        {
+            [PushPlatzhalter] = PushDienst(konfiguriert),
+        };
+        return mit;
+    }
+
+    /// <summary>
+    /// Die Push-Adresse für Vorlagen: die im Fork eingestellte, sofern sie wie ein
+    /// <c>notify.…</c>-Dienst aussieht (sie wird roh in die Automation geschrieben), sonst
+    /// <see cref="PushRueckfall"/>.
+    /// </summary>
+    public static string PushDienst(string? konfiguriert)
+        => konfiguriert?.Trim() is { } dienst
+           && dienst.StartsWith("notify.", StringComparison.Ordinal)
+           && SteuerungBauteile.IstEntityId(dienst)
+            ? dienst
+            : PushRueckfall;
+
+    /// <summary>
     /// Platzhalter ersetzen und die Blöcke entfernen, deren Rolle frei ist.
     /// </summary>
     /// <returns>Null, wenn danach noch ein Platzhalter übrig ist.</returns>
@@ -216,6 +265,8 @@ public sealed class SteuerungAutomationService
         var belegt = zuordnung
             .Where(p => !string.IsNullOrWhiteSpace(p.Value))
             .ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
+        // Ohne eingestellte Adresse die Sammelgruppe — eine Vorlage bleibt nie wegen ihr ungefüllt.
+        belegt.TryAdd(PushPlatzhalter, PushRueckfall);
 
         var geputzt = Aussieben(vorlage.DeepClone(), belegt.Keys.ToHashSet(StringComparer.Ordinal));
         if (geputzt is not JsonObject rumpf) return null;

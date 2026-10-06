@@ -264,7 +264,7 @@ public sealed class EntfeuchterZusatzTests
         ("FolgeAbstandK", (a, w) => a.FolgeAbstandK = w, 0.5, 3, false),
         ("WiederEinAbstandK", (a, w) => a.WiederEinAbstandK = w, 0.5, 3, false),
         ("ZuschaltVerzoegerungMin", (a, w) => a.ZuschaltVerzoegerungMin = (int)w, 0, 60, true),
-        ("MindestlaufzeitMin", (a, w) => a.MindestlaufzeitMin = (int)w, 0, 60, true),
+        ("MindestlaufzeitMin", (a, w) => a.MindestlaufzeitMin = (int)w, 1, 120, true),
         ("MindestpauseMin", (a, w) => a.MindestpauseMin = (int)w, 1, 120, true),
         ("VpdHystereseKpa", (a, w) => a.VpdHystereseKpa = w, 0.05, 0.6, false),
         ("Meldung.GrenzeW", (a, w) => a.Meldung = new() { GrenzeW = (int)w }, 5, 200, true),
@@ -398,13 +398,16 @@ public sealed class EntfeuchterZusatzTests
 
     // ---------------------------------------------------------------- Livebild
 
+    private static readonly DateTime Jetzt = new(2026, 10, 6, 21, 0, 0, DateTimeKind.Utc);
+
     private static EntfeuchterZusatzSteuerungService.ZusatzEingang Eingang(
         double? temp = 25.1, double? rh = 55.2, double? vpd = 1.31, bool? tag = true,
         double? vpdUnten = 1.4, double? vpdOben = 1.4, double? feuchteEin = 39, double? feuchteAus = 35,
         string? zusatz = "on", double? leistung = 313, string? fuehrung = "On", bool? automatik = true,
-        (string, double, double)? plan = null)
-        => new(true, "RDWC Dehumi", "Dehumi RDWC Tent", plan, temp, rh, vpd, tag, vpdUnten, vpdOben, feuchteEin, feuchteAus,
-            zusatz, leistung, 2.9, fuehrung, automatik);
+        (string, double, double)? plan = null, bool ha = true, int? anSeitMin = 30)
+        => new(ha, "RDWC Dehumi", "Dehumi RDWC Tent", plan, temp, rh, vpd, tag, vpdUnten, vpdOben, feuchteEin, feuchteAus,
+            zusatz, leistung, 2.9, fuehrung, automatik,
+            ZusatzSeitUtc: anSeitMin is { } m ? Jetzt.AddMinutes(-m) : null, JetztUtc: Jetzt);
 
     private static EntfeuchterZusatzEinstellungen Bru() => new()
     {
@@ -496,40 +499,61 @@ public sealed class EntfeuchterZusatzTests
         Assert.Equal(erwartet, live.ZiehtNichts);
     }
 
+    [Theory]
+    [InlineData(1, false)]   // Anlaufphase: erst seit einer Minute an
+    [InlineData(4, false)]
+    [InlineData(5, true)]    // genau die eingestellte Dauer
+    [InlineData(30, true)]
+    public void ZiehtNichts_ErstNachDerEingestelltenDauer_NichtInDerAnlaufphase(int anSeitMin, bool erwartet)
+    {
+        // Ein Kompressor zieht in der ersten Minute nach dem Einschalten oft noch wenig — die Meldung
+        // darf nicht schon dann kommen (Dauer = 5 min).
+        var live = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: "on", leistung: 3, anSeitMin: anSeitMin));
+        Assert.Equal(erwartet, live.ZiehtNichts);
+    }
+
     [Fact]
-    public void ZiehtNichts_FolgtDerEingestelltenGrenze()
+    public void ZiehtNichts_FolgtDerEingestelltenDauerUndGrenze()
     {
         var e = Bru();
         e.Meldung.GrenzeW = 350;
-        Assert.True(EntfeuchterZusatzSteuerungService.Berechnen(e, Eingang(zusatz: "on", leistung: 313)).ZiehtNichts);
-    }
-
-    [Theory]
-    [InlineData(null, 3.0)]
-    [InlineData("unavailable", 3.0)]
-    [InlineData("unknown", 3.0)]
-    [InlineData("on", null)]
-    public void ZiehtNichts_OhneMesswertOderZustand_IstNull_NieErraten(string? zusatz, double? leistung)
-    {
-        Assert.Null(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: zusatz, leistung: leistung)).ZiehtNichts);
+        e.Meldung.DauerMin = 20;
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(e, Eingang(zusatz: "on", leistung: 313, anSeitMin: 19)).ZiehtNichts);
+        Assert.True(EntfeuchterZusatzSteuerungService.Berechnen(e, Eingang(zusatz: "on", leistung: 313, anSeitMin: 20)).ZiehtNichts);
     }
 
     [Fact]
-    public void Livebild_NichtsErfinden_AllesFehlt_AllesNull()
+    public void ZiehtNichts_IstFalse_WennDieMeldungAusgeschaltetIst()
     {
-        var live = EntfeuchterZusatzSteuerungService.Berechnen(new EntfeuchterZusatzEinstellungen(),
-            new EntfeuchterZusatzSteuerungService.ZusatzEingang(
-                false, "Entfeuchter", "Zusatz-Entfeuchter", null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+        var e = Bru();
+        e.Meldung.Aktiv = false;
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(e, Eingang(zusatz: "on", leistung: 3)).ZiehtNichts);
+    }
 
-        Assert.False(live.HaErreichbar);
-        Assert.All(new object?[]
-        {
-            live.PlanWoche, live.PlanLuftTagC, live.PlanLuftNachtC, live.TempC, live.FeuchteProzent, live.Vpd, live.TagPhase,
-            live.VpdZiel, live.VpdEinSchwelle, live.VpdAusSchwelle, live.FeuchteEinProzent, live.FeuchteAusProzent,
-            live.ZusatzAn, live.ZusatzOnline, live.LeistungW, live.EnergieHeuteKwh, live.FuehrungAn, live.ZiehtNichts, live.AutomatikAn,
-        }, x => Assert.Null(x));
-        Assert.Equal(EntfeuchterZusatzSchaltgroesse.Keine, live.Schaltgroesse);
-        Assert.True(live.PlanUnvollstaendig);
+    [Theory]
+    [InlineData(null, 3.0, 30)]
+    [InlineData("unavailable", 3.0, 30)]
+    [InlineData("unknown", 3.0, 30)]
+    [InlineData("on", null, 30)]
+    [InlineData("on", 3.0, null)]   // seit wann er an ist, weiß Home Assistant nicht
+    public void ZiehtNichts_OhneMesswertZustandOderZeitpunkt_IstFalse_NieErraten(string? zusatz, double? leistung, int? anSeitMin)
+    {
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: zusatz, leistung: leistung, anSeitMin: anSeitMin)).ZiehtNichts);
+    }
+
+    [Fact]
+    public void PlanUnvollstaendig_NurMitHomeAssistant_OhneVerbindungWeissNiemandEtwasUeberDenPlan()
+    {
+        var mitHa = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: null, vpdOben: null, feuchteEin: null, feuchteAus: null, ha: true));
+        Assert.True(mitHa.PlanUnvollstaendig);
+        Assert.Equal(EntfeuchterZusatzSchaltgroesse.Keine, mitHa.Schaltgroesse);
+
+        var ohneHa = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: null, vpdOben: null, feuchteEin: null, feuchteAus: null, ha: false));
+        Assert.False(ohneHa.PlanUnvollstaendig);
+
+        // Mit Plan-Werten ist er nie unvollständig.
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(ha: true)).PlanUnvollstaendig);
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: null, vpdOben: null, ha: true)).PlanUnvollstaendig);
     }
 
     [Theory]
@@ -678,6 +702,90 @@ public sealed class EntfeuchterZusatzTests
         // die Fassung der Vorlage wäre null gewesen, und eine Erneuerung nie angeboten worden.
         Assert.Equal(3, SteuerungAutomationService.Fassung("... Herkunft: fork-ai/entfeuchter-zusatz/regelung/3."));
         Assert.Equal(1, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "regelung"));
-        Assert.Equal(1, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "meldung"));
+        Assert.Equal(2, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "meldung"));
     }
+
+    // ------------------------------------------- genannte Felder immer schreiben
+
+    [Fact]
+    public void Schreibliste_EinGenanntesFeld_WirdAuchBeiGleichemWertGeschrieben()
+    {
+        var stand = Ausgangsstand();
+        var a = new EntfeuchterZusatzAenderung { FolgeAbstandK = stand.FolgeAbstandK, Meldung = new() { Aktiv = stand.Meldung.Aktiv } };
+
+        var liste = EntfeuchterZusatzSteuerungService.Schreibliste(stand, Anwenden(a, stand), a);
+
+        Assert.Equal(2, liste.Count);
+        Assert.Contains(liste, l => l is { Entitaet: EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand, Wert: 2 });
+        Assert.Contains(liste, l => l is { Entitaet: EntfeuchterZusatzSteuerungService.Entitaeten.Melden, Dienst: "turn_off" });
+        // Ohne Kenntnis der Änderung bleibt es beim Vergleich: gleich = nichts.
+        Assert.Empty(EntfeuchterZusatzSteuerungService.Schreibliste(stand, Anwenden(a, stand)));
+    }
+
+    [Fact]
+    public void Schreibliste_EineVoreinstellungNenntIhreFuenfWerte()
+    {
+        var stand = Anwenden(new EntfeuchterZusatzAenderung { Hilfe = "normal" });
+        var a = new EntfeuchterZusatzAenderung { Hilfe = "normal" };
+
+        var liste = EntfeuchterZusatzSteuerungService.Schreibliste(stand, Anwenden(a, stand), a);
+
+        Assert.Equal(
+            new[] { "folge_abstand", "mindestpause", "vpd_hysterese", "wieder_ein_abstand", "zuschalt_verzogerung" },
+            liste.Select(l => l.Entitaet.Replace("input_number.trotec_zelt_", "")).Order());
+        // „aus" und „eigene" nennen keinen Helfer.
+        Assert.Empty(EntfeuchterZusatzSteuerungService.Schreibliste(stand, stand, new EntfeuchterZusatzAenderung { Hilfe = "aus" }));
+        Assert.Empty(EntfeuchterZusatzSteuerungService.Schreibliste(stand, stand, new EntfeuchterZusatzAenderung { Hilfe = "eigene" }));
+    }
+
+    [Fact]
+    public void TempMaxSchreibliste_NurDieGenanntenHelfer_MitDemGueltigenSollwert()
+    {
+        var e = new EntfeuchterEinstellungen
+        {
+            TempMaxTagModus = TempMaxModus.Fest, TempMaxTagFestC = 27,
+            TempMaxNachtModus = TempMaxModus.Plan, TempMaxNachtAbstandK = 9,
+        };
+
+        var nurTag = EntfeuchterZusatzSteuerungService.TempMaxSchreibliste(e, new() { TempMaxTagFestC = 27 }, ("Woche 7", 20, 16));
+        var tag = Assert.Single(nurTag);
+        Assert.Equal((EntfeuchterSteuerungService.Entitaeten.TempMaxTag, "set_value", 27.0), (tag.Entitaet, tag.Dienst, tag.Wert));
+
+        // Nacht im Plan-Modus: Plan-Luft Nacht + Abstand.
+        var nurNacht = EntfeuchterZusatzSteuerungService.TempMaxSchreibliste(e, new() { TempMaxNachtAbstandK = 9 }, ("Woche 7", 20, 16));
+        var nacht = Assert.Single(nurNacht);
+        Assert.Equal((EntfeuchterSteuerungService.Entitaeten.TempMaxNacht, 25.0), (nacht.Entitaet, nacht.Wert));
+
+        Assert.Equal(2, EntfeuchterZusatzSteuerungService.TempMaxSchreibliste(e, new() { TempMaxTagModus = "fest", TempMaxNachtModus = "plan" }, null).Count);
+        Assert.Empty(EntfeuchterZusatzSteuerungService.TempMaxSchreibliste(e, new() { FolgeAbstandK = 2 }, null));
+    }
+
+    // ------------------------------------------------------- Shelly ausschalten
+
+    [Theory]
+    [InlineData("switch.grow_dehumi_tent", true)]
+    [InlineData("input_boolean.zusatz", true)]
+    [InlineData("select.rdwc_dehumi_aktiver_modus", false)]
+    [InlineData("light.irgendwas", false)]
+    [InlineData("climate.trotec", false)]
+    [InlineData("automation.regelung", false)]
+    [InlineData("sensor.x", false)]
+    [InlineData("kaputt", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IstSchaltbar_NurSwitchUndInputBoolean(string? entitaet, bool erwartet)
+        => Assert.Equal(erwartet, EntfeuchterZusatzSteuerungService.IstSchaltbar(entitaet));
+
+    // ------------------------------------------------------------ Push-Adresse
+
+    [Theory]
+    [InlineData("notify.mobile_app_bruno_smartphone_1", "notify.mobile_app_bruno_smartphone_1")]
+    [InlineData("  notify.mobile_app_pixel ", "notify.mobile_app_pixel")]
+    [InlineData(null, "notify.notify")]
+    [InlineData("", "notify.notify")]
+    [InlineData("persistent_notification.create", "notify.notify")]
+    [InlineData("notify.x\"; drop", "notify.notify")]
+    [InlineData("mobile_app_pixel", "notify.notify")]
+    public void PushDienst_DieEingestellteAdresse_SonstDieSammelgruppe(string? eingestellt, string erwartet)
+        => Assert.Equal(erwartet, SteuerungAutomationService.PushDienst(eingestellt));
 }
