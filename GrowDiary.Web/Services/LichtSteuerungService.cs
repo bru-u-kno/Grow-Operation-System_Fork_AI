@@ -224,20 +224,37 @@ public sealed class LichtSteuerungService
             {
                 if (preset is not ("veggie" or "bluete")) return false;
                 var (ein, aus) = Preset(e, preset);
+                var zeiten = new[] { (Rollen.EinZeit, ein + ":00"), (Rollen.AusZeit, aus + ":00") };
+                var zeitplan = (Rollen.Modus, AcModi.Zeitplan);
                 // Reihenfolge: erst die Zeiten, dann der Modus. Wer zuerst auf
                 // Zeitplan schaltet, laesst den Controller kurz nach den alten
                 // Zeiten schalten.
-                return await SchreibenAsync(new[]
-                {
-                    (Rollen.EinZeit, ein + ":00"),
-                    (Rollen.AusZeit, aus + ":00"),
-                    (Rollen.Modus, AcModi.Zeitplan),
-                }, e, ct);
+                // Ausnahme: Auf „An" und „Aus" meldet Home Assistant die Zeiten als
+                // „unavailable" — ein Auftrag liefe ins Leere, und der Modus bliebe
+                // fuer immer stehen (06.10.2026: weder Veggie noch Bluete ging).
+                // Dann muss der Zeitplan zuerst her; die Zeiten folgen, sobald sie da sind.
+                return await SchreibenAsync(
+                    await ZeitenErreichbarAsync(ct) ? zeiten.Append(zeitplan).ToArray() : new[] { zeitplan }.Concat(zeiten).ToArray(),
+                    e, ct);
             }
 
             default:
                 return false;
         }
+    }
+
+    /// <summary>Melden Ein- und Aus-Zeit einen Wert — oder sind sie „unavailable", weil der Controller nicht im Zeitplan steht?</summary>
+    private async Task<bool> ZeitenErreichbarAsync(CancellationToken ct)
+    {
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        var geraete = _geraete.EntitiesFuerModul(Modul);
+        foreach (var rolle in new[] { Rollen.EinZeit, Rollen.AusZeit })
+        {
+            if (!geraete.TryGetValue(rolle, out var id) || string.IsNullOrWhiteSpace(id)) return true; // fehlt: das meldet SchreibenAsync
+            var stand = (await _funk.ZustandAsync(settings, id, ct))?.State;
+            if (stand is null or "unavailable" or "unknown" or "") return false;
+        }
+        return true;
     }
 
     /// <summary>

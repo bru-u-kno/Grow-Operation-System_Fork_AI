@@ -133,6 +133,10 @@ public sealed class LichtNachschreibenTests : IDisposable
         private readonly Dictionary<string, string> _stand = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Verwirft { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<string> Gesendet { get; } = new();
+        /// <summary>Entitäten, die „unavailable" sind und Schreibaufträge ins Leere laufen lassen.</summary>
+        public HashSet<string> Gesperrt { get; } = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Wird nach jedem angenommenen Auftrag gerufen: Entität, neuer Wert.</summary>
+        public Action<string, string>? Danach { get; set; }
 
         public void Setzen(string entityId, string zustand) => _stand[entityId] = zustand;
         public string? Stand(string entityId) => _stand.GetValueOrDefault(entityId);
@@ -146,10 +150,12 @@ public sealed class LichtNachschreibenTests : IDisposable
             IReadOnlyDictionary<string, object> daten, CancellationToken ct)
         {
             Gesendet.Add(entityId);
-            if (!Verwirft.Contains(entityId))
+            if (!Verwirft.Contains(entityId) && !Gesperrt.Contains(entityId))
             {
                 var wert = daten.GetValueOrDefault("option") ?? daten.GetValueOrDefault("time") ?? daten.GetValueOrDefault("value");
-                _stand[entityId] = Convert.ToString(wert, System.Globalization.CultureInfo.InvariantCulture) ?? "";
+                var text = Convert.ToString(wert, System.Globalization.CultureInfo.InvariantCulture) ?? "";
+                _stand[entityId] = text;
+                Danach?.Invoke(entityId, text);
             }
             return Task.FromResult(true);
         }
@@ -192,6 +198,38 @@ public sealed class LichtNachschreibenTests : IDisposable
         Assert.False(ok);
         Assert.DoesNotContain(Modus, wolke.Gesendet);
         Assert.Equal("On", wolke.Stand(Modus));
+    }
+
+    /// <summary>
+    /// Wer auf „An" oder „Aus" steht, hat keine Zeitplan-Zeiten: Home Assistant
+    /// meldet sie als „unavailable", und ein Schreibauftrag läuft ins Leere.
+    /// Am 06.10.2026 ging deshalb weder „Veggie" noch „Blüte" — die Zeiten
+    /// kamen nie an, der Modus wurde darum nie auf Zeitplan gestellt.
+    /// </summary>
+    [Fact]
+    public async Task PresetAusAn_StelltErstAufZeitplanUndSchreibtDanachDieZeiten()
+    {
+        var wolke = new Wolke();
+        wolke.Setzen(Modus, "On");
+        wolke.Setzen(Ein, "unavailable");
+        wolke.Setzen(Aus, "unavailable");
+        wolke.Gesperrt.Add(Ein);
+        wolke.Gesperrt.Add(Aus);
+        wolke.Danach = (entity, wert) =>
+        {
+            if (entity != Modus || wert != AcModi.Zeitplan) return;
+            wolke.Gesperrt.Clear();
+            wolke.Setzen(Ein, "08:00:00"); // die alten Zeiten des Controllers
+            wolke.Setzen(Aus, "20:00:00");
+        };
+
+        var ok = await Licht(wolke).BefehlAsync("preset", "bluete", null, CancellationToken.None);
+
+        Assert.True(ok);
+        Assert.Equal([Modus, Ein, Aus], wolke.Gesendet.Distinct());
+        Assert.Equal(AcModi.Zeitplan, wolke.Stand(Modus));
+        Assert.Equal(Vorgabe.BlueteEin + ":00", wolke.Stand(Ein));
+        Assert.Equal(Vorgabe.BlueteAus + ":00", wolke.Stand(Aus));
     }
 
     [Fact]

@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.177
+
+**Fork AI.** „Veggie" und „Blüte" funktionieren auch, wenn das Licht gerade auf „An" oder „Aus" steht.
+
+- **Was war:** Steht die LED auf „An" oder „Aus", meldet Home Assistant die Zeitplan-Zeiten als
+  „nicht verfügbar". „Veggie" und „Blüte" schrieben aber zuerst die Zeiten und stellten erst danach auf
+  Zeitplan. Die Zeiten kamen nie an, der Zeitplan wurde nie gesetzt — der Knopf tat scheinbar nichts.
+- **Jetzt:** Sind die Zeiten nicht erreichbar, stellt der Fork zuerst auf Zeitplan und schreibt die
+  Zeiten danach. Steht die LED schon im Zeitplan, bleibt die Reihenfolge wie bisher (erst Zeiten, dann
+  Zeitplan), damit der Controller nicht kurz nach den alten Zeiten schaltet.
+
 ## 2.0.0-forkai.176
 
 **Fork AI.** Die Knöpfe − und + bei der Leistungsstufe des LED-Lichts funktionieren wieder mehrfach hintereinander.
