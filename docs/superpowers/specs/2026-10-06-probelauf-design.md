@@ -30,6 +30,14 @@ wie gut die Zielwerte gehalten wurden (Push nur bei Auffälligem), und **sucht U
 Sie **startet nie selbst** einen Lauf; Start nur durch Bru. Gelerntes: **Notiz je Lauf im Vault plus ein Steckbrief je Gerät** mit der
 gelernten Wirkung (wächst mit jedem Lauf). Läufe sind **jederzeit erlaubt**, solange die Grenzen halten.
 
+## KI ist optional (Bru, 2026-10-06)
+Manche Endanwender wollen keine KI. Deshalb hängen alle KI-Teile an einem **zentralen Hauptschalter „KI-Funktionen"** (eigene Aufgabe A-011,
+Einstellung `ki.aktiv`; Voreinstellung aus, bei Bru automatisch an; Schalter sitzt auf der KI-Seite; bei „aus" bleibt nur diese Seite
+mit Schalter und Hinweis sichtbar, auch der Schlüsselzugang von außen ist gesperrt).
+**Der Fork rechnet immer selbst:** Lauf, Auswertung (Kurve, Kennzahlen), Zielabgleich, gelernte Wirkung je Gerät, Abdeckung und der
+regelbasierte Vorschlag für den nächsten Lauf sowie Einstellungsvorschläge brauchen **keine KI**. Nur Deutung in Worten, Ursachensuche,
+tägliche Beobachtung, Notiz und Steckbrief je Gerät im Vault gehören zur KI und erscheinen nur bei „an".
+
 ## Festgelegt (Bru, 2026-10-06)
 - Wirkung real am Zelt; akzeptiert, solange die Grenzen halten.
 - Nach dem Lauf: Auswertung **plus** KI-Empfehlung, nichts wird ohne Bestätigung übernommen.
