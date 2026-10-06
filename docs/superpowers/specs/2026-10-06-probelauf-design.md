@@ -24,6 +24,12 @@ Der einzelne Lauf ist ein Baustein; dazu kommt eine Ansicht **Kenntnisstand**:
 - **Vorschläge zur Zielerreichung:** Einstellungsänderungen mit Schätzung der Wirkung; nur per Klick übernommen.
 Mockup: `~/mockups/probelauf.html` (Ansicht 5 „Kenntnisstand").
 
+## Rolle der KI (Bru, 2026-10-06)
+Die KI **wertet jeden Lauf aus und deutet ihn**, **schlägt den nächsten Probelauf vor** (größte Lücke im Kenntnisstand), **beobachtet täglich**,
+wie gut die Zielwerte gehalten wurden (Push nur bei Auffälligem), und **sucht Ursachen** für Lücken über mehrere Geräte hinweg.
+Sie **startet nie selbst** einen Lauf; Start nur durch Bru. Gelerntes: **Notiz je Lauf im Vault plus ein Steckbrief je Gerät** mit der
+gelernten Wirkung (wächst mit jedem Lauf). Läufe sind **jederzeit erlaubt**, solange die Grenzen halten.
+
 ## Festgelegt (Bru, 2026-10-06)
 - Wirkung real am Zelt; akzeptiert, solange die Grenzen halten.
 - Nach dem Lauf: Auswertung **plus** KI-Empfehlung, nichts wird ohne Bestätigung übernommen.
