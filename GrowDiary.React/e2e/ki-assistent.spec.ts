@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { backendAntwortet, darfUeberspringen } from './pflicht'
+import { backendAntwortet, darfUeberspringen, kiAmServerAn } from './pflicht'
 
 /**
  * KI-Assistent (Fork AI, 04.10.2026): alles zur eigenen KI an einer Stelle.
@@ -16,6 +16,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 
 test.beforeEach(async ({ page }) => {
   darfUeberspringen(!(await backendAntwortet(page.request)), 'Kein Backend erreichbar.')
+  await kiAmServerAn(page.request) // Fork AI (A-011): ohne KI an gibt es die Seiten nicht
 })
 
 test('/berater leitet auf den Reiter Mappe und behält den Grow', async ({ page }) => {
