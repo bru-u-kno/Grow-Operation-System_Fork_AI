@@ -169,6 +169,15 @@ builder.Services.AddScoped<NachtabsenkungWriter>();
 builder.Services.AddScoped<IAcFunk, HomeAssistantFunk>();
 builder.Services.AddScoped<AcSchreiber>();
 builder.Services.AddScoped<Ausschalter>();
+// Fork AI (A-010): Probelauf — eine Steuerung zeitlich begrenzt abschalten, aufzeichnen, zurückstellen, auswerten.
+builder.Services.AddSingleton<ProbelaufRepository>();
+builder.Services.AddScoped<IProbelaufHa, ProbelaufHa>();
+builder.Services.AddScoped<IChillerRegler, ChillerReglerImZelt>();
+builder.Services.AddScoped<ProbelaufEingriff>();
+builder.Services.AddScoped<IProbelaufMessung, ProbelaufMessung>();
+builder.Services.AddScoped<IProbelaufMeldung, ProbelaufMeldung>();
+builder.Services.AddScoped<ProbelaufService>();
+builder.Services.AddHostedService<ProbelaufWorker>();
 builder.Services.AddSingleton<EinkaufslisteService>();
 builder.Services.AddSingleton<BeobachtungsWegweiser>();
 builder.Services.AddSingleton<SolutionStabilityAnalyzer>();

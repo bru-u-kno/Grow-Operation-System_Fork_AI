@@ -117,6 +117,23 @@ public enum BauteilArt
 /// <see cref="SteuerungBauteile.AutomationFinden"/>.
 /// </para>
 /// </param>
+/// <summary>
+/// Fork AI (A-010): Was ein Probelauf mit einer Automation tut.
+/// </summary>
+/// <remarks>
+/// Ausdrücklich je Automation und nicht aus Namensteilen geraten: Wächter, Sollwert-Läufe und
+/// Drosselungen bleiben an, nur die eigentliche Regelung wird für die Dauer des Laufs pausiert.
+/// Ohne Angabe (<c>null</c>) wird eine Automation nie angefasst.
+/// </remarks>
+public enum ProbelaufRolle
+{
+    /// <summary>Die Regelung, deren Wirkung der Lauf sichtbar machen soll — wird aus- und danach wieder eingeschaltet.</summary>
+    Pausieren,
+
+    /// <summary>Sicherheit oder Nebenwirkung — läuft weiter, auch im Probelauf.</summary>
+    Laufenlassen,
+}
+
 public sealed record Bauteil(
     string Modul,
     string EntityId,
@@ -133,7 +150,8 @@ public sealed record Bauteil(
     string? Vorlage = null,
     string? Zustandsklasse = null,
     string? Verfuegbarkeit = null,
-    string? VorlagenDatei = null)
+    string? VorlagenDatei = null,
+    ProbelaufRolle? Probelauf = null)
 {
     /// <summary>Die Domäne der Entität — <c>input_number</c>, <c>sensor</c>, …</summary>
     public string Domaene => EntityId.Split('.', 2)[0];
@@ -310,12 +328,15 @@ public static class SteuerungBauteile
 
         // --- Automationen -------------------------------------------------
         new(Co2, "automation.co2_dosierung_rdwc_port_5", "CO2 Dosierung", BauteilArt.Automation,
-            "Die eigentliche Regelung: Impuls, Prüfen, Warten.", VorlagenDatei: "dosierung"),
+            "Die eigentliche Regelung: Impuls, Prüfen, Warten.", VorlagenDatei: "dosierung",
+            Probelauf: ProbelaufRolle.Pausieren),
         new(Co2, "automation.co2_wachter_rdwc_port_5", "CO2 Wächter", BauteilArt.Automation,
-            "Schließt das Ventil zwangsweise, wenn es zu lange offen steht. Wird immer angelegt.", VorlagenDatei: "waechter"),
+            "Schließt das Ventil zwangsweise, wenn es zu lange offen steht. Wird immer angelegt.", VorlagenDatei: "waechter",
+            Probelauf: ProbelaufRolle.Laufenlassen),
         new(Co2, "automation.co2_abluft_drosselung_t6_rdwc_port_1", "CO2 Abluft-Drosselung", BauteilArt.Automation,
             "Senkt die Abluft während des Dosierens.", Pflicht: false, HaengtAn: BrauchtAbluft,
-            OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", VorlagenDatei: "abluft"),
+            OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", VorlagenDatei: "abluft",
+            Probelauf: ProbelaufRolle.Laufenlassen),
 
         // ====================================================================
         // Zuluft Keller — Außenluft ansaugen, solange sie trockener ist als die
@@ -382,7 +403,8 @@ public static class SteuerungBauteile
 
         // --- Automation -----------------------------------------------------
         new(Zuluft, "automation.zuluft_keller_regelung", "Zuluft Keller Regelung", BauteilArt.Automation,
-            "Schaltet den Lüfter-Port und führt die Stufe nach.", VorlagenDatei: "regelung"),
+            "Schaltet den Lüfter-Port und führt die Stufe nach.", VorlagenDatei: "regelung",
+            Probelauf: ProbelaufRolle.Pausieren),
 
         // ====================================================================
         // Water Chiller — Wassertemperatur auf zwei Zielen halten, Tag und Nacht.
@@ -435,15 +457,18 @@ public static class SteuerungBauteile
             "Schaltet die Steckdose nach Kühlbedarf, gegen Mindestlaufzeit und -pause.",
             Pflicht: false, HaengtAn: new[] { "steckdose" },
             OhneDas: "Ohne Regelung schaltet niemand die Steckdose nach Kühlbedarf — es sei denn, der Kühler hat einen eigenen Sollwert-Eingang.",
-            VorlagenDatei: "regelung"),
+            VorlagenDatei: "regelung",
+            Probelauf: ProbelaufRolle.Pausieren),
         new(Chiller, "automation.water_chiller_sollwert", "Water Chiller Sollwert", BauteilArt.Automation,
             "Schreibt das Tag- oder Nachtziel in einen Kühler mit eigenem Thermostat.",
             Pflicht: false, HaengtAn: new[] { "kuehler_sollwert" },
-            OhneDas: "Ohne Sollwert-Lauf kommt das Tag- und Nachtziel nicht im Kühler an.", VorlagenDatei: "sollwert"),
+            OhneDas: "Ohne Sollwert-Lauf kommt das Tag- und Nachtziel nicht im Kühler an.", VorlagenDatei: "sollwert",
+            Probelauf: ProbelaufRolle.Laufenlassen),
         new(Chiller, "automation.water_chiller_wachter", "Water Chiller Wachter", BauteilArt.Automation,
             "Schaltet ab, wenn der Wasserfühler ausfällt, und warnt bei zu warmem Wasser.",
             Pflicht: false,
-            OhneDas: "Ohne Wächter läuft der Kühler weiter, wenn der Fühler stumm wird.", VorlagenDatei: "waechter"),
+            OhneDas: "Ohne Wächter läuft der Kühler weiter, wenn der Fühler stumm wird.", VorlagenDatei: "waechter",
+            Probelauf: ProbelaufRolle.Laufenlassen),
 
 
         // ====================================================================
@@ -477,7 +502,8 @@ public static class SteuerungBauteile
         new(Entfeuchter, "input_number.trotec_feuchte_aus", "Trotec Feuchte AUS", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
         new(Entfeuchter, "automation.rdwc_trotec_nachtregelung_port_7_dehumi", "RDWC Trotec Regelung", BauteilArt.Automation,
-            "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft."),
+            "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft.",
+            Probelauf: ProbelaufRolle.Pausieren),
 
         // ====================================================================
         // Zusatz-Entfeuchter — Fork AI (A-009). Ein zweiter Trotec an einer
@@ -558,11 +584,13 @@ public static class SteuerungBauteile
         // über ihre Konfigurations-Kennung gefunden.
         new(EntfeuchterZusatz, "automation.rdwc_trotec_zelt_shelly_plan_regelung", "Zusatz-Entfeuchter Regelung", BauteilArt.Automation,
             "Schaltet den Zusatz-Entfeuchter nach dem Plan — und nie so, dass beide Entfeuchter gleichzeitig ausgehen.",
-            VorlagenDatei: "regelung"),
+            VorlagenDatei: "regelung",
+            Probelauf: ProbelaufRolle.Pausieren),
         new(EntfeuchterZusatz, "automation.zusatz_entfeuchter_zieht_nichts", "Zusatz-Entfeuchter zieht nichts", BauteilArt.Automation,
             "Meldet, wenn der Zusatz an ist, aber kaum Leistung aufnimmt (z. B. voller Tank).",
             Pflicht: false, HaengtAn: BrauchtZusatzLeistung,
-            OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.", VorlagenDatei: "meldung"),
+            OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.", VorlagenDatei: "meldung",
+            Probelauf: ProbelaufRolle.Laufenlassen),
     };
 
     /// <summary>

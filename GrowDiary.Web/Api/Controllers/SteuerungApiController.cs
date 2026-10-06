@@ -768,7 +768,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         return await Geraete(ct);
     }
 
-    private static string ModulTitel(string modul) => modul switch
+    internal static string ModulTitel(string modul) => modul switch
     {
         "co2" => "CO₂ · Begasung",
         "licht" => "Licht · LED Top",

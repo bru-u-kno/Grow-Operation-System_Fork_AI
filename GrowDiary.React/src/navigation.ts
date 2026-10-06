@@ -58,6 +58,11 @@ export type NavLeaf = {
    * globale Schalter „KI-Funktionen" aus ist (Menü, Suche, Mehr-Blatt).
    */
   ki?: boolean
+  /**
+   * Fork AI (A-010): Pfade unterhalb von `to`, auf denen dieser Eintrag NICHT als aktiv gilt, weil ein
+   * eigener Menüpunkt dort wohnt — „Probelauf" liegt unter `/steuerung/`, soll aber nicht „Steuerung" mit anleuchten.
+   */
+  ausser?: string[]
 }
 
 export type NavGroup = {
@@ -158,7 +163,8 @@ export const navGroups: NavGroup[] = [
       // ein Grow läuft: jede neue CO₂-Flasche, jeder Kanister Dünger wird hier
       // erfasst. Das Archiv rechnet den Strom aus Lampen-Watt; hier kommt er
       // vom Zähler.
-      { to: '/steuerung', label: 'Steuerung', end: false, icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter zusatz-entfeuchter shelly chiller abluft licht sollwerte automatik ventil dosierung klima' },
+      { to: '/steuerung/probelauf', label: 'Probelauf', end: true, keywords: 'probelauf test gerät abschalten entfeuchter chiller zuluft co2 aus testen wirkung messen kenntnisstand grenzen zurückstellen' },
+      { to: '/steuerung', label: 'Steuerung', end: false, ausser: ['/steuerung/probelauf'], icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter zusatz-entfeuchter shelly chiller abluft licht sollwerte automatik ventil dosierung klima' },
       { to: '/kosten', label: 'Kosten', end: true, icon: '€', short: 'Kosten', keywords: 'strom kwh euro preis zähler verbrauch verbrauchsartikel co2 flasche nachfüllung nachfüllen dünger kanister laufzeit prognose je tag je pflanze durchgang' },
     ],
   },
@@ -304,6 +310,7 @@ export function suchbareSeiten(kiAktiv = true) {
 export const searchablePages = suchbareSeiten(true)
 
 export function isNavLeafActive(item: NavLeaf, pathname: string): boolean {
+  if (item.ausser?.some((pfad) => pathname === pfad || pathname.startsWith(`${pfad}/`))) return false
   return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
 

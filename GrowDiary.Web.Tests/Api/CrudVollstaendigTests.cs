@@ -45,6 +45,13 @@ public sealed class CrudVollstaendigTests
             + "eines Befundes, den die App selbst erhoben hat — genau das, was ein "
             + "Waechter nicht koennen darf.",
 
+        // Fork AI (A-010)
+        ["ProbelaufApiController"] =
+            "Ein Probelauf ist ein Messprotokoll mit Lebenslauf statt Loeschweg: Laeuft -> Nachlauf -> Fertig oder "
+            + "Abgebrochen, und Abbrechen gibt es. Ein offener Lauf darf nie verschwinden, bevor das Zelt zurueckgestellt "
+            + "ist; die abgeschlossenen sind das Wissen, auf dem der Kenntnisstand aufbaut. Loeschen alter Laeufe kommt, "
+            + "wenn die Liste zu lang wird.",
+
         ["SystemApiController"] =
             "201 steht an der Sicherung (Backup). Eine Sicherung wird nicht ueber die "
             + "API geloescht — sie liegt als Datei im Add-on-Ordner, und ein "

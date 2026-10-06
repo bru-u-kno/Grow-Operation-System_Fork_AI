@@ -1,0 +1,42 @@
+/* Fork AI (A-010): Probelauf — Formular, laufender Lauf, Ergebnis. Alles über die Token des Forks. */
+@layer components {
+  .pl-seite { display: grid; gap: var(--s-4); }
+  .pl-karte { padding: var(--s-3); background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r-lg); display: grid; gap: var(--s-3); }
+  .pl-karte h2 { margin: 0; font: 600 var(--fs-etikett) var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent-text); }
+
+  .pl-dauer { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+  .pl-dauer .st-chip { justify-content: center; padding: var(--s-3); font-family: var(--font-mono); font-weight: 600; }
+
+  .pl-liste { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-1); color: var(--muted); font-size: var(--fs-text); }
+  .pl-liste li::before { content: '› '; color: var(--accent-text); }
+
+  .pl-grenzen { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); margin-top: var(--s-3); }
+  .pl-grenzen label { display: grid; gap: var(--s-1); font-size: var(--fs-etikett); color: var(--muted); }
+  .pl-grenzen input { padding: var(--s-2); background: var(--sunk, var(--surface)); border: 1px solid var(--hair); border-radius: var(--r-md, 8px); color: var(--ink); font: inherit; font-family: var(--font-mono); }
+  .pl-grenzen em { font-style: normal; color: var(--accent-text); }
+
+  .pl-zahlen { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+  .pl-zahl { padding: var(--s-2) var(--s-3); border: 1px solid var(--hair); border-radius: var(--r-md, 8px); }
+  .pl-zahl b { display: block; font: 600 1.25rem var(--font-mono); font-variant-numeric: tabular-nums; }
+  .pl-zahl span { font-size: var(--fs-etikett); color: var(--faint); }
+
+  .pl-balken { height: .6rem; border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; }
+  .pl-balken i { display: block; height: 100%; background: var(--accent); }
+
+  .pl-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-text); }
+  .pl-tabelle th, .pl-tabelle td { text-align: left; padding: var(--s-2) var(--s-1); border-bottom: 1px solid var(--hair); }
+  .pl-tabelle th { font: 500 var(--fs-etikett) var(--font-mono); text-transform: uppercase; color: var(--faint); }
+  .pl-tabelle td.is-steigt { color: var(--warn-text); }
+  .pl-tabelle td.is-faellt { color: var(--accent-text); }
+  .pl-tabelle button { all: unset; cursor: pointer; color: var(--accent-text); text-decoration: underline; }
+
+  .pl-kurve { width: 100%; height: auto; display: block; color: var(--ink); }
+  .pl-legende { display: flex; flex-wrap: wrap; gap: var(--s-3); font-size: var(--fs-etikett); color: var(--faint); }
+  .pl-legende i { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: var(--s-1); vertical-align: -1px; }
+
+  .pl-marke { display: inline-block; padding: 1px var(--s-2); border: 1px solid var(--hair); border-radius: 999px; font: 500 var(--fs-etikett) var(--font-mono); color: var(--muted); }
+  .pl-marke.is-ok { border-color: var(--accent); color: var(--accent-text); }
+  .pl-marke.is-warn { border-color: var(--warn); color: var(--warn-text); }
+
+  @media (max-width: 520px) { .pl-zahlen { grid-template-columns: 1fr 1fr; } }
+}

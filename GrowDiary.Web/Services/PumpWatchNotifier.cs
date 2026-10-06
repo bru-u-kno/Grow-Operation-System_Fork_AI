@@ -41,6 +41,7 @@ public sealed class PumpWatchNotifier
 
     private readonly HomeAssistantService? _ha;
     private readonly HomeAssistantSettingsRepository? _haSettings;
+    private readonly ProbelaufRepository? _probelauf; // Fork AI (A-010): ein Probelauf schaltet den Kühler mit Absicht aus
 
     public PumpWatchNotifier(
         AppSettingsRepository settings,
@@ -49,8 +50,10 @@ public sealed class PumpWatchNotifier
         AnlagenRisikoService risiken,
         ILogger<PumpWatchNotifier> logger,
         HomeAssistantService? ha = null,
-        HomeAssistantSettingsRepository? haSettings = null)
+        HomeAssistantSettingsRepository? haSettings = null,
+        ProbelaufRepository? probelauf = null)
     {
+        _probelauf = probelauf;
         _ha = ha;
         _haSettings = haSettings;
         _settings = settings;
@@ -178,7 +181,8 @@ public sealed class PumpWatchNotifier
         // befohlen und die Steckdose meldet trotzdem aus, ist das keine
         // Regelpause, sondern ein Defekt — dann greift die alte Beurteilung.
         var absichtlich = KuehlerService.IstAbsichtlichAus(tent, KuehlerWorker.LetzterBefehl(_settings, tent.Id))
-            || await KeinKuehlbedarfAsync(cancellationToken);
+            || await KeinKuehlbedarfAsync(cancellationToken)
+            || (_probelauf is not null && ProbelaufService.KuehlerAbsichtlichAus(_probelauf.Offene()));
 
         var befunde = AnlagenWatchService.Beurteilen(zustaende, nowUtc, SchonfristMinuten, absichtlich);
 

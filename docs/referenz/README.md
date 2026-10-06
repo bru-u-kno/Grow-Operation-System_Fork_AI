@@ -34,6 +34,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | Wann ein Glas gelüftet werden muss und wie lange | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) |
 | Was in der Kostenzahl im Archiv steckt — und was bewusst nicht | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) |
 | Wie lange die CO₂-Flasche noch hält und was der Strom vom Zähler kostet (Fork AI) | [kosten.md](kosten.md) |
+| Wie ich eine Steuerung 10–30 Minuten abschalte, um ihre Wirkung zu messen (Fork AI) | [probelauf.md](probelauf.md) |
 | Wo die Sollwerte der CO₂-Begasung stehen und wer eigentlich regelt (Fork AI) | [steuerung.md](steuerung.md) |
 | Welche Entität benutzt der Fork wofür und zu welchem Gerät gehört sie (Fork AI) | [geraete.md](geraete.md) |
 | Warum ein Controller und seine Ports getrennte Geräte sind (Fork AI) | [geraete.md](geraete.md) |

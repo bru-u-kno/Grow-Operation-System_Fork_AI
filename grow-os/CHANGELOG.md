@@ -5,6 +5,22 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.180
+
+**Fork AI.** Neue Seite „Probelauf" (Betrieb → Probelauf): Eine Steuerung für 10, 20 oder 30 Minuten abschalten und sehen, wie sich Luftfeuchte, Temperatur und VPD entwickeln.
+
+- **Was passiert:** Der Fork merkt sich den Zustand, pausiert die Regelung der gewählten Steuerung und schaltet das Gerät aus. Möglich bei Entfeuchter,
+  Zusatz-Entfeuchter, Zuluft, CO₂ und Chiller. Die Wächter (CO₂-Wächter, Kühler-Wächter, „zieht nichts") laufen weiter.
+- **Grenzen halten den Lauf sicher:** Luftfeuchte max., Temperatur max. und das VPD-Band (vorbelegt aus deinen Pflanzenzielen, unter „Erweitert").
+  Wird eine überschritten oder meldet ein Fühler länger als eine Minute nichts, bricht der Lauf ab und stellt sofort zurück.
+- **Zurückgestellt wird immer:** zum geplanten Ende, bei einem Abbruch von Hand und nach einem Neustart des Add-ons. Der Zustand vor dem Lauf steht in der
+  Datenbank (mit den damals zugeordneten Geräten, auch wenn du mitten im Lauf ein Gerät tauschst). Lässt sich das Zurückstellen nicht bestätigen, versucht es der
+  Fork weiter und meldet sich aufs Handy.
+- **Auswertung:** Kurve (vorher, Gerät aus, Nachlauf) mit Grenze und Kennzahlen je Wert: Start, Spitze, Ende, Änderung je Minute und Erholungszeit.
+  Wechselt während des Laufs die Lichtphase, steht ein Hinweis dabei.
+- **Ein Lauf zur Zeit.** Den Kühler-Alarm löst ein Chiller-Lauf nicht aus, solange der Eingriff läuft.
+- **Noch nicht dabei:** das Licht (es ändert die Lichtphase) und der „Kenntnisstand" (Zielabgleich, gelernte Wirkung je Gerät) — beides folgt.
+
 ## 2.0.0-forkai.179
 
 **Fork AI.** Neuer Schalter „KI-Funktionen": Wer keine KI will, schaltet sie für den ganzen Fork aus.

@@ -21,6 +21,7 @@ import ShoppingListPage from './pages/ShoppingListPage'
 import CuringPage from './pages/CuringPage'
 import KostenPage from './pages/KostenPage'
 import SteuerungPage from './pages/SteuerungPage'
+import ProbelaufSeite from './features/probelauf/ProbelaufSeite'
 import GeraetePage from './pages/GeraetePage'
 import LiveDashboardPage from './pages/LiveDashboardPage'
 import ManualMeasurementPage from './pages/ManualMeasurementPage'
@@ -175,6 +176,8 @@ function App() {
           <Route path="/kosten" element={<KostenPage />} />
           <Route path="/steuerung" element={<SteuerungPage />} />
           <Route path="/steuerung/geraete" element={<SteuerungGeraeteWeiterleitung />} />
+          {/* Fork AI (A-010): vor /steuerung/:modul, sonst hielte die Steuerungsseite „probelauf" für ein Modul. */}
+          <Route path="/steuerung/probelauf" element={<ProbelaufSeite />} />
           {/* Fork AI: Crop Steering wohnt thematisch unter der Steuerung, bleibt
               aber DIESELBE Seite des Entwicklers — eine zweite Route statt einer
               Kopie, damit seine Datei unberührt bleibt und Updates ankommen. */}
