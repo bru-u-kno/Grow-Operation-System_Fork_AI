@@ -278,6 +278,12 @@ public sealed class RundwegVollstaendigTests
     /// <summary>Verträge ohne Rundweg — mit ausgeschriebenem Grund.</summary>
     private static readonly Dictionary<string, string> NichtGefahren = new(StringComparer.Ordinal)
     {
+        // Fork AI (A-011)
+        ["KiHauptschalterDto"] =
+            "Ein einziger Schalter (aktiv), kein Formular mit Feldern, die zurueckkommen koennten. Ihn "
+            + "hier zu fahren, schaltete mitten im Lauf die KI der gemeinsamen Test-App aus und risse "
+            + "andere Faelle mit. Setzen, Lesen, Rueckschalten und die Wirkung auf KI-Seiten und Schluessel "
+            + "stehen in KiHauptschalterAppTests.",
         ["TagebuchVerwerfenRequest"] =
             "Ein Schalter, kein Formular: \u201eWar nichts\u201c setzt oder loescht nur den Zeitpunkt "
             + "VerworfenAmUtc einer Auffaelligkeit. Es gibt kein Feld, das zurueckkommen koennte; "

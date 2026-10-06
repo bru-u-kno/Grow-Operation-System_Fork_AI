@@ -5,6 +5,7 @@ import type { GrowSummary, SettingsOverviewDto } from '../types'
 import FileInput from '../components/FileInput'
 import { useTheme } from '../useTheme'
 import { useNavBar } from '../useNavBar'
+import { useKiAktiv } from '../ki-aktiv'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
 import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
@@ -32,6 +33,8 @@ function SettingsPage() {
     setHaZielSaving(true)
     try { await saveDashboardPath(haZiel.trim()) } finally { setHaZielSaving(false) }
   }
+  const { aktiv: kiAktiv, geladen: kiGeladen, setzen: kiSetzen } = useKiAktiv()
+  const [kiSpeichert, setKiSpeichert] = useState(false)
   const [settings, setSettings] = useState<SettingsOverviewDto | null>(null)
   const [grows, setGrows] = useState<GrowSummary[]>([])
   const [health, setHealth] = useState<BackendHealth | null>(null)
@@ -160,6 +163,22 @@ function SettingsPage() {
     }
   }
 
+  /** Fork AI (A-011): der globale Schalter KI-Funktionen. */
+  async function saveKiAktiv(neu: boolean) {
+    if (kiSpeichert || neu === kiAktiv) return
+    setKiSpeichert(true)
+    try {
+      await kiSetzen(neu)
+      setMessage(neu
+        ? 'KI-Funktionen sind an. Die Seite KI-Assistent steht wieder im Menü.'
+        : 'KI-Funktionen sind aus. Es ist nichts von der KI mehr sichtbar, und der Zugriff von außen ist gesperrt. Deine KI-Einstellungen bleiben gespeichert.')
+    } catch (caught) {
+      setError(formatApiError(caught, 'KI-Funktionen konnten nicht umgeschaltet werden.'))
+    } finally {
+      setKiSpeichert(false)
+    }
+  }
+
   async function savePumpSchonfrist() {
     setPumpSaving(true)
     setError(null)
@@ -234,6 +253,23 @@ function SettingsPage() {
 
       {loading ? <V1Skeleton rows={4} label="Lade Einstellungen" /> : (
         <div className="co-grid is-300" data-audit="settings-panels">
+          {/* Fork AI (A-011): ganz oben — der Schalter für alle KI-Teile des Fork. */}
+          <section className="ls-panel" data-audit="settings-ki-schalter">
+            <div className="ls-panel-head"><span className="ls-label">KI-Funktionen</span></div>
+            <div className="co-row">
+              <div style={{ minWidth: 0 }}>
+                <div className="co-row-title">KI-Funktionen</div>
+                <div className="co-row-sub">
+                  Schaltet alle KI-Teile des Fork ein oder aus. Aus: keine KI-Seiten und -Karten, kein Zugriff von außen.
+                  Der Fork rechnet alles Wichtige weiter selbst.
+                </div>
+              </div>
+              <div className="co-row-end st-theme" role="group" aria-label="KI-Funktionen">
+                <button type="button" className={`ls-btn is-small${kiGeladen && kiAktiv ? ' is-primary' : ''}`} aria-pressed={kiGeladen && kiAktiv} disabled={!kiGeladen || kiSpeichert} onClick={() => void saveKiAktiv(true)}>An</button>
+                <button type="button" className={`ls-btn is-small${kiGeladen && !kiAktiv ? ' is-primary' : ''}`} aria-pressed={kiGeladen && !kiAktiv} disabled={!kiGeladen || kiSpeichert} onClick={() => void saveKiAktiv(false)}>Aus</button>
+              </div>
+            </div>
+          </section>
           <section className="ls-panel" data-audit="settings-appearance">
             <div className="ls-panel-head"><span className="ls-label">Darstellung</span></div>
             <div className="co-row">
@@ -371,13 +407,13 @@ function SettingsPage() {
           forkai.164 hier in voller Länge. Er ist auf die Seite KI-Assistent
           gezogen, zu Verbinden und Mappe — hier bleibt nur der Wegweiser,
           damit niemand ihn an der alten Stelle vergeblich sucht. */}
-      <section className="ls-panel" data-audit="settings-ki-verweis">
+      {kiAktiv && <section className="ls-panel" data-audit="settings-ki-verweis">
         <div className="ls-panel-head"><span className="ls-label">KI-Assistent</span></div>
         <div className="co-row">
           <span className="co-row-text">Eigenen Assistenten verbinden, Schlüssel und Protokoll</span>
           <div className="co-row-end"><Link className="ls-btn is-small" to="/ki?tab=zugriff">Zum KI-Assistenten</Link></div>
         </div>
-      </section>
+      </section>}
     </V1Page>
   )
 }

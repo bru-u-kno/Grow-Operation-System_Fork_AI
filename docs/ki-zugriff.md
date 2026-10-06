@@ -15,6 +15,19 @@ selbst ein. Bisher scheitert jedes Schreiben eines anderen Add-ons mit 403
 Gedacht ist der Fork auch für andere Betreiber. Deshalb: **ab Werk aus**,
 vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 
+## Hauptschalter „KI-Funktionen" (A-011, 06.10.2026)
+
+Über allem steht ein **globaler Schalter** (`ki.aktiv` in AppSettings, `KiHauptschalter`). Aus heißt: keine KI-Seite in der Oberfläche
+(`/ki`, Mappe für eigene KI, Menü, Suche), die Controller `api/settings/ki-zugriff`, `api/agent-export` und `api/ki-ha` antworten mit
+**404 `ki_aus`** (Attribut `[NurMitKi]`), und jeder Schlüssel wird mit **403 `ki_aus`** abgewiesen, noch vor der Prüfung. Alle Einstellungen
+(Zugriff, Schlüssel, Stufen) bleiben gespeichert.
+
+- **Voreinstellung:** nichts gespeichert → aus, **außer** `ki-zugriff.aktiv` ist schon `true` (dann an). Diese Vorentscheidung wird nicht gespeichert.
+- **Lesen/Setzen:** `GET`/`PUT /api/settings/ki` (`{ "aktiv": bool }`); `PUT` ist `[KeinKiZugriff]` — ein Schlüssel schaltet die KI nie selbst ein.
+- **„KI an" öffnet den Zugriff von außen nicht** (`ki-zugriff.aktiv` bleibt eigene Entscheidung).
+- **Neue KI-Controller** unter `api/ki-*` brauchen `[NurMitKi]`; `KiHauptschalterAppTests.JederKiControllerTraegtNurMitKi` zählt das.
+- Oberfläche: `ki-aktiv.ts` / `KiAktivProvider.tsx` / `NurMitKi.tsx`; Menüeinträge mit `ki: true` in `navigation.ts`.
+
 ## Stufen (`KiStufe`, Bits)
 
 | Stufe | Wert | Beispiele |

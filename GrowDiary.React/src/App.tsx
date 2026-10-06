@@ -48,6 +48,8 @@ import './styles/widgets.css'
 import './styles/forkai-shell.css'
 
 import { AppShell } from './AppShell'
+import { KiAktivProvider } from './KiAktivProvider'
+import { NurMitKi } from './NurMitKi'
 import { legacyRedirects } from './navigation'
 import { useNavCounts } from './useNavCounts'
 import { useHaTiefenlink } from './useHaTiefenlink'
@@ -120,6 +122,7 @@ function App() {
   useHaTiefenlink()
 
   return (
+    <KiAktivProvider>
     <AppShell counts={counts}>
       <Routes>
           <Route path="/" element={<LiveDashboardPage />} />
@@ -190,7 +193,7 @@ function App() {
           {/* Sammelseiten: verwandte Bereiche unter Tabs statt als eigene Menuepunkte. */}
           <Route path="/regeln" element={<RulesCollectionPage />} />
           <Route path="/sorten" element={<StrainsPage />} />
-          <Route path="/ki" element={<KiAssistentSeite />} />
+          <Route path="/ki" element={<NurMitKi><KiAssistentSeite /></NurMitKi>} />
           <Route path="/archiv" element={<ArchivePage />} />
 
           {/* Alte Pfade bleiben gueltig — Lesezeichen und Links aus HA-Dashboards. */}
@@ -199,6 +202,7 @@ function App() {
           ))}
         </Routes>
     </AppShell>
+    </KiAktivProvider>
   )
 }
 

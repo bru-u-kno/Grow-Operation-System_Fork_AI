@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { navGroups } from '../src/navigation'
+import { kiImBrowserAn } from './pflicht'
 
 /**
  * Menü und Seite müssen dasselbe sagen.
@@ -48,6 +49,9 @@ const ohneGruppenPfad = new Set(['/'])
  * „Addback" tat genau das und wurde deshalb geändert.
  */
 const eigeneUeberschrift = new Set(['/aufgaben', '/messung'])
+
+// Fork AI (A-011): /ki gibt es nur bei „KI an" — hier geht es um Menü und Überschrift, nicht um den Schalter.
+test.beforeEach(async ({ page }) => { await kiImBrowserAn(page) })
 
 for (const ziel of ziele) {
   test(`Kopfzeile von ${ziel.label} nennt die Gruppe „${ziel.gruppe}"`, async ({ page }) => {

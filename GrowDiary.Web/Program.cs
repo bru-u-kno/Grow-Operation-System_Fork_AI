@@ -109,6 +109,7 @@ builder.Services.AddSingleton<AppSettingsRepository>();
 // Singleton, weil Fehlversuche und das Stundenfenster über alle Anfragen zählen.
 builder.Services.AddSingleton<KiSchluesselRepository>();
 builder.Services.AddSingleton<KiZugriffDienst>();
+builder.Services.AddSingleton<KiHauptschalter>(); // Fork AI (A-011): globaler Schalter „KI-Funktionen"
 builder.Services.AddSingleton<IKiSicherung, KiSicherungUeberSystemApi>();
 builder.Services.AddSingleton<WaterProfileStore>();
 builder.Services.AddScoped<GrowCostService>();

@@ -35,6 +35,8 @@ public sealed class KiZugriffApp : IDisposable
                 dienste.AddSingleton<IKiSicherung>(Sicherung);
             },
         };
+        // Fork AI (A-011): Wie ein Anwender: zuerst „KI-Funktionen" an, sonst gibt es die KI-Seiten nicht.
+        App.Services.GetRequiredService<GrowDiary.Web.Infrastructure.KiZugriff.KiHauptschalter>().Setzen(true);
     }
 
     public HttpClient Oberflaeche() => App.IngressClient();
@@ -42,6 +44,9 @@ public sealed class KiZugriffApp : IDisposable
     /// <summary>Hauptschalter setzen, Höchstwerte wahlweise mit.</summary>
     public async Task SchalterAsync(bool aktiv, int maxSchaltbefehle = 1000)
     {
+        // Fork AI (A-011): Die Einstellungsseite des KI-Zugriffs gibt es nur bei „KI an" — wie für jeden
+        // Anwender zuerst der globale Schalter, dann der Zugriff.
+        (await Oberflaeche().PutAsJsonAsync("/api/settings/ki", new { aktiv = true })).EnsureSuccessStatusCode();
         var antwort = await Oberflaeche().PutAsJsonAsync("/api/settings/ki-zugriff", new
         {
             aktiv,

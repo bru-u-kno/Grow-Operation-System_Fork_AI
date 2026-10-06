@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test, type APIRequestContext, type Page } from '@playwright/test'
 
 /**
  * Ein übersprungener Test ist kein bestandener.
@@ -62,4 +62,29 @@ export async function backendAntwortet(anfrage: {
   } catch {
     return false
   }
+}
+
+/**
+ * Fork AI (A-011): Die Seite so zeigen, als wäre „KI-Funktionen" an — nur im Browser.
+ *
+ * Neue Installationen starten mit „KI aus", und dann gibt es die KI-Seite nicht (sie leitet
+ * auf die Startseite). Wer nur die Oberfläche prüft, auch im Durchgang ohne Backend, meldet
+ * dem Browser den Schalter als an; der Server bleibt unberührt. Wer echte KI-Endpunkte braucht,
+ * nimmt <see cref="kiAmServerAn"/>.
+ */
+export async function kiImBrowserAn(page: Page): Promise<void> {
+  await page.route('**/api/settings/ki', (route) => (route.request().method() === 'GET'
+    ? route.fulfill({ json: { aktiv: true } })
+    : route.continue()))
+}
+
+/**
+ * Fork AI (A-011): „KI-Funktionen" am Server einschalten — so, wie es ein Anwender zuerst tut.
+ *
+ * Ohne das antworten die KI-Endpunkte (Zugriff, Mappe, Home Assistant) mit 404 `ki_aus`.
+ * Der Schalter bleibt danach an: „an" ist Brus Zustand, und keine andere Prüfung verlässt sich auf „aus".
+ */
+export async function kiAmServerAn(request: APIRequestContext): Promise<void> {
+  const antwort = await request.put('/api/settings/ki', { data: { aktiv: true } })
+  if (!antwort.ok()) throw new Error(`KI-Funktionen ließen sich nicht einschalten: HTTP ${antwort.status()}`)
 }

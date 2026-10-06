@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { backendAntwortet, darfUeberspringen } from './pflicht'
+import { backendAntwortet, darfUeberspringen, kiAmServerAn } from './pflicht'
 import { gibSchloss, nimmSchloss } from './schloss'
 
 /**
@@ -76,6 +76,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
 
   test.beforeEach(async ({ page }) => {
     darfUeberspringen(!(await backendAntwortet(page.request)), 'Kein Backend erreichbar.')
+    await kiAmServerAn(page.request) // Fork AI (A-011): die Einstellungen des KI-Zugriffs gibt es nur bei KI an
     const antwort = await page.request.get(WEG)
     darfUeberspringen(!antwort.ok(), `${WEG} antwortet mit HTTP ${antwort.status()} — ist das Backend von A-003 eingespielt?`)
     vorher ??= await antwort.json() as Record<string, unknown>

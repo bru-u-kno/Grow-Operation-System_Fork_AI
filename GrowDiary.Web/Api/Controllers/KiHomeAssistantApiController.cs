@@ -33,6 +33,7 @@ namespace GrowDiary.Web.Api.Controllers;
 [ApiController]
 [Route("api/ki-ha")]
 [Produces("application/json")]
+[NurMitKi]
 public sealed class KiHomeAssistantApiController : ApiControllerBase
 {
     public const int VorgabeAnzahl = 100;

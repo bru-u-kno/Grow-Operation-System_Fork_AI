@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { darfUeberspringen } from './pflicht'
+import { darfUeberspringen, kiAmServerAn } from './pflicht'
 import { TEXTSEITEN } from './seiten'
 
 /**
@@ -185,6 +185,8 @@ async function aufklappen(page: Page, knopfName: string): Promise<boolean> {
 
 for (const fall of HINTER_EINEM_KLICK) {
   test(`${fall.pfad} — ${fall.was} spricht Deutsch`, async ({ page }) => {
+    // Fork AI (A-011): die KI-Seiten gibt es nur bei KI an; ohne Backend bleibt das ein Übersprung wie bisher.
+    if (fall.pfad.startsWith('/ki')) await kiAmServerAn(page.request).catch(() => undefined)
     const antwort = await page.goto(fall.pfad, { waitUntil: 'networkidle' })
     darfUeberspringen(
       antwort == null || antwort.status() >= 400,

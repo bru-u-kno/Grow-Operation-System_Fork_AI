@@ -87,6 +87,7 @@ public sealed class KiPrueferBefundeTests : IClassFixture<KiZugriffApp>
         {
             Zusatzdienste = dienste => dienste.AddSingleton<IAppNeustart>(new KeinNeustart()),
         };
+        app.Services.GetRequiredService<GrowDiary.Web.Infrastructure.KiZugriff.KiHauptschalter>().Setzen(true); // Fork AI (A-011)
         var oberflaeche = app.IngressClient();
         (await oberflaeche.PutAsJsonAsync("/api/settings/ki-zugriff", new
         {

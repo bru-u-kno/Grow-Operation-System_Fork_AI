@@ -1,3 +1,4 @@
+using GrowDiary.Web.Infrastructure.KiZugriff;
 using System.IO.Compression;
 using System.Text;
 using GrowDiary.Web.Api.Contracts;
@@ -18,6 +19,7 @@ namespace GrowDiary.Web.Api.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/agent-export")]
+[NurMitKi]
 public sealed class AgentExportApiController : ApiControllerBase
 {
     private readonly AgentContextBuilder _builder;
