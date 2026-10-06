@@ -38,6 +38,13 @@ Einstellung `ki.aktiv`; Voreinstellung aus, bei Bru automatisch an). Der Schalte
 regelbasierte Vorschlag für den nächsten Lauf sowie Einstellungsvorschläge brauchen **keine KI**. Nur Deutung in Worten, Ursachensuche,
 tägliche Beobachtung, Notiz und Steckbrief je Gerät im Vault gehören zur KI und erscheinen nur bei „an".
 
+## Allgemeine Auswertung durch die KI (Bru, 2026-10-07)
+Die KI hilft nicht nur beim Probelauf: Der Fork und Home Assistant sammeln laufend Daten, die KI wertet sie aus und macht Bru **allgemein
+Vorschläge**. Der Probelauf ist eine Datenquelle unter mehreren. Eigene Aufgabe **A-012 „KI-Vorschläge"** (hängt an A-011, nur bei „KI an").
+Festgelegt: eigene Seite „Vorschläge" in der App plus Push bei Wichtigem · Auswertung täglich einmal und nach jedem Probelauf ·
+Daten: Zelt-Verlauf, Schaltvorgänge und Laufzeiten, Wasserwerte, Tagebuch/Beobachtungen/Fotos · Vorschlag kurz mit Beleg, „Übernehmen"/„Nicht jetzt"
+und Rückmeldung „Hilfreich? Ja/Nein" (daraus lernt die KI und legt es im Wissensspeicher ab). Ohne KI zeigt der Fork nur seine berechneten Hinweise.
+
 ## Festgelegt (Bru, 2026-10-06)
 - Wirkung real am Zelt; akzeptiert, solange die Grenzen halten.
 - Nach dem Lauf: Auswertung **plus** KI-Empfehlung, nichts wird ohne Bestätigung übernommen.
