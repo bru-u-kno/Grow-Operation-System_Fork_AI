@@ -8,7 +8,8 @@ import { rollenPfad } from '../geraete/rollenPfad'
 import { befehlsMeldung, speicherMeldung } from './licht-meldungen'
 import { feldFehlerAus, leereZahlenfelder, zahlAusFeld } from './feld-fehler'
 import { useFehlerZeigen } from './fehler-reiter'
-import { entwurfAbgleichen, stufeAusFeld } from './licht-bedienung'
+import { entwurfAbgleichen, stufeAusFeld, stufeBasis, stufeSchritt } from './licht-bedienung'
+import type { StufenZiel } from './licht-bedienung'
 
 /**
  * Fork AI: Steuerung › Licht — die Bedienung der LED, die bisher als eigene
@@ -43,12 +44,18 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
   // Was gerade im Stufenfeld steht, solange jemand tippt — `null` heißt: das
   // Feld zeigt den Livewert. Gesendet wird erst beim Verlassen oder mit Enter.
   const [stufeText, setStufeText] = useState<string | null>(null)
+  // Die zuletzt gesendete Stufe, bis der Livewert sie eingeholt hat — sonst
+  // zählen − und + vom veralteten Livewert aus und schicken immer dasselbe Ziel.
+  const [stufeZiel, setStufeZiel] = useState<StufenZiel | null>(null)
 
   /** Nachladen im Takt — hier steht nur das Auffrischen, nicht der erste Abruf. */
   const auffrischen = useCallback(async () => {
     try {
       const geladen = await apiFetch<LichtSeite>('/api/steuerung/licht')
       setSeite(geladen)
+      // Hat der Livewert sich bewegt, ist das gemerkte Stufenziel erledigt — sonst
+      // käme es wieder zum Zug, wenn die Stufe zufällig auf den alten Wert zurückgeht.
+      setStufeZiel((z) => (z && geladen.live.stufe !== z.basis ? null : z))
       // Einen angefangenen Entwurf nicht ueberschreiben, sonst springt beim
       // Nachladen die Zeit zurueck, die gerade getippt wird.
       setEntwurf((vorher) => vorher ?? geladen.einstellungen)
@@ -110,6 +117,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
 
   const befehl = async (art: string, daten?: { preset?: string; stufe?: number }) => {
     setArbeitet(true); setMeldung(null)
+    const stufeVorher = seite?.live.stufe ?? null
     try {
       const zurueck = await apiFetch<LichtSeite>('/api/steuerung/licht/befehl', {
         method: 'POST',
@@ -119,6 +127,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
       // der Befehl geändert und niemand angefasst hat.
       const alt = seite?.einstellungen
       setSeite(zurueck)
+      if (art === 'stufe' && daten?.stufe != null && zurueck.haAngenommen) setStufeZiel({ ziel: daten.stufe, basis: stufeVorher })
       setEntwurf((vorher) => (vorher && alt ? entwurfAbgleichen(vorher, alt, zurueck.einstellungen) : zurueck.einstellungen))
       setFehler(null)
       setMeldung(befehlsMeldung(art, zurueck.haAngenommen))
@@ -136,7 +145,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
 
   const live = seite.live
   const setz = <K extends keyof LichtEinstellungen>(feld: K, wert: LichtEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
-  const stufeJetzt = live.stufe ?? entwurf.stufe
+  const stufeJetzt = stufeBasis(live.stufe, stufeZiel, entwurf.stufe, live.fehlgeschlagen.length > 0)
   const stufeSenden = () => {
     if (stufeText == null) return
     const wert = stufeAusFeld(stufeText)
@@ -277,7 +286,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
                 {feldFehler.Stufe && <span className="st-fehler">{feldFehler.Stufe}</span>}
               </span>
               <span className="st-eingaben">
-                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: Math.max(1, stufeJetzt - 1) })} disabled={arbeitet}>−</V1Button>
+                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: stufeSchritt(stufeJetzt, -1) })} disabled={arbeitet}>−</V1Button>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -296,7 +305,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
                     if (e.key === 'Escape') { setStufeText(null); e.currentTarget.blur() }
                   }}
                 />
-                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: Math.min(10, stufeJetzt + 1) })} disabled={arbeitet}>+</V1Button>
+                <V1Button variant="ghost" onClick={() => void befehl('stufe', { stufe: stufeSchritt(stufeJetzt, 1) })} disabled={arbeitet}>+</V1Button>
               </span>
             </div>
           </V1Card>

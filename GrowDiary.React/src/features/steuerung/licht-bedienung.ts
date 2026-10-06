@@ -18,6 +18,28 @@ export function stufeAusFeld(text: string): number | null {
   return wert >= 1 && wert <= 10 ? wert : null
 }
 
+/** Die zuletzt gesendete Stufe und der Livewert, auf dem sie aufsetzte. */
+export type StufenZiel = { ziel: number; basis: number | null }
+
+/**
+ * Von welcher Stufe „−" und „+" weiterzählen.
+ *
+ * Home Assistant meldet eine neue Stufe erst beim nächsten Abruf der Cloud. Bis
+ * dahin steht im Livewert noch die alte — wer von ihr aus zählt, schickt bei
+ * jedem Klick dasselbe Ziel (6 → 7, 7, 7 …) und die Anzeige rührt sich nicht.
+ * Solange der Livewert noch auf dem Stand von damals steht, zählt deshalb das
+ * gesendete Ziel; bewegt er sich oder scheitert der Befehl, gilt wieder er.
+ */
+export function stufeBasis(live: number | null, ziel: StufenZiel | null, entwurf: number, gescheitert: boolean): number {
+  if (ziel && !gescheitert && live === ziel.basis) return ziel.ziel
+  return live ?? entwurf
+}
+
+/** Ein Schritt hoch (+1) oder runter (−1), begrenzt auf 1 bis 10. */
+export function stufeSchritt(von: number, richtung: 1 | -1): number {
+  return Math.min(10, Math.max(1, von + richtung))
+}
+
 const gleich = (a: unknown, b: unknown) => Object.is(a, b) || JSON.stringify(a) === JSON.stringify(b)
 
 /**
