@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-import { darfUeberspringen } from './pflicht'
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
+import { backendAntwortet, darfUeberspringen } from './pflicht'
 
 /**
  * A-014: Farbzonen und gesperrte Felder auf der Seite „Entfeuchter".
@@ -10,7 +10,9 @@ import { darfUeberspringen } from './pflicht'
  * seiner Zone, und Felder ohne Wirkung sind gesperrt.
  */
 
-async function seiteMitWerten(page: Page, live: Record<string, unknown>): Promise<void> {
+async function seiteMitWerten(page: Page, request: APIRequestContext, live: Record<string, unknown>): Promise<void> {
+  // Im Rauchtest ohne Backend gibt es nichts, was sich verändern ließe.
+  darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend unter GROW_OS_URL — die Zonen brauchen die laufende App mit Demobestand.')
   await page.route(/\/api\/steuerung\/entfeuchter$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue()
     const antwort = await route.fetch()
@@ -26,9 +28,9 @@ async function seiteMitWerten(page: Page, live: Record<string, unknown>): Promis
 
 const WERTE = { rhObergrenzeProzent: 51, einAktivProzent: 50, ausAktivProzent: 46, portAn: true, tagPhase: false, portOnline: true, automatikAn: true }
 
-test('Entfeuchter: der Messpunkt trägt die Farbe seiner Zone — und die Zone steht auch als Wort da', async ({ page }) => {
+test('Entfeuchter: der Messpunkt trägt die Farbe seiner Zone — und die Zone steht auch als Wort da', async ({ page, request }) => {
   // Bru, 07.10.2026: 57,9 % bei Ziel 51 % ist „deutlich daneben", 22,7 °C bei 25 °C Höchsttemperatur im Ziel.
-  await seiteMitWerten(page, { ...WERTE, feuchteProzent: 57.9, tempC: 22.7 })
+  await seiteMitWerten(page, request, { ...WERTE, feuchteProzent: 57.9, tempC: 22.7 })
   const karte = page.locator('.ef-band')
   const punkte = karte.locator('.ef-ist')
   await expect(punkte).toHaveCount(2)
@@ -53,8 +55,8 @@ test('Entfeuchter: der Messpunkt trägt die Farbe seiner Zone — und die Zone s
   }
 })
 
-test('Entfeuchter: bei „Nach VPD regeln" sind die festen Schwellen gesperrt, ohne den Haken sind sie bearbeitbar', async ({ page }) => {
-  await seiteMitWerten(page, { ...WERTE, feuchteProzent: 49, tempC: 22.7 })
+test('Entfeuchter: bei „Nach VPD regeln" sind die festen Schwellen gesperrt, ohne den Haken sind sie bearbeitbar', async ({ page, request }) => {
+  await seiteMitWerten(page, request, { ...WERTE, feuchteProzent: 49, tempC: 22.7 })
   await page.locator('.v1-tab', { hasText: /^Regel$/ }).click()
   const schalter = page.getByLabel('Nach VPD regeln')
   if (!(await schalter.isChecked())) await schalter.check()
@@ -74,8 +76,8 @@ test('Entfeuchter: bei „Nach VPD regeln" sind die festen Schwellen gesperrt, o
   await expect(page.getByRole('radio', { name: /^normal/ })).toBeEnabled()
 })
 
-test('jede Kachel lässt sich zuklappen und wieder aufklappen — zweimal', async ({ page }) => {
-  await seiteMitWerten(page, { ...WERTE, feuchteProzent: 49, tempC: 22.7 })
+test('jede Kachel lässt sich zuklappen und wieder aufklappen — zweimal', async ({ page, request }) => {
+  await seiteMitWerten(page, request, { ...WERTE, feuchteProzent: 49, tempC: 22.7 })
   const kopf = page.locator('.st-kk-kopf', { hasText: 'Messwerte & Zonen' })
   for (let runde = 0; runde < 2; runde++) {
     await expect(kopf).toHaveAttribute('aria-expanded', 'true')
