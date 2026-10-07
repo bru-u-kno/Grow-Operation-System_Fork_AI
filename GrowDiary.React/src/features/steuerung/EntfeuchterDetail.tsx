@@ -109,9 +109,9 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
     }
   }
 
-  if (laedt && !seite) return <V1Page eyebrow="Steuerung" title="Entfeuchter"><V1Skeleton rows={4} tiles={1} label="Wird geladen" /></V1Page>
+  if (laedt && !seite) return <V1Page eyebrow="Betrieb" title="Entfeuchtung"><V1Skeleton rows={4} tiles={1} label="Wird geladen" /></V1Page>
   if (!seite || !entwurf) {
-    return <V1Page eyebrow="Steuerung" title="Entfeuchter">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
+    return <V1Page eyebrow="Betrieb" title="Entfeuchtung">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
   }
 
   const live = seite.live
@@ -153,9 +153,9 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
 
   return (
     <V1Page
-      eyebrow="Steuerung"
-      title="Entfeuchter"
-      subtitle="Trotec am RDWC-Zelt — geregelt in Home Assistant"
+      eyebrow="Betrieb"
+      title="Entfeuchtung"
+      subtitle="Haupt-Entfeuchter: Trotec am RDWC-Zelt — geregelt in Home Assistant"
       action={geaendert ? <V1Button variant="primary" onClick={speichern} disabled={arbeitet}>{arbeitet ? 'Speichert …' : 'Speichern'}</V1Button> : undefined}
     >
       <div className="st-wechsel" role="tablist" aria-label="Steuerung wechseln">

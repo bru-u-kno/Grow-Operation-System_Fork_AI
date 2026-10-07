@@ -91,7 +91,7 @@ async function backendVorgeben(page: Page, live: Json = {}): Promise<Stand> {
 
 async function seiteOeffnen(page: Page): Promise<void> {
   await page.goto('/steuerung/entfeuchter-zusatz', { waitUntil: 'networkidle' })
-  await expect(page.getByRole('heading', { name: 'Zusatz-Entfeuchter', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Entfeuchtung', level: 1 })).toBeVisible()
 }
 
 /** A-014: Reiter und Klappkacheln. Die Seite öffnet auf „Überblick". */

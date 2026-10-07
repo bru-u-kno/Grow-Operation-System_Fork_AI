@@ -164,9 +164,9 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
     }
   }
 
-  if (laedt && !seite) return <V1Page eyebrow="Steuerung" title="Zusatz-Entfeuchter"><V1Skeleton rows={4} tiles={1} label="Wird geladen" /></V1Page>
+  if (laedt && !seite) return <V1Page eyebrow="Betrieb" title="Entfeuchtung"><V1Skeleton rows={4} tiles={1} label="Wird geladen" /></V1Page>
   if (!seite || !entwurf || !geladen) {
-    return <V1Page eyebrow="Steuerung" title="Zusatz-Entfeuchter">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
+    return <V1Page eyebrow="Betrieb" title="Entfeuchtung">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
   }
 
   const live = seite.live
@@ -223,9 +223,9 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
 
   return (
     <V1Page
-      eyebrow="Steuerung"
-      title="Zusatz-Entfeuchter"
-      subtitle={`Hilft ${fuehrung} — geregelt in Home Assistant`}
+      eyebrow="Betrieb"
+      title="Entfeuchtung"
+      subtitle={`Zusatz-Entfeuchter: hilft ${fuehrung} — geregelt in Home Assistant`}
       action={geaendert ? <V1Button variant="primary" onClick={speichern} disabled={arbeitet}>{arbeitet ? 'Speichert …' : 'Speichern'}</V1Button> : undefined}
     >
       <div className="st-wechsel" role="tablist" aria-label="Steuerung wechseln">
