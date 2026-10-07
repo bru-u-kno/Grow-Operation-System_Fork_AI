@@ -484,6 +484,8 @@ export type EntfeuchterZusatzLive = {
   fuehrungAn: boolean | null
   ziehtNichts: boolean | null
   planUnvollstaendig: boolean | null
+  /** A-014: Obergrenze der Luftfeuchte aus dem Plan — das Ziel der Zonen, wie beim Hauptentfeuchter. */
+  rhObergrenzeProzent?: number | null
   automatikAn: boolean | null
 }
 

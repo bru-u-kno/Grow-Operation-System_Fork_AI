@@ -38,7 +38,7 @@ Rückfallebene. Den **Abstand EIN → AUS** („Wie ruhig schaltet er?") gibt es
 
 ## Die Zahlen und woher sie kommen
 
-- **Ziel der Luftfeuchte:** die Plan-Obergrenze (Haupt) bzw. die Plan-Schwelle EIN (Zusatz); „knapp daneben" endet 4 Prozentpunkte darüber.
+- **Ziel der Luftfeuchte:** die Plan-Obergrenze der Luftfeuchte (auf beiden Seiten, ohne Plan die Schwelle EIN); „knapp daneben" endet 4 Prozentpunkte darüber.
 - **Höchsttemperatur:** Plan-Luft + Abstand oder fester Wert (Reiter Schutz) — dieselbe Zahl für beide Entfeuchter.
 - **EIN/AUS-Schwellen, VPD-Ziel, Plan-Werte:** aus dem Plan und den Helfern in Home Assistant; die Seite zeigt sie nur.
 

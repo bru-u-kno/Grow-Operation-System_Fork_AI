@@ -33,6 +33,7 @@ import { TEXTSEITEN } from './seiten'
  * hat den Test abgeschaltet statt den Fehler behoben.
  */
 const ERLAUBT: Record<string, string> = {
+  Do: 'Wochentagskürzel „Do“ (Donnerstag) auf der Live-Seite — gleich wie der Enum-Wert für gelösten Sauerstoff; fiel erst am Donnerstag 08.10.2026 auf',
   RDWC: 'Fachbegriff, auf Deutsch genauso — Recirculating Deep Water Culture',
   DWC: 'dasselbe für Deep Water Culture',
   Autoflower: 'die deutsche Sortenbezeichnung ist genau dieses Wort',

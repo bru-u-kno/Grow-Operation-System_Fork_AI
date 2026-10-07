@@ -201,9 +201,9 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
     nacht: `${live.planLuftNachtC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft Nacht: ${zahl(live.planLuftNachtC)} °C`} · gilt für beide Geräte`,
   }
 
-  // --- Zonen (A-014): Ziel der Luftfeuchte ist die Plan-Schwelle EIN; die Temperatur ist im Ziel,
+  // --- Zonen (A-014): Ziel der Luftfeuchte ist die Plan-Obergrenze (wie beim Hauptentfeuchter), ohne Plan die Schwelle EIN; die Temperatur ist im Ziel,
   // solange der Zusatz läuft darf (bis „Zusatz aus"), knapp bis zur Höchsttemperatur, darüber sind beide aus.
-  const feuchteZiel = live.feuchteEinProzent
+  const feuchteZiel = live.rhObergrenzeProzent ?? live.feuchteEinProzent
   const fZone = feuchteZone(live.feuchteProzent, feuchteZiel)
   const tZone = temperaturZone(live.tempC, grenzen.max, grenzen.folgeAus)
   const lage = schlechtereZone(fZone, tZone)

@@ -591,7 +591,8 @@ public sealed class EntfeuchterZusatzSteuerungService
             FuehrungZustand: Text(Rolle(Rollen.FuehrungZustand)),
             AutomatikAn: entities.Count > 0 ? AutomatikAn(entities) : null,
             ZusatzSeitUtc: Rolle(Rollen.ZusatzSchalter) is { } schalterId && nachId.TryGetValue(schalterId, out var schalterZustand)
-                ? schalterZustand.LastChangedUtc : null));
+                ? schalterZustand.LastChangedUtc : null,
+            RhObergrenzeProzent: Zahl(EntfeuchterSteuerungService.Entitaeten.RhObergrenze)));
     }
 
     /// <summary>Was das Livebild aus Home Assistant und dem Plan braucht — gelesen, nicht gerechnet.</summary>
@@ -614,7 +615,8 @@ public sealed class EntfeuchterZusatzSteuerungService
         string? FuehrungZustand,
         bool? AutomatikAn,
         DateTime? ZusatzSeitUtc = null,
-        DateTime? JetztUtc = null);
+        DateTime? JetztUtc = null,
+        double? RhObergrenzeProzent = null);
 
     /// <summary>
     /// Das Livebild aus den gelesenen Werten und den Einstellungen. Rein rechnend —
@@ -678,7 +680,8 @@ public sealed class EntfeuchterZusatzSteuerungService
             ZiehtNichts: ziehtNichts,
             // Nur mit Home Assistant am Hörer: ohne Verbindung wissen wir nichts über den Plan.
             PlanUnvollstaendig: x.HaErreichbar && groesse == EntfeuchterZusatzSchaltgroesse.Keine,
-            AutomatikAn: x.AutomatikAn);
+            AutomatikAn: x.AutomatikAn,
+            RhObergrenzeProzent: x.RhObergrenzeProzent);
     }
 
     /// <summary>

@@ -172,6 +172,22 @@ test('die Seite lädt: Chip, Statuskarte mit zwei Bändern, Einstellungen — un
   await expect(page.locator('.v1-switch', { hasText: 'Melden, wenn der Shelly an ist' })).toContainText('Tank voll oder Gerät ausgeschaltet? Gerade nimmt Dehumi RDWC Tent 313 W auf.')
 })
 
+test('Luftfeuchte-Zone: das Ziel ist die Plan-Obergrenze, wie beim Hauptentfeuchter — nicht die EIN-Schwelle', async ({ page }) => {
+  // 07.10.2026, echte Anlage: 48,1 % rF, EIN-Schwelle 45,8 %, Plan-Obergrenze 51 %. Der Hauptentfeuchter zeigte „im Ziel",
+  // der Zusatz „knapp daneben" — zwei Zonen für dieselbe Messung.
+  await backendVorgeben(page, { feuchteProzent: 48.1, feuchteEinProzent: 45.8, feuchteAusProzent: 43.8, rhObergrenzeProzent: 51, tempC: 23.5 })
+  await seiteOeffnen(page)
+  await expect(page.locator('.v1-alert').first()).toContainText('Im Ziel')
+  const punkte = page.locator('.ef-band .ef-ist')
+  for (let i = 0; i < await punkte.count(); i++) await expect(punkte.nth(i)).not.toHaveClass(/\bis-(knapp|kritisch)\b/)
+
+  // Zweiter Durchgang, ohne Neuladen des Skripts: ohne Plan-Obergrenze gilt die Schwelle EIN — dann ist es „knapp".
+  await page.unroute(/\/api\/steuerung\/entfeuchter-zusatz$/)
+  await backendVorgeben(page, { feuchteProzent: 48.1, feuchteEinProzent: 45.8, feuchteAusProzent: 43.8, rhObergrenzeProzent: null, tempC: 23.5 })
+  await page.reload({ waitUntil: 'networkidle' })
+  await expect(page.locator('.v1-alert').first()).toContainText('Knapp daneben')
+})
+
 test('ohne Verbindung zu Home Assistant steht nur der HA-Hinweis, nie zusätzlich „Plan unvollständig"', async ({ page }) => {
   await backendVorgeben(page, { haErreichbar: false, planUnvollstaendig: true, schaltgroesse: 'keine' })
   await seiteOeffnen(page)

@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.187
+
+**Fork AI.** Entfeuchtung: Beide Seiten zeigen dieselbe Zone für dieselbe Luftfeuchte.
+
+- **Was war:** Bei 48,1 % Luftfeuchte stand der Hauptentfeuchter „im Ziel" (Plan-Obergrenze 51 %), der Zusatz-Entfeuchter „knapp daneben" (er nahm seine EIN-Schwelle von 45,8 % als Ziel).
+- **Jetzt:** Auch der Zusatz-Entfeuchter misst die Zone der Luftfeuchte an der Plan-Obergrenze. Fehlt sie, gilt wie beim Hauptentfeuchter die EIN-Schwelle.
+
 ## 2.0.0-forkai.186
 
 **Fork AI.** Entfeuchtung: Entfeuchter und Zusatz-Entfeuchter sind gleich aufgebaut, mit Farbzonen und einer Erklärung — und jede Kachel lässt sich einklappen.
