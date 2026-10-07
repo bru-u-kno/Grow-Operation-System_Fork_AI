@@ -400,9 +400,11 @@ export type EntfeuchterSeite = {
   geraeteGesamt: number
 }
 
-export type EntfeuchterReiter = 'regel' | 'schutz' | 'betrieb'
+/** A-014: beide Entfeuchter-Seiten haben dieselben vier Reiter. */
+export type EntfeuchterReiter = 'ueberblick' | 'regel' | 'schutz' | 'betrieb'
 
 export const ENTFEUCHTER_REITER: Array<{ value: EntfeuchterReiter; label: string }> = [
+  { value: 'ueberblick', label: 'Überblick' },
   { value: 'regel', label: 'Regel' },
   { value: 'schutz', label: 'Schutz' },
   { value: 'betrieb', label: 'Betrieb' },

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { apiFetch, formatApiError } from '../../api'
-import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch } from '../../components/v1'
+import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { tempMax, zahl } from './entfeuchter-band'
 import {
@@ -32,7 +32,12 @@ import { feldFehlerAus } from './feld-fehler'
 import { useFehlerZeigen } from './fehler-reiter'
 import { TempMaxBlock, Zahl } from './SteuerungsFelder'
 import type { Empfehlung } from './SteuerungsFelder'
-import type { EntfeuchterZusatzEinstellungen, EntfeuchterZusatzSeite, SteuerungModul, ZusatzAblauf, ZusatzMeldung } from './steuerung-typen'
+import { ENTFEUCHTER_REITER } from './steuerung-typen'
+import type { EntfeuchterReiter, EntfeuchterZusatzEinstellungen, EntfeuchterZusatzSeite, SteuerungModul, ZusatzAblauf, ZusatzMeldung } from './steuerung-typen'
+import { Klappkachel } from './Klappkachel'
+import { Lage, MessKopf, Warum, ZonenLegende, ZonenSkala, Zusammenspiel } from './EntfeuchterUeberblick'
+import type { WarumZeile } from './EntfeuchterUeberblick'
+import { RF_KNAPP_PUNKTE, ZONEN_WORT, feuchteZone, schlechtereZone, temperaturZone } from './entfeuchter-zonen'
 import './steuerung.css'
 
 type Einstellungen = EntfeuchterZusatzEinstellungen
@@ -42,16 +47,6 @@ const VPD_STUFEN: ReadonlyArray<{ wert: number; label: string }> = [
   { wert: 0.1, label: 'knapp' },
   { wert: 0.15, label: 'normal' },
   { wert: 0.25, label: 'ruhig' },
-]
-
-/** Eine Seite ohne Reiter: das Rollen zum markierten Feld (`useFehlerZeigen`) braucht trotzdem eine Liste. */
-const EIN_REITER = [{ value: 'seite' as const }]
-const KEIN_WECHSEL = () => undefined
-
-/** Felder der „Erweitert"-Karte — ein Fehler dort klappt sie auf. */
-const ERWEITERT_FELDER = [
-  'vpdHystereseKpa', 'zuschaltVerzoegerungMin', 'folgeAbstandK', 'wiederEinAbstandK', 'mindestlaufzeitMin', 'mindestpauseMin',
-  'nachtDurchlaufen', 'tagbetriebErlauben', 'ablauf', 'meldung',
 ]
 
 /**
@@ -77,7 +72,7 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
 }) {
   const [seite, setSeite] = useState<EntfeuchterZusatzSeite | null>(null)
   const [entwurf, setEntwurf] = useState<Einstellungen | null>(null)
-  const [erweitertOffen, setErweitertOffen] = useState(false)
+  const [reiter, setReiter] = useState<EntfeuchterReiter>('ueberblick')
   const [eigeneHysterese, setEigeneHysterese] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
@@ -87,7 +82,7 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
   // Der zuletzt geladene Stand: Bezug für „was hat sich geändert". Als Ref,
   // damit das Auffrischen ihn lesen kann, ohne selbst davon abzuhängen.
   const geladenRef = useRef<Einstellungen | null>(null)
-  const fehlerZeigen = useFehlerZeigen('seite', KEIN_WECHSEL, EIN_REITER)
+  const fehlerZeigen = useFehlerZeigen(reiter, setReiter, ENTFEUCHTER_REITER)
 
   const auffrischen = useCallback(async () => {
     try {
@@ -140,7 +135,6 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
     const leer = leereFelder(entwurf)
     if (leer) {
       setFeldFehler(leer)
-      if (Object.keys(leer).some((n) => !['TempMaxTag', 'TempMaxNacht'].some((p) => n.startsWith(p)) && n !== 'Hilfe')) setErweitertOffen(true)
       setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen()
       return
     }
@@ -159,8 +153,6 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
       const felder = feldFehlerAus(caught)
       if (felder) {
         setFeldFehler(felder)
-        if (ERWEITERT_FELDER.some((f) => fehlerZu(felder, f === 'meldung' ? 'meldung.aktiv' : (f as keyof Einstellungen)) != null)
-          || Object.keys(felder).some((n) => n.startsWith('Meldung'))) setErweitertOffen(true)
         const rest = unbekannteFehler(felder)
         setFehler(rest.length > 0 ? `Bitte die markierten Felder prüfen. Außerdem: ${rest.join(' ')}` : 'Bitte die markierten Felder prüfen.')
         fehlerZeigen()
@@ -208,6 +200,26 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
     tag: `${live.planLuftTagC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft: ${zahl(live.planLuftTagC)} °C`} · gilt für beide Geräte`,
     nacht: `${live.planLuftNachtC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft Nacht: ${zahl(live.planLuftNachtC)} °C`} · gilt für beide Geräte`,
   }
+
+  // --- Zonen (A-014): Ziel der Luftfeuchte ist die Plan-Schwelle EIN; die Temperatur ist im Ziel,
+  // solange der Zusatz läuft darf (bis „Zusatz aus"), knapp bis zur Höchsttemperatur, darüber sind beide aus.
+  const feuchteZiel = live.feuchteEinProzent
+  const fZone = feuchteZone(live.feuchteProzent, feuchteZiel)
+  const tZone = temperaturZone(live.tempC, grenzen.max, grenzen.folgeAus)
+  const lage = schlechtereZone(fZone, tZone)
+  const lageText = [
+    fZone && `Luftfeuchte ${zahl(live.feuchteProzent)} % (${ZONEN_WORT[fZone]}${feuchteZiel == null ? '' : `, Ziel ${zahl(feuchteZiel, 0)} %`})`,
+    tZone && `Temperatur ${zahl(live.tempC)} °C (${ZONEN_WORT[tZone]}, Höchsttemperatur ${zahl(grenzen.max)} °C)`,
+  ].filter(Boolean).join(' · ')
+  const zusatzLageTitel = pausiert ? `${zusatz} wartet` : live.zusatzAn === true ? `${zusatz} läuft` : `${zusatz} bereit`
+  const feuchteWerte = [live.feuchteProzent, feuchteZiel].filter((w): w is number => w != null && Number.isFinite(w))
+  const fVon = feuchteWerte.length ? Math.floor(Math.min(...feuchteWerte) - 3) : 40
+  const fBis = feuchteWerte.length ? Math.ceil(Math.max(...feuchteWerte, (feuchteZiel ?? 0) + RF_KNAPP_PUNKTE) + 3) : 70
+  const warum: WarumZeile[] = [
+    { frage: `${fuehrung} läuft`, antwort: live.fuehrungAn == null ? 'unbekannt' : live.fuehrungAn ? 'ja — der Zusatz darf mithelfen' : 'nein — der Zusatz startet sofort, wenn nötig', ok: live.fuehrungAn },
+    { frage: `Zelt nicht zu warm (${zusatz} geht ab ${zahl(grenzen.folgeAus)} °C aus)`, antwort: `${zahl(live.tempC)} °C · wieder an unter ${zahl(grenzen.wiederEin)} °C`, ok: live.tempC == null ? null : live.tempC <= grenzen.folgeAus },
+    { frage: 'Hilfe und Automatik an', antwort: geladen.hilfe === 'aus' ? 'Hilfe steht auf „aus".' : geladen.automatikAktiv ? 'ja' : 'Automatik ist aus.', ok: geladen.hilfe !== 'aus' && geladen.automatikAktiv },
+  ]
 
   return (
     <V1Page
@@ -269,215 +281,318 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
         </div>
       )}
 
-      {/* --------------------------------------------------------- Status */}
-      <V1Card className="ef-band">
-        <div className="ef-kopf">
-          <span className="ef-gross">
-            {tagPhase ? <>{zahl(live.vpd, 2)}<small> kPa VPD</small></> : <>{zahl(live.feuchteProzent, 0)}<small> % rF</small></>}
-          </span>
-          <span className="ef-zustand">
-            <b className={zustand.ton === 'an' ? 'is-an' : zustand.ton === 'warn' ? 'is-warn' : undefined}>{zustand.text}</b>
-            {zahl(live.feuchteProzent)} % rF · {zahl(live.tempC)} °C{phaseText ? ` · ${phaseText}` : ''}
-          </span>
-        </div>
-        {eins.band && <BandAnzeige band={eins.band} />}
-        <BandAnzeige band={tempBand} />
-        {hinweis && <p className="st-hinweis">{hinweis}</p>}
-      </V1Card>
+      <V1Tabs items={ENTFEUCHTER_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
-      {/* ---------------------------------------------------- Einstellungen */}
-      <V1Section title="Einstellungen">
-        <V1Card>
-          <TempMaxBlock
-            titel="Höchsttemperatur tagsüber"
-            ariaLabel="Höchsttemperatur tagsüber"
-            planText={planTexte.tag}
-            modus={entwurf.tempMaxTagModus}
-            abstand={entwurf.tempMaxTagAbstandK}
-            fest={entwurf.tempMaxTagFestC}
-            plan={live.planLuftTagC}
-            ergebnis={tagMax}
-            onModus={(m) => setz('tempMaxTagModus', m)}
-            onAbstand={(v) => setz('tempMaxTagAbstandK', v)}
-            onFest={(v) => setz('tempMaxTagFestC', v)}
-            fehlerAbstand={fehlerZu(feldFehler, 'tempMaxTagAbstandK')}
-            fehlerFest={fehlerZu(feldFehler, 'tempMaxTagFestC')}
-            empfohlen={empfehlung('tag')}
-          />
-          <TempMaxBlock
-            titel="Höchsttemperatur nachts"
-            ariaLabel="Höchsttemperatur nachts"
-            planText={planTexte.nacht}
-            modus={entwurf.tempMaxNachtModus}
-            abstand={entwurf.tempMaxNachtAbstandK}
-            fest={entwurf.tempMaxNachtFestC}
-            plan={live.planLuftNachtC}
-            ergebnis={nachtMax}
-            onModus={(m) => setz('tempMaxNachtModus', m)}
-            onAbstand={(v) => setz('tempMaxNachtAbstandK', v)}
-            onFest={(v) => setz('tempMaxNachtFestC', v)}
-            fehlerAbstand={fehlerZu(feldFehler, 'tempMaxNachtAbstandK')}
-            fehlerFest={fehlerZu(feldFehler, 'tempMaxNachtFestC')}
-            empfohlen={empfehlung('nacht')}
-          />
-          <p className="st-hinweis">Darüber geht {fuehrung} aus. {zusatz} geht {zahl(anzeige.folgeAbstandK)} K früher aus und kommt {zahl(anzeige.wiederEinAbstandK)} K darunter wieder.</p>
+      {/* ---------------------------------------------------------- Überblick */}
+      {reiter === 'ueberblick' && (
+        <>
+          {lage && <Lage zone={lage} titel={zusatzLageTitel} text={lageText} />}
 
-          <div className="st-feldzeile is-gestapelt">
-            <span className="st-etikett">
-              Wie stark soll {zusatz} helfen?
-              <small>{fuehrung} führt. Der Zusatz hilft nur dazu.</small>
-            </span>
-            <div className="ef-stufen" role="radiogroup" aria-label="Hilfsstärke">
-              {HILFE_STUFEN.map((s) => (
-                <button
-                  key={s.wert}
-                  type="button"
-                  role="radio"
-                  className="st-chip"
-                  aria-checked={entwurf.hilfe === s.wert}
-                  aria-current={entwurf.hilfe === s.wert}
-                  onClick={() => setEntwurf(hilfeWaehlen(entwurf, geladen, s.wert))}
-                >
-                  {s.label}
-                </button>
-              ))}
-              {entwurf.hilfe === 'eigene' && (
-                <button type="button" role="radio" className="st-chip" aria-checked="true" aria-current="true">eigene Werte</button>
+          <Klappkachel
+            titel="Messwerte & Zonen"
+            zusammenfassung={`${zahl(live.feuchteProzent)} % rF · ${zahl(live.tempC)} °C · VPD ${zahl(live.vpd, 2)}${phaseText ? ` · ${phaseText}` : ''}`}
+          >
+            <V1Card className="ef-band">
+              {eins.band && (
+                <div className="ef-block">
+                  <MessKopf
+                    wert={tagPhase ? zahl(live.vpd, 2) : zahl(live.feuchteProzent, 0)}
+                    einheit={tagPhase ? 'kPa VPD' : '% rF'}
+                    zone={null}
+                    zustand={zustand.text}
+                    ton={zustand.ton === 'an' ? 'an' : zustand.ton === 'warn' ? 'warn' : undefined}
+                    beiwerk={`${zahl(live.feuchteProzent)} % rF · ${zahl(live.tempC)} °C${phaseText ? ` · ${phaseText}` : ''}`}
+                  />
+                  <BandAnzeige band={eins.band} />
+                </div>
               )}
-            </div>
-            <p className="st-hinweis">{hilfeText(entwurf.hilfe, fuehrung)}</p>
-            <p className={entwurf.hilfe === 'normal' ? 'ez-empf' : 'ez-empf is-abweichend'}>
-              {entwurf.hilfe === 'normal' ? 'Empfohlen: normal ✓' : 'Empfohlen: normal'}
-              {entwurf.hilfe !== 'normal' && (
-                <button type="button" onClick={() => setEntwurf(hilfeWaehlen(entwurf, geladen, 'normal'))}>zurücksetzen</button>
+              {feuchteZiel != null && (
+                <div className="ef-block">
+                  <MessKopf
+                    wert={zahl(live.feuchteProzent)}
+                    einheit="% rF"
+                    zone={fZone}
+                    zustand={fZone ? ZONEN_WORT[fZone] : 'keine Aussage'}
+                    ton={fZone === 'kritisch' ? 'kritisch' : fZone === 'knapp' ? 'warn' : undefined}
+                    beiwerk={`Ziel ${zahl(feuchteZiel, 0)} %`}
+                  />
+                  <ZonenSkala
+                    von={fVon}
+                    bis={fBis}
+                    zielBis={feuchteZiel}
+                    knappBis={feuchteZiel + RF_KNAPP_PUNKTE}
+                    marken={[{ wert: feuchteZiel, label: 'Ziel' }, { wert: feuchteZiel + RF_KNAPP_PUNKTE, label: 'Grenze' }]}
+                    ist={live.feuchteProzent}
+                    zone={fZone}
+                    einheit="%"
+                  />
+                </div>
               )}
-            </p>
-          </div>
-
-          <V1Switch
-            label="Automatik"
-            checked={entwurf.automatikAktiv}
-            onChange={(an) => setz('automatikAktiv', an)}
-            hint={`Aus hält die Regelung an. ${zusatz} bleibt, wie er gerade steht.`}
-          />
-        </V1Card>
-      </V1Section>
-
-      {/* ------------------------------------------------------- Erweitert */}
-      <button type="button" className="ef-klapp ez-klapp" aria-expanded={erweitertOffen} onClick={() => setErweitertOffen(!erweitertOffen)}>
-        <span><b>Erweitert</b> · Einzelwerte</span>
-        <span className="ef-klapp-zeichen">{erweitertOffen ? 'zuklappen ▴' : 'aufklappen ▾'}</span>
-      </button>
-
-      {erweitertOffen && (
-        <V1Card className="ez-erweitert">
-          <p className="st-gruppe">Was der Fork selbst wählt</p>
-          <Lesen
-            label="Schaltgröße"
-            hinweis={'VPD-Ziel aus dem Plan. Fehlt es, nimmt der Fork die Plan-Luftfeuchte. Fehlt beides, steht oben „Plan unvollständig".'}
-            wert={live.schaltgroesse === 'vpd' ? 'VPD' : live.schaltgroesse === 'feuchte' ? 'Luftfeuchte' : '–'}
-          />
-          <Lesen label="VPD-Ziel" hinweis={live.planWoche ?? undefined} wert={live.vpdZiel == null ? '–' : `${zahl(live.vpdZiel, 2)} kPa`} />
-          <Lesen
-            label="Luftfeuchte EIN / AUS"
-            hinweis={'Schwellen aus dem Plan; gelten nachts mit „Nachts durchlaufen" und wenn der Plan kein VPD liefert.'}
-            wert={live.feuchteEinProzent == null || live.feuchteAusProzent == null ? '–' : `${zahl(live.feuchteEinProzent, 0)} % / ${zahl(live.feuchteAusProzent, 0)} %`}
-          />
-          <div className="st-feldzeile">
-            <span className="st-etikett">Ändern im Plan</span>
-            <V1LinkButton to="/plan" variant="ghost">Plan ›</V1LinkButton>
-          </div>
-
-          <p className="st-gruppe">Schalten</p>
-          <div className="st-feldzeile is-gestapelt">
-            <span className="st-etikett">
-              Wie ruhig soll er schalten?
-              <small>Abstand rechts und links vom Plan-Ziel. Weiter auseinander = seltener schalten, größere Schwankung.</small>
-              {fehlerZu(feldFehler, 'vpdHystereseKpa') && <span className="st-fehler">{fehlerZu(feldFehler, 'vpdHystereseKpa')}</span>}
-            </span>
-            <div className="ef-stufen" role="radiogroup" aria-label="VPD-Abstand">
-              {VPD_STUFEN.map((s) => {
-                const an = !eigeneHysterese && gleich(entwurf.vpdHystereseKpa, s.wert)
-                return (
-                  <button key={s.wert} type="button" role="radio" className="st-chip" aria-checked={an} aria-current={an}
-                    onClick={() => { setEigeneHysterese(false); setzEinzel('vpdHystereseKpa', s.wert) }}>
-                    {s.label} · {zahl(s.wert, 2)}
-                  </button>
-                )
-              })}
-              <button type="button" role="radio" className="st-chip" aria-checked={eigeneHysterese} aria-current={eigeneHysterese} onClick={() => setEigeneHysterese(true)}>
-                eigener Wert
-              </button>
-            </div>
-            {eigeneHysterese && (
-              <div className="ef-unterfeld">
-                <Zahl label="Eigener VPD-Abstand" hinweis="0,05 bis 0,60 kPa." einheit="kPa" wert={entwurf.vpdHystereseKpa} min={0.05} max={0.6} schritt={0.05} onChange={(v) => setzEinzel('vpdHystereseKpa', v)} />
+              <div className="ef-block">
+                <MessKopf
+                  wert={zahl(live.tempC)}
+                  einheit="°C"
+                  zone={tZone}
+                  zustand={tZone === 'kritisch' ? 'zu warm — beide aus' : pausiert ? `${zusatz} wartet auf ${zahl(grenzen.wiederEin)} °C` : tZone ? ZONEN_WORT[tZone] : 'keine Aussage'}
+                  ton={tZone === 'kritisch' ? 'kritisch' : tZone === 'knapp' ? 'warn' : undefined}
+                  beiwerk={`Höchsttemperatur ${zahl(grenzen.max)} °C${phaseText ? ` · ${phaseText}` : ''}`}
+                />
+                <ZonenSkala
+                  von={tempBand.von}
+                  bis={tempBand.bis}
+                  zielBis={grenzen.folgeAus}
+                  knappBis={grenzen.max}
+                  marken={[
+                    { wert: grenzen.wiederEin, label: 'an' },
+                    { wert: grenzen.folgeAus, label: 'Zusatz' },
+                    { wert: grenzen.max, label: 'Haupt' },
+                  ]}
+                  ist={live.tempC}
+                  zone={tZone}
+                  einheit="°C"
+                />
               </div>
-            )}
-            <p className="st-hinweis">
-              {live.vpdZiel == null
-                ? 'Das Plan-Ziel ist noch nicht bekannt.'
-                : `EIN bei VPD unter ${zahl(live.vpdZiel - anzeige.vpdHystereseKpa, 2)}, AUS über ${zahl(live.vpdZiel + anzeige.vpdHystereseKpa, 2)} kPa.`}
-              {' '}Knapp hält das VPD enger, schaltet aber öfter.
-            </p>
-          </div>
-          <V1Switch
-            label="Nachts durchlaufen"
-            checked={entwurf.nachtDurchlaufen}
-            onChange={(an) => setz('nachtDurchlaufen', an)}
-            hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach dem VPD-Band takten. Wirkt mit der vom Fork angelegten Regelung."
-          />
-          <V1Switch
-            label="Auch tagsüber entfeuchten"
-            checked={entwurf.tagbetriebErlauben}
-            onChange={(an) => setz('tagbetriebErlauben', an)}
-            hint="Aus: nur in der Dunkelphase. Wirkt mit der vom Fork angelegten Regelung."
-          />
+              <ZonenLegende />
+              {hinweis && <p className="st-hinweis">{hinweis}</p>}
+            </V1Card>
+          </Klappkachel>
 
-          <p className="st-gruppe">Zusammenspiel mit {fuehrung}</p>
-          <Zahl label="Zuschalten erst nach" hinweis={`So lange muss ${fuehrung} laufen, bevor ${zusatz} mithilft. Ist ${fuehrung} aus, startet der Zusatz sofort.`} einheit="min" wert={entwurf.zuschaltVerzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => setzEinzel('zuschaltVerzoegerungMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'zuschaltVerzoegerungMin')} />
-          <Zahl label="Zusatz geht früher aus" hinweis={`Bei ${zahl(grenzen.max)} °C geht ${fuehrung} aus, der Zusatz schon bei ${zahl(grenzen.folgeAus)}.`} einheit="K" wert={entwurf.folgeAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('folgeAbstandK', v)} fehler={fehlerZu(feldFehler, 'folgeAbstandK')} />
-          <Zahl label="Wieder einschalten erst, wenn es kühler ist" hinweis={`Weiterer Abstand unter dem Abschaltwert (jetzt ${zahl(grenzen.wiederEin)} °C). Verhindert das Takten an der Grenze.`} einheit="K" wert={entwurf.wiederEinAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('wiederEinAbstandK', v)} fehler={fehlerZu(feldFehler, 'wiederEinAbstandK')} />
-          <Zahl label="Mindestlaufzeit" hinweis="Vorher schaltet ihn erreichtes VPD nicht ab. Übertemperatur schon." einheit="min" wert={entwurf.mindestlaufzeitMin} min={0} max={60} schritt={1} onChange={(v) => setz('mindestlaufzeitMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'mindestlaufzeitMin')} />
-          <Zahl label="Mindestpause" hinweis="Kompressorschutz." einheit="min" wert={entwurf.mindestpauseMin} min={1} max={120} schritt={1} onChange={(v) => setzEinzel('mindestpauseMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'mindestpauseMin')} />
-          <p className="st-hinweis" data-audit="zusatz-fuehrung-regel">Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät {fuehrung} läuft.</p>
-
-          <p className="st-gruppe">Meldung „zieht nichts"</p>
-          <V1Switch
-            label="Melden, wenn der Shelly an ist, das Gerät aber nichts zieht"
-            checked={entwurf.meldung.aktiv}
-            onChange={(an) => setzMeldung('aktiv', an)}
-            hint={live.leistungW == null ? 'Tank voll oder Gerät ausgeschaltet?' : `Tank voll oder Gerät ausgeschaltet? Gerade nimmt ${zusatz} ${zahl(live.leistungW, 0)} W auf.`}
+          <Warum an={live.zusatzAn} zeilen={warum} />
+          <Zusammenspiel
+            haupt={fuehrung}
+            zusatz={zusatz}
+            tempMax={grenzen.max}
+            abstaende={{ folgeAus: grenzen.folgeAus, wiederEin: grenzen.wiederEin, mindestpauseMin: anzeige.mindestpauseMin }}
           />
-          <Zahl label="Meldung unter" hinweis={'Leistung, ab der es als „zieht nichts" gilt.'} einheit="W" wert={entwurf.meldung.grenzeW} min={5} max={200} schritt={5} onChange={(v) => setzMeldung('grenzeW', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.grenzeW')} />
-          <Zahl label="Meldung nach" hinweis="So lange muss es anhalten, bevor gemeldet wird." einheit="min" wert={entwurf.meldung.dauerMin} min={1} max={60} schritt={1} onChange={(v) => setzMeldung('dauerMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.dauerMin')} />
-          <Zahl label="Meldung wiederholen alle" hinweis="Solange das Problem besteht. Als Meldung in Home Assistant und als Push an die in den Meldungs-Einstellungen gewählte Adresse. Nie bei ausgeschaltetem Shelly." einheit="h" wert={entwurf.meldung.wiederholungH} min={1} max={24} schritt={1} onChange={(v) => setzMeldung('wiederholungH', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.wiederholungH')} />
-
-          <p className="st-gruppe">Kondenswasser</p>
-          <div className="st-feldzeile">
-            <span className="st-etikett">
-              Ablauf
-              <small>Tank oder Ablaufschlauch</small>
-            </span>
-            <span className="ef-stufen" role="radiogroup" aria-label="Ablauf des Kondenswassers">
-              {(['tank', 'schlauch'] as ZusatzAblauf[]).map((a) => (
-                <button key={a} type="button" role="radio" className="st-chip" aria-checked={entwurf.ablauf === a} aria-current={entwurf.ablauf === a} onClick={() => setz('ablauf', a)}>
-                  {ablaufText(a)}
-                </button>
-              ))}
-            </span>
-          </div>
-        </V1Card>
+        </>
       )}
 
-      {/* ------------------------------------------------------------ Heute */}
-      {(live.energieHeuteKwh != null || live.leistungW != null) && (
-        <V1Section title="Heute">
-          <V1Card>
-            {live.energieHeuteKwh != null && <Lesen label="Energie heute" wert={`${zahl(live.energieHeuteKwh)} kWh`} />}
-            {live.leistungW != null && <Lesen label="Leistung jetzt" wert={`${zahl(live.leistungW, 0)} W`} />}
-          </V1Card>
-        </V1Section>
+      {/* -------------------------------------------------------------- Regel */}
+      {reiter === 'regel' && (
+        <>
+          <Klappkachel titel="Hilfe" zusammenfassung={`${HILFE_STUFEN.find((s) => s.wert === entwurf.hilfe)?.label ?? 'eigene Werte'} · Automatik ${entwurf.automatikAktiv ? 'an' : 'aus'}`}>
+            <V1Card>
+              <div className="st-feldzeile is-gestapelt">
+                <span className="st-etikett">
+                  Wie stark soll {zusatz} helfen?
+                  <small>{fuehrung} führt. Der Zusatz hilft nur dazu.</small>
+                </span>
+                <div className="ef-stufen" role="radiogroup" aria-label="Hilfsstärke">
+                  {HILFE_STUFEN.map((s) => (
+                    <button
+                      key={s.wert}
+                      type="button"
+                      role="radio"
+                      className="st-chip"
+                      aria-checked={entwurf.hilfe === s.wert}
+                      aria-current={entwurf.hilfe === s.wert}
+                      onClick={() => setEntwurf(hilfeWaehlen(entwurf, geladen, s.wert))}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                  {entwurf.hilfe === 'eigene' && (
+                    <button type="button" role="radio" className="st-chip" aria-checked="true" aria-current="true">eigene Werte</button>
+                  )}
+                </div>
+                <p className="st-hinweis">{hilfeText(entwurf.hilfe, fuehrung)}</p>
+                <p className={entwurf.hilfe === 'normal' ? 'ez-empf' : 'ez-empf is-abweichend'}>
+                  {entwurf.hilfe === 'normal' ? 'Empfohlen: normal ✓' : 'Empfohlen: normal'}
+                  {entwurf.hilfe !== 'normal' && (
+                    <button type="button" onClick={() => setEntwurf(hilfeWaehlen(entwurf, geladen, 'normal'))}>zurücksetzen</button>
+                  )}
+                </p>
+              </div>
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel
+            titel="Einschalten & Ausschalten"
+            zusammenfassung={live.vpdZiel == null ? 'Plan-Ziel unbekannt' : `VPD-Abstand ${zahl(anzeige.vpdHystereseKpa, 2)} kPa → EIN ${zahl(live.vpdZiel - anzeige.vpdHystereseKpa, 2)} · AUS ${zahl(live.vpdZiel + anzeige.vpdHystereseKpa, 2)}`}
+          >
+            <V1Card>
+              <Lesen
+                label="Schaltgröße"
+                hinweis={'VPD-Ziel aus dem Plan. Fehlt es, nimmt der Fork die Plan-Luftfeuchte. Fehlt beides, steht oben „Plan unvollständig".'}
+                wert={live.schaltgroesse === 'vpd' ? 'VPD' : live.schaltgroesse === 'feuchte' ? 'Luftfeuchte' : '–'}
+              />
+              <Lesen label="VPD-Ziel" hinweis={live.planWoche ?? undefined} wert={live.vpdZiel == null ? '–' : `${zahl(live.vpdZiel, 2)} kPa`} />
+              <div className="st-feldzeile is-gestapelt">
+                <span className="st-etikett">
+                  Wie ruhig soll er schalten?
+                  <small>Abstand rechts und links vom Plan-Ziel. Weiter auseinander = seltener schalten, größere Schwankung.</small>
+                  {fehlerZu(feldFehler, 'vpdHystereseKpa') && <span className="st-fehler">{fehlerZu(feldFehler, 'vpdHystereseKpa')}</span>}
+                </span>
+                <div className="ef-stufen" role="radiogroup" aria-label="VPD-Abstand">
+                  {VPD_STUFEN.map((s) => {
+                    const an = !eigeneHysterese && gleich(entwurf.vpdHystereseKpa, s.wert)
+                    return (
+                      <button key={s.wert} type="button" role="radio" className="st-chip" aria-checked={an} aria-current={an}
+                        onClick={() => { setEigeneHysterese(false); setzEinzel('vpdHystereseKpa', s.wert) }}>
+                        {s.label} · {zahl(s.wert, 2)}
+                      </button>
+                    )
+                  })}
+                  <button type="button" role="radio" className="st-chip" aria-checked={eigeneHysterese} aria-current={eigeneHysterese} onClick={() => setEigeneHysterese(true)}>
+                    eigener Wert
+                  </button>
+                </div>
+                {eigeneHysterese && (
+                  <div className="ef-unterfeld">
+                    <Zahl label="Eigener VPD-Abstand" hinweis="0,05 bis 0,60 kPa." einheit="kPa" wert={entwurf.vpdHystereseKpa} min={0.05} max={0.6} schritt={0.05} onChange={(v) => setzEinzel('vpdHystereseKpa', v)} />
+                  </div>
+                )}
+                <p className="ef-folge">
+                  {live.vpdZiel == null
+                    ? 'Das Plan-Ziel ist noch nicht bekannt.'
+                    : `EIN bei VPD unter ${zahl(live.vpdZiel - anzeige.vpdHystereseKpa, 2)}, AUS über ${zahl(live.vpdZiel + anzeige.vpdHystereseKpa, 2)} kPa.`}
+                  {' '}Knapp hält das VPD enger, schaltet aber öfter.
+                </p>
+              </div>
+              <Lesen
+                label="Luftfeuchte EIN / AUS"
+                hinweis={'Schwellen aus dem Plan; gelten nachts mit „Nachts durchlaufen" und wenn der Plan kein VPD liefert.'}
+                wert={live.feuchteEinProzent == null || live.feuchteAusProzent == null ? '–' : `${zahl(live.feuchteEinProzent, 0)} % / ${zahl(live.feuchteAusProzent, 0)} %`}
+              />
+              <div className="st-feldzeile">
+                <span className="st-etikett">Ändern im Plan</span>
+                <V1LinkButton to="/plan" variant="ghost">Plan ›</V1LinkButton>
+              </div>
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel titel="Tag & Nacht" zusammenfassung={`Nachts ${entwurf.nachtDurchlaufen ? 'durchlaufen' : 'nach VPD'} · tagsüber ${entwurf.tagbetriebErlauben ? 'erlaubt' : 'aus'}`} offen={false}>
+            <V1Card>
+              <V1Switch
+                label="Nachts durchlaufen"
+                checked={entwurf.nachtDurchlaufen}
+                onChange={(an) => setz('nachtDurchlaufen', an)}
+                hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach dem VPD-Band takten. Wirkt mit der vom Fork angelegten Regelung."
+              />
+              <V1Switch
+                label="Auch tagsüber entfeuchten"
+                checked={entwurf.tagbetriebErlauben}
+                onChange={(an) => setz('tagbetriebErlauben', an)}
+                hint="Aus: nur in der Dunkelphase. Wirkt mit der vom Fork angelegten Regelung."
+              />
+            </V1Card>
+          </Klappkachel>
+        </>
+      )}
+
+      {/* ------------------------------------------------------------- Schutz */}
+      {reiter === 'schutz' && (
+        <>
+          <Klappkachel titel="Temperatur max. · darüber geht er aus" zusammenfassung={`Tag ${zahl(tagMax)} °C · Nacht ${zahl(nachtMax)} °C`}>
+            <V1Card>
+              <TempMaxBlock
+                titel="Höchsttemperatur tagsüber"
+                ariaLabel="Höchsttemperatur tagsüber"
+                planText={planTexte.tag}
+                modus={entwurf.tempMaxTagModus}
+                abstand={entwurf.tempMaxTagAbstandK}
+                fest={entwurf.tempMaxTagFestC}
+                plan={live.planLuftTagC}
+                ergebnis={tagMax}
+                onModus={(m) => setz('tempMaxTagModus', m)}
+                onAbstand={(v) => setz('tempMaxTagAbstandK', v)}
+                onFest={(v) => setz('tempMaxTagFestC', v)}
+                fehlerAbstand={fehlerZu(feldFehler, 'tempMaxTagAbstandK')}
+                fehlerFest={fehlerZu(feldFehler, 'tempMaxTagFestC')}
+                empfohlen={empfehlung('tag')}
+              />
+              <TempMaxBlock
+                titel="Höchsttemperatur nachts"
+                ariaLabel="Höchsttemperatur nachts"
+                planText={planTexte.nacht}
+                modus={entwurf.tempMaxNachtModus}
+                abstand={entwurf.tempMaxNachtAbstandK}
+                fest={entwurf.tempMaxNachtFestC}
+                plan={live.planLuftNachtC}
+                ergebnis={nachtMax}
+                onModus={(m) => setz('tempMaxNachtModus', m)}
+                onAbstand={(v) => setz('tempMaxNachtAbstandK', v)}
+                onFest={(v) => setz('tempMaxNachtFestC', v)}
+                fehlerAbstand={fehlerZu(feldFehler, 'tempMaxNachtAbstandK')}
+                fehlerFest={fehlerZu(feldFehler, 'tempMaxNachtFestC')}
+                empfohlen={empfehlung('nacht')}
+              />
+              <p className="st-hinweis">Darüber geht {fuehrung} aus. {zusatz} geht {zahl(anzeige.folgeAbstandK)} K früher aus und kommt {zahl(anzeige.wiederEinAbstandK)} K darunter wieder.</p>
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel titel="Früher aus, später wieder an" zusammenfassung={`−${zahl(anzeige.folgeAbstandK)} K · Wieder-EIN −${zahl(anzeige.wiederEinAbstandK)} K`}>
+            <V1Card>
+              <Zahl label="Zusatz geht früher aus" hinweis={`Bei ${zahl(grenzen.max)} °C geht ${fuehrung} aus, der Zusatz schon bei ${zahl(grenzen.folgeAus)}.`} einheit="K" wert={entwurf.folgeAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('folgeAbstandK', v)} fehler={fehlerZu(feldFehler, 'folgeAbstandK')} />
+              <Zahl label="Wieder einschalten erst, wenn es kühler ist" hinweis={`Weiterer Abstand unter dem Abschaltwert (jetzt ${zahl(grenzen.wiederEin)} °C). Verhindert das Takten an der Grenze.`} einheit="K" wert={entwurf.wiederEinAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => setzEinzel('wiederEinAbstandK', v)} fehler={fehlerZu(feldFehler, 'wiederEinAbstandK')} />
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel titel="Laufverhalten" zusammenfassung={`Lauf ${anzeige.mindestlaufzeitMin} min · Pause ${anzeige.mindestpauseMin} min`} offen={false}>
+            <V1Card>
+              <Zahl label="Mindestlaufzeit" hinweis="Vorher schaltet ihn erreichtes VPD nicht ab. Übertemperatur schon." einheit="min" wert={entwurf.mindestlaufzeitMin} min={0} max={60} schritt={1} onChange={(v) => setz('mindestlaufzeitMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'mindestlaufzeitMin')} />
+              <Zahl label="Mindestpause" hinweis="Kompressorschutz." einheit="min" wert={entwurf.mindestpauseMin} min={1} max={120} schritt={1} onChange={(v) => setzEinzel('mindestpauseMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'mindestpauseMin')} />
+              <p className="st-hinweis" data-audit="zusatz-fuehrung-regel">Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät {fuehrung} läuft.</p>
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel titel="Meldung „zieht nichts" zusammenfassung={entwurf.meldung.aktiv ? `an · unter ${entwurf.meldung.grenzeW} W nach ${entwurf.meldung.dauerMin} min` : 'aus'} offen={false}>
+            <V1Card>
+              <V1Switch
+                label="Melden, wenn der Shelly an ist, das Gerät aber nichts zieht"
+                checked={entwurf.meldung.aktiv}
+                onChange={(an) => setzMeldung('aktiv', an)}
+                hint={live.leistungW == null ? 'Tank voll oder Gerät ausgeschaltet?' : `Tank voll oder Gerät ausgeschaltet? Gerade nimmt ${zusatz} ${zahl(live.leistungW, 0)} W auf.`}
+              />
+              <Zahl label="Meldung unter" hinweis={'Leistung, ab der es als „zieht nichts" gilt.'} einheit="W" wert={entwurf.meldung.grenzeW} min={5} max={200} schritt={5} onChange={(v) => setzMeldung('grenzeW', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.grenzeW')} />
+              <Zahl label="Meldung nach" hinweis="So lange muss es anhalten, bevor gemeldet wird." einheit="min" wert={entwurf.meldung.dauerMin} min={1} max={60} schritt={1} onChange={(v) => setzMeldung('dauerMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.dauerMin')} />
+              <Zahl label="Meldung wiederholen alle" hinweis="Solange das Problem besteht. Als Meldung in Home Assistant und als Push an die in den Meldungs-Einstellungen gewählte Adresse. Nie bei ausgeschaltetem Shelly." einheit="h" wert={entwurf.meldung.wiederholungH} min={1} max={24} schritt={1} onChange={(v) => setzMeldung('wiederholungH', Math.round(v))} fehler={fehlerZu(feldFehler, 'meldung.wiederholungH')} />
+            </V1Card>
+          </Klappkachel>
+        </>
+      )}
+
+      {/* ------------------------------------------------------------ Betrieb */}
+      {reiter === 'betrieb' && (
+        <>
+          <Klappkachel titel="Betrieb" zusammenfassung={`Automatik ${entwurf.automatikAktiv ? 'an' : 'aus'} · zuschalten nach ${anzeige.zuschaltVerzoegerungMin} min`}>
+            <V1Card>
+              <V1Switch
+                label="Automatik"
+                checked={entwurf.automatikAktiv}
+                onChange={(an) => setz('automatikAktiv', an)}
+                hint={`Aus hält die Regelung an. ${zusatz} bleibt, wie er gerade steht.`}
+              />
+              <Zahl label="Zuschalten erst nach" hinweis={`So lange muss ${fuehrung} laufen, bevor ${zusatz} mithilft. Ist ${fuehrung} aus, startet der Zusatz sofort.`} einheit="min" wert={entwurf.zuschaltVerzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => setzEinzel('zuschaltVerzoegerungMin', Math.round(v))} fehler={fehlerZu(feldFehler, 'zuschaltVerzoegerungMin')} />
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Ablauf des Kondenswassers
+                  <small>Tank oder Ablaufschlauch</small>
+                </span>
+                <span className="ef-stufen" role="radiogroup" aria-label="Ablauf des Kondenswassers">
+                  {(['tank', 'schlauch'] as ZusatzAblauf[]).map((a) => (
+                    <button key={a} type="button" role="radio" className="st-chip" aria-checked={entwurf.ablauf === a} aria-current={entwurf.ablauf === a} onClick={() => setz('ablauf', a)}>
+                      {ablaufText(a)}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            </V1Card>
+          </Klappkachel>
+
+          {(live.energieHeuteKwh != null || live.leistungW != null) && (
+            <Klappkachel
+              titel="Heute"
+              zusammenfassung={`${live.energieHeuteKwh == null ? '' : `${zahl(live.energieHeuteKwh)} kWh`}${live.energieHeuteKwh != null && live.leistungW != null ? ' · ' : ''}${live.leistungW == null ? '' : `${zahl(live.leistungW, 0)} W`}`}
+              offen={false}
+            >
+              <V1Card>
+                {live.energieHeuteKwh != null && <Lesen label="Energie heute" wert={`${zahl(live.energieHeuteKwh)} kWh`} />}
+                {live.leistungW != null && <Lesen label="Leistung jetzt" wert={`${zahl(live.leistungW, 0)} W`} />}
+              </V1Card>
+            </Klappkachel>
+          )}
+        </>
       )}
 
       <div className="st-geraete-zeile">

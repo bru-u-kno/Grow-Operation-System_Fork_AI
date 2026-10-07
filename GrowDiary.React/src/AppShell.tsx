@@ -128,7 +128,7 @@ export function AppShell({ children, counts }: Props) {
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                className={({ isActive }) => (isActive ? 'v1-nav-item active' : 'v1-nav-item')}
+                className={isNavLeafActive(item, location.pathname) ? 'v1-nav-item active' : 'v1-nav-item'}
               >
                 {item.label}
                 {item.badge === 'warn' && counts?.addbackDue && <span className="badge warn">fällig</span>}
@@ -312,7 +312,7 @@ export function AppShell({ children, counts }: Props) {
                     key={item.to}
                     to={item.to}
                     end={item.end}
-                    className={({ isActive }) => (isActive ? 'v1-more-tile active' : 'v1-more-tile')}
+                    className={isNavLeafActive(item, location.pathname) ? 'v1-more-tile active' : 'v1-more-tile'}
                     onClick={() => setMoreOpen(false)}
                   >
                     {item.label}

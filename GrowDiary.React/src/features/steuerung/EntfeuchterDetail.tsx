@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
-import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
+import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
 import { ENTFEUCHTER_REITER } from './steuerung-typen'
 import type { EntfeuchterEinstellungen, EntfeuchterReiter, EntfeuchterSeite, SteuerungModul } from './steuerung-typen'
-import { HYSTERESE_STUFEN, bandBerechnen, hystereseStufe, tempMax, zahl } from './entfeuchter-band'
+import { HYSTERESE_STUFEN, hystereseStufe, tempMax, zahl } from './entfeuchter-band'
 import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { feldFehlerAus, leereZahlenfelder, ohneLuecken } from './feld-fehler'
 import { TempMaxBlock, Zahl } from './SteuerungsFelder'
+import { Klappkachel } from './Klappkachel'
+import { Lage, MessKopf, Warum, ZonenLegende, ZonenSkala, Zusammenspiel } from './EntfeuchterUeberblick'
+import type { WarumZeile } from './EntfeuchterUeberblick'
+import { ZONEN_WORT, feuchteZone, schlechtereZone, temperaturZone, RF_KNAPP_PUNKTE } from './entfeuchter-zonen'
 import { useFehlerZeigen } from './fehler-reiter'
 
 /**
@@ -31,8 +35,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
 }) {
   const [seite, setSeite] = useState<EntfeuchterSeite | null>(null)
   const [entwurf, setEntwurf] = useState<EntfeuchterEinstellungen | null>(null)
-  const [reiter, setReiter] = useState<EntfeuchterReiter>('regel')
-  const [rueckfallOffen, setRueckfallOffen] = useState(false)
+  const [reiter, setReiter] = useState<EntfeuchterReiter>('ueberblick')
   const [eigeneHysterese, setEigeneHysterese] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
@@ -86,16 +89,10 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
     [seite, entwurf],
   )
 
-  // Die festen Schwellen stehen eingeklappt. Ist eine davon markiert, klappt
-  // die Liste auf — sonst fände auch der Reiterwechsel nichts zu zeigen.
-  const rueckfallZeigen = (felder: Record<string, string>) => {
-    if (Object.keys(felder).some((name) => /^Feuchte(Ein|Aus)(Tag|Nacht)$/.test(name))) setRueckfallOffen(true)
-  }
-
   const speichern = async () => {
     if (!entwurf) return
     const leer = leereZahlenfelder(entwurf)
-    if (leer) { setFeldFehler(leer); rueckfallZeigen(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen(); return }
+    if (leer) { setFeldFehler(leer); setMeldung(null); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen(); return }
     setArbeitet(true); setMeldung(null); setFeldFehler({})
     try {
       const zurueck = await apiFetch<EntfeuchterSeite>('/api/steuerung/entfeuchter', { method: 'PUT', body: JSON.stringify(entwurf) })
@@ -105,7 +102,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
         : 'Gespeichert.')
     } catch (caught) {
       const felder = feldFehlerAus(caught)
-      if (felder) { setFeldFehler(felder); rueckfallZeigen(felder); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen() }
+      if (felder) { setFeldFehler(felder); setFehler('Bitte die markierten Felder prüfen.'); fehlerZeigen() }
       else setFehler(formatApiError(caught, 'Speichern fehlgeschlagen.'))
     } finally {
       setArbeitet(false)
@@ -121,7 +118,6 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
   const anzeige = ohneLuecken(entwurf, seite.einstellungen)
   const setz = <K extends keyof EntfeuchterEinstellungen>(feld: K, wert: EntfeuchterEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
 
-  const band = bandBerechnen({ aus: live.ausAktivProzent, ein: live.einAktivProzent, deckel: live.rhObergrenzeProzent, ist: live.feuchteProzent })
   const phase = live.tagPhase === true ? 'Tag' : live.tagPhase === false ? 'Nacht' : null
   const ausSpaetestens = live.einAktivProzent == null ? null : live.einAktivProzent - anzeige.hystereseProzent
 
@@ -129,6 +125,31 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
   const nachtMax = tempMax(anzeige.tempMaxNachtModus, anzeige.tempMaxNachtAbstandK, anzeige.tempMaxNachtFestC, live.planLuftNachtC)
   const grenze = live.co2CanopyGrenzeC
   const ueberCo2 = grenze != null && (tagMax > grenze || nachtMax > grenze)
+
+  // --- Zonen (A-014): Ziel der Luftfeuchte ist die Plan-Obergrenze, ohne Plan die EIN-Schwelle.
+  const aktivMax = phase === 'Nacht' ? nachtMax : tagMax
+  const feuchteZiel = live.rhObergrenzeProzent ?? live.einAktivProzent
+  const fZone = feuchteZone(live.feuchteProzent, feuchteZiel)
+  const tZone = temperaturZone(live.tempC, aktivMax)
+  const lage = schlechtereZone(fZone, tZone)
+  const lageText = [
+    fZone && `Luftfeuchte ${zahl(live.feuchteProzent)} % (${ZONEN_WORT[fZone]}${feuchteZiel == null ? '' : `, Ziel ${zahl(feuchteZiel, 0)} %`})`,
+    tZone && `Temperatur ${zahl(live.tempC)} °C (${ZONEN_WORT[tZone]}, Höchsttemperatur ${zahl(aktivMax)} °C)`,
+  ].filter(Boolean).join(' · ')
+  const lageTitel = live.portAn === true ? 'Entfeuchter läuft' : 'Entfeuchter bereit'
+
+  const feuchteWerte = [live.feuchteProzent, feuchteZiel, live.einAktivProzent, live.ausAktivProzent].filter((w): w is number => w != null && Number.isFinite(w))
+  const fVon = feuchteWerte.length ? Math.floor(Math.min(...feuchteWerte) - 3) : 40
+  const fBis = feuchteWerte.length ? Math.ceil(Math.max(...feuchteWerte, (feuchteZiel ?? 0) + RF_KNAPP_PUNKTE) + 3) : 70
+  const tVon = Math.floor(Math.min(live.tempC ?? aktivMax, aktivMax) - 4)
+  const tBis = Math.ceil(Math.max(live.tempC ?? aktivMax, aktivMax) + 2)
+
+  const warum: WarumZeile[] = [
+    { frage: 'Feuchte über der EIN-Schwelle', antwort: `${zahl(live.feuchteProzent)} % · EIN ab ${zahl(live.einAktivProzent)} %`, ok: live.feuchteProzent == null || live.einAktivProzent == null ? null : live.feuchteProzent > live.einAktivProzent },
+    { frage: `Zelt unter der Höchsttemperatur (${zahl(aktivMax)} °C)`, antwort: `${zahl(live.tempC)} °C`, ok: live.tempC == null ? null : live.tempC < aktivMax },
+    ...(phase === 'Tag' ? [{ frage: 'Tagbetrieb erlaubt', antwort: anzeige.tagbetriebErlauben ? 'ja — er darf auch bei Licht an laufen' : 'nein — nur in der Dunkelphase', ok: anzeige.tagbetriebErlauben }] : []),
+    { frage: 'Automatik an', antwort: live.automatikAn === false ? 'Die Regelung ist angehalten.' : 'Die Regelung läuft in Home Assistant.', ok: live.automatikAn == null ? null : live.automatikAn },
+  ]
 
   return (
     <V1Page
@@ -162,53 +183,89 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
         <V1Alert tone="warn" title="Automatik aus" message="Die Regelung ist angehalten. Der Entfeuchter bleibt, wie er gerade steht." />
       )}
 
-      {/* ---------------------------------------------------- Schwellen-Band */}
-      <V1Card className="ef-band">
-        <div className="ef-kopf">
-          <span className="ef-gross">{zahl(live.feuchteProzent)}<small> % rF</small></span>
-          <span className="ef-zustand">
-            <b className={live.portAn === true ? 'is-an' : undefined}>{live.portAn === true ? 'entfeuchtet' : 'bereit'}</b>
-            VPD {zahl(live.vpd, 2)} · {zahl(live.tempC)} °C{phase ? ` · ${phase}` : ''}
-          </span>
-        </div>
-        {band && (
-          <>
-            <div className="ef-skala" aria-hidden="true">
-              <div className="ef-bahn" />
-              {band.zoneAb != null && <div className="ef-zone" style={{ left: `${band.zoneAb}%` }} />}
-              {band.marken.map((m) => (
-                <div key={m.art} className={m.art === 'deckel' ? 'ef-strich is-deckel' : 'ef-strich'} style={{ left: `${m.pos}%` }} />
-              ))}
-              {band.ist != null && (
-                <div className="ef-ist" style={{ left: `${band.ist}%` }}><em>{zahl(live.feuchteProzent)}</em></div>
-              )}
-            </div>
-            <div className="ef-marken">
-              {band.marken.map((m) => (
-                <span key={m.art} className={m.art === 'deckel' ? 'is-deckel' : undefined} style={{ left: `${m.pos}%` }}>
-                  {zahl(m.wert, 0)}<b>{m.art === 'aus' ? 'AUS' : m.art === 'ein' ? 'EIN' : 'Plan'}</b>
-                </span>
-              ))}
-            </div>
-            <div className="ef-rand"><span>{band.von} %</span><span>{band.bis} %</span></div>
-          </>
-        )}
-        <p className="st-hinweis">
-          {live.portAn === true
-            ? `Läuft, bis die Feuchte unter ${zahl(live.ausAktivProzent)} % fällt — frühestens nach ${anzeige.mindestlaufzeitMin} min Laufzeit.`
-            : `Springt an, wenn die Feuchte über ${zahl(live.einAktivProzent)} % steigt.`}
-          {entwurf.vpdRegelung && live.vpdUnten != null && live.vpdOben != null
-            ? ` Schwellen aus dem VPD-Band ${zahl(live.vpdUnten, 2)}–${zahl(live.vpdOben, 2)}, EIN gedeckelt von der Plan-Feuchte.`
-            : ' Feste Schwellen (Rückfallebene).'}
-        </p>
-      </V1Card>
-
       <V1Tabs items={ENTFEUCHTER_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
+
+      {/* ---------------------------------------------------------- Überblick */}
+      {reiter === 'ueberblick' && (
+        <>
+          {lage && <Lage zone={lage} titel={lageTitel} text={lageText} />}
+
+          <Klappkachel
+            titel="Messwerte & Zonen"
+            zusammenfassung={`${zahl(live.feuchteProzent)} % rF · ${zahl(live.tempC)} °C${phase ? ` · ${phase}` : ''}`}
+          >
+            <V1Card className="ef-band">
+              <div className="ef-block">
+                <MessKopf
+                  wert={zahl(live.feuchteProzent)}
+                  einheit="% rF"
+                  zone={fZone}
+                  zustand={live.portAn === true ? 'entfeuchtet' : 'bereit'}
+                  ton={live.portAn === true ? 'an' : undefined}
+                  beiwerk={`VPD ${zahl(live.vpd, 2)}${phase ? ` · ${phase}` : ''}`}
+                />
+                {feuchteZiel != null && (
+                  <ZonenSkala
+                    von={fVon}
+                    bis={fBis}
+                    zielBis={feuchteZiel}
+                    knappBis={feuchteZiel + RF_KNAPP_PUNKTE}
+                    marken={[
+                      ...(live.ausAktivProzent == null ? [] : [{ wert: live.ausAktivProzent, label: 'AUS' }]),
+                      ...(live.einAktivProzent == null ? [] : [{ wert: live.einAktivProzent, label: 'EIN' }]),
+                      { wert: feuchteZiel, label: 'Ziel' },
+                    ]}
+                    ist={live.feuchteProzent}
+                    zone={fZone}
+                    einheit="%"
+                  />
+                )}
+              </div>
+              <div className="ef-block">
+                <MessKopf
+                  wert={zahl(live.tempC)}
+                  einheit="°C"
+                  zone={tZone}
+                  zustand={tZone === 'kritisch' ? 'zu warm — er ist aus' : tZone ? ZONEN_WORT[tZone] : 'keine Aussage'}
+                  ton={tZone === 'kritisch' ? 'kritisch' : tZone === 'knapp' ? 'warn' : undefined}
+                  beiwerk={`Höchsttemperatur ${zahl(aktivMax)} °C${phase ? ` · ${phase}` : ''}`}
+                />
+                <ZonenSkala
+                  von={tVon}
+                  bis={tBis}
+                  zielBis={aktivMax - 1}
+                  knappBis={aktivMax}
+                  marken={[{ wert: aktivMax - 1, label: 'Ziel bis' }, { wert: aktivMax, label: 'Höchst' }]}
+                  ist={live.tempC}
+                  zone={tZone}
+                  einheit="°C"
+                />
+              </div>
+              <ZonenLegende />
+              <p className="st-hinweis">
+                {live.portAn === true
+                  ? `Läuft, bis die Feuchte unter ${zahl(live.ausAktivProzent)} % fällt — frühestens nach ${anzeige.mindestlaufzeitMin} min Laufzeit.`
+                  : `Springt an, wenn die Feuchte über ${zahl(live.einAktivProzent)} % steigt.`}
+                {entwurf.vpdRegelung && live.vpdUnten != null && live.vpdOben != null
+                  ? ` Schwellen aus dem VPD-Band ${zahl(live.vpdUnten, 2)}–${zahl(live.vpdOben, 2)}, EIN gedeckelt von der Plan-Feuchte.`
+                  : ' Feste Schwellen (Rückfallebene).'}
+              </p>
+            </V1Card>
+          </Klappkachel>
+
+          <Warum an={live.portAn} zeilen={warum} />
+          <Zusammenspiel haupt="Haupt-Entfeuchter" zusatz="Zusatz-Entfeuchter" tempMax={aktivMax} />
+        </>
+      )}
 
       {/* -------------------------------------------------------------- Regel */}
       {reiter === 'regel' && (
         <>
-          <V1Section title={live.planWoche ? `Aus dem Plan · ${live.planWoche}` : 'Aus dem Plan'}>
+          <Klappkachel
+            titel={live.planWoche ? `Aus dem Plan · ${live.planWoche}` : 'Aus dem Plan'}
+            zusammenfassung={`VPD ${live.vpdUnten == null ? '–' : `${zahl(live.vpdUnten, 2)}–${zahl(live.vpdOben, 2)} kPa`} · Feuchte max. ${live.rhObergrenzeProzent == null ? '–' : `${zahl(live.rhObergrenzeProzent, 0)} %`}`}
+            offen={false}
+          >
             <V1Card>
               <Lesen label="VPD-Band" herkunft="aus dem Plan" wert={live.vpdUnten == null ? '–' : `${zahl(live.vpdUnten, 2)} – ${zahl(live.vpdOben, 2)} kPa`} />
               <Lesen
@@ -223,22 +280,32 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
                 <V1LinkButton to="/plan" variant="ghost">Plan ›</V1LinkButton>
               </div>
             </V1Card>
-          </V1Section>
+          </Klappkachel>
 
-          <V1Section title="Gerät">
+          <Klappkachel titel="Regelart" zusammenfassung={entwurf.vpdRegelung ? 'nach VPD' : 'feste Schwellen'}>
             <V1Card>
               <V1Switch
+                className="ef-schalter"
                 label="Nach VPD regeln"
                 checked={entwurf.vpdRegelung}
                 onChange={(an) => setz('vpdRegelung', an)}
-                hint="An: die Schwellen wandern mit Temperatur und VPD-Band. Aus: die festen Schwellen unten gelten."
+                hint={
+                  <>
+                    <span className="ef-zeile"><b>An:</b> Die Schwellen wandern selbst mit Temperatur und VPD-Band aus dem Plan.</span>
+                    <span className="ef-zeile"><b>Aus:</b> Es gelten die festen Schwellen weiter unten.</span>
+                  </>
+                }
               />
-              <div className="st-feldzeile is-gestapelt">
-                <span className="st-etikett">
-                  Wie ruhig soll er schalten?
-                  <small>Wie weit die Feuchte unter die Einschaltschwelle fallen muss, bevor er ausgeht.</small>
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel titel="Wie ruhig schaltet er?" zusammenfassung={`Abstand EIN → AUS ${zahl(entwurf.hystereseProzent, 0)} %`}>
+            <V1Card>
+              <div className="ef-ruhig">
+                <p className="st-hinweis">
+                  So weit muss die Feuchte unter die Einschaltschwelle fallen, bevor er ausgeht. Gilt in beiden Regelarten.
                   {feldFehler.HystereseProzent && <span className="st-fehler">{feldFehler.HystereseProzent}</span>}
-                </span>
+                </p>
                 <div className="ef-stufen" role="radiogroup" aria-label="Abstand EIN → AUS">
                   {HYSTERESE_STUFEN.map((s) => (
                     <button
@@ -269,7 +336,7 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
                     <Zahl label="Eigener Abstand" hinweis="1 bis 10 %." einheit="%" wert={entwurf.hystereseProzent} min={1} max={10} schritt={0.5} onChange={(v) => setz('hystereseProzent', v)} />
                   </div>
                 )}
-                <p className="st-hinweis">
+                <p className="ef-folge">
                   Heißt jetzt: EIN ab {zahl(live.einAktivProzent)} %, AUS spätestens bei {zahl(ausSpaetestens)} %
                   {live.ausAktivProzent != null && ausSpaetestens != null && live.ausAktivProzent < ausSpaetestens - 0.05
                     ? ` (liegt das VPD-Ziel tiefer, gilt das: gerade ${zahl(live.ausAktivProzent)} %)`
@@ -277,29 +344,31 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
                   . Knapp hält die Feuchte enger, schaltet aber öfter. Ruhig schont den Kompressor.
                 </p>
               </div>
-
-              <button type="button" className="ef-klapp" aria-expanded={rueckfallOffen} onClick={() => setRueckfallOffen(!rueckfallOffen)}>
-                <span><b>Feste Schwellen</b> · Rückfallebene{entwurf.vpdRegelung ? ', ruht' : ', gilt gerade'}</span>
-                <span className="ef-klapp-zeichen">{rueckfallOffen ? 'zuklappen ▴' : 'aufklappen ▾'}</span>
-              </button>
-              {rueckfallOffen && (
-                <>
-                  <p className="st-hinweis">Gilt nur, wenn „Nach VPD regeln" aus ist oder der Plan keine VPD-Werte liefert. Auch hier deckelt die Plan-Feuchte die EIN-Schwelle.</p>
-                  <Zahl label="Tag · EIN ab" hinweis="Licht an." einheit="%" wert={entwurf.feuchteEinTag} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteEinTag', v)} fehler={feldFehler.FeuchteEinTag} />
-                  <Zahl label="Tag · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={entwurf.feuchteAusTag} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteAusTag', v)} fehler={feldFehler.FeuchteAusTag} />
-                  <Zahl label="Nacht · EIN ab" hinweis="Licht aus." einheit="%" wert={entwurf.feuchteEinNacht} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteEinNacht', v)} fehler={feldFehler.FeuchteEinNacht} />
-                  <Zahl label="Nacht · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={entwurf.feuchteAusNacht} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteAusNacht', v)} fehler={feldFehler.FeuchteAusNacht} />
-                </>
-              )}
             </V1Card>
-          </V1Section>
+          </Klappkachel>
+
+          <Klappkachel
+            titel="Feste Schwellen"
+            zusammenfassung={entwurf.vpdRegelung ? 'ruhen, solange „Nach VPD regeln" an ist' : `Tag EIN ${zahl(entwurf.feuchteEinTag, 0)} % · AUS ${zahl(entwurf.feuchteAusTag, 0)} %`}
+            offen={!entwurf.vpdRegelung}
+          >
+            <V1Card>
+              {entwurf.vpdRegelung && (
+                <p className="st-hinweis st-ruht-hinweis">Gerade ohne Wirkung: „Nach VPD regeln" ist an. Diese Werte gelten nur als Rückfallebene — wenn du es ausschaltest oder der Plan keine VPD-Werte liefert. Auch dann deckelt die Plan-Feuchte die EIN-Schwelle.</p>
+              )}
+              <Zahl ruht={entwurf.vpdRegelung} label="Tag · EIN ab" hinweis="Licht an." einheit="%" wert={entwurf.feuchteEinTag} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteEinTag', v)} fehler={feldFehler.FeuchteEinTag} />
+              <Zahl ruht={entwurf.vpdRegelung} label="Tag · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={entwurf.feuchteAusTag} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteAusTag', v)} fehler={feldFehler.FeuchteAusTag} />
+              <Zahl ruht={entwurf.vpdRegelung} label="Nacht · EIN ab" hinweis="Licht aus." einheit="%" wert={entwurf.feuchteEinNacht} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteEinNacht', v)} fehler={feldFehler.FeuchteEinNacht} />
+              <Zahl ruht={entwurf.vpdRegelung} label="Nacht · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={entwurf.feuchteAusNacht} min={30} max={90} schritt={1} onChange={(v) => setz('feuchteAusNacht', v)} fehler={feldFehler.FeuchteAusNacht} />
+            </V1Card>
+          </Klappkachel>
         </>
       )}
 
       {/* ------------------------------------------------------------- Schutz */}
       {reiter === 'schutz' && (
         <>
-          <V1Section title="Temperatur max. · darüber geht er aus">
+          <Klappkachel titel="Temperatur max. · darüber geht er aus" zusammenfassung={`Tag ${zahl(tagMax)} °C · Nacht ${zahl(nachtMax)} °C`}>
             <V1Card>
               <TempMaxBlock
                 titel="Tag"
@@ -332,11 +401,11 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
               {ueberCo2 && (
                 <V1Alert tone="warn" message={`Liegt über der CO₂-Grenze von ${zahl(grenze)} °C — dann steigt der Entfeuchter erst nach der CO₂-Klimasperre aus.`} />
               )}
-              <p className="st-hinweis">Kein Pflanzenziel, sondern Geräteschutz: der Entfeuchter gibt selbst Wärme ab.</p>
+              <p className="st-hinweis">Kein Pflanzenziel, sondern Geräteschutz: der Entfeuchter gibt selbst Wärme ab. Die Höchsttemperatur gilt für beide Entfeuchter.</p>
             </V1Card>
-          </V1Section>
+          </Klappkachel>
 
-          <V1Section title="Laufverhalten">
+          <Klappkachel titel="Laufverhalten" zusammenfassung={`Mindestlaufzeit ${anzeige.mindestlaufzeitMin} min`} offen={false}>
             <V1Card>
               <Zahl label="Mindestlaufzeit" hinweis="Vorher schaltet ihn erreichte Feuchte nicht ab. Übertemperatur schon." einheit="min" wert={entwurf.mindestlaufzeitMin} min={0} max={60} schritt={1} onChange={(v) => setz('mindestlaufzeitMin', Math.round(v))} fehler={feldFehler.MindestlaufzeitMin} />
               <V1Switch
@@ -346,40 +415,47 @@ export default function EntfeuchterDetail({ module, aktiv, onWechsel }: {
                 hint="Aus: nur in der Dunkelphase."
               />
             </V1Card>
-          </V1Section>
+          </Klappkachel>
         </>
       )}
 
       {/* ------------------------------------------------------------ Betrieb */}
       {reiter === 'betrieb' && (
-        <V1Section title="Betrieb">
-          <V1Card>
-            <V1Switch
-              label="Automatik aktiv"
-              checked={entwurf.automatikAktiv}
-              onChange={(an) => setz('automatikAktiv', an)}
-              hint="Aus hält die Regelung an. Der Entfeuchter bleibt, wie er gerade steht."
-            />
-            <Zahl label="Einschaltverzögerung" hinweis="So lange muss die Feuchte über EIN liegen, bevor er anspringt — fängt kurze Spitzen ab (Zelt offen, Gießen)." einheit="min" wert={entwurf.einschaltverzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => setz('einschaltverzoegerungMin', Math.round(v))} fehler={feldFehler.EinschaltverzoegerungMin} />
-            <Zahl label="Außenluft zuerst" hinweis="Trocknet die Zuluft gerade, wartet er stattdessen so lange — die Außenluft bekommt ihre Chance." einheit="min" wert={entwurf.wartezeitAussenluftMin} min={0} max={120} schritt={1} onChange={(v) => setz('wartezeitAussenluftMin', Math.round(v))} fehler={feldFehler.WartezeitAussenluftMin} />
-            <p className="st-hinweis">
-              {live.zuluftVorrang === true
-                ? `Gerade: Zuluft trocknet → es gelten ${anzeige.wartezeitAussenluftMin} min.`
-                : live.zuluftVorrang === false
-                  ? `Gerade: Außenluft bringt nichts → es gelten ${anzeige.einschaltverzoegerungMin} min.`
-                  : 'Ob die Zuluft gerade trocknet, ist nicht bekannt.'}
-              {' '}Ob die Zuluft trocknet, entscheidet die Zuluft-Steuerung.
-            </p>
-            <div className="st-feldzeile">
-              <span className="st-etikett">
-                Entfeuchter
-                <small>{live.portOnline === false ? 'Port offline' : live.portAn === true ? 'läuft' : 'steht'}</small>
-              </span>
-              <span className="st-nurlesen">{live.portAn === true ? 'AN' : live.portAn === false ? 'AUS' : '–'}</span>
-            </div>
-            <p className="st-hinweis">Geschaltet wird in Home Assistant, nicht hier — die Regelung läuft weiter, wenn der Fork neu startet.</p>
-          </V1Card>
-        </V1Section>
+        <>
+          <Klappkachel titel="Betrieb" zusammenfassung={`Automatik ${entwurf.automatikAktiv ? 'an' : 'aus'} · Einschaltverzögerung ${anzeige.einschaltverzoegerungMin} min`}>
+            <V1Card>
+              <V1Switch
+                label="Automatik aktiv"
+                checked={entwurf.automatikAktiv}
+                onChange={(an) => setz('automatikAktiv', an)}
+                hint="Aus hält die Regelung an. Der Entfeuchter bleibt, wie er gerade steht."
+              />
+              <Zahl label="Einschaltverzögerung" hinweis="So lange muss die Feuchte über EIN liegen, bevor er anspringt — fängt kurze Spitzen ab (Zelt offen, Gießen)." einheit="min" wert={entwurf.einschaltverzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => setz('einschaltverzoegerungMin', Math.round(v))} fehler={feldFehler.EinschaltverzoegerungMin} />
+              <Zahl label="Außenluft zuerst" hinweis="Trocknet die Zuluft gerade, wartet er stattdessen so lange — die Außenluft bekommt ihre Chance." einheit="min" wert={entwurf.wartezeitAussenluftMin} min={0} max={120} schritt={1} onChange={(v) => setz('wartezeitAussenluftMin', Math.round(v))} fehler={feldFehler.WartezeitAussenluftMin} />
+              <p className="st-hinweis">
+                {live.zuluftVorrang === true
+                  ? `Gerade: Zuluft trocknet → es gelten ${anzeige.wartezeitAussenluftMin} min.`
+                  : live.zuluftVorrang === false
+                    ? `Gerade: Außenluft bringt nichts → es gelten ${anzeige.einschaltverzoegerungMin} min.`
+                    : 'Ob die Zuluft gerade trocknet, ist nicht bekannt.'}
+                {' '}Ob die Zuluft trocknet, entscheidet die Zuluft-Steuerung.
+              </p>
+            </V1Card>
+          </Klappkachel>
+
+          <Klappkachel titel="Gerät" zusammenfassung={live.portOnline === false ? 'Port offline' : live.portAn === true ? 'läuft' : 'steht'} offen={false}>
+            <V1Card>
+              <div className="st-feldzeile">
+                <span className="st-etikett">
+                  Entfeuchter
+                  <small>{live.portOnline === false ? 'Port offline' : live.portAn === true ? 'läuft' : 'steht'}</small>
+                </span>
+                <span className="st-nurlesen">{live.portAn === true ? 'AN' : live.portAn === false ? 'AUS' : '–'}</span>
+              </div>
+              <p className="st-hinweis">Geschaltet wird in Home Assistant, nicht hier — die Regelung läuft weiter, wenn der Fork neu startet.</p>
+            </V1Card>
+          </Klappkachel>
+        </>
       )}
 
       <div className="st-geraete-zeile">

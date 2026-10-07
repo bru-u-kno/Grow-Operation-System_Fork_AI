@@ -167,9 +167,9 @@ export function V1Field({ label, children, hint, wide }: { label: string; childr
   )
 }
 
-export function V1Switch({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (checked: boolean) => void; hint?: string }) {
+export function V1Switch({ label, checked, onChange, hint, className }: { label: string; checked: boolean; onChange: (checked: boolean) => void; hint?: ReactNode; className?: string }) {
   return (
-    <label className="v1-switch">
+    <label className={classNames('v1-switch', className)}>
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <span>
         <strong>{label}</strong>

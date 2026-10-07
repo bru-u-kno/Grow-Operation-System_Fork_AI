@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.186
+
+**Fork AI.** Entfeuchtung: Entfeuchter und Zusatz-Entfeuchter sind gleich aufgebaut, mit Farbzonen und einer Erklärung — und jede Kachel lässt sich einklappen.
+
+- **Gleicher Aufbau:** Beide Seiten haben dieselben vier Reiter — **Überblick · Regel · Schutz · Betrieb**. Beim Zusatz-Entfeuchter ist „Erweitert" aufgelöst; jeder Wert steht dort, wo ihn der Hauptentfeuchter auch hat. Im Menü gibt es unter „Betrieb" den neuen Punkt **Entfeuchtung**.
+- **Farbzonen:** Messpunkt, große Zahl und eine Lagemeldung zeigen, ob du **im Ziel**, **knapp daneben** oder **deutlich daneben** bist — immer auch als Wort. Die Temperatur hat jetzt wie die Luftfeuchte ihre große Live-Zahl.
+- **Erklärung in der Seite:** „Warum ist er gerade AN/AUS?" nennt jede Bedingung mit dem echten Wert; „So arbeiten die beiden Entfeuchter zusammen" erklärt Führen, Helfen, Wärmegrenze und Wiedereinschalten in einfachen Sätzen.
+- **Einklappbare Kacheln:** Jede Kachel hat in der Kopfzeile ein Auf/Zu und zeigt zugeklappt ihren aktuellen Wert. Eine Kachel mit einem markierten Fehlerfeld klappt von selbst auf.
+- **Regelart klarer:** „Nach VPD regeln" steht in einer eigenen Kachel mit „An:" und „Aus:". Die festen Schwellen sind bei gesetztem Haken **blass und gesperrt** (sie haben dann keine Wirkung); die Kachel „Wie ruhig schaltet er?" hat ein gleichmäßiges Raster.
+- **Menü:** Beim Zusatz-Entfeuchter leuchtet jetzt auch im Desktop-Menü der richtige Punkt (vorher zwei zugleich).
+- **Noch nicht:** der Verlauf der letzten Stunden im Überblick und eine Vorrang-Einstellung „Feuchte vor Temperatur" (A-013).
+
 ## 2.0.0-forkai.185
 
 **Fork AI.** Probelauf: Ein Lauf an einem Gerät, das schon aus war, zählt nicht mehr als „Wirkung" des Geräts.

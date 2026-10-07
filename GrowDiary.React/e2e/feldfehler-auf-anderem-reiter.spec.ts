@@ -101,22 +101,26 @@ test('Zuluft: das leere Feld auf einem anderen Reiter wird gezeigt — zweimal',
   await speichernUndPruefen(page, 'Lüfter', 'Mindestpause')
 })
 
-test('Entfeuchter: ein leeres Feld in den eingeklappten festen Schwellen wird gezeigt', async ({ page }) => {
+test('Entfeuchter: ein leeres Feld in den zugeklappten festen Schwellen wird gezeigt', async ({ page }) => {
   await seiteLaden(page, '/steuerung/entfeuchter', 'Regel')
 
   await reiter(page, 'Regel').click()
-  const klapp = page.locator('.ef-klapp')
-  await klapp.click()
-  await expect(klapp).toHaveAttribute('aria-expanded', 'true')
+  // A-014: bei „Nach VPD regeln" sind die festen Schwellen gesperrt — erst ausschalten, dann bearbeiten.
+  const schalter = page.getByLabel('Nach VPD regeln')
+  if (await schalter.isChecked()) await schalter.uncheck()
+  const kopf = page.locator('.st-kk-kopf', { hasText: 'Feste Schwellen' })
+  if ((await kopf.getAttribute('aria-expanded')) === 'false') await kopf.click()
+  await expect(kopf).toHaveAttribute('aria-expanded', 'true')
   const feld = page.getByLabel('Nacht · AUS unter', { exact: true })
   await feld.fill('')
-  // Zuklappen und weg — das Feld steckt jetzt doppelt versteckt.
-  await klapp.click()
-  await expect(feld).toHaveCount(0)
+  // Zuklappen und auf einen anderen Reiter — das Feld steckt jetzt doppelt versteckt.
+  await kopf.click()
+  await expect(feld).toBeHidden()
   await reiter(page, 'Betrieb').click()
 
   await speichernUndPruefen(page, 'Regel', 'Nacht · AUS unter')
-  await expect(klapp).toHaveAttribute('aria-expanded', 'true')
+  // Die Kachel hat sich von selbst geöffnet (CSS), das Feld ist zu sehen.
+  await expect(feld).toBeVisible()
 })
 
 /**

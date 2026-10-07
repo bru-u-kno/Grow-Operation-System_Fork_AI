@@ -35,6 +35,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | Was in der Kostenzahl im Archiv steckt — und was bewusst nicht | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) |
 | Wie lange die CO₂-Flasche noch hält und was der Strom vom Zähler kostet (Fork AI) | [kosten.md](kosten.md) |
 | Wie ich eine Steuerung 10–30 Minuten abschalte, um ihre Wirkung zu messen (Fork AI) | [probelauf.md](probelauf.md) |
+| Wie ich beide Entfeuchter einstelle, was die Farbzonen bedeuten und warum feste Schwellen gerade blass sind (Fork AI) | [entfeuchtung.md](entfeuchtung.md) |
 | Wo die Sollwerte der CO₂-Begasung stehen und wer eigentlich regelt (Fork AI) | [steuerung.md](steuerung.md) |
 | Welche Entität benutzt der Fork wofür und zu welchem Gerät gehört sie (Fork AI) | [geraete.md](geraete.md) |
 | Warum ein Controller und seine Ports getrennte Geräte sind (Fork AI) | [geraete.md](geraete.md) |
@@ -70,6 +71,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) | Aufgabenseite, Journal und Fotos, Grow MCP, Mappe für eigene KI |
 | [ki-assistent.md](ki-assistent.md) | Fork AI: die eine Stelle für die eigene KI — Verbinden über das eigene Konto, Zugriff & Schlüssel, Mappe |
 | [kosten.md](kosten.md) | Fork AI: Strom aus HA-Zählerständen je Grow und Phase, Verbrauchsartikel mit Nachfüllungen, Laufzeit-Prognose, Kosten je Tag/Pflanze |
+| [entfeuchtung.md](entfeuchtung.md) | Fork AI: Entfeuchter und Zusatz-Entfeuchter — vier Reiter, Farbzonen, Regelart, feste Schwellen, Höchsttemperatur |
 | [steuerung.md](steuerung.md) | Fork AI: Leitstand der Regelungen — CO₂-Sollwerte im Fork, Regelung in HA, Ziel fest oder als Prozentstaffel vom Phasenband, Klima-Vorrang, Tagesabschluss in Chronik und Kosten |
 | [geraete.md](geraete.md) | Fork AI: alle benutzten Entitäten nach Gerät sortiert — sechs Quellen eingesammelt, Hierarchie aus dem HA-Geräteregister (Controller und seine Ports), Marke je Verwendung; liest nur |
 

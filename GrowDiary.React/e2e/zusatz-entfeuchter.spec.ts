@@ -94,6 +94,19 @@ async function seiteOeffnen(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Zusatz-Entfeuchter', level: 1 })).toBeVisible()
 }
 
+/** A-014: Reiter und Klappkacheln. Die Seite öffnet auf „Überblick". */
+const reiterWahl = (page: Page, name: string) => page.locator('.v1-tab', { hasText: new RegExp(`^${name}$`) }).click()
+const aufklappen = async (page: Page, titel: RegExp) => {
+  const kopf = page.locator('.st-kk-kopf[aria-expanded="false"]', { hasText: titel })
+  if (await kopf.count()) await kopf.first().click()
+}
+const alleKartenOeffnen = async (page: Page) => {
+  const zu = page.locator('.st-kk-kopf[aria-expanded="false"]')
+  // Die Liste schrumpft mit jedem Klick — immer die erste nehmen.
+  for (let i = 0; i < 20 && (await zu.count()) > 0; i++) await zu.first().click()
+}
+const TABS = ['Überblick', 'Regel', 'Schutz', 'Betrieb']
+
 const kasten = (page: Page) => page.locator('[data-audit="zusatz-aenderungen"]')
 const speichern = (page: Page) => page.getByRole('button', { name: 'Speichern', exact: true })
 const block = (page: Page, titel: string) => page.locator('.ef-tempmax')
@@ -109,37 +122,51 @@ test('die Seite lädt: Chip, Statuskarte mit zwei Bändern, Einstellungen — un
   await expect(chip).toHaveAttribute('aria-current', 'true')
   await expect(page.getByRole('tab', { name: 'RDWC Dehumi' })).toBeVisible()
 
-  // Statuskarte: Tag, also VPD, und zwei Bänder.
+  // Überblick: Tag, also VPD (mit Band), dazu Luftfeuchte und Temperatur mit Farbzonen.
   const karte = page.locator('.ef-band')
   await expect(karte).toContainText('1,31')
   await expect(karte).toContainText('entfeuchtet')
-  await expect(karte.locator('.ez-bandtitel')).toHaveCount(2)
+  await expect(karte.locator('.ez-bandtitel')).toHaveCount(1)
   await expect(karte.locator('.ez-bandtitel').first()).toContainText('VPD · Plan-Ziel 1,40')
-  await expect(karte.locator('.ez-bandtitel').nth(1)).toContainText('Temperatur im Zelt')
-  await expect(karte.locator('.ez-bandtitel').nth(1)).toContainText('Dehumi RDWC Tent aus 25,5 · RDWC Dehumi aus 26,5')
+  await expect(karte).toContainText('Höchsttemperatur 26,5 °C')
+  await expect(karte.locator('.ef-marken').last()).toContainText('Zusatz')
+  await expect(karte.locator('.ef-marken').last()).toContainText('25,5')
+  await expect(karte.locator('.ef-marken').last()).toContainText('Haupt')
+  await expect(karte.locator('.ef-marken').last()).toContainText('26,5')
+  // Zonen: 25,1 °C liegt im Ziel (bis „Zusatz aus" 25,5), 55,2 % rF weit über dem Ziel 39 % — die Lage sagt es als Wort.
+  await expect(page.locator('.v1-alert').first()).toContainText('deutlich daneben')
 
-  // Einstellungen: Höchsttemperatur Tag/Nacht aus den gemeinsamen Feldern.
+  // Einstellungen: Höchsttemperatur Tag/Nacht aus den gemeinsamen Feldern (Reiter „Schutz").
+  await reiterWahl(page, 'Schutz')
   await expect(festFeld(page, 'Höchsttemperatur tagsüber')).toHaveValue('26.5')
   await expect(festFeld(page, 'Höchsttemperatur nachts')).toHaveValue('25')
+  await reiterWahl(page, 'Regel')
   await expect(page.getByRole('radio', { name: 'normal', exact: true })).toHaveAttribute('aria-checked', 'true')
 
   // Nichts geändert: kein Kasten, kein Speichern.
   await expect(kasten(page)).toHaveCount(0)
   await expect(speichern(page)).toHaveCount(0)
 
-  // Erweitert ist zu; nach dem Aufklappen keine festen Schwellen, keine Aufstellung, kein „Port 7".
+  // „Zuschalten erst nach" steht im Reiter „Betrieb"; keine festen Schwellen, keine Aufstellung, kein „Port 7".
   await expect(page.getByText('Zuschalten erst nach')).toHaveCount(0)
-  await page.getByRole('button', { name: /Erweitert/ }).click()
+  await reiterWahl(page, 'Betrieb')
   await expect(page.getByText('Zuschalten erst nach')).toBeVisible()
+  await reiterWahl(page, 'Schutz')
+  await aufklappen(page, /Laufverhalten/)
+  await aufklappen(page, /Meldung/)
   const text = await page.locator('main.v1-page').innerText()
   expect(text).not.toMatch(/Port\s*7|Aufstellung|Feste Schwellen|Kreislauf|Normalbetrieb|Mindestens ein Gerät läuft|So läuft immer eins/i)
   // Die Regel zum Führungsgerät steht als Satz mit dem Namen, ohne den Wert „immer".
   await expect(page.locator('[data-audit="zusatz-fuehrung-regel"]'))
     .toHaveText('Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät RDWC Dehumi läuft.')
-  // Die beiden Schalter sagen, womit sie wirken.
+  // Die beiden Schalter sagen, womit sie wirken (Reiter „Regel", Kachel „Tag & Nacht").
+  await reiterWahl(page, 'Regel')
+  await aufklappen(page, /Tag & Nacht/)
   await expect(page.locator('.v1-switch', { hasText: 'Nachts durchlaufen' })).toContainText('Wirkt mit der vom Fork angelegten Regelung.')
   await expect(page.locator('.v1-switch', { hasText: 'Auch tagsüber entfeuchten' })).toContainText('Wirkt mit der vom Fork angelegten Regelung.')
   // Der Meldungsweg ist der, den der Fork wirklich hat, und die Ursache eine Frage.
+  await reiterWahl(page, 'Schutz')
+  await aufklappen(page, /Meldung/)
   await expect(page.getByText('Als Meldung in Home Assistant und als Push an die in den Meldungs-Einstellungen gewählte Adresse.')).toBeVisible()
   await expect(page.getByText(/Push aufs Handy|Meldungsliste/)).toHaveCount(0)
   await expect(page.locator('.v1-switch', { hasText: 'Melden, wenn der Shelly an ist' })).toContainText('Tank voll oder Gerät ausgeschaltet? Gerade nimmt Dehumi RDWC Tent 313 W auf.')
@@ -164,6 +191,7 @@ test('ein Feld ändern: der gelbe Kasten nennt nur dieses Feld, Speichern schick
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
 
+  await reiterWahl(page, 'Schutz')
   // Durchgang 1: Tag-Grenze 26,5 → 27.
   await festFeld(page, 'Höchsttemperatur tagsüber').fill('27')
   await expect(kasten(page)).toBeVisible()
@@ -191,6 +219,7 @@ test('ein Feld ändern: der gelbe Kasten nennt nur dieses Feld, Speichern schick
 test('ändern und zurückstellen: nichts mehr zu speichern', async ({ page }) => {
   await backendVorgeben(page)
   await seiteOeffnen(page)
+  await reiterWahl(page, 'Schutz')
   const tag = festFeld(page, 'Höchsttemperatur tagsüber')
   await tag.fill('29')
   await expect(speichern(page)).toBeVisible()
@@ -207,6 +236,7 @@ test('ändern und zurückstellen: nichts mehr zu speichern', async ({ page }) =>
 test('Hilfsstärke „sparsam": der Kasten nennt sie samt den Einzelwerten, der Körper schickt sie — und „aus" nur sich selbst', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
+  await reiterWahl(page, 'Regel')
 
   await page.getByRole('radio', { name: 'sparsam', exact: true }).click()
   await expect(kasten(page).locator('li')).toHaveCount(1)
@@ -224,11 +254,13 @@ test('Hilfsstärke „sparsam": der Kasten nennt sie samt den Einzelwerten, der 
   expect(stand.puts[1]).toEqual({ hilfe: 'aus' })
 })
 
-test('ein Einzelwert unter „Erweitert" macht aus der Stufe „eigene Werte" — gesendet wird nur der Einzelwert', async ({ page }) => {
+test('ein Einzelwert unter „Schutz" macht aus der Stufe „eigene Werte" — gesendet wird nur der Einzelwert', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
-  await page.getByRole('button', { name: /Erweitert/ }).click()
+  await reiterWahl(page, 'Schutz')
+  await aufklappen(page, /Laufverhalten/)
   await page.getByLabel('Mindestpause', { exact: true }).fill('12')
+  await reiterWahl(page, 'Regel')
   await expect(page.getByRole('radio', { name: 'eigene Werte' })).toHaveAttribute('aria-checked', 'true')
   await expect(kasten(page)).toContainText('Hilfsstärke: normal → eigene Werte')
   await speichern(page).click()
@@ -236,15 +268,18 @@ test('ein Einzelwert unter „Erweitert" macht aus der Stufe „eigene Werte" �
   expect(stand.puts).toEqual([{ mindestpauseMin: 12 }])
 })
 
-test('ein geleertes Feld sperrt das Speichern und wird markiert, auch in „Erweitert"', async ({ page }) => {
+test('ein geleertes Feld sperrt das Speichern und wird markiert, auch in einer zugeklappten Kachel', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
-  await page.getByRole('button', { name: /Erweitert/ }).click()
+  await reiterWahl(page, 'Schutz')
+  await aufklappen(page, /Meldung/)
   await page.getByLabel('Meldung unter', { exact: true }).fill('')
-  await page.getByRole('button', { name: /Erweitert/ }).click()
+  await page.locator('.st-kk-kopf', { hasText: /Meldung/ }).click()
+  await expect(page.getByLabel('Meldung unter', { exact: true })).toBeHidden()
+  await reiterWahl(page, 'Betrieb')
   await speichern(page).click()
   await expect(page.getByText('Bitte die markierten Felder prüfen.')).toBeVisible()
-  // Die Karte hat sich geöffnet, das Feld trägt die Markierung.
+  // Der Reiter „Schutz" ist wieder offen, die Kachel hat sich geöffnet, das Feld trägt die Markierung.
   await expect(page.getByLabel('Meldung unter', { exact: true })).toBeVisible()
   await expect(page.locator('.st-fehler')).toHaveText('Bitte eine Zahl eintragen.')
   expect(stand.puts).toEqual([])
@@ -260,18 +295,19 @@ test('Warnungen: „zieht nichts" mit Namen und Leistung, „Plan unvollständig
   await expect(main).toContainText('Dehumi RDWC Tent pausiert: Zelt zu warm')
   await expect(main).toContainText('unter 24,5 °C')
   // Ohne Schaltgröße gibt es kein erstes Band — kein erfundenes.
-  await expect(page.locator('.ef-band .ez-bandtitel')).toHaveCount(1)
+  await expect(page.locator('.ef-band .ez-bandtitel')).toHaveCount(0)
 })
 
 test('fehlende Werte stehen als „–", nie als erfundene Null', async ({ page }) => {
   await backendVorgeben(page, { vpd: null, tempC: null, feuchteProzent: null, leistungW: null, energieHeuteKwh: null, zusatzAn: null })
   await seiteOeffnen(page)
   const karte = page.locator('.ef-band')
-  await expect(karte.locator('.ef-gross')).toContainText('–')
+  await expect(karte.locator('.ef-gross').first()).toContainText('–')
   await expect(karte).toContainText('– % rF · – °C')
   await expect(karte).toContainText('Zustand unbekannt')
   // Kein Istwert-Punkt ohne Messwert, und keine „Heute"-Karte ohne Werte.
   await expect(karte.locator('.ef-ist')).toHaveCount(0)
+  await reiterWahl(page, 'Betrieb')
   await expect(page.getByRole('heading', { name: 'Heute' })).toHaveCount(0)
 })
 
@@ -279,56 +315,61 @@ test('nachts mit „Nachts durchlaufen": die Plan-Feuchte ist das erste Band', a
   await backendVorgeben(page, { tagPhase: false, tempC: 23.6, feuchteProzent: 49, vpd: 1.28 })
   await seiteOeffnen(page)
   const karte = page.locator('.ef-band')
-  await expect(karte.locator('.ef-gross')).toContainText('49')
+  await expect(karte.locator('.ef-gross').first()).toContainText('49')
   await expect(karte.locator('.ez-bandtitel').first()).toContainText('Luftfeuchte')
   await expect(karte).toContainText('Nachts durchlaufen')
 })
 
 for (const breite of [320, 390]) {
-  test(`Handy ${breite} px: nichts ragt über den Rand — auch mit offenem „Erweitert", Kasten und Warnungen`, async ({ page }) => {
+  test(`Handy ${breite} px: nichts ragt über den Rand — auf allen vier Reitern, mit offenen Kacheln, Kasten und Warnungen`, async ({ page }) => {
     await page.setViewportSize({ width: breite, height: 800 })
     await backendVorgeben(page, { ziehtNichts: true, leistungW: 3, zusatzAn: false, tempC: 27.6 })
     await seiteOeffnen(page)
+    await reiterWahl(page, 'Schutz')
     await festFeld(page, 'Höchsttemperatur tagsüber').fill('27')
+    await reiterWahl(page, 'Regel')
     await page.getByRole('radio', { name: 'sparsam', exact: true }).click()
-    await page.getByRole('button', { name: /Erweitert/ }).click()
-    await expect(page.getByText('Zuschalten erst nach')).toBeVisible()
 
-    const ueberstand = await page.evaluate(() => {
-      const w = document.documentElement.clientWidth
-      const imWischbereich = (el: HTMLElement): boolean => {
-        for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
-          const ox = getComputedStyle(n).overflowX
-          if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true
+    for (const reiter of TABS) {
+      await reiterWahl(page, reiter)
+      await alleKartenOeffnen(page)
+
+      const ueberstand = await page.evaluate(() => {
+        const w = document.documentElement.clientWidth
+        const imWischbereich = (el: HTMLElement): boolean => {
+          for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+            const ox = getComputedStyle(n).overflowX
+            if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true
+          }
+          return false
         }
-        return false
-      }
-      return [...document.querySelectorAll<HTMLElement>('main *')]
-        .filter((el) => {
-          const r = el.getBoundingClientRect()
-          return r.width > 0 && r.height > 0 && r.right > w + 1 && !imWischbereich(el)
-        })
-        .slice(0, 8)
-        .map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}@${Math.round(el.getBoundingClientRect().right)}`)
-    })
-    expect(ueberstand, `ragt bei ${breite} px rechts hinaus`).toEqual([])
-    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
-      `die Seite scrollt bei ${breite} px seitwärts`).toBe(false)
+        return [...document.querySelectorAll<HTMLElement>('main *')]
+          .filter((el) => {
+            const r = el.getBoundingClientRect()
+            return r.width > 0 && r.height > 0 && r.right > w + 1 && !imWischbereich(el)
+          })
+          .slice(0, 8)
+          .map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}@${Math.round(el.getBoundingClientRect().right)}`)
+      })
+      expect(ueberstand, `${reiter}: ragt bei ${breite} px rechts hinaus`).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
+        `${reiter}: die Seite scrollt bei ${breite} px seitwärts`).toBe(false)
 
-    // Die Beschriftungen der Bänder liegen nicht übereinander (Text, nicht Kasten messen).
-    const kollisionen = await page.evaluate(() => {
-      const funde: string[] = []
-      for (const reihe of document.querySelectorAll('.ef-marken')) {
-        const boxen = [...reihe.querySelectorAll('span')].map((s) => {
-          const r = document.createRange(); r.selectNodeContents(s)
-          const b = r.getBoundingClientRect()
-          return { t: s.textContent ?? '', l: b.left, r: b.right }
-        }).sort((a, b) => a.l - b.l)
-        for (let i = 1; i < boxen.length; i++) if (boxen[i].l < boxen[i - 1].r - 0.5) funde.push(`${boxen[i - 1].t} / ${boxen[i].t}`)
-      }
-      return funde
-    })
-    expect(kollisionen, `Bandbeschriftungen überlappen bei ${breite} px`).toEqual([])
+      // Die Beschriftungen der Bänder liegen nicht übereinander (Text, nicht Kasten messen).
+      const kollisionen = await page.evaluate(() => {
+        const funde: string[] = []
+        for (const reihe of document.querySelectorAll('.ef-marken')) {
+          const boxen = [...reihe.querySelectorAll('span')].map((s) => {
+            const r = document.createRange(); r.selectNodeContents(s)
+            const b = r.getBoundingClientRect()
+            return { t: s.textContent ?? '', l: b.left, r: b.right }
+          }).sort((a, b) => a.l - b.l)
+          for (let i = 1; i < boxen.length; i++) if (boxen[i].l < boxen[i - 1].r - 0.5) funde.push(`${boxen[i - 1].t} / ${boxen[i].t}`)
+        }
+        return funde
+      })
+      expect(kollisionen, `${reiter}: Bandbeschriftungen überlappen bei ${breite} px`).toEqual([])
+    }
   })
 }
 
@@ -338,36 +379,42 @@ for (const schema of ['light', 'dark'] as const) {
     await page.addInitScript((s) => localStorage.setItem('growos.theme', s), schema)
     await backendVorgeben(page, { ziehtNichts: true, leistungW: 3, zusatzAn: false, tempC: 27.6 })
     await seiteOeffnen(page)
+    await reiterWahl(page, 'Regel')
     await page.getByRole('radio', { name: 'sparsam', exact: true }).click()
+    await reiterWahl(page, 'Schutz')
     await block(page, 'Höchsttemperatur tagsüber').getByRole('radio', { name: 'Fest' }).click()
     await festFeld(page, 'Höchsttemperatur tagsüber').fill('28')
-    await page.getByRole('button', { name: /Erweitert/ }).click()
     await expect(page.locator('.ez-aender')).toBeVisible()
+    await reiterWahl(page, 'Regel')
     await expect(page.locator('.ez-empf.is-abweichend').first()).toBeVisible()
 
-    const funde = await page.evaluate(`(() => {
-      ${KONTRAST_HELFER}
-      const funde = []
-      for (const el of document.querySelectorAll('main *')) {
-        const eigen = [...el.childNodes].filter((k) => k.nodeType === 3).map((k) => k.textContent).join('').trim()
-        if (!eigen) continue
-        const s = getComputedStyle(el)
-        if (s.visibility === 'hidden' || s.display === 'none') continue
-        if (el.closest('[disabled], [aria-disabled="true"], .is-disabled')) continue
-        // Die Zahl über dem Istwert-Punkt (.ef-ist em) liegt über dem Punkt, nicht auf ihm:
-        // gemessen wird gegen die Fläche des Bandes, nicht gegen die Punktfarbe.
-        const punkt = el.closest('.ef-ist')
-        const grund = flaeche(punkt ? punkt.parentElement : el)
-        const vorne = alsRgb(s.color, grund)
-        const l1 = lum(vorne), l2 = lum(grund)
-        const k = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
-        const px = parseFloat(s.fontSize)
-        const gross = px >= 24 || (px >= 18.66 && Number(s.fontWeight) >= 700)
-        if (k < (gross ? 3 : 4.5)) funde.push((el.className || el.tagName) + ' — ' + eigen.slice(0, 40) + ' — ' + k.toFixed(2))
-      }
-      return [...new Set(funde)]
-    })()`) as string[]
-    expect(funde, 'Zu wenig Kontrast').toEqual([])
+    for (const reiter of TABS) {
+      await reiterWahl(page, reiter)
+      await alleKartenOeffnen(page)
+      const funde = await page.evaluate(`(() => {
+        ${KONTRAST_HELFER}
+        const funde = []
+        for (const el of document.querySelectorAll('main *')) {
+          const eigen = [...el.childNodes].filter((k) => k.nodeType === 3).map((k) => k.textContent).join('').trim()
+          if (!eigen) continue
+          const s = getComputedStyle(el)
+          if (s.visibility === 'hidden' || s.display === 'none') continue
+          if (el.closest('[disabled], [aria-disabled="true"], .is-disabled, [hidden]')) continue
+          // Die Zahl über dem Istwert-Punkt (.ef-ist em) liegt über dem Punkt, nicht auf ihm:
+          // gemessen wird gegen die Fläche des Bandes, nicht gegen die Punktfarbe.
+          const punkt = el.closest('.ef-ist')
+          const grund = flaeche(punkt ? punkt.parentElement : el)
+          const vorne = alsRgb(s.color, grund)
+          const l1 = lum(vorne), l2 = lum(grund)
+          const k = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+          const px = parseFloat(s.fontSize)
+          const gross = px >= 24 || (px >= 18.66 && Number(s.fontWeight) >= 700)
+          if (k < (gross ? 3 : 4.5)) funde.push((el.className || el.tagName) + ' — ' + eigen.slice(0, 40) + ' — ' + k.toFixed(2))
+        }
+        return [...new Set(funde)]
+      })()`) as string[]
+      expect(funde, `${reiter}: zu wenig Kontrast`).toEqual([])
+    }
   })
 }
 

@@ -80,7 +80,7 @@ export function TempMaxBlock({ titel, ariaLabel, planText, modus, abstand, fest,
 }
 
 /** Ein Zahlenfeld im Box-Modus — kein Schieberegler, am Telefon trifft man damit keinen Wert. */
-export function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChange, fehler }: {
+export function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChange, fehler, ruht }: {
   label: string
   hinweis: ReactNode
   einheit?: string
@@ -90,9 +90,11 @@ export function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChang
   schritt: number
   onChange: (wert: number) => void
   fehler?: string
+  /** A-014: gerade ohne Wirkung — blass und gesperrt, statt ein Feld zu zeigen, das nichts bewirkt. */
+  ruht?: boolean
 }) {
   return (
-    <div className="st-feldzeile">
+    <div className={ruht ? 'st-feldzeile is-ruht' : 'st-feldzeile'}>
       <span className="st-etikett">
         {label}
         <small>{hinweis}</small>
@@ -106,6 +108,7 @@ export function Zahl({ label, hinweis, einheit, wert, min, max, schritt, onChang
           max={max}
           step={schritt}
           aria-label={label}
+          disabled={ruht}
           value={Number.isFinite(wert) ? wert : ''}
           onChange={(e) => {
             const neu = zahlAusFeld(e.target.value)
