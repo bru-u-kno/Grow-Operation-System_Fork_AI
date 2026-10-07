@@ -334,6 +334,15 @@ test('nachts mit „Nachts durchlaufen": die Plan-Feuchte ist das erste Band', a
   await expect(karte.locator('.ef-gross').first()).toContainText('49')
   await expect(karte.locator('.ez-bandtitel').first()).toContainText('Luftfeuchte')
   await expect(karte).toContainText('Nachts durchlaufen')
+  // 08.10.2026: Die Luftfeuchte stand nachts ZWEIMAL da — im alten Band und noch einmal im neuen Zonenblock.
+  await expect(karte.locator('.ef-gross', { hasText: 'rF' })).toHaveCount(1)
+  await expect(karte.locator('.ef-ist').first()).toHaveClass(/\bis-kritisch\b/)  // 49 % gegen Ziel 39 %
+  // Tags dagegen gibt es VPD und Luftfeuchte — zwei verschiedene Größen, je einmal.
+  await page.unroute(/\/api\/steuerung\/entfeuchter-zusatz$/)
+  await backendVorgeben(page, { tagPhase: true })
+  await page.reload({ waitUntil: 'networkidle' })
+  await expect(karte.locator('.ef-gross', { hasText: 'kPa' })).toHaveCount(1)
+  await expect(karte.locator('.ef-gross', { hasText: 'rF' })).toHaveCount(1)
 })
 
 for (const breite of [320, 390]) {

@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.188
+
+**Fork AI.** Zusatz-Entfeuchter: Die Luftfeuchte steht im Überblick nur noch einmal da.
+
+- **Was war:** Nachts (und bei Schaltgröße „Feuchte") erschien die Luftfeuchte zweimal — einmal im alten Band mit EIN/AUS, einmal im neuen Zonenblock darunter.
+- **Jetzt:** Dann ist das erste Band die Luftfeuchte und trägt selbst die Zonenfarbe (Zahl und Messpunkt). Tags bleiben VPD und Luftfeuchte zwei getrennte Blöcke — zwei verschiedene Größen.
+
 ## 2.0.0-forkai.187
 
 **Fork AI.** Entfeuchtung: Beide Seiten zeigen dieselbe Zone für dieselbe Luftfeuchte.

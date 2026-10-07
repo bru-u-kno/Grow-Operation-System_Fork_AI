@@ -37,7 +37,8 @@ import type { EntfeuchterReiter, EntfeuchterZusatzEinstellungen, EntfeuchterZusa
 import { Klappkachel } from './Klappkachel'
 import { Lage, MessKopf, Warum, ZonenLegende, ZonenSkala, Zusammenspiel } from './EntfeuchterUeberblick'
 import type { WarumZeile } from './EntfeuchterUeberblick'
-import { RF_KNAPP_PUNKTE, ZONEN_WORT, feuchteZone, schlechtereZone, temperaturZone } from './entfeuchter-zonen'
+import { RF_KNAPP_PUNKTE, ZONEN_WORT, feuchteZone, schlechtereZone, temperaturZone, zonenKlasse } from './entfeuchter-zonen'
+import type { Zone } from './entfeuchter-zonen'
 import './steuerung.css'
 
 type Einstellungen = EntfeuchterZusatzEinstellungen
@@ -296,17 +297,18 @@ export default function EntfeuchterZusatzDetail({ module, aktiv, onWechsel }: {
               {eins.band && (
                 <div className="ef-block">
                   <MessKopf
-                    wert={tagPhase ? zahl(live.vpd, 2) : zahl(live.feuchteProzent, 0)}
-                    einheit={tagPhase ? 'kPa VPD' : '% rF'}
-                    zone={null}
+                    wert={eins.art === 'feuchte' ? zahl(live.feuchteProzent) : zahl(live.vpd, 2)}
+                    einheit={eins.art === 'feuchte' ? '% rF' : 'kPa VPD'}
+                    zone={eins.art === 'feuchte' ? fZone : null}
                     zustand={zustand.text}
                     ton={zustand.ton === 'an' ? 'an' : zustand.ton === 'warn' ? 'warn' : undefined}
                     beiwerk={`${zahl(live.feuchteProzent)} % rF · ${zahl(live.tempC)} °C${phaseText ? ` · ${phaseText}` : ''}`}
                   />
-                  <BandAnzeige band={eins.band} />
+                  <BandAnzeige band={eins.band} zone={eins.art === 'feuchte' ? fZone : null} />
                 </div>
               )}
-              {feuchteZiel != null && (
+              {/* Nachts (oder bei Schaltgröße Feuchte) IST das erste Block die Luftfeuchte — nicht ein zweites Mal zeigen. */}
+              {feuchteZiel != null && eins.art !== 'feuchte' && (
                 <div className="ef-block">
                   <MessKopf
                     wert={zahl(live.feuchteProzent)}
@@ -623,7 +625,7 @@ function Lesen({ label, hinweis, wert }: { label: string; hinweis?: ReactNode; w
 }
 
 /** Ein Band: Skala mit Zonen, Marken und Istwert. Rechnung in `entfeuchter-zusatz.ts`. */
-function BandAnzeige({ band }: { band: ZusatzBand }) {
+function BandAnzeige({ band, zone = null }: { band: ZusatzBand; zone?: Zone | null }) {
   return (
     <>
       <div className="ez-bandtitel"><span>{band.titel}</span><span>{band.kurz}</span></div>
@@ -640,7 +642,7 @@ function BandAnzeige({ band }: { band: ZusatzBand }) {
           <div key={m.label + m.wert} className={`ef-strich is-${m.art}`} style={{ left: `${m.pos}%` }} />
         ))}
         {band.ist != null && (
-          <div className={band.istWarm ? 'ef-ist is-warm' : 'ef-ist'} style={{ left: `${band.ist}%` }}><em>{zahl(band.istWert, band.stellen)}</em></div>
+          <div className={zone ? `ef-ist ${zonenKlasse(zone)}` : band.istWarm ? 'ef-ist is-warm' : 'ef-ist'} style={{ left: `${band.ist}%` }}><em>{zahl(band.istWert, band.stellen)}</em></div>
         )}
       </div>
       <div className="ef-marken">
