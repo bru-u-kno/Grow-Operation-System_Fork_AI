@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.184
+
+**Fork AI.** Kenntnisstand: Tag- und Nachtziele kommen jetzt aus dem Wochenplan statt aus dem einen aktiven Wert.
+
+- **Was war:** In forkai.183 stand bei „Luftfeuchte bei Licht an" dasselbe Ziel wie nachts (≤ 51 %) — der Fork las den Wert, der gerade für die laufende Lichtphase aktiv ist.
+  Damit sah das Tag-Urteil schlechter aus, als es ist.
+- **Jetzt:** Luftfeuchte max., Temperatur max. (Plan-Luft plus erlaubte Abweichung) und das VPD-Band kommen aus der laufenden Plan-Woche, getrennt für Licht an und Licht aus.
+  Gibt es keinen Wochenplan, gilt wie bisher der aktive Wert der Entfeuchter-Seite.
+
 ## 2.0.0-forkai.183
 
 **Fork AI.** Probelauf → neuer Reiter „Kenntnisstand": Kann dein System die Zielwerte aus dem Plan halten? Der Fork rechnet es aus — ohne KI.

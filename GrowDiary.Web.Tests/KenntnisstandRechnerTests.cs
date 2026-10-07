@@ -231,3 +231,44 @@ public sealed class KenntnisstandRechnerTests
     public void Hinweise_ErreichbareZieleBekommenKeinen()
         => Assert.Empty(KenntnisstandRechner.Hinweise(KenntnisstandRechner.Zielabgleich(Reihe(true, 100, _ => 50), Ziele), []));
 }
+
+/// <summary>Fork AI (A-010, Etappe 2): Die Ziele des Plans je Lichtphase.</summary>
+public sealed class ProbelaufZielbaenderTests
+{
+    [Fact]
+    public void TagUndNachtBekommenIhreEigenenPlanWerte()
+    {
+        var plan = new Dictionary<string, double>
+        {
+            [WochenplanSyncService.Rollen.FeuchteOben] = 62,
+            [WochenplanSyncService.Rollen.FeuchteNachtOben] = 51,
+            [WochenplanSyncService.Rollen.LuftOben] = 27.5,
+            [WochenplanSyncService.Rollen.LuftNachtOben] = 24,
+            [WochenplanSyncService.Rollen.VpdUnten] = 1.4,
+            [WochenplanSyncService.Rollen.VpdOben] = 1.4,
+        };
+
+        var z = ProbelaufMessung.ZielbaenderAusPlan(plan)!;
+
+        Assert.Equal(new ZielBand(62, 27.5, 1.4, 1.4), z.Tag);
+        Assert.Equal(new ZielBand(51, 24, 1.4, 1.4), z.Nacht);
+    }
+
+    [Fact]
+    public void OhneNachtwertGiltNachtsDerTageswert()
+    {
+        var plan = new Dictionary<string, double>
+        {
+            [WochenplanSyncService.Rollen.FeuchteOben] = 62, [WochenplanSyncService.Rollen.LuftOben] = 27.5,
+        };
+
+        var z = ProbelaufMessung.ZielbaenderAusPlan(plan)!;
+
+        Assert.Equal(62, z.Nacht.FeuchteMax);
+        Assert.Equal(27.5, z.Nacht.TempMax);
+    }
+
+    [Fact]
+    public void OhnePlanWochenWerte_GibtEsKeineZiele()
+        => Assert.Null(ProbelaufMessung.ZielbaenderAusPlan(new Dictionary<string, double>()));
+}

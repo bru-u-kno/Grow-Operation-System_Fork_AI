@@ -21,12 +21,14 @@ public sealed class ProbelaufMessung : IProbelaufMessung
     private readonly HomeAssistantService _ha;
     private readonly SteuerungGeraeteService _geraete;
     private readonly EntfeuchterSteuerungService _entfeuchter;
+    private readonly WochenplanSyncService _wochenplan;
     private readonly TimeProvider _zeit;
 
     public ProbelaufMessung(
         HomeAssistantSettingsRepository einstellungen, HomeAssistantService ha, SteuerungGeraeteService geraete,
-        EntfeuchterSteuerungService entfeuchter, TimeProvider? zeit = null)
+        EntfeuchterSteuerungService entfeuchter, WochenplanSyncService wochenplan, TimeProvider? zeit = null)
     {
+        _wochenplan = wochenplan;
         _einstellungen = einstellungen;
         _ha = ha;
         _geraete = geraete;
@@ -143,10 +145,32 @@ public sealed class ProbelaufMessung : IProbelaufMessung
 
     public async Task<Zielbaender> ZielbaenderAsync(CancellationToken ct)
     {
+        // Zuerst der Plan der laufenden Woche: nur er kennt Tag UND Nacht. Der aktive Wert der Entfeuchter-Seite gilt nur für die
+        // gerade laufende Lichtphase — für „Licht an" nachts gelesen wäre das Nachtziel dort falsch.
+        if (ZielbaenderAusPlan(_wochenplan.PlanWerte()) is { } ausPlan) return ausPlan;
+
         var live = await _entfeuchter.LiveAsync(ct);
         return new Zielbaender(
             new ZielBand(live.RhObergrenzeProzent, live.TempMaxTagC, live.VpdUnten, live.VpdOben),
             new ZielBand(live.RhObergrenzeProzent, live.TempMaxNachtC, live.VpdUnten, live.VpdOben));
+    }
+
+    /// <summary>
+    /// Die Ziele aus den Werten der Plan-Woche. <c>null</c>, wenn der Plan weder Feuchte noch Luft nennt.
+    /// Nachts gilt der Nachtwert, sonst der Tageswert („nachts wie tags").
+    /// </summary>
+    public static Zielbaender? ZielbaenderAusPlan(IReadOnlyDictionary<string, double> plan)
+    {
+        double? W(string rolle) => plan.TryGetValue(rolle, out var v) ? v : null;
+        var feuchteTag = W(WochenplanSyncService.Rollen.FeuchteOben);
+        var luftTag = W(WochenplanSyncService.Rollen.LuftOben);
+        if (feuchteTag is null && luftTag is null) return null;
+
+        var vpdUnten = W(WochenplanSyncService.Rollen.VpdUnten);
+        var vpdOben = W(WochenplanSyncService.Rollen.VpdOben);
+        return new Zielbaender(
+            new ZielBand(feuchteTag, luftTag, vpdUnten, vpdOben),
+            new ZielBand(W(WochenplanSyncService.Rollen.FeuchteNachtOben) ?? feuchteTag, W(WochenplanSyncService.Rollen.LuftNachtOben) ?? luftTag, vpdUnten, vpdOben));
     }
 
     public async Task<ProbelaufGrenzen> VoreinstellungAsync(CancellationToken ct)

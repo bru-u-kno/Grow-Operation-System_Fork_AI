@@ -272,6 +272,18 @@ public sealed class WochenplanSyncService
         return liste;
     }
 
+    /// <summary>
+    /// Fork AI (A-010): Alle Werte der laufenden Plan-Woche je Rolle — auch die Zelt-Regeln (Luft und Feuchte, Tag und Nacht),
+    /// die <see cref="Sollwerte"/> mangels Helfer auslässt. Leer, solange kein einzelner Durchgang mit Wochen-Zielen läuft.
+    /// </summary>
+    public IReadOnlyDictionary<string, double> PlanWerte()
+    {
+        var werte = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        if (Spalte() is not { } jetzt) return werte;
+        foreach (var (rolle, wert) in WerteMitZelt(jetzt.Grow, jetzt.Spalte)) werte[rolle] = wert;
+        return werte;
+    }
+
     /// <summary>Gibt einen von Hand verstellten Helfer wieder für den Plan frei.</summary>
     public void Freigeben(string rolle)
     {
