@@ -85,6 +85,13 @@ internal sealed class FakeProbelaufMessung : IProbelaufMessung
         => Task.FromResult(Verlauf);
 
     public Task<ProbelaufGrenzen> VoreinstellungAsync(CancellationToken ct) => Task.FromResult(Voreinstellung);
+
+    public IReadOnlyList<ZeltMinute> Zeltverlauf { get; set; } = [];
+    public Zielbaender Ziele { get; set; } = new(new ZielBand(62, 27.5, 0.9, 1.4), new ZielBand(51, 24, 1.4, 1.4));
+
+    public Task<IReadOnlyList<ZeltMinute>> ZeltverlaufAsync(DateTime vonUtc, DateTime bisUtc, CancellationToken ct) => Task.FromResult(Zeltverlauf);
+
+    public Task<Zielbaender> ZielbaenderAsync(CancellationToken ct) => Task.FromResult(Ziele);
 }
 
 internal sealed class FakeProbelaufMeldung : IProbelaufMeldung

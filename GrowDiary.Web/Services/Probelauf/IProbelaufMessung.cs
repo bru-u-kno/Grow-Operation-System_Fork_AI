@@ -19,6 +19,12 @@ public interface IProbelaufMessung
 
     /// <summary>Die vorgeschlagenen Grenzen aus den Pflanzenzielen (Luftfeuchte max., Temperatur max., VPD-Band).</summary>
     Task<ProbelaufGrenzen> VoreinstellungAsync(CancellationToken ct);
+
+    /// <summary>Der Verlauf des Zelts auf Minuten gelegt, mit der Lichtphase je Minute (Grundlage des Zielabgleichs).</summary>
+    Task<IReadOnlyList<ZeltMinute>> ZeltverlaufAsync(DateTime vonUtc, DateTime bisUtc, CancellationToken ct);
+
+    /// <summary>Die Ziele des Plans je Lichtphase.</summary>
+    Task<Zielbaender> ZielbaenderAsync(CancellationToken ct);
 }
 
 /// <summary>Fork AI (A-010): Wie der Nutzer benachrichtigt wird, wenn das Zurückstellen nicht gelingt.</summary>

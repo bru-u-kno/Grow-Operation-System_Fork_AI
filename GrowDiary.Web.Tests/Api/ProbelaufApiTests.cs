@@ -24,6 +24,12 @@ public sealed class ProbelaufApiTests
     private const string Port = "select.rdwc_dehumi_aktiver_modus";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Der Server schreibt Enums als Text („Knapp") — so, wie die Oberfläche sie liest.</summary>
+    private static readonly JsonSerializerOptions MitTextEnums = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
     private sealed class Anlage : IDisposable
     {
         public FakeProbelaufHa Ha { get; } = new();
@@ -201,5 +207,43 @@ public sealed class ProbelaufApiTests
         var antwort = await client.PostAsJsonAsync($"/api/steuerung/probelauf/{lauf.Id}/empfehlung", new { text = "  " });
 
         Assert.Equal(HttpStatusCode.BadRequest, antwort.StatusCode);
+    }
+
+    // ------------------------------------------------------------ Kenntnisstand
+
+    [Fact]
+    public async Task Kenntnisstand_RechnetAusVerlaufUndLaeufen_OhneKi()
+    {
+        KenntnisstandService.Vergessen();
+        using var a = new Anlage();
+        var jetzt = DateTime.UtcNow;
+        // Nacht: 200 Minuten, 150 davon bei Luftfeuchte ≤ 51 → 75 % → „knapp"; Tag unbekannt (nichts gemessen).
+        a.Messung.Zeltverlauf = Enumerable.Range(0, 200)
+            .Select(i => new ZeltMinute(jetzt.AddMinutes(-200 + i), i < 150 ? 50 : 55, 22, 1.4, false)).ToList();
+        var repo = a.App.Services.GetRequiredService<GrowDiary.Web.Infrastructure.ProbelaufRepository>();
+        repo.Anlegen(new ProbelaufLauf
+        {
+            Modul = "entfeuchter-zusatz", Status = ProbelaufStatus.Fertig, TagPhaseBeiStart = false,
+            StartUtc = jetzt.AddHours(-1), EingriffEndeUtc = jetzt.AddHours(-1).AddMinutes(10),
+            Auswertung = new ProbelaufAuswertung([new ProbelaufKennzahl("Feuchte", 48.5, 54, 54, 0.55, 8)], [], false, false),
+        });
+        var client = a.Client();
+        await KiAsync(client, false); // KI aus: der Kenntnisstand gehört nicht zur KI
+
+        var antwort = await client.GetAsync("/api/steuerung/probelauf/kenntnisstand");
+
+        Assert.Equal(HttpStatusCode.OK, antwort.StatusCode);
+        var k = (await antwort.Content.ReadFromJsonAsync<Kenntnisstand>(MitTextEnums))!;
+        var feuchte = k.Zielabgleich.Single(z => z.Groesse == "Luftfeuchte");
+        Assert.Equal(75, feuchte.Nacht.AnteilProzent);
+        Assert.Equal(ZielUrteil.Knapp, feuchte.Nacht.Urteil);
+        Assert.Equal(ZielUrteil.Unbekannt, feuchte.Tag.Urteil);
+        var wirkung = Assert.Single(k.Wirkung);
+        Assert.Equal("Zusatz-Entfeuchter", wirkung.Titel);
+        Assert.False(wirkung.Tag);
+        Assert.Equal(0.55, wirkung.Werte.Single().ProMinute);
+        Assert.Equal(5, k.Abdeckung.Count);
+        Assert.Contains(k.Hinweise, h => h.Contains("Zusatz-Entfeuchter") && h.Contains("75 %"));
+        Assert.NotNull(k.Naechster);
     }
 }

@@ -97,6 +97,58 @@ public sealed class ProbelaufMessung : IProbelaufMessung
         return letzter is null ? null : Zahlenlesen.Maschine(letzter.Zustand);
     }
 
+    public async Task<IReadOnlyList<ZeltMinute>> ZeltverlaufAsync(DateTime vonUtc, DateTime bisUtc, CancellationToken ct)
+    {
+        var einstellungen = Einstellungen;
+
+        async Task<List<HaVerlaufsPunkt>> Reihe(string rolle)
+        {
+            var id = Fuehler(rolle);
+            if (id is null) return [];
+            return (await _ha.GetVerlaufAsync(einstellungen, id, vonUtc, bisUtc, ct))?.ToList() ?? [];
+        }
+
+        var rh = await Reihe(EntfeuchterSteuerungService.Rollen.ZeltFeuchte);
+        var temp = await Reihe(EntfeuchterSteuerungService.Rollen.ZeltTemp);
+        var vpd = await Reihe(EntfeuchterSteuerungService.Rollen.ZeltVpd);
+        var licht = await Reihe(EntfeuchterSteuerungService.Rollen.LichtZustand);
+
+        var minuten = (int)Math.Floor((bisUtc - vonUtc).TotalMinutes) + 1;
+        var f = Minuten(rh, vonUtc, minuten, p => Zahlenlesen.Maschine(p.Zustand));
+        var t = Minuten(temp, vonUtc, minuten, p => Zahlenlesen.Maschine(p.Zustand));
+        var v = Minuten(vpd, vonUtc, minuten, p => Zahlenlesen.Maschine(p.Zustand));
+        var l = Minuten(licht, vonUtc, minuten, p => p.Zustand is "on" or "On" ? 1.0 : p.Zustand is "off" or "Off" ? 0.0 : (double?)null);
+
+        var ergebnis = new List<ZeltMinute>(minuten);
+        for (var i = 0; i < minuten; i++)
+            ergebnis.Add(new ZeltMinute(vonUtc.AddMinutes(i), f[i], t[i], v[i], l[i] is { } x ? x > 0.5 : null));
+        return ergebnis;
+    }
+
+    /// <summary>Eine Reihe mit Änderungszeitpunkten auf Minuten legen: an jeder Minute gilt der letzte bekannte Wert. Ein Durchlauf.</summary>
+    private static double?[] Minuten(List<HaVerlaufsPunkt> reihe, DateTime von, int anzahl, Func<HaVerlaufsPunkt, double?> wert)
+    {
+        var ergebnis = new double?[anzahl];
+        var sortiert = reihe.OrderBy(p => p.ZeitUtc).ToList();
+        var index = 0;
+        double? aktuell = null;
+        for (var i = 0; i < anzahl; i++)
+        {
+            var t = von.AddMinutes(i);
+            while (index < sortiert.Count && sortiert[index].ZeitUtc <= t) aktuell = wert(sortiert[index++]);
+            ergebnis[i] = aktuell;
+        }
+        return ergebnis;
+    }
+
+    public async Task<Zielbaender> ZielbaenderAsync(CancellationToken ct)
+    {
+        var live = await _entfeuchter.LiveAsync(ct);
+        return new Zielbaender(
+            new ZielBand(live.RhObergrenzeProzent, live.TempMaxTagC, live.VpdUnten, live.VpdOben),
+            new ZielBand(live.RhObergrenzeProzent, live.TempMaxNachtC, live.VpdUnten, live.VpdOben));
+    }
+
     public async Task<ProbelaufGrenzen> VoreinstellungAsync(CancellationToken ct)
     {
         var live = await _entfeuchter.LiveAsync(ct);

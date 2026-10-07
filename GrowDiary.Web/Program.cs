@@ -177,6 +177,7 @@ builder.Services.AddScoped<ProbelaufEingriff>();
 builder.Services.AddScoped<IProbelaufMessung, ProbelaufMessung>();
 builder.Services.AddScoped<IProbelaufMeldung, ProbelaufMeldung>();
 builder.Services.AddScoped<ProbelaufService>();
+builder.Services.AddScoped<KenntnisstandService>();
 builder.Services.AddHostedService<ProbelaufWorker>();
 builder.Services.AddSingleton<EinkaufslisteService>();
 builder.Services.AddSingleton<BeobachtungsWegweiser>();

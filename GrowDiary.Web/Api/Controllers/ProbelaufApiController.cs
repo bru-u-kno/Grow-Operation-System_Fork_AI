@@ -25,11 +25,14 @@ public sealed class ProbelaufApiController : ApiControllerBase
     private readonly ProbelaufRepository _repo;
     private readonly IProbelaufMessung _messung;
     private readonly KiHauptschalter _ki;
+    private readonly KenntnisstandService _kenntnis;
     private readonly TimeProvider _zeit;
 
     public ProbelaufApiController(
-        ProbelaufService dienst, ProbelaufRepository repo, IProbelaufMessung messung, KiHauptschalter ki, TimeProvider? zeit = null)
+        ProbelaufService dienst, ProbelaufRepository repo, IProbelaufMessung messung, KiHauptschalter ki,
+        KenntnisstandService kenntnis, TimeProvider? zeit = null)
     {
+        _kenntnis = kenntnis;
         _dienst = dienst;
         _repo = repo;
         _messung = messung;
@@ -48,6 +51,15 @@ public sealed class ProbelaufApiController : ApiControllerBase
     [ProducesResponseType(typeof(ProbelaufGrenzen), StatusCodes.Status200OK)]
     public async Task<ActionResult<ProbelaufGrenzen>> Voreinstellung(CancellationToken ct)
         => Ok(await _messung.VoreinstellungAsync(ct));
+
+    /// <summary>
+    /// Der Kenntnisstand: Kann das System die Zielwerte des Plans halten? Was bewirkt jedes Gerät? Wo fehlen Messungen?
+    /// Vom Fork berechnet, ohne KI.
+    /// </summary>
+    [HttpGet("kenntnisstand")]
+    [ProducesResponseType(typeof(Kenntnisstand), StatusCodes.Status200OK)]
+    public async Task<ActionResult<Kenntnisstand>> Kenntnisstand(CancellationToken ct)
+        => Ok(await _kenntnis.BerechnenAsync(ct));
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ProbelaufLaufDto>), StatusCodes.Status200OK)]

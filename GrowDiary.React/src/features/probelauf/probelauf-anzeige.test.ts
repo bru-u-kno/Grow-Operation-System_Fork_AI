@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { isNavLeafActive, navGroups } from '../../navigation'
 import type { ProbelaufKennzahl, ProbelaufMessreihe } from '../../types'
 import {
-  erholungText, grenzenAusText, istOffen, kurvenPunkte, proMinuteText, restzeit, startText, statusText, wertText,
+  anteilText, erholungText, grenzenAusText, istOffen, lichtText, urteilKlasse, urteilText, wirkungText, kurvenPunkte, proMinuteText, restzeit, startText, statusText, wertText,
 } from './probelauf-anzeige'
 
 const k = (groesse: ProbelaufKennzahl['groesse'], proMinute: number, erholung: number | null = null): ProbelaufKennzahl => ({
@@ -98,5 +98,23 @@ describe('Probelauf: Anzeige', () => {
     // Alle anderen Steuerungsseiten leuchten weiter unter „Steuerung".
     expect(isNavLeafActive(steuerung, '/steuerung/chiller')).toBe(true)
     expect(isNavLeafActive(steuerung, '/steuerung')).toBe(true)
+  })
+
+  it('Kenntnisstand: Urteile auf Deutsch, Farben nach Aussage', () => {
+    expect(urteilText('Luecke')).toBe('Lücke')
+    expect(urteilText('Unbekannt')).toBe('zu wenig gemessen')
+    expect(urteilKlasse('Erreichbar')).toBe('is-ok')
+    expect(urteilKlasse('Knapp')).toBe('is-warn')
+    expect(urteilKlasse('Luecke')).toBe('is-warn')
+    expect(urteilKlasse('Unbekannt')).toBe('')
+  })
+
+  it('Kenntnisstand: Anteil, Wirkung und Lichtphase als Text', () => {
+    expect(anteilText(93.6)).toBe('94 % der Zeit')
+    expect(anteilText(null)).toBe('–')
+    expect(wirkungText('Feuchte', 0.55)).toBe('+0,55 %/Min.')
+    expect(wirkungText('VPD', -0.024)).toBe('−0,024 kPa/Min.')
+    expect(lichtText(true)).toBe('bei Licht an')
+    expect(lichtText(false)).toBe('bei Licht aus')
   })
 })

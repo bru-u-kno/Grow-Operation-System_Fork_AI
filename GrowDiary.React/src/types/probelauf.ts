@@ -64,3 +64,62 @@ export interface ProbelaufLauf {
   /** Nur in der Einzelansicht. */
   messreihe: ProbelaufMessreihe | null
 }
+
+// ---------------------------------------------------------------- Kenntnisstand (Etappe 2)
+// Quelle: `GrowDiary.Web/Models/Kenntnisstand.cs`, `GET /api/steuerung/probelauf/kenntnisstand`.
+
+export type ZielUrteil = 'Unbekannt' | 'Erreichbar' | 'Knapp' | 'Luecke'
+
+export interface ZielPhase {
+  zielText: string | null
+  anteilProzent: number | null
+  urteil: ZielUrteil
+  minuten: number
+}
+
+export interface ZielZeile {
+  groesse: 'Luftfeuchte' | 'Temperatur' | 'VPD'
+  tag: ZielPhase
+  nacht: ZielPhase
+}
+
+export interface WirkungWert {
+  groesse: 'Feuchte' | 'Temperatur' | 'VPD'
+  proMinute: number
+  erholungMinuten: number | null
+}
+
+export interface WirkungZeile {
+  modul: string
+  titel: string
+  tag: boolean
+  laeufe: number
+  werte: WirkungWert[]
+}
+
+export interface AbdeckungZeile {
+  modul: string
+  titel: string
+  laeufeTag: number
+  laeufeNacht: number
+  tagMoeglich: boolean
+  nachtMoeglich: boolean
+}
+
+export interface NaechsterLauf {
+  modul: string
+  titel: string
+  tag: boolean
+  dauerMinuten: number
+  begruendung: string
+}
+
+export interface Kenntnisstand {
+  standUtc: string
+  tageBetrachtet: number
+  zielabgleich: ZielZeile[]
+  wirkung: WirkungZeile[]
+  abdeckung: AbdeckungZeile[]
+  naechster: NaechsterLauf | null
+  hinweise: string[]
+}

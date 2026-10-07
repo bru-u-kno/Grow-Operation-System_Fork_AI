@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.183
+
+**Fork AI.** Probelauf → neuer Reiter „Kenntnisstand": Kann dein System die Zielwerte aus dem Plan halten? Der Fork rechnet es aus — ohne KI.
+
+- **Zielabgleich:** Luftfeuchte, Temperatur und VPD gegen die Ziele deines Plans, getrennt nach Licht an und Licht aus, aus dem Verlauf der letzten 7 Tage.
+  Du siehst, wie viel Prozent der Zeit im Ziel waren, und ein Urteil: erreichbar (ab 90 %), knapp (ab 70 %), Lücke. Beim VPD gilt ein Band von ± 0,1 kPa um das Ziel,
+  damit „annähernd" reicht (dein Plan nennt 1,4 bis 1,4).
+- **Was jedes Gerät bewirkt:** aus deinen Probeläufen gemittelt, je Licht an und aus — etwa „Zusatz-Entfeuchter aus: Luftfeuchte +0,55 Punkte je Minute". Läufe unter zwei Minuten zählen nicht.
+- **Wo noch Messungen fehlen** und der **nächste sinnvolle Probelauf** (mit „Vorbereiten", das Gerät und Dauer im Formular setzt). Der Fork startet nie von allein.
+- **Hinweise:** Wo ein Ziel nicht gehalten wird, nennt der Fork das Gerät mit der größten gemessenen Wirkung als Ansatzpunkt. Es sind Hinweise, keine Einstellungen.
+- **Noch nicht dabei:** Wassertemperatur (Chiller), Vorschläge mit „Übernehmen" und das Licht als Probelauf.
+
 ## 2.0.0-forkai.182
 
 **Fork AI.** Probelauf: Die Erholungszeit wird jetzt auch bei einem unruhigen Verlauf berechnet.

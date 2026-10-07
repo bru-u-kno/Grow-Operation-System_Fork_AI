@@ -12,6 +12,7 @@
 - **Laufender Lauf**: Restzeit, die letzten Messwerte gegen die Grenzen und **Jetzt abbrechen und zurückstellen**.
 - **Ergebnis**: Kurve (Luftfeuchte, Temperatur oder VPD; Vorlauf, Gerät aus, Nachlauf), Kennzahlen und Hinweise.
 - **Frühere Läufe**: Liste, jeder Lauf lässt sich wieder ansehen.
+- **Reiter „Kenntnisstand"** (`/steuerung/probelauf?ansicht=kenntnis`): Zielabgleich, Wirkung je Gerät, Abdeckung, nächster sinnvoller Lauf, Hinweise.
 
 ## Was es tut
 
@@ -33,6 +34,17 @@ Möglich an: Entfeuchter, Zusatz-Entfeuchter, Zuluft, CO₂ und Chiller. Es läu
   Erholung (Minuten nach dem Ende, bis 90 % der Abweichung vom Startwert wieder abgebaut sind).
 - **Hinweise**: u. a. ein Lichtwechsel während des Laufs — dann sind die Werte nur eingeschränkt vergleichbar.
 
+## Der Kenntnisstand
+
+Vom Fork berechnet, **ohne KI** (`Services/Kenntnisstand/KenntnisstandRechner.cs`):
+
+- **Zielabgleich**: Anteil der Minuten der letzten 7 Tage im Ziel, getrennt nach Licht an und aus. Im Ziel heißt: Luftfeuchte und Temperatur ≤ Höchstwert des Plans,
+  VPD im Band des Plans ± 0,1 kPa. Urteil: ab 90 % erreichbar, ab 70 % knapp, darunter Lücke; unter 60 Messminuten „zu wenig gemessen".
+- **Wirkung**: Mittelwert der „Änderung je Minute" aller Läufe (fertig oder abgebrochen, Eingriff ≥ 2 Minuten, Lichtphase bekannt), je Gerät und Lichtphase.
+- **Nächster Lauf**: eine Kombination aus Gerät und Lichtphase ohne Messung; Vorrang hat die, die zu einer Lücke im Zielabgleich passt. CO₂ wird nachts nicht dosiert und nicht gemessen.
+- **Hinweise**: Satz je Lücke, mit dem Gerät der größten gemessenen Wirkung — ein Ansatzpunkt, keine Einstellung.
+- Das Ergebnis des Zielabgleichs wird 5 Minuten gehalten (sieben Tage Verlauf von vier Fühlern sind ein paar Megabyte).
+
 ## Was es bewusst NICHT tut
 
 - **Keine Wächter abschalten.** CO₂-Wächter, Kühler-Wächter und die Meldung „Zusatz zieht nichts" laufen im Probelauf weiter.
@@ -40,7 +52,8 @@ Möglich an: Entfeuchter, Zusatz-Entfeuchter, Zuluft, CO₂ und Chiller. Es läu
   nach einem Neustart des Add-ons wird zuerst zurückgestellt. Ist das Zurückstellen nicht bestätigt, bleibt der Lauf offen,
   der Fork versucht es weiter und meldet sich aufs Handy.
 - **Kein Licht.** Das Licht ändert die Lichtphase und ist (noch) nicht Teil des Probelaufs.
-- **Keine Einstellung ändern.** Der Probelauf misst; was daraus folgt, übernimmt der Nutzer selbst.
+- **Keine Einstellung ändern.** Der Probelauf misst; was daraus folgt, übernimmt der Nutzer selbst. Es gibt (noch) keine Vorschläge mit „Übernehmen".
+- **Keine Wassertemperatur** im Zielabgleich — nur Luftfeuchte, Temperatur und VPD des Zelts.
 - **Kein zweiter Lauf zugleich**, auch nicht an einer anderen Steuerung.
 
 ## Im Code

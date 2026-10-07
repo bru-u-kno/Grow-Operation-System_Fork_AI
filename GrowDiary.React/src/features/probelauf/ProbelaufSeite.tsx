@@ -7,6 +7,7 @@ import { formatNumber } from '../../utils'
 import { feldText } from '../../zahlenfeld'
 import '../steuerung/steuerung.css'
 import './probelauf.css'
+import { KenntnisstandAnsicht } from './KenntnisstandAnsicht'
 import { ProbelaufKurve } from './ProbelaufKurve'
 import {
   erholungText, grenzenAusText, istOffen, jetztWerte, proMinuteText, restzeit, startText, statusText, wertText,
@@ -46,6 +47,7 @@ export default function ProbelaufSeite() {
 
   const offen = useMemo(() => liste?.find((l) => istOffen(l.status)) ?? null, [liste])
   const gewaehltId = Number(params.get('lauf')) || offen?.id || null
+  const kenntnis = params.get('ansicht') === 'kenntnis'
 
   const ladeListe = useCallback(async () => {
     try {
@@ -136,6 +138,13 @@ export default function ProbelaufSeite() {
       <div className="pl-seite" data-audit="probelauf-seite">
         {fehler && <V1Alert title="Probelauf" message={fehler} tone="warn" />}
 
+        <div className="st-wechsel" role="group" aria-label="Ansicht">
+          <button type="button" className="st-chip" aria-current={!kenntnis} onClick={() => setParams({}, { replace: true })}>Probelauf</button>
+          <button type="button" className="st-chip" aria-current={kenntnis} onClick={() => setParams({ ansicht: 'kenntnis' }, { replace: true })}>Kenntnisstand</button>
+        </div>
+
+        {kenntnis ? <KenntnisstandAnsicht onVorbereiten={(m) => { setModul(m); setDauer(10); setParams({}, { replace: true }) }} /> : <>
+
         {angezeigt
           ? <LaufAnsicht lauf={angezeigt} sendet={sendet} onAbbrechen={() => void abbrechen(angezeigt.id)} onZurueck={() => setParams({}, { replace: true })} offen={offen != null} />
           : (
@@ -164,6 +173,7 @@ export default function ProbelaufSeite() {
             </table>
           </div>
         )}
+        </>}
       </div>
     </V1Page>
   )

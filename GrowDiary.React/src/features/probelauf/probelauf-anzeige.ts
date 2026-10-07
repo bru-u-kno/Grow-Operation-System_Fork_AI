@@ -121,3 +121,35 @@ export function grenzenAusText(t: GrenzenText): { grenzen: ProbelaufGrenzen } | 
   }
   return { grenzen: g }
 }
+
+// ------------------------------------------------------------------ Kenntnisstand
+
+import type { ZielUrteil } from '../../types'
+
+const URTEIL_TEXT: Record<ZielUrteil, string> = {
+  Erreichbar: 'erreichbar', Knapp: 'knapp', Luecke: 'Lücke', Unbekannt: 'zu wenig gemessen',
+}
+
+export function urteilText(u: ZielUrteil): string {
+  return URTEIL_TEXT[u] ?? u
+}
+
+/** Die Farbe der Marke: erreichbar grün, knapp gelb, Lücke rot-gelb betont, unbekannt neutral. */
+export function urteilKlasse(u: ZielUrteil): '' | 'is-ok' | 'is-warn' {
+  return u === 'Erreichbar' ? 'is-ok' : u === 'Knapp' || u === 'Luecke' ? 'is-warn' : ''
+}
+
+/** „94 % der Zeit" — oder ein Strich, wenn nichts gesagt werden kann. */
+export function anteilText(anteil: number | null): string {
+  return anteil == null ? '–' : `${formatNumber(anteil, 0)} % der Zeit`
+}
+
+/** Wirkung eines abgeschalteten Geräts je Minute, mit Einheit und Vorzeichen: „+0,55 %/Min.". */
+export function wirkungText(groesse: 'Feuchte' | 'Temperatur' | 'VPD', proMinute: number): string {
+  return proMinuteText({ groesse, start: 0, spitze: 0, ende: 0, aenderungProMinute: proMinute, erholungMinuten: null })
+}
+
+/** „bei Licht an" / „bei Licht aus". */
+export function lichtText(tag: boolean): string {
+  return tag ? 'bei Licht an' : 'bei Licht aus'
+}
