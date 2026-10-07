@@ -188,25 +188,14 @@ jobs:
           path: ~/pw-apt-debs
           key: pw-apt-${{ runner.os }}-${{ runner.arch }}-${{ env.RUNNER_IMAGE }}-${{ hashFiles('GrowDiary.React/package-lock.json') }}
 
-      # Zeitlimit statt 20 Minuten Warten: Am 07.10.2026 blieb `apt-get update` in diesem
-      # Schritt an einem hängenden Spiegel stehen und hielt drei Jobs je 20 Minuten fest, bis
-      # das Job-Limit sie abbrach (zweimal hintereinander). Jetzt: apt gibt nach 20 s je
-      # Verbindung auf und versucht es dreimal; der Schritt selbst bekommt vier Minuten je
-      # Versuch und zwei Versuche.
       - name: Install Playwright browser
-        timeout-minutes: 10
         working-directory: GrowDiary.React
         run: |
-          printf 'Acquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::Retries "3";\n' | sudo tee /etc/apt/apt.conf.d/99-ci-zeitlimit > /dev/null
           if compgen -G "$HOME/pw-apt-debs/*.deb" > /dev/null; then
             sudo cp "$HOME"/pw-apt-debs/*.deb /var/cache/apt/archives/
             echo "$(ls "$HOME"/pw-apt-debs/*.deb | wc -l) Pakete aus dem Zwischenspeicher bereitgelegt."
           fi
-          for versuch in 1 2; do
-            if timeout 240 npx playwright install --with-deps chromium; then break; fi
-            echo "Versuch $versuch der Browser-Installation gescheitert oder zu langsam."
-            if [ "$versuch" = 2 ]; then exit 1; fi
-          done
+          npx playwright install --with-deps chromium
           mkdir -p "$HOME/pw-apt-debs"
           cp /var/cache/apt/archives/*.deb "$HOME/pw-apt-debs/" 2>/dev/null || true
           echo "$(ls "$HOME"/pw-apt-debs/*.deb 2>/dev/null | wc -l) Pakete fuer den naechsten Lauf gemerkt."
@@ -286,25 +275,14 @@ jobs:
           path: ~/pw-apt-debs
           key: pw-apt-${{ runner.os }}-${{ runner.arch }}-${{ env.RUNNER_IMAGE }}-${{ hashFiles('GrowDiary.React/package-lock.json') }}
 
-      # Zeitlimit statt 20 Minuten Warten: Am 07.10.2026 blieb `apt-get update` in diesem
-      # Schritt an einem hängenden Spiegel stehen und hielt drei Jobs je 20 Minuten fest, bis
-      # das Job-Limit sie abbrach (zweimal hintereinander). Jetzt: apt gibt nach 20 s je
-      # Verbindung auf und versucht es dreimal; der Schritt selbst bekommt vier Minuten je
-      # Versuch und zwei Versuche.
       - name: Install Playwright browser
-        timeout-minutes: 10
         working-directory: GrowDiary.React
         run: |
-          printf 'Acquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::Retries "3";\n' | sudo tee /etc/apt/apt.conf.d/99-ci-zeitlimit > /dev/null
           if compgen -G "$HOME/pw-apt-debs/*.deb" > /dev/null; then
             sudo cp "$HOME"/pw-apt-debs/*.deb /var/cache/apt/archives/
             echo "$(ls "$HOME"/pw-apt-debs/*.deb | wc -l) Pakete aus dem Zwischenspeicher bereitgelegt."
           fi
-          for versuch in 1 2; do
-            if timeout 240 npx playwright install --with-deps chromium; then break; fi
-            echo "Versuch $versuch der Browser-Installation gescheitert oder zu langsam."
-            if [ "$versuch" = 2 ]; then exit 1; fi
-          done
+          npx playwright install --with-deps chromium
           mkdir -p "$HOME/pw-apt-debs"
           cp /var/cache/apt/archives/*.deb "$HOME/pw-apt-debs/" 2>/dev/null || true
           echo "$(ls "$HOME"/pw-apt-debs/*.deb 2>/dev/null | wc -l) Pakete fuer den naechsten Lauf gemerkt."
