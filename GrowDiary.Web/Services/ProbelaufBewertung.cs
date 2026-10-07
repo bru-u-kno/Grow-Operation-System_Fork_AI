@@ -16,6 +16,9 @@ namespace GrowDiary.Web.Services;
 /// </remarks>
 public static class ProbelaufBewertung
 {
+    /// <summary>Wie viel der Abweichung vom Start wieder abgebaut sein muss, damit ein Wert als erholt gilt.</summary>
+    public const double ErholungsAnteil = 0.9;
+
     /// <summary>Ab dieser Dauer ohne Wert bricht der Lauf ab.</summary>
     public static readonly TimeSpan FuehlerLosGrenze = TimeSpan.FromSeconds(60);
 
@@ -111,14 +114,16 @@ public static class ProbelaufBewertung
         var minuten = (w[^1].ZeitUtc - w[0].ZeitUtc).TotalMinutes;
         var proMinute = minuten > 0 ? (ende - start) / minuten : 0;
 
+        // Erholt heißt: 90 % der Abweichung vom Startwert sind wieder abgebaut. Der Startwert (der Stand, in dem die Regelung
+        // arbeitete) ist der Bezug — nicht der Mittelwert des Vorlaufs: der schwankt, und eine enge Toleranz darum wird nie erreicht
+        // (am echten Zelt am 07.10.2026: Luftfeuchte 53,3 → 48,5 % schon im Vorlauf).
         double? erholung = null;
-        var vorWerte = vorher.Select(wahl).Where(v => v is not null).Select(v => v!.Value).ToList();
         var nachReihe = nachher.Where(m => wahl(m) is not null).OrderBy(m => m.ZeitUtc).ToList();
-        if (vorWerte.Count > 0 && nachReihe.Count > 0)
+        var abweichung = spitze - start;
+        if (Math.Abs(abweichung) > 1e-9 && nachReihe.Count > 0)
         {
-            var niveau = vorWerte.Average();
-            var toleranz = 0.05 * Math.Abs(spitze - niveau);
-            var treffer = nachReihe.FirstOrDefault(m => Math.Abs(wahl(m)!.Value - niveau) <= toleranz);
+            var ziel = spitze - ErholungsAnteil * abweichung;
+            var treffer = nachReihe.FirstOrDefault(m => abweichung > 0 ? wahl(m)!.Value <= ziel : wahl(m)!.Value >= ziel);
             if (treffer is not null) erholung = Math.Max(0, (treffer.ZeitUtc - w[^1].ZeitUtc).TotalMinutes);
         }
 

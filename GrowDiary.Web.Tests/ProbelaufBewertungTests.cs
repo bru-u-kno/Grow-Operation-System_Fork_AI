@@ -131,6 +131,33 @@ public sealed class ProbelaufBewertungTests
     }
 
     [Fact]
+    public void Kennzahlen_Erholung_AmEchtenVerlaufVom07102026_DerVorlaufSchwankteSchon()
+    {
+        // Lauf 1 am Zelt: Vorlauf fiel schon von 53,3 auf 48,5 %, der Eingriff hob auf 54,0, danach fiel es wieder.
+        var vorher = new[] { 53.3, 54.0, 54.1, 53.6, 54.3, 53.8, 52.5, 51.0, 49.2, 48.7, 48.5 }
+            .Select((v, i) => Wert(-11 + i, feuchte: v)).ToList();
+        var waehrend = Reihe(0, 10, m => 48.5 + 0.55 * m);                 // 48,5 → 54,0
+        var nachher = new[] { (1, 54.3), (3, 53.1), (5, 54.0), (6, 49.8), (8, 48.8), (10, 47.3) }
+            .Select(p => Wert(10 + p.Item1, feuchte: p.Item2)).ToList();
+
+        var feuchte = ProbelaufBewertung.Kennzahlen(vorher, waehrend, nachher).Single(k => k.Groesse == "Feuchte");
+
+        // 90 % von 5,5 sind abgebaut ab 49,05 → erster Punkt darunter: 48,8 nach 8 Minuten.
+        Assert.Equal(8, feuchte.ErholungMinuten!.Value, 0.01);
+    }
+
+    [Fact]
+    public void Kennzahlen_Erholung_FaelltDerWertWeiterAlsAufDenStart_GiltErAlsErholt()
+    {
+        var waehrend = Reihe(0, 10, m => 50 + 0.3 * m);                    // 50 → 53
+        var nachher = Reihe(11, 20, m => 53 - (m - 10) * 0.7);             // fällt unter den Start
+
+        var feuchte = ProbelaufBewertung.Kennzahlen([], waehrend, nachher).Single(k => k.Groesse == "Feuchte");
+
+        Assert.NotNull(feuchte.ErholungMinuten);
+    }
+
+    [Fact]
     public void Kennzahlen_Erholung_NullWennNichtErreicht()
     {
         var vorher = Reihe(-10, -1, _ => 50);

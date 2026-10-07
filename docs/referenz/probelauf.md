@@ -30,7 +30,7 @@ Möglich an: Entfeuchter, Zusatz-Entfeuchter, Zuluft, CO₂ und Chiller. Es läu
 - **Vorher**: die letzten 10 Minuten aus dem Verlauf von Home Assistant, auf Minuten gelegt.
 - **Grenzen**: vorbelegt als Pflanzenziel **plus Spielraum** (Luftfeuchte max. +4 Punkte, Temperatur max. +1,5 K, VPD-Band ±0,5 kPa; Quelle: Entfeuchter-Seite). Die Ziele regeln, die Grenzen sichern — ein Lauf soll das Ziel überschreiten dürfen.
 - **Kennzahlen**: Start, Spitze, Ende, Änderung je Minute (Ende minus Start durch die Minuten des Eingriffs) und
-  Erholung (Minuten nach dem Ende, bis der Wert wieder auf dem Niveau vor dem Lauf liegt, Toleranz 5 % der Abweichung).
+  Erholung (Minuten nach dem Ende, bis 90 % der Abweichung vom Startwert wieder abgebaut sind).
 - **Hinweise**: u. a. ein Lichtwechsel während des Laufs — dann sind die Werte nur eingeschränkt vergleichbar.
 
 ## Was es bewusst NICHT tut
