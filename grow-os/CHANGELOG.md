@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.182
+
+**Fork AI.** Probelauf: Die Erholungszeit wird jetzt auch bei einem unruhigen Verlauf berechnet.
+
+- **Was war:** Bei den ersten echten Läufen blieb „Erholung" leer („nicht erreicht"): Als Maß diente das Mittel der letzten 10 Minuten vor dem Lauf mit einer Toleranz von nur 5 % — bei deiner Anlage schwankte die Luftfeuchte schon vorher um fünf Punkte.
+- **Jetzt:** Erholt heißt: 90 % der Abweichung vom Startwert des Eingriffs sind wieder abgebaut. Am Verlauf des ersten Laufs (48,5 → 54,0 %) sind das 8 Minuten nach dem Ende.
+- **Belegt am echten Zelt (07.10.2026):** Zusatz-Entfeuchter 10 Minuten aus (Luftfeuchte +0,55 Punkte je Minute), erzwungener Abbruch an der Grenze nach 50 Sekunden,
+  Neustart des Add-ons mitten im Lauf (zurückgestellt innerhalb einer Sekunde), zweiter Start abgelehnt.
+
 ## 2.0.0-forkai.181
 
 **Fork AI.** Probelauf: Die vorgeschlagenen Grenzen sind jetzt „Pflanzenziel plus Spielraum" und lassen einen Start überhaupt zu.
