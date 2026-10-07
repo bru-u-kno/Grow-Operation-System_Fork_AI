@@ -273,6 +273,28 @@ public sealed class ProbelaufServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Auswertung_SagtEsAusdruecklich_WennDasGeraetSchonAusWar()
+    {
+        _ha.Zustaende[Port] = "off";   // wie am 07.10.2026: der Hauptentfeuchter stand schon auf „Off"
+        var lauf = await StartenAsync(10);
+        for (var s = 0; s < 45; s++) { Weiter(TimeSpan.FromSeconds(30)); await _dienst.TickAsync(default); }
+
+        var fertig = Lauf(lauf.Id);
+
+        Assert.Equal(ProbelaufStatus.Fertig, fertig.Status);
+        Assert.Contains(fertig.Auswertung!.Hinweise, h => h.Contains("schon aus"));
+    }
+
+    [Fact]
+    public async Task Auswertung_LaeuftDasGeraet_GibtEsDiesenHinweisNicht()
+    {
+        var lauf = await StartenAsync(10);   // Port steht auf „Auto"
+        for (var s = 0; s < 45; s++) { Weiter(TimeSpan.FromSeconds(30)); await _dienst.TickAsync(default); }
+
+        Assert.DoesNotContain(Lauf(lauf.Id).Auswertung!.Hinweise, h => h.Contains("schon aus"));
+    }
+
+    [Fact]
     public async Task NachFertig_KannDerNaechsteLaufStarten()
     {
         await StartenAsync(1);

@@ -122,6 +122,22 @@ public sealed class ProbelaufEingriff
         return JsonSerializer.Serialize(new Ausgang(automationen, geraete, []), Json);
     }
 
+    /// <summary>
+    /// Lief das Gerät, als der Lauf begann? <c>false</c>, wenn alle Geräte des Laufs schon aus waren — dann zeigt der Lauf nur, was ohne
+    /// die Regelung passiert, nicht, was das Gerät bewirkt. <c>null</c>, wenn der Zustand unbekannt ist.
+    /// </summary>
+    public static bool? GeraetWarAn(string ausgangszustand)
+    {
+        try
+        {
+            var z = JsonSerializer.Deserialize<Ausgang>(ausgangszustand, Json);
+            if (z?.Geraete is null || z.Geraete.Count == 0) return null; // auch „{}" (ältere Läufe, Tests) heißt: unbekannt
+            var bekannte = z.Geraete.Where(g => NichtUnbekannt(g.Zustand)).ToList();
+            return bekannte.Count == 0 ? null : bekannte.Any(g => !Ausschalter.IstAus(g.Zustand));
+        }
+        catch (JsonException) { return null; }
+    }
+
     // --------------------------------------------------------------- Eingreifen
 
     /// <summary>

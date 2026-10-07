@@ -16,6 +16,9 @@ namespace GrowDiary.Web.Services;
 /// </remarks>
 public static class ProbelaufBewertung
 {
+    /// <summary>Unterhalb dieser Abweichung vom Start gilt ein Wert als unverändert (Messrauschen) — dort gibt es keine Erholungszeit.</summary>
+    public static double MindestAbweichung(string groesse) => groesse switch { "Feuchte" => 1.0, "Temperatur" => 0.3, _ => 0.05 };
+
     /// <summary>Wie viel der Abweichung vom Start wieder abgebaut sein muss, damit ein Wert als erholt gilt.</summary>
     public const double ErholungsAnteil = 0.9;
 
@@ -120,7 +123,12 @@ public static class ProbelaufBewertung
         double? erholung = null;
         var nachReihe = nachher.Where(m => wahl(m) is not null).OrderBy(m => m.ZeitUtc).ToList();
         var abweichung = spitze - start;
-        if (Math.Abs(abweichung) > 1e-9 && nachReihe.Count > 0)
+        if (Math.Abs(abweichung) < MindestAbweichung(name))
+        {
+            // Es gab nichts, wovon sich etwas erholen könnte — „0 Minuten" statt einer Zahl aus dem Messrauschen.
+            erholung = 0;
+        }
+        else if (nachReihe.Count > 0)
         {
             var ziel = spitze - ErholungsAnteil * abweichung;
             var treffer = nachReihe.FirstOrDefault(m => abweichung > 0 ? wahl(m)!.Value <= ziel : wahl(m)!.Value >= ziel);

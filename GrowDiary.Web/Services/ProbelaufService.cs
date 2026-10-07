@@ -345,6 +345,9 @@ public sealed class ProbelaufService
         if (lauf.TagPhaseBeiStart is { } vorher && tagPhaseJetzt is { } nachher && vorher != nachher)
             hinweise.Add("Während des Laufs hat die Lichtphase gewechselt — die Werte sind deshalb nur eingeschränkt vergleichbar.");
 
+        if (ProbelaufEingriff.GeraetWarAn(lauf.Ausgangszustand) == false)
+            hinweise.Add("Das Gerät war schon aus, als der Lauf begann: Der Lauf zeigt nur, was ohne seine Regelung passiert — nicht, was das Gerät bewirkt. In den Kenntnisstand geht er deshalb nicht als Wirkung ein.");
+
         hinweise.Add("Ein einzelner Lauf belegt wenig — am besten zu einer anderen Tageszeit wiederholen.");
 
         var k = ProbelaufBewertung.Kennzahlen(lauf.Messreihe.Vorlauf, lauf.Messreihe.Waehrend, lauf.Messreihe.Nachlauf);

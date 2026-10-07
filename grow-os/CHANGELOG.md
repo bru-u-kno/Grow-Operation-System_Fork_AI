@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.185
+
+**Fork AI.** Probelauf: Ein Lauf an einem Gerät, das schon aus war, zählt nicht mehr als „Wirkung" des Geräts.
+
+- **Was war:** Beim Test am Hauptentfeuchter bei Licht an stand das Gerät schon auf „Off". Der Lauf zeigte deshalb fast nichts (Luftfeuchte +0,04 Punkte je Minute) — und der Kenntnisstand hätte daraus
+  „Hauptentfeuchter wirkt nicht" gelernt.
+- **Jetzt:** Die Auswertung sagt es ausdrücklich („Das Gerät war schon aus …"), und solche Läufe gehen nicht in die gelernte Wirkung und die Abdeckung ein. Der Lauf bleibt in der Liste.
+- **Erholungszeit:** Ändert sich ein Wert im Lauf kaum (unter einem Punkt Luftfeuchte, 0,3 °C, 0,05 kPa), gibt es keine Erholungszeit mehr statt einer Zahl aus dem Messrauschen.
+
 ## 2.0.0-forkai.184
 
 **Fork AI.** Kenntnisstand: Tag- und Nachtziele kommen jetzt aus dem Wochenplan statt aus dem einen aktiven Wert.

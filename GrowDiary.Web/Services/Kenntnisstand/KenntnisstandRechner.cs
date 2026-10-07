@@ -80,6 +80,8 @@ public static class KenntnisstandRechner
         var brauchbar = laeufe
             .Where(l => l.Status is ProbelaufStatus.Fertig or ProbelaufStatus.Abgebrochen
                         && l.TagPhaseBeiStart is not null && l.Auswertung is not null
+                        // War das Gerät schon aus, zeigt der Lauf nur, was ohne die Regelung passiert — nicht, was das Gerät bewirkt.
+                        && ProbelaufEingriff.GeraetWarAn(l.Ausgangszustand) != false
                         && l.EingriffEndeUtc is { } ende && (ende - l.StartUtc).TotalMinutes >= MindestEingriffMinuten)
             .ToList();
 

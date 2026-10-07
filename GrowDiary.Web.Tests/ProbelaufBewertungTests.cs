@@ -158,6 +158,18 @@ public sealed class ProbelaufBewertungTests
     }
 
     [Fact]
+    public void Kennzahlen_Erholung_BeiMesstauschenGibtEsKeineErholungszeit()
+    {
+        // Lauf 4 am 07.10.2026: Feuchte 46,0 → 46,9 → 46,4 — Rauschen, keine Abweichung, von der sich etwas erholen könnte.
+        var waehrend = Reihe(0, 10, m => 46 + (m % 3) * 0.3);
+        var nachher = Reihe(11, 20, _ => 45.5);
+
+        var feuchte = ProbelaufBewertung.Kennzahlen([], waehrend, nachher).Single(k => k.Groesse == "Feuchte");
+
+        Assert.Equal(0, feuchte.ErholungMinuten);
+    }
+
+    [Fact]
     public void Kennzahlen_Erholung_NullWennNichtErreicht()
     {
         var vorher = Reihe(-10, -1, _ => 50);

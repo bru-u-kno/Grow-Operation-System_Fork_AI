@@ -138,6 +138,32 @@ public sealed class KenntnisstandRechnerTests
     }
 
     [Fact]
+    public void Wirkung_ZaehltLaeufeNicht_BeiDenenDasGeraetSchonAusWar()
+    {
+        // Lauf 4 am 07.10.2026: der Hauptentfeuchter stand schon auf „Off" — Feuchte +0,04 je Minute ist nicht seine Wirkung.
+        var schonAus = Lauf("entfeuchter", true, ProbelaufStatus.Fertig, 0.04);
+        schonAus.Ausgangszustand = """{"automationen":[],"geraete":[{"rolle":"port_schalter","id":"select.x","zustand":"Off"}],"chillerZelte":[]}""";
+        var lief = Lauf("entfeuchter", true, ProbelaufStatus.Fertig, 0.9);
+        lief.Ausgangszustand = """{"automationen":[],"geraete":[{"rolle":"port_schalter","id":"select.x","zustand":"On"}],"chillerZelte":[]}""";
+
+        var w = KenntnisstandRechner.Wirkung([schonAus, lief], Titel);
+
+        var zeile = Assert.Single(w);
+        Assert.Equal(1, zeile.Laeufe);
+        Assert.Equal(0.9, zeile.Werte.Single().ProMinute, 3);
+        Assert.Empty(KenntnisstandRechner.Wirkung([schonAus], Titel));
+    }
+
+    [Theory]
+    [InlineData("""{"automationen":[],"geraete":[{"rolle":"a","id":"x","zustand":"off"}],"chillerZelte":[]}""", false)]
+    [InlineData("""{"automationen":[],"geraete":[{"rolle":"a","id":"x","zustand":"on"}],"chillerZelte":[]}""", true)]
+    [InlineData("""{"automationen":[],"geraete":[{"rolle":"a","id":"x","zustand":"unavailable"}],"chillerZelte":[]}""", null)]
+    [InlineData("""{"automationen":[],"geraete":[],"chillerZelte":[]}""", null)]
+    [InlineData("{kaputt", null)]
+    public void GeraetWarAn_LiestDenAusgangszustand(string json, bool? erwartet)
+        => Assert.Equal(erwartet, ProbelaufEingriff.GeraetWarAn(json));
+
+    [Fact]
     public void Wirkung_IgnoriertZuKurzeUndUnfertigeLaeufeOhneLichtphase()
     {
         var laeufe = new[]
