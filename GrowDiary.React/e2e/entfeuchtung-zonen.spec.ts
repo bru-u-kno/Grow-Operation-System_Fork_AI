@@ -55,24 +55,25 @@ test('Entfeuchter: der Messpunkt trägt die Farbe seiner Zone — und die Zone s
   }
 })
 
-test('Entfeuchter: bei „Nach VPD regeln" sind die festen Schwellen gesperrt, ohne den Haken sind sie bearbeitbar', async ({ page, request }) => {
+test('Entfeuchter: bei Regelgröße VPD sind die festen Schwellen gesperrt, bei Luftfeuchte bearbeitbar', async ({ page, request }) => {
   await seiteMitWerten(page, request, { ...WERTE, feuchteProzent: 49, tempC: 22.7 })
   await page.locator('.v1-tab', { hasText: /^Regel$/ }).click()
-  const schalter = page.getByLabel('Nach VPD regeln')
-  if (!(await schalter.isChecked())) await schalter.check()
+  const vpd = page.getByRole('radio', { name: 'VPD', exact: true })
+  const feuchte = page.getByRole('radio', { name: 'Luftfeuchte', exact: true })
+  await vpd.click()
   const kopf = page.locator('.st-kk-kopf', { hasText: 'Feste Schwellen' })
   if ((await kopf.getAttribute('aria-expanded')) === 'false') await kopf.click()
   const feld = page.getByLabel('Tag · EIN ab', { exact: true })
   await expect(feld).toBeDisabled()
   await expect(page.getByText('Gerade ohne Wirkung')).toBeVisible()
 
-  // Zweiter Durchgang: ausschalten, bearbeiten, wieder einschalten.
-  await schalter.uncheck()
+  // Zweiter Durchgang: auf Luftfeuchte stellen, bearbeiten, wieder auf VPD.
+  await feuchte.click()
   await expect(feld).toBeEnabled()
   await expect(page.getByText('Gerade ohne Wirkung')).toHaveCount(0)
-  await schalter.check()
+  await vpd.click()
   await expect(feld).toBeDisabled()
-  // Der Abstand EIN → AUS gilt in beiden Regelarten und bleibt bedienbar.
+  // Der Abstand EIN → AUS gilt in beiden Regelgrößen und bleibt bedienbar.
   await expect(page.getByRole('radio', { name: /^normal/ }).first()).toBeEnabled()
 })
 

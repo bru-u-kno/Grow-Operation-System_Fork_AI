@@ -595,7 +595,8 @@ public sealed class EntfeuchterZusatzSteuerungService
             AutomatikAn: entities.Count > 0 ? AutomatikAn(entities) : null,
             ZusatzSeitUtc: Rolle(Rollen.ZusatzSchalter) is { } schalterId && nachId.TryGetValue(schalterId, out var schalterZustand)
                 ? schalterZustand.LastChangedUtc : null,
-            RhObergrenzeProzent: Zahl(EntfeuchterSteuerungService.Entitaeten.RhObergrenze)));
+            RhObergrenzeProzent: Zahl(EntfeuchterSteuerungService.Entitaeten.RhObergrenze),
+            VpdRegelung: AnAus(Text(EntfeuchterSteuerungService.Entitaeten.VpdRegelung))));
     }
 
     /// <summary>Was das Livebild aus Home Assistant und dem Plan braucht — gelesen, nicht gerechnet.</summary>
@@ -619,7 +620,8 @@ public sealed class EntfeuchterZusatzSteuerungService
         bool? AutomatikAn,
         DateTime? ZusatzSeitUtc = null,
         DateTime? JetztUtc = null,
-        double? RhObergrenzeProzent = null);
+        double? RhObergrenzeProzent = null,
+        bool? VpdRegelung = null);
 
     /// <summary>
     /// Das Livebild aus den gelesenen Werten und den Einstellungen. Rein rechnend —
@@ -636,7 +638,9 @@ public sealed class EntfeuchterZusatzSteuerungService
         var folgeNacht = Math.Round(nachtMax - e.FolgeAbstandK, 1);
 
         // Schaltgröße: das VPD-Ziel des Plans, sonst dessen Luftfeuchte, sonst nichts.
-        var hatVpd = x.VpdUnten is not null && x.VpdOben is not null;
+        // Ausdrücklich „Luftfeuchte" gewählt (der Schalter „Nach VPD regeln" des Entfeuchters steht auf aus): dann
+        // gilt auch am Tag die Feuchte — wie in der Regelung (Fassung 2). Fehlt der Schalter, bleibt es beim VPD.
+        var hatVpd = x.VpdUnten is not null && x.VpdOben is not null && x.VpdRegelung != false;
         var hatFeuchte = x.FeuchteEin is not null && x.FeuchteAus is not null;
         var groesse = hatVpd ? EntfeuchterZusatzSchaltgroesse.Vpd
             : hatFeuchte ? EntfeuchterZusatzSchaltgroesse.Feuchte
@@ -684,7 +688,8 @@ public sealed class EntfeuchterZusatzSteuerungService
             // Nur mit Home Assistant am Hörer: ohne Verbindung wissen wir nichts über den Plan.
             PlanUnvollstaendig: x.HaErreichbar && groesse == EntfeuchterZusatzSchaltgroesse.Keine,
             AutomatikAn: x.AutomatikAn,
-            RhObergrenzeProzent: x.RhObergrenzeProzent);
+            RhObergrenzeProzent: x.RhObergrenzeProzent,
+            VpdRegelung: x.VpdRegelung);
     }
 
     /// <summary>

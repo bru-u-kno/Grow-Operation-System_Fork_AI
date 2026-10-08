@@ -1,6 +1,6 @@
 {
   "alias": "Zusatz-Entfeuchter Regelung",
-  "description": "Folgegeraet neben dem Fuehrungsgeraet (Entfeuchter, Rolle fuehrung_zustand). Schaltet den Zusatz-Entfeuchter (Shelly) nach den Zielwerten des Plans: TAG (Licht an) VPD-Band um das Plan-Ziel (EIN unter sensor.trotec_zelt_vpd_ein_schwelle, AUS ueber sensor.trotec_zelt_vpd_aus_schwelle); nennt der Plan kein VPD-Ziel, gelten die Plan-Feuchte-Schwellen auch am Tag; NACHT Feuchte nach sensor.trotec_feuchte_ein_aktiv / _aus_aktiv, oder - mit Nacht durchlaufen - nur die Temperaturgrenze. ZUSAMMENSPIEL: Beide Geraete duerfen nie gleichzeitig ausgehen. 1) Zuschalten erst, wenn die Fuehrung mindestens input_number.trotec_zelt_zuschalt_verzogerung Minuten laeuft - ist sie aus, startet der Zusatz sofort. 2) Waerme: Der Zusatz geht schon bei sensor.trotec_zelt_folge_aus_temperatur (= sensor.trotec_temp_max_aktiv minus input_number.trotec_zelt_folge_abstand) aus, aber nur, wenn die Fuehrung laeuft; laeuft sie nicht, bleibt er bis zur Grenze an. 3) Wieder an erst unter sensor.trotec_zelt_wieder_ein_temperatur (= Folge-AUS minus input_number.trotec_zelt_wieder_ein_abstand), nach input_number.trotec_zelt_mindestpause. 4) Abschalten wegen VPD/Feuchte nur, wenn die Fuehrung laeuft (mindestens ein Geraet bleibt), und erst nach input_number.trotec_zelt_mindestlaufzeit. Uebertemperatur ueber der Grenze schaltet immer sofort ab. Voraussetzung: sensor.trotec_temp_max_aktiv und die Plan-Sensoren des Entfeuchters; fehlen sie, schaltet die Regelung nicht ein. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter-zusatz/regelung/1.",
+  "description": "Folgegeraet neben dem Fuehrungsgeraet (Entfeuchter, Rolle fuehrung_zustand). Schaltet den Zusatz-Entfeuchter (Shelly) nach den Zielwerten des Plans: TAG (Licht an) VPD-Band um das Plan-Ziel (EIN unter sensor.trotec_zelt_vpd_ein_schwelle, AUS ueber sensor.trotec_zelt_vpd_aus_schwelle); nennt der Plan kein VPD-Ziel, gelten die Plan-Feuchte-Schwellen auch am Tag; NACHT Feuchte nach sensor.trotec_feuchte_ein_aktiv / _aus_aktiv, oder - mit Nacht durchlaufen - nur die Temperaturgrenze. ZUSAMMENSPIEL: Beide Geraete duerfen nie gleichzeitig ausgehen. 1) Zuschalten erst, wenn die Fuehrung mindestens input_number.trotec_zelt_zuschalt_verzogerung Minuten laeuft - ist sie aus, startet der Zusatz sofort. 2) Waerme: Der Zusatz geht schon bei sensor.trotec_zelt_folge_aus_temperatur (= sensor.trotec_temp_max_aktiv minus input_number.trotec_zelt_folge_abstand) aus, aber nur, wenn die Fuehrung laeuft; laeuft sie nicht, bleibt er bis zur Grenze an. 3) Wieder an erst unter sensor.trotec_zelt_wieder_ein_temperatur (= Folge-AUS minus input_number.trotec_zelt_wieder_ein_abstand), nach input_number.trotec_zelt_mindestpause. 4) Abschalten wegen VPD/Feuchte nur, wenn die Fuehrung laeuft (mindestens ein Geraet bleibt), und erst nach input_number.trotec_zelt_mindestlaufzeit. Uebertemperatur ueber der Grenze schaltet immer sofort ab. Voraussetzung: sensor.trotec_temp_max_aktiv und die Plan-Sensoren des Entfeuchters; fehlen sie, schaltet die Regelung nicht ein. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - REGELGROESSE (Fassung 2): input_boolean.trotec_vpd_regelung - derselbe Schalter wie beim Fuehrungsgeraet - steht er ausdruecklich auf AUS, regelt der Zusatz auch am TAG nach der Feuchte (sensor.trotec_feuchte_ein_aktiv / _aus_aktiv, dieselben Schwellen wie das Fuehrungsgeraet) statt nach dem VPD; sonst wie bisher. Herkunft: fork-ai/entfeuchter-zusatz/regelung/2.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [
@@ -114,6 +114,11 @@
               "condition": "numeric_state",
               "entity_id": "[[zelt_vpd]]",
               "above": "sensor.trotec_zelt_vpd_aus_schwelle"
+            },
+            {
+              "condition": "template",
+              "alias": "Regelgroesse ist nicht ausdruecklich Luftfeuchte (VPD, oder der Schalter fehlt)",
+              "value_template": "{{ not is_state('input_boolean.trotec_vpd_regelung', 'off') }}"
             }
           ],
           "sequence": [
@@ -165,7 +170,7 @@
           ]
         },
         {
-          "alias": "AUS Tag: Feuchte unter Plan-AUS, wenn der Plan kein VPD-Ziel nennt (nach Mindestlaufzeit, nur wenn die Fuehrung laeuft)",
+          "alias": "AUS Tag: Feuchte unter Plan-AUS, wenn der Plan kein VPD-Ziel nennt oder Luftfeuchte gewaehlt ist (nach Mindestlaufzeit, nur wenn die Fuehrung laeuft)",
           "conditions": [
             {
               "condition": "state",
@@ -174,7 +179,7 @@
             },
             {
               "condition": "or",
-              "alias": "Plan nennt kein VPD-Ziel (oder es gibt keinen VPD-Fuehler)",
+              "alias": "Plan nennt kein VPD-Ziel (oder es gibt keinen VPD-Fuehler), oder die Regelgroesse Luftfeuchte ist gewaehlt",
               "conditions": [
                 {
                   "condition": "template",
@@ -185,6 +190,11 @@
                   "wennNicht": "zelt_vpd",
                   "condition": "template",
                   "value_template": "{{ true }}"
+                },
+                {
+                  "condition": "template",
+                  "alias": "Regelgroesse Luftfeuchte ausdruecklich gewaehlt (input_boolean.trotec_vpd_regelung aus)",
+                  "value_template": "{{ is_state('input_boolean.trotec_vpd_regelung', 'off') }}"
                 }
               ]
             },
@@ -318,6 +328,11 @@
                   }
                 }
               ]
+            },
+            {
+              "condition": "template",
+              "alias": "Regelgroesse ist nicht ausdruecklich Luftfeuchte (VPD, oder der Schalter fehlt)",
+              "value_template": "{{ not is_state('input_boolean.trotec_vpd_regelung', 'off') }}"
             }
           ],
           "sequence": [
@@ -330,7 +345,7 @@
           ]
         },
         {
-          "alias": "EIN Tag: Feuchte ueber Plan-EIN, wenn der Plan kein VPD-Ziel nennt (Mindestpause, kuehl genug, Fuehrung traegt schon oder ist aus)",
+          "alias": "EIN Tag: Feuchte ueber Plan-EIN, wenn der Plan kein VPD-Ziel nennt oder Luftfeuchte gewaehlt ist (Mindestpause, kuehl genug, Fuehrung traegt schon oder ist aus)",
           "conditions": [
             {
               "condition": "state",
@@ -344,7 +359,7 @@
             },
             {
               "condition": "or",
-              "alias": "Plan nennt kein VPD-Ziel (oder es gibt keinen VPD-Fuehler)",
+              "alias": "Plan nennt kein VPD-Ziel (oder es gibt keinen VPD-Fuehler), oder die Regelgroesse Luftfeuchte ist gewaehlt",
               "conditions": [
                 {
                   "condition": "template",
@@ -355,6 +370,11 @@
                   "wennNicht": "zelt_vpd",
                   "condition": "template",
                   "value_template": "{{ true }}"
+                },
+                {
+                  "condition": "template",
+                  "alias": "Regelgroesse Luftfeuchte ausdruecklich gewaehlt (input_boolean.trotec_vpd_regelung aus)",
+                  "value_template": "{{ is_state('input_boolean.trotec_vpd_regelung', 'off') }}"
                 }
               ]
             },

@@ -117,7 +117,9 @@ export function UeberblickTab({ h, z, haupt, zusatz }: Ctx) {
               : `${haupt} springt an, wenn die Feuchte über ${zahl(hl.einAktivProzent)} % steigt.`}
             {a.vpdRegelung && hl.vpdUnten != null && hl.vpdOben != null
               ? ` Schwellen aus dem VPD-Band ${zahl(hl.vpdUnten, 2)}–${zahl(hl.vpdOben, 2)}, EIN gedeckelt von der Plan-Feuchte.`
-              : ' Feste Schwellen (Rückfallebene).'}
+              : a.vpdRegelung
+                ? ' Feste Schwellen (Rückfallebene).'
+                : ' Regelgröße Luftfeuchte: EIN gedeckelt von der Plan-Feuchte.'}
           </p>
         </V1Card>
       </Klappkachel>

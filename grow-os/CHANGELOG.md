@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.191
+
+**Fork AI.** Entfeuchtung: beide Entfeuchter regeln jetzt einheitlich nach Luftfeuchte — keine VPD-Felder mehr bei dem einen und Luftfeuchte beim anderen.
+
+- **Eine Regelgröße für alle:** Im Reiter „Regel" steht oben „Wonach wird geregelt?" — Luftfeuchte (Standard) oder VPD. Die Wahl gilt für Haupt- und Zusatz-Entfeuchter zugleich (derselbe Schalter in Home Assistant).
+- **Luftfeuchte:** Ziel ist die Plan-Obergrenze. Es gibt einen Abstand EIN → AUS in Prozent für alle Geräte; kPa-Felder erscheinen nur bei VPD. Die festen Schwellen bleiben bedienbar und gelten für beide Geräte.
+- **Zusatz-Entfeuchter:** Seine Regelung in Home Assistant (Fassung 2) folgt dem gemeinsamen Schalter: bei Luftfeuchte schaltet er tagsüber nach den gleichen Schwellen wie der Hauptentfeuchter, bei VPD wie bisher nach dem VPD-Ziel. „Schaltgröße" zeigt nur noch, was daraus folgt.
+- **Hinweis:** Die Automation des Zusatzes wird über „Erneuern" (Fassung 1 → 2) aktualisiert; Zusatz und Haupt behalten dabei ihre Schutzwerte.
+
 ## 2.0.0-forkai.190
 
 **Fork AI.** Entfeuchtung: Du sagst jetzt selbst, wie viele Entfeuchter du hast — und die Zeile in der Steuerungs-Übersicht überdeckt sich nicht mehr.

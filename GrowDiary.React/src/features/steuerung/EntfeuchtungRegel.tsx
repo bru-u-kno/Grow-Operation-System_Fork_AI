@@ -12,8 +12,12 @@ import './steuerung.css'
  *
  * Jede Regel steht einmal mit ihrer Erklärung da, darunter dieselben Felder für
  * jedes Gerät. Was nur ein Gerät hat, steht danach in einer eigenen Gruppe
- * („Nur für …"): beim Hauptentfeuchter die Regelart und die Außenluft, beim
- * Zusatz die Hilfsstärke und „Nachts durchlaufen".
+ * („Nur für …"): beim Hauptentfeuchter die Außenluft, beim Zusatz die
+ * Hilfsstärke und „Nachts durchlaufen".
+ *
+ * Die Regelgröße (Luftfeuchte oder VPD) ist ein einziger Schalter und gilt für
+ * alle Geräte; bei Luftfeuchte gibt es nur einen Abstand in %, kPa-Felder
+ * erscheinen nur bei VPD.
  */
 export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
   const he = h.entwurf!
@@ -23,19 +27,43 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
   const zs = z?.seite ?? null
   const zl = zs?.live ?? null
 
+  const vpd = he.vpdRegelung
   const ausSpaetestens = hl.einAktivProzent == null ? null : hl.einAktivProzent - (h.anzeige?.hystereseProzent ?? he.hystereseProzent)
 
   return (
     <>
+      {/* ---------------------------------------------------- Regelgröße */}
+      <RegelKachel
+        titel="Wonach wird geregelt?"
+        zusammenfassung={`${vpd ? 'VPD' : 'Luftfeuchte'} · gilt für ${ze ? 'alle Entfeuchter' : haupt}`}
+        erklaerung="Eine Einstellung für alle Entfeuchter. Luftfeuchte ist der Standard: Ziel ist die Obergrenze aus dem Plan. Bei VPD wandern die Schwellen mit Temperatur und VPD-Band."
+      >
+        <div className="st-feldzeile is-gestapelt">
+          <div className="ef-stufen" role="radiogroup" aria-label="Regelgröße">
+            <button type="button" role="radio" className="st-chip" aria-checked={!vpd} aria-current={!vpd} onClick={() => h.setz('vpdRegelung', false)}>
+              Luftfeuchte
+            </button>
+            <button type="button" role="radio" className="st-chip" aria-checked={vpd} aria-current={vpd} onClick={() => h.setz('vpdRegelung', true)}>
+              VPD
+            </button>
+          </div>
+          <p className="ef-folge">
+            {vpd
+              ? 'Die Schwellen folgen dem VPD-Band aus dem Plan; die Plan-Luftfeuchte deckelt EIN.'
+              : `Ziel ist die Plan-Obergrenze${hl.rhObergrenzeProzent == null ? '' : ` (${zahl(hl.rhObergrenzeProzent, 0)} %)`}. Tag und Nacht gelten dieselben Schwellen, solange du unten keine festen setzt.`}
+          </p>
+        </div>
+      </RegelKachel>
+
       {/* ------------------------------------------------ Wie ruhig schaltet er? */}
       <RegelKachel
         titel="Wie ruhig schaltet er?"
-        zusammenfassung={`${haupt} ${zahl(he.hystereseProzent, 0)} %${ze ? ` · ${zusatz} ${zahl(ze.vpdHystereseKpa, 2)} kPa` : ''}`}
+        zusammenfassung={vpd && ze ? `${haupt} ${zahl(he.hystereseProzent, 0)} % · ${zusatz} ${zahl(ze.vpdHystereseKpa, 2)} kPa` : `${zahl(he.hystereseProzent, 0)} %${ze ? ' · beide gleich' : ''}`}
         erklaerung="Wie weit die Messung vom Ziel abweichen darf, bevor ein Entfeuchter schaltet. Knapp hält den Wert enger, schaltet aber öfter; ruhig schont den Kompressor."
       >
         <div className="st-feldzeile is-gestapelt">
           <span className="st-etikett">
-            {haupt}
+            {vpd || !ze ? haupt : 'Alle Entfeuchter'}
             <small>Abstand EIN → AUS in % Luftfeuchte</small>
             {h.feldFehler.HystereseProzent && <span className="st-fehler">{h.feldFehler.HystereseProzent}</span>}
           </span>
@@ -61,14 +89,14 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
           )}
           <p className="ef-folge">
             Heißt jetzt: EIN ab {zahl(hl.einAktivProzent)} %, AUS spätestens bei {zahl(ausSpaetestens)} %
-            {hl.ausAktivProzent != null && ausSpaetestens != null && hl.ausAktivProzent < ausSpaetestens - 0.05
+            {vpd && hl.ausAktivProzent != null && ausSpaetestens != null && hl.ausAktivProzent < ausSpaetestens - 0.05
               ? ` (liegt das VPD-Ziel tiefer, gilt das: gerade ${zahl(hl.ausAktivProzent)} %)`
               : ''}
             .
           </p>
         </div>
 
-        {z && ze && zl && (
+        {vpd && z && ze && zl && (
           <div className="st-feldzeile is-gestapelt">
             <span className="st-etikett">
               {zusatz}
@@ -139,32 +167,15 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
         {z && ze && <V1Switch label={zusatz} checked={ze.automatikAktiv} onChange={(an) => z.setz('automatikAktiv', an)} />}
       </RegelKachel>
 
-      {/* ------------------------------------------------ Nur Hauptentfeuchter */}
-      <GruppenKopf>Nur für {haupt}</GruppenKopf>
-      <Klappkachel titel="Regelart" zusammenfassung={he.vpdRegelung ? 'nach VPD' : 'feste Schwellen'}>
-        <V1Card>
-          <V1Switch
-            className="ef-schalter"
-            label="Nach VPD regeln"
-            checked={he.vpdRegelung}
-            onChange={(an) => h.setz('vpdRegelung', an)}
-            hint={
-              <>
-                <span className="ef-zeile"><b>An:</b> Die Schwellen wandern selbst mit Temperatur und VPD-Band aus dem Plan.</span>
-                <span className="ef-zeile"><b>Aus:</b> Es gelten die festen Schwellen weiter unten.</span>
-              </>
-            }
-          />
-        </V1Card>
-      </Klappkachel>
       <Klappkachel
         titel="Feste Schwellen"
-        zusammenfassung={he.vpdRegelung ? 'ruhen, solange „Nach VPD regeln" an ist' : `Tag EIN ${zahl(he.feuchteEinTag, 0)} % · AUS ${zahl(he.feuchteAusTag, 0)} %`}
+        zusammenfassung={vpd ? 'ruhen, solange VPD gewählt ist' : `Tag EIN ${zahl(he.feuchteEinTag, 0)} % · AUS ${zahl(he.feuchteAusTag, 0)} %`}
         offen={!he.vpdRegelung}
       >
         <V1Card>
+          <p className="st-hinweis">Gelten für alle Entfeuchter.</p>
           {he.vpdRegelung && (
-            <p className="st-hinweis st-ruht-hinweis">Gerade ohne Wirkung: „Nach VPD regeln" ist an. Diese Werte gelten nur als Rückfallebene — wenn du es ausschaltest oder der Plan keine VPD-Werte liefert. Auch dann deckelt die Plan-Feuchte die EIN-Schwelle.</p>
+            <p className="st-hinweis st-ruht-hinweis">Gerade ohne Wirkung: Die Regelgröße steht auf VPD. Diese Werte gelten nur als Rückfallebene — wenn du auf Luftfeuchte umstellst oder der Plan keine VPD-Werte liefert. Auch dann deckelt die Plan-Feuchte die EIN-Schwelle.</p>
           )}
           <Zahl ruht={he.vpdRegelung} label="Tag · EIN ab" hinweis="Licht an." einheit="%" wert={he.feuchteEinTag} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteEinTag', v)} fehler={h.feldFehler.FeuchteEinTag} />
           <Zahl ruht={he.vpdRegelung} label="Tag · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={he.feuchteAusTag} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteAusTag', v)} fehler={h.feldFehler.FeuchteAusTag} />
@@ -172,6 +183,8 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
           <Zahl ruht={he.vpdRegelung} label="Nacht · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={he.feuchteAusNacht} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteAusNacht', v)} fehler={h.feldFehler.FeuchteAusNacht} />
         </V1Card>
       </Klappkachel>
+      {/* ------------------------------------------------ Nur Hauptentfeuchter */}
+      <GruppenKopf>Nur für {haupt}</GruppenKopf>
       <Klappkachel titel="Außenluft zuerst" zusammenfassung={`${he.wartezeitAussenluftMin} min`} offen={false}>
         <V1Card>
           <Zahl label="Außenluft zuerst" hinweis="Trocknet die Zuluft gerade, wartet er stattdessen so lange — die Außenluft bekommt ihre Chance." einheit="min" wert={he.wartezeitAussenluftMin} min={0} max={120} schritt={1} onChange={(v) => h.setz('wartezeitAussenluftMin', Math.round(v))} fehler={h.feldFehler.WartezeitAussenluftMin} />
@@ -240,7 +253,7 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
             <V1Card>
               <Lesen
                 label="Schaltgröße"
-                hinweis={'VPD-Ziel aus dem Plan. Fehlt es, nimmt der Fork die Plan-Luftfeuchte. Fehlt beides, steht oben „Plan unvollständig".'}
+                hinweis={'Folgt der Regelgröße oben. Bei VPD braucht er ein VPD-Ziel im Plan, sonst nimmt der Fork die Plan-Luftfeuchte.'}
                 wert={zl.schaltgroesse === 'vpd' ? 'VPD' : zl.schaltgroesse === 'feuchte' ? 'Luftfeuchte' : '–'}
               />
               <Lesen label="VPD-Ziel" hinweis={zl.planWoche ?? undefined} wert={zl.vpdZiel == null ? '–' : `${zahl(zl.vpdZiel, 2)} kPa`} />

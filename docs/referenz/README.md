@@ -71,7 +71,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) | Aufgabenseite, Journal und Fotos, Grow MCP, Mappe für eigene KI |
 | [ki-assistent.md](ki-assistent.md) | Fork AI: die eine Stelle für die eigene KI — Verbinden über das eigene Konto, Zugriff & Schlüssel, Mappe |
 | [kosten.md](kosten.md) | Fork AI: Strom aus HA-Zählerständen je Grow und Phase, Verbrauchsartikel mit Nachfüllungen, Laufzeit-Prognose, Kosten je Tag/Pflanze |
-| [entfeuchtung.md](entfeuchtung.md) | Fork AI: Entfeuchter und Zusatz-Entfeuchter — vier Reiter, Farbzonen, Regelart, feste Schwellen, Höchsttemperatur |
+| [entfeuchtung.md](entfeuchtung.md) | Fork AI: Entfeuchter und Zusatz-Entfeuchter — vier Reiter, Farbzonen, Regelgröße Luftfeuchte/VPD, feste Schwellen, Höchsttemperatur |
 | [steuerung.md](steuerung.md) | Fork AI: Leitstand der Regelungen — CO₂-Sollwerte im Fork, Regelung in HA, Ziel fest oder als Prozentstaffel vom Phasenband, Klima-Vorrang, Tagesabschluss in Chronik und Kosten |
 | [geraete.md](geraete.md) | Fork AI: alle benutzten Entitäten nach Gerät sortiert — sechs Quellen eingesammelt, Hierarchie aus dem HA-Geräteregister (Controller und seine Ports), Marke je Verwendung; liest nur |
 

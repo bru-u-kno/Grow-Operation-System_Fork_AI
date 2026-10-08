@@ -404,10 +404,10 @@ public sealed class EntfeuchterZusatzTests
         double? temp = 25.1, double? rh = 55.2, double? vpd = 1.31, bool? tag = true,
         double? vpdUnten = 1.4, double? vpdOben = 1.4, double? feuchteEin = 39, double? feuchteAus = 35,
         string? zusatz = "on", double? leistung = 313, string? fuehrung = "On", bool? automatik = true,
-        (string, double, double)? plan = null, bool ha = true, int? anSeitMin = 30, double? rhMax = null)
+        (string, double, double)? plan = null, bool ha = true, int? anSeitMin = 30, double? rhMax = null, bool? vpdRegelung = null)
         => new(ha, "RDWC Dehumi", "Dehumi RDWC Tent", plan, temp, rh, vpd, tag, vpdUnten, vpdOben, feuchteEin, feuchteAus,
             zusatz, leistung, 2.9, fuehrung, automatik,
-            ZusatzSeitUtc: anSeitMin is { } m ? Jetzt.AddMinutes(-m) : null, JetztUtc: Jetzt, RhObergrenzeProzent: rhMax);
+            ZusatzSeitUtc: anSeitMin is { } m ? Jetzt.AddMinutes(-m) : null, JetztUtc: Jetzt, RhObergrenzeProzent: rhMax, VpdRegelung: vpdRegelung);
 
     private static EntfeuchterZusatzEinstellungen Bru() => new()
     {
@@ -428,6 +428,29 @@ public sealed class EntfeuchterZusatzTests
         Assert.Equal((39.0, 35.0), (live.FeuchteEinProzent, live.FeuchteAusProzent));
         Assert.False(live.PlanUnvollstaendig);
         Assert.Equal(("RDWC Dehumi", "Dehumi RDWC Tent"), (live.FuehrungName, live.ZusatzName));
+    }
+
+    [Fact]
+    public void Livebild_FolgtDerRegelgroesseDesEntfeuchters_LuftfeuchteGewaehltHeisstAuchTagsFeuchte()
+    {
+        // A-015: Steht „Nach VPD regeln" des Entfeuchters ausdrücklich auf aus, regelt der Zusatz auch am Tag nach der Feuchte.
+        var feuchte = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdRegelung: false));
+        Assert.Equal(EntfeuchterZusatzSchaltgroesse.Feuchte, feuchte.Schaltgroesse);
+        Assert.Null(feuchte.VpdZiel);
+        Assert.False(feuchte.VpdRegelung);
+        Assert.False(feuchte.PlanUnvollstaendig);
+
+        // An, unbekannt oder fehlender Schalter: wie bisher VPD — ein fehlender Helfer schaltet nichts um.
+        foreach (bool? stand in new bool?[] { true, null })
+        {
+            var vpd = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdRegelung: stand));
+            Assert.Equal(EntfeuchterZusatzSchaltgroesse.Vpd, vpd.Schaltgroesse);
+            Assert.Equal(1.4, vpd.VpdZiel);
+        }
+
+        // Ohne Feuchte-Schwellen und ohne VPD-Wunsch gibt es keine Größe — „Plan unvollständig" bleibt möglich.
+        var keine = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdRegelung: false, feuchteEin: null, feuchteAus: null));
+        Assert.Equal(EntfeuchterZusatzSchaltgroesse.Keine, keine.Schaltgroesse);
     }
 
     [Fact]
@@ -709,7 +732,7 @@ public sealed class EntfeuchterZusatzTests
         // „entfeuchter-zusatz" hat einen Bindestrich; das Muster der Herkunftsmarke liess ihn früher nicht zu —
         // die Fassung der Vorlage wäre null gewesen, und eine Erneuerung nie angeboten worden.
         Assert.Equal(3, SteuerungAutomationService.Fassung("... Herkunft: fork-ai/entfeuchter-zusatz/regelung/3."));
-        Assert.Equal(1, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "regelung"));
+        Assert.Equal(2, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "regelung"));
         Assert.Equal(2, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "meldung"));
     }
 

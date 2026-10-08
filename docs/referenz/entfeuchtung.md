@@ -12,7 +12,7 @@
 | Reiter | Inhalt |
 |---|---|
 | **Überblick** | Nur zum Lesen: Lagemeldung (im Ziel, knapp daneben, deutlich daneben), Messwerte und Zonen einmal fürs Zelt, die Geräte mit ihrem Status (läuft · aus · wartet · offline), „Warum läuft welches Gerät?", die Erklärung der Zusammenarbeit |
-| **Regel** | Nach Regeln geordnet: „Wie ruhig schaltet er?", „Einschalten erst nach", „Auch tagsüber entfeuchten", „Automatik" — je Regel dieselben Felder für jedes Gerät. Danach „Nur für …": beim Hauptentfeuchter Regelart, feste Schwellen, Außenluft; beim Zusatz Hilfsstärke, Schaltgröße, Nachts durchlaufen |
+| **Regel** | Nach Regeln geordnet: „Wie ruhig schaltet er?", „Einschalten erst nach", „Auch tagsüber entfeuchten", „Automatik" — je Regel dieselben Felder für jedes Gerät. Davor steht „Wonach wird geregelt?" (Luftfeuchte oder VPD, EINE Einstellung für alle) und danach die festen Schwellen (für alle). Dann „Nur für …": beim Hauptentfeuchter Außenluft und Plan-Werte; beim Zusatz Hilfsstärke, Schaltgröße, Nachts durchlaufen |
 | **Schutz** | Höchsttemperatur Tag/Nacht einmal für alle, Mindestlaufzeit je Gerät, beim Zusatz früher aus/später wieder an, Mindestpause, Meldung „zieht nichts" |
 | **Einrichtung** | Wie viele Entfeuchter du hast (Zusatz an- oder abwählen, sofort gespeichert), wie sie arbeiten, Zuordnung der Geräte |
 
@@ -32,18 +32,22 @@ Der Messpunkt auf der Skala, die große Zahl und die Lagemeldung zeigen die Zone
 - **knapp daneben** (orange): Luftfeuchte bis 4 Prozentpunkte über dem Ziel; Temperatur bis zur Höchsttemperatur.
 - **deutlich daneben** (rot): darüber. Über der Höchsttemperatur sind alle Entfeuchter aus.
 
-## „Nach VPD regeln" und die festen Schwellen
+## Regelgröße: Luftfeuchte oder VPD — für alle Entfeuchter gleich
 
-Ist **Nach VPD regeln** an, wandern die Schwellen selbst mit Temperatur und VPD-Band aus dem Plan. Die vier **festen
-Schwellen** (Tag/Nacht, EIN ab / AUS unter) haben dann keine Wirkung: Sie stehen blass und gesperrt da und gelten nur als
-Rückfallebene. Das „Wie ruhig schaltet er?" gibt es in beiden Regelarten.
+Im Reiter Regel steht oben **Wonach wird geregelt?** mit zwei Wahlen. Sie gilt für Haupt- und Zusatz-Entfeuchter zugleich
+(derselbe Schalter `input_boolean.trotec_vpd_regelung` in Home Assistant; ab Fassung 2 der Zusatz-Regelung folgt auch der Zusatz ihm).
+
+- **Luftfeuchte** (Standard): Ziel ist die Plan-Obergrenze der Luftfeuchte. Es gibt EINEN Abstand EIN → AUS in Prozent für alle
+  Geräte; kPa-Felder erscheinen nicht. Die vier **festen Schwellen** (Tag/Nacht) sind bedienbar; die Plan-Feuchte deckelt EIN.
+- **VPD**: Die Schwellen wandern mit Temperatur und VPD-Band aus dem Plan. Dann gibt es den Abstand in % (Haupt) und in kPa (Zusatz);
+  die festen Schwellen stehen blass und gesperrt als Rückfallebene.
 
 ## Die Zahlen und woher sie kommen
 
 - **Ziel der Luftfeuchte:** die Plan-Obergrenze der Luftfeuchte (ohne Plan die Schwelle EIN); „knapp daneben" endet 4 Prozentpunkte darüber.
 - **Höchsttemperatur:** Plan-Luft + Abstand oder fester Wert (Reiter Schutz) — dieselbe Zahl für alle Entfeuchter.
 - **EIN/AUS-Schwellen, VPD-Ziel, Plan-Werte:** aus dem Plan und den Helfern in Home Assistant; die Seite zeigt sie nur.
-- **Abstand „Wie ruhig":** beim Hauptentfeuchter in Prozent Luftfeuchte, beim Zusatz in kPa VPD — dieselben Stufen (knapp, normal, ruhig), die Einheit gehört zum Gerät.
+- **Abstand „Wie ruhig":** bei Luftfeuchte ein Wert in Prozent für alle Geräte; nur bei VPD zusätzlich beim Zusatz in kPa (Stufen knapp, normal, ruhig).
 
 ## Was es bewusst NICHT tut
 
@@ -51,7 +55,7 @@ Rückfallebene. Das „Wie ruhig schaltet er?" gibt es in beiden Regelarten.
 - „Getrennt" (jeder Entfeuchter regelt sich selbst) und mehr als zwei Entfeuchter gibt es noch nicht; sie brauchen eine zweite Regelvariante in Home Assistant (Aufgabe A-015, Stufen 2 und 3).
 - Es gibt noch keine Vorrang-Einstellung „Feuchte vor Temperatur" (Aufgabe A-013).
 - Der Verlauf der letzten Stunden steht im Überblick noch nicht.
-- Die festen Schwellen wirken nicht, solange „Nach VPD regeln" an ist.
+- Die festen Schwellen wirken nicht, solange die Regelgröße VPD gewählt ist.
 
 ## Im Code
 

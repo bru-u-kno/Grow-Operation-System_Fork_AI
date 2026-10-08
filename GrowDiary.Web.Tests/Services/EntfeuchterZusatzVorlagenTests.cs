@@ -215,8 +215,9 @@ public sealed class EntfeuchterZusatzVorlagenTests
         // … und dort gilt sie IMMER (ohne Fühler gibt es keine VPD-Regelung); mit Fühler nur, wenn der Plan kein VPD-Ziel nennt.
         var oderMit = Assert.Single(Objekte(feuchteMit["conditions"]), c => c["condition"]?.ToString() == "or" && c["alias"]?.ToString()?.StartsWith("Plan nennt kein VPD-Ziel", StringComparison.Ordinal) == true);
         var oderOhne = Assert.Single(Objekte(feuchteOhne["conditions"]), c => c["condition"]?.ToString() == "or" && c["alias"]?.ToString()?.StartsWith("Plan nennt kein VPD-Ziel", StringComparison.Ordinal) == true);
-        Assert.Single(oderMit["conditions"]!.AsArray());
-        Assert.Equal(2, oderOhne["conditions"]!.AsArray().Count);
+        // Plan-Bedingung + Schalter „Luftfeuchte gewählt"; ohne Fühler kommt die Dauer-Wahr-Bedingung dazu.
+        Assert.Equal(2, oderMit["conditions"]!.AsArray().Count);
+        Assert.Equal(3, oderOhne["conditions"]!.AsArray().Count);
     }
 
     [Fact]
@@ -472,5 +473,36 @@ public sealed class EntfeuchterZusatzVorlagenTests
         // Mengenwächter: die Regelung und ihre Helfer bleiben (6 Zahlen, 2 Schalter, 4 Rechenwerte, 1 Automation).
         Assert.Equal(13, ohne.Count);
         Assert.Contains("automation.rdwc_trotec_zelt_shelly_plan_regelung", ohne);
+    }
+
+    /// <summary>
+    /// A-015 (Fassung 2): Die Regelgröße ist ein Schalter, derselbe wie beim Entfeuchter. Die zwei VPD-Zweige
+    /// gelten nur, wenn er NICHT ausdrücklich aus ist; die zwei Feuchte-Zweige am Tag auch dann, wenn er aus ist.
+    /// Geprüft an der gefüllten Vorlage — die Beschreibung allein beweist nichts.
+    /// </summary>
+    [Fact]
+    public void Regelgroesse_SchalterEntscheidetTagsZwischenVpdUndFeuchte()
+    {
+        var regelung = Gefuellt("regelung");
+        const string Schalter = "input_boolean.trotec_vpd_regelung";
+        var zweige = Zweige(regelung);
+
+        var vpdZweige = zweige.Where(z => z["alias"]!.ToString().StartsWith("AUS Tag: VPD") || z["alias"]!.ToString().StartsWith("EIN Tag: VPD")).ToList();
+        Assert.Equal(2, vpdZweige.Count);
+        foreach (var z in vpdZweige)
+        {
+            Assert.Contains(Objekte(z["conditions"]), o => o["value_template"]?.ToString().Contains($"not is_state('{Schalter}', 'off')") == true);
+        }
+
+        var feuchteZweige = zweige.Where(z => z["alias"]!.ToString().Contains("Feuchte") && z["alias"]!.ToString().Contains("kein VPD-Ziel")).ToList();
+        Assert.Equal(2, feuchteZweige.Count);
+        foreach (var z in feuchteZweige)
+        {
+            var oder = Objekte(z["conditions"]).First(o => o["condition"]?.ToString() == "or");
+            Assert.Contains(((JsonArray)oder["conditions"]!).Cast<JsonObject>(), c => c["value_template"]?.ToString().Contains($"is_state('{Schalter}', 'off')") == true);
+        }
+
+        // Die Fassung steht in der Beschreibung — sonst aktualisiert der Fork die Automation in Home Assistant nie.
+        Assert.Equal(2, SteuerungAutomationService.Fassung(regelung["description"]!.ToString()));
     }
 }

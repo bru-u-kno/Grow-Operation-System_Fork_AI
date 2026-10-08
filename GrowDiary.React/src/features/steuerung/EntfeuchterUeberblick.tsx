@@ -118,7 +118,7 @@ export function Zusammenspiel({ haupt, zusatz, tempMax, abstaende }: {
     <Klappkachel titel="So arbeiten die beiden Entfeuchter zusammen" offen={false}>
       <V1Card>
         <div className="ef-regelart">
-          <p><b>{haupt} führt.</b> Er schaltet nach Luftfeuchte oder VPD; die Schwellen kommen aus dem Plan.</p>
+          <p><b>{haupt} führt.</b> Beide regeln nach derselben Größe (Luftfeuchte oder VPD, einstellbar im Reiter Regel); die Schwellen kommen aus dem Plan.</p>
           <p><b>{zusatz} hilft.</b> Er springt zu, wenn {haupt} eine Weile läuft, und geht früher wieder aus. Er steht im Zelt und gibt Wärme ab.</p>
           <p>
             <b>Zu warm: beide aus.</b> Über {zahl(tempMax)} °C geht {haupt} aus

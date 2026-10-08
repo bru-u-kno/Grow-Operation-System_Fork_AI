@@ -362,6 +362,8 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
     [Fact]
     public async Task Livebild_RechnetMitBrusWerten()
     {
+        // Brus Stand: Regelgröße VPD (der Prüfstand steht sonst auf Luftfeuchte).
+        _stand.Setze(EntfeuchterSteuerungService.Entitaeten.VpdRegelung, "on");
         var live = await _stand.Zusatz().LiveAsync(CancellationToken.None);
 
         Assert.True(live.HaErreichbar);

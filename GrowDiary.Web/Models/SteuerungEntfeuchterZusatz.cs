@@ -240,7 +240,9 @@ public sealed record EntfeuchterZusatzLive(
     bool PlanUnvollstaendig,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool? AutomatikAn,
     /// <summary>A-014: Obergrenze der Luftfeuchte aus dem Plan — dasselbe Ziel wie auf der Seite des Hauptentfeuchters, damit beide Seiten dieselbe Zone zeigen.</summary>
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] double? RhObergrenzeProzent = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] double? RhObergrenzeProzent = null,
+    /// <summary>A-015: Die Regelgröße des Entfeuchters („Nach VPD regeln"): true = VPD, false = Luftfeuchte, null = unbekannt. Der Zusatz folgt ihr.</summary>
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool? VpdRegelung = null);
 
 public sealed record EntfeuchterZusatzSeiteDto(EntfeuchterZusatzEinstellungen Einstellungen, EntfeuchterZusatzLive Live)
 {

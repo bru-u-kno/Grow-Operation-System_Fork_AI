@@ -105,9 +105,8 @@ test('Entfeuchter: ein leeres Feld in den zugeklappten festen Schwellen wird gez
   await seiteLaden(page, '/steuerung/entfeuchtung', 'Regel')
 
   await reiter(page, 'Regel').click()
-  // A-014: bei „Nach VPD regeln" sind die festen Schwellen gesperrt — erst ausschalten, dann bearbeiten.
-  const schalter = page.getByLabel('Nach VPD regeln')
-  if (await schalter.isChecked()) await schalter.uncheck()
+  // A-014: bei Regelgröße VPD sind die festen Schwellen gesperrt — erst auf Luftfeuchte stellen, dann bearbeiten.
+  await page.getByRole('radio', { name: 'Luftfeuchte', exact: true }).click()
   const kopf = page.locator('.st-kk-kopf', { hasText: 'Feste Schwellen' })
   if ((await kopf.getAttribute('aria-expanded')) === 'false') await kopf.click()
   await expect(kopf).toHaveAttribute('aria-expanded', 'true')
