@@ -279,11 +279,20 @@ eine Doppelung, die bei zwei Browsern rund 20 Minuten kostet. Seit dem
   die betroffenen Spezifikationen — die, die die geänderte Seite, den
   geänderten Text oder die geänderte Route lesen, dazu die Querschnitte, die
   jede Seite messen und die Änderung berühren können (`worttrennung`,
-  `rohe-enums`, `handy-zuschnitt`, `zellen-kollision`, `deutsche-zahlen`).
+  `rohe-enums`, `handy-zuschnitt`, `zellen-kollision`, `deutsche-zahlen`,
+  `wegweiser`, `kontrast`).
   Welche das sind, per Suche nach Route, `data-audit` und Text ermitteln.
 - **Voll lokal** nach dem Zusammenführen mehrerer Arbeitsstränge, bei Umbauten
   über viele Seiten und bei allem, was Layout, Thema oder Navigation global
   ändert.
+  **Neue Seite, neuer Menüpunkt, geänderte Überschrift/Kopfzeile oder geändertes
+  gemeinsames CSS** gehören dazu: am 07.10.2026 ging A-014 (neuer Menüpunkt
+  „Entfeuchtung“) mit fünf roten Fällen ins Tor (`wegweiser`: Überschrift muss
+  wie der Menüpunkt heißen, Kopfzeile die Gruppe nennen; `kontrast`: eine Zahl auf
+  dem Messpunkt las sich als Schrift auf Schriftfarbe) — die gezielte Auswahl hatte
+  beide Querschnitte nicht dabei. Chromium allein läuft voll in rund 6 Minuten,
+  ein rotes Release kostet mehr. `verlaufsdiagramm` (Zeitzonen-Fall) ist auf der
+  VM wegen deren Zeitzone immer rot und kein Befund.
 - **Immer:** vor dem Release-Branch das Tor am Arbeitsbranch grün ansehen. Ein
   rotes Tor ist kein „nur E2E" — es ist der volle Lauf, den man lokal gespart
   hat.

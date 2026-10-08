@@ -400,9 +400,11 @@ export type EntfeuchterSeite = {
   geraeteGesamt: number
 }
 
-export type EntfeuchterReiter = 'regel' | 'schutz' | 'betrieb'
+/** A-014: beide Entfeuchter-Seiten haben dieselben vier Reiter. */
+export type EntfeuchterReiter = 'ueberblick' | 'regel' | 'schutz' | 'betrieb'
 
 export const ENTFEUCHTER_REITER: Array<{ value: EntfeuchterReiter; label: string }> = [
+  { value: 'ueberblick', label: 'Überblick' },
   { value: 'regel', label: 'Regel' },
   { value: 'schutz', label: 'Schutz' },
   { value: 'betrieb', label: 'Betrieb' },
@@ -482,6 +484,8 @@ export type EntfeuchterZusatzLive = {
   fuehrungAn: boolean | null
   ziehtNichts: boolean | null
   planUnvollstaendig: boolean | null
+  /** A-014: Obergrenze der Luftfeuchte aus dem Plan — das Ziel der Zonen, wie beim Hauptentfeuchter. */
+  rhObergrenzeProzent?: number | null
   automatikAn: boolean | null
 }
 

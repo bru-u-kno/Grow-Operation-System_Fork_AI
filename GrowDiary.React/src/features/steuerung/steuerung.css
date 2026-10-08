@@ -190,10 +190,11 @@
   .ef-zone { position: absolute; right: 0; top: var(--s-4); height: var(--s-2); background: var(--accent-wash); border-top: 1px solid var(--accent-dim); border-bottom: 1px solid var(--accent-dim); }
   .ef-strich { position: absolute; top: var(--s-2); width: 2px; height: calc(var(--s-5) + var(--s-1)); background: var(--muted); }
   .ef-strich.is-deckel { background: var(--warn); }
-  .ef-ist {
-    position: absolute; top: calc(var(--s-2) + 2px); width: calc(var(--s-5)); height: calc(var(--s-5));
-    margin-left: calc(var(--s-5) / -2); border-radius: 50%; background: var(--accent); border: 3px solid var(--bg);
-  }
+  /* A-014: Der Punkt wird als ::before gemalt, nicht als Hintergrund des Elements. Die Zahl darüber (em)
+     liegt auf der Karte, nicht auf dem Punkt — als Hintergrund des Elternteils sah die Kontrastmessung sie
+     fälschlich auf der Punktfarbe (Schrift = Fläche, Kontrast 1,0). */
+  .ef-ist { position: absolute; top: calc(var(--s-2) + 2px); width: calc(var(--s-5)); height: calc(var(--s-5)); margin-left: calc(var(--s-5) / -2); }
+  .ef-ist::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--punkt, var(--accent)); border: 3px solid var(--bg); box-sizing: border-box; }
   .ef-ist em {
     position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%);
     font-style: normal; font-family: var(--font-mono); font-size: var(--fs-klein); color: var(--accent-text); white-space: nowrap;
@@ -272,7 +273,7 @@
   .ez-zone.is-aus { background: var(--warn-wash); border: 1px solid var(--warn); }
   .ef-strich.is-ziel { background: var(--faint); height: calc(var(--s-4) - var(--s-1)); top: calc(var(--s-4) - 1px); }
   .ef-strich.is-max { background: var(--warn); }
-  .ef-ist.is-warm { background: var(--warn); }
+  .ef-ist.is-warm { --punkt: var(--warn); }
   .ef-ist.is-warm em { color: var(--warn-text); }
   .ef-zustand b.is-warn { color: var(--warn-text); }
 
@@ -284,4 +285,56 @@
   .ez-namen-zeile { display: flex; align-items: center; gap: var(--s-2); }
   .ez-namen-zeile .v1-button { flex: 0 0 auto; }
   .ez-namen-zeile input { flex: 1 1 auto; min-width: 0; }
+
+  /* --- A-014: einklappbare Kacheln und Zonenfarben --- */
+  .st-kk > .v1-section-head { padding: 0; }
+  .st-kk > .v1-section-head h2 { flex: 1 1 auto; }
+  .st-kk-kopf {
+    display: flex; align-items: baseline; gap: var(--s-3); width: 100%; min-height: 40px; padding: var(--s-2) var(--s-4);
+    border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer;
+  }
+  .st-kk-titel { flex: 0 1 auto; }
+  .st-kk-zus { flex: 1 1 auto; min-width: 0; font: 400 var(--fs-klein)/1.3 var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--faint); }
+  .st-kk-kopf .ef-klapp-zeichen { margin-left: auto; font: 400 var(--fs-klein)/1 var(--font-sans); letter-spacing: 0; text-transform: none; }
+  .st-kk > .st-kk-body[hidden] { display: none; }
+  .st-kk:has(.st-fehler) > .st-kk-body[hidden] { display: block; }
+  .st-kk-ablage { display: flex; justify-content: flex-end; gap: var(--s-2); margin-bottom: var(--s-2); }
+
+  .ez-farbe { position: absolute; top: 0; bottom: 0; }
+  .ez-farbe.is-ziel { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .ez-farbe.is-knapp { background: color-mix(in srgb, var(--warn) 65%, transparent); }
+  .ez-farbe.is-kritisch { background: color-mix(in srgb, var(--danger) 60%, transparent); }
+  .ef-bahn.hat-zonen { overflow: hidden; }
+  .ef-ist.is-knapp { --punkt: var(--warn); }
+  .ef-ist.is-knapp em, .ef-gross.is-knapp { color: var(--warn-text); }
+  .ef-ist.is-kritisch { --punkt: var(--danger); }
+  .ef-ist.is-kritisch em, .ef-gross.is-kritisch { color: var(--danger-text); }
+  .ef-zustand b.is-kritisch { color: var(--danger-text); }
+  .ef-legende { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); margin: var(--s-3) var(--s-3) 0; font-size: var(--fs-klein); color: var(--faint); }
+  .ef-legende span { white-space: nowrap; }
+  .ef-legende i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: var(--s-1); }
+  .ef-legende i.is-ziel { background: var(--accent); }
+  .ef-legende i.is-knapp { background: var(--warn); }
+  .ef-legende i.is-kritisch { background: var(--danger); }
+  .ef-kopf + .ef-skala { margin-top: var(--s-4); }
+  .ef-block + .ef-block { margin-top: var(--s-5); }
+
+  /* Felder, die gerade ohne Wirkung sind: sichtbar, aber blass und gesperrt. */
+  .st-feldzeile.is-ruht { opacity: .45; }
+  .st-feldzeile.is-ruht input { cursor: not-allowed; background: var(--sunk); }
+  .st-ruht-hinweis { margin: 0 0 var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: var(--accent-wash); }
+  .ef-folge { margin: var(--s-3) 0 0; padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: var(--accent-wash); font-size: var(--fs-klein); color: var(--muted); }
+  .ef-ruhig .ef-stufen { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); margin-top: var(--s-3); }
+  .ef-ruhig .st-chip { justify-content: center; width: 100%; }
+  .v1-switch.ef-schalter { background: none; border: 0; padding: 0; gap: var(--s-3); align-items: flex-start; }
+  .v1-switch.ef-schalter strong { font-size: var(--fs-gross); }
+  .v1-switch.ef-schalter small { font-size: var(--fs-text); }
+  .v1-switch.ef-schalter small .ef-zeile { display: block; margin-top: var(--s-1); }
+  .ef-regelart { display: flex; flex-direction: column; gap: var(--s-1); }
+  .ef-regelart p { margin: 0; font-size: var(--fs-text); color: var(--muted); }
+  .ef-regelart b { color: var(--ink); font-weight: 600; }
+  .ef-gruppe { margin: var(--s-5) 0 var(--s-1); }
+  /* Eine Marke ist Zahl + Wort, rund 34 px hoch: die zweite Zeile liegt darunter. */
+  .ef-marken.ist-gestaffelt { height: 74px; }
+  .ef-marken span.is-tief { top: 38px; }
 }

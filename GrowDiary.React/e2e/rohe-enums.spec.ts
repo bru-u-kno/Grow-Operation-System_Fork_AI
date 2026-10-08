@@ -102,13 +102,20 @@ test('die Grundmenge ist da', () => {
   expect(erfunden, `Diese Ausnahmen sind keine Enum-Werte: ${erfunden.join(', ')}`).toEqual([])
 })
 
+/**
+ * Wochentagskürzel stehen in Kalendern und Diagrammen — und „Do“ (Donnerstag) heißt auch ein Enum-Wert
+ * (gelöster Sauerstoff). Der Treffer hängt dann am Wochentag: am Donnerstag 08.10.2026 war die Live-Seite rot, an jedem
+ * anderen Tag wäre eine Ausnahme in ERLAUBT „unbelegt". Deshalb zählen diese Kürzel nicht als roher Enum-Wert.
+ */
+const KALENDERKUERZEL = new Set(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'])
+
 async function roheWerte(page: Page): Promise<string[]> {
   const text = await page.evaluate(() =>
     (document.querySelector('main') as HTMLElement | null)?.innerText || '')
 
   const gefunden: string[] = []
   for (const [wert, typ] of WERTE) {
-    if (wert in ERLAUBT) continue
+    if (wert in ERLAUBT || KALENDERKUERZEL.has(wert)) continue
     if (!new RegExp(`(?<![\\w-])${wert}(?![\\w-])`).test(text)) continue
     gefunden.push(`${wert} (${typ})`)
   }

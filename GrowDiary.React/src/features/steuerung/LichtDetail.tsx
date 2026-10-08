@@ -1,3 +1,4 @@
+import { SteuerungWechsel } from './SteuerungWechsel'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
@@ -172,23 +173,8 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
       title="Licht LED Top"
       subtitle="AC-Infinity-Controller · Zeitplan läuft im Gerät"
       action={geaendert ? <V1Button variant="primary" onClick={speichern} disabled={arbeitet}>{arbeitet ? 'Speichert …' : 'Speichern'}</V1Button> : undefined}
+      vorKopf={<SteuerungWechsel module={module} aktiv={aktiv} onWechsel={onWechsel} />}
     >
-      <div className="st-wechsel" role="tablist" aria-label="Steuerung wechseln">
-        {module.map((m) => (
-          <button
-            key={m.kennung}
-            type="button"
-            role="tab"
-            className="st-chip"
-            aria-current={m.kennung === aktiv}
-            disabled={!m.hatDetail}
-            onClick={() => onWechsel(m.kennung)}
-          >
-            <i className={m.status === 'an' ? 'is-an' : m.status === 'warn' ? 'is-warn' : ''} aria-hidden="true" />
-            {m.titel}
-          </button>
-        ))}
-      </div>
 
       <div className="st-geraete-zeile">
         <span>

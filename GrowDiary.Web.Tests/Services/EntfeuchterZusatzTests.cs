@@ -404,10 +404,10 @@ public sealed class EntfeuchterZusatzTests
         double? temp = 25.1, double? rh = 55.2, double? vpd = 1.31, bool? tag = true,
         double? vpdUnten = 1.4, double? vpdOben = 1.4, double? feuchteEin = 39, double? feuchteAus = 35,
         string? zusatz = "on", double? leistung = 313, string? fuehrung = "On", bool? automatik = true,
-        (string, double, double)? plan = null, bool ha = true, int? anSeitMin = 30)
+        (string, double, double)? plan = null, bool ha = true, int? anSeitMin = 30, double? rhMax = null)
         => new(ha, "RDWC Dehumi", "Dehumi RDWC Tent", plan, temp, rh, vpd, tag, vpdUnten, vpdOben, feuchteEin, feuchteAus,
             zusatz, leistung, 2.9, fuehrung, automatik,
-            ZusatzSeitUtc: anSeitMin is { } m ? Jetzt.AddMinutes(-m) : null, JetztUtc: Jetzt);
+            ZusatzSeitUtc: anSeitMin is { } m ? Jetzt.AddMinutes(-m) : null, JetztUtc: Jetzt, RhObergrenzeProzent: rhMax);
 
     private static EntfeuchterZusatzEinstellungen Bru() => new()
     {
@@ -428,6 +428,14 @@ public sealed class EntfeuchterZusatzTests
         Assert.Equal((39.0, 35.0), (live.FeuchteEinProzent, live.FeuchteAusProzent));
         Assert.False(live.PlanUnvollstaendig);
         Assert.Equal(("RDWC Dehumi", "Dehumi RDWC Tent"), (live.FuehrungName, live.ZusatzName));
+    }
+
+    [Fact]
+    public void Livebild_ReichtDiePlanObergrenzeDerLuftfeuchteDurch_SonstNull()
+    {
+        // A-014: Beide Entfeuchter-Seiten messen die Zone der Feuchte am selben Ziel — der Plan-Obergrenze.
+        Assert.Equal(51.0, EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(rhMax: 51)).RhObergrenzeProzent);
+        Assert.Null(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang()).RhObergrenzeProzent);
     }
 
     [Fact]

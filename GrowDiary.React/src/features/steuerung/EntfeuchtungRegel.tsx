@@ -1,0 +1,268 @@
+import { V1Card, V1LinkButton, V1Switch } from '../../components/v1'
+import { HYSTERESE_STUFEN, zahl } from './entfeuchter-band'
+import { HILFE_STUFEN, VPD_STUFEN, fehlerZu, gleich, hilfeText, hilfeWaehlen } from './entfeuchter-zusatz'
+import { Klappkachel } from './Klappkachel'
+import { GruppenKopf, Lesen, RegelKachel } from './EntfeuchtungBausteine'
+import type { Ctx } from './EntfeuchtungBausteine'
+import { Zahl } from './SteuerungsFelder'
+import './steuerung.css'
+
+/**
+ * Fork AI (A-015): Reiter „Regel" — nach Regeln geordnet, nicht nach Geräten.
+ *
+ * Jede Regel steht einmal mit ihrer Erklärung da, darunter dieselben Felder für
+ * jedes Gerät. Was nur ein Gerät hat, steht danach in einer eigenen Gruppe
+ * („Nur für …"): beim Hauptentfeuchter die Regelart und die Außenluft, beim
+ * Zusatz die Hilfsstärke und „Nachts durchlaufen".
+ */
+export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
+  const he = h.entwurf!
+  const hs = h.seite!
+  const hl = hs.live
+  const ze = z?.entwurf ?? null
+  const zs = z?.seite ?? null
+  const zl = zs?.live ?? null
+
+  const ausSpaetestens = hl.einAktivProzent == null ? null : hl.einAktivProzent - (h.anzeige?.hystereseProzent ?? he.hystereseProzent)
+
+  return (
+    <>
+      {/* ------------------------------------------------ Wie ruhig schaltet er? */}
+      <RegelKachel
+        titel="Wie ruhig schaltet er?"
+        zusammenfassung={`${haupt} ${zahl(he.hystereseProzent, 0)} %${ze ? ` · ${zusatz} ${zahl(ze.vpdHystereseKpa, 2)} kPa` : ''}`}
+        erklaerung="Wie weit die Messung vom Ziel abweichen darf, bevor ein Entfeuchter schaltet. Knapp hält den Wert enger, schaltet aber öfter; ruhig schont den Kompressor."
+      >
+        <div className="st-feldzeile is-gestapelt">
+          <span className="st-etikett">
+            {haupt}
+            <small>Abstand EIN → AUS in % Luftfeuchte</small>
+            {h.feldFehler.HystereseProzent && <span className="st-fehler">{h.feldFehler.HystereseProzent}</span>}
+          </span>
+          <div className="ef-stufen" role="radiogroup" aria-label={`Abstand EIN → AUS, ${haupt}`}>
+            {HYSTERESE_STUFEN.map((s) => (
+              <button
+                key={s.wert} type="button" role="radio" className="st-chip"
+                aria-checked={!h.eigeneHysterese && he.hystereseProzent === s.wert}
+                aria-current={!h.eigeneHysterese && he.hystereseProzent === s.wert}
+                onClick={() => { h.setEigeneHysterese(false); h.setz('hystereseProzent', s.wert) }}
+              >
+                {s.label} · {s.wert} %
+              </button>
+            ))}
+            <button type="button" role="radio" className="st-chip" aria-checked={h.eigeneHysterese} aria-current={h.eigeneHysterese} onClick={() => h.setEigeneHysterese(true)}>
+              eigener Wert
+            </button>
+          </div>
+          {h.eigeneHysterese && (
+            <div className="ef-unterfeld">
+              <Zahl label={`Eigener Abstand, ${haupt}`} hinweis="1 bis 10 %." einheit="%" wert={he.hystereseProzent} min={1} max={10} schritt={0.5} onChange={(v) => h.setz('hystereseProzent', v)} />
+            </div>
+          )}
+          <p className="ef-folge">
+            Heißt jetzt: EIN ab {zahl(hl.einAktivProzent)} %, AUS spätestens bei {zahl(ausSpaetestens)} %
+            {hl.ausAktivProzent != null && ausSpaetestens != null && hl.ausAktivProzent < ausSpaetestens - 0.05
+              ? ` (liegt das VPD-Ziel tiefer, gilt das: gerade ${zahl(hl.ausAktivProzent)} %)`
+              : ''}
+            .
+          </p>
+        </div>
+
+        {z && ze && zl && (
+          <div className="st-feldzeile is-gestapelt">
+            <span className="st-etikett">
+              {zusatz}
+              <small>Abstand in kPa VPD, rechts und links vom Plan-Ziel</small>
+              {fehlerZu(z.feldFehler, 'vpdHystereseKpa') && <span className="st-fehler">{fehlerZu(z.feldFehler, 'vpdHystereseKpa')}</span>}
+            </span>
+            <div className="ef-stufen" role="radiogroup" aria-label={`VPD-Abstand, ${zusatz}`}>
+              {VPD_STUFEN.map((s) => {
+                const an = !z.eigeneHysterese && gleich(ze.vpdHystereseKpa, s.wert)
+                return (
+                  <button
+                    key={s.wert} type="button" role="radio" className="st-chip" aria-checked={an} aria-current={an}
+                    onClick={() => { z.setEigeneHysterese(false); z.setzEinzel('vpdHystereseKpa', s.wert) }}
+                  >
+                    {s.label} · {zahl(s.wert, 2)}
+                  </button>
+                )
+              })}
+              <button type="button" role="radio" className="st-chip" aria-checked={z.eigeneHysterese} aria-current={z.eigeneHysterese} onClick={() => z.setEigeneHysterese(true)}>
+                eigener Wert
+              </button>
+            </div>
+            {z.eigeneHysterese && (
+              <div className="ef-unterfeld">
+                <Zahl label={`Eigener VPD-Abstand, ${zusatz}`} hinweis="0,05 bis 0,60 kPa." einheit="kPa" wert={ze.vpdHystereseKpa} min={0.05} max={0.6} schritt={0.05} onChange={(v) => z.setzEinzel('vpdHystereseKpa', v)} />
+              </div>
+            )}
+            <p className="ef-folge">
+              {zl.vpdZiel == null
+                ? 'Das Plan-Ziel ist noch nicht bekannt.'
+                : `EIN bei VPD unter ${zahl(zl.vpdZiel - (z.anzeige?.vpdHystereseKpa ?? ze.vpdHystereseKpa), 2)}, AUS über ${zahl(zl.vpdZiel + (z.anzeige?.vpdHystereseKpa ?? ze.vpdHystereseKpa), 2)} kPa.`}
+            </p>
+          </div>
+        )}
+      </RegelKachel>
+
+      {/* ---------------------------------------------- Einschalten erst nach … */}
+      <RegelKachel
+        titel="Einschalten erst nach"
+        zusammenfassung={`${haupt} ${he.einschaltverzoegerungMin} min${ze ? ` · ${zusatz} ${ze.zuschaltVerzoegerungMin} min` : ''}`}
+        erklaerung="Wie lange die Bedingung anliegen muss, bevor das Gerät anspringt. Das fängt kurze Spitzen ab (Zelt offen, Gießen)."
+      >
+        <Zahl label={haupt} hinweis="So lange muss die Feuchte über EIN liegen, bevor er anspringt." einheit="min" wert={he.einschaltverzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => h.setz('einschaltverzoegerungMin', Math.round(v))} fehler={h.feldFehler.EinschaltverzoegerungMin} />
+        {z && ze && (
+          <Zahl label={zusatz} hinweis={`So lange muss ${haupt} laufen, bevor ${zusatz} mithilft. Ist ${haupt} aus, startet der Zusatz sofort.`} einheit="min" wert={ze.zuschaltVerzoegerungMin} min={0} max={60} schritt={1} onChange={(v) => z.setzEinzel('zuschaltVerzoegerungMin', Math.round(v))} fehler={fehlerZu(z.feldFehler, 'zuschaltVerzoegerungMin')} />
+        )}
+      </RegelKachel>
+
+      {/* ------------------------------------------------------- Tagbetrieb */}
+      <RegelKachel
+        titel="Auch tagsüber entfeuchten"
+        zusammenfassung={`${haupt} ${he.tagbetriebErlauben ? 'ja' : 'nein'}${ze ? ` · ${zusatz} ${ze.tagbetriebErlauben ? 'ja' : 'nein'}` : ''}`}
+        erklaerung="Aus: nur in der Dunkelphase. Wirkt mit der vom Fork angelegten Regelung."
+        offen={false}
+      >
+        <V1Switch label={haupt} checked={he.tagbetriebErlauben} onChange={(an) => h.setz('tagbetriebErlauben', an)} />
+        {z && ze && <V1Switch label={zusatz} checked={ze.tagbetriebErlauben} onChange={(an) => z.setz('tagbetriebErlauben', an)} />}
+      </RegelKachel>
+
+      {/* ---------------------------------------------------------- Automatik */}
+      <RegelKachel
+        titel="Automatik"
+        zusammenfassung={`${haupt} ${he.automatikAktiv ? 'an' : 'aus'}${ze ? ` · ${zusatz} ${ze.automatikAktiv ? 'an' : 'aus'}` : ''}`}
+        erklaerung="Aus hält die Regelung für dieses Gerät an; es bleibt, wie es gerade steht."
+        offen={false}
+      >
+        <V1Switch label={haupt} checked={he.automatikAktiv} onChange={(an) => h.setz('automatikAktiv', an)} />
+        {z && ze && <V1Switch label={zusatz} checked={ze.automatikAktiv} onChange={(an) => z.setz('automatikAktiv', an)} />}
+      </RegelKachel>
+
+      {/* ------------------------------------------------ Nur Hauptentfeuchter */}
+      <GruppenKopf>Nur für {haupt}</GruppenKopf>
+      <Klappkachel titel="Regelart" zusammenfassung={he.vpdRegelung ? 'nach VPD' : 'feste Schwellen'}>
+        <V1Card>
+          <V1Switch
+            className="ef-schalter"
+            label="Nach VPD regeln"
+            checked={he.vpdRegelung}
+            onChange={(an) => h.setz('vpdRegelung', an)}
+            hint={
+              <>
+                <span className="ef-zeile"><b>An:</b> Die Schwellen wandern selbst mit Temperatur und VPD-Band aus dem Plan.</span>
+                <span className="ef-zeile"><b>Aus:</b> Es gelten die festen Schwellen weiter unten.</span>
+              </>
+            }
+          />
+        </V1Card>
+      </Klappkachel>
+      <Klappkachel
+        titel="Feste Schwellen"
+        zusammenfassung={he.vpdRegelung ? 'ruhen, solange „Nach VPD regeln" an ist' : `Tag EIN ${zahl(he.feuchteEinTag, 0)} % · AUS ${zahl(he.feuchteAusTag, 0)} %`}
+        offen={!he.vpdRegelung}
+      >
+        <V1Card>
+          {he.vpdRegelung && (
+            <p className="st-hinweis st-ruht-hinweis">Gerade ohne Wirkung: „Nach VPD regeln" ist an. Diese Werte gelten nur als Rückfallebene — wenn du es ausschaltest oder der Plan keine VPD-Werte liefert. Auch dann deckelt die Plan-Feuchte die EIN-Schwelle.</p>
+          )}
+          <Zahl ruht={he.vpdRegelung} label="Tag · EIN ab" hinweis="Licht an." einheit="%" wert={he.feuchteEinTag} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteEinTag', v)} fehler={h.feldFehler.FeuchteEinTag} />
+          <Zahl ruht={he.vpdRegelung} label="Tag · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={he.feuchteAusTag} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteAusTag', v)} fehler={h.feldFehler.FeuchteAusTag} />
+          <Zahl ruht={he.vpdRegelung} label="Nacht · EIN ab" hinweis="Licht aus." einheit="%" wert={he.feuchteEinNacht} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteEinNacht', v)} fehler={h.feldFehler.FeuchteEinNacht} />
+          <Zahl ruht={he.vpdRegelung} label="Nacht · AUS unter" hinweis="Muss unter EIN liegen." einheit="%" wert={he.feuchteAusNacht} min={30} max={90} schritt={1} onChange={(v) => h.setz('feuchteAusNacht', v)} fehler={h.feldFehler.FeuchteAusNacht} />
+        </V1Card>
+      </Klappkachel>
+      <Klappkachel titel="Außenluft zuerst" zusammenfassung={`${he.wartezeitAussenluftMin} min`} offen={false}>
+        <V1Card>
+          <Zahl label="Außenluft zuerst" hinweis="Trocknet die Zuluft gerade, wartet er stattdessen so lange — die Außenluft bekommt ihre Chance." einheit="min" wert={he.wartezeitAussenluftMin} min={0} max={120} schritt={1} onChange={(v) => h.setz('wartezeitAussenluftMin', Math.round(v))} fehler={h.feldFehler.WartezeitAussenluftMin} />
+          <p className="st-hinweis">
+            {hl.zuluftVorrang === true
+              ? `Gerade: Zuluft trocknet → es gelten ${he.wartezeitAussenluftMin} min.`
+              : hl.zuluftVorrang === false
+                ? `Gerade: Außenluft bringt nichts → es gelten ${he.einschaltverzoegerungMin} min.`
+                : 'Ob die Zuluft gerade trocknet, ist nicht bekannt.'}
+            {' '}Ob die Zuluft trocknet, entscheidet die Zuluft-Steuerung.
+          </p>
+        </V1Card>
+      </Klappkachel>
+      <Klappkachel titel={hs.live.planWoche ? `Aus dem Plan · ${hs.live.planWoche}` : 'Aus dem Plan'} zusammenfassung={`VPD ${hl.vpdUnten == null ? '–' : `${zahl(hl.vpdUnten, 2)}–${zahl(hl.vpdOben, 2)} kPa`} · Feuchte max. ${hl.rhObergrenzeProzent == null ? '–' : `${zahl(hl.rhObergrenzeProzent, 0)} %`}`} offen={false}>
+        <V1Card>
+          <Lesen label="VPD-Band" hinweis="aus dem Plan" wert={hl.vpdUnten == null ? '–' : `${zahl(hl.vpdUnten, 2)} – ${zahl(hl.vpdOben, 2)} kPa`} />
+          <Lesen
+            label="Luftfeuchte max."
+            hinweis={hl.deckelProzent == null ? 'aus dem Plan' : `aus dem Plan · Deckel für EIN: ${zahl(hl.rhObergrenzeProzent, 0)} % − Klima-Abstand = ${zahl(hl.deckelProzent, 0)} %`}
+            wert={hl.rhObergrenzeProzent == null ? '–' : `${zahl(hl.rhObergrenzeProzent, 0)} %`}
+          />
+          <Lesen label="Blatt-Offset" hinweis="vom Zelt" wert={hl.blattOffsetC == null ? '–' : `${zahl(hl.blattOffsetC)} °C`} />
+          <div className="st-feldzeile">
+            <span className="st-etikett">Ändern im Plan</span>
+            <V1LinkButton to="/plan" variant="ghost">Plan ›</V1LinkButton>
+          </div>
+        </V1Card>
+      </Klappkachel>
+
+      {/* ------------------------------------------------------- Nur Zusatz */}
+      {z && ze && zl && zs && (
+        <>
+          <GruppenKopf>Nur für {zusatz}</GruppenKopf>
+          <Klappkachel titel="Hilfsstärke" zusammenfassung={HILFE_STUFEN.find((s) => s.wert === ze.hilfe)?.label ?? 'eigene Werte'}>
+            <V1Card>
+              <div className="st-feldzeile is-gestapelt">
+                <span className="st-etikett">
+                  Wie stark soll {zusatz} helfen?
+                  <small>{haupt} führt. Der Zusatz hilft nur dazu.</small>
+                </span>
+                <div className="ef-stufen" role="radiogroup" aria-label="Hilfsstärke">
+                  {HILFE_STUFEN.map((s) => (
+                    <button
+                      key={s.wert} type="button" role="radio" className="st-chip"
+                      aria-checked={ze.hilfe === s.wert} aria-current={ze.hilfe === s.wert}
+                      onClick={() => z.setEntwurf(hilfeWaehlen(ze, z.geladen!, s.wert))}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                  {ze.hilfe === 'eigene' && (
+                    <button type="button" role="radio" className="st-chip" aria-checked="true" aria-current="true">eigene Werte</button>
+                  )}
+                </div>
+                <p className="st-hinweis">{hilfeText(ze.hilfe, haupt)}</p>
+                <p className={ze.hilfe === 'normal' ? 'ez-empf' : 'ez-empf is-abweichend'}>
+                  {ze.hilfe === 'normal' ? 'Empfohlen: normal ✓' : 'Empfohlen: normal'}
+                  {ze.hilfe !== 'normal' && (
+                    <button type="button" onClick={() => z.setEntwurf(hilfeWaehlen(ze, z.geladen!, 'normal'))}>zurücksetzen</button>
+                  )}
+                </p>
+              </div>
+            </V1Card>
+          </Klappkachel>
+          <Klappkachel titel="Schaltgröße" zusammenfassung={zl.schaltgroesse === 'vpd' ? 'VPD' : zl.schaltgroesse === 'feuchte' ? 'Luftfeuchte' : '–'} offen={false}>
+            <V1Card>
+              <Lesen
+                label="Schaltgröße"
+                hinweis={'VPD-Ziel aus dem Plan. Fehlt es, nimmt der Fork die Plan-Luftfeuchte. Fehlt beides, steht oben „Plan unvollständig".'}
+                wert={zl.schaltgroesse === 'vpd' ? 'VPD' : zl.schaltgroesse === 'feuchte' ? 'Luftfeuchte' : '–'}
+              />
+              <Lesen label="VPD-Ziel" hinweis={zl.planWoche ?? undefined} wert={zl.vpdZiel == null ? '–' : `${zahl(zl.vpdZiel, 2)} kPa`} />
+              <Lesen
+                label="Luftfeuchte EIN / AUS"
+                hinweis={'Schwellen aus dem Plan; gelten nachts mit „Nachts durchlaufen" und wenn der Plan kein VPD liefert.'}
+                wert={zl.feuchteEinProzent == null || zl.feuchteAusProzent == null ? '–' : `${zahl(zl.feuchteEinProzent, 0)} % / ${zahl(zl.feuchteAusProzent, 0)} %`}
+              />
+            </V1Card>
+          </Klappkachel>
+          <Klappkachel titel="Nachts durchlaufen" zusammenfassung={ze.nachtDurchlaufen ? 'an' : 'aus'} offen={false}>
+            <V1Card>
+              <V1Switch
+                label="Nachts durchlaufen"
+                checked={ze.nachtDurchlaufen}
+                onChange={(an) => z.setz('nachtDurchlaufen', an)}
+                hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach dem VPD-Band takten. Wirkt mit der vom Fork angelegten Regelung."
+              />
+            </V1Card>
+          </Klappkachel>
+        </>
+      )}
+    </>
+  )
+}

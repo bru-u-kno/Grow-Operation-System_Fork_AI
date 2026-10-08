@@ -63,6 +63,8 @@ export type NavLeaf = {
    * eigener Menüpunkt dort wohnt — „Probelauf" liegt unter `/steuerung/`, soll aber nicht „Steuerung" mit anleuchten.
    */
   ausser?: string[]
+  /** A-014: weitere Pfade, auf denen dieser Punkt ebenfalls aktiv ist (z. B. die zweite Seite derselben Steuerung). */
+  auch?: string[]
 }
 
 export type NavGroup = {
@@ -164,7 +166,9 @@ export const navGroups: NavGroup[] = [
       // erfasst. Das Archiv rechnet den Strom aus Lampen-Watt; hier kommt er
       // vom Zähler.
       { to: '/steuerung/probelauf', label: 'Probelauf', end: true, keywords: 'probelauf test gerät abschalten entfeuchter chiller zuluft co2 aus testen wirkung messen kenntnisstand grenzen zurückstellen' },
-      { to: '/steuerung', label: 'Steuerung', end: false, ausser: ['/steuerung/probelauf'], icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter zusatz-entfeuchter shelly chiller abluft licht sollwerte automatik ventil dosierung klima' },
+      // Fork AI (A-014): beide Entfeuchter in einem Punkt — Haupt und Zusatz sind zwei Seiten, die zusammengehören.
+      { to: '/steuerung/entfeuchtung', label: 'Entfeuchtung', end: true, keywords: 'entfeuchtung entfeuchter zusatz-entfeuchter trotec shelly luftfeuchte feuchte vpd temperatur höchsttemperatur zonen ziel schwellen ein aus ruhig regelart überblick' },
+      { to: '/steuerung', label: 'Steuerung', end: false, ausser: ['/steuerung/probelauf', '/steuerung/entfeuchtung'], icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter zusatz-entfeuchter shelly chiller abluft licht sollwerte automatik ventil dosierung klima' },
       { to: '/kosten', label: 'Kosten', end: true, icon: '€', short: 'Kosten', keywords: 'strom kwh euro preis zähler verbrauch verbrauchsartikel co2 flasche nachfüllung nachfüllen dünger kanister laufzeit prognose je tag je pflanze durchgang' },
     ],
   },
@@ -311,6 +315,7 @@ export const searchablePages = suchbareSeiten(true)
 
 export function isNavLeafActive(item: NavLeaf, pathname: string): boolean {
   if (item.ausser?.some((pfad) => pathname === pfad || pathname.startsWith(`${pfad}/`))) return false
+  if (item.auch?.some((pfad) => pathname === pfad || pathname.startsWith(`${pfad}/`))) return true
   return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
 

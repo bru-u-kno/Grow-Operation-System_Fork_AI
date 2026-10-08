@@ -47,6 +47,13 @@ export const HILFE_VORGABEN: Record<HilfeStufe, Voreinstellung> = {
 }
 
 /** Die Stufen in der Reihenfolge der Knöpfe; „eigene Werte" ist keine Wahl, sondern ein Befund. */
+/** Die drei Stufen für „Wie ruhig soll er schalten?“ (VPD-Abstand, kPa). */
+export const VPD_STUFEN: ReadonlyArray<{ wert: number; label: string }> = [
+  { wert: 0.1, label: 'knapp' },
+  { wert: 0.15, label: 'normal' },
+  { wert: 0.25, label: 'ruhig' },
+]
+
 export const HILFE_STUFEN: ReadonlyArray<{ wert: 'aus' | HilfeStufe; label: string }> = [
   { wert: 'aus', label: 'aus' },
   { wert: 'sparsam', label: 'sparsam' },

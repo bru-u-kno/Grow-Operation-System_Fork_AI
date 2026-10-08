@@ -5,9 +5,10 @@ import { auslaufZuruecksetzen, reiterInsBild } from './reiter-ins-bild'
 
 export type Tone = 'neutral' | 'ok' | 'warn' | 'critical' | 'accent'
 
-export function V1Page({ eyebrow, title, subtitle, action, children, className }: { eyebrow?: string; title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+export function V1Page({ eyebrow, title, subtitle, action, children, className, vorKopf }: { eyebrow?: string; title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string; /** A-015: steht ganz oben, noch über der Überschrift (z. B. die Auswahl der Steuerungen). */ vorKopf?: ReactNode }) {
   return (
     <main className={classNames('v1-page', className)}>
+      {vorKopf}
       <section className="v1-hero">
         <div>
           {eyebrow && <div className="v1-eyebrow">{eyebrow}</div>}
@@ -167,9 +168,9 @@ export function V1Field({ label, children, hint, wide }: { label: string; childr
   )
 }
 
-export function V1Switch({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (checked: boolean) => void; hint?: string }) {
+export function V1Switch({ label, checked, onChange, hint, className }: { label: string; checked: boolean; onChange: (checked: boolean) => void; hint?: ReactNode; className?: string }) {
   return (
-    <label className="v1-switch">
+    <label className={classNames('v1-switch', className)}>
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <span>
         <strong>{label}</strong>
