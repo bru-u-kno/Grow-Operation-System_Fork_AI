@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.190
+
+**Fork AI.** Entfeuchtung: Du sagst jetzt selbst, wie viele Entfeuchter du hast — und die Zeile in der Steuerungs-Übersicht überdeckt sich nicht mehr.
+
+- **Einrichtung:** Unter „Welche Entfeuchter hast du?" lässt sich der Zusatz-Entfeuchter an- und abwählen (der Hauptentfeuchter ist immer dabei). Gespeichert wird sofort. Danach richten sich die Seite („Entfeuchtung" zeigt nur noch das Hauptgerät, ohne Hilfsstärke und ohne zweite Zeile) und die Übersicht der Steuerungen. „Automatisch" lässt den Fork wieder nach der Zuordnung in „Geräte & Entitäten" entscheiden.
+- **Die Regelung in Home Assistant bleibt unberührt.** Wer den Zusatz abwählt, obwohl er noch läuft, bekommt einen Hinweis, seine Automatik in Home Assistant auszuschalten.
+- **Übersicht der Steuerungen:** Die Zeile „Entfeuchtung" ist am Handy kürzer („Haupt- und Zusatz-Entfeuchter" · „entfeuchtet · Zusatz bereit"); die linke und die rechte Spalte schieben sich nicht mehr übereinander.
+
 ## 2.0.0-forkai.189
 
 **Fork AI.** Entfeuchtung: Hauptentfeuchter und Zusatz-Entfeuchter sind jetzt EINE Seite — und die Auswahl der Steuerungen steht ganz oben.

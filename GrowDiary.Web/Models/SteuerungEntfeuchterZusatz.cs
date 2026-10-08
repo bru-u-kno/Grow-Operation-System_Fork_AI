@@ -298,3 +298,23 @@ public sealed class EntfeuchterNamenAenderung
     [JsonIgnore] public bool FuehrungGesetzt { get; private set; }
     [JsonIgnore] public bool ZusatzGesetzt { get; private set; }
 }
+
+// ------------------------------------------------------------- Einrichtung
+
+/// <summary>
+/// Fork AI (A-015): Wie viele Entfeuchter der Nutzer hat. Gespeichert in <c>ForkSteuerungEinstellungen</c>
+/// (Modul <c>entfeuchtung</c>). <c>null</c> heißt „nach der Zuordnung in Geräte &amp; Entitäten entscheiden".
+/// </summary>
+public sealed class EntfeuchtungEinrichtung
+{
+    /// <summary><c>true</c>/<c>false</c>: ausdrücklich gesagt; <c>null</c>: der Fork schließt es aus der Zuordnung.</summary>
+    public bool? ZusatzVorhanden { get; set; }
+}
+
+public sealed record EntfeuchtungEinrichtungDto([property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool? ZusatzVorhanden);
+
+/// <summary>Der Körper beim Speichern: <c>zusatzVorhanden</c> ist <c>true</c>, <c>false</c> oder <c>null</c> (automatisch).</summary>
+public sealed class EntfeuchtungEinrichtungAenderung
+{
+    public bool? ZusatzVorhanden { get; set; }
+}

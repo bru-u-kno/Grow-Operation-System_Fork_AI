@@ -13,7 +13,8 @@
   .st-zeile:hover, .st-zeile:focus-visible { border-color: var(--accent-dim); }
   .st-zeile[disabled] { cursor: default; opacity: .7; }
 
-  .st-zeile-links { display: flex; align-items: flex-start; gap: var(--s-2); min-width: 0; }
+  .st-zeile-links { display: flex; flex: 1 1 0; align-items: flex-start; gap: var(--s-2); min-width: 0; }
+  .st-titel { min-width: 0; overflow-wrap: anywhere; }
   .st-punkt { flex: 0 0 auto; width: .5rem; height: .5rem; margin-top: .45rem; border-radius: 50%; background: var(--faint); }
   .st-punkt.is-an { background: var(--accent-text); }
   .st-punkt.is-warn { background: var(--warn-text); }
@@ -22,7 +23,7 @@
   .st-titel { display: block; font-size: var(--fs-text); }
   .st-titel small { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
 
-  .st-wert { flex: 0 0 auto; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .st-wert { flex: 0 1 auto; min-width: 0; max-width: 55%; overflow-wrap: anywhere; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .st-wert small { display: block; font-family: var(--font-sans); font-size: var(--fs-etikett); color: var(--faint); }
 
   /* --- Chip-Leiste zum Umschalten zwischen den Steuerungen --- */

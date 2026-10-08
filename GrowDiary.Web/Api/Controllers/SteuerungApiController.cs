@@ -372,6 +372,21 @@ public sealed class SteuerungApiController : ApiControllerBase
         return Ok(await _zusatz.NamenAsync(ct));
     }
 
+    /// <summary>Fork AI (A-015): Wie viele Entfeuchter es gibt — null heißt „nach der Zuordnung entscheiden".</summary>
+    [HttpGet("entfeuchtung-einrichtung")]
+    [ProducesResponseType(typeof(EntfeuchtungEinrichtungDto), StatusCodes.Status200OK)]
+    public ActionResult<EntfeuchtungEinrichtungDto> EntfeuchtungEinrichtung() => Ok(_zusatz.Einrichtung());
+
+    /// <summary>Sagt, ob es einen Zusatz-Entfeuchter gibt (true/false) oder ob der Fork das aus der Zuordnung schließen soll (null). Die Regelung in Home Assistant bleibt unberührt.</summary>
+    [HttpPut("entfeuchtung-einrichtung")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [ProducesResponseType(typeof(EntfeuchtungEinrichtungDto), StatusCodes.Status200OK)]
+    public ActionResult<EntfeuchtungEinrichtungDto> EntfeuchtungEinrichtungSpeichern([FromBody] EntfeuchtungEinrichtungAenderung request)
+    {
+        if (request is null) return BadRequestError("entfeuchtung_einrichtung_invalid", "Es wurde nichts übergeben.");
+        return Ok(_zusatz.EinrichtungSpeichern(request.ZusatzVorhanden));
+    }
+
     /// <summary>Die Statuszeile der Übersicht: „warn" bei „zieht nichts" oder zu warmem Zelt.</summary>
     private static string ZusatzStatus(EntfeuchterZusatzLive live, EntfeuchterZusatzEinstellungen e)
     {

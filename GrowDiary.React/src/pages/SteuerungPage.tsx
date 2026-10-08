@@ -8,6 +8,7 @@ import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
 import EntfeuchtungSeite from '../features/steuerung/EntfeuchtungSeite'
 import { ENTFEUCHTUNG_KENNUNG, mitEntfeuchtung } from '../features/steuerung/entfeuchtung-modell'
+import { useEntfeuchtungEinrichtung } from '../features/steuerung/useEntfeuchtungEinrichtung'
 import { CO2_REITER, minuten, probeWerte, tagKurz, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
@@ -74,7 +75,9 @@ export default function SteuerungPage() {
 
   const [uebersicht, setUebersicht] = useState<SteuerungUebersicht | null>(null)
   // A-015: Hauptentfeuchter und Zusatz-Entfeuchter sind in Chip-Leiste und Übersicht EIN Eintrag.
-  const module = useMemo(() => mitEntfeuchtung(uebersicht?.module ?? []), [uebersicht])
+  const { einrichtung } = useEntfeuchtungEinrichtung()
+  const zusatzGesagt = einrichtung?.zusatzVorhanden ?? null
+  const module = useMemo(() => mitEntfeuchtung(uebersicht?.module ?? [], zusatzGesagt), [uebersicht, zusatzGesagt])
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
 

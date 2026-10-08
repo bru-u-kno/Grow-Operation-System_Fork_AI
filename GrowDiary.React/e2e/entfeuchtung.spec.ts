@@ -74,14 +74,14 @@ const MODULE = {
   ],
 }
 
-type Stand = { einstellungen: Json; puts: Json[]; haupt: Json; hauptPuts: Json[] }
+type Stand = { einstellungen: Json; puts: Json[]; haupt: Json; hauptPuts: Json[]; einrichtung: { zusatzVorhanden: boolean | null }; einrichtungPuts: Json[] }
 
 /**
  * Die Antworten vorgeben. Der Zusatz-`PUT` übernimmt nur die Felder aus dem Körper (Vertrag), der des
  * Hauptentfeuchters ersetzt alles — und gibt die Höchsttemperatur an den Zusatz weiter, wie das Backend es tut.
  */
 async function backendVorgeben(page: Page, live: Json = {}, hauptLive: Json = {}): Promise<Stand> {
-  const stand: Stand = { einstellungen: structuredClone(EINSTELLUNGEN), puts: [], haupt: structuredClone(HAUPT_EINSTELLUNGEN), hauptPuts: [] }
+  const stand: Stand = { einstellungen: structuredClone(EINSTELLUNGEN), puts: [], haupt: structuredClone(HAUPT_EINSTELLUNGEN), hauptPuts: [], einrichtung: { zusatzVorhanden: null }, einrichtungPuts: [] }
   const zusatzAntwort = () => ({
     einstellungen: stand.einstellungen,
     live: { ...LIVE, ...live },
@@ -93,6 +93,14 @@ async function backendVorgeben(page: Page, live: Json = {}, hauptLive: Json = {}
     geraeteZugeordnet: 7, geraeteGesamt: 7, ausHomeAssistantUebernommen: false, haAngenommen: null,
   })
   await page.route(/\/api\/steuerung$/, (route) => route.fulfill({ json: MODULE }))
+  await page.route(/\/api\/steuerung\/entfeuchtung-einrichtung$/, async (route) => {
+    if (route.request().method() === 'PUT') {
+      const koerper = route.request().postDataJSON() as { zusatzVorhanden: boolean | null }
+      stand.einrichtungPuts.push(koerper)
+      stand.einrichtung = { zusatzVorhanden: koerper.zusatzVorhanden }
+    }
+    await route.fulfill({ json: stand.einrichtung })
+  })
   await page.route(/\/api\/steuerung\/entfeuchter-namen$/, (route) => route.fulfill({
     json: { fuehrung: { anzeigename: 'RDWC Dehumi', vorgabe: 'RDWC Dehumi' }, zusatz: { anzeigename: 'Dehumi RDWC Tent', vorgabe: 'Dehumi RDWC Tent' } },
   }))
@@ -219,18 +227,74 @@ test('ohne Zusatz-Entfeuchter steht nur der Hauptentfeuchter da — ohne Hilfsst
   await expect(page.getByRole('radiogroup', { name: 'Hilfsstärke' })).toHaveCount(0)
   await expect(page.getByRole('radiogroup').filter({ hasText: 'kPa' })).toHaveCount(0)
   await reiterWahl(page, 'Einrichtung')
-  await expect(page.locator('.st-kk', { hasText: 'Welche Entfeuchter hast du?' }).locator('.v1-switch')).toHaveCount(1)
+  const wahl = page.locator('.st-kk', { hasText: 'Welche Entfeuchter hast du?' }).locator('.v1-switch input')
+  await expect(wahl).toHaveCount(2)
+  await expect(wahl.nth(1), 'der Zusatz ist nicht gewählt').not.toBeChecked()
 })
 
-test('Einrichtung: die zwei Geräte, „zusammen" als einzige Regelung, „getrennt" gesperrt', async ({ page }) => {
-  await backendVorgeben(page)
+test('Einrichtung: der Nutzer sagt, wie viele Entfeuchter er hat — die Seite und die Übersicht folgen, zweimal', async ({ page }) => {
+  const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
   await reiterWahl(page, 'Einrichtung')
-  await expect(page.locator('.st-kk', { hasText: 'Welche Entfeuchter hast du?' }).locator('.v1-switch')).toHaveCount(2)
-  const schalter = page.getByLabel('Der Zusatz hilft dem Haupt-Entfeuchter')
-  await expect(schalter).toBeChecked()
-  await expect(schalter).toBeDisabled()
+  const geraete = page.locator('.st-kk', { hasText: 'Welche Entfeuchter hast du?' }).locator('.v1-switch')
+  await expect(geraete).toHaveCount(2)
+  const haupt = geraete.nth(0).locator('input')
+  const zusatz = geraete.nth(1).locator('input')
+  await expect(haupt).toBeDisabled()
+  await expect(zusatz, 'der Zusatz lässt sich an- und abwählen').toBeEnabled()
+  await expect(zusatz).toBeChecked()
   await expect(page.locator('main').getByRole('link', { name: /Geräte & Entitäten/ })).toBeVisible()
+
+  // Durchgang 1: „Ich habe keinen Zusatz." — gespeichert wird sofort, die Seite folgt.
+  await zusatz.uncheck()
+  await expect(page.getByText('Der Zusatz-Entfeuchter läuft in Home Assistant weiter')).toBeVisible()
+  expect(stand.einrichtungPuts).toEqual([{ zusatzVorhanden: false }])
+  await expect(page.getByText('Haupt- und Zusatz-Entfeuchter arbeiten zusammen')).toHaveCount(0)
+  await reiterWahl(page, 'Regel')
+  await expect(page.getByRole('radiogroup', { name: 'Hilfsstärke' })).toHaveCount(0)
+  await reiterWahl(page, 'Überblick')
+  await expect(page.locator('.st-kk', { hasText: 'Geräte' }).locator('.st-nurlesen')).toHaveText(['läuft'])
+  // …und nach dem Neuladen bleibt es so.
+  await page.reload({ waitUntil: 'networkidle' })
+  await reiterWahl(page, 'Überblick')
+  await expect(page.locator('.st-kk', { hasText: 'Geräte' }).locator('.st-nurlesen')).toHaveText(['läuft'])
+
+  // Durchgang 2, ohne den Test neu zu starten: wieder „ja", dann „automatisch".
+  await reiterWahl(page, 'Einrichtung')
+  await zusatz.check()
+  expect(stand.einrichtungPuts.at(-1)).toEqual({ zusatzVorhanden: true })
+  await expect(page.locator('.st-kk', { hasText: 'Wie arbeiten die Entfeuchter?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Automatisch' }).click()
+  expect(stand.einrichtungPuts.at(-1)).toEqual({ zusatzVorhanden: null })
+  await expect(page.getByRole('button', { name: 'Automatisch' })).toHaveCount(0)
+})
+
+test('Übersicht der Steuerungen: „Entfeuchtung" ist EINE Zeile, und ihre zwei Spalten überdecken sich am Handy nicht', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  const stand = await backendVorgeben(page)
+  // Echte Namen aus Brus Anlage — lang genug, um die Zeile zu sprengen (08.10.2026, Screenshot).
+  await page.unroute(/\/api\/steuerung$/)
+  await page.route(/\/api\/steuerung$/, (route) => route.fulfill({ json: { ...MODULE, module: [
+    MODULE.module[0],
+    { kennung: 'entfeuchter', titel: 'RDWC Dehumi', status: 'an', kurz: 'VPD-Modus · ein ab 45,8 % · aus unter 43,8 %', wert: '52,9 %', unterzeile: 'entfeuchtet · VPD 1,26', hatDetail: true },
+    { kennung: 'entfeuchter-zusatz', titel: 'Dehumi RDWC Tent', status: 'an', kurz: 'normal · Automatik an · folgt RDWC Dehumi', wert: '0 W', unterzeile: 'bereit', hatDetail: true },
+  ] } }))
+  await page.goto('/steuerung', { waitUntil: 'networkidle' })
+  const zeile = page.locator('.st-zeile', { hasText: 'Entfeuchtung' })
+  await expect(zeile).toHaveCount(1)
+  await expect(page.locator('.st-zeile', { hasText: 'Dehumi RDWC Tent' })).toHaveCount(0)
+  await expect(zeile).toContainText('Zusatz bereit')
+  const ueberdeckt = await zeile.evaluate((el) => {
+    const kasten = (sel: string) => { const r = document.createRange(); r.selectNodeContents(el.querySelector(sel)!); return r.getBoundingClientRect() }
+    const a = kasten('.st-titel'), b = kasten('.st-wert')
+    return a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5
+  })
+  expect(ueberdeckt, 'Titel und Wert der Zeile liegen übereinander').toBe(false)
+
+  // Hat der Nutzer „kein Zusatz" gesagt, steht nur noch das Hauptgerät in der Zeile.
+  stand.einrichtung = { zusatzVorhanden: false }
+  await page.reload({ waitUntil: 'networkidle' })
+  await expect(page.locator('.st-zeile', { hasText: 'Entfeuchtung' })).not.toContainText('Zusatz')
 })
 
 test('Luftfeuchte-Zone: das Ziel ist die Plan-Obergrenze — auf der ganzen Seite dieselbe Zone', async ({ page }) => {

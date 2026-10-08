@@ -28,11 +28,12 @@ const ZUSATZ = 'entfeuchter-zusatz'
  *
  * <b>Status:</b> „warn", sobald eines warnt; „an", sobald eines läuft; sonst „aus".
  */
-export function mitEntfeuchtung(module: SteuerungModul[]): SteuerungModul[] {
+export function mitEntfeuchtung(module: SteuerungModul[], zusatzGesagt: boolean | null = null): SteuerungModul[] {
   const haupt = module.find((m) => m.kennung === HAUPT)
   if (!haupt) return module
   const zusatz = module.find((m) => m.kennung === ZUSATZ)
-  const zusatzDa = zusatz != null && zusatz.unterzeile !== 'Zustand unbekannt'
+  // Hat der Nutzer es gesagt (Einrichtung), gilt das; sonst entscheidet, ob für den Zusatz ein Zustand bekannt ist.
+  const zusatzDa = zusatz != null && (zusatzGesagt ?? zusatz.unterzeile !== 'Zustand unbekannt')
 
   const status = [haupt.status, zusatzDa ? zusatz!.status : 'aus'].includes('warn') ? 'warn'
     : [haupt.status, zusatzDa ? zusatz!.status : 'aus'].includes('an') ? 'an' : 'aus'
@@ -40,9 +41,10 @@ export function mitEntfeuchtung(module: SteuerungModul[]): SteuerungModul[] {
     kennung: ENTFEUCHTUNG_KENNUNG,
     titel: 'Entfeuchtung',
     status,
-    kurz: zusatzDa ? `${haupt.titel} + ${zusatz!.titel}` : haupt.kurz,
+    // Kurz halten: die Zeile ist am Handy nur zwei Spalten breit. Die Namen stehen auf der Seite selbst.
+    kurz: zusatzDa ? 'Haupt- und Zusatz-Entfeuchter' : haupt.kurz,
     wert: haupt.wert,
-    unterzeile: zusatzDa ? `${haupt.unterzeile} · ${zusatz!.titel}: ${zusatz!.unterzeile}` : haupt.unterzeile,
+    unterzeile: zusatzDa ? `${haupt.unterzeile.split(' · ')[0]} · Zusatz ${zusatz!.unterzeile}` : haupt.unterzeile,
     hatDetail: haupt.hatDetail,
   }
   const ergebnis: SteuerungModul[] = []

@@ -289,6 +289,34 @@ public sealed class EntfeuchterZusatzApiTests
     }
 
     [Fact]
+    public async Task Einrichtung_ZusatzVorhanden_JaNeinOderAutomatisch_ZweimalSpeichern()
+    {
+        var pfad = "/api/steuerung/entfeuchtung-einrichtung";
+        try
+        {
+            // Ohne Angabe: null — der Fork schließt aus der Zuordnung.
+            var anfang = await Lesen(pfad);
+            Assert.True(anfang.AsObject().ContainsKey("zusatzVorhanden"), "das Feld muss ausdrücklich dastehen, auch als null");
+            Assert.Null(anfang["zusatzVorhanden"]);
+
+            var (s1, nach1) = await Schreiben(pfad, """{"zusatzVorhanden":false}""");
+            Assert.Equal(HttpStatusCode.OK, s1);
+            Assert.False(nach1["zusatzVorhanden"]!.GetValue<bool>());
+            Assert.False((await Lesen(pfad))["zusatzVorhanden"]!.GetValue<bool>());
+
+            // Zweiter Durchgang, ohne Neustart: auf „ja", dann zurück auf „automatisch".
+            var (_, nach2) = await Schreiben(pfad, """{"zusatzVorhanden":true}""");
+            Assert.True(nach2["zusatzVorhanden"]!.GetValue<bool>());
+            var (_, nach3) = await Schreiben(pfad, """{"zusatzVorhanden":null}""");
+            Assert.Null(nach3["zusatzVorhanden"]);
+        }
+        finally
+        {
+            await Schreiben(pfad, """{"zusatzVorhanden":null}""");
+        }
+    }
+
+    [Fact]
     public async Task Namen_ZuLangOderMitSteuerzeichen_Gibt400()
     {
         var pfad = "/api/steuerung/entfeuchter-namen";

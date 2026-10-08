@@ -39,6 +39,9 @@ public sealed class EntfeuchterZusatzSteuerungService
     /// <summary>Modul unter dem die Anzeigenamen in <c>ForkSteuerungEinstellungen</c> stehen.</summary>
     public const string NamenModul = "entfeuchter-namen";
 
+    /// <summary>Modul unter dem die Einrichtung (wie viele Entfeuchter) in <c>ForkSteuerungEinstellungen</c> steht.</summary>
+    public const string EinrichtungModul = "entfeuchtung";
+
     /// <summary>Die Rollen dieses Moduls — Zelt-Fühler und Licht kommen aus <c>entfeuchter</c>.</summary>
     public static class Rollen
     {
@@ -763,6 +766,19 @@ public sealed class EntfeuchterZusatzSteuerungService
             }
         }
         return name;
+    }
+
+    /// <summary>Wie viele Entfeuchter es gibt — was der Nutzer gesagt hat (A-015); <c>null</c> = nach der Zuordnung entscheiden.</summary>
+    public EntfeuchtungEinrichtungDto Einrichtung()
+        => new(_repo.GetEinstellungen<EntfeuchtungEinrichtung>(EinrichtungModul)?.ZusatzVorhanden);
+
+    /// <summary>Speichert, ob es einen Zusatz-Entfeuchter gibt. Die Regelung in Home Assistant bleibt unberührt.</summary>
+    public EntfeuchtungEinrichtungDto EinrichtungSpeichern(bool? zusatzVorhanden)
+    {
+        var stand = _repo.GetEinstellungen<EntfeuchtungEinrichtung>(EinrichtungModul) ?? new EntfeuchtungEinrichtung();
+        stand.ZusatzVorhanden = zusatzVorhanden;
+        _repo.SetEinstellungen(EinrichtungModul, stand);
+        return Einrichtung();
     }
 
     /// <summary>Prüft und speichert die Anzeigenamen — nur die genannten. Leer oder null setzt auf die Vorgabe.</summary>

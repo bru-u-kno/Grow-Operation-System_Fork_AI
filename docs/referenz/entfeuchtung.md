@@ -14,14 +14,14 @@
 | **Überblick** | Nur zum Lesen: Lagemeldung (im Ziel, knapp daneben, deutlich daneben), Messwerte und Zonen einmal fürs Zelt, die Geräte mit ihrem Status (läuft · aus · wartet · offline), „Warum läuft welches Gerät?", die Erklärung der Zusammenarbeit |
 | **Regel** | Nach Regeln geordnet: „Wie ruhig schaltet er?", „Einschalten erst nach", „Auch tagsüber entfeuchten", „Automatik" — je Regel dieselben Felder für jedes Gerät. Danach „Nur für …": beim Hauptentfeuchter Regelart, feste Schwellen, Außenluft; beim Zusatz Hilfsstärke, Schaltgröße, Nachts durchlaufen |
 | **Schutz** | Höchsttemperatur Tag/Nacht einmal für alle, Mindestlaufzeit je Gerät, beim Zusatz früher aus/später wieder an, Mindestpause, Meldung „zieht nichts" |
-| **Einrichtung** | Welche Entfeuchter es gibt (aus „Geräte & Entitäten"), wie sie arbeiten, Zuordnung der Geräte |
+| **Einrichtung** | Wie viele Entfeuchter du hast (Zusatz an- oder abwählen, sofort gespeichert), wie sie arbeiten, Zuordnung der Geräte |
 
 ## Was es tut
 
 Zeigt, wie es um Luftfeuchte und Temperatur steht, erklärt in einfachen Sätzen, wann welcher Entfeuchter schaltet, und lässt
 die Werte dafür einstellen. Gespeichert wird über die bekannten Wege (`/api/steuerung/entfeuchter` und
 `/api/steuerung/entfeuchter-zusatz`); ein Knopf „Speichern" ruft beide nacheinander auf. Die Regelung selbst läuft in
-Home Assistant. Gibt es keinen Zusatz-Entfeuchter (in „Geräte & Entitäten" nicht zugeordnet), steht nur der Hauptentfeuchter da.
+Home Assistant. Wie viele Entfeuchter es gibt, sagst du im Reiter **Einrichtung** (Zusatz-Entfeuchter an- oder abwählen; „Automatisch" schließt es aus der Zuordnung in „Geräte & Entitäten"). Ohne Zusatz steht nur der Hauptentfeuchter da, ohne Hilfsstärke und ohne zweite Zeile; in der Übersicht der Steuerungen ist es weiter EIN Eintrag „Entfeuchtung". Abwählen hält die Regelung des Zusatzes in Home Assistant nicht an.
 
 ## Die drei Zonen
 

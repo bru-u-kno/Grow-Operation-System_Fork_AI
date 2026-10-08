@@ -15,7 +15,8 @@ describe('Entfeuchtung als ein Eintrag (A-015)', () => {
     const e = liste[1]
     expect(e.titel).toBe('Entfeuchtung')
     expect(e.status).toBe('an')
-    expect(e.unterzeile).toBe('entfeuchtet · Dehumi Tent: bereit')
+    expect(e.kurz).toBe('Haupt- und Zusatz-Entfeuchter')
+    expect(e.unterzeile).toBe('entfeuchtet · Zusatz bereit')
   })
 
   it('der Status warnt, sobald eines warnt', () => {
@@ -28,6 +29,15 @@ describe('Entfeuchtung als ein Eintrag (A-015)', () => {
     expect(liste).toHaveLength(1)
     expect(liste[0].kurz).toBe('kurz RDWC Dehumi')
     expect(liste[0].unterzeile).toBe('bereit')
+  })
+
+  it('die Angabe aus der Einrichtung gilt vor der Zuordnung', () => {
+    const liste = [modul('entfeuchter', 'A', 'an', 'entfeuchtet · VPD 1,26'), modul('entfeuchter-zusatz', 'B', 'aus', 'bereit')]
+    expect(mitEntfeuchtung(liste, false)[0].unterzeile).toBe('entfeuchtet · VPD 1,26')
+    expect(mitEntfeuchtung(liste, true)[0].unterzeile).toBe('entfeuchtet · Zusatz bereit')
+    const unbekannt = [modul('entfeuchter', 'A', 'an'), modul('entfeuchter-zusatz', 'B', 'aus', 'Zustand unbekannt')]
+    expect(mitEntfeuchtung(unbekannt, true)[0].kurz).toBe('Haupt- und Zusatz-Entfeuchter')
+    expect(mitEntfeuchtung(unbekannt, null)[0].kurz).toBe('kurz A')
   })
 
   it('ohne Entfeuchter-Modul bleibt die Liste, wie sie ist', () => {

@@ -511,6 +511,9 @@ export type EntfeuchterNamen = { fuehrung: EntfeuchterName; zusatz: EntfeuchterN
 /** PUT-Körper der Namen: leer oder `null` heißt „zurück auf die Vorgabe". */
 export type EntfeuchterNamenAenderung = { fuehrung?: string | null; zusatz?: string | null }
 
+/** A-015: Wie viele Entfeuchter es gibt — `null` heißt „nach der Zuordnung in Geräte & Entitäten entscheiden“. */
+export type EntfeuchtungEinrichtung = { zusatzVorhanden: boolean | null }
+
 // ----------------------------------------------------------------- Chiller
 
 export type ChillerEinstellungen = {

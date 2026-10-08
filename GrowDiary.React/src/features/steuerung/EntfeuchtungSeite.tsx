@@ -14,6 +14,7 @@ import { useFehlerZeigen } from './fehler-reiter'
 import { SteuerungWechsel } from './SteuerungWechsel'
 import { useEntfeuchterHaupt } from './useEntfeuchterHaupt'
 import { useEntfeuchterZusatz } from './useEntfeuchterZusatz'
+import { useEntfeuchtungEinrichtung } from './useEntfeuchtungEinrichtung'
 import type { EntfeuchterNamen, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
 
@@ -38,6 +39,7 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
   const fehlerZeigen = useFehlerZeigen(reiter, setReiter, ENTFEUCHTUNG_REITER)
   const h = useEntfeuchterHaupt()
   const z = useEntfeuchterZusatz()
+  const einr = useEntfeuchtungEinrichtung()
   const [namen, setNamen] = useState<EntfeuchterNamen | null>(null)
 
   useEffect(() => {
@@ -48,7 +50,9 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
     return () => controller.abort()
   }, [])
 
-  const hatZusatz = zusatzVorhanden(z.seite?.live)
+  // Hat der Nutzer in der Einrichtung gesagt, ob es einen Zusatz gibt, gilt das; sonst die Zuordnung in Geräte & Entitäten.
+  const zusatzAuto = zusatzVorhanden(z.seite?.live)
+  const hatZusatz = einr.einrichtung?.zusatzVorhanden ?? zusatzAuto
   const zusatzModell = hatZusatz ? z : null
   const haupt = namen?.fuehrung.anzeigename ?? z.seite?.live.fuehrungName ?? 'Entfeuchter'
   const zusatz = namen?.zusatz.anzeigename ?? z.seite?.live.zusatzName ?? 'Zusatz-Entfeuchter'
@@ -142,7 +146,17 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
       {reiter === 'ueberblick' && <UeberblickTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
       {reiter === 'regel' && <RegelTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
       {reiter === 'schutz' && <SchutzTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
-      {reiter === 'einrichtung' && <EinrichtungTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
+      {reiter === 'einrichtung' && (
+        <EinrichtungTab
+          h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz}
+          zusatzLive={z.seite?.live ?? null}
+          zusatzGesagt={einr.einrichtung?.zusatzVorhanden ?? null}
+          zusatzAuto={zusatzAuto}
+          arbeitet={einr.arbeitet}
+          fehler={einr.fehler}
+          onZusatz={(wert) => { void einr.zusatzSetzen(wert) }}
+        />
+      )}
     </V1Page>
   )
 }

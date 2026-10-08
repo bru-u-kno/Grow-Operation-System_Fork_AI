@@ -330,6 +330,10 @@ public sealed class RundwegVollstaendigTests
         ["EntfeuchterNamenAenderung"] =
             "Zwei Namen, bei denen „fehlt“ und „null“ verschiedenes heißen (Name bleibt / Vorgabe). Die "
             + "feste Probe kennt den Unterschied nicht. Fahren EntfeuchterZusatzApiTests.",
+        // Fork AI (A-015)
+        ["EntfeuchtungEinrichtungAenderung"] =
+            "Ein einziger Wahrheitswert mit drei Zuständen (true / false / null = automatisch). Die feste Probe (1) "
+            + "kennt „null“ nicht und träfe nur „true“. Fährt EntfeuchterZusatzApiTests (alle drei Zustände, zweimal).",
         // Fork AI
         ["ChillerEinstellungen"] =
             "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Bei den Zieltemperaturen "
