@@ -198,9 +198,9 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
           </p>
         </V1Card>
       </Klappkachel>
-      <Klappkachel titel={hs.live.planWoche ? `Aus dem Plan · ${hs.live.planWoche}` : 'Aus dem Plan'} zusammenfassung={`VPD ${hl.vpdUnten == null ? '–' : `${zahl(hl.vpdUnten, 2)}–${zahl(hl.vpdOben, 2)} kPa`} · Feuchte max. ${hl.rhObergrenzeProzent == null ? '–' : `${zahl(hl.rhObergrenzeProzent, 0)} %`}`} offen={false}>
+      <Klappkachel titel={hs.live.planWoche ? `Aus dem Plan · ${hs.live.planWoche}` : 'Aus dem Plan'} zusammenfassung={`${vpd ? `VPD ${hl.vpdUnten == null ? '–' : `${zahl(hl.vpdUnten, 2)}–${zahl(hl.vpdOben, 2)} kPa`} · ` : ''}Feuchte max. ${hl.rhObergrenzeProzent == null ? '–' : `${zahl(hl.rhObergrenzeProzent, 0)} %`}`} offen={false}>
         <V1Card>
-          <Lesen label="VPD-Band" hinweis="aus dem Plan" wert={hl.vpdUnten == null ? '–' : `${zahl(hl.vpdUnten, 2)} – ${zahl(hl.vpdOben, 2)} kPa`} />
+          {vpd && <Lesen label="VPD-Band" hinweis="aus dem Plan" wert={hl.vpdUnten == null ? '–' : `${zahl(hl.vpdUnten, 2)} – ${zahl(hl.vpdOben, 2)} kPa`} />}
           <Lesen
             label="Luftfeuchte max."
             hinweis={hl.deckelProzent == null ? 'aus dem Plan' : `aus dem Plan · Deckel für EIN: ${zahl(hl.rhObergrenzeProzent, 0)} % − Klima-Abstand = ${zahl(hl.deckelProzent, 0)} %`}
@@ -253,13 +253,13 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
             <V1Card>
               <Lesen
                 label="Schaltgröße"
-                hinweis={'Folgt der Regelgröße oben. Bei VPD braucht er ein VPD-Ziel im Plan, sonst nimmt der Fork die Plan-Luftfeuchte.'}
+                hinweis={vpd ? 'Folgt der Regelgröße oben. Bei VPD braucht er ein VPD-Ziel im Plan, sonst nimmt der Fork die Plan-Luftfeuchte.' : 'Folgt der Regelgröße oben: Luftfeuchte.'}
                 wert={zl.schaltgroesse === 'vpd' ? 'VPD' : zl.schaltgroesse === 'feuchte' ? 'Luftfeuchte' : '–'}
               />
-              <Lesen label="VPD-Ziel" hinweis={zl.planWoche ?? undefined} wert={zl.vpdZiel == null ? '–' : `${zahl(zl.vpdZiel, 2)} kPa`} />
+              {vpd && <Lesen label="VPD-Ziel" hinweis={zl.planWoche ?? undefined} wert={zl.vpdZiel == null ? '–' : `${zahl(zl.vpdZiel, 2)} kPa`} />}
               <Lesen
                 label="Luftfeuchte EIN / AUS"
-                hinweis={'Schwellen aus dem Plan; gelten nachts mit „Nachts durchlaufen" und wenn der Plan kein VPD liefert.'}
+                hinweis={vpd ? 'Schwellen aus dem Plan; gelten nachts mit „Nachts durchlaufen" und wenn der Plan kein VPD liefert.' : 'Dieselben Schwellen wie beim Hauptgerät, Tag und Nacht.'}
                 wert={zl.feuchteEinProzent == null || zl.feuchteAusProzent == null ? '–' : `${zahl(zl.feuchteEinProzent, 0)} % / ${zahl(zl.feuchteAusProzent, 0)} %`}
               />
             </V1Card>
@@ -270,7 +270,7 @@ export function RegelTab({ h, z, haupt, zusatz }: Ctx) {
                 label="Nachts durchlaufen"
                 checked={ze.nachtDurchlaufen}
                 onChange={(an) => z.setz('nachtDurchlaufen', an)}
-                hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach dem VPD-Band takten. Wirkt mit der vom Fork angelegten Regelung."
+                hint="An: nachts läuft er, bis das Zelt zu warm wird (keine Feuchtespitzen). Aus: auch nachts nach der Luftfeuchte takten. Wirkt mit der vom Fork angelegten Regelung."
               />
             </V1Card>
           </Klappkachel>

@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.192
+
+**Fork AI.** Entfeuchtung: bei Regelgröße Luftfeuchte steht nirgends mehr VPD.
+
+- **Regel-Reiter:** „VPD-Band" (Aus dem Plan), „VPD-Ziel" (Schaltgröße) und die VPD-Hinweise erscheinen nur noch, wenn VPD gewählt ist. „Nachts durchlaufen" nennt die Luftfeuchte statt des VPD-Bands.
+- **Schutz-Reiter und Überblick:** Mindestlaufzeit, „Zusatz geht aus" und der kleine VPD-Messwert unter der Luftfeuchte richten sich nach der gewählten Regelgröße.
+- **Übersicht der Steuerungen:** Die Zeile zeigt „Luftfeuchte · ein ab …" statt „Fest · …".
+
 ## 2.0.0-forkai.191
 
 **Fork AI.** Entfeuchtung: beide Entfeuchter regeln jetzt einheitlich nach Luftfeuchte — keine VPD-Felder mehr bei dem einen und Luftfeuchte beim anderen.

@@ -79,7 +79,7 @@ export function UeberblickTab({ h, z, haupt, zusatz }: Ctx) {
               zone={fZone}
               zustand={fZone ? ZONEN_WORT[fZone] : 'keine Aussage'}
               ton={fZone === 'kritisch' ? 'kritisch' : fZone === 'knapp' ? 'warn' : undefined}
-              beiwerk={`VPD ${zahl(hl.vpd, 2)} kPa${phase ? ` · ${phase}` : ''}`}
+              beiwerk={`${a.vpdRegelung ? `VPD ${zahl(hl.vpd, 2)} kPa` : ''}${a.vpdRegelung && phase ? ' · ' : ''}${phase ?? ''}`}
             />
             {feuchteZiel != null && (
               <ZonenSkala

@@ -106,7 +106,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                 Kennung: "entfeuchter",
                 Titel: "Entfeuchter",
                 Status: entfeuchter.AutomatikAn == false ? "aus" : entfeuchter.PortAn == true ? "an" : "aus",
-                Kurz: $"{(Text(EntfeuchterSteuerungService.Entitaeten.VpdRegelung) == "on" ? "VPD-Modus" : "Fest")} · ein ab {F(entfeuchter.EinAktivProzent, " %", "0.0")} · aus unter {F(entfeuchter.AusAktivProzent, " %", "0.0")}",
+                Kurz: $"{(Text(EntfeuchterSteuerungService.Entitaeten.VpdRegelung) == "on" ? "VPD-Modus" : "Luftfeuchte")} · ein ab {F(entfeuchter.EinAktivProzent, " %", "0.0")} · aus unter {F(entfeuchter.AusAktivProzent, " %", "0.0")}",
                 Wert: F(entfeuchter.FeuchteProzent, " %", "0.0"),
                 Unterzeile: $"{(entfeuchter.PortAn == true ? "entfeuchtet" : "bereit")} · VPD {F(entfeuchter.Vpd, "", "0.00")}",
                 HatDetail: true),

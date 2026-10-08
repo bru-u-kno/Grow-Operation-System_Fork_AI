@@ -72,7 +72,7 @@ export function SchutzTab({ h, z, haupt, zusatz }: Ctx) {
       <RegelKachel
         titel="Mindestlaufzeit"
         zusammenfassung={`${haupt} ${he.mindestlaufzeitMin} min${ze ? ` · ${zusatz} ${ze.mindestlaufzeitMin} min` : ''}`}
-        erklaerung="Vorher schaltet erreichte Feuchte (oder VPD) das Gerät nicht ab. Übertemperatur schaltet immer sofort ab."
+        erklaerung={`Vorher schaltet ${he.vpdRegelung ? 'der erreichte VPD-Wert oder die erreichte Feuchte' : 'die erreichte Luftfeuchte'} das Gerät nicht ab. Übertemperatur schaltet immer sofort ab.`}
         offen={false}
       >
         <Zahl label={haupt} hinweis="Mindestlaufzeit" einheit="min" wert={he.mindestlaufzeitMin} min={0} max={60} schritt={1} onChange={(v) => h.setz('mindestlaufzeitMin', Math.round(v))} fehler={h.feldFehler.MindestlaufzeitMin} />
@@ -89,7 +89,7 @@ export function SchutzTab({ h, z, haupt, zusatz }: Ctx) {
             <V1Card>
               <Zahl label="Zusatz geht früher aus" hinweis={grenzen ? `Bei ${zahl(grenzen.max)} °C geht ${haupt} aus, der Zusatz schon bei ${zahl(grenzen.folgeAus)}.` : 'Abstand unter der Höchsttemperatur.'} einheit="K" wert={ze.folgeAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => z.setzEinzel('folgeAbstandK', v)} fehler={fehlerZu(z.feldFehler, 'folgeAbstandK')} />
               <Zahl label="Wieder einschalten erst, wenn es kühler ist" hinweis={grenzen ? `Weiterer Abstand unter dem Abschaltwert (jetzt ${zahl(grenzen.wiederEin)} °C). Verhindert das Takten an der Grenze.` : 'Weiterer Abstand unter dem Abschaltwert. Verhindert das Takten an der Grenze.'} einheit="K" wert={ze.wiederEinAbstandK} min={0.5} max={3} schritt={0.5} onChange={(v) => z.setzEinzel('wiederEinAbstandK', v)} fehler={fehlerZu(z.feldFehler, 'wiederEinAbstandK')} />
-              <p className="st-hinweis" data-audit="zusatz-fuehrung-regel">Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät {haupt} läuft.</p>
+              <p className="st-hinweis" data-audit="zusatz-fuehrung-regel">Der Zusatz geht wegen {he.vpdRegelung ? 'VPD oder Feuchte' : 'der Luftfeuchte'} nur aus, wenn das Hauptgerät {haupt} läuft.</p>
             </V1Card>
           </Klappkachel>
           <Klappkachel titel="Mindestpause" zusammenfassung={`${ze.mindestpauseMin} min`} offen={false}>
