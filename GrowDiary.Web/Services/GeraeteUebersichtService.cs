@@ -13,8 +13,9 @@ namespace GrowDiary.Web.Services;
 /// vorerst weiter dort, wo sie heute gepflegt wird.</para>
 ///
 /// <para><b>Reihenfolge der Wahrheit.</b> Erstens die Zuordnung des Nutzers,
-/// zweitens das Geräteregister von Home Assistant, drittens — nur wenn beides
-/// schweigt — die Vermutung aus dem Namen. Das Inventar definiert KEIN Gerät:
+/// zweitens das Geräteregister von Home Assistant. Schweigt beides, gehört die
+/// Entität in das Sammelfach „Nicht zugeordnet" — der Fork rät nichts. Das
+/// Inventar definiert KEIN Gerät:
 /// es legt je Messgröße einen Eintrag an („pH", „EC", „Wassertemperatur"), und
 /// die sind drei Sensoren EINES Bluelab, nicht drei Geräte. Ein Inventar-Eintrag
 /// hängt sich deshalb an das Gerät seiner Entität.</para>
@@ -27,6 +28,9 @@ namespace GrowDiary.Web.Services;
 /// </remarks>
 public sealed class GeraeteUebersichtService
 {
+    /// <param name="RegisterErreichbar">Home Assistant hat sein Geräteregister geliefert.</param>
+    public sealed record GeraeteStand(IReadOnlyList<Geraet> Geraete, bool RegisterErreichbar);
+
     private readonly GeraeteRepository _geraete;
     private readonly TentRepository _zelte;
     private readonly HardwareRepository _hardware;
@@ -58,17 +62,20 @@ public sealed class GeraeteUebersichtService
 
     /// <summary>
     /// Alle Geräte mit ihren Entitäten und deren Verwendungen. Holt die Herkunft aus
-    /// dem HA-Register; ist es nicht erreichbar, greift die Namensvermutung.
+    /// dem HA-Register. Ist es nicht erreichbar, belegt nichts ein Gerät — dann
+    /// steht alles im Sammelfach, und <see cref="GeraeteStand.RegisterErreichbar"/>
+    /// sagt der Seite, warum.
     /// </summary>
-    public async Task<IReadOnlyList<Geraet>> AlleAsync(CancellationToken ct)
+    public async Task<GeraeteStand> AlleAsync(CancellationToken ct)
     {
         var herkunft = await _register.HerkunftAsync(_haEinstellungen.GetEffectiveHomeAssistantSettings(), ct);
-        return Zusammenfassen(
+        var geraete = Zusammenfassen(
             Verwendungen(),
             herkunft,
             _hardware.GetHardwareItems(),
             _geraete.Geraete(),
             _geraete.Zuordnungen());
+        return new GeraeteStand(geraete, herkunft.Count > 0);
     }
 
     // ------------------------------------------------------- Quellen einsammeln
@@ -159,11 +166,20 @@ public sealed class GeraeteUebersichtService
         foreach (var (entityId, liste) in verwendungen)
         {
             herkunft.TryGetValue(entityId, out var quelle);
-            var (schluessel, bestaetigt, vomNutzer) = SchluesselFuer(entityId, quelle, zuordnungen);
+            var (schluessel, vomNutzer) = SchluesselFuer(entityId, quelle, zuordnungen);
 
             var eintrag = Holen(schluessel);
             eintrag.Entitaeten.Add(new GeraetEntitaet(entityId, liste, vomNutzer, vomNutzer ? quelle?.DeviceName : null));
-            eintrag.Bestaetigt |= bestaetigt;
+
+            // Das Sammelfach hat keine Herkunft, aus der sich Name, Modell oder
+            // Controller lesen liessen — und keine Verbindung zum Register.
+            if (schluessel == GeraeteSchluessel.Unzugeordnet)
+            {
+                eintrag.Name = "Nicht zugeordnet";
+                eintrag.IstRubrik = true;
+                eintrag.IstUnzugeordnet = true;
+                continue;
+            }
 
             // Eine zugewanderte Entität benennt ihr neues Gerät NICHT um: der Name
             // kam sonst von dem Gerät, aus dem sie stammt — eine Kamera hieß nach
@@ -200,7 +216,6 @@ public sealed class GeraeteUebersichtService
 
                 var eltern = Holen(controller);
                 eltern.IstController = true;
-                eltern.Bestaetigt = true;
                 eltern.Name ??= controllerName;
                 eltern.Modell ??= controllerModell;
             }
@@ -212,7 +227,6 @@ public sealed class GeraeteUebersichtService
         foreach (var eintrag in hardware.Where(h => string.IsNullOrWhiteSpace(h.HaEntityId)))
         {
             var eimerEintrag = Holen(HardwareSchluessel(eintrag.Id));
-            eimerEintrag.Bestaetigt = true;
             eimerEintrag.Name ??= eintrag.Name;
         }
 
@@ -222,9 +236,10 @@ public sealed class GeraeteUebersichtService
         {
             var fach = Holen(schluessel);
             fach.IstRubrik = true;
-            fach.Bestaetigt = true;
             fach.Name ??= eintrag.Name;
         }
+
+        MacPlatzhalterAufloesen(eimer);
 
         var hardwareNachEntity = hardware
             .Where(h => !string.IsNullOrWhiteSpace(h.HaEntityId))
@@ -235,19 +250,22 @@ public sealed class GeraeteUebersichtService
         foreach (var (schluessel, eintrag) in eimer)
         {
             gespeichert.TryGetValue(schluessel, out var eigen);
-            var hardwareItem = HardwareZu(schluessel, eintrag.Entitaeten, hardwareNachEntity, hardware, eigen);
+            // Das Sammelfach ist kein Gerät und hängt an keinem Inventar-Eintrag, auch
+            // wenn eine seiner Entitäten dort eingetragen ist.
+            var hardwareItem = eintrag.IstUnzugeordnet
+                ? null
+                : HardwareZu(schluessel, eintrag.Entitaeten, hardwareNachEntity, hardware, eigen);
 
             geraete.Add(new Geraet(
                 schluessel,
                 // Ein leer gespeicherter Name ist keine Korrektur, sondern das
                 // Fehlen einer — dann gilt weiter, was Home Assistant sagt.
                 (string.IsNullOrWhiteSpace(eigen?.Name) ? null : eigen!.Name)
-                    ?? eintrag.Name ?? hardwareItem?.Name ?? GeraeteSchluessel.AlsName(schluessel),
+                    ?? eintrag.Name ?? hardwareItem?.Name ?? schluessel,
                 eigen?.TentId ?? hardwareItem?.TentId,
                 eigen?.HardwareItemId ?? hardwareItem?.Id,
                 eintrag.Entitaeten.OrderBy(e => e.EntityId, StringComparer.OrdinalIgnoreCase).ToList())
             {
-                Bestaetigt = eintrag.Bestaetigt || eigen is not null,
                 // Ein LEERER Eltern-Schlüssel ist die ausdrückliche Ansage „hängt an
                 // nichts" — nicht dasselbe wie „nichts eingetragen", sonst liesse sich
                 // ein von Home Assistant geerbter Controller nie aushängen.
@@ -258,6 +276,7 @@ public sealed class GeraeteUebersichtService
                 IstController = eintrag.IstController,
                 Modell = eintrag.Modell,
                 IstRubrik = eintrag.IstRubrik || (eigen?.IstRubrik ?? false),
+                IstUnzugeordnet = eintrag.IstUnzugeordnet,
                 ElternVomNutzer = eigen?.ElternSchluessel is not null,
                 NameVomNutzer = !string.IsNullOrWhiteSpace(eigen?.Name),
                 AbgeleiteterEltern = eintrag.ElternSchluessel,
@@ -283,6 +302,62 @@ public sealed class GeraeteUebersichtService
             .ToList();
     }
 
+    /// <summary>
+    /// Zu jeder Entität im Sammelfach ein Satz für die Seite: was fehlt, und — wenn
+    /// die Steuerung es belegt — wohin sie vermutlich gehört. „Belegt" heißt: ein
+    /// anderes Gerät trägt Entitäten desselben Steuerungs-Moduls, und es ist das
+    /// EINZIGE. Bei mehreren Geräten im Modul gibt es keinen Vorschlag; der Fork
+    /// wählt nicht aus.
+    /// </summary>
+    public static IReadOnlyList<string> Zuordnungshinweise(IReadOnlyList<Geraet> geraete)
+    {
+        var fach = geraete.FirstOrDefault(g => g.IstUnzugeordnet);
+        if (fach is null) return [];
+
+        var hinweise = new List<string>();
+        foreach (var entitaet in fach.Entitaeten)
+        {
+            var module = entitaet.Verwendungen
+                .Where(v => v.Quelle == GeraetQuellen.Steuerung)
+                .Select(v => SteuerungsModul(v.Zweck))
+                .Where(m => m is not null)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            string? vorschlag = null;
+            foreach (var modul in module)
+            {
+                var kandidaten = geraete
+                    .Where(g => !g.IstRubrik && g.Entitaeten.Any(e => e.Verwendungen.Any(v =>
+                        v.Quelle == GeraetQuellen.Steuerung
+                        && string.Equals(SteuerungsModul(v.Zweck), modul, StringComparison.OrdinalIgnoreCase))))
+                    .Select(g => g.Name)
+                    .Distinct()
+                    .ToList();
+                if (kandidaten.Count == 1)
+                {
+                    vorschlag = $"{kandidaten[0]} (Steuerung {modul})";
+                    break;
+                }
+            }
+
+            hinweise.Add(vorschlag is null
+                ? $"{entitaet.EntityId} gehört zu keinem Gerät — bitte einem Gerät zuweisen."
+                : $"{entitaet.EntityId} gehört zu keinem Gerät. Die Steuerung stellt sie zu {vorschlag} — dorthin zuweisen?");
+        }
+
+        return hinweise;
+    }
+
+    /// <summary>„Steuerung BLUELAB · Grenze setzen" → „BLUELAB".</summary>
+    private static string? SteuerungsModul(string zweck)
+    {
+        const string praefix = "Steuerung ";
+        if (!zweck.StartsWith(praefix, StringComparison.Ordinal)) return null;
+        var ende = zweck.IndexOf(" · ", StringComparison.Ordinal);
+        return ende < 0 ? zweck[praefix.Length..].Trim() : zweck[praefix.Length..ende].Trim();
+    }
+
     /// <summary>Schlüssel eines Inventar-Eintrags ohne Entität — eigener Namensraum.</summary>
     public static string HardwareSchluessel(int hardwareItemId) => $"hw:{hardwareItemId}";
 
@@ -292,31 +367,87 @@ public sealed class GeraeteUebersichtService
     private sealed class Eimer
     {
         public List<GeraetEntitaet> Entitaeten { get; } = new();
-        public bool Bestaetigt { get; set; }
         public bool IstController { get; set; }
         public string? Name { get; set; }
         public string? ElternSchluessel { get; set; }
         public string? Anschluss { get; set; }
         public string? Modell { get; set; }
         public bool IstRubrik { get; set; }
+        public bool IstUnzugeordnet { get; set; }
     }
 
-    private static (string Schluessel, bool Bestaetigt, bool VomNutzer) SchluesselFuer(
+    private static (string Schluessel, bool VomNutzer) SchluesselFuer(
         string entityId,
         HerkunftEintrag? herkunft,
         IReadOnlyDictionary<string, string> zuordnungen)
     {
         if (zuordnungen.TryGetValue(entityId, out var gesetzt) && !string.IsNullOrWhiteSpace(gesetzt))
         {
-            return (gesetzt, true, true);
+            return (gesetzt, true);
         }
 
         if (!string.IsNullOrWhiteSpace(herkunft?.DeviceId))
         {
-            return (HaSchluessel(herkunft!.DeviceId!), true, false);
+            return (HaSchluessel(herkunft!.DeviceId!), false);
         }
 
-        return (GeraeteSchluessel.AusEntity(entityId), false, false);
+        return (GeraeteSchluessel.Unzugeordnet, false);
+    }
+
+    /// <summary>
+    /// Ein Controller ist EIN Gerät. Die MAC in der <c>unique_id</c> klammert Ports
+    /// nur dann zu einem Platzhalter-Controller, wenn Home Assistant keinen
+    /// Controller kennt. Kennt er einen — erkennbar daran, dass er selbst Ports
+    /// über <c>via_device</c> trägt und eine eigene Entität mit derselben MAC
+    /// hat —, hängen die Ports an ihm, und der Platzhalter entfällt.
+    /// </summary>
+    /// <remarks>
+    /// Der Controller trug sonst doppelt: als „RDWC" und als Platzhalter
+    /// „Controller 4C16", und „RDWC" hing als „Fühler 7" unter dem Platzhalter,
+    /// weil die unique_id seiner eigenen Sensoren (<c>…_sensor_7_…</c>) wie die
+    /// eines Kindes aussieht.
+    /// </remarks>
+    private static void MacPlatzhalterAufloesen(Dictionary<string, Eimer> eimer)
+    {
+        var macZuController = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (schluessel, eintrag) in eimer)
+        {
+            if (eintrag.IstController
+                && schluessel.StartsWith("ha:", StringComparison.Ordinal)
+                && eintrag.ElternSchluessel is { } eltern
+                && eltern.StartsWith("mac:", StringComparison.OrdinalIgnoreCase))
+            {
+                macZuController[eltern] = schluessel;
+            }
+        }
+
+        foreach (var (schluessel, eintrag) in eimer.ToList())
+        {
+            if (eintrag.ElternSchluessel is not { } platzhalter
+                || !macZuController.TryGetValue(platzhalter, out var controller))
+            {
+                continue;
+            }
+
+            if (controller.Equals(schluessel, StringComparison.OrdinalIgnoreCase))
+            {
+                // Der Controller selbst, nicht sein eigenes Kind.
+                eintrag.ElternSchluessel = null;
+                eintrag.Anschluss = null;
+            }
+            else
+            {
+                eintrag.ElternSchluessel = controller;
+            }
+        }
+
+        foreach (var platzhalter in macZuController.Keys)
+        {
+            if (eimer.TryGetValue(platzhalter, out var leer) && leer.Entitaeten.Count == 0)
+            {
+                eimer.Remove(platzhalter);
+            }
+        }
     }
 
     private static HardwareItem? HardwareZu(

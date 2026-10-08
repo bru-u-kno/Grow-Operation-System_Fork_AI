@@ -41,13 +41,18 @@ einer Umstellung ist das die eigentliche Frage — was hängt daran?
 ## Die Zahlen und woher sie kommen
 
 - **Geräte** und **Entitäten**: Zählung aus `GET /api/geraete`.
-- **vermutet**: Geräte, deren Zuschnitt weder der Nutzer noch Home Assistant
-  bestätigt hat — der Name der Entität war die einzige Spur. Steht die Zahl
-  über null, lohnt ein Blick; in einer eingerichteten Anlage ist sie klein.
+- **nicht zugeordnet**: Entitäten, die weder zu einem Gerät in Home Assistant
+  gehören noch von dir einem Gerät zugewiesen wurden — Skripte, Helfer,
+  Templates. Sie stehen im Sammelfach „Nicht zugeordnet“ (zählt nicht als Gerät,
+  lässt sich nicht umbenennen). Wenn die Steuerung die Entität schon einem
+  einzigen Gerät zuordnet, steht ein Hinweis mit Vorschlag auf der Seite; der
+  Fork weist nie von allein zu.
 - Die Herkunft kommt aus `config/entity_registry/list` und
   `config/device_registry/list` über den WebSocket. Reihenfolge der Wahrheit:
-  Zuordnung des Nutzers, dann `device_id`/`via_device_id` von Home Assistant,
-  dann die Namensvermutung.
+  Zuordnung des Nutzers, dann `device_id`/`via_device_id` von Home Assistant.
+  Der Fork rät nicht aus Namen. Ein Controller erscheint einmal: die MAC aus der
+  `unique_id` klammert Ports nur dann zu einem Platzhalter, wenn Home Assistant
+  keinen Controller kennt.
 
 ## Was es bewusst NICHT tut
 

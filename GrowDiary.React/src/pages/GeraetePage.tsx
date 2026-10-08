@@ -37,12 +37,11 @@ type Geraet = {
   anschluss: string | null
   istController: boolean
   istRubrik: boolean
+  istUnzugeordnet: boolean
   elternVomNutzer: boolean
   nameVomNutzer: boolean
   abgeleiteterEltern: string | null
   modell: string | null
-  bestaetigt: boolean
-  vermutet: boolean
   tentId: number | null
   hardwareItemId: number | null
   entitaeten: Entitaet[]
@@ -51,7 +50,7 @@ type Seite = {
   geraete: Geraet[]
   anzahlGeraete: number
   anzahlEntitaeten: number
-  anzahlVermutet: number
+  anzahlUnzugeordnet: number
   anzahlVerschoben: number
   hinweise: string[]
 }
@@ -60,7 +59,7 @@ type Seite = {
 function zielOptionen(alle: Geraet[]): V1Option[] {
   return [
     { wert: '', text: '— dorthin, wo Home Assistant sie zählt —', betont: true },
-    ...alle.map((ziel): V1Option => ({
+    ...alle.filter((ziel) => !ziel.istUnzugeordnet).map((ziel): V1Option => ({
       wert: ziel.schluessel,
       text: ziel.name,
       hinweis: ziel.anschluss,
@@ -349,7 +348,7 @@ export default function GeraetePage() {
   // Wohin sich ein Gerät hängen lässt: in eine Rubrik oder unter einen
   // Controller. Ein Port-Gerät als Ziel wäre eine dritte Ebene — die zeigt die
   // Liste nicht, also bietet sie es auch nicht an.
-  const ziele = (seite?.geraete ?? []).filter((g) => g.istRubrik || g.istController)
+  const ziele = (seite?.geraete ?? []).filter((g) => !g.istUnzugeordnet && (g.istRubrik || g.istController))
 
   function werkzeug(geraet: Geraet) {
     if (bearbeitet === geraet.schluessel) {
@@ -461,7 +460,7 @@ export default function GeraetePage() {
         <div className="gr-zahlen">
           <div><b>{seite.anzahlGeraete}</b><span>Geräte</span></div>
           <div><b>{seite.anzahlEntitaeten}</b><span>Entitäten</span></div>
-          <div><b className={seite.anzahlVermutet > 0 ? 'is-warn' : undefined}>{seite.anzahlVermutet}</b><span>vermutet</span></div>
+          <div><b className={seite.anzahlUnzugeordnet > 0 ? 'is-warn' : undefined}>{seite.anzahlUnzugeordnet}</b><span>nicht zugeordnet</span></div>
           <div>
             <b className={seite.anzahlVerschoben > 0 ? 'is-korrigiert' : undefined}>{seite.anzahlVerschoben}</b>
             <span>korrigiert</span>
@@ -539,7 +538,9 @@ export default function GeraetePage() {
                   + (kind.elternVomNutzer || kind.nameVomNutzer ? 1 : 0), 0)
               }
               werkzeug={werkzeug(geraet)}
-              onMenue={() => setMenue(menue === geraet.schluessel ? null : geraet.schluessel)}
+              // Das Sammelfach ist keine Rubrik zum Pflegen: umbenennen, verschieben
+              // oder verwerfen gibt es dort nicht.
+              onMenue={geraet.istUnzugeordnet ? undefined : () => setMenue(menue === geraet.schluessel ? null : geraet.schluessel)}
               menueOffen={menue === geraet.schluessel}
               alleGeraete={seite.geraete}
               aufGeraet={(entityId, ziel) => void entitaetVerschieben(entityId, geraet, ziel)}
@@ -614,9 +615,9 @@ export default function GeraetePage() {
       </>}
 
       <p className="gr-fuss">
-        „Vermutet" heißt: weder Home Assistant noch du habt gesagt, zu welchem Gerät die Entität
-        gehört — der Name war die einzige Spur. Geändert wird vorerst weiter dort, wo es heute steht;
-        die Marke hinter jeder Entität sagt, wo das ist.
+        Ein Gerät ist, was Home Assistant als Gerät führt oder im Inventar als Hardware steht. „Nicht zugeordnet"
+        sammelt alles ohne Gerät, etwa Skripte — der Fork rät nicht, zu wem es gehört; du weist es zu.
+        Geändert wird vorerst weiter dort, wo es heute steht; die Marke hinter jeder Entität sagt, wo das ist.
       </p>
     </V1Page>
   )
@@ -656,7 +657,6 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
       <button type="button" className="gr-kopf" onClick={onKlick} aria-expanded={hatKinder ? !zugeklappt : offen}>
         <span className="gr-name">
           {geraet.name}
-          {geraet.vermutet && <em className="gr-vermutet">vermutet</em>}
           <small>{unterzeile}</small>
         </span>
         {onMenue && (

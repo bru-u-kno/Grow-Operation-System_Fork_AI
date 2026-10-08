@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.193
+
+**Fork AI.** Geräte & Entitäten: Ein Gerät ist nur noch echte Hardware — der Fork rät keine Geräte mehr aus Namen.
+
+- **Keine geratenen Geräte mehr:** Bisher machte der Fork aus den ersten zwei Wortteilen einer Entität ein „Gerät". So entstand „Edenic Alarmgrenze setzen" — in Wahrheit ein Skript für die Bluelab-Alarmgrenzen. Ein Gerät kommt jetzt nur noch aus dem Geräteregister von Home Assistant, dem Inventar oder deiner Zuordnung.
+- **Sammelfach „Nicht zugeordnet":** Skripte, Helfer und Templates ohne Gerät stehen dort, bis du sie einem Gerät zuweist. Das Fach zählt nicht als Gerät und lässt sich nicht umbenennen. Die Zahl „vermutet" im Kopf der Seite heißt jetzt „nicht zugeordnet". Trägt die Steuerung die Entität schon einem einzigen Gerät zu, steht oben ein Hinweis mit Vorschlag; der Fork weist nie von allein zu.
+- **Ein Controller, ein Eintrag:** Der AC-Infinity-Controller „RDWC" stand doppelt in der Liste — einmal als „RDWC" und einmal als Platzhalter „Controller 4C16", unter dem „RDWC" als „Fühler 7" hing. Jetzt gibt es nur noch „RDWC", die Ports hängen direkt daran.
+- **Home Assistant nicht erreichbar:** Liefert Home Assistant sein Geräteregister nicht, steht ein Hinweis oben, statt dass die Liste still ungenauer wird.
+
 ## 2.0.0-forkai.192
 
 **Fork AI.** Entfeuchtung: bei Regelgröße Luftfeuchte steht nirgends mehr VPD.

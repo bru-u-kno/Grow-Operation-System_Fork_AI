@@ -38,7 +38,8 @@ public sealed class GeraeteApiController : ApiControllerBase
     [ProducesResponseType(typeof(GeraeteSeiteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<GeraeteSeiteDto>> Liste(CancellationToken ct)
     {
-        var geraete = await _geraete.AlleAsync(ct);
+        var stand = await _geraete.AlleAsync(ct);
+        var geraete = stand.Geraete;
 
         var zeilen = geraete.Select(g => new GeraetDto(
             g.Schluessel,
@@ -46,9 +47,9 @@ public sealed class GeraeteApiController : ApiControllerBase
             g.ElternSchluessel,
             g.Anschluss,
             g.IstController,
-            g.Bestaetigt,
             g.Modell,
             g.IstRubrik,
+            g.IstUnzugeordnet,
             g.ElternVomNutzer,
             g.NameVomNutzer,
             g.AbgeleiteterEltern,
@@ -64,14 +65,18 @@ public sealed class GeraeteApiController : ApiControllerBase
         // Fork AI (forkai.44): Regeln tut Home Assistant. Weicht eine Rolle von dem
         // ab, was die Automation fest verdrahtet hat, meinen Anzeige und Regelung
         // Verschiedenes — das gehört auf die Seite, nicht in ein Protokoll.
-        var hinweise = Co2SteuerungService.Abweichungen(_rollen.EntitiesFuerModul(Co2SteuerungService.Modul));
+        var hinweise = Co2SteuerungService.Abweichungen(_rollen.EntitiesFuerModul(Co2SteuerungService.Modul))
+            .Concat(stand.RegisterErreichbar
+                ? GeraeteUebersichtService.Zuordnungshinweise(geraete)
+                : ["Das Geräteregister von Home Assistant ist nicht erreichbar. Ohne es lässt sich kein Gerät belegen — deshalb steht alles unter „Nicht zugeordnet“."])
+            .ToList();
 
         return Ok(new GeraeteSeiteDto(
             zeilen,
             // Eine Rubrik ist ein Fach, kein Geraet — sie faelschte die Zahl.
             zeilen.Count(z => !z.IstRubrik),
             zeilen.Sum(z => z.Entitaeten.Count),
-            zeilen.Count(z => !z.Bestaetigt),
+            zeilen.Where(z => z.IstUnzugeordnet).Sum(z => z.Entitaeten.Count),
             // Korrekturen sind BEIDES: verschobene Entitaeten und Geraete, die der
             // Nutzer umgehaengt oder umbenannt hat. Zaehlte nur das erste, stuende
             // nach dem Verschieben eines Geraets weiter eine Null da.
@@ -93,6 +98,11 @@ public sealed class GeraeteApiController : ApiControllerBase
             return BadRequestError("entity_missing", "Ohne Entität geht es nicht.");
         }
 
+        if (string.Equals(request.Schluessel?.Trim(), GeraeteSchluessel.Unzugeordnet, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequestError("unzugeordnet_fest", "„Nicht zugeordnet“ ist kein Ziel. Zum Lösen den Schlüssel leer lassen.");
+        }
+
         _repo.EntitaetZuordnen(request.EntityId.Trim(), request.Schluessel?.Trim());
         return await Liste(ct);
     }
@@ -107,6 +117,12 @@ public sealed class GeraeteApiController : ApiControllerBase
     public async Task<ActionResult<GeraeteSeiteDto>> Speichern(string schluessel, [FromBody] GeraetSpeichernRequest request, CancellationToken ct)
     {
         if (request is null) return BadRequestError("leer", "Es wurde nichts übergeben.");
+
+        if (string.Equals(schluessel, GeraeteSchluessel.Unzugeordnet, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(request.ElternSchluessel?.Trim(), GeraeteSchluessel.Unzugeordnet, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequestError("unzugeordnet_fest", "„Nicht zugeordnet“ sammelt, was zu keinem Gerät gehört — es lässt sich nicht ändern und nichts hängt daran.");
+        }
 
         if (!string.IsNullOrWhiteSpace(request.ElternSchluessel)
             && string.Equals(request.ElternSchluessel.Trim(), schluessel, StringComparison.OrdinalIgnoreCase))
@@ -192,31 +208,28 @@ public sealed record GeraetEntitaetDto(
 
 /// <param name="ElternSchluessel">Der Controller, in dessen Port das Gerät steckt.</param>
 /// <param name="Anschluss">Die Steckstelle am Eltern-Gerät, etwa „Port 5".</param>
-/// <param name="Vermutet">Weder vom Nutzer noch von Home Assistant bestätigt — aus dem Namen geraten.</param>
+/// <param name="IstUnzugeordnet">Das Sammelfach für Entitäten, die zu keinem Gerät gehören.</param>
 public sealed record GeraetDto(
     string Schluessel,
     string Name,
     string? ElternSchluessel,
     string? Anschluss,
     bool IstController,
-    bool Bestaetigt,
     string? Modell,
     bool IstRubrik,
+    bool IstUnzugeordnet,
     bool ElternVomNutzer,
     bool NameVomNutzer,
     string? AbgeleiteterEltern,
     int? TentId,
     int? HardwareItemId,
-    IReadOnlyList<GeraetEntitaetDto> Entitaeten)
-{
-    public bool Vermutet => !Bestaetigt;
-}
+    IReadOnlyList<GeraetEntitaetDto> Entitaeten);
 
 public sealed record GeraeteSeiteDto(
     IReadOnlyList<GeraetDto> Geraete,
     int AnzahlGeraete,
     int AnzahlEntitaeten,
-    int AnzahlVermutet,
+    int AnzahlUnzugeordnet,
     int AnzahlVerschoben,
     /// <summary>Rollen, die nicht zu dem passen, was die HA-Automation wirklich benutzt.</summary>
     IReadOnlyList<string> Hinweise);

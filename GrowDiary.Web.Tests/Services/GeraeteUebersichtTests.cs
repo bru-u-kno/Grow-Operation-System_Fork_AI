@@ -74,27 +74,155 @@ public sealed class GeraeteUebersichtTests
         Assert.Empty(Co2SteuerungService.Abweichungen(rollen));
     }
 
-    [Theory]
-    [InlineData("sensor.bluelab_guardian_ph", "bluelab_guardian")]
-    [InlineData("sensor.bluelab_guardian_electrical_conductivity", "bluelab_guardian")]
-    [InlineData("number.klein_abluft_eingeschaltete_leistung", "klein_abluft")]
-    [InlineData("switch.pumpe", "pumpe")]
-    [InlineData("binary_sensor.big_port_5_zustand", "big_port")]
-    public void SchluesselNimmtDieErstenBeidenAbschnitte(string entityId, string erwartet)
-        => Assert.Equal(erwartet, GeraeteSchluessel.AusEntity(entityId));
-
     [Fact]
-    public void EntitaetenMitGleichemStammWerdenEinGeraet()
+    public void EntitaetenOhneGeraetWerdenNieAusDemNamenZuEinemGeraet()
     {
+        // Frueher wurde aus den ersten beiden Wortteilen ein „Geraet": aus
+        // script.edenic_set_alarm das Geraet „Edenic", aus drei Bluelab-Werten
+        // „Bluelab Guardian". Beides war geraten. Heute gibt es dafuer nur das
+        // Sammelfach „Nicht zugeordnet".
         var geraete = Bauen(Verwendungen(
             ("sensor.bluelab_guardian_ph", "Messgröße ReservoirPh"),
-            ("sensor.bluelab_guardian_electrical_conductivity", "Messgröße ReservoirEc"),
-            ("sensor.bluelab_guardian_temperature", "Messgröße ReservoirWaterTemp")));
+            ("script.edenic_set_alarm", "Steuerung BLUELAB · Grenze setzen")));
 
-        var geraet = Assert.Single(geraete);
-        Assert.Equal("Bluelab Guardian", geraet.Name);
-        Assert.Equal(3, geraet.Entitaeten.Count);
-        Assert.False(geraet.Bestaetigt);
+        var fach = Assert.Single(geraete);
+        Assert.Equal(GeraeteSchluessel.Unzugeordnet, fach.Schluessel);
+        Assert.Equal("Nicht zugeordnet", fach.Name);
+        Assert.True(fach.IstUnzugeordnet);
+        Assert.True(fach.IstRubrik);
+        Assert.Equal(2, fach.Entitaeten.Count);
+    }
+
+    [Fact]
+    public void DasSammelfachHaengtAnKeinemInventarEintrag()
+    {
+        // Am laufenden Stand gefunden: ein Inventar-Eintrag mit Entitaet im
+        // Sammelfach gab dem Fach Zelt und Inventar-Id eines fremden Geraets.
+        var hardware = new[] { new HardwareItem { Id = 4, Name = "Entfeuchter", HaEntityId = "switch.demo", TentId = 1 } };
+
+        var fach = Assert.Single(Bauen(Verwendungen(("switch.demo", "Steuerung X · y")), hardware));
+
+        Assert.True(fach.IstUnzugeordnet);
+        Assert.Null(fach.HardwareItemId);
+        Assert.Null(fach.TentId);
+    }
+
+    [Fact]
+    public void KeinGeraetEntstehtOhneBelegteQuelle()
+    {
+        // Jedes Geraet ausser dem Sammelfach und Rubriken hat einen Schluessel aus
+        // einer belegten Quelle: HA-Register, Inventar oder Zuordnung des Nutzers.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.bluelab_guardian_ph"] = new("sensor.bluelab_guardian_ph", "8efd96", "Bluelab Guardian", "6bf89330_ph"),
+        };
+
+        var geraete = Bauen(
+            Verwendungen(("sensor.bluelab_guardian_ph", "Messgröße ReservoirPh"),
+                         ("script.edenic_set_alarm", "Steuerung BLUELAB · Grenze setzen"),
+                         ("input_boolean.irgendwas_an", "Steuerung X · y")),
+            herkunft: herkunft);
+
+        foreach (var g in geraete.Where(g => !g.IstRubrik))
+        {
+            Assert.StartsWith("ha:", g.Schluessel);
+        }
+
+        Assert.Equal(2, Assert.Single(geraete, g => g.IstUnzugeordnet).Entitaeten.Count);
+    }
+
+    [Fact]
+    public void DerVorschlagKommtAusDerSteuerungUndNurWennEindeutig()
+    {
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["number.bluelab_guardian_ph_high_alarm"] = new("number.bluelab_guardian_ph_high_alarm", "8efd96", "Bluelab Guardian", "g_ph"),
+            ["switch.a"] = new("switch.a", "dev_a", "Gerät A", "a"),
+            ["switch.b"] = new("switch.b", "dev_b", "Gerät B", "b"),
+        };
+        var verwendungen = new Dictionary<string, List<GeraetVerwendung>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["number.bluelab_guardian_ph_high_alarm"] = new() { new("Steuerung BLUELAB · pH · oben", GeraetQuellen.Steuerung) },
+            ["script.edenic_set_alarm"] = new() { new("Steuerung BLUELAB · Grenze setzen · Skript", GeraetQuellen.Steuerung) },
+            ["switch.a"] = new() { new("Steuerung MEHR · eins", GeraetQuellen.Steuerung) },
+            ["switch.b"] = new() { new("Steuerung MEHR · zwei", GeraetQuellen.Steuerung) },
+            ["script.mehr_skript"] = new() { new("Steuerung MEHR · drei", GeraetQuellen.Steuerung) },
+            ["script.ohne_rolle"] = new() { new("Messgröße Irgendwas", GeraetQuellen.Messgroesse) },
+        };
+
+        var hinweise = GeraeteUebersichtService.Zuordnungshinweise(
+            GeraeteUebersichtService.Zusammenfassen(
+                verwendungen,
+                herkunft,
+                Array.Empty<HardwareItem>(),
+                new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
+
+        Assert.Equal(3, hinweise.Count);
+        Assert.Contains(hinweise, h => h.StartsWith("script.edenic_set_alarm", StringComparison.Ordinal)
+            && h.Contains("Bluelab Guardian", StringComparison.Ordinal));
+        // Zwei Geraete im Modul: der Fork waehlt nicht aus.
+        Assert.Contains(hinweise, h => h.StartsWith("script.mehr_skript", StringComparison.Ordinal)
+            && h.Contains("bitte einem Gerät zuweisen", StringComparison.Ordinal));
+        Assert.Contains(hinweise, h => h.StartsWith("script.ohne_rolle", StringComparison.Ordinal)
+            && h.Contains("bitte einem Gerät zuweisen", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EinControllerMitEigenerMacBleibtEinEintragUndTraegtSeinePorts()
+    {
+        // Der AC-Infinity-Controller „RDWC": seine eigenen Sensoren tragen
+        // …_sensor_7_… in der unique_id und sahen wie ein Kind der MAC aus. Er hing
+        // als „Fühler 7" unter einem Platzhalter „Controller 4C16" — derselbe
+        // Controller zweimal. Seine Ports kennen ihn per via_device.
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.big_controller_temperatur"] = new("sensor.big_controller_temperatur", "372e54", "RDWC",
+                "ac_infinity_34CDB02C4C16_sensor_7_controllerTemperature"),
+            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "RDWC CO2",
+                "ac_infinity_34CDB02C4C16_port_5_loadState", "372e54", "RDWC"),
+        };
+
+        var geraete = Bauen(
+            Verwendungen(("sensor.big_controller_temperatur", "Steuerung ZULUFT · Kellerfühler"),
+                         ("binary_sensor.big_port_5_zustand", "CO₂-Ventil")),
+            herkunft: herkunft);
+
+        Assert.DoesNotContain(geraete, g => g.Schluessel.StartsWith("mac:", StringComparison.Ordinal));
+        Assert.Equal(2, geraete.Count);
+
+        var controller = Assert.Single(geraete, g => g.Name == "RDWC");
+        Assert.True(controller.IstController);
+        Assert.Null(controller.ElternSchluessel);
+        Assert.Null(controller.Anschluss);
+
+        var ventil = Assert.Single(geraete, g => g.Name == "RDWC CO2");
+        Assert.Equal(controller.Schluessel, ventil.ElternSchluessel);
+        Assert.Equal("Port 5", ventil.Anschluss);
+    }
+
+    [Fact]
+    public void EinPortOhneViaDeviceHaengtAmHaControllerMitGleicherMac()
+    {
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.big_controller_temperatur"] = new("sensor.big_controller_temperatur", "372e54", "RDWC",
+                "ac_infinity_34CDB02C4C16_sensor_7_controllerTemperature"),
+            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "RDWC CO2",
+                "ac_infinity_34CDB02C4C16_port_5_loadState", "372e54", "RDWC"),
+            ["number.rdwc_venti_einschaltleistung"] = new("number.rdwc_venti_einschaltleistung", "ffcb63", "RDWC Venti",
+                "ac_infinity_34CDB02C4C16_port_1_onSelfSpead"),
+        };
+
+        var geraete = Bauen(
+            Verwendungen(("sensor.big_controller_temperatur", "Steuerung ZULUFT · Kellerfühler"),
+                         ("binary_sensor.big_port_5_zustand", "CO₂-Ventil"),
+                         ("number.rdwc_venti_einschaltleistung", "Abluft Stufe")),
+            herkunft: herkunft);
+
+        Assert.DoesNotContain(geraete, g => g.Schluessel.StartsWith("mac:", StringComparison.Ordinal));
+        var controller = Assert.Single(geraete, g => g.Name == "RDWC");
+        Assert.Equal(controller.Schluessel, Assert.Single(geraete, g => g.Name == "RDWC Venti").ElternSchluessel);
     }
 
     [Fact]
@@ -123,7 +251,6 @@ public sealed class GeraeteUebersichtTests
         var geraet = Assert.Single(geraete);
         Assert.Equal("Bluelab Guardian", geraet.Name);
         Assert.Equal(2, geraet.Entitaeten.Count);
-        Assert.True(geraet.Bestaetigt);
         Assert.Null(geraet.ElternSchluessel);
     }
 
@@ -226,9 +353,9 @@ public sealed class GeraeteUebersichtTests
     }
 
     [Fact]
-    public void DieZuordnungDesNutzersStichtDieVermutung()
+    public void DieZuordnungDesNutzersStichtDasRegister()
     {
-        // Zwei Entitäten, die nach Namen NICHT zusammengehören — der Nutzer weiß es besser.
+        // Zwei Entitäten ohne gemeinsames HA-Gerät — der Nutzer weiß, dass sie zusammengehören.
         var zuordnungen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["switch.zuluft_keller"] = "lueftung_keller",
@@ -242,24 +369,27 @@ public sealed class GeraeteUebersichtTests
         var geraet = Assert.Single(geraete);
         Assert.Equal("lueftung_keller", geraet.Schluessel);
         Assert.Equal(2, geraet.Entitaeten.Count);
-        Assert.True(geraet.Bestaetigt);
     }
 
     [Fact]
-    public void EinGespeicherterNameStichtInventarUndVermutung()
+    public void EinGespeicherterNameStichtInventarUndRegister()
     {
         var hardware = new[]
         {
             new HardwareItem { Id = 3, Name = "Aus dem Inventar", HaEntityId = "sensor.big_probe_sensor_sonden_temperatur" },
         };
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.big_probe_sensor_sonden_temperatur"] = new("sensor.big_probe_sensor_sonden_temperatur", "c3737f", "RDWC Probe Sensor", "ac_infinity_34CDB02C4C16_sensor_2_probeTemperature"),
+        };
         var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
         {
-            ["big_probe"] = new() { Schluessel = "big_probe", Name = "Big Probe Sensor" },
+            ["ha:c3737f"] = new() { Schluessel = "ha:c3737f", Name = "Big Probe Sensor" },
         };
 
-        var geraete = Bauen(Verwendungen(("sensor.big_probe_sensor_sonden_temperatur", "Messgröße AirTemperature")), hardware, gespeichert);
+        var geraete = Bauen(Verwendungen(("sensor.big_probe_sensor_sonden_temperatur", "Messgröße AirTemperature")), hardware, gespeichert, herkunft: herkunft);
 
-        Assert.Equal("Big Probe Sensor", Assert.Single(geraete).Name);
+        Assert.Equal("Big Probe Sensor", Assert.Single(geraete, g => g.Schluessel == "ha:c3737f").Name);
     }
 
     [Fact]
@@ -363,6 +493,7 @@ public sealed class GeraeteUebersichtTests
 
         var geraete = Bauen(Verwendungen(("sensor.bluelab_guardian_ph", "Messgröße ReservoirPh")), hardware);
 
+        Assert.Equal(2, geraete.Count);
         var flasche = Assert.Single(geraete, g => g.Name == "CO₂-Flasche 10 kg");
         Assert.Empty(flasche.Entitaeten);
         Assert.Equal(11, flasche.HardwareItemId);
@@ -380,7 +511,12 @@ public sealed class GeraeteUebersichtTests
             },
         };
 
-        var geraet = Assert.Single(Bauen(verwendungen));
+        var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sensor.bluelab_guardian_temperature"] = new("sensor.bluelab_guardian_temperature", "8efd96", "Bluelab Guardian", "g_temp"),
+        };
+
+        var geraet = Assert.Single(Bauen(verwendungen, herkunft: herkunft));
         var entitaet = Assert.Single(geraet.Entitaeten);
         Assert.Equal(2, entitaet.Verwendungen.Count);
     }

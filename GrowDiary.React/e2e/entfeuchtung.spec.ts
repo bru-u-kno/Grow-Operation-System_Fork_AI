@@ -561,10 +561,10 @@ test('Namen: die Geräte-Seite zeigt die Namen mit Vorgabe, speichert nur den ge
   })
   await page.route(/\/api\/geraete$/, (route) => route.fulfill({
     json: {
-      anzahlGeraete: 1, anzahlEntitaeten: 1, anzahlVermutet: 0, anzahlVerschoben: 0, hinweise: [],
+      anzahlGeraete: 1, anzahlEntitaeten: 1, anzahlUnzugeordnet: 0, anzahlVerschoben: 0, hinweise: [],
       geraete: [{
-        schluessel: 'g1', name: 'RDWC Dehumi', elternSchluessel: null, anschluss: null, istController: false, istRubrik: false,
-        elternVomNutzer: false, nameVomNutzer: false, abgeleiteterEltern: null, modell: null, bestaetigt: true, vermutet: false,
+        schluessel: 'g1', name: 'RDWC Dehumi', elternSchluessel: null, anschluss: null, istController: false, istRubrik: false, istUnzugeordnet: false,
+        elternVomNutzer: false, nameVomNutzer: false, abgeleiteterEltern: null, modell: null,
         tentId: null, hardwareItemId: null, entitaeten: [],
       }],
     },

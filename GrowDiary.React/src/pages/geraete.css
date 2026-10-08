@@ -24,12 +24,6 @@
 .gr-name { flex: 1; min-width: 0; font-size: var(--fs-text); font-weight: 600; }
 .gr-name small { display: block; margin-top: var(--s-1); font-weight: 400; font-size: var(--fs-micro, .625rem); color: var(--muted); }
 
-.gr-vermutet {
-  margin-left: var(--s-2); padding: 1px var(--s-2); border-radius: var(--r-sm);
-  border: 1px solid var(--hair-2); font-style: normal; font-size: var(--fs-micro, .625rem);
-  letter-spacing: .05em; text-transform: uppercase; color: var(--info-text);
-}
-
 .gr-anzahl {
   flex: 0 0 auto; padding: 1px var(--s-2); border-radius: var(--r-pill);
   border: 1px solid var(--hair-2); background: var(--accent-wash); color: var(--accent-text);
@@ -107,10 +101,9 @@
 .gr-gehoert select { flex: 1; min-width: 0; font: inherit; font-size: var(--fs-text); }
 
 /* Fork AI (forkai.30): verschobene Entitaeten sichtbar machen. */
-/* forkai.36/37: Zwei Zustaende, zwei Farben. „vermutet" ist blau — der Fork hat
-   geraten, gehandelt hat niemand. „korrigiert" ist gelb: hier hat der Nutzer
-   eingegriffen, und das faellt beim Suchen staerker ins Auge. Durchgaengig bis
-   zur Marke an der Geraetezeile. */
+/* forkai.36/37: „korrigiert" ist gelb: hier hat der Nutzer eingegriffen, und das
+   faellt beim Suchen staerker ins Auge. Durchgaengig bis zur Marke an der
+   Geraetezeile. */
 .gr-anzahl.is-korrigiert { border-color: var(--warn-text); background: var(--warn-wash); color: var(--warn-text); }
 .gr-zahlen b.is-korrigiert, .gr-zahlen b.is-korrigiert * { color: var(--warn-text) !important; }
 

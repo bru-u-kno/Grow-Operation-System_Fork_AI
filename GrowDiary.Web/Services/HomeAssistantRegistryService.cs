@@ -17,8 +17,8 @@ namespace GrowDiary.Web.Services;
 ///
 /// <para><b>Fehler sind hier normal.</b> Ein altes Home Assistant, ein Token ohne
 /// Rechte, eine Anlage, die den Socket nicht durchlässt: dann kommt eine leere
-/// Liste zurück und die Ableitung fällt auf die Namensvermutung. Der Aufrufer soll
-/// nicht abbrechen — gröber ist besser als nichts.</para>
+/// Liste zurück, und die Geräteseite weist darauf hin, dass sich nichts belegen lässt.
+/// Der Aufrufer soll nicht abbrechen.</para>
 /// </remarks>
 public sealed class HomeAssistantRegistryService
 {
@@ -31,7 +31,7 @@ public sealed class HomeAssistantRegistryService
 
     /// <summary>
     /// Herkunft je Entity-ID. Leer, wenn Home Assistant nicht eingerichtet ist oder
-    /// der Socket nichts hergibt — dann greift die Namensvermutung.
+    /// der Socket nichts hergibt.
     /// </summary>
     public async Task<IReadOnlyDictionary<string, HerkunftEintrag>> HerkunftAsync(
         HomeAssistantSettings settings,
@@ -53,7 +53,7 @@ public sealed class HomeAssistantRegistryService
             var antwort = await LesenAsync(socket, abbruch.Token);
             if (Typ(antwort) != "auth_ok")
             {
-                _log.LogInformation("Home Assistant nimmt das Token am WebSocket nicht an — Geräte werden geraten.");
+                _log.LogInformation("Home Assistant nimmt das Token am WebSocket nicht an — Die Geräteliste kann nichts belegen.");
                 return Leer();
             }
 
@@ -69,7 +69,7 @@ public sealed class HomeAssistantRegistryService
         }
         catch (Exception ex) when (ex is WebSocketException or OperationCanceledException or JsonException or UriFormatException)
         {
-            _log.LogInformation(ex, "Register von Home Assistant nicht erreichbar — Geräte werden aus Namen geraten.");
+            _log.LogInformation(ex, "Register von Home Assistant nicht erreichbar — Die Geräteliste kann nichts belegen.");
             return Leer();
         }
     }

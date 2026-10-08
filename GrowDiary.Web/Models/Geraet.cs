@@ -22,9 +22,6 @@ public sealed record Geraet(
     int? HardwareItemId,
     IReadOnlyList<GeraetEntitaet> Entitaeten)
 {
-    /// <summary>Zugeordnet von Hand oder aus dem HA-Geräteregister statt nur geraten.</summary>
-    public bool Bestaetigt { get; init; }
-
     /// <summary>
     /// Das Gerät, an dem dieses hängt — der Controller, in dessen Port es steckt.
     /// Null bei einem Gerät, das für sich steht.
@@ -46,6 +43,14 @@ public sealed record Geraet(
     /// ohne Entsprechung in Home Assistant; deshalb zählt sie nicht als Gerät.
     /// </summary>
     public bool IstRubrik { get; init; }
+
+    /// <summary>
+    /// Das Sammelfach für Entitäten, die weder zu einem HA-Gerät gehören noch vom
+    /// Nutzer einem Gerät zugewiesen wurden — Skripte, Helfer, Templates. Es ist
+    /// eine Rubrik (zählt nicht als Gerät), aber der Fork legt es selbst an und
+    /// es lässt sich weder umbenennen noch löschen.
+    /// </summary>
+    public bool IstUnzugeordnet { get; init; }
 
     /// <summary>Der Nutzer hat gesagt, woran dieses Gerät hängt (oder dass es an nichts hängt).</summary>
     public bool ElternVomNutzer { get; init; }
@@ -85,24 +90,23 @@ public static class GeraetQuellen
 }
 
 /// <summary>
-/// Der Schlüssel, unter dem Entitäten ohne ausdrückliche Zuordnung zu einem Gerät
-/// zusammenfinden.
+/// Die festen Schlüssel der Geräteliste.
 /// </summary>
 /// <remarks>
-/// <para><b>Die Regel.</b> Die ersten beiden Abschnitte des Objektnamens:
-/// <c>sensor.bluelab_guardian_ph</c> und <c>sensor.bluelab_guardian_temperature</c>
-/// landen beide unter <c>bluelab_guardian</c>, die vier Ports des Controllers unter
-/// <c>klein_abluft</c>. Das ist geraten, nicht gewusst — deshalb heißt so ein Gerät
-/// in der Oberfläche „vermutet", und eine Korrektur des Nutzers sticht es immer.</para>
-///
-/// <para>Kürzere Namen bleiben, wie sie sind: <c>switch.pumpe</c> wird
-/// <c>pumpe</c> und steht für sich allein. Das ist ehrlicher, als zwei Geräte
-/// zusammenzuwerfen, die nur zufällig ähnlich heißen.</para>
+/// <para><b>Ein Gerät kommt nur aus einer belegten Quelle:</b> dem Geräteregister
+/// von Home Assistant (<c>ha:…</c>), dem Inventar (<c>hw:…</c>) oder einer
+/// Zuordnung des Nutzers. Aus dem Namen einer Entität wird nie ein Gerät
+/// abgeleitet — das war eine Vermutung, und aus <c>script.edenic_set_alarm</c>
+/// wurde so ein „Gerät" Edenic. Was keine belegte Quelle hat, steht im
+/// Sammelfach <see cref="Unzugeordnet"/>, bis der Nutzer es zuweist.</para>
 /// </remarks>
 public static class GeraeteSchluessel
 {
     /// <summary>Namensraum der selbst angelegten Rubriken.</summary>
     public const string RubrikPraefix = "rubrik:";
+
+    /// <summary>Das Sammelfach für Entitäten ohne Gerät.</summary>
+    public const string Unzugeordnet = "unzugeordnet";
 
     /// <summary>Aus einem Rubriknamen einen stabilen Schlüssel: „Kameras" → „rubrik:kameras".</summary>
     public static string RubrikSchluessel(string name)
@@ -112,29 +116,6 @@ public static class GeraeteSchluessel
             .Trim('-');
         while (sauber.Contains("--", StringComparison.Ordinal)) sauber = sauber.Replace("--", "-", StringComparison.Ordinal);
         return RubrikPraefix + (sauber.Length == 0 ? Guid.NewGuid().ToString("N")[..8] : sauber);
-    }
-
-    public static string AusEntity(string entityId)
-    {
-        if (string.IsNullOrWhiteSpace(entityId)) return string.Empty;
-
-        var punkt = entityId.IndexOf('.');
-        var objekt = punkt >= 0 ? entityId[(punkt + 1)..] : entityId;
-        var teile = objekt.Split('_', StringSplitOptions.RemoveEmptyEntries);
-
-        return teile.Length <= 2
-            ? objekt.Trim().ToLowerInvariant()
-            : string.Join('_', teile.Take(2)).ToLowerInvariant();
-    }
-
-    /// <summary>Aus dem geratenen Schlüssel ein lesbarer Name: „bluelab_guardian" → „Bluelab Guardian".</summary>
-    public static string AlsName(string schluessel)
-    {
-        if (string.IsNullOrWhiteSpace(schluessel)) return "Unbenannt";
-        var worte = schluessel
-            .Split('_', StringSplitOptions.RemoveEmptyEntries)
-            .Select(wort => wort.Length == 1 ? wort.ToUpperInvariant() : char.ToUpperInvariant(wort[0]) + wort[1..]);
-        return string.Join(' ', worte);
     }
 }
 
@@ -161,8 +142,8 @@ public sealed class GespeichertesGeraet
 /// <remarks>
 /// <para>Die Zustandsliste (<c>/api/states</c>) kennt das nicht — sie liefert nur
 /// Name und Wert. <c>DeviceId</c> und <c>UniqueId</c> kommen aus dem Geräte- und
-/// Entitätsregister. Fehlen sie (alte Anlage, Registry nicht erreichbar), fällt die
-/// Ableitung auf die Namensvermutung zurück; nichts bricht, es wird nur gröber.</para>
+/// Entitätsregister. Fehlen sie (alte Anlage, Registry nicht erreichbar), belegt nichts ein
+/// Gerät: alles steht im Sammelfach „Nicht zugeordnet“, und die Seite sagt warum.</para>
 ///
 /// <para><c>ViaDeviceId</c> ist Home Assistants eigene Auskunft darüber, an welchem
 /// Gerät dieses hängt — bei AC Infinity zeigt jedes Port-Gerät auf seinen Controller.
