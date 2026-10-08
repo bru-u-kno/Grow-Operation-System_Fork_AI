@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { V1Alert, V1Card } from '../../components/v1'
 import { zahl } from './entfeuchter-band'
-import { ZONEN_WORT, zonenKlasse, zonenStrecken, zonenTon } from './entfeuchter-zonen'
+import { ZONEN_WORT, markenZeilen, zonenKlasse, zonenStrecken, zonenTon } from './entfeuchter-zonen'
 import type { Zone } from './entfeuchter-zonen'
 import { Klappkachel } from './Klappkachel'
 import './steuerung.css'
@@ -17,6 +17,7 @@ export function Lage({ zone, titel, text }: { zone: Zone; titel: string; text: s
 }
 
 export type SkalaMarke = { wert: number; label: string }
+
 
 /**
  * Eine Skala mit drei Farbstrecken, Messpunkt und Marken. Der Messpunkt und die
@@ -34,6 +35,7 @@ export function ZonenSkala({ von, bis, zielBis, knappBis, marken, ist, zone, ste
   einheit: string
 }) {
   const pos = (w: number) => Math.round(Math.max(0, Math.min(100, ((w - von) / (bis - von)) * 100)) * 10) / 10
+  const zeilen = markenZeilen(marken.map((m) => pos(m.wert)))
   return (
     <>
       <div className="ef-skala" aria-hidden="true">
@@ -44,9 +46,9 @@ export function ZonenSkala({ von, bis, zielBis, knappBis, marken, ist, zone, ste
         </div>
         {ist != null && <div className={`ef-ist ${zonenKlasse(zone)}`} style={{ left: `${pos(ist)}%` }}><em>{zahl(ist, stellen)}</em></div>}
       </div>
-      <div className="ef-marken">
-        {marken.map((m) => (
-          <span key={m.label + m.wert} style={{ left: `${pos(m.wert)}%` }}>{zahl(m.wert, stellen)}<b>{m.label}</b></span>
+      <div className={zeilen.length > 1 ? 'ef-marken ist-gestaffelt' : 'ef-marken'}>
+        {marken.map((m, i) => (
+          <span key={m.label + m.wert} className={zeilen[i] === 1 ? 'is-tief' : undefined} style={{ left: `${pos(m.wert)}%` }}>{zahl(m.wert, stellen)}<b>{m.label}</b></span>
         ))}
       </div>
       <div className="ef-rand"><span>{zahl(von, 0)} {einheit}</span><span>{zahl(bis, 0)} {einheit}</span></div>
@@ -84,10 +86,10 @@ export function MessKopf({ wert, einheit, zone, zustand, ton, beiwerk }: {
 export type WarumZeile = { frage: string; antwort: string; ok?: boolean | null }
 
 /** „Warum ist er gerade AN/AUS?" — jede Bedingung der Regel mit dem echten Wert. */
-export function Warum({ an, zeilen, fuss }: { an: boolean | null; zeilen: WarumZeile[]; fuss?: ReactNode }) {
+export function Warum({ an, zeilen, fuss, titel }: { an: boolean | null; zeilen: WarumZeile[]; fuss?: ReactNode; titel?: string }) {
   const wort = an === true ? 'AN' : an === false ? 'AUS' : '…'
   return (
-    <Klappkachel titel={`Warum ist er gerade ${wort}?`}>
+    <Klappkachel titel={titel ?? `Warum ist er gerade ${wort}?`}>
       <V1Card>
         {zeilen.map((z) => (
           <div key={z.frage} className="st-feldzeile">

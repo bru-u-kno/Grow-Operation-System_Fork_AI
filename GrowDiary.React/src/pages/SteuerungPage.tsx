@@ -1,12 +1,13 @@
+import { SteuerungWechsel } from '../features/steuerung/SteuerungWechsel'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
 import LichtDetail from '../features/steuerung/LichtDetail'
 import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
-import EntfeuchterDetail from '../features/steuerung/EntfeuchterDetail'
-import EntfeuchterZusatzDetail from '../features/steuerung/EntfeuchterZusatzDetail'
+import EntfeuchtungSeite from '../features/steuerung/EntfeuchtungSeite'
+import { ENTFEUCHTUNG_KENNUNG, mitEntfeuchtung } from '../features/steuerung/entfeuchtung-modell'
 import { CO2_REITER, minuten, probeWerte, tagKurz, wirksameZiele } from '../features/steuerung/steuerung-typen'
 import type { Co2Einstellungen, Co2Reiter, Co2Seite, GrenzModus, SteuerungModul, SteuerungUebersicht } from '../features/steuerung/steuerung-typen'
 import { formatNumber } from '../utils'
@@ -72,6 +73,8 @@ export default function SteuerungPage() {
   const navigate = useNavigate()
 
   const [uebersicht, setUebersicht] = useState<SteuerungUebersicht | null>(null)
+  // A-015: Hauptentfeuchter und Zusatz-Entfeuchter sind in Chip-Leiste und Übersicht EIN Eintrag.
+  const module = useMemo(() => mitEntfeuchtung(uebersicht?.module ?? []), [uebersicht])
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
 
@@ -93,27 +96,28 @@ export default function SteuerungPage() {
   }, [])
 
   if (modul === 'co2') {
-    return <Co2Detail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+    return <Co2Detail module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
   if (modul === 'licht') {
-    return <LichtDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+    return <LichtDetail module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
   if (modul === 'chiller') {
-    return <ChillerDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+    return <ChillerDetail module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
-  if (modul === 'entfeuchter') {
-    return <EntfeuchterDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+  if (modul === ENTFEUCHTUNG_KENNUNG) {
+    return <EntfeuchtungSeite module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
-  if (modul === 'entfeuchter-zusatz') {
-    return <EntfeuchterZusatzDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+  // Die alten Adressen der zwei Entfeuchter-Seiten (Lesezeichen, Push-Links, Probelauf) führen auf die eine Seite.
+  if (modul === 'entfeuchter' || modul === 'entfeuchter-zusatz') {
+    return <Navigate to={`/steuerung/${ENTFEUCHTUNG_KENNUNG}`} replace />
   }
 
   if (modul === 'zuluft') {
-    return <ZuluftDetail module={uebersicht?.module ?? []} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
+    return <ZuluftDetail module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
 
   // Ein Pfad, den keine Steuerung kennt. Er landet bewusst NICHT ersatzweise
@@ -138,11 +142,11 @@ export default function SteuerungPage() {
       )}
       {laedt && !uebersicht ? (
         <V1Skeleton rows={5} label="Steuerungen werden geladen" />
-      ) : !uebersicht || uebersicht.module.length === 0 ? (
+      ) : !uebersicht || module.length === 0 ? (
         <V1Empty title="Noch keine Steuerung" text="Sobald eine Regelung eingerichtet ist, steht sie hier." />
       ) : (
         <div className="st-liste">
-          {uebersicht.module.map((m) => (
+          {module.map((m) => (
             <ModulZeile key={m.kennung} modul={m} onOeffnen={() => navigate(`/steuerung/${m.kennung}`)} />
           ))}
         </div>
@@ -333,23 +337,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
       title="CO₂-Begasung"
       subtitle={seite.growName ? `${seite.growName}${seite.phase ? ` · ${seite.phase}` : ''}` : undefined}
       action={geaendert ? <V1Button variant="primary" onClick={speichern} disabled={speichert}>{speichert ? 'Speichert …' : 'Speichern'}</V1Button> : undefined}
+      vorKopf={<SteuerungWechsel module={module} aktiv={aktiv} onWechsel={onWechsel} />}
     >
-      <div className="st-wechsel" role="tablist" aria-label="Steuerung wechseln">
-        {module.map((m) => (
-          <button
-            key={m.kennung}
-            type="button"
-            role="tab"
-            className="st-chip"
-            aria-current={m.kennung === aktiv}
-            disabled={!m.hatDetail}
-            onClick={() => onWechsel(m.kennung)}
-          >
-            <i className={m.status === 'an' ? 'is-an' : m.status === 'warn' ? 'is-warn' : ''} aria-hidden="true" />
-            {m.titel}
-          </button>
-        ))}
-      </div>
 
       {/* Fork AI (forkai.21): Geraete werden auf EINER Seite zugeordnet — hier steht
           nur, wie viele Rollen belegt sind, und der Weg dorthin. Doppelte Pflege

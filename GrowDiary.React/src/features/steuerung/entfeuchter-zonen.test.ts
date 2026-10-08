@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RF_KNAPP_PUNKTE, feuchteZone, schlechtereZone, temperaturZone, zonenKlasse, zonenStrecken, zonenTon } from './entfeuchter-zonen'
+import { MARKEN_MINDESTABSTAND, RF_KNAPP_PUNKTE, feuchteZone, markenZeilen, schlechtereZone, temperaturZone, zonenKlasse, zonenStrecken, zonenTon } from './entfeuchter-zonen'
 
 describe('Zonen der Entfeuchter-Seiten (A-014)', () => {
   it('Luftfeuchte: bis zum Ziel im Ziel, vier Punkte darüber knapp, danach deutlich daneben', () => {
@@ -56,5 +56,15 @@ describe('Zonen der Entfeuchter-Seiten (A-014)', () => {
     const rand = zonenStrecken(52, 60, 51, 55)
     expect(rand.every((x) => x.breite > 0 && x.links >= 0)).toBe(true)
     expect(rand[0].zone).toBe('knapp')
+  })
+
+  it('Marken: weit auseinander bleiben alle oben, dicht beieinander wandert die zweite nach unten', () => {
+    expect(markenZeilen([10, 50, 90])).toEqual([0, 0, 0])
+    expect(markenZeilen([10, 10 + MARKEN_MINDESTABSTAND - 1, 90])).toEqual([0, 1, 0])
+    // „50,0 EIN" und „51,0 Ziel" (Handy, 07.10.2026): nebeneinander ginge nicht.
+    expect(markenZeilen([40, 44, 80])).toEqual([0, 1, 0])
+    // Drei dicht beieinander: höchstens zwei Zeilen — die dritte teilt sich eine, rutscht aber nach der Reihenfolge.
+    expect(markenZeilen([40, 42, 44]).every((z) => z === 0 || z === 1)).toBe(true)
+    expect(markenZeilen([])).toEqual([])
   })
 })

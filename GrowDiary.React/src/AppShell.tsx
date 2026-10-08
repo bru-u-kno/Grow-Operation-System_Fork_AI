@@ -128,7 +128,8 @@ export function AppShell({ children, counts }: Props) {
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                className={isNavLeafActive(item, location.pathname) ? 'v1-nav-item active' : 'v1-nav-item'}
+                /* Funktionsform: bei einer festen Zeichenkette hängt React Router `active` selbst an, sobald der Pfad passt — dann leuchteten Steuerung und Entfeuchtung zugleich. */
+                className={() => (isNavLeafActive(item, location.pathname) ? 'v1-nav-item active' : 'v1-nav-item')}
               >
                 {item.label}
                 {item.badge === 'warn' && counts?.addbackDue && <span className="badge warn">fällig</span>}
@@ -312,7 +313,7 @@ export function AppShell({ children, counts }: Props) {
                     key={item.to}
                     to={item.to}
                     end={item.end}
-                    className={isNavLeafActive(item, location.pathname) ? 'v1-more-tile active' : 'v1-more-tile'}
+                    className={() => (isNavLeafActive(item, location.pathname) ? 'v1-more-tile active' : 'v1-more-tile')}
                     onClick={() => setMoreOpen(false)}
                   >
                     {item.label}

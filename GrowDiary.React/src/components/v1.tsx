@@ -5,9 +5,10 @@ import { auslaufZuruecksetzen, reiterInsBild } from './reiter-ins-bild'
 
 export type Tone = 'neutral' | 'ok' | 'warn' | 'critical' | 'accent'
 
-export function V1Page({ eyebrow, title, subtitle, action, children, className }: { eyebrow?: string; title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+export function V1Page({ eyebrow, title, subtitle, action, children, className, vorKopf }: { eyebrow?: string; title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string; /** A-015: steht ganz oben, noch über der Überschrift (z. B. die Auswahl der Steuerungen). */ vorKopf?: ReactNode }) {
   return (
     <main className={classNames('v1-page', className)}>
+      {vorKopf}
       <section className="v1-hero">
         <div>
           {eyebrow && <div className="v1-eyebrow">{eyebrow}</div>}

@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.189
+
+**Fork AI.** Entfeuchtung: Hauptentfeuchter und Zusatz-Entfeuchter sind jetzt EINE Seite — und die Auswahl der Steuerungen steht ganz oben.
+
+- **Ein Eintrag „Entfeuchtung":** In der Auswahl der Steuerungen und im Menü (Betrieb) gibt es nur noch „Entfeuchtung". Die alten Adressen der zwei Seiten führen dorthin. Reiter: **Überblick · Regel · Schutz · Einrichtung** („Betrieb" ist in „Regel" aufgegangen).
+- **Überblick nur zum Lesen:** Lagemeldung, Messwerte und Zonen **einmal** fürs Zelt (vorher je Gerät), die Geräte mit **nur ihrem Status** (läuft · aus · wartet · offline — ohne Wattzahl), „Warum läuft welches Gerät?" und die Erklärung der Zusammenarbeit. Eingaben gibt es dort nicht.
+- **Regel nach Regeln geordnet:** Jede Regel („Wie ruhig schaltet er?", „Einschalten erst nach", „Auch tagsüber entfeuchten", „Automatik") steht einmal mit ihrer Erklärung da, darunter **dieselben Felder für jedes Gerät**. Was nur ein Gerät hat (Regelart und Außenluft beim Hauptentfeuchter, Hilfsstärke und „Nachts durchlaufen" beim Zusatz), steht danach unter „Nur für …".
+- **Schutz:** Die Höchsttemperatur steht **einmal für alle**; Mindestlaufzeit je Gerät; früher aus/später wieder an, Mindestpause und die Meldung „zieht nichts" nur beim Zusatz.
+- **Einrichtung:** zeigt, welche Entfeuchter der Fork gefunden hat (Namen und Zuordnung bleiben in „Geräte & Entitäten"), und wie sie arbeiten. „Getrennt" und mehr als zwei Entfeuchter kommen später und brauchen eine zweite Regelvariante.
+- **Auswahl der Steuerungen ganz oben:** Auf allen Steuerungsseiten (CO₂, Entfeuchtung, Chiller, Zuluft, Licht) stehen die Chips jetzt über der Überschrift.
+- **Skalen:** Liegen zwei Beschriftungen dicht beieinander (am Handy), stehen sie in zwei Zeilen statt übereinander.
+- **Menü:** Der Menüpunkt „Entfeuchtung" leuchtet allein; vorher leuchtete „Steuerung" mit.
+- **Sicherheit beim Speichern:** Der Entwurf des Hauptentfeuchters folgt dem Serverstand für alles, was du nicht angefasst hast, und nach dem Speichern werden beide Geräte neu gelesen. So schreibt ein späteres Speichern keine alte Höchsttemperatur zurück.
+- Die Regelung in Home Assistant ist unverändert.
+
 ## 2.0.0-forkai.188
 
 **Fork AI.** Zusatz-Entfeuchter: Die Luftfeuchte steht im Überblick nur noch einmal da.

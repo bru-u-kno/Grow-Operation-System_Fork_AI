@@ -167,8 +167,8 @@ export const navGroups: NavGroup[] = [
       // vom Zähler.
       { to: '/steuerung/probelauf', label: 'Probelauf', end: true, keywords: 'probelauf test gerät abschalten entfeuchter chiller zuluft co2 aus testen wirkung messen kenntnisstand grenzen zurückstellen' },
       // Fork AI (A-014): beide Entfeuchter in einem Punkt — Haupt und Zusatz sind zwei Seiten, die zusammengehören.
-      { to: '/steuerung/entfeuchter', label: 'Entfeuchtung', end: true, auch: ['/steuerung/entfeuchter-zusatz'], keywords: 'entfeuchtung entfeuchter zusatz-entfeuchter trotec shelly luftfeuchte feuchte vpd temperatur höchsttemperatur zonen ziel schwellen ein aus ruhig regelart überblick' },
-      { to: '/steuerung', label: 'Steuerung', end: false, ausser: ['/steuerung/probelauf', '/steuerung/entfeuchter', '/steuerung/entfeuchter-zusatz'], icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter zusatz-entfeuchter shelly chiller abluft licht sollwerte automatik ventil dosierung klima' },
+      { to: '/steuerung/entfeuchtung', label: 'Entfeuchtung', end: true, keywords: 'entfeuchtung entfeuchter zusatz-entfeuchter trotec shelly luftfeuchte feuchte vpd temperatur höchsttemperatur zonen ziel schwellen ein aus ruhig regelart überblick' },
+      { to: '/steuerung', label: 'Steuerung', end: false, ausser: ['/steuerung/probelauf', '/steuerung/entfeuchtung'], icon: '⊚', short: 'Steuerung', keywords: 'co2 begasung regelung leitstand entfeuchter zusatz-entfeuchter shelly chiller abluft licht sollwerte automatik ventil dosierung klima' },
       { to: '/kosten', label: 'Kosten', end: true, icon: '€', short: 'Kosten', keywords: 'strom kwh euro preis zähler verbrauch verbrauchsartikel co2 flasche nachfüllung nachfüllen dünger kanister laufzeit prognose je tag je pflanze durchgang' },
     ],
   },

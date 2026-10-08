@@ -20,7 +20,7 @@ async function seiteMitWerten(page: Page, request: APIRequestContext, live: Reco
     json.live = { ...json.live, haErreichbar: true, ...live }
     return route.fulfill({ response: antwort, json })
   })
-  const antwort = await page.goto('/steuerung/entfeuchter', { waitUntil: 'networkidle' })
+  const antwort = await page.goto('/steuerung/entfeuchtung', { waitUntil: 'networkidle' })
   darfUeberspringen(antwort == null || antwort.status() >= 400, 'die App antwortet nicht — läuft sie unter GROW_OS_URL?')
   const da = await page.locator('.v1-tab', { hasText: 'Überblick' }).waitFor({ timeout: 15_000 }).then(() => true, () => false)
   darfUeberspringen(!da, 'keine Reiterleiste — der Demobestand legt diese Steuerung an.')
@@ -36,7 +36,7 @@ test('Entfeuchter: der Messpunkt trägt die Farbe seiner Zone — und die Zone s
   await expect(punkte).toHaveCount(2)
   await expect(punkte.nth(0)).toHaveClass(/\bis-kritisch\b/)
   await expect(punkte.nth(1)).not.toHaveClass(/\bis-(knapp|kritisch)\b/)
-  await expect(page.locator('.v1-alert').first()).toContainText('deutlich daneben')
+  await expect(page.locator('.v1-alert').filter({ hasText: /Im Ziel|daneben/ }).first()).toContainText('deutlich daneben')
 
   // Zweiter Durchgang, ohne Neuladen der Seite: im Ziel, dann knapp.
   for (const [rf, klasse] of [[49, null], [53, 'is-knapp']] as const) {
@@ -73,12 +73,12 @@ test('Entfeuchter: bei „Nach VPD regeln" sind die festen Schwellen gesperrt, o
   await schalter.check()
   await expect(feld).toBeDisabled()
   // Der Abstand EIN → AUS gilt in beiden Regelarten und bleibt bedienbar.
-  await expect(page.getByRole('radio', { name: /^normal/ })).toBeEnabled()
+  await expect(page.getByRole('radio', { name: /^normal/ }).first()).toBeEnabled()
 })
 
 test('jede Kachel lässt sich zuklappen und wieder aufklappen — zweimal', async ({ page, request }) => {
   await seiteMitWerten(page, request, { ...WERTE, feuchteProzent: 49, tempC: 22.7 })
-  const kopf = page.locator('.st-kk-kopf', { hasText: 'Messwerte & Zonen' })
+  const kopf = page.locator('.st-kk-kopf', { hasText: 'Messwerte & Zonen (Zelt)' })
   for (let runde = 0; runde < 2; runde++) {
     await expect(kopf).toHaveAttribute('aria-expanded', 'true')
     await expect(page.locator('.ef-band')).toBeVisible()

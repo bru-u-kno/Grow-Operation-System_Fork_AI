@@ -102,7 +102,7 @@ test('Zuluft: das leere Feld auf einem anderen Reiter wird gezeigt — zweimal',
 })
 
 test('Entfeuchter: ein leeres Feld in den zugeklappten festen Schwellen wird gezeigt', async ({ page }) => {
-  await seiteLaden(page, '/steuerung/entfeuchter', 'Regel')
+  await seiteLaden(page, '/steuerung/entfeuchtung', 'Regel')
 
   await reiter(page, 'Regel').click()
   // A-014: bei „Nach VPD regeln" sind die festen Schwellen gesperrt — erst ausschalten, dann bearbeiten.
@@ -116,7 +116,7 @@ test('Entfeuchter: ein leeres Feld in den zugeklappten festen Schwellen wird gez
   // Zuklappen und auf einen anderen Reiter — das Feld steckt jetzt doppelt versteckt.
   await kopf.click()
   await expect(feld).toBeHidden()
-  await reiter(page, 'Betrieb').click()
+  await reiter(page, 'Einrichtung').click()
 
   await speichernUndPruefen(page, 'Regel', 'Nacht · AUS unter')
   // Die Kachel hat sich von selbst geöffnet (CSS), das Feld ist zu sehen.
@@ -144,7 +144,7 @@ async function ausgeblendetPruefen(page: Page, zeile: Locator, erwarteterReiter:
 }
 
 test('Entfeuchter: das leere Feld im ausgeblendeten Modus wird mit Feld und Modus genannt — zweimal', async ({ page }) => {
-  await seiteLaden(page, '/steuerung/entfeuchter', 'Schutz')
+  await seiteLaden(page, '/steuerung/entfeuchtung', 'Schutz')
   const block = (titel: string) => page.locator('.ef-tempmax')
     .filter({ has: page.getByRole('radiogroup', { name: `Temperatur max. ${titel}` }) })
   const chip = (titel: string, modus: string) =>
@@ -159,7 +159,7 @@ test('Entfeuchter: das leere Feld im ausgeblendeten Modus wird mit Feld und Modu
   await festTag.fill('')
   await chip('Tag', 'Plan +').click()
   await expect(festTag).toHaveCount(0)
-  await reiter(page, 'Betrieb').click()
+  await reiter(page, 'Einrichtung').click()
   await ausgeblendetPruefen(page, block('Tag').locator('.st-feldzeile').first(), 'Schutz',
     'Fester Wert: Bitte eine Zahl eintragen — steht unter „Fest" und ist ausgeblendet, solange „Plan +" gewählt ist.')
   // Der Modus bleibt, wie der Nutzer ihn gewählt hat.

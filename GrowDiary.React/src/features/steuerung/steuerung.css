@@ -333,4 +333,8 @@
   .ef-regelart { display: flex; flex-direction: column; gap: var(--s-1); }
   .ef-regelart p { margin: 0; font-size: var(--fs-text); color: var(--muted); }
   .ef-regelart b { color: var(--ink); font-weight: 600; }
+  .ef-gruppe { margin: var(--s-5) 0 var(--s-1); }
+  /* Eine Marke ist Zahl + Wort, rund 34 px hoch: die zweite Zeile liegt darunter. */
+  .ef-marken.ist-gestaffelt { height: 74px; }
+  .ef-marken span.is-tief { top: 38px; }
 }

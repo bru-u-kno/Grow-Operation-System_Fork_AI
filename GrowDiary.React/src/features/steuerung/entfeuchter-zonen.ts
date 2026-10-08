@@ -80,3 +80,22 @@ export function zonenStrecken(von: number, bis: number, ziel: number, knapp: num
     { zone: 'kritisch' as const, links: k, breite: 100 - k },
   ].filter((s) => s.breite > 0)
 }
+
+/** Ab so vielen Prozent der Bandbreite Abstand stehen zwei Beschriftungen nebeneinander (Handy: ≈ 40 px). */
+export const MARKEN_MINDESTABSTAND = 14
+
+/**
+ * In welche Zeile jede Marke kommt: dicht beieinander liegende Marken wandern in eine zweite Zeile,
+ * damit sich ihre Beschriftungen nie überdecken. Gibt je Marke 0 (oben) oder 1 (unten) zurück.
+ */
+export function markenZeilen(positionen: number[]): number[] {
+  const reihenfolge = positionen.map((p, i) => ({ p, i })).sort((a, b) => a.p - b.p)
+  const zuletzt = [-Infinity, -Infinity]
+  const zeile: number[] = positionen.map(() => 0)
+  for (const { p, i } of reihenfolge) {
+    const z = p - zuletzt[0] >= MARKEN_MINDESTABSTAND ? 0 : p - zuletzt[1] >= MARKEN_MINDESTABSTAND ? 1 : 0
+    zeile[i] = z
+    zuletzt[z] = p
+  }
+  return zeile
+}
