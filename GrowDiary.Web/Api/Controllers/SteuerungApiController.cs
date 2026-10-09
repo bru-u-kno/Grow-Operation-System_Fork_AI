@@ -72,7 +72,7 @@ public sealed class SteuerungApiController : ApiControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(SteuerungUebersichtDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<SteuerungUebersichtDto>> Uebersicht(CancellationToken ct)
+    public async Task<ActionResult<SteuerungUebersichtDto>> Uebersicht([FromServices] SteuerungAuswahlService auswahl, CancellationToken ct)
     {
         var live = await _co2.LiveAsync(ct);
         var licht = await _licht.LiveAsync(ct);
@@ -174,7 +174,54 @@ public sealed class SteuerungApiController : ApiControllerBase
                 HatDetail: true),
         };
 
-        return Ok(new SteuerungUebersichtDto(live.HaErreichbar, module, DateTime.UtcNow));
+        // Fork AI (A-016): Nur die Steuerungen, die der Nutzer hat. Der Rest steht als „nicht eingerichtet" daneben.
+        var gewaehlt = auswahl.Gewaehlt();
+        var sichtbar = module.Where(m => SteuerungAuswahlService.Sichtbar(m.Kennung, gewaehlt)).ToList();
+        var nichtEingerichtet = SteuerungAuswahlService.Alle
+            .Where(a => !gewaehlt.Contains(a.Kennung))
+            .Select(a => new SteuerungKarteDto(a.Kennung, a.Titel, a.Beschreibung))
+            .ToList();
+
+        return Ok(new SteuerungUebersichtDto(live.HaErreichbar, sichtbar, nichtEingerichtet, DateTime.UtcNow));
+    }
+
+    // -------------------------------------------------------------- Auswahl
+
+    /// <summary>
+    /// Fork AI (A-016): Welche Steuerungen der Nutzer hat — und wie weit jede eingerichtet ist.
+    /// </summary>
+    [HttpGet("auswahl")]
+    [ProducesResponseType(typeof(SteuerungAuswahlDto), StatusCodes.Status200OK)]
+    public ActionResult<SteuerungAuswahlDto> Auswahl([FromServices] SteuerungAuswahlService auswahl)
+        => Ok(AuswahlDto(auswahl));
+
+    /// <summary>
+    /// Die Auswahl setzen. Blendet ab- und einblendet nur — gelöscht und geschaltet wird nichts,
+    /// Automationen in Home Assistant laufen weiter.
+    /// </summary>
+    [HttpPut("auswahl")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [ProducesResponseType(typeof(SteuerungAuswahlDto), StatusCodes.Status200OK)]
+    public ActionResult<SteuerungAuswahlDto> AuswahlSpeichern([FromServices] SteuerungAuswahlService auswahl, [FromBody] SteuerungAuswahlAenderung request)
+    {
+        if (request?.Gewaehlt is null) return BadRequestError("steuerung_auswahl_invalid", "Es wurde keine Auswahl übergeben.");
+        var unbekannt = auswahl.Speichern(request.Gewaehlt);
+        if (unbekannt.Count > 0)
+        {
+            return BadRequestError("steuerung_auswahl_unbekannt", $"Diese Steuerung gibt es nicht: {string.Join(", ", unbekannt)}.");
+        }
+        return Ok(AuswahlDto(auswahl));
+    }
+
+    private static SteuerungAuswahlDto AuswahlDto(SteuerungAuswahlService auswahl)
+    {
+        var gewaehlt = auswahl.Gewaehlt();
+        var eintraege = SteuerungAuswahlService.Alle.Select(a =>
+        {
+            var (zugeordnet, gesamt) = auswahl.Pflichtrollen(a);
+            return new SteuerungAuswahlEintragDto(a.Kennung, a.Titel, a.Beschreibung, gewaehlt.Contains(a.Kennung), zugeordnet, gesamt);
+        }).ToList();
+        return new SteuerungAuswahlDto(auswahl.Gespeichert(), eintraege);
     }
 
     // ------------------------------------------------------------------ CO₂
@@ -802,7 +849,12 @@ public sealed class SteuerungApiController : ApiControllerBase
 }
 
 public sealed record SteuerungModulDto(string Kennung, string Titel, string Status, string Kurz, string Wert, string Unterzeile, bool HatDetail);
-public sealed record SteuerungUebersichtDto(bool HaErreichbar, IReadOnlyList<SteuerungModulDto> Module, DateTime StandUtc);
+public sealed record SteuerungKarteDto(string Kennung, string Titel, string Beschreibung);
+public sealed record SteuerungUebersichtDto(bool HaErreichbar, IReadOnlyList<SteuerungModulDto> Module, IReadOnlyList<SteuerungKarteDto> NichtEingerichtet, DateTime StandUtc);
+public sealed record SteuerungAuswahlEintragDto(string Kennung, string Titel, string Beschreibung, bool Gewaehlt, int PflichtZugeordnet, int PflichtGesamt);
+/// <param name="Gespeichert">False: der Nutzer hat nie gewählt, die Liste ergibt sich aus den zugeordneten Geräten.</param>
+public sealed record SteuerungAuswahlDto(bool Gespeichert, IReadOnlyList<SteuerungAuswahlEintragDto> Eintraege);
+public sealed record SteuerungAuswahlAenderung(IReadOnlyList<string> Gewaehlt);
 public sealed record KostenArtikelKurzDto(int Id, string Name, string Einheit);
 public sealed record Co2TagDto(string Datum, int Impulse, double VentilSekunden, double Gramm, string? ZielErreichtUm, bool Abgeschlossen, bool ImJournal, bool InKosten, bool Flaschenwechsel);
 public sealed record Co2SeiteDto(

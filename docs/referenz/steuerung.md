@@ -10,6 +10,12 @@ sechstes Ziel. Zwei Ebenen:
 
 - **Übersicht** (`/steuerung`): je Regelung eine Zeile mit Status-Punkt
   (grün an, gelb gesperrt, grau aus), Kurzbeschreibung und aktuellem Wert.
+  Seit A-016 nur die Steuerungen, die der Nutzer hat; die übrigen stehen
+  unter „Nicht eingerichtet" mit dem Knopf „Einrichten" (wählt aus und öffnet
+  die Seite). „Meine Steuerungen wählen" schaltet sie ein und aus —
+  `GET`/`PUT /api/steuerung/auswahl`. Abwählen blendet nur aus; Home Assistant
+  bleibt unberührt. Wer nie gewählt hat, behält die Steuerungen mit
+  zugeordneten Geräten.
 - **Detail** (`/steuerung/co2`): oben eine Chip-Leiste zum Wechseln zwischen
   den Steuerungen, darunter die Statuskarte und fünf Reiter — **Ziel ·
   Dosierung · Klima · Zeiten · Heute**.

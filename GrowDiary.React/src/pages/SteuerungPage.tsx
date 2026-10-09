@@ -1,5 +1,5 @@
 import { SteuerungWechsel } from '../features/steuerung/SteuerungWechsel'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
@@ -18,6 +18,8 @@ import { feldFehlerAus, leereZahlenfelder, modusFehler, zahlAusFeld } from '../f
 import { useFehlerZeigen } from '../features/steuerung/fehler-reiter'
 import { BestandAbschnitt, BestandHinweis } from '../features/steuerung/Bestand'
 import { useBestand } from '../features/steuerung/bestand-laden'
+import { AuswahlFeld, NichtEingerichtet } from '../features/steuerung/Auswahl'
+import { useSteuerungAuswahl } from '../features/steuerung/useSteuerungAuswahl'
 
 /**
  * Fork AI: Was die Prüfung der vorhandenen CO₂-Automationen meldet.
@@ -80,6 +82,10 @@ export default function SteuerungPage() {
   const module = useMemo(() => mitEntfeuchtung(uebersicht?.module ?? [], zusatzGesagt), [uebersicht, zusatzGesagt])
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
+  // A-016: Nach einer Änderung der Auswahl lädt die Übersicht neu.
+  const [ladeNr, setLadeNr] = useState(0)
+  const neuLaden = useCallback(() => setLadeNr((n) => n + 1), [])
+  const { auswahl, fehler: auswahlFehler, arbeitet: auswahlArbeitet, umschalten } = useSteuerungAuswahl(neuLaden)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -96,7 +102,14 @@ export default function SteuerungPage() {
     }
     void laden()
     return () => controller.abort()
-  }, [])
+  }, [ladeNr])
+
+  // „Einrichten": auswählen, dann auf die Seite der Steuerung — dort werden Geräte zugeordnet.
+  const einrichten = async (kennung: string) => {
+    if (await umschalten(kennung, true)) {
+      navigate(`/steuerung/${kennung === 'entfeuchter' ? ENTFEUCHTUNG_KENNUNG : kennung}`)
+    }
+  }
 
   if (modul === 'co2') {
     return <Co2Detail module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
@@ -145,15 +158,24 @@ export default function SteuerungPage() {
       )}
       {laedt && !uebersicht ? (
         <V1Skeleton rows={5} label="Steuerungen werden geladen" />
-      ) : !uebersicht || module.length === 0 ? (
+      ) : !uebersicht || (module.length === 0 && uebersicht.nichtEingerichtet.length === 0) ? (
         <V1Empty title="Noch keine Steuerung" text="Sobald eine Regelung eingerichtet ist, steht sie hier." />
       ) : (
-        <div className="st-liste">
-          {module.map((m) => (
-            <ModulZeile key={m.kennung} modul={m} onOeffnen={() => navigate(`/steuerung/${m.kennung}`)} />
-          ))}
-        </div>
+        <>
+          {module.length > 0 && (
+            <div className="st-liste">
+              {module.map((m) => (
+                <ModulZeile key={m.kennung} modul={m} onOeffnen={() => navigate(`/steuerung/${m.kennung}`)} />
+              ))}
+            </div>
+          )}
+          {module.length === 0 && (
+            <p className="st-hinweis">Noch keine Steuerung eingerichtet. Such dir unten aus, was du hast — du ordnest danach deine Geräte zu.</p>
+          )}
+          <NichtEingerichtet karten={uebersicht.nichtEingerichtet} arbeitet={auswahlArbeitet} onEinrichten={(k) => void einrichten(k)} />
+        </>
       )}
+      <AuswahlFeld auswahl={auswahl} fehler={auswahlFehler} onUmschalten={(k, v) => void umschalten(k, v)} />
       <p className="st-fuss">Sollwerte werden in Home Assistant gespiegelt</p>
     </V1Page>
   )

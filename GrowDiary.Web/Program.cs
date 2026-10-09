@@ -150,6 +150,7 @@ builder.Services.AddScoped<EntfeuchterZusatzSteuerungService>(); // Fork AI (A-0
 builder.Services.AddScoped<SteuerungBestandService>();
 // Fork AI (forkai.58): legt die fehlenden Helfer in Home Assistant an.
 builder.Services.AddScoped<SteuerungHelferService>();
+builder.Services.AddScoped<SteuerungAuswahlService>(); // Fork AI (A-016)
 // Fork AI (forkai.69): legt die Rechenwerte ueber den Einrichtungsdialog an.
 builder.Services.AddScoped<SteuerungRechenwertService>();
 builder.Services.AddScoped<SteuerungMittelwertService>();

@@ -19,10 +19,33 @@ export type SteuerungModul = {
   hatDetail: boolean
 }
 
+/** Fork AI (A-016): Eine Steuerung, die der Nutzer (noch) nicht hat — Titel und ein Satz, wofür sie da ist. */
+export type SteuerungKarte = {
+  kennung: string
+  titel: string
+  beschreibung: string
+}
+
 export type SteuerungUebersicht = {
   haErreichbar: boolean
   module: SteuerungModul[]
+  /** Steuerungen, die nicht gewählt sind. Leer, sobald der Nutzer alle hat. */
+  nichtEingerichtet: SteuerungKarte[]
   standUtc: string
+}
+
+/** Fork AI (A-016): Eine wählbare Steuerung samt Stand der Zuordnung. */
+export type SteuerungAuswahlEintrag = SteuerungKarte & {
+  gewaehlt: boolean
+  /** Wie viele Pflicht-Geräte (Rollen) schon zugeordnet sind. */
+  pflichtZugeordnet: number
+  pflichtGesamt: number
+}
+
+export type SteuerungAuswahl = {
+  /** False: der Nutzer hat nie gewählt; die Liste ergibt sich aus den zugeordneten Geräten. */
+  gespeichert: boolean
+  eintraege: SteuerungAuswahlEintrag[]
 }
 
 /** Fork AI (forkai.150): Grenze fest oder aus der Plan-Woche plus Abstand. */

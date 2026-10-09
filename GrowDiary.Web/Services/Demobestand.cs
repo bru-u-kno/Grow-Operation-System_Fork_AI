@@ -125,6 +125,9 @@ public static partial class Demobestand
         var pumpe = WeitereGeraeteAnlegen(hardware, zelt.Id, laufend.Id);
         AlarmregelAnlegen(alarme, zelt.Id);
         LichtplanAnlegen(grows, zelt.Id);
+        // A-016: Die Demo hat alle Steuerungen — sonst zeigte die Übersicht nur die mit zugeordneten Geräten.
+        dienste.GetRequiredService<AppSettingsRepository>().SetValue(SteuerungAuswahlService.Schluessel,
+            System.Text.Json.JsonSerializer.Serialize(SteuerungAuswahlService.Alle.Select(a => a.Kennung)));
         LichtRollenZuordnen(dienste.GetRequiredService<SteuerungRepository>());
         EntfeuchterRollenZuordnen(dienste.GetRequiredService<SteuerungRepository>());
         LichtflankenAnlegen(dienste.GetRequiredService<LightRepository>(), zelt.Id, DateTime.Now);

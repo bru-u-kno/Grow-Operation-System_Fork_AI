@@ -95,6 +95,11 @@
   .st-feldzeile.is-gestapelt > .st-eingaben { flex-wrap: wrap; margin-top: var(--s-2); }
   .st-nurlesen { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+  /* A-016: Steuerungen, die der Nutzer nicht hat. */
+  .st-zeile-leer { cursor: default; border-style: dashed; }
+  .st-zeile-leer:hover { border-color: inherit; }
+  .st-punkt.is-leer { background: transparent; border: 1px solid var(--faint); }
+  .st-auswahl { margin-top: var(--s-3); display: grid; gap: var(--s-2); }
   .st-hinweis { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); color: var(--faint); line-height: 1.5; }
   /* Fork AI: Ein Befund der Absicherung — Titel, Erklärung, ggf. was fehlt. */
   .st-befund { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); line-height: 1.5; color: var(--faint); overflow-wrap: anywhere; }

@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.197
+
+**Fork AI.** Einrichtung (A-016, Etappe 2): Du sagst dem Fork, welche Steuerungen du hast — nur die erscheinen.
+
+- **Übersicht zeigt nur, was du hast:** Auf „Steuerung" stehen jetzt die gewählten Steuerungen (CO₂, Entfeuchter, Zuluft, Wasserkühler, Lampe). Die übrigen stehen unter „Nicht eingerichtet" mit einem Satz, wofür sie da sind, und einem Knopf „Einrichten". Der Knopf wählt die Steuerung aus und öffnet ihre Seite, dort ordnest du deine Geräte zu. Die Zeile „Abluft T6" gehört zur CO₂-Begasung und folgt ihr.
+- **„Meine Steuerungen wählen":** Unter der Liste schaltest du jede Steuerung ein oder aus; gespeichert wird sofort. Abwählen blendet nur aus — die Automationen in Home Assistant laufen weiter, gelöscht wird nichts. Bei jeder Steuerung steht, wie viele der nötigen Geräte schon zugeordnet sind.
+- **Bestehende Anlagen bleiben, wie sie sind:** Hast du nie gewählt, gilt eine Steuerung als gewählt, sobald ihr ein Gerät zugeordnet ist — deine Übersicht sieht aus wie vorher. Erst wenn du etwas änderst, gilt deine Auswahl wörtlich; „nichts gewählt" ist dann auch eine Antwort.
+
 ## 2.0.0-forkai.196
 
 **Fork AI.** Einrichtung (A-016, Etappe 1): Was ein Neuer bisher selbst bauen musste, legt der Fork jetzt an.

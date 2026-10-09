@@ -334,6 +334,11 @@ public sealed class RundwegVollstaendigTests
         ["EntfeuchtungEinrichtungAenderung"] =
             "Ein einziger Wahrheitswert mit drei Zuständen (true / false / null = automatisch). Die feste Probe (1) "
             + "kennt „null“ nicht und träfe nur „true“. Fährt EntfeuchterZusatzApiTests (alle drei Zustände, zweimal).",
+        // Fork AI (A-016)
+        ["SteuerungAuswahlAenderung"] =
+            "Eine Liste von Kennungen aus einer festen Menge; die feste Probe (1) ist keine Kennung und würde "
+            + "abgelehnt. Gefahren wird sie von e2e/steuerung-auswahl.spec.ts (ausblenden, einrichten, leer, "
+            + "unbekannt — zweimal) und SteuerungAuswahlTests.",
         // Fork AI
         ["ChillerEinstellungen"] =
             "Der Rundweg faehrt jedes Feld mit derselben Probe (1). Bei den Zieltemperaturen "
