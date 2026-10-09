@@ -1,8 +1,10 @@
 /* Fork AI (forkai.22): Geräteliste. Nur Tokens, keine eigenen Farbwerte —
    die Seite soll im hellen wie im dunklen Thema tragen. */
 
-.gr-zahlen { display: flex; gap: var(--s-4); }
-.gr-zahlen div { flex: 1; }
+/* Raster statt vier erzwungener Spalten: Reicht der Platz nicht (Handy), bricht es
+   sauber auf 2 x 2 um. Mit vier Spalten und nowrap ragte „korrigiert" am Handy
+   ueber den Kartenrand, sobald ein Label laenger war als „vermutet". */
+.gr-zahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--s-3) var(--s-4); margin-bottom: var(--s-3); }
 .gr-zahlen b { display: block; font-size: var(--fs-lg, 1.25rem); font-variant-numeric: tabular-nums; }
 .gr-zahlen b.is-warn, .gr-zahlen b.is-warn * { color: var(--info-text) !important; }
 .gr-zahlen span {

@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.194
+
+**Fork AI.** Geräte & Entitäten: Die Zahlen oben ragen am Handy nicht mehr über den Rand.
+
+- **„korrigiert" stand außerhalb der Karte:** Seit forkai.193 heißt die dritte Zahl „nicht zugeordnet" (vorher „vermutet"). Vier Spalten nebeneinander brauchten damit rund 337 px, die Karte hat bei 360 px innen nur 302 — „korrigiert" ragte rechts über den Kartenrand. Jetzt ordnen sich die vier Zahlen als Raster an: am Handy 2 × 2, auf dem Schreibtisch vier nebeneinander. Gemessen bei 320, 360, 390, 430 und 1280 px; ein neuer Test hält das fest.
+
 ## 2.0.0-forkai.193
 
 **Fork AI.** Geräte & Entitäten: Ein Gerät ist nur noch echte Hardware — der Fork rät keine Geräte mehr aus Namen.
