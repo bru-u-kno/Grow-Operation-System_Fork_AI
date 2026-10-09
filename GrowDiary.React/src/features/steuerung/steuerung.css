@@ -99,6 +99,14 @@
   .st-zeile-leer { cursor: default; border-style: dashed; }
   .st-zeile-leer:hover { border-color: inherit; }
   .st-punkt.is-leer { background: transparent; border: 1px solid var(--faint); }
+  /* A-016, Etappe 3: Einrichtungs-Assistent */
+  .st-schritte { display: flex; gap: var(--s-2); margin: 0 0 var(--s-3); padding: 0; list-style: none; flex-wrap: wrap; }
+  .st-schritte li { display: flex; gap: .4rem; align-items: baseline; padding: .3rem .7rem; border: 1px solid var(--hair); border-radius: 999px; font-size: var(--fs-etikett); color: var(--faint); }
+  .st-schritte li b { font-family: var(--font-mono); }
+  .st-schritte li.is-jetzt { color: var(--ink); border-color: var(--accent-dim); background: var(--surface); }
+  .st-schritte li.is-fertig { color: var(--accent-text); }
+  .st-eingerueckt { margin-left: var(--s-4); }
+  .st-fuss-link a { color: inherit; }
   .st-auswahl { margin-top: var(--s-3); display: grid; gap: var(--s-2); }
   .st-hinweis { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); color: var(--faint); line-height: 1.5; }
   /* Fork AI: Ein Befund der Absicherung — Titel, Erklärung, ggf. was fehlt. */

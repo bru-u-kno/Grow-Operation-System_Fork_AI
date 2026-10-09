@@ -29,10 +29,13 @@ async function auswahlSetzen(page: Page, gewaehlt: string[]) {
 const ALLE = ['co2', 'entfeuchter', 'zuluft', 'chiller', 'licht']
 
 test.afterAll(async ({ browser, baseURL }) => {
+  // Auch das Zurückstellen gehört unter das Schloss — sonst reißt es eine Prüfung aus einer anderen Datei mittendrin um.
+  await nimmSchloss()
   const page = await browser.newPage({ baseURL })
   // Ohne Backend (Rauchtest) war nichts zu ändern — und nichts wiederherzustellen.
   if (await backendAntwortet(page.request)) await auswahlSetzen(page, ALLE)
   await page.close()
+  gibSchloss()
 })
 
 test('Übersicht: nur gewählte Steuerungen, der Rest steht als „Nicht eingerichtet" daneben', async ({ page }) => {

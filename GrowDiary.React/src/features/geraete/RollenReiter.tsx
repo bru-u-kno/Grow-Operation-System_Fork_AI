@@ -36,7 +36,16 @@ const GRUPPEN: Array<{ key: string; label: string }> = [
   { key: 'umfeld', label: 'Umfeld' },
 ]
 
-export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string | null; onModul?: (modul: string) => void }) {
+export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUngespeichert }: {
+  modulVorwahl?: string | null
+  onModul?: (modul: string) => void
+  /** A-016: Nur diese Module zeigen (der Einrichtungs-Assistent: die gewählten Steuerungen). */
+  nurModule?: string[]
+  /** A-016: Ohne den Verweis auf die CO₂-Seite am Ende — im Assistenten führt er vom Weg ab. */
+  schlank?: boolean
+  /** A-016: Meldet, ob es Änderungen gibt, die noch nicht gespeichert sind (der Assistent sperrt dann Weiter). */
+  onUngespeichert?: (offen: boolean) => void
+}) {
   const navigate = useNavigate()
   const [seite, setSeite] = useState<GeraeteSeite | null>(null)
   const [entities, setEntities] = useState<HomeAssistantEntity[]>([])
@@ -75,9 +84,14 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
     return () => controller.abort()
   }, [])
 
+  const sichtbareModule = useMemo(
+    () => (seite?.module ?? []).filter((m) => !nurModule || nurModule.includes(m.modul)),
+    [seite, nurModule],
+  )
+
   const modul = useMemo(
-    () => seite?.module.find((m) => m.modul === aktiv) ?? seite?.module[0] ?? null,
-    [seite, aktiv],
+    () => sichtbareModule.find((m) => m.modul === aktiv) ?? sichtbareModule[0] ?? null,
+    [sichtbareModule, aktiv],
   )
 
   const entwurf = useMemo(() => {
@@ -90,6 +104,9 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
     if (!modul) return
     setAenderungen((current) => ({ ...current, [modul.modul]: { ...(current[modul.modul] ?? {}), [rolle]: wert } }))
   }
+
+  const ungespeichert = Object.values(aenderungen).some((m) => Object.keys(m).length > 0)
+  useEffect(() => { onUngespeichert?.(ungespeichert) }, [ungespeichert, onUngespeichert])
 
   const offen = modul?.zeilen.filter((zeile) => zeile.pflicht && !zeile.gefunden).length ?? 0
 
@@ -122,7 +139,7 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
 
   if (laedt) return <V1Skeleton label="Rollen werden geladen" />
 
-  if (!seite || seite.module.length === 0) {
+  if (!seite || sichtbareModule.length === 0) {
     return <V1Empty title="Keine Steuerung mit Geräten" text="Sobald eine Regelung Geräte braucht, stehen sie hier." />
   }
 
@@ -139,7 +156,7 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
       )}
 
       <div className="st-wechsel" role="tablist" aria-label="Steuerung">
-        {seite.module.map((eintrag) => {
+        {sichtbareModule.map((eintrag) => {
           const luecken = eintrag.zeilen.filter((zeile) => zeile.pflicht && !zeile.gefunden).length
           return (
             <button
@@ -202,13 +219,15 @@ export function RollenReiter({ modulVorwahl, onModul }: { modulVorwahl?: string 
         onFehler={(text) => setFehler(text)}
       />
 
-      <V1Card>
-        <p className="st-hinweis">
-          Die Regelung selbst läuft weiter in Home Assistant; sie kennt ihre Entitäten dort noch fest.
-          Bis das umgestellt ist, wirkt eine Änderung hier auf Anzeige und Auswertung im Add-on.
-        </p>
-        <V1Button onClick={() => navigate('/steuerung/co2')}>Zur CO₂-Steuerung</V1Button>
-      </V1Card>
+      {!schlank && (
+        <V1Card>
+          <p className="st-hinweis">
+            Die Regelung selbst läuft weiter in Home Assistant; sie kennt ihre Entitäten dort noch fest.
+            Bis das umgestellt ist, wirkt eine Änderung hier auf Anzeige und Auswertung im Add-on.
+          </p>
+          <V1Button onClick={() => navigate('/steuerung/co2')}>Zur CO₂-Steuerung</V1Button>
+        </V1Card>
+      )}
     </div>
   )
 }

@@ -16,6 +16,12 @@ sechstes Ziel. Zwei Ebenen:
   `GET`/`PUT /api/steuerung/auswahl`. Abwählen blendet nur aus; Home Assistant
   bleibt unberührt. Wer nie gewählt hat, behält die Steuerungen mit
   zugeordneten Geräten.
+  **Einrichtungs-Assistent** (`/steuerung/einrichtung?schritt=1…3`): Geräte
+  ankreuzen → Entitäten zuordnen (die Rollen-Zuordnung der Geräteseite, nur
+  für die gewählten Steuerungen) → Bereitstellen (Helfer und Rechenwerte,
+  danach Vorschau und Zustimmung für die Automationen; Steuerungen mit
+  fehlenden Pflichtgeräten bleiben unberührt). Dieselben Endpunkte wie die
+  Detailseiten: `{modul}/bestand`, `/helfer`, `/rechenwerte`, `/automationen`.
 - **Detail** (`/steuerung/co2`): oben eine Chip-Leiste zum Wechseln zwischen
   den Steuerungen, darunter die Statuskarte und fünf Reiter — **Ziel ·
   Dosierung · Klima · Zeiten · Heute**.

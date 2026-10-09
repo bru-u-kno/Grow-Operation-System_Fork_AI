@@ -83,7 +83,7 @@ public static class SteuerungGeraeteRollen
         // Beschriftung muss deshalb fuer beides stimmen.
         new("co2", "canopy", "Canopy-Temperatur", GruppeMessen,
             "sensor.big_probe_sensor_sonden_temperatur", new[] { "sensor" }, Einheit: "°C",
-            Hinweis: "Vorbelegt mit dem Luftfuehler im Bestand. Ein IR-Sensor misst hier die echte Blatttemperatur — dann verschieben sich die Schwellen entsprechend."),
+            Hinweis: "Der Luftfühler im Zelt genügt. Ein IR-Sensor misst hier die echte Blatttemperatur — dann verschieben sich die Schwellen entsprechend."),
         new("co2", "rh", "Luftfeuchte", GruppeMessen,
             "sensor.big_probe_sensor_sonden_luftfeuchtigkeit", new[] { "sensor" }, Einheit: "%"),
         new("co2", "vpd", "VPD", GruppeMessen,

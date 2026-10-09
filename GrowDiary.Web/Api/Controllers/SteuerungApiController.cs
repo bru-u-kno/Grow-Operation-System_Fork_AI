@@ -219,7 +219,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         var eintraege = SteuerungAuswahlService.Alle.Select(a =>
         {
             var (zugeordnet, gesamt) = auswahl.Pflichtrollen(a);
-            return new SteuerungAuswahlEintragDto(a.Kennung, a.Titel, a.Beschreibung, gewaehlt.Contains(a.Kennung), zugeordnet, gesamt);
+            return new SteuerungAuswahlEintragDto(a.Kennung, a.Titel, a.Beschreibung, gewaehlt.Contains(a.Kennung), zugeordnet, gesamt, SteuerungAuswahlService.Bausteinmodule(a), a.Module);
         }).ToList();
         return new SteuerungAuswahlDto(auswahl.Gespeichert(), eintraege);
     }
@@ -851,7 +851,9 @@ public sealed class SteuerungApiController : ApiControllerBase
 public sealed record SteuerungModulDto(string Kennung, string Titel, string Status, string Kurz, string Wert, string Unterzeile, bool HatDetail);
 public sealed record SteuerungKarteDto(string Kennung, string Titel, string Beschreibung);
 public sealed record SteuerungUebersichtDto(bool HaErreichbar, IReadOnlyList<SteuerungModulDto> Module, IReadOnlyList<SteuerungKarteDto> NichtEingerichtet, DateTime StandUtc);
-public sealed record SteuerungAuswahlEintragDto(string Kennung, string Titel, string Beschreibung, bool Gewaehlt, int PflichtZugeordnet, int PflichtGesamt);
+/// <param name="Module">Die Module, für die Bausteine in Home Assistant angelegt werden, in Anlege-Reihenfolge.</param>
+/// <param name="Rollenmodule">Alle Module der Steuerung, deren Geräte (Rollen) zugeordnet werden — auch die Lampe.</param>
+public sealed record SteuerungAuswahlEintragDto(string Kennung, string Titel, string Beschreibung, bool Gewaehlt, int PflichtZugeordnet, int PflichtGesamt, IReadOnlyList<string> Module, IReadOnlyList<string> Rollenmodule);
 /// <param name="Gespeichert">False: der Nutzer hat nie gewählt, die Liste ergibt sich aus den zugeordneten Geräten.</param>
 public sealed record SteuerungAuswahlDto(bool Gespeichert, IReadOnlyList<SteuerungAuswahlEintragDto> Eintraege);
 public sealed record SteuerungAuswahlAenderung(IReadOnlyList<string> Gewaehlt);

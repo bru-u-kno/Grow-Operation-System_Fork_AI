@@ -8,14 +8,19 @@ import type { SteuerungAuswahl } from './steuerung-typen'
  * Geschrieben wird sofort beim Umschalten (kein Speichern-Knopf): es ist eine Angabe über die Anlage,
  * keine Regel. Abwählen blendet aus — Home Assistant und seine Automationen bleiben unberührt.
  *
+ * <b>Mehrere Tipps hintereinander gehen alle durch.</b> Jeder Schreibvorgang liest vorher den aktuellen Stand und
+ * schreibt die ganze Liste; zwei gleichzeitig würden sich überholen, einer ginge verloren (gemessen: Zuluft an,
+ * gleich danach Lampe aus — die Lampe blieb an). Deshalb laufen sie hintereinander in einer Kette; der Schalter
+ * springt sofort, die Kette holt den Server nach.
+ *
  * @param nachAenderung wird nach jedem erfolgreichen Speichern gerufen (die Übersicht lädt neu)
  */
 export function useSteuerungAuswahl(nachAenderung?: () => void) {
   const [auswahl, setAuswahl] = useState<SteuerungAuswahl | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [arbeitet, setArbeitet] = useState(false)
-  // Ein Schreibvorgang zur Zeit: ein zweiter Tipp währenddessen würde den ersten überholen.
-  const laeuft = useRef(false)
+  const kette = useRef<Promise<unknown>>(Promise.resolve())
+  const offen = useRef(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -25,38 +30,38 @@ export function useSteuerungAuswahl(nachAenderung?: () => void) {
     return () => controller.abort()
   }, [])
 
-  /**
-   * Eine Steuerung ein- oder ausschalten. Liest vorher den aktuellen Stand, damit ein zweiter
-   * Tab oder ein veralteter Bildschirm keine fremde Auswahl überschreibt.
-   */
-  const umschalten = useCallback(async (kennung: string, gewaehlt: boolean): Promise<boolean> => {
-    if (laeuft.current) return false
-    laeuft.current = true
-    setArbeitet(true)
+  const umschalten = useCallback((kennung: string, gewaehlt: boolean): Promise<boolean> => {
     setFehler(null)
     // Sofort zeigen, was gewählt wurde — sonst springt der Schalter bis zur Antwort zurück.
-    // Scheitert das Speichern, wird der Stand neu gelesen (unten, im catch).
     setAuswahl((a) => a && { ...a, eintraege: a.eintraege.map((e) => e.kennung === kennung ? { ...e, gewaehlt } : e) })
-    try {
-      const aktuell = await apiFetch<SteuerungAuswahl>('/api/steuerung/auswahl')
-      const neu = new Set(aktuell.eintraege.filter((e) => e.gewaehlt).map((e) => e.kennung))
-      if (gewaehlt) neu.add(kennung)
-      else neu.delete(kennung)
-      const gespeichert = await apiFetch<SteuerungAuswahl>('/api/steuerung/auswahl', {
-        method: 'PUT',
-        body: JSON.stringify({ gewaehlt: [...neu] }),
-      })
-      setAuswahl(gespeichert)
-      nachAenderung?.()
-      return true
-    } catch (caught) {
-      setFehler(formatApiError(caught, 'Die Auswahl konnte nicht gespeichert werden.'))
-      void apiFetch<SteuerungAuswahl>('/api/steuerung/auswahl').then(setAuswahl).catch(() => undefined)
-      return false
-    } finally {
-      laeuft.current = false
-      setArbeitet(false)
-    }
+    offen.current += 1
+    setArbeitet(true)
+
+    const lauf = kette.current.then(async () => {
+      try {
+        const aktuell = await apiFetch<SteuerungAuswahl>('/api/steuerung/auswahl')
+        const neu = new Set(aktuell.eintraege.filter((e) => e.gewaehlt).map((e) => e.kennung))
+        if (gewaehlt) neu.add(kennung)
+        else neu.delete(kennung)
+        const gespeichert = await apiFetch<SteuerungAuswahl>('/api/steuerung/auswahl', {
+          method: 'PUT',
+          body: JSON.stringify({ gewaehlt: [...neu] }),
+        })
+        // Nur der letzte Schreibvorgang der Kette setzt den Stand: ein früherer würde spätere Tipps kurz zurückdrehen.
+        if (offen.current === 1) setAuswahl(gespeichert)
+        nachAenderung?.()
+        return true
+      } catch (caught) {
+        setFehler(formatApiError(caught, 'Die Auswahl konnte nicht gespeichert werden.'))
+        void apiFetch<SteuerungAuswahl>('/api/steuerung/auswahl').then(setAuswahl).catch(() => undefined)
+        return false
+      } finally {
+        offen.current -= 1
+        if (offen.current === 0) setArbeitet(false)
+      }
+    })
+    kette.current = lauf
+    return lauf
   }, [nachAenderung])
 
   return { auswahl, fehler, arbeitet, umschalten }

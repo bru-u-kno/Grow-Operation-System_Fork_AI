@@ -1,12 +1,13 @@
 import { SteuerungWechsel } from '../features/steuerung/SteuerungWechsel'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../components/v1'
 import LichtDetail from '../features/steuerung/LichtDetail'
 import ZuluftDetail from '../features/steuerung/ZuluftDetail'
 import ChillerDetail from '../features/steuerung/ChillerDetail'
 import EntfeuchtungSeite from '../features/steuerung/EntfeuchtungSeite'
+import EinrichtungSeite from '../features/steuerung/EinrichtungSeite'
 import { ENTFEUCHTUNG_KENNUNG, mitEntfeuchtung } from '../features/steuerung/entfeuchtung-modell'
 import { useEntfeuchtungEinrichtung } from '../features/steuerung/useEntfeuchtungEinrichtung'
 import { CO2_REITER, minuten, probeWerte, tagKurz, wirksameZiele } from '../features/steuerung/steuerung-typen'
@@ -113,6 +114,9 @@ export default function SteuerungPage() {
     }
   }
 
+  // A-016: der Einrichtungs-Assistent (keine Steuerung, daher keine Chip-Leiste)
+  if (modul === 'einrichtung') return <EinrichtungSeite />
+
   if (modul === 'co2') {
     return <Co2Detail module={module} aktiv={modul} onWechsel={(k) => navigate(`/steuerung/${k}`)} />
   }
@@ -172,10 +176,16 @@ export default function SteuerungPage() {
             </div>
           )}
           {module.length === 0 && (
-            <p className="st-hinweis">Noch keine Steuerung eingerichtet. Such dir unten aus, was du hast — du ordnest danach deine Geräte zu.</p>
+            <V1Card>
+              <p className="st-hinweis">Noch keine Steuerung eingerichtet. Der Assistent fragt, was du hast, ordnet deine Geräte zu und legt in Home Assistant an, was fehlt.</p>
+              <V1LinkButton to="/steuerung/einrichtung" variant="primary">Einrichtung starten</V1LinkButton>
+            </V1Card>
           )}
           <NichtEingerichtet karten={nichtEingerichtet} arbeitet={auswahlArbeitet} onEinrichten={(k) => void einrichten(k)} />
         </>
+      )}
+      {module.length > 0 && (
+        <p className="st-fuss st-fuss-link"><Link to="/steuerung/einrichtung">Einrichtungs-Assistent öffnen</Link></p>
       )}
       <AuswahlFeld auswahl={auswahl} fehler={auswahlFehler} onUmschalten={(k, v) => void umschalten(k, v)} />
       <p className="st-fuss">Sollwerte werden in Home Assistant gespiegelt</p>

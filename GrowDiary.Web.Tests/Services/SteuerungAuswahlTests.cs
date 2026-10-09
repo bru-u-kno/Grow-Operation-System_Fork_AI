@@ -149,4 +149,14 @@ public sealed class SteuerungAuswahlTests : IDisposable
         _steuerung.SetGeraet("zuluft", "aussen_temp", "sensor.draussen");
         Assert.Equal((1, gesamt), _auswahl.Pflichtrollen(art));
     }
+
+    [Fact]
+    public void BausteineGibtEsNurFuerModuleMitKatalogUndInAnlegeReihenfolge()
+    {
+        Assert.Equal(["entfeuchter", EntfeuchterZusatzSteuerungService.Modul],
+            SteuerungAuswahlService.Bausteinmodule(SteuerungAuswahlService.Finden("entfeuchter")!));
+        Assert.Equal(["co2"], SteuerungAuswahlService.Bausteinmodule(SteuerungAuswahlService.Finden("co2")!));
+        // Die Lampe hat Rollen, aber keine Bausteine — bei ihr genügt die Zuordnung.
+        Assert.Empty(SteuerungAuswahlService.Bausteinmodule(SteuerungAuswahlService.Finden("licht")!));
+    }
 }

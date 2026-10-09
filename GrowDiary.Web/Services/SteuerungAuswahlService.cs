@@ -100,6 +100,13 @@ public sealed class SteuerungAuswahlService
     public static bool Sichtbar(string uebersichtKennung, IReadOnlyCollection<string> gewaehlt)
         => Alle.Any(a => gewaehlt.Contains(a.Kennung) && a.Uebersicht.Contains(uebersichtKennung, StringComparer.Ordinal));
 
+    /// <summary>
+    /// Die Module der Steuerung, für die der Fork Bausteine in Home Assistant anlegt (Helfer, Rechenwerte,
+    /// Automationen) — in der Reihenfolge, in der sie angelegt werden. Die Lampe hat keine: bei ihr genügt die Zuordnung.
+    /// </summary>
+    public static IReadOnlyList<string> Bausteinmodule(Art art)
+        => art.Module.Where(m => SteuerungBauteile.FuerModul(m).Count > 0).ToList();
+
     /// <summary>Wie viele Pflicht-Rollen der Steuerung zugeordnet sind (nur gespeicherte Zuordnungen).</summary>
     public (int Zugeordnet, int Gesamt) Pflichtrollen(Art art)
     {

@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.198
+
+**Fork AI.** Einrichtung (A-016, Etappe 3): Der Einrichtungs-Assistent führt in drei Schritten von „Was habe ich?" bis „in Home Assistant bereit".
+
+- **Drei Schritte:** Unter „Steuerung → Einrichtungs-Assistent öffnen" (bei noch leerer Übersicht: „Einrichtung starten"). **1 Geräte:** Steuerungen ankreuzen, beim Entfeuchter auf Wunsch einen zweiten. **2 Zuordnen:** deine Entitäten den Aufgaben zuordnen — nur für die gewählten Steuerungen; ungespeicherte Zuordnungen sperren „Weiter", damit nichts verloren geht. **3 Bereitstellen:** je Steuerung steht „bereit", „bereit zum Anlegen" mit der Zahl der Helfer, Rechenwerte und Automationen, oder „Pflichtgerät fehlt". Der Schritt steht in der Adresse: Zurück im Browser geht einen Schritt zurück.
+- **Zwei Zustimmungen:** „Alles Gewählte bereitstellen" legt Helfer und Rechenwerte an (sie schalten nichts) und zeigt dann, welche Automationen entstehen würden — was von Hand Gebautes ist, bleibt unangetastet. Geschrieben werden sie erst nach „Automationen jetzt anlegen". Steuerungen mit fehlenden Pflichtgeräten werden nicht angefasst.
+- **Schnelles Antippen geht nicht mehr verloren:** Mehrere Schalter hintereinander (Zuluft an, gleich danach Lampe aus) werden der Reihe nach gespeichert; vorher konnte der zweite Tipp untergehen. Das gilt auch für „Meine Steuerungen wählen".
+- **Hinweis zur Canopy-Temperatur** sprach noch von „vorbelegt mit dem Luftfühler im Bestand" — das stammte aus der ersten Anlage und stimmt für niemanden mehr. Jetzt: „Der Luftfühler im Zelt genügt."
+
 ## 2.0.0-forkai.197
 
 **Fork AI.** Einrichtung (A-016, Etappe 2): Du sagst dem Fork, welche Steuerungen du hast — nur die erscheinen.

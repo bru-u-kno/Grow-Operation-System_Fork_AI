@@ -40,6 +40,10 @@ export type SteuerungAuswahlEintrag = SteuerungKarte & {
   /** Wie viele Pflicht-Geräte (Rollen) schon zugeordnet sind. */
   pflichtZugeordnet: number
   pflichtGesamt: number
+  /** Die Module, für die Bausteine in Home Assistant angelegt werden, in Anlege-Reihenfolge (die Lampe hat keine). */
+  module: string[]
+  /** Alle Module der Steuerung, deren Geräte zugeordnet werden (auch die Lampe). */
+  rollenmodule: string[]
 }
 
 export type SteuerungAuswahl = {
