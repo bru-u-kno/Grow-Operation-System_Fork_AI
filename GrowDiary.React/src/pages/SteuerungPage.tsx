@@ -82,6 +82,8 @@ export default function SteuerungPage() {
   const module = useMemo(() => mitEntfeuchtung(uebersicht?.module ?? [], zusatzGesagt), [uebersicht, zusatzGesagt])
   const [fehler, setFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(true)
+  // Ein älteres Backend (oder ein Zwischenspeicher) kennt das Feld noch nicht — dann ist nichts ausgeblendet.
+  const nichtEingerichtet = uebersicht?.nichtEingerichtet ?? []
   // A-016: Nach einer Änderung der Auswahl lädt die Übersicht neu.
   const [ladeNr, setLadeNr] = useState(0)
   const neuLaden = useCallback(() => setLadeNr((n) => n + 1), [])
@@ -158,7 +160,7 @@ export default function SteuerungPage() {
       )}
       {laedt && !uebersicht ? (
         <V1Skeleton rows={5} label="Steuerungen werden geladen" />
-      ) : !uebersicht || (module.length === 0 && uebersicht.nichtEingerichtet.length === 0) ? (
+      ) : !uebersicht || (module.length === 0 && nichtEingerichtet.length === 0) ? (
         <V1Empty title="Noch keine Steuerung" text="Sobald eine Regelung eingerichtet ist, steht sie hier." />
       ) : (
         <>
@@ -172,7 +174,7 @@ export default function SteuerungPage() {
           {module.length === 0 && (
             <p className="st-hinweis">Noch keine Steuerung eingerichtet. Such dir unten aus, was du hast — du ordnest danach deine Geräte zu.</p>
           )}
-          <NichtEingerichtet karten={uebersicht.nichtEingerichtet} arbeitet={auswahlArbeitet} onEinrichten={(k) => void einrichten(k)} />
+          <NichtEingerichtet karten={nichtEingerichtet} arbeitet={auswahlArbeitet} onEinrichten={(k) => void einrichten(k)} />
         </>
       )}
       <AuswahlFeld auswahl={auswahl} fehler={auswahlFehler} onUmschalten={(k, v) => void umschalten(k, v)} />
