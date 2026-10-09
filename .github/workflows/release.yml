@@ -279,3 +279,25 @@ jobs:
         run: |
           REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
           docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${V}"
+
+      # Eintrag auf der GitHub-Releases-Seite: Text ist der Abschnitt aus
+      # CHANGELOG.md (liegt schon im Release-Commit). Seit 20.07.2026 gab es
+      # hier keinen solchen Schritt mehr, deshalb fehlten die Eintraege ab
+      # forkai.153. Spaet und tolerant: Das Image ist schon veroeffentlicht,
+      # ein fehlender Eintrag darf den Lauf nicht mehr rot machen.
+      - name: GitHub-Release-Eintrag anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          if gh release view "v${V}" >/dev/null 2>&1; then
+            echo "Eintrag v${V} existiert schon."
+            exit 0
+          fi
+          awk -v h="## ${V}" '($0 == h || index($0, h " ") == 1) { f = 1; next } /^## / { f = 0 } f' grow-os/CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::warning::Kein Changelog-Abschnitt fuer ${V} — Eintrag ohne Text."
+            echo "Fork AI ${V}" > release-notes.md
+          fi
+          gh release create "v${V}" --verify-tag --title "${V}" --notes-file release-notes.md --latest \
+            || echo "::warning::GitHub-Release-Eintrag fuer v${V} konnte nicht angelegt werden."
