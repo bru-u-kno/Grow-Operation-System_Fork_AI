@@ -26,12 +26,17 @@ public sealed class GeraeteApiController : ApiControllerBase
     private readonly GeraeteUebersichtService _geraete;
     private readonly GeraeteRepository _repo;
     private readonly SteuerungGeraeteService _rollen;
+    private readonly SteuerungAbsicherungService _absicherung;
+    private readonly HomeAssistantSettingsRepository _haSettings;
 
-    public GeraeteApiController(GeraeteUebersichtService geraete, GeraeteRepository repo, SteuerungGeraeteService rollen)
+    public GeraeteApiController(GeraeteUebersichtService geraete, GeraeteRepository repo, SteuerungGeraeteService rollen,
+        SteuerungAbsicherungService absicherung, HomeAssistantSettingsRepository haSettings)
     {
         _geraete = geraete;
         _repo = repo;
         _rollen = rollen;
+        _absicherung = absicherung;
+        _haSettings = haSettings;
     }
 
     [HttpGet]
@@ -65,7 +70,8 @@ public sealed class GeraeteApiController : ApiControllerBase
         // Fork AI (forkai.44): Regeln tut Home Assistant. Weicht eine Rolle von dem
         // ab, was die Automation fest verdrahtet hat, meinen Anzeige und Regelung
         // Verschiedenes — das gehört auf die Seite, nicht in ein Protokoll.
-        var hinweise = Co2SteuerungService.Abweichungen(_rollen.EntitiesFuerModul(Co2SteuerungService.Modul))
+        var verdrahtet = await _absicherung.HandgebauteVerdrahtungAsync(_haSettings.GetEffectiveHomeAssistantSettings(), ct);
+        var hinweise = Co2SteuerungService.Abweichungen(_rollen.EntitiesFuerModul(Co2SteuerungService.Modul), verdrahtet)
             .Concat(stand.RegisterErreichbar
                 ? GeraeteUebersichtService.Zuordnungshinweise(geraete)
                 : ["Das Geräteregister von Home Assistant ist nicht erreichbar. Ohne es lässt sich kein Gerät belegen — deshalb steht alles unter „Nicht zugeordnet“."])

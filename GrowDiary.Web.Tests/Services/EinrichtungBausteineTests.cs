@@ -231,3 +231,51 @@ public sealed class EinrichtungBausteineTests
         }
     }
 }
+
+/// <summary>
+/// Fork AI (A-016, Etappe 5): Die Entfeuchter-Regelung wird unter der Kennung geschaltet und gelesen, unter der sie
+/// in Home Assistant steht — handgebaut oder vom Fork angelegt.
+/// </summary>
+public sealed class EntfeuchterAutomatikKennungTests
+{
+    private static HomeAssistantEntity Auto(string id, string? konfig, string state = "on")
+        => new() { EntityId = id, Domain = "automation", State = state, KonfigKennung = konfig };
+
+    private static string Katalog => EntfeuchterSteuerungService.Entitaeten.Automatik;
+
+    [Fact]
+    public void EineHandgebauteStehtUnterDerKatalogKennung()
+        => Assert.Equal([Katalog], EntfeuchterSteuerungService.AutomatikKennungen([Auto(Katalog, "1788322037805")]));
+
+    [Fact]
+    public void EineVomForkAngelegteStehtUnterIhremAlias()
+    {
+        var vorlage = SteuerungBauteile.FuerModul("entfeuchter").Single(b => b.EntityId == Katalog);
+        var vomFork = Auto("automation.entfeuchter_regelung_tag_nacht", vorlage.KonfigKennung);
+
+        // Vorher ging „Automatik aus" an der Katalog-Kennung vorbei — die es bei dieser Anlage gar nicht gibt.
+        Assert.Equal(["automation.entfeuchter_regelung_tag_nacht"], EntfeuchterSteuerungService.AutomatikKennungen([vomFork]));
+    }
+
+    [Fact]
+    public void OhneRegelungGibtEsNichtsZuSchalten_OhneAntwortDieKatalogKennung()
+    {
+        Assert.Empty(EntfeuchterSteuerungService.AutomatikKennungen([Auto("automation.etwas_anderes", "x")]));
+        Assert.Equal([Katalog], EntfeuchterSteuerungService.AutomatikKennungen([]));
+    }
+
+    [Fact]
+    public void DieEinstellungenLesenDenZustandDerVomForkAngelegten()
+    {
+        var zustaende = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["automation.entfeuchter_regelung_tag_nacht"] = "off",
+        };
+
+        var e = EntfeuchterSteuerungService.AusHomeAssistant(zustaende, ["automation.entfeuchter_regelung_tag_nacht"]);
+        Assert.False(e.AutomatikAktiv);
+
+        // Ohne die Kennung der Fork-Regelung wüsste die Seite nichts vom Zustand und bliebe bei der Vorgabe.
+        Assert.True(EntfeuchterSteuerungService.AusHomeAssistant(zustaende).AutomatikAktiv);
+    }
+}

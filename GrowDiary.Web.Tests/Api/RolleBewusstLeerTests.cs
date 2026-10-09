@@ -12,6 +12,7 @@ namespace GrowDiary.Web.Tests.Api;
 public sealed class RolleBewusstLeerTests : IDisposable
 {
     private readonly string _wurzel;
+    private readonly SteuerungRepository _repo;
     private readonly SteuerungGeraeteService _geraete;
 
     public RolleBewusstLeerTests()
@@ -20,7 +21,8 @@ public sealed class RolleBewusstLeerTests : IDisposable
         Directory.CreateDirectory(_wurzel);
         var pfade = new AppPaths(_wurzel);
         TestDatabase.Initialize(pfade);
-        _geraete = new SteuerungGeraeteService(new SteuerungRepository(pfade));
+        _repo = new SteuerungRepository(pfade);
+        _geraete = new SteuerungGeraeteService(_repo);
     }
 
     [Fact]
@@ -34,13 +36,34 @@ public sealed class RolleBewusstLeerTests : IDisposable
     }
 
     [Fact]
-    public void DieVorgabeEintragenHoltSieZurueck()
+    public void EineGeleerteRolleLaesstSichNeuBelegen()
     {
-        var vorgabe = SteuerungGeraeteRollen.Finden("chiller", "steckdose")!.BisherigeVorgabe;
+        _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = "switch.eine_steckdose" });
         _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = "" });
-        _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = vorgabe });
+        Assert.Null(_geraete.EntitiesFuerModul("chiller")["steckdose"]);
 
-        Assert.Equal(vorgabe, _geraete.EntitiesFuerModul("chiller")["steckdose"]);
+        _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = "switch.eine_steckdose" });
+        Assert.Equal("switch.eine_steckdose", _geraete.EntitiesFuerModul("chiller")["steckdose"]);
+    }
+
+    [Fact]
+    public void EineAltMarkeInDerDatenbankWirdWeiterAlsLeerGelesen()
+    {
+        // Frühere Fassungen schrieben bei einer geleerten optionalen Rolle die Marke „-". Sie steht noch in
+        // vorhandenen Datenbanken und darf nicht als Entität gelten.
+        _repo.SetGeraet("chiller", "steckdose", SteuerungGeraeteRollen.BewusstLeer);
+
+        Assert.Null(_geraete.EntitiesFuerModul("chiller")["steckdose"]);
+        Assert.Null(_geraete.Entity("chiller", "steckdose"));
+    }
+
+    [Fact]
+    public void LeerenSchreibtKeineMarkeMehr()
+    {
+        _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = "switch.x" });
+        _geraete.Speichern("chiller", new Dictionary<string, string?> { ["steckdose"] = "" });
+
+        Assert.False(_geraete.Gespeichert("chiller").ContainsKey("steckdose"));
     }
 
     [Fact]

@@ -17,21 +17,19 @@ namespace GrowDiary.Web.Tests.Services;
 public sealed class SteuerungGeraeteTests
 {
     [Fact]
-    public void JedeRolleHatEineVorgabeDieZuIhrenDomainsPasst()
+    public void JedeRolleNenntIhreErlaubtenDomains()
     {
+        // Ohne Domain ließe sich nichts zuordnen: die Oberfläche filtert darauf, und die Prüfung beim Speichern auch.
         foreach (var rolle in SteuerungGeraeteRollen.Alle)
         {
-            // Fork AI (Chiller-Ansteuerung): Eine optionale Rolle darf ohne
-            // Vorgabe kommen — ein Kühler mit eigenem Sollwert ist die Ausnahme,
-            // nicht der Normalfall.
-            if (!rolle.Pflicht && string.IsNullOrEmpty(rolle.BisherigeVorgabe)) continue;
-
-            var domain = SteuerungGeraeteService.Domain(rolle.BisherigeVorgabe);
-            Assert.True(domain is not null, $"Vorgabe von {rolle.Modul}/{rolle.Schluessel} ist keine Entity-ID: {rolle.BisherigeVorgabe}");
-            Assert.True(rolle.Domains.Contains(domain!, StringComparer.OrdinalIgnoreCase),
-                $"Vorgabe von {rolle.Modul}/{rolle.Schluessel} ist {domain}, erlaubt sind {string.Join("/", rolle.Domains)}.");
+            Assert.NotEmpty(rolle.Domains);
+            Assert.All(rolle.Domains, d => Assert.Matches("^[a-z_]+$", d));
         }
     }
+
+    [Fact]
+    public void EsGibtKeineWerksvorgabe()
+        => Assert.All(SteuerungGeraeteRollen.Alle, rolle => Assert.Equal(string.Empty, rolle.Vorgabe));
 
     [Fact]
     public void RollenschluesselSindJeModulEindeutig()
@@ -43,27 +41,6 @@ public sealed class SteuerungGeraeteTests
             .ToList();
 
         Assert.True(doppelt.Count == 0, $"Doppelte Rollen: {string.Join(", ", doppelt)}");
-    }
-
-    /// <summary>
-    /// Die CO₂-Begasung hatte diese Entitäten bis forkai.20 als Konstanten im
-    /// Dienst. Wandern sie beim Umzug in die Registry verloren, läuft die
-    /// Regelung nach dem Update plötzlich auf anderen Geräten — deshalb stehen
-    /// sie hier ausgeschrieben.
-    /// </summary>
-    [Fact]
-    public void Co2BehaeltSeineBisherigenGeraeteAlsVorgabe()
-    {
-        var vorgaben = SteuerungGeraeteRollen.FuerModul("co2")
-            .ToDictionary(rolle => rolle.Schluessel, rolle => rolle.BisherigeVorgabe, StringComparer.Ordinal);
-
-        Assert.Equal("sensor.big_co2_light_sensor_co2", vorgaben["co2_sensor"]);
-        Assert.Equal("sensor.big_probe_sensor_sonden_temperatur", vorgaben["canopy"]);
-        Assert.Equal("sensor.big_probe_sensor_sonden_luftfeuchtigkeit", vorgaben["rh"]);
-        Assert.Equal("sensor.big_probe_sensor_sonden_vpd", vorgaben["vpd"]);
-        Assert.Equal("binary_sensor.big_port_5_zustand", vorgaben["port_zustand"]);
-        Assert.Equal("number.rdwc_venti_einschaltleistung", vorgaben["abluft_stufe"]);
-        Assert.Equal("binary_sensor.klein_abluft_zustand", vorgaben["licht"]);
     }
 
     [Theory]

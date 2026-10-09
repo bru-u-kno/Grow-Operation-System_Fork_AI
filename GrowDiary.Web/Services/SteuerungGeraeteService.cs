@@ -23,43 +23,21 @@ public sealed class SteuerungGeraeteService
 {
     private readonly SteuerungRepository _repo;
 
-    public SteuerungGeraeteService(SteuerungRepository repo, AppSettingsRepository? einstellungen = null)
+    public SteuerungGeraeteService(SteuerungRepository repo)
     {
         _repo = repo;
-        _einstellungen = einstellungen;
     }
 
-    private readonly AppSettingsRepository? _einstellungen;
-
-    /// <summary>Merker: die bisherigen Vorgaben sind als Zuordnungen übernommen.</summary>
-    /// <remarks>Mit „:3" (A-016): läuft erneut für die neuen Zuluft-Rollen des Entfeuchters;
-    /// „:2" (forkai.141) tat es für die Bluelab-Rollen;
-    /// bestehende Zuordnungen fasst die Übernahme nie an.</remarks>
-    public const string UebernahmeSchluessel = "fork-ai:rollen:vorgaben-uebernommen:3";
-
     /// <summary>
-    /// Fork AI (F-034): Solange die bisherigen Vorgaben noch nicht übernommen sind,
-    /// gelten sie weiter — sonst stünde eine Anlage nach dem Update kurz ohne
-    /// Geräte da. Danach gibt es keinen Rückfall mehr.
-    /// </summary>
-    public string Rueckfall(GeraeteRolle? rolle)
-        => rolle is null ? string.Empty
-            : _einstellungen is not null && _einstellungen.GetValue(UebernahmeSchluessel) is not null
-                ? string.Empty
-                : rolle.BisherigeVorgabe;
-
-    /// <summary>
-    /// Die Entität einer Rolle — die gespeicherte, sonst die Vorgabe. Null nur,
-    /// wenn eine optionale Rolle bewusst leer steht oder ein Verweis ins Leere zeigt.
+    /// Die Entität einer Rolle — die gespeicherte. Null, wenn keine zugeordnet ist,
+    /// eine optionale Rolle bewusst leer steht oder ein Verweis ins Leere zeigt.
     /// </summary>
     public string? Entity(string modul, string schluessel)
     {
-        var rolle = SteuerungGeraeteRollen.Finden(modul, schluessel);
         var gespeichert = _repo.GetGeraete(modul)
             .FirstOrDefault(g => string.Equals(g.Rolle, schluessel, StringComparison.OrdinalIgnoreCase))?.EntityId;
 
-        var wert = string.IsNullOrWhiteSpace(gespeichert) ? Rueckfall(rolle) : gespeichert;
-        return Aufloesen(wert);
+        return Aufloesen(gespeichert);
     }
 
     /// <summary>Alle Rollen eines Moduls auf einmal — spart je Rolle eine Abfrage.</summary>
@@ -71,10 +49,8 @@ public sealed class SteuerungGeraeteService
         var ergebnis = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (var rolle in SteuerungGeraeteRollen.FuerModul(modul))
         {
-            var wert = gespeichert.TryGetValue(rolle.Schluessel, out var eigen) && !string.IsNullOrWhiteSpace(eigen)
-                ? eigen
-                : Rueckfall(rolle);
-            ergebnis[rolle.Schluessel] = Aufloesen(wert);
+            ergebnis[rolle.Schluessel] = Aufloesen(
+                gespeichert.TryGetValue(rolle.Schluessel, out var eigen) && !string.IsNullOrWhiteSpace(eigen) ? eigen : null);
         }
 
         // Fork AI (A-009): Rollen, die dieses Modul von einem anderen mitbenutzt
@@ -82,11 +58,9 @@ public sealed class SteuerungGeraeteService
         // Zuordnungen des Quell-Moduls — es gibt nur eine Wahrheit je Gerät.
         foreach (var (quelle, schluessel) in SteuerungGeraeteRollen.MitbenutztVon(modul))
         {
-            var rolle = SteuerungGeraeteRollen.Finden(quelle, schluessel);
             var eigen = _repo.GetGeraete(quelle)
                 .FirstOrDefault(g => string.Equals(g.Rolle, schluessel, StringComparison.OrdinalIgnoreCase))?.EntityId;
-            var wert = string.IsNullOrWhiteSpace(eigen) ? Rueckfall(rolle) : eigen;
-            ergebnis[schluessel] = Aufloesen(wert);
+            ergebnis[schluessel] = Aufloesen(eigen);
         }
         return ergebnis;
     }
@@ -152,19 +126,10 @@ public sealed class SteuerungGeraeteService
         {
             var rolle = SteuerungGeraeteRollen.Finden(modul, schluessel)!;
             var wert = roh?.Trim() ?? string.Empty;
-            // Leer bei einer optionalen Rolle mit Vorgabe heißt „habe ich nicht"
-            // und nicht „wie ab Werk" — sonst käme die Vorgabe zurück.
-            if ((wert.Length == 0 || wert == SteuerungGeraeteRollen.BewusstLeer)
-                && !rolle.Pflicht && !string.IsNullOrWhiteSpace(Rueckfall(rolle)))
-            {
-                _repo.SetGeraet(modul, schluessel, SteuerungGeraeteRollen.BewusstLeer);
-                continue;
-            }
-
-            // Wer die Vorgabe einträgt, meint „wie ab Werk" — dann bleibt die
-            // Zeile draußen und wandert bei einem Update weiter mit.
+            // Leer löscht die Zuordnung. Die Marke „bewusst leer" wird nicht mehr geschrieben (es gibt keine
+            // Vorgabe, die zurückkäme), aber noch gelesen: in älteren Datenbanken steht sie.
             _repo.SetGeraet(modul, schluessel,
-                wert.Length == 0 || string.Equals(wert, rolle.Vorgabe, StringComparison.OrdinalIgnoreCase) ? null : wert);
+                wert.Length == 0 || wert == SteuerungGeraeteRollen.BewusstLeer ? null : wert);
         }
         return fehler;
     }

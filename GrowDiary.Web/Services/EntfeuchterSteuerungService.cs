@@ -105,7 +105,8 @@ public sealed class EntfeuchterSteuerungService
 
         var entities = await _ha.GetEntitiesAsync(settings, ct);
         var uebernommen = AusHomeAssistant(entities.ToDictionary(
-            x => x.EntityId, x => (string?)x.State, StringComparer.OrdinalIgnoreCase));
+            x => x.EntityId, x => (string?)x.State, StringComparer.OrdinalIgnoreCase),
+            AutomatikKennungen(entities));
         // Fork AI (forkai.139, F-035): Beim ersten Aufruf übernimmt der Fork die
         // Werte aus Home Assistant sofort als eigenen Stand — gespeichert wird nur
         // im Fork, nach HA wird nichts geschrieben. Nur mit echter Antwort von HA,
@@ -120,7 +121,10 @@ public sealed class EntfeuchterSteuerungService
     /// immer als „Fest" — ob der Wert einmal aus dem Plan stammte, weiß Home
     /// Assistant nicht.
     /// </summary>
-    public static EntfeuchterEinstellungen AusHomeAssistant(IReadOnlyDictionary<string, string?> zustaende)
+    /// <param name="zustaende">Entität → Zustand aus Home Assistant.</param>
+    /// <param name="automatiken">Die Regelungen, die es dort wirklich gibt (<see cref="AutomatikKennungen"/>); ohne Angabe die Katalog-Kennung.</param>
+    public static EntfeuchterEinstellungen AusHomeAssistant(
+        IReadOnlyDictionary<string, string?> zustaende, IReadOnlyList<string>? automatiken = null)
     {
         var e = new EntfeuchterEinstellungen();
 
@@ -141,8 +145,23 @@ public sealed class EntfeuchterSteuerungService
         if (Zahl(Entitaeten.FeuchteAusTag) is { } fat) e.FeuchteAusTag = fat;
         if (Zahl(Entitaeten.FeuchteEinNacht) is { } fen) e.FeuchteEinNacht = fen;
         if (Zahl(Entitaeten.FeuchteAusNacht) is { } fan) e.FeuchteAusNacht = fan;
-        if (An(Entitaeten.Automatik) is { } au) e.AutomatikAktiv = au;
+        var an = (automatiken ?? [Entitaeten.Automatik]).Select(An).OfType<bool>().ToList();
+        if (an.Count > 0) e.AutomatikAktiv = an.Any(x => x);
         return e;
+    }
+
+    /// <summary>
+    /// Fork AI (A-016, Etappe 5): Unter welchen Entity-IDs die Entfeuchter-Regelung in Home Assistant steht — handgebaut
+    /// (<see cref="Entitaeten.Automatik"/>) oder vom Fork angelegt (Entity-ID aus dem Alias der Vorlage, gefunden über
+    /// ihre Konfigurations-Kennung). Vorher wurde immer die Katalog-Kennung geschaltet: bei einer vom Fork angelegten
+    /// Regelung ging „Automatik aus" an einer Entität vorbei, die es nicht gibt, und die Seite zeigte nie ihren Zustand.
+    /// </summary>
+    /// <returns>Ohne Entitätenliste (Home Assistant stumm) die Katalog-Kennung; sonst nur, was es wirklich gibt.</returns>
+    public static IReadOnlyList<string> AutomatikKennungen(IReadOnlyCollection<HomeAssistantEntity> alle)
+    {
+        if (alle.Count == 0) return [Entitaeten.Automatik];
+        var regelung = SteuerungBauteile.FuerModul(Modul).Single(b => b.EntityId == Entitaeten.Automatik);
+        return SteuerungBauteile.AutomationFinden(regelung, alle);
     }
 
     public static Dictionary<string, string> Pruefen(EntfeuchterEinstellungen e)
@@ -248,7 +267,12 @@ public sealed class EntfeuchterSteuerungService
 
         alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.VpdRegelung ? "turn_on" : "turn_off", Entitaeten.VpdRegelung, ct);
         alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.TagbetriebErlauben ? "turn_on" : "turn_off", Entitaeten.Tagbetrieb, ct);
-        alles &= await _ha.CallEntityServiceAsync(settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik, ct);
+        // Die Regelung unter der Kennung schalten, unter der sie wirklich steht. Gibt es keine, bleibt das Speichern
+        // der Sollwerte trotzdem ein Erfolg: sie lassen sich auch vor dem Anlegen der Regelung eintragen.
+        foreach (var automatik in AutomatikKennungen(await _ha.GetEntitiesAsync(settings, ct)))
+        {
+            alles &= await _ha.CallEntityServiceAsync(settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", automatik, ct);
+        }
 
         if (!alles) _logger.LogWarning("Entfeuchter-Sollwerte: nicht alle Helfer in Home Assistant angenommen.");
         return alles;
@@ -309,8 +333,9 @@ public sealed class EntfeuchterSteuerungService
         double? ZahlRolle(string rolle) => Rolle(rolle) is { } id ? Zahl(id) : null;
         bool? AnRolle(string rolle) => Rolle(rolle) is { } id ? An(id) : null;
 
+        var automatiken = AutomatikKennungen(entities);
         var e = Gespeichert ?? AusHomeAssistant(
-            nachId.ToDictionary(x => x.Key, x => (string?)x.Value.State, StringComparer.OrdinalIgnoreCase));
+            nachId.ToDictionary(x => x.Key, x => (string?)x.Value.State, StringComparer.OrdinalIgnoreCase), automatiken);
         var plan = _wochenplan.PlanLuft();
 
         var rhMax = Zahl(Entitaeten.RhObergrenze);
@@ -348,7 +373,7 @@ public sealed class EntfeuchterSteuerungService
             Co2CanopyGrenzeC: Zahl(Entitaeten.CanopyObergrenze),
             PortAn: portAn,
             PortOnline: AnRolle(Rollen.PortStatus),
-            AutomatikAn: An(Entitaeten.Automatik),
+            AutomatikAn: automatiken.Select(An).OfType<bool>().ToList() is { Count: > 0 } laeuft ? laeuft.Any(x => x) : null,
             ZuluftVorrang: vorrang);
     }
 

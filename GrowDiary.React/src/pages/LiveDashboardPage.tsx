@@ -379,7 +379,7 @@ function LiveDashboardPage() {
           <div className="ls-head-title">
             <div className="ls-eyebrow">Jetzt / Live</div>
             <h1>Willkommen bei Grow OS</h1>
-            <div className="ls-head-parts">Drei Schritte bis zum ersten Messwert.</div>
+            <div className="ls-head-parts">Drei Schritte bis zum ersten Messwert, dann die Steuerungen.</div>
           </div>
         </header>
         <ol className="ls-firstrun">
@@ -403,6 +403,13 @@ function LiveDashboardPage() {
               <span>Sorte, Zelt und System wählen — ab dann zeigt diese Seite deine Werte.</span>
             </div>
             <Link className="ls-btn" to="/grows/new">Grow starten</Link>
+          </li>
+          <li>
+            <div>
+              <strong>Steuerungen einrichten</strong>
+              <span>Danach, wenn du CO₂, Entfeuchter, Zuluft, Kühler oder Lampe über Home Assistant regelst: sag, was du hast — der Rest wird nicht angelegt.</span>
+            </div>
+            <Link className="ls-btn" to="/steuerung/einrichtung">Einrichten</Link>
           </li>
         </ol>
         <article className="ls-panel">

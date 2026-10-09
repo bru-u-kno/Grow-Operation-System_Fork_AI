@@ -771,7 +771,7 @@ public sealed class SteuerungApiController : ApiControllerBase
             {
                 var roh = gespeichert.TryGetValue(rolle.Schluessel, out var eigen) && !string.IsNullOrWhiteSpace(eigen)
                     ? eigen
-                    : _geraete.Rueckfall(rolle);
+                    : string.Empty;
                 // Bewusst leer gelassen: das Feld zeigt leer, nicht die Marke.
                 if (roh == SteuerungGeraeteRollen.BewusstLeer) roh = string.Empty;
                 var ziel = aufgeloest.TryGetValue(rolle.Schluessel, out var id) ? id : null;

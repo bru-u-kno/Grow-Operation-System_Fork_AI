@@ -30,15 +30,18 @@ test.describe('Erstlauf ohne Daten', () => {
     await expect(erstlauf).toBeVisible()
 
     const schritte = erstlauf.locator('.ls-firstrun li')
-    await expect(schritte).toHaveCount(3)
+    await expect(schritte).toHaveCount(4)
     await expect(schritte.nth(0)).toContainText('Zelt anlegen')
     await expect(schritte.nth(1)).toContainText('Hydro')
     await expect(schritte.nth(2)).toContainText('Grow starten')
+    // A-016: Die Steuerungen kommen danach — sie brauchen weder Zelt noch Grow, aber gehören zum Ankommen.
+    await expect(schritte.nth(3)).toContainText('Steuerungen einrichten')
 
     // Jeder Schritt muss auch irgendwo hinführen.
     await expect(erstlauf.locator('a[href$="/zelte/new"]')).toBeVisible()
     await expect(erstlauf.locator('a[href$="/hydro/new"]')).toBeVisible()
     await expect(erstlauf.locator('a[href$="/grows/new"]')).toBeVisible()
+    await expect(erstlauf.locator('a[href$="/steuerung/einrichtung"]')).toBeVisible()
   })
 
   test('bietet die Ersten Schritte an, die sonst nur in den Einstellungen stehen', async ({ page }) => {

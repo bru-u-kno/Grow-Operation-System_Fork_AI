@@ -179,6 +179,36 @@ public sealed class SteuerungAbsicherungService
         return new Bilanz(null, einzeln, nachher.Lage);
     }
 
+    /// <summary>
+    /// Fork AI (A-016, Etappe 5): Welche Entitäten die HANDGEBAUTEN CO₂-Automationen (unter den Katalog-Kennungen,
+    /// ohne Herkunftsmarke des Forks) wirklich nennen — für den Abgleich mit den Rollen auf der Geräteseite.
+    /// </summary>
+    /// <returns>
+    /// Null, wenn Home Assistant nichts liefert (dann wird nichts verglichen); leer, wenn es keine handgebaute gibt
+    /// (eine vom Fork angelegte ist per Vorlage an die Rollen gebunden — da gibt es nichts abzugleichen).
+    /// </returns>
+    public async Task<IReadOnlySet<string>?> HandgebauteVerdrahtungAsync(HomeAssistantSettings settings, CancellationToken ct)
+    {
+        if (DemoData.IsEnabled || !settings.IsConfigured) return null;
+
+        using var client = _ha.CreateClient(settings);
+        var zustaende = await AutomationenAsync(client, ct);
+        if (zustaende is null) return null;
+
+        var katalog = SteuerungBauteile.FuerModul("co2")
+            .Where(b => b.Art == BauteilArt.Automation)
+            .Select(b => b.EntityId)
+            .ToHashSet(StringComparer.Ordinal);
+        var verdrahtet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var z in zustaende.Values.Where(z => katalog.Contains(z.EntityId) && !z.ConfigId.StartsWith(EigenePraefix, StringComparison.Ordinal)))
+        {
+            if (await ConfigAsync(client, z.ConfigId, ct) is not { } config) return null;
+            verdrahtet.UnionWith(Co2Absicherung.AlleEntitaeten(config));
+        }
+
+        return verdrahtet;
+    }
+
     // ------------------------------------------------------------ Lesen
 
     private async Task<Stand> LesenAsync(

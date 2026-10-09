@@ -99,9 +99,15 @@ public sealed class EntfeuchterZusatzApiTests
         Assert.Equal("normal", e["hilfe"]!.GetValue<string>());
         Assert.Equal("keine", live["schaltgroesse"]!.GetValue<string>());
 
-        // Vier eigene Rollen plus die vier mitbenutzten aus dem Entfeuchter — der Bestand ordnet alle zu.
+        // Vier eigene Rollen plus die vier mitbenutzten aus dem Entfeuchter. Der Demobestand ordnet alle zu bis auf den
+        // VPD-Fühler (optional, der Demobestand hat keinen) — bis A-016 (Etappe 5) füllte ihn der Rückfall auf die
+        // Entität der ersten Anlage auf, die es in der Demo gar nicht gibt.
         Assert.Equal(8, seite["geraeteGesamt"]!.GetValue<int>());
-        Assert.Equal(8, seite["geraeteZugeordnet"]!.GetValue<int>());
+        Assert.Equal(7, seite["geraeteZugeordnet"]!.GetValue<int>());
+        var geraete = await Lesen("/api/steuerung/geraete");
+        var vpd = geraete["module"]!.AsArray().Single(m => m!["modul"]!.GetValue<string>() == "entfeuchter")!["zeilen"]!.AsArray()
+            .Single(z => z!["rolle"]!.GetValue<string>() == "zelt_vpd")!;
+        Assert.True(string.IsNullOrEmpty(vpd["eingetragen"]?.GetValue<string>()), "Der VPD-Fühler müsste die eine leere Rolle sein.");
         Assert.Contains("ausHomeAssistantUebernommen", seite.Select(p => p.Key));
         // Unbekanntes steht als null da, nicht als fehlendes Feld.
         Assert.True(seite.ContainsKey("haAngenommen") && seite["haAngenommen"] is null);

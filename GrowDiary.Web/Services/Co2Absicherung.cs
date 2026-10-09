@@ -585,6 +585,32 @@ public static class Co2Absicherung
     private static IEnumerable<string> Ziele(JsonObject schritt)
         => Entitaeten(schritt["target"]?["entity_id"] ?? schritt["entity_id"] ?? schritt["data"]?["entity_id"]);
 
+    /// <summary>
+    /// Fork AI (A-016, Etappe 5): Alle Entity-IDs, die eine Automation irgendwo nennt — als eigener Wert, in einer
+    /// Liste oder mitten in einer Vorlage (<c>states('sensor.x')</c>). Zu viel gefunden ist hier unschädlich:
+    /// gefragt wird nur, ob eine Entität <i>vorkommt</i>.
+    /// </summary>
+    public static IReadOnlySet<string> AlleEntitaeten(JsonNode? knoten)
+    {
+        var gefunden = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Lauf(JsonNode? k)
+        {
+            switch (k)
+            {
+                case JsonObject o: foreach (var p in o) Lauf(p.Value); break;
+                case JsonArray a: foreach (var e in a) Lauf(e); break;
+                case JsonValue v when v.TryGetValue<string>(out var text):
+                    foreach (System.Text.RegularExpressions.Match m in EntityMuster.Matches(text)) gefunden.Add(m.Value);
+                    break;
+            }
+        }
+        Lauf(knoten);
+        return gefunden;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex EntityMuster = new(
+        @"\b[a-z][a-z0-9_]*\.[a-z0-9_]+\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static IEnumerable<string> Entitaeten(JsonNode? knoten) => knoten switch
     {
         JsonArray a => a.Select(k => k?.ToString()).OfType<string>(),

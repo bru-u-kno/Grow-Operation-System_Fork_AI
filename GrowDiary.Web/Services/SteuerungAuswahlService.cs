@@ -15,9 +15,8 @@ namespace GrowDiary.Web.Services;
 /// <para><b>Zwei Zustände.</b> <i>Gespeichert</i>: der Nutzer hat die Auswahl gesetzt, sie gilt
 /// wörtlich. <i>Nie gespeichert</i> (Bestandsanlagen): eine Steuerung gilt als gewählt, sobald ihr
 /// mindestens eine Geräte-Rolle zugeordnet ist — wer vor diesem Stand eingerichtet hat, sieht
-/// seine Steuerungen unverändert. Ausgewertet werden nur <i>gespeicherte</i> Zuordnungen, nicht
-/// die Rückfall-Vorgaben der Rollen (<see cref="SteuerungGeraeteService.Rueckfall"/>) — die machten
-/// auf einer frischen Anlage jede Steuerung zur gewählten.</para>
+/// seine Steuerungen unverändert. Ausgewertet werden nur <i>gespeicherte</i> Zuordnungen. (Bis A-016 Etappe 5
+/// gab es Rückfall-Vorgaben der Rollen, die auf einer frischen Anlage jede Steuerung zur gewählten machten.)</para>
 /// <para><b>Was die Auswahl nicht tut.</b> Sie löscht nichts und schaltet nichts ab: Abwählen
 /// blendet eine Steuerung aus. Automationen in Home Assistant laufen weiter.</para>
 /// </remarks>

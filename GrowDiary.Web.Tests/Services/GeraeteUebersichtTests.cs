@@ -34,32 +34,34 @@ public sealed class GeraeteUebersichtTests
             gespeichert ?? new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase),
             zuordnungen ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
+    private static readonly string[] Gelesen = ["co2_sensor", "abluft_stufe", "licht"];
+
     [Fact]
-    public void DieVergleichstabelleKenntNurEchteRollenUndDerenVorgabe()
+    public void DieAbgeglichenenRollenGibtEsUndSieSindDieDerAutomation()
     {
-        // Der Abgleich meldet nur etwas, wenn die Rolle vom YAML abweicht. Passt die
-        // Tabelle nicht mehr zu den Rollen (umbenannt, Vorgabe geaendert), meldete er
-        // still nichts — deshalb haelt der Test beides zusammen.
-        foreach (var (rolle, entity) in Co2SteuerungService.AutomationVerdrahtet)
+        // Der Abgleich meldet nur etwas für Rollen, die die Automation liest. Wird eine umbenannt, meldete er
+        // still nichts — deshalb hält der Test die Liste an den Rollen fest.
+        foreach (var rolle in Gelesen)
         {
-            var definition = SteuerungGeraeteRollen.Finden(Co2SteuerungService.Modul, rolle);
-            Assert.True(definition is not null, $"Rolle {rolle} gibt es nicht mehr.");
-            Assert.Equal(definition!.BisherigeVorgabe, entity);
+            Assert.NotNull(SteuerungGeraeteRollen.Finden(Co2SteuerungService.Modul, rolle));
         }
     }
 
     [Fact]
-    public void EineAbweichendeRolleWirdGemeldet()
+    public void EineRolleDieDieHandgebauteAutomationNichtNenntWirdGemeldet()
     {
         var rollen = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
             ["co2_sensor"] = "sensor.ein_anderer_fuehler",
-            ["licht"] = "binary_sensor.klein_abluft_zustand",
+            ["licht"] = "binary_sensor.lampe_zustand",
         };
+        var verdrahtet = new HashSet<string>(["sensor.mein_co2", "binary_sensor.lampe_zustand"], StringComparer.OrdinalIgnoreCase);
 
-        var meldung = Assert.Single(Co2SteuerungService.Abweichungen(rollen));
+        var meldung = Assert.Single(Co2SteuerungService.Abweichungen(rollen, verdrahtet));
         Assert.Contains("sensor.ein_anderer_fuehler", meldung);
-        Assert.Contains("sensor.big_co2_light_sensor_co2", meldung);
+        // Der Text nennt nichts aus einer fremden Anlage — er sagt nur, dass die Automation die Entität nicht kennt.
+        Assert.DoesNotContain("big_", meldung);
+        Assert.DoesNotContain("rdwc", meldung);
     }
 
     [Fact]
@@ -67,11 +69,41 @@ public sealed class GeraeteUebersichtTests
     {
         var rollen = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
-            ["co2_sensor"] = "sensor.big_co2_light_sensor_co2",
+            ["co2_sensor"] = "sensor.mein_co2",
             ["abluft_stufe"] = null,
         };
 
-        Assert.Empty(Co2SteuerungService.Abweichungen(rollen));
+        Assert.Empty(Co2SteuerungService.Abweichungen(rollen, new HashSet<string>(["sensor.mein_co2"])));
+    }
+
+    [Theory]
+    [InlineData(false)] // Home Assistant nicht lesbar
+    [InlineData(true)]  // keine handgebaute Automation (der Fork hat sie per Vorlage an die Rollen gebunden)
+    public void OhneAutomationZumVergleichGibtEsKeineDauerwarnung(bool leereMenge)
+    {
+        // Das war der Fehler der ersten Fassung: eine feste Tabelle mit den Entitäten einer einzigen Anlage
+        // meldete bei JEDEM anderen Nutzer, die Automation „dosiere mit sensor.big_…".
+        var rollen = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase) { ["co2_sensor"] = "sensor.irgendein_fuehler" };
+
+        Assert.Empty(Co2SteuerungService.Abweichungen(rollen, leereMenge ? new HashSet<string>() : null));
+    }
+
+    [Fact]
+    public void AlleEntitaetenFindetAuchWasInEinerVorlageSteht()
+    {
+        var config = System.Text.Json.Nodes.JsonNode.Parse("""
+            {"triggers":[{"entity_id":"binary_sensor.licht"}],
+             "conditions":[{"condition":"template","value_template":"{{ states('sensor.co2') | float > 800 and is_state('switch.ventil','off') }}"}],
+             "actions":[{"action":"number.set_value","target":{"entity_id":["number.abluft","number.zweite"]}}]}
+            """);
+
+        var gefunden = Co2Absicherung.AlleEntitaeten(config);
+
+        Assert.Contains("binary_sensor.licht", gefunden);
+        Assert.Contains("sensor.co2", gefunden);
+        Assert.Contains("switch.ventil", gefunden);
+        Assert.Contains("number.abluft", gefunden);
+        Assert.Contains("number.zweite", gefunden);
     }
 
     [Fact]
