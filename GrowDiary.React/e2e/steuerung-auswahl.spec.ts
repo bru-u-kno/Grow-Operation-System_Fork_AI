@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { backendAntwortet, darfUeberspringen } from './pflicht'
 import { gibSchloss, nimmSchloss } from './schloss'
 
 /**
@@ -13,7 +14,11 @@ import { gibSchloss, nimmSchloss } from './schloss'
 test.describe.configure({ mode: 'serial' })
 
 // Die Auswahl gehört der ganzen App: Prüfungen, die die Übersicht lesen, dürfen sie nicht mittendrin sehen.
-test.beforeEach(async () => { await nimmSchloss() })
+test.beforeEach(async ({ request }) => {
+  // Im Rauchtest ohne Backend gibt es keine Auswahl, die sich setzen ließe — dort überspringt sich die Datei.
+  darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend unter GROW_OS_URL — die Auswahl braucht die laufende App mit Demobestand.')
+  await nimmSchloss()
+})
 test.afterEach(() => { gibSchloss() })
 
 async function auswahlSetzen(page: Page, gewaehlt: string[]) {
@@ -25,7 +30,8 @@ const ALLE = ['co2', 'entfeuchter', 'zuluft', 'chiller', 'licht']
 
 test.afterAll(async ({ browser, baseURL }) => {
   const page = await browser.newPage({ baseURL })
-  await auswahlSetzen(page, ALLE)
+  // Ohne Backend (Rauchtest) war nichts zu ändern — und nichts wiederherzustellen.
+  if (await backendAntwortet(page.request)) await auswahlSetzen(page, ALLE)
   await page.close()
 })
 
