@@ -337,6 +337,11 @@ public static class SteuerungBauteile
             "Senkt die Abluft während des Dosierens.", Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", VorlagenDatei: "abluft",
             Probelauf: ProbelaufRolle.Laufenlassen),
+        // Fork AI (A-016): Bisher nur in der Anlage, in der sie zuerst lief. Schließt das Ventil in
+        // dem Moment, in dem das Licht ausgeht — ohne auf das Ende des laufenden Zyklus zu warten.
+        new(Co2, "automation.co2_dosierung_licht_aus_sicherung_rdwc_port_5", "CO2 Licht-aus Sicherung", BauteilArt.Automation,
+            "Schließt das Ventil sofort, wenn das Licht ausgeht — Nachts wird nie begast.",
+            VorlagenDatei: "licht_aus_sicherung", Probelauf: ProbelaufRolle.Laufenlassen),
 
         // ====================================================================
         // Zuluft Keller — Außenluft ansaugen, solange sie trockener ist als die
@@ -501,9 +506,43 @@ public static class SteuerungBauteile
             "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
         new(Entfeuchter, "input_number.trotec_feuchte_aus", "Trotec Feuchte AUS", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
+        // --- Plan-Zielwerte (Fork AI, A-016) --------------------------------
+        // Die Zielwerte, die der Wochenplan schreibt (WochenplanSyncService). Bisher wurden sie
+        // nur erwartet („legt der Nutzer selbst an"): ohne sie fehlte dem Entfeuchter und dem
+        // Zusatz-Entfeuchter das VPD-Band. Grenzen wie in der Anlage, in der sie zuerst liefen.
+        new(Entfeuchter, "input_number.vpd_ziel_unten", "VPD Ziel unten", BauteilArt.Zahl,
+            "Untergrenze des VPD-Bands aus dem Plan — darunter ist die Luft zu feucht, der Entfeuchter schaltet ein.",
+            Min: 0.4, Max: 2, Schritt: 0.05, Einheit: "kPa"),
+        new(Entfeuchter, "input_number.vpd_ziel_abschaltung", "VPD Ziel Abschaltung", BauteilArt.Zahl,
+            "Obergrenze des VPD-Bands aus dem Plan — darüber ist es trocken genug, der Entfeuchter schaltet ab.",
+            Min: 0.4, Max: 2, Schritt: 0.05, Einheit: "kPa"),
+        new(Entfeuchter, "input_number.vpd_blatt_offset", "VPD Blatt Offset", BauteilArt.Zahl,
+            "Wie viel kälter das Blatt als die Luft ist; der VPD wird mit der Blatttemperatur gerechnet.",
+            Min: -5, Max: 0, Schritt: 0.1, Einheit: "°C"),
+
+        // --- Rechenwerte (Fork AI, A-016; Brus Fassung vom 09.10.2026) -------
+        // Die aktiven Schwellen: je nach Licht die Tag- oder Nachtwerte, bei eingeschalteter
+        // VPD-Regelung aus dem VPD-Band des Plans. Der Deckel (Feuchte-Obergrenze minus Hysterese)
+        // kommt aus den CO₂-Helfern, sofern es sie gibt — ohne sie gilt kein Deckel (100 %).
+        new(Entfeuchter, "sensor.trotec_feuchte_ein_aktiv", "Trotec Feuchte EIN aktiv", BauteilArt.RechenSensor,
+            "Ab welcher Zeltfeuchte der Entfeuchter einschaltet — gerade gültig für Tag oder Nacht.",
+            Einheit: "%", Zustandsklasse: "measurement",
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set fest = states('input_number.trotec_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.trotec_feuchte_ein') | float(62) %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% if is_state('input_boolean.trotec_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ziel = states('input_number.vpd_ziel_unten') | float(1.2) %}{% set ein = [ [ ((svb - ziel) / svl * 100), 45 ] | max, 85 ] | min %}{{ [ein, deckel] | min | round(1) }}{% elif led in ['on','off'] %}{{ [fest, deckel] | min }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.trotec_feuchte_ein') | float(62) }}{% endif %}"),
+        new(Entfeuchter, "sensor.trotec_feuchte_aus_aktiv", "Trotec Feuchte AUS aktiv", BauteilArt.RechenSensor,
+            "Bei welcher Zeltfeuchte der Entfeuchter wieder ausschaltet (mindestens die Hysterese unter EIN).",
+            Einheit: "%", Zustandsklasse: "measurement",
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set hyst = states('input_number.trotec_hysterese') | float(4) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% set fest_ein = states('input_number.trotec_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.trotec_feuchte_ein') | float(62) %}{% set fest_aus = states('input_number.trotec_feuchte_aus_tag') | float(57) if led == 'on' else states('input_number.trotec_feuchte_aus') | float(60) %}{% if is_state('input_boolean.trotec_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ein_roh = [ [ ((svb - (states('input_number.vpd_ziel_unten') | float(1.2))) / svl * 100), 45 ] | max, 85 ] | min %}{% set ein = [ein_roh, deckel] | min %}{% set aus = ((svb - (states('input_number.vpd_ziel_abschaltung') | float(1.3))) / svl * 100) %}{{ [ [ aus, ein - hyst ] | min, 35 ] | max | round(1) }}{% elif led in ['on','off'] %}{{ [ fest_aus, [fest_ein, deckel] | min - hyst ] | min | round(1) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.trotec_feuchte_aus') | float(60) }}{% endif %}"),
+        new(Entfeuchter, "sensor.trotec_temp_max_aktiv", "Trotec Temp Max aktiv", BauteilArt.RechenSensor,
+            "Die gerade gültige Höchsttemperatur — Tag- oder Nachtwert, je nach Licht.",
+            Einheit: "°C", Zustandsklasse: "measurement",
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% if led == 'on' %}{{ states('input_number.trotec_temp_max_tag') | float(28.5) }}{% elif led == 'off' %}{{ states('input_number.trotec_temp_max') | float(30) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.trotec_temp_max') | float(30) }}{% endif %}"),
+        new(Entfeuchter, "binary_sensor.trotec_feuchte_uber_ein", "Trotec Feuchte uber EIN", BauteilArt.RechenSchalter,
+            "An, solange die Zeltfeuchte über der Einschaltschwelle liegt. Die Regelung misst daran, wie lange schon.",
+            Vorlage: "{{ states('[[zelt_rh]]') | float(0) > states('sensor.trotec_feuchte_ein_aktiv') | float(100) }}"),
+
         new(Entfeuchter, "automation.rdwc_trotec_nachtregelung_port_7_dehumi", "RDWC Trotec Regelung", BauteilArt.Automation,
             "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft.",
-            Probelauf: ProbelaufRolle.Pausieren),
+            VorlagenDatei: "regelung", Probelauf: ProbelaufRolle.Pausieren),
 
         // ====================================================================
         // Zusatz-Entfeuchter — Fork AI (A-009). Ein zweiter Trotec an einer
@@ -618,8 +657,8 @@ public static class SteuerungBauteile
     /// Katalog, aus dem auch der Helfer angelegt wird — nicht abgetippt.
     ///
     /// <para><b>Helfer außerhalb des Katalogs</b> (Fork AI, 02.10.2026): etwa
-    /// <c>input_number.vpd_ziel_unten</c>, das der Nutzer selbst anlegt und der
-    /// Wochenplan nur beschreibt. Für sie ist die Spanne, die Home Assistant am
+    /// ein Helfer, den der Nutzer selbst angelegt hat und den der Wochenplan nur beschreibt
+    /// (<c>vpd_ziel_unten</c> war einer, bis A-016 ihn in den Katalog aufnahm). Für sie ist die Spanne, die Home Assistant am
     /// Helfer meldet (Attribute <c>min</c>/<c>max</c>), die einzige Quelle —
     /// sie kommt als <paramref name="haMin"/>/<paramref name="haMax"/> herein.
     /// Der Katalog geht vor: er ist die Vorlage, aus der der Fork seine Helfer

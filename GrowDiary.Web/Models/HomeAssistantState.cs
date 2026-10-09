@@ -20,7 +20,7 @@ public sealed class HomeAssistantState
     /// <remarks>
     /// Für Helfer, die nicht aus dem Katalog (<see cref="SteuerungBauteile"/>)
     /// stammen, ist das die einzige Quelle ihrer Spanne — etwa
-    /// <c>input_number.vpd_ziel_unten</c>, das der Nutzer selbst angelegt hat.
+    /// ein Helfer, den der Nutzer selbst angelegt hat (bis A-016 auch <c>vpd_ziel_unten</c>).
     /// </remarks>
     public double? AttributMin { get; set; }
 

@@ -1,0 +1,528 @@
+{
+  "alias": "Entfeuchter Regelung Tag/Nacht",
+  "description": "Schaltet den Entfeuchter nach Zeltfeuchte mit getrennten Tag- und Nachtschwellen. Tag/Nacht folgt dem Licht (Rolle licht_zustand). Die gerade gueltigen Schwellen liefern sensor.trotec_feuchte_ein_aktiv, sensor.trotec_feuchte_aus_aktiv und sensor.trotec_temp_max_aktiv (Tag: input_number.trotec_feuchte_ein_tag, _aus_tag, trotec_temp_max_tag; Nacht: input_number.trotec_feuchte_ein, _aus, trotec_temp_max; mit input_boolean.trotec_vpd_regelung aus dem VPD-Band des Plans). Tagbetrieb nur, wenn input_boolean.trotec_tagbetrieb_erlauben an ist (aus = nur nachts). EIN: Zeltfeuchte laenger als input_number.trotec_einschaltverzoegerung Minuten ueber der EIN-Schwelle UND Zelttemperatur unter dem Limit; laeuft die Zuluft und bringt die Aussenluft einen Trockenvorteil (Rollen zuluft_bedarf, zuluft_stufe_ist), gilt stattdessen input_number.trotec_wartezeit_aussenluft - ohne diese Rollen immer die kurze Wartezeit. AUS: Zeltfeuchte unter der AUS-Schwelle (erst nach input_number.trotec_mindestlaufzeit Minuten), Zelttemperatur ueber dem Limit oder Tagbetrieb nicht erlaubt - Uebertemperatur und fehlende Tagfreigabe schalten sofort ab. Eine Pruefung alle 5 Minuten und beim Start von Home Assistant faengt verpasste Faelle ab. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter/regelung/1. Abweichung zur handgebauten Fassung: Die Sperre 'nicht waehrend der CO2-Drosselung abschalten' fehlt hier - sie haengt an Abluft-Regler und CO2-Helfern, die ein Entfeuchter-Nutzer nicht haben muss.",
+  "mode": "single",
+  "max_exceeded": "silent",
+  "triggers": [
+    {
+      "trigger": "numeric_state",
+      "entity_id": "[[zelt_rh]]",
+      "above": "sensor.trotec_feuchte_ein_aktiv",
+      "id": "rh_hoch",
+      "for": {
+        "minutes": "{{ states('input_number.trotec_einschaltverzoegerung') | int(10) }}"
+      }
+    },
+    {
+      "wenn": "zuluft_bedarf",
+      "trigger": "numeric_state",
+      "entity_id": "[[zelt_rh]]",
+      "above": "sensor.trotec_feuchte_ein_aktiv",
+      "id": "rh_hoch_lang",
+      "for": {
+        "minutes": "{{ states('input_number.trotec_wartezeit_aussenluft') | int(25) }}"
+      }
+    },
+    {
+      "trigger": "numeric_state",
+      "entity_id": "[[zelt_rh]]",
+      "below": "sensor.trotec_feuchte_aus_aktiv",
+      "id": "rh_ok"
+    },
+    {
+      "trigger": "numeric_state",
+      "entity_id": "[[zelt_temp]]",
+      "above": "sensor.trotec_temp_max_aktiv",
+      "id": "zu_warm"
+    },
+    {
+      "trigger": "numeric_state",
+      "entity_id": "[[zelt_temp]]",
+      "below": "sensor.trotec_temp_max_aktiv",
+      "id": "wieder_kuehl",
+      "for": "00:05:00"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "[[licht_zustand]]",
+      "from": "off",
+      "to": "on",
+      "id": "modus_wechsel"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "[[licht_zustand]]",
+      "from": "on",
+      "to": "off",
+      "id": "modus_wechsel"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+      "from": "on",
+      "to": "off",
+      "id": "modus_wechsel"
+    },
+    {
+      "trigger": "state",
+      "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+      "from": "off",
+      "to": "on",
+      "id": "modus_wechsel"
+    },
+    {
+      "trigger": "time_pattern",
+      "minutes": "/5",
+      "id": "pruefung"
+    },
+    {
+      "trigger": "homeassistant",
+      "event": "start",
+      "id": "pruefung"
+    }
+  ],
+  "conditions": [],
+  "actions": [
+    {
+      "choose": [
+        {
+          "alias": "AUS: Feuchte erreicht (nach Mindestlaufzeit) oder zu warm",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "rh_ok",
+                "zu_warm"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "On"
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "trigger",
+                  "id": [
+                    "zu_warm"
+                  ]
+                },
+                {
+                  "alias": "Mindestlaufzeit erreicht",
+                  "condition": "state",
+                  "entity_id": "[[port_schalter]]",
+                  "state": "On",
+                  "for": {
+                    "minutes": "{{ states('input_number.trotec_mindestlaufzeit') | int(20) }}"
+                  }
+                }
+              ]
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "Off"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "AUS: Tagbetrieb nicht erlaubt",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "modus_wechsel",
+                "pruefung"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[licht_zustand]]",
+              "state": "on"
+            },
+            {
+              "condition": "state",
+              "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+              "state": "off"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "On"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "Off"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "AUS: Pruefung - laeuft, obwohl zu warm oder Feuchte unter AUS (nach Mindestlaufzeit)",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "pruefung"
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "On"
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "numeric_state",
+                  "entity_id": "[[zelt_temp]]",
+                  "above": "sensor.trotec_temp_max_aktiv"
+                },
+                {
+                  "condition": "and",
+                  "conditions": [
+                    {
+                      "condition": "numeric_state",
+                      "entity_id": "[[zelt_rh]]",
+                      "below": "sensor.trotec_feuchte_aus_aktiv"
+                    },
+                    {
+                      "alias": "Mindestlaufzeit erreicht",
+                      "condition": "state",
+                      "entity_id": "[[port_schalter]]",
+                      "state": "On",
+                      "for": {
+                        "minutes": "{{ states('input_number.trotec_mindestlaufzeit') | int(20) }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "Off"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN: Modus-/Freigabe-Wechsel oder wieder kuehl - sofort neu bewerten",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "modus_wechsel",
+                "wieder_kuehl"
+              ]
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[licht_zustand]]",
+                  "state": "off"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "state": "on"
+                }
+              ]
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_rh]]",
+              "above": "sensor.trotec_feuchte_ein_aktiv"
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_temp_max_aktiv"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "Off"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "On"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN: Feuchte lange genug hoch, Zuluft aus oder ohne Trockenvorteil",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "rh_hoch"
+              ]
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[licht_zustand]]",
+                  "state": "off"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "state": "on"
+                }
+              ]
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_temp_max_aktiv"
+            },
+            {
+              "alias": "Aussenluft bringt keinen Trockenvorteil",
+              "wenn": "zuluft_bedarf",
+              "condition": "or",
+              "conditions": [
+                {
+                  "wenn": "zuluft_stufe_ist",
+                  "condition": "numeric_state",
+                  "entity_id": "[[zuluft_stufe_ist]]",
+                  "below": 1
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[zuluft_bedarf]]",
+                  "state": "off"
+                }
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "Off"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "On"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN: Feuchte lange hoch, auch wenn die Zuluft laeuft",
+          "wenn": "zuluft_bedarf",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "rh_hoch_lang"
+              ]
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[licht_zustand]]",
+                  "state": "off"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "state": "on"
+                }
+              ]
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_temp_max_aktiv"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "Off"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "On"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN: Pruefung - Feuchte lange ueber EIN, Zuluft aus oder ohne Trockenvorteil (faengt bereits-hoch bei Reload/Start ab)",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "pruefung"
+              ]
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[licht_zustand]]",
+                  "state": "off"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "state": "on"
+                }
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "binary_sensor.trotec_feuchte_uber_ein",
+              "state": "on",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_einschaltverzoegerung') | int(10) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_temp_max_aktiv"
+            },
+            {
+              "alias": "Aussenluft bringt keinen Trockenvorteil",
+              "wenn": "zuluft_bedarf",
+              "condition": "or",
+              "conditions": [
+                {
+                  "wenn": "zuluft_stufe_ist",
+                  "condition": "numeric_state",
+                  "entity_id": "[[zuluft_stufe_ist]]",
+                  "below": 1
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[zuluft_bedarf]]",
+                  "state": "off"
+                }
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "Off"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "On"
+              }
+            }
+          ]
+        },
+        {
+          "alias": "EIN: Pruefung - Feuchte lange ueber EIN, auch wenn die Zuluft laeuft",
+          "wenn": "zuluft_bedarf",
+          "conditions": [
+            {
+              "condition": "trigger",
+              "id": [
+                "pruefung"
+              ]
+            },
+            {
+              "condition": "or",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "[[licht_zustand]]",
+                  "state": "off"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "state": "on"
+                }
+              ]
+            },
+            {
+              "condition": "state",
+              "entity_id": "binary_sensor.trotec_feuchte_uber_ein",
+              "state": "on",
+              "for": {
+                "minutes": "{{ states('input_number.trotec_wartezeit_aussenluft') | int(25) }}"
+              }
+            },
+            {
+              "condition": "numeric_state",
+              "entity_id": "[[zelt_temp]]",
+              "below": "sensor.trotec_temp_max_aktiv"
+            },
+            {
+              "condition": "state",
+              "entity_id": "[[port_schalter]]",
+              "state": "Off"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "select.select_option",
+              "target": {
+                "entity_id": "[[port_schalter]]"
+              },
+              "data": {
+                "option": "On"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

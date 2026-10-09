@@ -1,0 +1,25 @@
+{
+  "alias": "CO2 Licht-aus Sicherung",
+  "description": "Notabschaltung der CO2-Dosierung: Geht das Licht aus (Rolle licht), wird das Dosier-Ventil (Rolle port_schalter) sofort geschlossen - ohne auf das Ende des laufenden Dosierzyklus zu warten. Die Dosierung endet ohnehin, sobald das Licht aus ist; diese Automation schliesst die Luecke bis dahin. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/licht_aus_sicherung/1. Abweichung zur handgebauten Fassung: Sie bricht die Dosierung nicht per automation.turn_off ab, weil die Kennung der Dosierung je nach Anlage anders heisst; das Ventil ist zu, die Schleife beendet sich beim naechsten Pruefen von selbst.",
+  "mode": "single",
+  "triggers": [
+    {
+      "trigger": "state",
+      "entity_id": "[[licht]]",
+      "to": "off",
+      "id": "licht_aus"
+    }
+  ],
+  "conditions": [],
+  "actions": [
+    {
+      "action": "select.select_option",
+      "target": {
+        "entity_id": "[[port_schalter]]"
+      },
+      "data": {
+        "option": "Off"
+      }
+    }
+  ]
+}

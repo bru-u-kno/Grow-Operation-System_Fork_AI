@@ -199,8 +199,10 @@ public sealed class SteuerungAbsicherungService
             return new Stand(new Lage(false, false, [], null), [], leer);
         }
 
+        // Die Licht-aus-Sicherung (A-016) schließt nur das Ventil und hat nichts, was sich absichern
+        // ließe — sie gehört nicht in die Prüfung der Dosier-Automationen.
         var katalog = SteuerungBauteile.FuerModul("co2")
-            .Where(b => b.Art == BauteilArt.Automation)
+            .Where(b => b.Art == BauteilArt.Automation && b.VorlagenDatei != "licht_aus_sicherung")
             .Select(b => b.EntityId)
             .ToHashSet(StringComparer.Ordinal);
 

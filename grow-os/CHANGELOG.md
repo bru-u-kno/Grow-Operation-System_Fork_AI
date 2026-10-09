@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.196
+
+**Fork AI.** Einrichtung (A-016, Etappe 1): Was ein Neuer bisher selbst bauen musste, legt der Fork jetzt an.
+
+- **VPD-Zielwerte des Plans:** `input_number.vpd_ziel_unten`, `vpd_ziel_abschaltung` und `vpd_blatt_offset` gehören jetzt zum Entfeuchter und werden bei „Fehlende anlegen" erzeugt (0,4–2 kPa, Blatt-Offset −5…0 °C). Bisher stand dort „legt der Nutzer selbst an" — ohne sie hatte weder der Entfeuchter noch der Zusatz-Entfeuchter sein VPD-Band.
+- **Entfeuchter-Schwellen:** `sensor.trotec_feuchte_ein_aktiv`, `…_aus_aktiv`, `sensor.trotec_temp_max_aktiv` und `binary_sensor.trotec_feuchte_uber_ein` (Tag/Nacht, VPD-Band, Hysterese) entstehen aus dem Katalog. Anders als in der ersten Anlage gilt ohne CO₂-Helfer kein Feuchte-Deckel von 62 %, sondern keiner.
+- **Entfeuchter-Regelung als Vorlage:** Die Automation „Entfeuchter Regelung Tag/Nacht" (Einschaltverzögerung, Mindestlaufzeit, Tagbetrieb, Übertemperatur, Prüfung alle 5 Minuten und beim Start) wird wie die anderen Vorlagen angeboten: erst Vorschau, dann Zustimmung. Wer schon eine handgebaute hat, bekommt keine zweite daneben. Zwei neue, **optionale** Rollen („Zuluft · Bedarf", „Zuluft-Lüfter · laufende Stufe") schalten die längere Wartezeit bei laufender Außenluft zu; ohne sie gilt die kurze.
+- **CO₂-Licht-aus-Sicherung:** Eine kleine Vorlage schließt das Dosier-Ventil in dem Moment, in dem das Licht ausgeht. Sie wird immer angelegt (Pflicht), auch hier nie neben eine handgebaute.
+- **Bekannte Abweichung:** Die Sperre „nicht abschalten während der CO₂-Drosselung" aus der handgebauten Fassung steht noch nicht in der Vorlage — sie hängt an Abluft-Regler und CO₂-Helfern.
+
 ## 2.0.0-forkai.195
 
 **Fork AI.** Geräte & Entitäten: Die Einträge unter einem Gerät sind geordnet statt eine lange alphabetische Liste.

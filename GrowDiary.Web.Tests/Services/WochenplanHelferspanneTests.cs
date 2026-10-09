@@ -129,14 +129,21 @@ public sealed class WochenplanHelferspanneTests
         }
     }
 
-    /// <summary>Die Kennung, an die der Wochenplan das untere VPD-Ziel schreibt — aus dem Code, nicht aus dem Kopf.</summary>
-    private const string VpdHelfer = EntfeuchterSteuerungService.Entitaeten.VpdUnten;
+    /// <summary>
+    /// Ein Helfer, den der Katalog NICHT kennt — der Nutzer hat ihn selbst angelegt. Bis A-016 war
+    /// das <c>vpd_ziel_unten</c>; der steht jetzt im Katalog (der Fork legt ihn an), die Regel
+    /// „Spanne aus Home Assistant" gilt aber weiter für jeden Helfer, den der Plan beschreibt und der
+    /// nicht im Katalog steht. Deshalb ein erfundener Name.
+    /// </summary>
+    private const string VpdHelfer = "input_number.eigenes_vpd_ziel";
 
     [Fact]
-    public void DerVpdHelferStehtNichtImKatalog()
+    public void DerFremdeHelferStehtNichtImKatalog()
     {
         // Selbsttest: stünde er im Katalog, prüften die Fälle unten nur den alten Weg.
         Assert.Throws<InvalidOperationException>(() => SteuerungBauteile.Spanne(VpdHelfer));
+        // ... und der echte VPD-Helfer des Plans steht seit A-016 drin, mit der Spanne der Anlage.
+        Assert.Equal((0.4, 2.0), SteuerungBauteile.Spanne(EntfeuchterSteuerungService.Entitaeten.VpdUnten));
     }
 
     [Theory]
