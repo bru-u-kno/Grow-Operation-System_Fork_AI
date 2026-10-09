@@ -10,6 +10,7 @@ import { V1Sheet } from '../components/V1Sheet'
 import { V1Tabs } from '../components/v1'
 import { MessgroessenReiter } from '../features/geraete/MessgroessenReiter'
 import { RollenReiter } from '../features/geraete/RollenReiter'
+import { ordneEintraege } from '../features/geraete/eintraegeOrdnung'
 import { rollenPfad } from '../features/geraete/rollenPfad'
 import { WartungReiter } from '../features/geraete/WartungReiter'
 import type { HomeAssistantEntity } from '../types'
@@ -637,6 +638,7 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
   zugeklappt?: boolean
   verschobenImBaum?: number
 }) {
+  const [entitaetMenue, setEntitaetMenue] = useState<string | null>(null)
   const hatKinder = kinderZahl > 0
   // Das Modell faellt weg, wenn es nur den Namen wiederholt: „FRITZ!Box 7590 (UI)
   // · Controller · FRITZ!Box 7590 (UI)" liest sich wie ein Fehler.
@@ -702,41 +704,76 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
           ) : (
             <>
             <VerwendungBlock geraet={geraet} />
-            <ul className="gr-entitaeten">
-            {geraet.entitaeten.map((entitaet) => (
-              <li key={entitaet.entityId}>
-                <code>{entitaet.entityId}</code>
-                <V1Select
-                  label="Gehört zu"
-                  titel="Gehört zu"
-                  unterzeile={entitaet.entityId}
-                  wert={geraet.schluessel}
-                  onWahl={(ziel) => aufGeraet(entitaet.entityId, ziel)}
-                  optionen={zielOptionen(alleGeraete)}
-                />
-                {entitaet.verschoben && (
-                  <p className="gr-verschoben-hinweis">
-                    <em>verschoben</em>
-                    {entitaet.herkunftName ? ` laut Home Assistant: ${entitaet.herkunftName}` : ' — von Hand zugeordnet'}
-                  </p>
-                )}
-                <span className="gr-marken">
-                    {entitaet.verwendungen.map((verwendung) => {
-                    const modul = steuerungsModul(verwendung)
-                    const marke = (
-                      <em title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>
-                        {verwendung.zweck}{modul ? ' ›' : ''}
-                      </em>
+            {ordneEintraege(geraet.entitaeten).map((gruppe) => (
+              <section key={gruppe.art} className="gr-gruppe" aria-label={gruppe.label}>
+                <h4 className="gr-gruppe-kopf">{gruppe.label}<span>{gruppe.eintraege.length}</span></h4>
+                <ul className="gr-entitaeten">
+                  {gruppe.eintraege.map(({ entitaet, titel }) => {
+                    const menueAuf = entitaetMenue === entitaet.entityId
+                    const ersteMarke = entitaet.verwendungen[0]
+                    const ersterModul = ersteMarke ? steuerungsModul(ersteMarke) : null
+                    return (
+                      <li key={entitaet.entityId}>
+                        <div className="gr-eintrag">
+                          <span className="gr-eintrag-name">
+                            {titel !== null
+                              ? (ersterModul
+                                ? <Link to={rollenPfad(ersterModul)} className="gr-eintrag-titel is-link">{titel} ›</Link>
+                                : <b className="gr-eintrag-titel">{titel}</b>)
+                              : <code className="gr-eintrag-titel is-id">{entitaet.entityId}</code>}
+                            {titel !== null && <code>{entitaet.entityId}</code>}
+                          </span>
+                          <span
+                            className={menueAuf ? 'gr-mehr is-offen' : 'gr-mehr'}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Aktionen für ${entitaet.entityId}`}
+                            aria-expanded={menueAuf}
+                            onClick={() => setEntitaetMenue(menueAuf ? null : entitaet.entityId)}
+                            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setEntitaetMenue(menueAuf ? null : entitaet.entityId) } }}
+                          >
+                            ⋯
+                          </span>
+                        </div>
+                        {menueAuf && (
+                          <V1Select
+                            label="Verschieben nach"
+                            titel="Verschieben nach"
+                            unterzeile={entitaet.entityId}
+                            wert={geraet.schluessel}
+                            onWahl={(ziel) => { setEntitaetMenue(null); aufGeraet(entitaet.entityId, ziel) }}
+                            optionen={zielOptionen(alleGeraete)}
+                          />
+                        )}
+                        {entitaet.verschoben && (
+                          <p className="gr-verschoben-hinweis">
+                            <em>verschoben</em>
+                            {entitaet.herkunftName ? ` laut Home Assistant: ${entitaet.herkunftName}` : ' — von Hand zugeordnet'}
+                          </p>
+                        )}
+                        {/* Der erste Zweck steht schon als Titel; hier die weiteren. */}
+                        {entitaet.verwendungen.length > (titel !== null ? 1 : 0) && (
+                          <span className="gr-marken">
+                            {entitaet.verwendungen.slice(titel !== null ? 1 : 0).map((verwendung) => {
+                              const modul = steuerungsModul(verwendung)
+                              const marke = (
+                                <em title={QUELLEN[verwendung.quelle] ?? verwendung.quelle}>
+                                  {verwendung.zweck}{modul ? ' ›' : ''}
+                                </em>
+                              )
+                              // Fork AI (forkai.134): Eine Rolle führt dorthin, wo sie gepflegt wird.
+                              return modul
+                                ? <Link key={`${verwendung.quelle}-${verwendung.zweck}`} to={rollenPfad(modul)} className="gr-marke-link">{marke}</Link>
+                                : <span key={`${verwendung.quelle}-${verwendung.zweck}`}>{marke}</span>
+                            })}
+                          </span>
+                        )}
+                      </li>
                     )
-                    // Fork AI (forkai.134): Eine Rolle führt dorthin, wo sie gepflegt wird.
-                    return modul
-                      ? <Link key={`${verwendung.quelle}-${verwendung.zweck}`} to={rollenPfad(modul)} className="gr-marke-link">{marke}</Link>
-                      : <span key={`${verwendung.quelle}-${verwendung.zweck}`}>{marke}</span>
                   })}
-                </span>
-              </li>
-              ))}
-            </ul>
+                </ul>
+              </section>
+            ))}
             </>
           )}
         </>

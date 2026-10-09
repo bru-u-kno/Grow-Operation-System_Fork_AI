@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.195
+
+**Fork AI.** Geräte & Entitäten: Die Einträge unter einem Gerät sind geordnet statt eine lange alphabetische Liste.
+
+- **Nach Art gruppiert:** Unter einem aufgeklappten Gerät stehen die Einträge in Gruppen — Messwerte, Einstellungen, Schalter, Skripte, Kameras (Rest unter „Sonstige") — mit der Zahl dahinter. Die Gruppe richtet sich nach dem Typ der Entität (sensor, number, script …), nicht nach dem Namen.
+- **Zweck groß, ID klein:** Als Überschrift steht, wofür der Eintrag im Fork dient („EC · oben", „Grenze setzen · Skript"); die Entity-ID steht klein darunter. Hat ein Eintrag keinen Zweck, steht die ID fett. Innerhalb einer Gruppe geht es nach Zweck, dann nach Name. Führt ein Zweck zu einer Steuerung, ist die Überschrift ein Link („›").
+- **Verschieben hinter ⋯:** Das große „Gehört zu"-Feld bei jedem Eintrag ist weg. Zum Verschieben tippst du am Eintrag auf ⋯. Beim Bluelab Guardian wird die Liste dadurch statt neun hohen Blöcken kurz und lesbar.
+
 ## 2.0.0-forkai.194
 
 **Fork AI.** Geräte & Entitäten: Die Zahlen oben ragen am Handy nicht mehr über den Rand.

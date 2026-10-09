@@ -214,13 +214,14 @@ test.describe('Geräte: ein Speicherfehler', () => {
     const zeilen = page.locator('.gr-kopf[aria-expanded="false"]')
     const anzahl = await zeilen.count()
     expect(anzahl, 'keine aufklappbare Gerätezeile').toBeGreaterThan(0)
-    let gehoertZu = page.getByRole('button', { name: 'Gehört zu' })
-    for (let i = anzahl - 1; i >= 0 && await gehoertZu.count() === 0; i--) {
+    // forkai.195: Das Verschieben-Feld steht nicht mehr bei jedem Eintrag, sondern hinter dessen ⋯.
+    const eintragMenue = page.locator('.gr-eintrag .gr-mehr')
+    for (let i = anzahl - 1; i >= 0 && await eintragMenue.count() === 0; i--) {
       await zeilen.nth(i).click()
-      gehoertZu = page.getByRole('button', { name: 'Gehört zu' })
     }
-    darfUeberspringen(await gehoertZu.count() === 0, 'kein Gerät mit Entität im Demobestand')
-    await gehoertZu.first().click()
+    darfUeberspringen(await eintragMenue.count() === 0, 'kein Gerät mit Entität im Demobestand')
+    await eintragMenue.first().click()
+    await page.getByRole('button', { name: 'Verschieben nach' }).first().click()
     await page.locator('[role="option"][aria-selected="false"]').nth(1).click()
     await expect(page.getByText('Testfehler: abgelehnt.')).toBeVisible()
     await expect(page.getByText(/steht jetzt bei|steht wieder dort/)).toHaveCount(0)
