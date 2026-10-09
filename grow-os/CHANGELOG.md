@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.199
+
+**Fork AI.** Einrichtung (A-016, Etappe 5): Nichts aus der ersten Anlage steht mehr als Vorgabe im Code — und zwei Fehler, die nur bei einer Neuinstallation auftraten, sind behoben.
+
+- **Keine Werksvorgaben mehr:** Die Geräte-Rollen trugen noch die Entitäten der ersten Anlage (`sensor.big_…`, `select.rdwc_…`) als „bisherige Vorgabe". Sie wurden vor Monaten einmalig als feste Zuordnung übernommen; jetzt sind sie aus dem Code gestrichen, ebenso der Dienst, der sie übernahm, und der Rückfall auf sie. Auf einer frischen Anlage konnten sie bis zur Übernahme als „zugeordnet" erscheinen. Bestehende Zuordnungen bleiben unberührt.
+- **Keine Dauerwarnung mehr auf der Geräteseite:** Der Abgleich „die CO₂-Automation dosiert mit einer anderen Entität" verglich gegen eine feste Tabelle der ersten Anlage und meldete bei jedem anderen Nutzer, die Automation dosiere mit `sensor.big_…`. Jetzt liest der Fork die handgebaute CO₂-Automation selbst und meldet nur, wenn eine zugeordnete Entität dort nirgends vorkommt. Eine vom Fork angelegte Automation ist per Vorlage an die Rollen gebunden und wird nicht verglichen.
+- **Entfeuchter „Automatik an/aus":** Eine vom Fork angelegte Entfeuchter-Regelung heißt in Home Assistant nach ihrem Namen („Entfeuchter Regelung Tag/Nacht"), nicht wie die handgebaute. Schalter und Statusanzeige der Seite gingen an der Katalog-Kennung vorbei. Jetzt wird die Regelung unter der Kennung gefunden, unter der sie steht — handgebaut oder vom Fork.
+- **Erste Schritte:** Auf der Live-Seite einer frischen Installation steht als vierter Schritt „Steuerungen einrichten" mit Weg zum Assistenten.
+- Eine geleerte optionale Rolle schreibt keine Marke mehr; in älteren Datenbanken vorhandene Marken werden weiter als leer gelesen.
+
 ## 2.0.0-forkai.198
 
 **Fork AI.** Einrichtung (A-016, Etappe 3): Der Einrichtungs-Assistent führt in drei Schritten von „Was habe ich?" bis „in Home Assistant bereit".
