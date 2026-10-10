@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.201
+
+**Fork AI.** Einrichtung (A-016, Rest von Etappe 4): Der Assistent sagt, wovon eine Steuerung abhängt — und legt nichts an, was auf etwas Fehlendem aufbaut.
+
+- **Hinweise unter „Bereitstellen":** Wer den Entfeuchter ohne die CO₂-Steuerung wählt, liest, dass es dann keine Feuchte-Obergrenze gibt, die seine Einschaltschwelle begrenzt — er richtet sich nur nach seinen eigenen Schwellen und dem VPD-Band (kein Fehler, aber nichts, was man ahnt). Zeigt eine der Zuluft-Rollen des Entfeuchters („Zuluft · Bedarf", „Zuluft-Lüfter · laufende Stufe") auf eine Entität, die es nicht gibt, und die Zuluft ist nicht gewählt, steht eine Warnung mit Rolle und Entität: Zuluft wählen oder die Rolle leeren. Die Hinweise stehen in voller Breite unter der Zeile der Steuerung.
+- **Zusatz-Entfeuchter wartet auf den Entfeuchter:** Seine Rechenwerte und seine Regelung lesen die Rechenwerte und VPD-Zielwerte des Entfeuchters. Scheitert dort das Anlegen (ganz oder teilweise), werden die des Zusatzes nicht mehr angelegt, und die Meldung sagt, warum — statt zwölf Helfer zu erzeugen, die auf „nicht verfügbar" stehen. Dasselbe gilt für die Automationen; die Vorschau fragt weiter beide.
+
 ## 2.0.0-forkai.200
 
 **Fork AI.** Einrichtung (A-016, Etappe 6): Eine Anleitung für die Bluelab-Übertragung — mit Häkchen aus dem echten Stand.

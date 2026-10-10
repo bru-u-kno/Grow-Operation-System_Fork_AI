@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Badge, V1Button, V1Card, V1Section, V1Skeleton, type Tone } from '../../components/v1'
 import {
-  automationen, bausteinModule, fehlendText, helferUndRechenwerte, reife, summe, wuerdeSchreiben, zaehleFehlend,
-  type Phase2, type Reife,
+  abhaengigkeiten, automationen, bausteinModule, fehlendText, helferUndRechenwerte, reife, summe, wuerdeSchreiben, zaehleFehlend,
+  type Phase2, type Reife, type RollenStand,
 } from './bereitstellen-ablauf'
-import type { Bestandsaufnahme, SteuerungAuswahl } from './steuerung-typen'
+import type { Bestandsaufnahme, GeraeteSeite, SteuerungAuswahl } from './steuerung-typen'
 
 /**
  * Fork AI (A-016, Etappe 3): Schritt 3 — bereitstellen, was in Home Assistant noch fehlt.
@@ -35,6 +35,7 @@ const STAND_LESBAR: Record<string, string> = {
 export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
   const [auswahl, setAuswahl] = useState<SteuerungAuswahl | null>(null)
   const [bestaende, setBestaende] = useState<Record<string, Bestandsaufnahme | null>>({})
+  const [rollen, setRollen] = useState<RollenStand[]>([])
   const [laedt, setLaedt] = useState(true)
   const [arbeitet, setArbeitet] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -49,19 +50,24 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
     await Promise.all(alle.map(async (m) => {
       stande[m] = await apiFetch<Bestandsaufnahme>(`/api/steuerung/${m}/bestand`, { signal }).catch(() => null)
     }))
-    return { a, stande }
+    // Die Rollen brauchen nur die Hinweise zu Abhängigkeiten — ohne sie bleiben die Hinweise aus, nichts bricht.
+    const seite = await apiFetch<GeraeteSeite>('/api/steuerung/geraete', { signal }).catch(() => null)
+    const r: RollenStand[] = (seite?.module ?? []).flatMap((m) => m.zeilen.map((z) => (
+      { modul: m.modul, rolle: z.rolle, label: z.label, eingetragen: z.eingetragen, gefunden: z.gefunden })))
+    return { a, stande, r }
   }, [zusatz])
 
   useEffect(() => {
     const controller = new AbortController()
     void lesen(controller.signal)
-      .then(({ a, stande }) => { if (!controller.signal.aborted) { setAuswahl(a); setBestaende(stande) } })
+      .then(({ a, stande, r }) => { if (!controller.signal.aborted) { setAuswahl(a); setBestaende(stande); setRollen(r) } })
       .catch((caught) => { if (!controller.signal.aborted) setFehler(formatApiError(caught, 'Der Stand konnte nicht gelesen werden.')) })
       .finally(() => { if (!controller.signal.aborted) setLaedt(false) })
     return () => controller.abort()
   }, [lesen])
 
   const gewaehlt = (auswahl?.eintraege ?? []).filter((e) => e.gewaehlt)
+  const hinweise = abhaengigkeiten(gewaehlt, rollen)
   const mitReife = gewaehlt.map((e) => {
     const mods = bausteinModule([e], zusatz)
     return { e, mods, r: reife({ ...e, module: mods }, bestaende) }
@@ -72,9 +78,10 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
   const nichtsMehr = fehltGesamt.helfer + fehltGesamt.rechenwerte + fehltGesamt.automationen === 0
 
   async function neuLesen() {
-    const { a, stande } = await lesen()
+    const { a, stande, r } = await lesen()
     setAuswahl(a)
     setBestaende(stande)
+    setRollen(r)
   }
 
   /** Phase 1: Helfer und Rechenwerte — danach die Vorschau der Automationen. */
@@ -140,7 +147,8 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
           const fehlt = summe(mods.map((m) => zaehleFehlend(bestaende[m])))
           const t = REIFE_TEXT[r]
           return (
-            <div className="st-feldzeile" key={e.kennung}>
+            <div key={e.kennung}>
+            <div className="st-feldzeile">
               <span className="st-etikett">
                 {e.titel}
                 <small>
@@ -152,6 +160,13 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
                 </small>
               </span>
               <V1Badge tone={t.ton}>{t.text}</V1Badge>
+            </div>
+            {/* Abhängigkeiten über die ganze Breite: neben dem Schild bliebe für den Satz kaum Platz. */}
+            {(hinweise[e.kennung] ?? []).map((h) => (
+              <p key={h.text} className={h.ton === 'warn' ? 'st-hinweis st-hinweis-abh is-warn' : 'st-hinweis st-hinweis-abh'} data-audit="abhaengigkeit">
+                {h.ton === 'warn' ? '⚠ ' : 'ℹ '}{h.text}
+              </p>
+            ))}
             </div>
           )
         })}

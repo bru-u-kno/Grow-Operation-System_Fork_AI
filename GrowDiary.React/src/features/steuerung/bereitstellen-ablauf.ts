@@ -24,6 +24,67 @@ export function bausteinModule(gewaehlt: Array<{ module: string[] }>, zusatz: bo
   return gewaehlt.flatMap((e) => e.module).filter((m) => zusatz || m !== ZUSATZ)
 }
 
+/**
+ * Welches Modul zuerst vollständig angelegt sein muss: Die Rechenwerte und die Regelung des Zusatz-Entfeuchters lesen
+ * `sensor.trotec_temp_max_aktiv` und die VPD-Zielwerte des Entfeuchters. Entstehen sie vor ihnen — oder scheitert der
+ * Entfeuchter —, steht der Zusatz auf „nicht verfügbar" und seine Regelung schaltet nicht ein.
+ */
+export const VORAUSSETZUNG: Readonly<Record<string, string>> = { 'entfeuchter-zusatz': 'entfeuchter' }
+
+export type Hinweis = { ton: 'info' | 'warn'; text: string }
+
+/** Eine Rollen-Zeile, so wie `GET /api/steuerung/geraete` sie liefert (nur, was der Abgleich braucht). */
+export type RollenStand = { modul: string; rolle: string; label: string; eingetragen: string; gefunden: boolean }
+
+/**
+ * Abhängigkeiten zwischen den gewählten Steuerungen — als Hinweis je Steuerung, nichts wird verhindert.
+ *
+ * <ul>
+ * <li><b>Entfeuchter ohne CO₂:</b> Die Einschaltschwelle des Entfeuchters wird sonst auf die Feuchte-Obergrenze des
+ * CO₂-Klimas begrenzt (der „Deckel"). Ohne die CO₂-Steuerung gibt es sie nicht — er richtet sich nur nach seinen
+ * eigenen Schwellen. Kein Fehler, aber nichts, was man ahnt.</li>
+ * <li><b>Zuluft-Rollen des Entfeuchters ohne Zuluft:</b> „Zuluft · Bedarf" und „Zuluft-Lüfter · laufende Stufe" zeigen
+ * auf Entitäten der Zuluft-Steuerung. Wer sie zugeordnet hat, ohne die Steuerung zu wählen, und die Entität nicht
+ * findet, hat eine Rolle, die ins Leere zeigt.</li>
+ * </ul>
+ *
+ * @returns Hinweise je Kennung der Auswahl; Steuerungen ohne Hinweis fehlen im Ergebnis.
+ */
+export function abhaengigkeiten(gewaehlt: Array<{ kennung: string }>, rollen: readonly RollenStand[]): Record<string, Hinweis[]> {
+  const da = new Set(gewaehlt.map((e) => e.kennung))
+  const ergebnis: Record<string, Hinweis[]> = {}
+  const dazu = (kennung: string, h: Hinweis) => { (ergebnis[kennung] ??= []).push(h) }
+
+  if (da.has('entfeuchter') && !da.has('co2')) {
+    dazu('entfeuchter', {
+      ton: 'info',
+      text: 'Ohne die CO₂-Steuerung gibt es keine Feuchte-Obergrenze, die seine Einschaltschwelle begrenzt — er richtet sich nur nach seinen eigenen Schwellen und dem VPD-Band.',
+    })
+  }
+
+  if (da.has('entfeuchter') && !da.has('zuluft')) {
+    for (const r of rollen) {
+      if (r.modul !== 'entfeuchter' || !['zuluft_bedarf', 'zuluft_stufe_ist'].includes(r.rolle)) continue
+      if (r.eingetragen.trim() === '' || r.gefunden) continue
+      dazu('entfeuchter', {
+        ton: 'warn',
+        text: `Die Rolle „${r.label}" zeigt auf ${r.eingetragen}, doch diese Entität gibt es in Home Assistant nicht — sie gehört zur Zuluft-Steuerung, die du nicht gewählt hast. Wähle Zuluft oder leere die Rolle.`,
+      })
+    }
+  }
+
+  return ergebnis
+}
+
+/** Warum ein Modul übersprungen wurde, weil seine Voraussetzung nicht vollständig angelegt ist — oder null. */
+export function uebersprungenWegen(modul: string, ergebnisse: ReadonlyMap<string, { fehler: string | null; nicht: number }>): string | null {
+  const voraus = VORAUSSETZUNG[modul]
+  if (!voraus) return null
+  const r = ergebnisse.get(voraus)
+  if (!r || (r.fehler === null && r.nicht === 0)) return null
+  return `Übersprungen: ${voraus} ist nicht vollständig angelegt — der Zusatz liest dessen Rechenwerte und Zielwerte.`
+}
+
 export type Aufruf = <T>(pfad: string, optionen?: { method?: string }) => Promise<T>
 
 const HELFER = new Set(['Zahl', 'Schalter', 'Zeitpunkt', 'Zaehler'])
@@ -73,9 +134,17 @@ export async function helferUndRechenwerte(
   aufruf: Aufruf,
 ): Promise<Phase1[]> {
   const ergebnis: Phase1[] = []
+  const stand = new Map<string, { fehler: string | null; nicht: number }>()
   for (const modul of module) {
     const fehlt = zaehleFehlend(bestaende[modul])
     const r: Phase1 = { modul, helfer: 0, rechenwerte: 0, nicht: 0, fehler: null }
+    const grund = uebersprungenWegen(modul, stand)
+    if (grund) {
+      r.fehler = grund
+      ergebnis.push(r)
+      stand.set(modul, { fehler: r.fehler, nicht: r.nicht })
+      continue
+    }
     try {
       if (fehlt.helfer > 0) {
         const b = await aufruf<Bilanz>(`/api/steuerung/${modul}/helfer`, { method: 'POST' })
@@ -91,6 +160,7 @@ export async function helferUndRechenwerte(
       r.fehler = caught instanceof Error ? caught.message : String(caught)
     }
     ergebnis.push(r)
+    stand.set(modul, { fehler: r.fehler, nicht: r.nicht })
   }
   return ergebnis
 }
@@ -102,12 +172,22 @@ export type Phase2 = { modul: string; bilanz: AutoBilanz | null; fehler: string 
 /** Automationen aller Module — `vorschau=true` schreibt nichts und sagt nur, was geschähe. */
 export async function automationen(module: string[], vorschau: boolean, aufruf: Aufruf): Promise<Phase2[]> {
   const ergebnis: Phase2[] = []
+  const stand = new Map<string, { fehler: string | null; nicht: number }>()
   for (const modul of module) {
+    const grund = vorschau ? null : uebersprungenWegen(modul, stand)
+    if (grund) {
+      ergebnis.push({ modul, bilanz: null, fehler: grund })
+      stand.set(modul, { fehler: grund, nicht: 0 })
+      continue
+    }
     try {
       const bilanz = await aufruf<AutoBilanz>(`/api/steuerung/${modul}/automationen${vorschau ? '?vorschau=true' : ''}`, { method: 'POST' })
       ergebnis.push({ modul, bilanz, fehler: null })
+      stand.set(modul, { fehler: null, nicht: bilanz.fehlgeschlagen })
     } catch (caught) {
-      ergebnis.push({ modul, bilanz: null, fehler: caught instanceof Error ? caught.message : String(caught) })
+      const fehler = caught instanceof Error ? caught.message : String(caught)
+      ergebnis.push({ modul, bilanz: null, fehler })
+      stand.set(modul, { fehler, nicht: 0 })
     }
   }
   return ergebnis

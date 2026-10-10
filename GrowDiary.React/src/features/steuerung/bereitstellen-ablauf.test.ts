@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  automationen, fehlendText, helferUndRechenwerte, reife, summe, wuerdeSchreiben, zaehleFehlend,
+  abhaengigkeiten, automationen, fehlendText, helferUndRechenwerte, reife, summe, wuerdeSchreiben, zaehleFehlend,
   type Aufruf, type AutoBilanz,
 } from './bereitstellen-ablauf'
 import type { BauteilStand, Bestandsaufnahme } from './steuerung-typen'
@@ -144,5 +144,90 @@ describe('reife', () => {
       { entfeuchter: bestand(bauteil('Zahl', 'Da')), 'entfeuchter-zusatz': bestand(bauteil('Zahl', 'Da')) })).toBe('bereit')
     expect(reife({ ...voll, module: ['entfeuchter', 'entfeuchter-zusatz'] },
       { entfeuchter: bestand(bauteil('Zahl', 'Da')), 'entfeuchter-zusatz': bestand(bauteil('Zahl')) })).toBe('anlegen')
+  })
+})
+
+describe('abhaengigkeiten', () => {
+  const rolle = (rolle: string, eingetragen: string, gefunden: boolean) =>
+    ({ modul: 'entfeuchter', rolle, label: rolle === 'zuluft_bedarf' ? 'Zuluft · Bedarf' : 'Zuluft-Lüfter · laufende Stufe', eingetragen, gefunden })
+  const wahl = (...k: string[]) => k.map((kennung) => ({ kennung }))
+
+  it('Entfeuchter ohne CO₂: ein Hinweis, kein Fehler', () => {
+    const h = abhaengigkeiten(wahl('entfeuchter', 'licht'), [])
+    expect(h.entfeuchter).toHaveLength(1)
+    expect(h.entfeuchter[0].ton).toBe('info')
+    expect(h.entfeuchter[0].text).toContain('Feuchte-Obergrenze')
+    expect(Object.keys(h)).toEqual(['entfeuchter'])
+  })
+
+  it('Entfeuchter mit CO₂: kein Hinweis', () => {
+    expect(abhaengigkeiten(wahl('co2', 'entfeuchter'), [])).toEqual({})
+  })
+
+  it('Zuluft-Rollen, die ins Leere zeigen, ohne gewählte Zuluft: Warnung mit Rolle und Entität', () => {
+    const h = abhaengigkeiten(wahl('co2', 'entfeuchter'), [rolle('zuluft_bedarf', 'binary_sensor.zuluft_bedarf', false)])
+    expect(h.entfeuchter).toHaveLength(1)
+    expect(h.entfeuchter[0]).toMatchObject({ ton: 'warn' })
+    expect(h.entfeuchter[0].text).toContain('Zuluft · Bedarf')
+    expect(h.entfeuchter[0].text).toContain('binary_sensor.zuluft_bedarf')
+  })
+
+  it('gefundene, leere oder bei gewählter Zuluft zugeordnete Rollen warnen nicht', () => {
+    expect(abhaengigkeiten(wahl('co2', 'entfeuchter'), [rolle('zuluft_bedarf', 'binary_sensor.x', true)])).toEqual({})
+    expect(abhaengigkeiten(wahl('co2', 'entfeuchter'), [rolle('zuluft_bedarf', '', false)])).toEqual({})
+    expect(abhaengigkeiten(wahl('co2', 'entfeuchter', 'zuluft'), [rolle('zuluft_bedarf', 'binary_sensor.x', false)])).toEqual({})
+  })
+
+  it('beide Hinweise zugleich, je Steuerung gesammelt', () => {
+    const h = abhaengigkeiten(wahl('entfeuchter'), [rolle('zuluft_bedarf', 'a.b', false), rolle('zuluft_stufe_ist', 'c.d', false)])
+    expect(h.entfeuchter.map((x) => x.ton)).toEqual(['info', 'warn', 'warn'])
+  })
+})
+
+describe('Voraussetzung: der Zusatz wartet auf den Entfeuchter', () => {
+  const bestandMit = (...art: string[]) => bestand(...art.map((a) => bauteil(a)))
+
+  it('scheitert der Entfeuchter, wird der Zusatz nicht angelegt — und die Meldung sagt warum', async () => {
+    const { calls, aufruf } = aufzeichnung({ '/api/steuerung/entfeuchter/helfer': new Error('Home Assistant antwortet nicht') })
+    const r = await helferUndRechenwerte(['entfeuchter', 'entfeuchter-zusatz'], {
+      entfeuchter: bestandMit('Zahl'), 'entfeuchter-zusatz': bestandMit('Zahl', 'RechenSensor'),
+    }, aufruf)
+
+    expect(calls).toEqual(['POST /api/steuerung/entfeuchter/helfer'])
+    expect(r[1].fehler).toContain('Übersprungen: entfeuchter')
+    expect(r[1].helfer).toBe(0)
+  })
+
+  it('teilweise angelegt (fehlgeschlagen > 0) reicht auch für das Überspringen', async () => {
+    const { calls, aufruf } = aufzeichnung({ '/api/steuerung/entfeuchter/helfer': { angelegt: 10, fehlgeschlagen: 2 } })
+    await helferUndRechenwerte(['entfeuchter', 'entfeuchter-zusatz'], {
+      entfeuchter: bestandMit('Zahl'), 'entfeuchter-zusatz': bestandMit('Zahl'),
+    }, aufruf)
+    expect(calls).toEqual(['POST /api/steuerung/entfeuchter/helfer'])
+  })
+
+  it('ist der Entfeuchter vollständig da, läuft der Zusatz wie gewohnt', async () => {
+    const { calls, aufruf } = aufzeichnung({
+      '/api/steuerung/entfeuchter/helfer': { angelegt: 3, fehlgeschlagen: 0 },
+      '/api/steuerung/entfeuchter-zusatz/helfer': { angelegt: 4, fehlgeschlagen: 0 },
+    })
+    const r = await helferUndRechenwerte(['entfeuchter', 'entfeuchter-zusatz'], {
+      entfeuchter: bestandMit('Zahl'), 'entfeuchter-zusatz': bestandMit('Zahl'),
+    }, aufruf)
+    expect(calls).toEqual(['POST /api/steuerung/entfeuchter/helfer', 'POST /api/steuerung/entfeuchter-zusatz/helfer'])
+    expect(r.map((x) => x.fehler)).toEqual([null, null])
+  })
+
+  it('bei den Automationen: fehlgeschlagene Regelung des Entfeuchters hält die des Zusatzes zurück; die Vorschau nicht', async () => {
+    const schlecht = { angelegt: 0, fremd: 0, fehlgeschlagen: 1, einzeln: [] }
+    const { calls, aufruf } = aufzeichnung({ '/api/steuerung/entfeuchter/automationen': schlecht })
+    const r = await automationen(['entfeuchter', 'entfeuchter-zusatz'], false, aufruf)
+    expect(calls).toEqual(['POST /api/steuerung/entfeuchter/automationen'])
+    expect(r[1].fehler).toContain('Übersprungen')
+
+    // Die Vorschau schreibt nichts und fragt immer beide.
+    const v = aufzeichnung({ '/api/steuerung/entfeuchter/automationen?vorschau=true': schlecht })
+    await automationen(['entfeuchter', 'entfeuchter-zusatz'], true, v.aufruf)
+    expect(v.calls).toHaveLength(2)
   })
 })

@@ -224,3 +224,48 @@ test('Die Übersicht führt zum Assistenten — auch wenn noch nichts gewählt i
   await page.getByRole('link', { name: 'Einrichtung starten' }).click()
   await expect(page).toHaveURL(/\/steuerung\/einrichtung$/)
 })
+
+// ------------------------------------------------- Abhängigkeiten (Rest von Etappe 4)
+
+const hinweise = (page: Page) => page.locator('[data-audit="abhaengigkeit"]')
+
+test('Schritt 3: Entfeuchter ohne CO₂ bekommt einen Hinweis, mit CO₂ keinen — zweimal', async ({ page }) => {
+  await page.route(/\/api\/steuerung\/entfeuchter\/bestand$/, (route) => route.fulfill({ json: bestand([['Zahl', 1]]) }))
+
+  await auswahlSetzen(page, ['entfeuchter', 'licht'])
+  await page.goto('/steuerung/einrichtung?schritt=3')
+  await expect(page.locator('.st-feldzeile').filter({ hasText: 'Entfeuchter' }).first()).toBeVisible()
+  await expect(hinweise(page)).toHaveCount(1)
+  await expect(hinweise(page)).toContainText('Ohne die CO₂-Steuerung gibt es keine Feuchte-Obergrenze')
+
+  // Zweiter Durchgang mit CO₂, ohne die Seite zu verlassen: neu laden genügt, der Stand kommt vom Server.
+  await auswahlSetzen(page, ['co2', 'entfeuchter', 'licht'])
+  await page.reload()
+  await expect(page.locator('.st-feldzeile').filter({ hasText: 'Entfeuchter' }).first()).toBeVisible()
+  await expect(hinweise(page)).toHaveCount(0)
+})
+
+test('Schritt 3: Zuluft-Rolle des Entfeuchters ohne gewählte Zuluft zeigt ins Leere — Warnung', async ({ page }) => {
+  const geraete = await (await page.request.get('/api/steuerung/geraete')).json()
+  for (const m of geraete.module) {
+    if (m.modul !== 'entfeuchter') continue
+    const z = m.zeilen.find((x: Json) => x.rolle === 'zuluft_bedarf')
+    z.eingetragen = 'binary_sensor.zuluft_bedarf'
+    z.gefunden = false
+  }
+  await page.route(/\/api\/steuerung\/geraete$/, (route) => route.fulfill({ json: geraete }))
+  await page.route(/\/api\/steuerung\/entfeuchter\/bestand$/, (route) => route.fulfill({ json: bestand([['Zahl', 1]]) }))
+
+  await auswahlSetzen(page, ['co2', 'entfeuchter'])
+  await page.goto('/steuerung/einrichtung?schritt=3')
+  const warn = hinweise(page).filter({ hasText: 'Zuluft · Bedarf' })
+  await expect(warn).toHaveCount(1)
+  await expect(warn).toContainText('binary_sensor.zuluft_bedarf')
+  await expect(warn).toContainText('Wähle Zuluft oder leere die Rolle')
+
+  // Mit gewählter Zuluft ist die Rolle in Ordnung — die Warnung entfällt.
+  await auswahlSetzen(page, ['co2', 'entfeuchter', 'zuluft'])
+  await page.reload()
+  await expect(page.locator('.st-feldzeile').filter({ hasText: 'Zuluft' }).first()).toBeVisible()
+  await expect(hinweise(page).filter({ hasText: 'Zuluft · Bedarf' })).toHaveCount(0)
+})

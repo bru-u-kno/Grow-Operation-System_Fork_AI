@@ -105,6 +105,8 @@
   .st-schritte li b { font-family: var(--font-mono); }
   .st-schritte li.is-jetzt { color: var(--ink); border-color: var(--accent-dim); background: var(--surface); }
   .st-schritte li.is-fertig { color: var(--accent-text); }
+  .st-hinweis-abh { margin-top: 4px; }
+  .st-hinweis-abh.is-warn { color: var(--warn-text); }
   .st-eingerueckt { margin-left: var(--s-4); }
   .st-fuss-link a { color: inherit; }
   /* A-016, Etappe 6: Bluelab-Anleitung */
