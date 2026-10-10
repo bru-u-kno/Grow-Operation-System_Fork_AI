@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.205
+
+**Fork AI.** Addback: Die Seite zeigt jetzt, was die neue Lösung hat und was sie im Tank bewirkt.
+
+- **Neuer Kasten „Dein Plan heute":** Direkt unter „Live jetzt" stehen Tag und Woche (bei der Blüte „Blütewoche 6", sonst „Woche 2 Wachstum"), der Name des Plans, das EC-Ziel (mit „Dünger + Wasser") und das pH-Ziel. Darunter, wie weit der Tank gerade davon weg ist: „EC 1,52 · Ziel 1,60 → 0,08 darunter". Die Woche steht genau einmal; das Spaltenlabel des Plans bleibt weg, weil es meist dasselbe sagt. Ein Plan mit nur einem pH-Wert (5,8) zeigt „5,8" und keine Spanne „5,8–5,8".
+- **Neue Karte „Die neue Lösung (so mischst du an)":** Bei „Wasser + Dünger & Zusätze" steht der EC der angesetzten Lösung (zum Beispiel ≈ 1,60 = 0,00 Wasser + 1,60 Dünger, mit „= Ziel laut Plan ✓") und das pH-Ziel mit „nach dem Anmischen messen und einstellen". Das gilt für die Menge, die du ansetzt — auch in einem Extratank. Trag bei den Litern nur ein, was du in den Tank gießt. Der pH der Lösung wird nicht errechnet, weil er von Wasser, Puffer und pH-Down abhängt.
+- **„Im Tank danach" mit Wirkung:** Beim EC steht jetzt, was das Nachfüllen bewirkt — „Wirkung ±0,00 – EC bleibt" bei frisch angesetzter Lösung in Zielstärke, „Wirkung −0,21 – EC sinkt" bei reinem Osmosewasser. Der Anlass: Wer Wasser *mit Dünger* nachfüllt, sieht den EC kaum sinken, weil die neue Lösung selbst Zielstärke hat; das war richtig gerechnet, aber nicht erklärt. Der pH im Tank bleibt der Live-Wert (mit „jetzt") und trägt den Satz „wird nicht vorausberechnet – nach dem Durchmischen nachmessen", damit er nicht wie eine Vorhersage aussieht.
+- **Geprüft:** An der gebauten Demo-App mit Mischplan „SKX Canna Aqua" (Tag 36, Blütewoche 6, EC-Ziel 1,60) im dunklen und im hellen Thema, ohne Überlauf bei 390 px; 636 Fälle der betroffenen und der querschneidenden Oberflächenprüfungen grün. Die neue Prüfung im Addback-Rundweg wird rot, sobald der Kasten fehlt.
+
 ## 2.0.0-forkai.204
 
 **Fork AI.** Addback und Wasserwechsel: Nachbesserungen nach dem ersten Blick auf dem Handy.

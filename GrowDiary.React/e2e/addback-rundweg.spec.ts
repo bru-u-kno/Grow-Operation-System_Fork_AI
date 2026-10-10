@@ -182,6 +182,17 @@ test.describe('Nachfüll-Rundweg', () => {
     await expect(page.locator('[data-audit="nachfuellen-erwartung"]')).toContainText('Mischrechnung')
     await expect(page.locator('[data-audit="nachfuellen-eintrag"]')).toContainText('automatisch um')
 
+    // ---- „Dein Plan heute": Plan, Tag, Blütewoche/Woche (genau einmal) und die Ziele; dazu die neue Lösung und die Wirkung
+    const plan = page.locator('[data-audit="nachfuellen-plan"]')
+    await expect(plan, 'Der Kasten „Dein Plan heute" fehlt.').toContainText('Dein Plan heute')
+    await expect(plan).toContainText(/Tag \d+/)
+    expect((await plan.innerText()).match(/woche/gi)?.length ?? 0, 'Die Woche steht nicht genau einmal im Plankasten.').toBe(1)
+    await expect(plan).toContainText('EC-Ziel')
+    await expect(plan).toContainText('pH-Ziel')
+    await expect(page.locator('[data-audit="nachfuellen-neue-loesung"]')).toContainText('nach dem Anmischen messen')
+    await expect(page.locator('[data-audit="nachfuellen-erwartung"]')).toContainText('wird nicht vorausberechnet')
+    await expect(page.locator('[data-audit="nachfuellen-erwartung"]')).toContainText(/Wirkung [±+−]\d/)
+
     // ---- Zeitpunkt vor zwei Tagen, Verbrauch in Litern, Notiz
     await weitereAngabenOeffnen(page)
     const vorbei = new Date(Date.now() - 2 * 24 * 3600 * 1000)

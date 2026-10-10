@@ -112,3 +112,21 @@
   .nf-zr .nf-mit{grid-column:1;grid-row:auto;padding-left:28px}
   .nf-zr .nf-mit input{flex:1;width:auto;min-width:0}
 }
+
+/* Dein Plan heute (Plankasten) */
+.nf-plan{border:1px solid var(--hair-2);border-radius:var(--r);padding:var(--s-3) var(--s-4);margin-top:var(--s-3)}
+.nf-plan .k{font-size:var(--fs-klein);color:var(--faint);text-transform:uppercase;letter-spacing:.06em;display:block}
+.nf-plan .kz{display:flex;flex-wrap:wrap;gap:var(--s-2);margin:6px 0 var(--s-2)}
+.nf-plan .kz span{border:1px solid var(--hair-2);border-radius:999px;padding:2px 12px}
+.nf-plan .ziel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-3);border-top:1px solid var(--hair);margin-top:var(--s-2);padding-top:var(--s-2)}
+.nf-plan .ziel b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.nf-plan .ziel small,.nf-plan .abstand{color:var(--faint);font-size:var(--fs-klein)}
+.nf-plan .abstand{margin-top:var(--s-2)}
+/* Neue Lösung und Wirkung */
+.nf-neu{grid-template-columns:repeat(2,minmax(0,1fr))}
+.nf-neu>div:first-child,.nf-neu>div:nth-child(2){border-color:var(--accent)}
+.nf-neu>.nf-neu-hin{grid-column:1/-1;border:0;border-left:2px solid var(--hair-2);border-radius:0;padding:0 var(--s-3);color:var(--faint);font-size:var(--fs-klein)}
+@media(max-width:760px){.nf-neu{grid-template-columns:minmax(0,1fr)}}
+.nf-wirkung{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:999px;border:1px solid var(--hair-2);font-size:var(--fs-klein);color:var(--accent-text,var(--accent))}
+.nf-wirkung.sinkt,.nf-wirkung.steigt{color:var(--warn-text,var(--warn));border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+.nf-vor .nf-jetzt{font-size:var(--fs-klein);font-weight:400;color:var(--faint);margin-left:8px}

@@ -1,6 +1,8 @@
 import type { AddbackLogKind, WaterSource } from '../../types'
+import { ankerphaseName } from '../../deutsche-woerter'
 import { istUnlesbar, zahlOderNull } from '../../zahlenfeld'
-import { NACHFUELL_ART, tagebuchZeile, zahl, type TagebuchWerte, type Werte } from '../vorgang/ablauf-rechnung'
+import type { Ankerphase } from '../../types'
+import { aenderung, NACHFUELL_ART, tagebuchZeile, zahl, type TagebuchWerte, type Werte } from '../vorgang/ablauf-rechnung'
 
 /**
  * Das vereinfachte Addback (A-006, Etappe 3, 10.10.2026) — die Regeln ohne Oberfläche.
@@ -124,4 +126,48 @@ export function nachfuellTagebuch(modus: Modus, w: TagebuchWerte): { titel: stri
  */
 export function wirksameWerte(eigen: Werte, abgewaehlt: ReadonlySet<string>): Werte {
   return { ...eigen, ...Object.fromEntries([...abgewaehlt].map((schluessel) => [schluessel, '0'])) }
+}
+
+/**
+ * Tag und Woche für den Kasten „Dein Plan heute" — aus dem Phasenanker des Grows.
+ *
+ * Die Woche steht nur hier und nirgends sonst im Kasten (Bru, 10.10.2026: „die Woche wird doppelt
+ * erwähnt"); das Label der Plan-Spalte bleibt deshalb weg. `null`, wenn der Anker keine Tageszahl hat.
+ */
+export function planChips(anker: { phase: Ankerphase; tagInPhase: number; wocheInPhase: number } | null | undefined): { tag: string; woche: string } | null {
+  if (anker == null || !(anker.tagInPhase > 0) || !(anker.wocheInPhase > 0)) return null
+  const woche = anker.phase === 'Bluete' ? `Blütewoche ${anker.wocheInPhase}` : `Woche ${anker.wocheInPhase} ${ankerphaseName(anker.phase)}`
+  return { tag: `Tag ${anker.tagInPhase}`, woche }
+}
+
+/** „Jetzt im Tank: EC 1,18 · Ziel 1,20 → 0,02 darunter" — oder `null`, wenn eine der beiden Zahlen fehlt. */
+export function zielAbstandEc(ec: number | null, ziel: number | null): string | null {
+  if (ec == null || ziel == null) return null
+  const abstand = Number((ec - ziel).toFixed(2))
+  const lage = abstand === 0 ? 'im Ziel' : `${zahl(Math.abs(abstand), 2)} ${abstand < 0 ? 'darunter' : 'darüber'}`
+  return `Jetzt im Tank: EC ${zahl(ec, 2)} · Ziel ${zahl(ziel, 2)} → ${lage}`
+}
+
+/**
+ * Wo der pH gegen das Band des Plans liegt. `null`, wenn der Wert oder eine Grenze fehlt — und bei
+ * einem Punktziel (Min = Max, etwa 5,8): ohne Breite gäbe es „darüber" schon bei 5,86 (Befund an der Demo-App, 10.10.2026).
+ */
+export function phLage(ph: number | null, min: number | null, max: number | null): 'im Ziel' | 'darunter' | 'darüber' | null {
+  if (ph == null || min == null || max == null || min === max) return null
+  return ph < min ? 'darunter' : ph > max ? 'darüber' : 'im Ziel'
+}
+
+/** Was die neue Lösung im Tank am EC ändert: „Wirkung −0,21 – EC sinkt". Auf zwei Stellen gerundet, wie angezeigt. */
+export function ecWirkung(vorher: number | null, nachher: number | null): { text: string; richtung: 'gleich' | 'sinkt' | 'steigt' } | null {
+  const text = aenderung(vorher, nachher, 2)
+  if (text == null || vorher == null || nachher == null) return null
+  const diff = Number((nachher - vorher).toFixed(2))
+  if (diff === 0) return { text: `Wirkung ${text} – EC bleibt`, richtung: 'gleich' }
+  return diff < 0 ? { text: `Wirkung ${text} – EC sinkt`, richtung: 'sinkt' } : { text: `Wirkung ${text} – EC steigt`, richtung: 'steigt' }
+}
+
+/** Das pH-Ziel als Text: „5,8–6,2", bei einem Punktziel nur „5,8". `null`, wenn der Plan keins nennt. */
+export function phZielText(min: number | null, max: number | null): string | null {
+  if (min == null || max == null) return null
+  return min === max ? zahl(min, 1) : `${zahl(min, 1)}–${zahl(max, 1)}`
 }

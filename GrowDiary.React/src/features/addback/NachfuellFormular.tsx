@@ -33,14 +33,19 @@ import {
   alterMinuten,
   alterText,
   ART_VON_MODUS,
+  ecWirkung,
   artikelFuerName,
   eigenesWasserZeile,
   fuellstand,
   MODI,
   nachfuellTagebuch,
   nachmessungZeit,
+  phLage,
+  phZielText,
+  planChips,
   uhrzeitText,
   wirksameWerte,
+  zielAbstandEc,
   type Modus,
   type WasserWahl,
 } from './nachfuell-rechnung'
@@ -77,6 +82,9 @@ function fehlerText(caught: unknown, ersatz: string): string {
  * Die Vorschläge rechnet das Backend (`GET …/mixing-plan/vorschlag`); hier wird nichts davon
  * nachgerechnet, nur die Mischung im Tank (`ecTankDanach`) — mit Etikett „Mischrechnung".
  */
+/** Was `GET …/mixing-plan` über den Plan dieser Woche sagt — für den Kasten „Dein Plan heute". */
+type PlanKopf = { volumenLiter: number | null; programmName: string | null; ecZiel: number | null; phMin: number | null; phMax: number | null }
+
 export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung = null, onGespeichert }: {
   growId: number
   /** Welcher Fall beim Öffnen gewählt ist (`?modus=`) — für Links und für die Oberflächen-Prüfungen. */
@@ -116,6 +124,8 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
   const [profil, setProfil] = useState<Wasserprofil | null>(null)
   const [sensorJetzt, setSensorJetzt] = useState<WasserwechselSensorDto | null | undefined>(undefined)
   const [sensorStand, setSensorStand] = useState<{ fuer: string; daten: WasserwechselSensorDto | null } | null>(null)
+  const [plan, setPlan] = useState<PlanKopf | null>(null)
+  const [anker, setAnker] = useState<GrowDetail['phasenanker'] | null>(null)
   const [vorschlagRoh, setVorschlag] = useState<MischplanVorschlag | null>(null)
   const [vorschlagFehler, setVorschlagFehler] = useState<string | null>(null)
   const [speichert, setSpeichert] = useState(false)
@@ -127,7 +137,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
     const controller = new AbortController()
     void (async () => {
       const [plan, g, liste, wasserprofil, einstellung] = await Promise.all([
-        apiFetch<{ volumenLiter: number | null }>(`/api/grows/${growId}/mixing-plan`, { signal: controller.signal }).catch(() => null),
+        apiFetch<PlanKopf>(`/api/grows/${growId}/mixing-plan`, { signal: controller.signal }).catch(() => null),
         apiFetch<GrowDetail>(`/api/grows/${growId}`, { signal: controller.signal }).catch(() => null),
         apiFetch<Artikel[]>('/api/kosten/artikel', { signal: controller.signal }).catch(() => [] as Artikel[]),
         apiFetch<Wasserprofil>('/api/water-profile', { signal: controller.signal }).catch(() => null),
@@ -135,6 +145,8 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
       ])
       if (controller.signal.aborted) return
       setAnlageLiter(plan?.volumenLiter ?? null)
+      setPlan(plan)
+      setAnker(g?.phasenanker ?? null)
       setArtikel(liste.filter((a) => a.aktiv))
       setProfil(wasserprofil)
       if (g?.waterSource && !vorbelegung?.wasser) setWasserWahl(g.waterSource)
@@ -255,6 +267,12 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
     ? (ecMitDeinenMengen(wasserEc, vorschlag?.ecZielDuenger ?? null, anteilPlanDosis(zeilen, wirksameWerte(eigen, abgewaehlt))) ?? wasserEc)
     : wasserEc
   const ecErwartet = modus === 'zusatz' ? null : ecTankDanach(fl.vorher, vorherEc, literZahl, ecLoesung)
+  const ecZielTank = vorschlag?.ecZielGesamt ?? plan?.ecZiel ?? null
+  const phMin = vorschlag?.phMin ?? plan?.phMin ?? null
+  const phMax = vorschlag?.phMax ?? plan?.phMax ?? null
+  const planZeit = planChips(anker)
+  const wirkung = modus === 'zusatz' ? null : ecWirkung(vorherEc, ecErwartet)
+  const ecAnteilDuenger = modus === 'mix' && ecLoesung != null && wasserEc != null ? ecLoesung - wasserEc : null
   const wasserPh = wasserWahl === 'eigen' ? zahlOderNull(eigenW.ph) : wasserWahl === 'Tap' ? (profil?.treatedPh ?? profil?.ph ?? null) : null
 
   // ---- Nachmessung
@@ -431,6 +449,29 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
         )}
       </div>
 
+      {/* ---- Dein Plan heute */}
+      {plan?.programmName && (
+        <div className="nf-plan" data-audit="nachfuellen-plan">
+          <div className="k">Dein Plan heute</div>
+          {planZeit && <div className="kz"><span>{planZeit.tag}</span><span>{planZeit.woche}</span></div>}
+          <div className="nm">Plan: <b>{plan.programmName}</b></div>
+          <div className="ziel">
+            <div>
+              <span className="k">EC-Ziel</span>
+              <b>{ecZielTank != null ? `${zahl(ecZielTank, 2)} mS/cm` : '–'}</b>
+              {vorschlag?.ecZielDuenger != null && vorschlag.wasserEc != null && <small>Dünger {zahl(vorschlag.ecZielDuenger, 2)} + Wasser {zahl(vorschlag.wasserEc, 2)}</small>}
+            </div>
+            <div>
+              <span className="k">pH-Ziel</span>
+              <b>{phZielText(phMin, phMax) ?? '–'}</b>
+              {phLage(sensorJetzt?.ph?.wert ?? null, phMin, phMax) && <small>Tank jetzt {zahl(sensorJetzt!.ph!.wert, 2)} · {phLage(sensorJetzt?.ph?.wert ?? null, phMin, phMax)}</small>}
+              {phLage(sensorJetzt?.ph?.wert ?? null, phMin, phMax) == null && sensorJetzt?.ph != null && <small>Tank jetzt {zahl(sensorJetzt.ph.wert, 2)}</small>}
+            </div>
+          </div>
+          {zielAbstandEc(sensorJetzt?.ec?.wert ?? null, ecZielTank) && <div className="abstand">{zielAbstandEc(sensorJetzt?.ec?.wert ?? null, ecZielTank)}</div>}
+        </div>
+      )}
+
       {/* ---- 1 · Was hast du gemacht? */}
       <div className="v1-eyebrow nf-ek nf-abschnitt"><span className="nf-nr">1</span>Was hast du gemacht?</div>
       {modusKnoepfe}
@@ -603,7 +644,28 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
       )}
 
       {/* ---- Erwartung */}
-      <div className="v1-eyebrow nf-abschnitt">So sieht das Reservoir danach aus (Erwartung, keine Messung)</div>
+      {modus === 'mix' && ecLoesung != null && literZahl != null && literZahl > 0 && (
+        <>
+          <div className="v1-eyebrow nf-abschnitt">Die neue Lösung (so mischst du an)</div>
+          <div className="nf-vor nf-neu" data-audit="nachfuellen-neue-loesung">
+            <div>
+              <div className="k">EC</div>
+              <div className="z">≈ {zahl(ecLoesung, 2)}</div>
+              <div className="n">
+                {wasserEc != null && ecAnteilDuenger != null ? `${zahl(wasserEc, 2)} Wasser + ${zahl(ecAnteilDuenger, 2)} Dünger` : 'Wasser + Dünger'}
+                {ecZielTank != null && Math.abs(ecLoesung - ecZielTank) < 0.005 && <><br />= Ziel laut Plan ✓</>}
+              </div>
+            </div>
+            <div>
+              <div className="k">pH</div>
+              <div className="z">{phZielText(phMin, phMax) ?? '–'}</div>
+              <div className="n">{phMin != null && phMax != null ? 'Ziel laut Plan · ' : ''}nach dem Anmischen messen und einstellen</div>
+            </div>
+            <div className="nf-neu-hin">Gilt für die Menge, die du ansetzt – im Extratank oder direkt im Tank. Trag oben nur die Liter ein, die du in den Tank gießt.</div>
+          </div>
+        </>
+      )}
+      <div className="v1-eyebrow nf-abschnitt">{mitWasser ? `Im Tank danach (${literZahl != null && literZahl > 0 ? `${zahl(literZahl, Number.isInteger(literZahl) ? 0 : 1)} L dazu` : 'Erwartung, keine Messung'})` : 'So sieht das Reservoir danach aus (Erwartung, keine Messung)'}</div>
       <div className="nf-vor" data-audit="nachfuellen-erwartung">
         <div>
           <div className="k">Volumen</div>
@@ -622,11 +684,12 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
                 : modus === 'mix' ? `Mischrechnung mit deinen Mengen${vorschlag?.ecZielGesamt != null ? `; Ziel ${zahl(vorschlag.ecZielGesamt, 2)}` : ''}`
                   : 'Mischrechnung — ohne Dünger sinkt der EC'}
           </div>
+          {wirkung && <span className={classNames('nf-wirkung', wirkung.richtung)}>{wirkung.text}</span>}
         </div>
         <div>
           <div className="k">pH</div>
-          <div className="z">{vorherPh != null ? zahl(vorherPh, 2) : '–'}</div>
-          <div className="n">{modus === 'zusatz' ? 'pH-Zusätze ändern ihn — nachmessen' : wasserPh != null && wasserWahl !== 'RO' ? `${wasserName} hat pH ${zahl(wasserPh, 1)} — nachmessen` : 'nach dem Durchmischen nachmessen'}</div>
+          <div className="z">{vorherPh != null ? zahl(vorherPh, 2) : '–'}{vorherPh != null && modus !== 'zusatz' && <small className="nf-jetzt">jetzt</small>}</div>
+          <div className="n">{modus === 'zusatz' ? 'pH-Zusätze ändern ihn — nachmessen' : `wird nicht vorausberechnet – nach dem Durchmischen nachmessen${wasserPh != null && wasserWahl !== 'RO' ? ` (${wasserName} hat pH ${zahl(wasserPh, 1)})` : ''}`}</div>
         </div>
       </div>
 

@@ -7,11 +7,16 @@ import {
   artikelFuerName,
   eigenesWasserZeile,
   fuellstand,
+  ecWirkung,
   MODI,
   nachmessungZeit,
   nachfuellTagebuch,
   normalisiert,
+  phLage,
+  phZielText,
+  planChips,
   uhrzeitText,
+  zielAbstandEc,
   wirksameWerte,
 } from './nachfuell-rechnung'
 
@@ -152,5 +157,49 @@ describe('Abgewählte Zeilen zählen nicht', () => {
   it('eine eigene Menge wird von der Abwahl überstimmt, nicht umgekehrt', () => {
     expect(mengeDerZeile(A, wirksameWerte({ [A.schluessel]: '250' }, new Set([A.schluessel])))).toBe(0)
     expect(mengeDerZeile(A, wirksameWerte({ [A.schluessel]: '250' }, new Set()))).toBe(250)
+  })
+})
+
+describe('Dein Plan heute (A-006, Plankasten)', () => {
+  it('Blüte: „Tag 35" und „Blütewoche 5" — die Woche steht genau einmal', () => {
+    expect(planChips({ phase: 'Bluete', tagInPhase: 35, wocheInPhase: 5 })).toEqual({ tag: 'Tag 35', woche: 'Blütewoche 5' })
+  })
+
+  it('andere Phasen nennen ihre Phase bei der Woche', () => {
+    expect(planChips({ phase: 'Veg', tagInPhase: 9, wocheInPhase: 2 })).toEqual({ tag: 'Tag 9', woche: 'Woche 2 Wachstum' })
+  })
+
+  it('ohne Phasenanker oder ohne Tageszahl: keine Chips statt erfundener Zahlen', () => {
+    expect(planChips(null)).toBeNull()
+    expect(planChips({ phase: 'Bluete', tagInPhase: 0, wocheInPhase: 0 })).toBeNull()
+  })
+
+  it('Abstand zum EC-Ziel in Worten', () => {
+    expect(zielAbstandEc(1.18, 1.2)).toBe('Jetzt im Tank: EC 1,18 · Ziel 1,20 → 0,02 darunter')
+    expect(zielAbstandEc(1.35, 1.2)).toBe('Jetzt im Tank: EC 1,35 · Ziel 1,20 → 0,15 darüber')
+    expect(zielAbstandEc(1.2, 1.2)).toBe('Jetzt im Tank: EC 1,20 · Ziel 1,20 → im Ziel')
+    expect(zielAbstandEc(null, 1.2)).toBeNull()
+    expect(zielAbstandEc(1.2, null)).toBeNull()
+  })
+
+  it('pH-Lage gegen das Band des Plans', () => {
+    expect(phLage(6.06, 5.8, 6.2)).toBe('im Ziel')
+    expect(phLage(5.5, 5.8, 6.2)).toBe('darunter')
+    expect(phLage(6.5, 5.8, 6.2)).toBe('darüber')
+    expect(phLage(6.06, null, 6.2)).toBeNull()
+    expect(phLage(null, 5.8, 6.2)).toBeNull()
+    // Punktziel: kein Band, also keine Lage und nur eine Zahl im Text
+    expect(phLage(5.86, 5.8, 5.8)).toBeNull()
+    expect(phZielText(5.8, 5.8)).toBe('5,8')
+    expect(phZielText(5.8, 6.2)).toBe('5,8–6,2')
+    expect(phZielText(null, 6.2)).toBeNull()
+  })
+
+  it('Wirkung auf den Tank: bleibt, sinkt, steigt', () => {
+    expect(ecWirkung(1.18, 1.18)).toEqual({ text: 'Wirkung ±0,00 – EC bleibt', richtung: 'gleich' })
+    expect(ecWirkung(1.18, 1.183)).toEqual({ text: 'Wirkung ±0,00 – EC bleibt', richtung: 'gleich' })
+    expect(ecWirkung(1.18, 0.9697)).toEqual({ text: 'Wirkung −0,21 – EC sinkt', richtung: 'sinkt' })
+    expect(ecWirkung(1.18, 1.3)).toEqual({ text: 'Wirkung +0,12 – EC steigt', richtung: 'steigt' })
+    expect(ecWirkung(null, 1.3)).toBeNull()
   })
 })
