@@ -1,16 +1,16 @@
 import type { TagebuchSprungDto } from '../../types'
-import { feldText } from '../../zahlenfeld'
+import { feldText, zahlOderNull } from '../../zahlenfeld'
 import { sprungSatz } from './tagebuch-modell'
 
 /**
  * „Nachfüllen eintragen" an einer Auffälligkeit — die EINE Stelle, die
  * entscheidet, wohin der Knopf führt und was vorbelegt wird.
  *
- * Heute öffnet er das kleine Formular in der Zeile (POST Nachfüllen ins
- * Addback-Protokoll). Sobald Addback als Vorgang mit vorbelegbarer Adresse da
- * ist (Branch `feat/addback-vorgang`), liefert `nachfuellenWeg` stattdessen
- * `{ art: 'adresse', to }` — `AuffaelligAktionen` folgt dann der Adresse,
- * sonst ändert sich nichts. Die Vorbelegung bleibt dieselbe.
+ * Seit A-006 Etappe 3 führt er in den Nachfüll-Ablauf auf `/addback`
+ * (ein Vorgang: Eintrag, Messung vorher/nachher, Verbrauch, Tagebuchzeile),
+ * vorbelegt über die Adresse — `vorbelegungAusLink` in
+ * `features/vorgang/ablauf-rechnung.ts` liest sie. Das kleine Formular in der
+ * Zeile, das nur einen Addback-Eintrag schrieb, entfällt: ein Weg, nicht zwei.
  */
 
 /** Was vorbelegt wird — Zeitpunkt in Ortszeit der Anlage, Zahlen mit Komma. */
@@ -27,13 +27,24 @@ export type NachfuellenVorbelegung = {
   notiz: string
 }
 
-export type NachfuellenWeg = { art: 'formular' } | { art: 'adresse'; to: string }
+export type NachfuellenWeg = { art: 'adresse'; to: string }
 
-/** Wohin „Nachfüllen eintragen" führt. Umstellen auf den Addback-Vorgang: nur hier. */
+/** Wohin „Nachfüllen eintragen" führt: der Nachfüll-Ablauf, vorbelegt. Umstellen: nur hier. */
 export function nachfuellenWeg(growId: string, vorbelegung: NachfuellenVorbelegung): NachfuellenWeg {
-  void growId
-  void vorbelegung
-  return { art: 'formular' }
+  const suche = new URLSearchParams({ growId, zeitpunkt: vorbelegung.zeitpunktUtc })
+  const zahlen: Array<[string, string]> = [
+    ['liter', vorbelegung.liter], ['ecVorher', vorbelegung.ecVorher], ['ecNachher', vorbelegung.ecNachher],
+    ['phVorher', vorbelegung.phVorher], ['phNachher', vorbelegung.phNachher],
+  ]
+  // Feldtext („1,75") über die eine Leseregel der App, in die Adresse in Maschinenform („1.75").
+  for (const [name, feld] of zahlen) {
+    const wert = zahlOderNull(feld)
+    if (wert != null) suche.set(name, String(wert))
+  }
+  // Die Werte kommen vom Sensor (die Auffälligkeit ist ein Sensorsprung).
+  suche.set('quelle', 'sensor')
+  if (vorbelegung.notiz.trim() !== '') suche.set('notiz', vorbelegung.notiz)
+  return { art: 'adresse', to: `/addback?${suche.toString()}` }
 }
 
 function wert(befunde: TagebuchSprungDto[], messgroesse: string, seite: 'vorher' | 'nachher'): string {

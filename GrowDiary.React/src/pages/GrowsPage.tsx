@@ -104,7 +104,7 @@ function GrowCard({ grow }: { grow: GrowSummary }) {
         <div className="gc-facts">{factsLine(grow)}</div>
         <div className="co-actions" data-audit="grow-list-actions">
           <Link className="ls-btn is-small is-primary" to={`/grows/${grow.id}`}>Öffnen</Link>
-          {running && <Link className="ls-btn is-small" to={`/grows/${grow.id}/addback`}>Addback</Link>}
+          {running && <Link className="ls-btn is-small" to={`/addback?growId=${grow.id}`}>Addback</Link>}
           <Link className="ls-btn is-small" to={`/grows/${grow.id}/setup`}>Bearbeiten</Link>
         </div>
       </div>

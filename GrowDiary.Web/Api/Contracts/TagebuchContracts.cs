@@ -110,6 +110,10 @@ public sealed record TagebuchWechselDto(
     string? Notiz,
     TagebuchNotizDto? Journal);
 
+/// <param name="VorgangId">Der Nachfüll-Vorgang (A-006, Etappe 3) — <c>null</c> bei Altdaten.</param>
+/// <param name="Vorher">Nur am Vorgang: die Messung vorher mit allen Werten (DO, ORP …).</param>
+/// <param name="Nachher">Nur am Vorgang: die Messung nachher.</param>
+/// <param name="Journal">Nur am Vorgang: seine Tagebuchzeile.</param>
 public sealed record TagebuchAddbackDto(
     int Id,
     string Art,
@@ -119,7 +123,11 @@ public sealed record TagebuchAddbackDto(
     double? PhVorher,
     double? PhNachher,
     string? Wasser,
-    string? Notiz);
+    string? Notiz,
+    int? VorgangId = null,
+    TagebuchWerteDto? Vorher = null,
+    TagebuchWerteDto? Nachher = null,
+    TagebuchNotizDto? Journal = null);
 
 /// <param name="Messgroesse">Woran die Pumpe arbeitet: „pH", „EC" — null bei eigenem Mittel.</param>
 public sealed record TagebuchDosisDto(

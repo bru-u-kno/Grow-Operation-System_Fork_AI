@@ -203,31 +203,47 @@ test('Rundweg: AuffaelligAktionen — Notiz dazu und Nachfüllen eintragen, beid
   await page.reload({ waitUntil: 'networkidle' })
   await expect(auffaellig(page)).toHaveCount(1)
 
-  // --- Nachfüllen eintragen: vorbelegt mit EC davor/danach, Liter mit Komma.
+  // --- Nachfüllen eintragen: führt in den Nachfüll-Ablauf (A-006, Etappe 3),
+  // vorbelegt mit Zeitpunkt und EC davor/danach — ein Vorgang, kein zweites Formular.
   await auffaellig(page).locator('[data-audit="tagebuch-nachfuellen"]').click()
-  const form = page.locator('[data-audit="tagebuch-nachfuellen-form"]')
-  await expect(form.getByLabel('EC vorher')).toHaveValue(/^\d,\d+$/)
-  await expect(form.getByLabel('EC nachher')).toHaveValue(/^\d,\d+$/)
-  await form.getByLabel('Liter nachgefüllt').fill('12,5')
-  await form.getByLabel('Notiz').fill(MARKE)
-  const rumpf = await gesendet(page, 'POST', /\/api\/grows\/1\/addback\/logs$/,
-    () => form.getByRole('button', { name: 'Nachfüllen speichern' }).click())
-  expect(rumpf.kind).toBe('TopOff')
-  expect(rumpf.litersAdded).toBe(12.5)
-  expect(typeof rumpf.ecBefore).toBe('number')
-  expect((rumpf.ecBefore as number) - (rumpf.ecAfter as number)).toBeGreaterThan(0.1)
+  await expect(page).toHaveURL(/\/addback\?growId=1&zeitpunkt=/)
+  const ablauf = page.locator('[data-audit="addback-ablauf"]')
+  await expect(ablauf.getByText('Vorbelegt aus dem Link')).toBeVisible()
+  await expect(page.locator('[data-audit="addback-sensor"]')).toContainText('Vom Sensor, aus dem Link')
+  await page.locator('[data-audit="addback-weiter-2"]').click()
+  await ablauf.getByLabel('Art des Nachfüllens').selectOption('TopOff')
+  await ablauf.getByLabel('Nachgefüllt in Litern').fill('12,5')
+  await page.locator('[data-audit="addback-weiter-3"]').click()
+  await expect(ablauf.getByPlaceholder('z. B. 1,15')).toHaveValue(/^\d,\d+$/)
+  await expect(ablauf.getByPlaceholder(/Warum nachgefüllt/)).toHaveValue(/Nachgetragen aus dem Tagebuch/)
+  await ablauf.getByPlaceholder(/Warum nachgefüllt/).fill(MARKE)
+  await page.locator('[data-audit="addback-weiter-4"]').click()
+  const rumpf = await gesendet(page, 'POST', /\/api\/grows\/1\/addback\/vorgaenge$/,
+    () => page.locator('[data-audit="addback-speichern"]').click())
+  expect(rumpf.art).toBe('TopOff')
+  expect(rumpf.liter).toBe(12.5)
+  const vorher = rumpf.vorher as { reservoirEc: number; herkunft: string }
+  const nachher = rumpf.nachher as { reservoirEc: number }
+  expect(vorher.herkunft).toBe('Sensor')
+  expect(vorher.reservoirEc - nachher.reservoirEc).toBeGreaterThan(0.1)
 
-  await page.reload({ waitUntil: 'networkidle' })
+  await oeffnen(page)
   await expect(auffaellig(page)).toHaveCount(0)
   const nachgefuellt = page.locator('[data-audit="tagebuch-ereignis-addback"]').filter({ hasText: MARKE })
   await expect(nachgefuellt).toContainText('Nachfüllen 12,5 L')
+  // Gebündelt wie der Wechsel: Vorher/Nachher, Posten, „Vorgang öffnen" — keine eigene Messzeile.
+  await expect(nachgefuellt.getByRole('table', { name: 'Vorher und nachher' })).toBeVisible()
+  await expect(nachgefuellt).toContainText(/Posten im Verbrauch gebucht/)
+  await expect(nachgefuellt.getByRole('link', { name: 'Vorgang öffnen' })).toHaveAttribute('href', /\/addback\?growId=1&vorgang=\d+/)
 
-  // Aufräumen über „Entfernen" — der Löschweg gehört zum Rundweg.
+  // Aufräumen über „Entfernen" — der Löschweg gehört zum Rundweg und nimmt den ganzen Vorgang.
   page.once('dialog', (d) => void d.accept())
   await gesendet(page, 'DELETE', /\/api\/grows\/1\/addback\/logs\/\d+$/,
     () => nachgefuellt.getByRole('button', { name: /entfernen$/ }).click())
   await page.reload({ waitUntil: 'networkidle' })
   await expect(auffaellig(page)).toHaveCount(1)
+  const rest = await (await page.request.get('/api/grows/1/addback/vorgaenge')).json() as Array<{ eintrag: { notes: string | null } | null }>
+  expect(rest.filter((v) => v.eintrag?.notes === MARKE)).toEqual([])
 })
 
 test('Rundweg: NotizBearbeiten — eine Notiz im Tagebuch korrigieren, zweimal', async ({ page }) => {
@@ -261,7 +277,7 @@ test('Rundweg: NotizBearbeiten — eine Notiz im Tagebuch korrigieren, zweimal',
 
 test('Handy: alles aufgeklappt, Formular offen — nichts ragt über den Rand (320–768 px, beide Themen)', async ({ page }) => {
   // handy-zuschnitt misst die Seite im Ausgangszustand — die Kurven und das
-  // Nachfüll-Formular sind dann zu. Hier im aufgeklappten Zustand.
+  // Notiz-Formular sind dann zu. Hier im aufgeklappten Zustand.
   await oeffnen(page)
   const gemessen: string[] = []
   for (const thema of ['dark', 'light']) {
@@ -271,8 +287,9 @@ test('Handy: alles aufgeklappt, Formular offen — nichts ragt über den Rand (3
       await page.goto(ADRESSE, { waitUntil: 'networkidle' })
       await page.locator('[data-audit="tagebuch-alle-kurven"]').click()
       await expect(page.locator('[data-audit="tagebuch-kurve-reservoir-ec"]').first()).toBeVisible()
-      await auffaellig(page).locator('[data-audit="tagebuch-nachfuellen"]').click()
-      await expect(page.locator('[data-audit="tagebuch-nachfuellen-form"]')).toBeVisible()
+      // „Nachfüllen eintragen" führt seit A-006 Etappe 3 auf /addback — offen bleibt hier die Notiz.
+      await auffaellig(page).locator('[data-audit="tagebuch-notiz-dazu"]').click()
+      await expect(page.locator('[data-audit="tagebuch-notiz-form"]')).toBeVisible()
       const befund = await page.evaluate(() => {
         const raus: string[] = []
         const rand = document.documentElement.clientWidth

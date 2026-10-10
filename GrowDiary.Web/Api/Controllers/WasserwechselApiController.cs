@@ -1,4 +1,3 @@
-using System.Globalization;
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Api.Mapping;
 using GrowDiary.Web.Infrastructure;
@@ -6,7 +5,6 @@ using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace GrowDiary.Web.Api.Controllers;
 
@@ -32,9 +30,6 @@ namespace GrowDiary.Web.Api.Controllers;
 [KiStufe(KiStufe.Dokumentieren)]
 public sealed class WasserwechselApiController : ApiControllerBase
 {
-    /// <summary>Format von <see cref="WasserwechselVorgangRequest.ZeitpunktLokal"/>.</summary>
-    private const string ZeitFormat = "yyyy-MM-ddTHH:mm";
-
     /// <summary>
     /// So weit sucht „vorher" zurück: 30 Minuten.
     /// </summary>
@@ -121,7 +116,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
         var grow = _grows.GetGrow(growId);
         if (grow is null) return NotFoundError("grow_not_found", $"Grow mit Id {growId} existiert nicht.");
 
-        var bis = zeitpunkt is { } z ? ZuUtc(z) : DateTime.UtcNow;
+        var bis = zeitpunkt is { } z ? VorgangEingabe.ZuUtc(z) : DateTime.UtcNow;
         if (grow.TentId is not { } zelt)
         {
             return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, null, null, null, "Der Grow steht in keinem Zelt — es gibt keine Sensoren dazu."));
@@ -151,105 +146,24 @@ public sealed class WasserwechselApiController : ApiControllerBase
         if (grow is null) return NotFoundError("grow_not_found", $"Grow mit Id {growId} existiert nicht.");
         if (!ModelState.IsValid) return ValidationError();
 
-        // ---- Zeitpunkt
-        var zeitpunkt = DateTime.Now;
-        if (!string.IsNullOrWhiteSpace(request.ZeitpunktLokal))
-        {
-            if (!DateTime.TryParse(request.ZeitpunktLokal, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out zeitpunkt))
-            {
-                ModelState.AddModelError(nameof(request.ZeitpunktLokal), "Datum oder Uhrzeit konnten nicht gelesen werden.");
-                return ValidationError();
-            }
-        }
-
-        // Wie beim Wechsel: ein Zeitpunkt in der Zukunft ist ein Plan, keine Erfassung.
-        if (zeitpunkt.ToUniversalTime() > DateTime.UtcNow.AddHours(1))
-        {
-            ModelState.AddModelError(nameof(request.ZeitpunktLokal), "Der Zeitpunkt liegt in der Zukunft. Ein Wasserwechsel wird erfasst, nachdem er war.");
-        }
+        var eingabe = new VorgangEingabe(ModelState, _sperre);
+        var zeitpunkt = eingabe.Zeitpunkt(request.ZeitpunktLokal, nameof(request.ZeitpunktLokal), "Ein Wasserwechsel wird erfasst, nachdem er war.");
 
         // ---- Wechsel
-        if (request.Liter is not { } liter || !double.IsFinite(liter) || liter <= 0)
-        {
-            ModelState.AddModelError(nameof(request.Liter), "Wie viele Liter hast du neu angesetzt? Die Menge muss größer als 0 sein.");
-        }
-
+        eingabe.LiterPruefen(request.Liter, nameof(request.Liter), "Wie viele Liter hast du neu angesetzt?");
         if (!Enum.IsDefined(request.Art)) ModelState.AddModelError(nameof(request.Art), "Die Art des Wechsels ist ungültig.");
-        if (!Enum.IsDefined(request.Wasser)) ModelState.AddModelError(nameof(request.Wasser), "Die Wasserart ist ungültig.");
-
-        if (request.Wasser == WaterSource.Mixed && request.OsmoseProzent is not (>= 0 and <= 100))
-        {
-            ModelState.AddModelError(nameof(request.OsmoseProzent), "Bei einer Mischung fehlt der Anteil Osmose (0–100 %).");
-        }
-
-        MeasurementSanityService.PhysikGrenze(ModelState, nameof(request.WasserEcMsCm), "ec", request.WasserEcMsCm, "Der EC des Wassers");
+        eingabe.WasserPruefen(request.Wasser, request.OsmoseProzent, request.WasserEcMsCm);
 
         // ---- Messungen: dieselbe Sperre wie jede Messung
-        var vorher = AlsMessung(grow, request.Vorher, "Vorher", zeitpunkt.AddMinutes(-1), solutionChange: false,
-            notiz: VorherNotiz(request.Vorher));
-        var nachher = AlsMessung(grow, request.Nachher, "Nachher", zeitpunkt, solutionChange: request.ErinnerungNeuStarten,
+        var vorher = eingabe.AlsMessung(grow, request.Vorher, "Vorher", zeitpunkt.AddMinutes(-1), solutionChange: false,
+            notiz: VorgangEingabe.VorherNotiz(request.Vorher, "Vor dem Wasserwechsel"));
+        var nachher = eingabe.AlsMessung(grow, request.Nachher, "Nachher", zeitpunkt, solutionChange: request.ErinnerungNeuStarten,
             notiz: "Nach dem Wasserwechsel.");
+        eingabe.VorherVorDemVorgang(vorher, zeitpunkt, "Wechsel");
 
-        if (vorher is not null && vorher.TakenAt > zeitpunkt)
-        {
-            ModelState.AddModelError("Vorher.ZeitpunktLokal", "Die Werte „vorher“ liegen nach dem Wechsel.");
-        }
-
-        // ---- Buchungen
-        var artikel = _kosten.GetArtikel().ToDictionary(a => a.Id);
-        var buchungen = new List<VorgangBuchungEntwurf>();
-        for (var i = 0; i < request.Buchungen.Count; i++)
-        {
-            var b = request.Buchungen[i];
-            var feld = $"Buchungen[{i}]";
-            if (!double.IsFinite(b.Menge) || b.Menge <= 0)
-            {
-                ModelState.AddModelError($"{feld}.Menge", "Die Menge muss größer als 0 sein.");
-                continue;
-            }
-
-            if (b.ArtikelId is { } id)
-            {
-                if (!artikel.ContainsKey(id)) ModelState.AddModelError($"{feld}.ArtikelId", $"Verbrauchsartikel {id} existiert nicht.");
-                else buchungen.Add(new VorgangBuchungEntwurf(id, null, b.Menge));
-            }
-            else if (b.Wasser is WaterSource.Tap or WaterSource.RO)
-            {
-                buchungen.Add(new VorgangBuchungEntwurf(null,
-                    b.Wasser == WaterSource.RO ? WasserwechselVorgangRepository.OsmosewasserArtikel : WasserwechselVorgangRepository.LeitungswasserArtikel,
-                    b.Menge));
-            }
-            else
-            {
-                ModelState.AddModelError($"{feld}.ArtikelId", "Jede Buchung braucht einen Artikel oder die Wasserart (Leitung oder Osmose).");
-            }
-        }
-
-        // ---- Tagebuch
-        JournalEntry? tagebuch = null;
-        if (request.Tagebuch is { } tb)
-        {
-            var titel = tb.Titel?.Trim();
-            var text = tb.Text?.Trim();
-            if (string.IsNullOrEmpty(titel) && string.IsNullOrEmpty(text))
-            {
-                ModelState.AddModelError("Tagebuch.Titel", "Für die Tagebuchzeile fehlt Titel oder Text.");
-            }
-            else
-            {
-                tagebuch = new JournalEntry
-                {
-                    GrowId = growId,
-                    Title = string.IsNullOrEmpty(titel) ? null : titel,
-                    Body = string.IsNullOrEmpty(text) ? null : text,
-                    // Seit A-006 setzt nur noch der Ablauf diese Art — das freie
-                    // Journal-Formular bietet sie nicht mehr an.
-                    EntryType = JournalEntryType.ReservoirChange,
-                    Source = ValueOrigin.Manual,
-                    OccurredAtUtc = zeitpunkt.ToUniversalTime(),
-                };
-            }
-        }
+        // ---- Buchungen und Tagebuch
+        var buchungen = eingabe.Buchungen(request.Buchungen, _kosten.GetArtikel().ToDictionary(a => a.Id));
+        var tagebuch = eingabe.Tagebuch(request.Tagebuch, growId, JournalEntryType.ReservoirChange, zeitpunkt);
 
         if (!ModelState.IsValid) return ValidationError();
 
@@ -283,8 +197,8 @@ public sealed class WasserwechselApiController : ApiControllerBase
             Buchungen = buchungen,
             Tagebuch = tagebuch,
             OsmoseProzent = request.Wasser == WaterSource.Mixed ? request.OsmoseProzent : null,
-            VorherHerkunft = vorher is null ? null : NormalisierteHerkunft(request.Vorher?.Herkunft),
-            VorherSensorZeitUtc = vorher is null ? null : request.Vorher?.SensorZeitUtc is { } sz ? ZuUtc(sz) : null,
+            VorherHerkunft = VorgangEingabe.VorherVermerk(vorher, request.Vorher).Herkunft,
+            VorherSensorZeitUtc = VorgangEingabe.VorherVermerk(vorher, request.Vorher).SensorZeitUtc,
         });
 
         foreach (var messung in new[] { vorher, nachher }.OfType<Measurement>())
@@ -316,81 +230,9 @@ public sealed class WasserwechselApiController : ApiControllerBase
             : NotFoundError("vorgang_not_found", $"Zu diesem Grow gibt es keinen Wasserwechsel-Vorgang {vorgangId}.");
     }
 
-    /// <summary>
-    /// Die Messwerte des Ablaufs als Messung — oder <c>null</c>, wenn keiner da ist.
-    /// </summary>
-    /// <remarks>
-    /// Geprüft mit <see cref="MeasurementSanityService.ApplyBlockingValidation"/>,
-    /// also mit denselben Grenzen wie jede Messung (<c>MessfelderVollstaendigTests</c>).
-    /// Die Fehler bekommen den Abschnitt vorangestellt („Vorher.ReservoirEc"),
-    /// damit die Oberfläche weiß, in welchem Schritt sie stehen.
-    /// </remarks>
-    private Measurement? AlsMessung(GrowRun grow, VorgangMessungRequest? werte, string abschnitt, DateTime standardZeit, bool solutionChange, string notiz)
-    {
-        if (werte is null) return null;
-        if (werte.ReservoirEc is null && werte.ReservoirPh is null && werte.ReservoirWaterTempC is null
-            && werte.DissolvedOxygenMgL is null && werte.OrpMv is null)
-        {
-            return null;
-        }
-
-        var zeit = standardZeit;
-        if (!string.IsNullOrWhiteSpace(werte.ZeitpunktLokal)
-            && !DateTime.TryParse(werte.ZeitpunktLokal, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out zeit))
-        {
-            ModelState.AddModelError($"{abschnitt}.ZeitpunktLokal", "Datum oder Uhrzeit konnten nicht gelesen werden.");
-            return null;
-        }
-
-        var messung = new Measurement
-        {
-            GrowId = grow.Id,
-            TakenAt = zeit,
-            Stage = GrowStageResolver.Resolve(grow, zeit.Date),
-            Source = NormalisierteHerkunft(werte.Herkunft) == "Sensor" ? ValueOrigin.HomeAssistant : ValueOrigin.Manual,
-            Notes = notiz,
-            ReservoirEc = werte.ReservoirEc,
-            ReservoirPh = werte.ReservoirPh,
-            ReservoirWaterTempC = werte.ReservoirWaterTempC,
-            DissolvedOxygenMgL = werte.DissolvedOxygenMgL,
-            OrpMv = werte.OrpMv,
-            SolutionChange = solutionChange,
-        };
-
-        var fehler = new ModelStateDictionary();
-        _sperre.ApplyBlockingValidation(fehler, grow, messung);
-        foreach (var (feld, eintrag) in fehler)
-        {
-            foreach (var e in eintrag.Errors) ModelState.AddModelError($"{abschnitt}.{feld}", e.ErrorMessage);
-        }
-
-        return messung;
-    }
-
-    private static string VorherNotiz(VorgangMessungRequest? vorher)
-        => NormalisierteHerkunft(vorher?.Herkunft) switch
-        {
-            "Sensor" => "Vor dem Wasserwechsel — Werte vom Sensor übernommen.",
-            "gemischt" => "Vor dem Wasserwechsel — teils vom Sensor, teils von Hand.",
-            _ => "Vor dem Wasserwechsel.",
-        };
-
-    private static string NormalisierteHerkunft(string? herkunft)
-        => herkunft?.Trim().ToLowerInvariant() switch
-        {
-            "sensor" => "Sensor",
-            "gemischt" => "gemischt",
-            _ => "Hand",
-        };
-
     private WasserwechselVorgangDto AlsDto(WasserwechselVorgang v, IReadOnlyDictionary<int, Verbrauchsartikel> artikel, IReadOnlyDictionary<int, ChangeoutEntry> wechsel)
     {
-        var buchungen = _vorgaenge.Buchungen(v.Id)
-            .Select(b => new VorgangBuchungDto(b.Id, b.ArtikelId,
-                artikel.TryGetValue(b.ArtikelId, out var a) ? a.Name : $"Artikel {b.ArtikelId}",
-                artikel.TryGetValue(b.ArtikelId, out var e) ? e.Einheit : string.Empty,
-                b.Menge))
-            .ToList();
+        var buchungen = VorgangEingabe.BuchungenAlsDto(_vorgaenge.Buchungen(v.Id), artikel);
         return new WasserwechselVorgangDto(
             v.Id,
             v.GrowId,
@@ -404,12 +246,4 @@ public sealed class WasserwechselApiController : ApiControllerBase
             v.VorherHerkunft,
             v.VorherSensorZeitUtc);
     }
-
-    /// <summary>Ein Zeitpunkt aus der Anfrage: ohne Kennzeichnung gilt Ortszeit.</summary>
-    private static DateTime ZuUtc(DateTime wert) => wert.Kind switch
-    {
-        DateTimeKind.Utc => wert,
-        DateTimeKind.Local => wert.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(wert, DateTimeKind.Local).ToUniversalTime(),
-    };
 }

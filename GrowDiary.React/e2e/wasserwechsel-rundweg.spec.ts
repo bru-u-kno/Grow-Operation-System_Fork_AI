@@ -61,7 +61,7 @@ test.describe('Wasserwechsel-Rundweg', () => {
     }
   })
 
-  test('Rundweg: WasserwechselAblauf — vier Schritte, zurückdatiert, zweimal speichern, wiederfinden, löschen', async ({ page }) => {
+  test('Rundweg: VorgangAblauf (Wasserwechsel) — vier Schritte, zurückdatiert, zweimal speichern, wiederfinden, löschen', async ({ page }) => {
     darfUeberspringen(eigener == null || artikelId == null, 'Kein eigener Grow anlegbar — laeuft die App unter GROW_OS_URL?')
     const growId = eigener!.growId
     page.on('dialog', (dialog) => void dialog.accept())

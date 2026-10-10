@@ -88,6 +88,7 @@ public sealed class TagebuchService
     private readonly DosingRepository _dosierung;
     private readonly KostenRepository _kosten;
     private readonly HardwareRepository _hardware;
+    private readonly AddbackVorgangRepository? _nachfuellVorgaenge;
 
     public TagebuchService(
         GrowRepository grows,
@@ -98,8 +99,10 @@ public sealed class TagebuchService
         DosingRepository dosierung,
         KostenRepository kosten,
         HardwareRepository hardware,
-        WasserwechselVorgangRepository vorgaenge)
+        WasserwechselVorgangRepository vorgaenge,
+        AddbackVorgangRepository? nachfuellVorgaenge = null)
     {
+        _nachfuellVorgaenge = nachfuellVorgaenge;
         _grows = grows;
         _journal = journal;
         _rohwerte = rohwerte;
@@ -222,7 +225,11 @@ public sealed class TagebuchService
         var postenJeVorgang = buchungen.Where(b => b.VorgangId is not null)
             .GroupBy(b => b.VorgangId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(b => Posten(b, artikel)).ToList());
-        var postenJeMessung = buchungen.Where(b => b.MessungId is not null && b.VorgangId is null)
+        // A-006 Etappe 3: dasselbe für den Nachfüll-Vorgang (eigener Verweis).
+        var postenJeNachfuellen = buchungen.Where(b => b.AddbackVorgangId is not null)
+            .GroupBy(b => b.AddbackVorgangId!.Value)
+            .ToDictionary(g => g.Key, g => g.Select(b => Posten(b, artikel)).ToList());
+        var postenJeMessung = buchungen.Where(b => b.MessungId is not null && b.VorgangId is null && b.AddbackVorgangId is null)
             .GroupBy(b => b.MessungId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(b => Posten(b, artikel)).ToList());
         var fotosJeMessung = fotos.Where(f => f.MeasurementId is not null)
@@ -242,6 +249,13 @@ public sealed class TagebuchService
         var gebuendelteMessungen = vorgaenge.Values
             .SelectMany(v => new[] { v.MessungVorherId, v.MessungNachherId }).OfType<int>().ToHashSet();
         var gebuendelteEintraege = vorgaenge.Values.Select(v => v.JournalId).OfType<int>().ToHashSet();
+
+        // Nachfüll-Vorgänge bündeln ihre Messungen und ihre Tagebuchzeile genauso.
+        var nachfuellVorgaenge = (_nachfuellVorgaenge?.FuerGrow(grow.Id) ?? [])
+            .Where(v => v.AddbackLogId is not null)
+            .ToDictionary(v => v.AddbackLogId!.Value);
+        gebuendelteMessungen.UnionWith(nachfuellVorgaenge.Values.SelectMany(v => new[] { v.MessungVorherId, v.MessungNachherId }).OfType<int>());
+        gebuendelteEintraege.UnionWith(nachfuellVorgaenge.Values.Select(v => v.JournalId).OfType<int>());
         foreach (var c in wechsel.OrderBy(c => vorgaenge.ContainsKey(c.Id) ? 0 : 1))
         {
             var utc = Utc(c.PerformedAtUtc);
@@ -329,14 +343,27 @@ public sealed class TagebuchService
                 notiz: Notiz(j), fotos: bilder)));
         }
 
-        // --- Nachfüllen / Addback
+        // --- Nachfüllen / Addback. Seit A-006 Etappe 3 als Vorgang: Messung
+        // vorher/nachher, Buchungen und Tagebuchzeile stehen am Eintrag.
         foreach (var a in addbacks)
         {
             var utc = Utc(a.PerformedAtUtc);
+            nachfuellVorgaenge.TryGetValue(a.Id, out var nv);
+            var vorherMessung = nv?.MessungVorherId is { } mv && messungNachId.TryGetValue(mv, out var m1) ? m1 : null;
+            var nachherMessung = nv?.MessungNachherId is { } mn && messungNachId.TryGetValue(mn, out var m2) ? m2 : null;
+            var eintrag = nv?.JournalId is { } jid && journalNachId.TryGetValue(jid, out var j1) ? j1 : null;
+            var posten = nv is not null && postenJeNachfuellen.TryGetValue(nv.Id, out var pn) ? pn : [];
+            var bilder = new[] { vorherMessung, nachherMessung }.OfType<Measurement>()
+                .SelectMany(m => fotosJeMessung.TryGetValue(m.Id, out var f) ? f : []).ToList();
             liste.Add(new Roh(utc, "addback", 3, () => Ereignis(
                 $"addback-{a.Id}", "addback", utc, AddbackTitel(a), wasser: true,
                 addback: new TagebuchAddbackDto(a.Id, a.Kind.ToString(), a.LitersAdded, a.EcBefore, a.EcAfter,
-                    a.PhBefore, a.PhAfter, a.WaterUsed?.ToString(), Leer(a.Notes)))));
+                    a.PhBefore, a.PhAfter, a.WaterUsed?.ToString(), Leer(a.Notes),
+                    nv?.Id,
+                    nv is null ? null : vorherMessung is not null ? Werte(vorherMessung) : new TagebuchWerteDto(a.PhBefore, a.EcBefore, null, null, null, null, null, null, null, null),
+                    nv is null ? null : nachherMessung is not null ? Werte(nachherMessung) : new TagebuchWerteDto(a.PhAfter, a.EcAfter, null, null, null, null, null, null, null, null),
+                    eintrag is not null ? Notiz(eintrag) : null),
+                posten: posten, fotos: bilder)));
         }
 
         // --- Dosierpumpe
@@ -361,7 +388,7 @@ public sealed class TagebuchService
         }
 
         // --- Gebuchter Verbrauch ohne Messung (CO₂-Steuerung, Nachträge)
-        foreach (var gruppe in buchungen.Where(b => b.MessungId is null && b.VorgangId is null).GroupBy(b => Utc(b.ZeitpunktUtc)))
+        foreach (var gruppe in buchungen.Where(b => b.MessungId is null && b.VorgangId is null && b.AddbackVorgangId is null).GroupBy(b => Utc(b.ZeitpunktUtc)))
         {
             var utc = gruppe.Key;
             var posten = gruppe.Select(b => Posten(b, artikel)).ToList();

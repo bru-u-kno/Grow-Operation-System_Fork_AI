@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
-import type { PhotoAssetDto, TagebuchEreignisDto, TagebuchNotizDto, TagebuchPostenDto, TagebuchWechselDto } from '../../types'
+import type { PhotoAssetDto, TagebuchEreignisDto, TagebuchNotizDto, TagebuchPostenDto, TagebuchWechselDto, TagebuchWerteDto } from '../../types'
 import { zahl } from '../live/verlauf-modell'
 import { AuffaelligAktionen } from './AuffaelligAktionen'
 import { NotizBearbeiten } from './NotizBearbeiten'
@@ -171,40 +171,47 @@ function Fotos({ fotos }: { fotos: PhotoAssetDto[] }) {
   )
 }
 
+/** Vorher | nachher | Änderung — für Wasserwechsel und Nachfüllen derselbe Baustein. */
+function VorherNachher({ vorher, nachher }: { vorher: TagebuchWerteDto; nachher: TagebuchWerteDto }) {
+  return (
+    <div className="tb-vt" role="table" aria-label="Vorher und nachher">
+      <div className="tb-vt-kopf" role="row">
+        <span role="columnheader"><i className="tb-unsichtbar">Wert</i></span>
+        <span role="columnheader"><i className="tb-lang">vorher</i><i className="tb-kurz">vor</i></span>
+        <span role="columnheader"><i className="tb-lang">nachher</i><i className="tb-kurz">nach</i></span>
+        <span role="columnheader"><i className="tb-lang">Änderung</i><i className="tb-kurz" title="Änderung">±</i></span>
+      </div>
+      {VORGANG_ZEILEN.map((z) => {
+        const a = vorher[z.feld]
+        const b = nachher[z.feld]
+        const diff = aenderung(a, b, z.nachkomma)
+        return (
+          <div key={z.feld} className="tb-vt-zeile" role="row">
+            <span className="tb-vt-name" role="rowheader">{z.name}{z.einheit && <small>{z.einheit}</small>}</span>
+            {a == null && b == null ? (
+              // Über alle drei Spalten: in der schmalen Änderungsspalte ragte
+              // „nicht gemessen" bei 320 px über den Rand.
+              <span role="cell" className="tb-vt-diff tb-vt-leer">nicht gemessen</span>
+            ) : (
+              <>
+                <span role="cell">{a != null ? zahl(a, z.nachkomma) : '—'}</span>
+                <span role="cell"><b>{b != null ? zahl(b, z.nachkomma) : '—'}</b></span>
+                <span role="cell" className={`tb-vt-diff${diff ? ` is-${diff.richtung}` : ''}`}>{diff?.text ?? ''}</span>
+              </>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /** Der Wasserwechsel als Vorgang: vorher | nachher | Änderung, Zugaben, Notiz. */
 function Vorgang({ growId, w, posten, onGeaendert }: { growId: string; w: TagebuchWechselDto; posten: TagebuchPostenDto[]; onGeaendert: () => void | Promise<void> }) {
   const wasser = wasserName(w.wasser)
   return (
     <div className="tb-vorgang">
-      <div className="tb-vt" role="table" aria-label="Vorher und nachher">
-        <div className="tb-vt-kopf" role="row">
-          <span role="columnheader"><i className="tb-unsichtbar">Wert</i></span>
-          <span role="columnheader"><i className="tb-lang">vorher</i><i className="tb-kurz">vor</i></span>
-          <span role="columnheader"><i className="tb-lang">nachher</i><i className="tb-kurz">nach</i></span>
-          <span role="columnheader"><i className="tb-lang">Änderung</i><i className="tb-kurz" title="Änderung">±</i></span>
-        </div>
-        {VORGANG_ZEILEN.map((z) => {
-          const a = w.vorher[z.feld]
-          const b = w.nachher[z.feld]
-          const diff = aenderung(a, b, z.nachkomma)
-          return (
-            <div key={z.feld} className="tb-vt-zeile" role="row">
-              <span className="tb-vt-name" role="rowheader">{z.name}{z.einheit && <small>{z.einheit}</small>}</span>
-              {a == null && b == null ? (
-                // Über alle drei Spalten: in der schmalen Änderungsspalte ragte
-                // „nicht gemessen" bei 320 px über den Rand.
-                <span role="cell" className="tb-vt-diff tb-vt-leer">nicht gemessen</span>
-              ) : (
-                <>
-                  <span role="cell">{a != null ? zahl(a, z.nachkomma) : '—'}</span>
-                  <span role="cell"><b>{b != null ? zahl(b, z.nachkomma) : '—'}</b></span>
-                  <span role="cell" className={`tb-vt-diff${diff ? ` is-${diff.richtung}` : ''}`}>{diff?.text ?? ''}</span>
-                </>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      <VorherNachher vorher={w.vorher} nachher={w.nachher} />
       {(wasser || w.liter != null) && (
         <p className="tb-zahlen">
           {[w.komplett ? 'Komplettwechsel' : 'Teilwechsel',
@@ -292,14 +299,19 @@ function NotizInhalt({ notiz, titel, fotos, onGeaendert, eingebettet, ohneEntfer
 function AddbackInhalt({ growId, e, onGeaendert }: { growId: string; e: TagebuchEreignisDto; onGeaendert: () => void | Promise<void> }) {
   const a = e.addback!
   const [fehler, setFehler] = useState<string | null>(null)
+  const imVorgang = a.vorgangId != null
   const teile = [
-    a.ecVorher != null || a.ecNachher != null ? `EC ${zahl(a.ecVorher, 2)} → ${zahl(a.ecNachher, 2)}` : null,
-    a.phVorher != null || a.phNachher != null ? `pH ${zahl(a.phVorher, 2)} → ${zahl(a.phNachher, 2)}` : null,
+    !imVorgang && (a.ecVorher != null || a.ecNachher != null) ? `EC ${zahl(a.ecVorher, 2)} → ${zahl(a.ecNachher, 2)}` : null,
+    !imVorgang && (a.phVorher != null || a.phNachher != null) ? `pH ${zahl(a.phVorher, 2)} → ${zahl(a.phNachher, 2)}` : null,
     wasserName(a.wasser),
   ].filter(Boolean)
 
+  /** Ein Weg: DELETE am Eintrag — gehört er zu einem Vorgang, geht der ganze Vorgang. */
   async function entfernen() {
-    if (!window.confirm(`„${e.titel}" von ${e.uhrzeit} Uhr wirklich entfernen?`)) return
+    const frage = imVorgang
+      ? `„${e.titel}" von ${e.uhrzeit} Uhr mit allem entfernen — Messungen, Buchungen und Tagebuchzeile gehen mit?`
+      : `„${e.titel}" von ${e.uhrzeit} Uhr wirklich entfernen?`
+    if (!window.confirm(frage)) return
     try {
       await apiFetch(`/api/grows/${growId}/addback/logs/${a.id}`, { method: 'DELETE' })
       await onGeaendert()
@@ -314,10 +326,26 @@ function AddbackInhalt({ growId, e, onGeaendert }: { growId: string; e: Tagebuch
         tag={addbackArtName(a.art)}
         ton="info"
         titel={e.titel}
+        herkunft={imVorgang ? 'Vorgang' : null}
         aktionen={<button type="button" className="js-weg" aria-label={`${e.titel} von ${e.uhrzeit} Uhr entfernen`} onClick={() => void entfernen()}>Entfernen</button>}
       />
+      {imVorgang && a.vorher && a.nachher && (
+        <div className="tb-vorgang">
+          <VorherNachher vorher={a.vorher} nachher={a.nachher} />
+        </div>
+      )}
       {teile.length > 0 && <p className="tb-zahlen">{teile.join(' · ')}</p>}
-      {a.notiz && <p>{a.notiz}</p>}
+      {imVorgang && <Posten liste={e.posten} titel="Zugaben" />}
+      {imVorgang && (
+        <p className="tb-gebucht">
+          {e.posten.length > 0 && <>✓ {e.posten.length === 1 ? '1 Posten' : `${e.posten.length} Posten`} im Verbrauch gebucht · </>}
+          <Link className="tb-link" to={`/addback?growId=${growId}&vorgang=${a.vorgangId}`}>Vorgang öffnen</Link>
+        </p>
+      )}
+      {/* Am Vorgang steht die Notiz schon in seiner Tagebuchzeile darunter. */}
+      {a.notiz && !a.journal && <p>{a.notiz}</p>}
+      {a.journal && <NotizImVorgang notiz={a.journal} onGeaendert={onGeaendert} imVorgang />}
+      <Fotos fotos={e.fotos} />
       {fehler && <p className="tb-fehler" role="alert">{fehler}</p>}
     </>
   )

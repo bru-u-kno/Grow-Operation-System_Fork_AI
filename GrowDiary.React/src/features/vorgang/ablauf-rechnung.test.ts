@@ -4,10 +4,13 @@ import {
   alleAufVorschlag,
   anteilPlanDosis,
   ecMitDeinenMengen,
+  ecTankDanach,
   istGeaendert,
   meineWiederEinsetzen,
   meinsVerfuegbar,
   tagebuchZeile,
+  teileText,
+  vorbelegungAusLink,
   wasserZeilen,
   wertDerZeile,
   type AblaufZeile,
@@ -87,6 +90,7 @@ describe('Wasser und Tagebuch', () => {
 
   it('baut die Tagebuchzeile, die auch gespeichert wird', () => {
     const { titel, text } = tagebuchZeile({
+      titel: 'Wasserwechsel',
       liter: 160,
       wasserName: 'Leitungswasser',
       vorher: { ec: 1.63, ph: 6.12, wt: 20, do: null, orp: null },
@@ -96,5 +100,51 @@ describe('Wasser und Tagebuch', () => {
     })
     expect(titel).toBe('Wasserwechsel 160 L Leitungswasser')
     expect(text).toBe('EC 1,63 → 1,15 · pH 6,12 → 6,15 · Wasser 20,0 → 18,1\u00a0°C · ORP — → 450\u00a0mV\nZugaben: Leitungswasser 160\u00a0L · Aqua Flores A 180\u00a0ml\nBewusst unter Plan.')
+  })
+})
+
+describe('Nachfüllen (A-006, Etappe 3)', () => {
+  it('rechnet den Tank danach als Mischung nach Volumen', () => {
+    // 180 L Rest bei EC 1,75, dazu 20 L Lösung mit EC 0,5 → (315 + 10) / 200 = 1,625
+    expect(ecTankDanach(180, 1.75, 20, 0.5)).toBeCloseTo(1.625, 6)
+    // Leerer Tank: die Lösung allein.
+    expect(ecTankDanach(0, 1.75, 20, 0.5)).toBeCloseTo(0.5, 6)
+    expect(ecTankDanach(null, 1.75, 20, 0.5)).toBeNull()
+    expect(ecTankDanach(180, 1.75, 0, 0.5)).toBeNull()
+  })
+
+  it('liest die Vorbelegung aus dem Link des Tagebuchs', () => {
+    const v = vorbelegungAusLink(new URLSearchParams('growId=1&zeitpunkt=2026-10-03T16:55&ecVorher=1.75&ecNachher=1,61&phVorher=6.02&liter=20&wasser=RO&notiz=Sprung'))
+    expect(v).not.toBeNull()
+    expect(v!.zeitpunkt).toBe('2026-10-03T16:55')
+    expect(v!.liter).toBe('20')
+    expect(v!.wasser).toBe('RO')
+    expect(v!.vorher).toEqual({ ec: 1.75, ph: 6.02, wt: null })
+    expect(v!.nachher).toEqual({ ec: 1.61, ph: null, wt: null })
+    expect(v!.quelle).toBe('Sensor')
+    expect(v!.notiz).toBe('Sprung')
+  })
+
+  it('nimmt einen Zeitpunkt mit Zone und rechnet ihn in Ortszeit um', () => {
+    const utc = '2026-10-03T14:55:00Z'
+    const v = vorbelegungAusLink(new URLSearchParams(`zeitpunkt=${encodeURIComponent(utc)}`))
+    const ort = new Date(utc)
+    const zwei = (n: number) => String(n).padStart(2, '0')
+    expect(v!.zeitpunkt).toBe(`${ort.getFullYear()}-${zwei(ort.getMonth() + 1)}-${zwei(ort.getDate())}T${zwei(ort.getHours())}:${zwei(ort.getMinutes())}`)
+  })
+
+  it('belegt nichts vor, wenn der Link nur den Grow nennt — und verwirft Unsinn', () => {
+    expect(vorbelegungAusLink(new URLSearchParams('growId=1'))).toBeNull()
+    const v = vorbelegungAusLink(new URLSearchParams('liter=-3&wasser=Bier&zeitpunkt=gestern&quelle=hand'))
+    expect(v!.liter).toBeNull()
+    expect(v!.wasser).toBeNull()
+    expect(v!.zeitpunkt).toBeNull()
+    expect(v!.quelle).toBe('Hand')
+  })
+
+  it('nennt, was am Nachfüllen hängt — dieselbe Zählung wie beim Wechsel', () => {
+    expect(teileText({ vorher: {}, nachher: {}, buchungen: [{ id: 1, artikelId: 1, artikelName: 'A', einheit: 'ml', menge: 3 }], tagebuch: {} }))
+      .toBe('2 Messwerten, 1 Buchung und der Tagebuchzeile')
+    expect(teileText({ vorher: null, nachher: null, buchungen: [], tagebuch: null })).toBe('nichts weiter')
   })
 })

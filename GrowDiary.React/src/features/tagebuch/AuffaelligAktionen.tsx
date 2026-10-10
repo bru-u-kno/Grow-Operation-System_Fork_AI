@@ -1,21 +1,20 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
-import { V1Button, V1Field } from '../../components/v1'
-import type { CreateAddbackLogRequest, JournalEntryType, TagebuchSprungDto, WaterSource } from '../../types'
-import { unlesbareFelder, unlesbarMeldung, zahlOderNull } from '../../zahlenfeld'
+import { V1Button } from '../../components/v1'
+import type { JournalEntryType, TagebuchSprungDto } from '../../types'
 import { EintragFelderFormular } from '../grow-detail/JournalStreamSection'
 import { eintragFehler, type EintragFelder } from '../grow-detail/journal-bearbeiten'
 import { nachfuellenVorbelegung, nachfuellenWeg } from './nachfuellen-weg'
-import { alsEingabeZeit, sprungSatz } from './tagebuch-modell'
+import { sprungSatz } from './tagebuch-modell'
 
-type Modus = 'nachfuellen' | 'notiz' | null
+type Modus = 'notiz' | null
 
 /**
  * Die drei Antworten auf „Nachgefüllt?" an einer Auffälligkeit.
  *
- * - **Nachfüllen eintragen**: ein Nachfüll-Eintrag (Addback-Protokoll, Art
- *   „Nachfüllen"), vorbelegt mit Zeitpunkt und den Werten davor/danach.
+ * - **Nachfüllen eintragen**: führt in den Nachfüll-Ablauf (`/addback`,
+ *   ein Vorgang), vorbelegt mit Zeitpunkt und den Werten davor/danach.
  * - **Notiz dazu**: ein Journaleintrag, vorbelegt — dasselbe Formular wie im
  *   Journal (`EintragFelderFormular`).
  * - **War nichts**: blendet die Zeile aus; gemerkt auf dem Server, und bis zum
@@ -52,12 +51,7 @@ export function AuffaelligAktionen({ growId, befunde, onGespeichert }: {
 
   /** Der Weg kommt aus `nachfuellen-weg.ts` — dort, und nur dort, wird er umgestellt. */
   function nachfuellenOeffnen() {
-    const weg = nachfuellenWeg(growId, nachfuellenVorbelegung(befunde))
-    if (weg.art === 'adresse') {
-      navigate(weg.to)
-      return
-    }
-    setModus(modus === 'nachfuellen' ? null : 'nachfuellen')
+    navigate(nachfuellenWeg(growId, nachfuellenVorbelegung(befunde)).to)
   }
 
   if (verworfen) {
@@ -85,100 +79,10 @@ export function AuffaelligAktionen({ growId, befunde, onGespeichert }: {
         </V1Button>
       </div>
       {fehler && <p className="tb-fehler" role="alert">{fehler}</p>}
-      {modus === 'nachfuellen' && (
-        <NachfuellenFormular growId={growId} befunde={befunde} onAbbrechen={() => setModus(null)} onGespeichert={onGespeichert} />
-      )}
       {modus === 'notiz' && (
         <NotizFormular growId={growId} befunde={befunde} onAbbrechen={() => setModus(null)} onGespeichert={onGespeichert} />
       )}
     </>
-  )
-}
-
-function NachfuellenFormular({ growId, befunde, onAbbrechen, onGespeichert }: {
-  growId: string
-  befunde: TagebuchSprungDto[]
-  onAbbrechen: () => void
-  onGespeichert: () => void | Promise<void>
-}) {
-  const [felder, setFelder] = useState(() => {
-    const { zeitpunktUtc, zeitpunktOrtszeit: _ortszeit, ...rest } = nachfuellenVorbelegung(befunde)
-    void _ortszeit
-    // Das Formular schickt UTC — das Feld steht deshalb in der Uhr des Browsers.
-    return { ...rest, zeitpunkt: alsEingabeZeit(zeitpunktUtc), wasser: '' }
-  })
-  const [speichert, setSpeichert] = useState(false)
-  const [fehler, setFehler] = useState<string | null>(null)
-  const setze = (patch: Partial<typeof felder>) => setFelder((alt) => ({ ...alt, ...patch }))
-
-  async function speichern(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const unlesbar = unlesbarMeldung(unlesbareFelder([
-      [felder.liter, 'Liter nachgefüllt'],
-      [felder.ecVorher, 'EC vorher'], [felder.ecNachher, 'EC nachher'],
-      [felder.phVorher, 'pH vorher'], [felder.phNachher, 'pH nachher'],
-    ]))
-    if (unlesbar) { setFehler(unlesbar); return }
-    const zeit = new Date(felder.zeitpunkt)
-    if (Number.isNaN(zeit.getTime())) { setFehler('Bitte einen Zeitpunkt angeben.'); return }
-
-    const anfrage: CreateAddbackLogRequest = {
-      kind: 'TopOff',
-      performedAtUtc: zeit.toISOString(),
-      reservoirLiters: null,
-      ecBefore: zahlOderNull(felder.ecVorher),
-      ecTarget: null,
-      ecStock: null,
-      ecAfter: zahlOderNull(felder.ecNachher),
-      phBefore: zahlOderNull(felder.phVorher),
-      phAfter: zahlOderNull(felder.phNachher),
-      litersAdded: zahlOderNull(felder.liter),
-      newReservoirVolumeLiters: null,
-      usedHydroSetupVolume: false,
-      waterUsed: felder.wasser === '' ? null : (felder.wasser as WaterSource),
-      notes: felder.notiz.trim() || null,
-    }
-    setSpeichert(true)
-    setFehler(null)
-    try {
-      await apiFetch(`/api/grows/${growId}/addback/logs`, { method: 'POST', body: JSON.stringify(anfrage) })
-      await onGespeichert()
-    } catch (caught) {
-      setFehler(formatApiError(caught, 'Nachfüllen konnte nicht gespeichert werden.'))
-    } finally {
-      setSpeichert(false)
-    }
-  }
-
-  return (
-    <form className="js-form tb-formular" data-audit="tagebuch-nachfuellen-form" onSubmit={(event) => void speichern(event)}>
-      <V1Field label="Zeitpunkt"><input type="datetime-local" value={felder.zeitpunkt} onChange={(e) => setze({ zeitpunkt: e.target.value })} /></V1Field>
-      <V1Field label="Liter nachgefüllt" hint="Leer lassen, wenn du es nicht weißt.">
-        <input inputMode="decimal" value={felder.liter} onChange={(e) => setze({ liter: e.target.value })} />
-      </V1Field>
-      <V1Field label="Wasser">
-        <select value={felder.wasser} onChange={(e) => setze({ wasser: e.target.value })}>
-          <option value="">wie am Grow</option>
-          <option value="RO">Osmose / VE-Wasser</option>
-          <option value="Tap">Leitungswasser</option>
-          <option value="Mixed">Mischung</option>
-        </select>
-      </V1Field>
-      <div className="tb-paar">
-        <V1Field label="EC vorher"><input inputMode="decimal" value={felder.ecVorher} onChange={(e) => setze({ ecVorher: e.target.value })} /></V1Field>
-        <V1Field label="EC nachher"><input inputMode="decimal" value={felder.ecNachher} onChange={(e) => setze({ ecNachher: e.target.value })} /></V1Field>
-      </div>
-      <div className="tb-paar">
-        <V1Field label="pH vorher"><input inputMode="decimal" value={felder.phVorher} onChange={(e) => setze({ phVorher: e.target.value })} /></V1Field>
-        <V1Field label="pH nachher"><input inputMode="decimal" value={felder.phNachher} onChange={(e) => setze({ phNachher: e.target.value })} /></V1Field>
-      </div>
-      <V1Field label="Notiz" wide><textarea rows={3} value={felder.notiz} onChange={(e) => setze({ notiz: e.target.value })} /></V1Field>
-      {fehler && <p className="tb-fehler" role="alert">{fehler}</p>}
-      <div className="js-knopfreihe">
-        <V1Button type="submit" variant="primary" audit="tagebuch-nachfuellen-speichern" disabled={speichert}>{speichert ? 'Speichert…' : 'Nachfüllen speichern'}</V1Button>
-        <V1Button onClick={onAbbrechen} disabled={speichert}>Abbrechen</V1Button>
-      </div>
-    </form>
   )
 }
 

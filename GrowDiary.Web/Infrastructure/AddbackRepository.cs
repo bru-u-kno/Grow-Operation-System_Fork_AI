@@ -22,13 +22,25 @@ public sealed class AddbackRepository : RepositoryBase
             throw new InvalidOperationException($"HydroSetup with id {entry.HydroSetupId.Value} does not exist.");
         }
 
+        using var connection = OpenConnection();
+        return CreateAddbackLog(entry, connection, null);
+    }
+
+    /// <summary>
+    /// Den Addback-Eintrag auf einer fremden Verbindung anlegen — für den
+    /// Nachfüll-Vorgang (A-006, Etappe 3), der Eintrag, Messungen, Buchungen
+    /// und Tagebuch in EINER Transaktion schreibt.
+    /// </summary>
+    /// <remarks>Grow und Anlage prüft der Aufrufer; die Werte-Prüfung läuft hier wie oben.</remarks>
+    internal static AddbackLogEntry CreateAddbackLog(AddbackLogEntry entry, SqliteConnection connection, SqliteTransaction? transaction)
+    {
         ValidateAddbackLog(entry);
         entry.PerformedAtUtc = entry.PerformedAtUtc == default ? DateTime.UtcNow : entry.PerformedAtUtc;
         entry.CreatedAtUtc = DateTime.UtcNow;
         entry.Notes = NormalizeOptional(entry.Notes);
 
-        using var connection = OpenConnection();
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO AddbackLogs (
                 GrowId, HydroSetupId, Kind, PerformedAtUtc, ReservoirLiters,

@@ -3,6 +3,10 @@ import { apiFetch, ApiRequestError } from '../../api'
 import FileInput from '../../components/FileInput'
 import { V1Alert, V1Button, V1Field, V1Section, V1Switch, V1Tabs } from '../../components/v1'
 import type {
+  AddbackLogKind,
+  AddbackResultDto,
+  AddbackVorgangDto,
+  AddbackVorgangRequest,
   ChangeoutKind,
   GrowDetail,
   MischplanVorschlag,
@@ -15,31 +19,76 @@ import type {
   WaterSource,
 } from '../../types'
 import { classNames, toLocalInputValue } from '../../utils'
-import { istUnlesbar, unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../../zahlenfeld'
+import { feldText, istUnlesbar, unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../../zahlenfeld'
 import {
   aenderung,
   alleAufVorschlag,
   anteilPlanDosis,
   ecMitDeinenMengen,
+  ecTankDanach,
   istGeaendert,
   meineWiederEinsetzen,
   meinsVerfuegbar,
   mengeDerZeile,
   tagebuchZeile,
+  teileText,
   wasserZeilen,
   wertDerZeile,
   zahl,
+  NACHFUELL_ART,
   type AblaufZeile,
+  type Vorbelegung,
   type Werte,
 } from './ablauf-rechnung'
-import './wasserwechsel-ablauf.css'
+import './vorgang-ablauf.css'
 
 type Schritt = 1 | 2 | 3 | 4
 type Messfelder = { ec: string; ph: string; wt: string; do: string; orp: string }
 type Artikel = { id: number; name: string; einheit: string; aktiv: boolean }
 
+/** Welcher Vorgang: der Wasserwechsel (Etappe 1) oder das Nachfüllen (Etappe 3). */
+export type AblaufArt = 'wasserwechsel' | 'addback'
+
 const LEER: Messfelder = { ec: '', ph: '', wt: '', do: '', orp: '' }
 const WASSER_NAME: Record<WaterSource, string> = { Tap: 'Leitungswasser', RO: 'Osmose', Mixed: 'Mischung' }
+
+/**
+ * Was die beiden Abläufe unterscheidet — Wörter, Ziel der Anfrage, Prüfkennungen.
+ *
+ * Alles andere ist derselbe Ablauf: vorher, Wasser und Zugaben, nachher,
+ * speichern. Die Prüfkennungen (`data-audit`) des Wechsels bleiben, wie sie
+ * waren — die E2E-Mappe liest sie.
+ */
+const TEXTE = {
+  wasserwechsel: {
+    audit: 'wasserwechsel',
+    schritt2: '2 · Ansetzen',
+    wannHinweis: 'Beginn des Wechsels — für einen Nachtrag zurückstellen.',
+    titel2: 'Neu ansetzen',
+    literLabel: 'Neues Wasser',
+    literAria: 'Neues Wasser in Litern',
+    literFehlt: 'Wie viele Liter hast du neu angesetzt? Trag sie in Schritt 2 ein.',
+    titel3: 'Nachher — fertig angesetzt',
+    loesung: 'Mit deinen Mengen',
+    fotoTitel: 'Nach dem Wasserwechsel',
+    fotoFehlt: 'Der Wechsel ist gespeichert, das Foto nicht',
+    speichern: 'Wasserwechsel speichern',
+  },
+  addback: {
+    audit: 'addback',
+    schritt2: '2 · Nachfüllen',
+    wannHinweis: 'Wann du nachgefüllt hast — für einen Nachtrag zurückstellen.',
+    titel2: 'Nachfüllen',
+    literLabel: 'Nachgefüllt',
+    literAria: 'Nachgefüllt in Litern',
+    literFehlt: 'Wie viele Liter hast du nachgefüllt? Trag sie in Schritt 2 ein.',
+    titel3: 'Nachher — nach dem Durchmischen',
+    loesung: 'Deine Lösung',
+    fotoTitel: 'Nach dem Nachfüllen',
+    fotoFehlt: 'Das Nachfüllen ist gespeichert, das Foto nicht',
+    speichern: 'Nachfüllen speichern',
+  },
+} as const
 
 function Zurueck({ text, onClick }: { text: string; onClick: () => void }) {
   return <button type="button" className="wa-zurueck" onClick={onClick} title="Zurück auf den Vorschlag">↺ Vorschlag {text}</button>
@@ -57,31 +106,56 @@ function fehlerText(caught: unknown, ersatz: string): string {
   return caught instanceof ApiRequestError ? caught.message : ersatz
 }
 
+/** Vorbelegte Messwerte als Feldtext (mit Komma). */
+function alsFelder(werte: { ec: number | null; ph: number | null; wt: number | null } | undefined): Messfelder {
+  if (!werte) return LEER
+  return { ec: feldText(werte.ec), ph: feldText(werte.ph), wt: feldText(werte.wt), do: '', orp: '' }
+}
+
 /**
- * Der Wasserwechsel als ein Ablauf in vier Schritten (A-006, freigegeben von Bru am 05.10.2026).
+ * Ein Vorgang als Ablauf in vier Schritten (A-006, freigegeben von Bru am 05.10.2026).
  *
- * Vorher · Ansetzen · Nachher · Speichern. Ein Speichern legt Wechsel, Messung
- * vorher und nachher, Verbrauch und Tagebuchzeile an — als ein Vorgang
- * (`POST /api/grows/{id}/wasserwechsel`). Vorher waren es vier getrennte
- * Eingaben an vier Stellen.
+ * Vorher · Wasser und Zugaben · Nachher · Speichern. Ein Speichern legt alles
+ * an — beim **Wasserwechsel** Wechsel, Messung vorher und nachher, Verbrauch
+ * und Tagebuchzeile (`POST /api/grows/{id}/wasserwechsel`), beim
+ * **Nachfüllen** dasselbe mit einem Addback-Eintrag statt des Wechsels
+ * (`POST /api/grows/{id}/addback/vorgaenge`, Etappe 3).
  *
  * **Die Felder stehen auf dem Vorschlag** (kein „übernehmen"). Wer ändert,
  * sieht das Feld gelb und „↺ Vorschlag …"; der eigene Wert bleibt gemerkt und
  * kommt mit „↶ deins …" zurück. Gemerkt wird nur **innerhalb dieses Vorgangs**:
- * jeder Wechsel rechnet neu, ein „wie letztes Mal" gibt es nicht (Bru).
+ * jeder Wechsel und jedes Nachfüllen rechnet neu, ein „wie letztes Mal" gibt
+ * es nicht (Bru).
  *
- * Die Vorschläge rechnet das Backend (`GET …/mixing-plan/vorschlag`) — hier
- * wird nichts davon nachgerechnet.
+ * Die Vorschläge rechnet das Backend (`GET …/mixing-plan/vorschlag` auf die
+ * Literzahl, beim Nachfüllen zusätzlich der Addback-Rechner
+ * `POST …/addback/calculate`) — hier wird nichts davon nachgerechnet.
+ *
+ * @param vorbelegung Werte aus einem Link (`/addback?zeitpunkt=…&ecVorher=…`),
+ *   z. B. „Nachfüllen eintragen" an einer Auffälligkeit im Tagebuch.
  */
-export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeichert }: {
+export function VorgangAblauf({ art, growId, stand = null, startSchritt = 1, vorbelegung = null, onGespeichert }: {
+  art: AblaufArt
   growId: number
   /** Auf welchem Schritt der Ablauf beginnt (`?schritt=`). */
   startSchritt?: Schritt
-  stand: WasserwechselStandDto | null
-  onGespeichert: (vorgang: WasserwechselVorgangDto, hinweis: string | null) => void
+  /** Nur beim Wechsel: der Stand der Wechsel-Erinnerung. */
+  stand?: WasserwechselStandDto | null
+  vorbelegung?: Vorbelegung | null
+  /** Nach dem Speichern: was am Vorgang hängt („2 Messwerten, 3 Buchungen …") und ein Hinweis, falls das Foto scheiterte. */
+  onGespeichert: (teile: string, hinweis: string | null, vorgangId: number) => void
 }) {
+  const t = TEXTE[art]
+  const istWechsel = art === 'wasserwechsel'
   const [schritt, setSchritt] = useState<Schritt>(startSchritt)
-  const [zeitpunkt, setZeitpunkt] = useState(() => toLocalInputValue())
+  const [zeitpunkt, setZeitpunkt] = useState(() => vorbelegung?.zeitpunkt ?? toLocalInputValue())
+
+  // Vorbelegte Werte „vorher" vom Sensor gelten nur für den vorbelegten
+  // Zeitpunkt. Wer „Wann" verstellt, bekommt wieder die Sensorwerte von dort.
+  const vorbelegtVorher = vorbelegung?.quelle === 'Sensor' && Object.values(vorbelegung.vorher).some((w) => w != null)
+    && (vorbelegung.zeitpunkt == null || vorbelegung.zeitpunkt === zeitpunkt)
+    ? vorbelegung.vorher : null
+  const vorbelegtNachher = useMemo(() => alsFelder(vorbelegung?.nachher), [vorbelegung])
 
   // Schritt 1 — vorher
   /* Für WELCHEN Zeitpunkt die Sensorwerte gelten. Gefunden im E2E-Rundweg: wer
@@ -90,12 +164,13 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
      Werte zum eingestellten Zeitpunkt zählen. */
   const [sensorStand, setSensorStand] = useState<{ fuer: string; daten: WasserwechselSensorDto } | null>(null)
   const [sensorFehler, setSensorFehler] = useState<string | null>(null)
-  const [vorherHand, setVorherHand] = useState<Messfelder>(LEER)
+  const [vorherHand, setVorherHand] = useState<Messfelder>(() => vorbelegung?.quelle === 'Hand' ? alsFelder(vorbelegung.vorher) : LEER)
 
-  // Schritt 2 — ansetzen
-  const [art, setArt] = useState<ChangeoutKind>('Full')
-  const [liter, setLiter] = useState('')
-  const [wasser, setWasser] = useState<WaterSource>('Tap')
+  // Schritt 2 — Wasser und Zugaben
+  const [wechselArt, setWechselArt] = useState<ChangeoutKind>('Full')
+  const [nachfuellArt, setNachfuellArt] = useState<AddbackLogKind>('Addback')
+  const [liter, setLiter] = useState(vorbelegung?.liter ?? '')
+  const [wasser, setWasser] = useState<WaterSource>(vorbelegung?.wasser ?? 'Tap')
   const [osmoseProzent, setOsmoseProzent] = useState('50')
   const [ecEigenJe, setEcEigenJe] = useState<Partial<Record<WaterSource, string>>>({})
   const [ecGemerktJe, setEcGemerktJe] = useState<Partial<Record<WaterSource, string>>>({})
@@ -109,11 +184,12 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
   const [wasserBuchen, setWasserBuchen] = useState(true)
   const [artikel, setArtikel] = useState<Artikel[]>([])
   const [produktWahl, setProduktWahl] = useState('')
+  const [rechner, setRechner] = useState<{ fuer: string; daten: AddbackResultDto } | null>(null)
 
   // Schritt 3 — nachher
-  const [nachher, setNachher] = useState<Messfelder>(LEER)
+  const [nachher, setNachher] = useState<Messfelder>(vorbelegtNachher)
   const [sensorJetzt, setSensorJetzt] = useState<WasserwechselSensorDto | null>(null)
-  const [notiz, setNotiz] = useState('')
+  const [notiz, setNotiz] = useState(vorbelegung?.notiz ?? '')
   const [fotos, setFotos] = useState<File[]>([])
 
   // Schritt 4 — speichern
@@ -122,7 +198,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
   const [speichert, setSpeichert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
 
-  // Grundlage: Anlagevolumen (vorbelegt als Liter), Wasserquelle des Grows, aktive Artikel.
+  // Grundlage: Anlagevolumen (beim Wechsel vorbelegt als Liter), Wasserquelle des Grows, aktive Artikel.
   useEffect(() => {
     const controller = new AbortController()
     void (async () => {
@@ -132,14 +208,15 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
         apiFetch<Artikel[]>('/api/kosten/artikel', { signal: controller.signal }).catch(() => [] as Artikel[]),
       ])
       if (controller.signal.aborted) return
-      if (plan?.volumenLiter != null) setLiter((alt) => alt === '' ? zahl(plan.volumenLiter!, 0) : alt)
-      if (grow?.waterSource) setWasser(grow.waterSource)
+      // Nachgefüllt wird ein Teil, nicht die Anlage — dort gibt es keine Vorbelegung aus dem Volumen.
+      if (istWechsel && plan?.volumenLiter != null) setLiter((alt) => alt === '' ? zahl(plan.volumenLiter!, 0) : alt)
+      if (grow?.waterSource && !vorbelegung?.wasser) setWasser(grow.waterSource)
       setArtikel(liste.filter((a) => a.aktiv))
     })()
     return () => controller.abort()
-  }, [growId])
+  }, [growId, istWechsel, vorbelegung])
 
-  // Sensorwerte kurz vor dem Zeitpunkt.
+  // Sensorwerte kurz vor dem Zeitpunkt — derselbe Endpunkt für Wechsel und Nachfüllen.
   useEffect(() => {
     const controller = new AbortController()
     const zeit = new Date(zeitpunkt)
@@ -162,13 +239,25 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     return () => controller.abort()
   }, [growId, schritt])
 
-  const sensor = sensorStand?.fuer === zeitpunkt ? sensorStand.daten : null
-  const sensorLaedt = sensor == null && sensorFehler == null && !Number.isNaN(new Date(zeitpunkt).getTime())
+  const sensorGeladen = sensorStand?.fuer === zeitpunkt ? sensorStand.daten : null
+  // Vorbelegt vom Sensor (aus dem Tagebuch): diese Werte gelten, die Suche ergänzt nur, was fehlt.
+  const sensor: WasserwechselSensorDto | null = vorbelegtVorher
+    ? {
+      zeitpunktUtc: new Date(zeitpunkt).toISOString(),
+      fensterMinuten: sensorGeladen?.fensterMinuten ?? 0,
+      ec: vorbelegtVorher.ec != null ? { wert: vorbelegtVorher.ec, zeitUtc: '' } : sensorGeladen?.ec ?? null,
+      ph: vorbelegtVorher.ph != null ? { wert: vorbelegtVorher.ph, zeitUtc: '' } : sensorGeladen?.ph ?? null,
+      wasserTemp: vorbelegtVorher.wt != null ? { wert: vorbelegtVorher.wt, zeitUtc: '' } : sensorGeladen?.wasserTemp ?? null,
+      hinweis: null,
+    }
+    : sensorGeladen
+  const sensorLaedt = !vorbelegtVorher && sensorGeladen == null && sensorFehler == null && !Number.isNaN(new Date(zeitpunkt).getTime())
   const literZahl = zahlOderNull(liter)
   const ecEigen = ecEigenJe[wasser] ?? null
   const ecGemerkt = ecGemerktJe[wasser] ?? null
   const ecEigenZahl = ecEigen != null ? zahlOderNull(ecEigen) : null
   const osmoseZahl = zahlOderNull(osmoseProzent)
+  const nurWasser = !istWechsel && nachfuellArt === 'TopOff'
 
   // Der Vorschlag — neu bei Liter, Wasserart, Anteil und eigenem Wasser-EC.
   useEffect(() => {
@@ -190,7 +279,8 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
   const vorschlag = literZahl != null && literZahl > 0 ? vorschlagRoh : null
 
   const zeilen: AblaufZeile[] = useMemo(() => [
-    ...(vorschlag?.zeilen ?? []).map((z): AblaufZeile => {
+    // „Nur Wasser": keine Plan-Zeilen. Über „+ Produkt" lässt sich trotzdem etwas buchen.
+    ...(nurWasser ? [] : vorschlag?.zeilen ?? []).map((z): AblaufZeile => {
       const schluessel = `plan:${z.komponente}`
       const gewaehlt = artikelWahl[schluessel]
       const gewaehlterArtikel = gewaehlt != null ? artikel.find((a) => a.id === gewaehlt) : null
@@ -208,7 +298,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     ...extra.map((a): AblaufZeile => ({
       schluessel: `extra:${a.id}`, name: a.name, art: 'extra', rolle: null, vorschlagMl: null, hinweis: null, artikelId: a.id, einheit: a.einheit,
     })),
-  ], [vorschlag, extra, artikel, artikelWahl])
+  ], [vorschlag, extra, artikel, artikelWahl, nurWasser])
 
   const setze = (schluessel: string, wert: string | null) => {
     setEigen((alt) => {
@@ -253,16 +343,47 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     || (hand(vorherHand.wt) == null && sensor?.wasserTemp != null)
   const handGenutzt = Object.values(vorherHand).some((text) => hand(text) != null)
   const vorherHerkunft: 'Sensor' | 'Hand' | 'gemischt' = sensorGenutzt ? (handGenutzt ? 'gemischt' : 'Sensor') : 'Hand'
-  const sensorZeit = [sensor?.ec, sensor?.ph, sensor?.wasserTemp].filter((w) => w != null).map((w) => w!.zeitUtc).sort().at(-1) ?? null
+  // Vorbelegte Werte tragen keine eigene Sensorzeit — die Messung steht dann eine Minute vor dem Vorgang.
+  const sensorZeit = [sensor?.ec, sensor?.ph, sensor?.wasserTemp].filter((w) => w != null && w.zeitUtc !== '').map((w) => w!.zeitUtc).sort().at(-1) ?? null
   const nach = { ec: hand(nachher.ec), ph: hand(nachher.ph), wt: hand(nachher.wt), do: hand(nachher.do), orp: hand(nachher.orp) }
   const vorherHatWerte = Object.values(vorher).some((w) => w != null)
   const nachherHatWerte = Object.values(nach).some((w) => w != null)
+  // „nachher" vom Sensor, wenn der Link die Werte so mitgab und niemand sie geändert hat.
+  const nachherVomSensor = vorbelegung?.quelle === 'Sensor' && Object.values(vorbelegung.nachher).some((w) => w != null)
+    && (['ec', 'ph', 'wt'] as const).every((f) => nachher[f] === vorbelegtNachher[f])
+  const nachherHerkunft: 'Sensor' | 'Hand' | 'gemischt' = nachherVomSensor ? (nach.do != null || nach.orp != null ? 'gemischt' : 'Sensor') : 'Hand'
+
+  // ---- Nachfüllen: was im Tank war, und was danach drin ist
+  const anlageLiter = vorschlag?.anlageLiter ?? null
+  const restLiter = anlageLiter != null && literZahl != null && literZahl <= anlageLiter ? anlageLiter - literZahl : null
+  const ecLoesung = nurWasser ? vorschlag?.wasserEc ?? null : ecErwartet
+  const ecDanach = istWechsel ? null : ecTankDanach(restLiter, vorher.ec, literZahl, ecLoesung)
+  const rechnerSchluessel = !istWechsel && !nurWasser && restLiter != null && restLiter > 0 && vorher.ec != null && vorschlag?.ecZielGesamt != null && ecLoesung != null
+    ? JSON.stringify([restLiter, vorher.ec, vorschlag.ecZielGesamt, Number(ecLoesung.toFixed(2))])
+    : null
+
+  // Der Addback-Rechner: wie viel DIESER Lösung bräuchte der Tank bis zum Ziel?
+  useEffect(() => {
+    if (rechnerSchluessel == null) return
+    const [reservoirLiters, ecIst, ecZiel, ecStock] = JSON.parse(rechnerSchluessel) as number[]
+    const controller = new AbortController()
+    const warte = window.setTimeout(() => {
+      apiFetch<AddbackResultDto>(`/api/grows/${growId}/addback/calculate`, {
+        method: 'POST', signal: controller.signal, body: JSON.stringify({ reservoirLiters, ecIst, ecZiel, ecStock }),
+      })
+        .then((daten) => setRechner({ fuer: rechnerSchluessel, daten }))
+        .catch(() => { if (!controller.signal.aborted) setRechner(null) })
+    }, 300)
+    return () => { window.clearTimeout(warte); controller.abort() }
+  }, [growId, rechnerSchluessel])
+  const rechnerErgebnis = rechner != null && rechner.fuer === rechnerSchluessel ? rechner.daten : null
 
   const zugaben = [
     ...wasserGebucht.map((w) => ({ name: w.name, menge: w.menge, einheit: 'L' })),
     ...gebucht.map((z) => ({ name: z.name, menge: mengeDerZeile(z, eigen), einheit: z.einheit })),
   ]
   const tagebuch = tagebuchZeile({
+    titel: istWechsel ? 'Wasserwechsel' : NACHFUELL_ART[nachfuellArt],
     liter: literZahl ?? 0,
     wasserName: wasser === 'Tap' ? 'Leitungswasser' : wasser === 'RO' ? 'Osmosewasser' : 'Mischung',
     vorher,
@@ -281,7 +402,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
 
   const weiter = (ziel: Schritt) => (
     <div className="wa-weiter">
-      <V1Button variant="primary" onClick={() => setSchritt(ziel)} audit={`wasserwechsel-weiter-${ziel}`}>Weiter</V1Button>
+      <V1Button variant="primary" onClick={() => setSchritt(ziel)} audit={`${t.audit}-weiter-${ziel}`}>Weiter</V1Button>
     </div>
   )
 
@@ -294,13 +415,13 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     const unlesbar = unlesbarMeldung(unlesbareFelder([
       [vorherHand.ec, 'EC vorher'], [vorherHand.ph, 'pH vorher'], [vorherHand.wt, 'Wasser vorher'],
       [vorherHand.do, 'DO vorher'], [vorherHand.orp, 'ORP vorher'],
-      [liter, 'Neues Wasser (Liter)'], [osmoseProzent, 'Anteil Osmose'], [ecEigen ?? '', 'EC des Wassers'],
+      [liter, `${t.literLabel} (Liter)`], [osmoseProzent, 'Anteil Osmose'], [ecEigen ?? '', 'EC des Wassers'],
       [nachher.ec, 'EC nachher'], [nachher.ph, 'pH nachher'], [nachher.wt, 'Wasser nachher'],
       [nachher.do, 'DO nachher'], [nachher.orp, 'ORP nachher'],
       ...zeilen.map((z): [string, string] => [wertDerZeile(z, eigen), `Menge ${z.name}`]),
     ]))
     if (unlesbar) { setFehler(unlesbar); return }
-    if (literZahl == null || literZahl <= 0) { setFehler('Wie viele Liter hast du neu angesetzt? Trag sie in Schritt 2 ein.'); setSchritt(2); return }
+    if (literZahl == null || literZahl <= 0) { setFehler(t.literFehlt); setSchritt(2); return }
     // Ein Foto hängt an der Messung „nachher" — ohne sie ginge es still verloren (Befund des Prüfers).
     if (fotos.length > 0 && !nachherHatWerte) {
       setFehler('Das Foto braucht die Messung „nachher" — trag dort mindestens einen Wert ein oder nimm das Foto heraus.')
@@ -318,9 +439,8 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
       ...gebucht.map((z) => ({ artikelId: z.artikelId, menge: mengeDerZeile(z, eigen) })),
     ]
 
-    const body: WasserwechselVorgangRequest = {
+    const gemeinsam = {
       zeitpunktLokal: zeitpunkt || null,
-      art,
       liter: literZahl,
       wasser,
       osmoseProzent: wasser === 'Mixed' ? osmoseZahl : null,
@@ -328,12 +448,11 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
       vorher: messung(vorher, {
         herkunft: vorherHerkunft,
         sensorZeitUtc: sensorGenutzt ? sensorZeit : null,
-        // Nur Sensorwerte: die Messung steht zur Zeit des Sensorwerts. Sonst eine Minute vor dem Wechsel.
+        // Nur Sensorwerte mit eigener Zeit: die Messung steht zur Zeit des Sensorwerts. Sonst eine Minute vor dem Vorgang.
         zeitpunktLokal: vorherHerkunft === 'Sensor' && sensorZeit ? toLocalInputValue(new Date(sensorZeit)) : null,
       }),
-      nachher: messung(nach, { herkunft: 'Hand' }),
+      nachher: messung(nach, { herkunft: nachherHerkunft }),
       buchungen,
-      erinnerungNeuStarten: erinnerung,
       notiz: notiz.trim() || null,
       tagebuch: insTagebuch ? tagebuch : null,
     }
@@ -341,22 +460,29 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     setSpeichert(true)
     setFehler(null)
     try {
-      const vorgang = await apiFetch<WasserwechselVorgangDto>(`/api/grows/${growId}/wasserwechsel`, { method: 'POST', body: JSON.stringify(body) })
+      let vorgang: WasserwechselVorgangDto | AddbackVorgangDto
+      if (istWechsel) {
+        const body: WasserwechselVorgangRequest = { ...gemeinsam, art: wechselArt, erinnerungNeuStarten: erinnerung }
+        vorgang = await apiFetch<WasserwechselVorgangDto>(`/api/grows/${growId}/wasserwechsel`, { method: 'POST', body: JSON.stringify(body) })
+      } else {
+        const body: AddbackVorgangRequest = { ...gemeinsam, art: nachfuellArt, ecZiel: nurWasser ? null : vorschlag?.ecZielGesamt ?? null }
+        vorgang = await apiFetch<AddbackVorgangDto>(`/api/grows/${growId}/addback/vorgaenge`, { method: 'POST', body: JSON.stringify(body) })
+      }
       let hinweis: string | null = null
       if (fotos.length > 0 && vorgang.nachher) {
         try {
           const form = new FormData()
-          form.append('photoCaption', 'Nach dem Wasserwechsel')
+          form.append('photoCaption', t.fotoTitel)
           form.append('photoTag', 'Overview')
           form.append('useAsReferenceShot', 'false')
           form.append('source', 'Manual')
           for (const datei of fotos) form.append('photos', datei)
           await apiFetch(`/api/measurements/${vorgang.nachher.id}/photos`, { method: 'POST', body: form })
         } catch (caught) {
-          hinweis = `Der Wechsel ist gespeichert, das Foto nicht: ${fehlerText(caught, 'Hochladen fehlgeschlagen.')}`
+          hinweis = `${t.fotoFehlt}: ${fehlerText(caught, 'Hochladen fehlgeschlagen.')}`
         }
       }
-      onGespeichert(vorgang, hinweis)
+      onGespeichert(teileText(vorgang), hinweis, vorgang.id)
     } catch (caught) {
       setFehler(fehlerText(caught, 'Speichern fehlgeschlagen.'))
     } finally {
@@ -380,29 +506,36 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
     </div>
   )
 
+  const sensorHerkunftText = vorbelegtVorher
+    ? 'Vom Sensor, aus dem Link'
+    : `Vom Sensor, ${sensorZeit ? `${uhrzeit(sensorZeit)} Uhr` : 'kurz davor'}`
+
   return (
-    <form onSubmit={(e) => void speichern(e)} className="wa-ablauf" data-audit="wasserwechsel-ablauf" noValidate>
+    <form onSubmit={(e) => void speichern(e)} className="wa-ablauf" data-audit={`${t.audit}-ablauf`} noValidate>
       <V1Tabs label="Schritt" active={schritt} onChange={setSchritt}
         items={[
-          { value: 1, label: '1 · Vorher', audit: 'wasserwechsel-schritt-1' },
-          { value: 2, label: '2 · Ansetzen', audit: 'wasserwechsel-schritt-2' },
-          { value: 3, label: '3 · Nachher', audit: 'wasserwechsel-schritt-3' },
-          { value: 4, label: '4 · Speichern', audit: 'wasserwechsel-schritt-4' },
+          { value: 1, label: '1 · Vorher', audit: `${t.audit}-schritt-1` },
+          { value: 2, label: t.schritt2, audit: `${t.audit}-schritt-2` },
+          { value: 3, label: '3 · Nachher', audit: `${t.audit}-schritt-3` },
+          { value: 4, label: '4 · Speichern', audit: `${t.audit}-schritt-4` },
         ]} />
 
       {fehler && <V1Alert message={fehler} tone="warn" />}
 
       {schritt === 1 && (
         <V1Section title="Vorher — was ist im Tank?">
+          {vorbelegung && (
+            <V1Alert tone="neutral" message="Vorbelegt aus dem Link — etwa vom Tagebuch („Nachfüllen eintragen“). Prüf Zeitpunkt und Werte und ergänze, was fehlt." />
+          )}
           <div className="v1-form-grid wa-felder">
-            <V1Field label="Wann" hint="Beginn des Wechsels — für einen Nachtrag zurückstellen.">
+            <V1Field label="Wann" hint={t.wannHinweis}>
               <input type="datetime-local" value={zeitpunkt} max={toLocalInputValue()} onChange={(e) => setZeitpunkt(e.target.value)} />
             </V1Field>
           </div>
-          <div className="wa-sensorbox" data-audit="wasserwechsel-sensor">
+          <div className="wa-sensorbox" data-audit={`${t.audit}-sensor`}>
             {sensor && (sensor.ec || sensor.ph || sensor.wasserTemp) ? (
               <>
-                <span className="wa-herkunft">Vom Sensor, {sensorZeit ? `${uhrzeit(sensorZeit)} Uhr` : 'kurz davor'}</span>
+                <span className="wa-herkunft">{sensorHerkunftText}</span>
                 <div className="wa-gross">
                   <div><small>EC</small><b>{sensor.ec ? zahl(sensor.ec.wert, 2) : '—'}</b></div>
                   <div><small>pH</small><b>{sensor.ph ? zahl(sensor.ph.wert, 2) : '—'}</b></div>
@@ -426,17 +559,27 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
       )}
 
       {schritt === 2 && (
-        <V1Section title="Neu ansetzen">
+        <V1Section title={t.titel2}>
           <div className="v1-form-grid wa-felder">
-            <V1Field label="Neues Wasser" hint={vorschlag?.anlageLiter != null ? `Liter · Anlage fasst ${zahl(vorschlag.anlageLiter, 0)} L` : 'Liter'}>
-              <input value={liter} onChange={(e) => setLiter(e.target.value)} inputMode="decimal" aria-label="Neues Wasser in Litern" />
+            <V1Field label={t.literLabel} hint={vorschlag?.anlageLiter != null ? `Liter · Anlage fasst ${zahl(vorschlag.anlageLiter, 0)} L` : 'Liter'}>
+              <input value={liter} onChange={(e) => setLiter(e.target.value)} inputMode="decimal" aria-label={t.literAria}
+                className={istUnlesbar(liter) ? 'is-unlesbar' : undefined} />
             </V1Field>
-            <V1Field label="Art">
-              <select value={art} onChange={(e) => setArt(e.target.value as ChangeoutKind)}>
-                <option value="Full">Komplettwechsel</option>
-                <option value="Partial">Teilwechsel</option>
-              </select>
-            </V1Field>
+            {istWechsel ? (
+              <V1Field label="Art">
+                <select value={wechselArt} onChange={(e) => setWechselArt(e.target.value as ChangeoutKind)}>
+                  <option value="Full">Komplettwechsel</option>
+                  <option value="Partial">Teilwechsel</option>
+                </select>
+              </V1Field>
+            ) : (
+              <V1Field label="Art">
+                <select value={nachfuellArt} onChange={(e) => setNachfuellArt(e.target.value as AddbackLogKind)} aria-label="Art des Nachfüllens">
+                  <option value="Addback">Mit Dünger nach Plan</option>
+                  <option value="TopOff">Nur Wasser</option>
+                </select>
+              </V1Field>
+            )}
             <V1Field label="Wasser">
               <select value={wasser} onChange={(e) => setWasser(e.target.value as WaterSource)}>
                 <option value="Tap">Leitungswasser</option>
@@ -462,10 +605,11 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
           </div>
 
           {vorschlagFehler && <V1Alert message={vorschlagFehler} tone="warn" />}
-          {vorschlag?.luecke && <V1Alert message={vorschlag.luecke} tone="neutral" />}
+          {vorschlag?.luecke && !nurWasser && <V1Alert message={vorschlag.luecke} tone="neutral" />}
+          {nurWasser && <V1Alert tone="neutral" message="Nur Wasser — ohne Zugaben nach Plan. Über „+ Produkt“ buchst du trotzdem, was du hineingegeben hast." />}
 
-          {vorschlag && !vorschlag.luecke && (
-            <div className="wa-ziel" data-audit="wasserwechsel-ziel">
+          {vorschlag && !vorschlag.luecke && !nurWasser && (
+            <div className="wa-ziel" data-audit={`${t.audit}-ziel`}>
               <div><small>Plan</small><b>{vorschlag.programmName}{vorschlag.spalteLabel ? ` · ${vorschlag.spalteLabel}` : ''}</b></div>
               <div>
                 <small>EC-Ziel gesamt</small>
@@ -475,7 +619,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
                   : 'ohne Wasser-EC kein Gesamtziel'}</em>
               </div>
               <div>
-                <small>Mit deinen Mengen</small>
+                <small>{t.loesung}</small>
                 <b className={classNames(ecErwartet != null && vorschlag.ecZielGesamt != null && ecErwartet < vorschlag.ecZielGesamt - 0.15 && 'is-warn')}>
                   {ecErwartet != null ? `≈ ${zahl(ecErwartet, 2)}` : '—'}
                 </b>
@@ -483,7 +627,36 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
               </div>
             </div>
           )}
-          {vorschlag?.calMagHinweis && <V1Alert tone="neutral" message={vorschlag.calMagHinweis} />}
+          {!istWechsel && (
+            <div className="wa-ziel" data-audit="addback-tank">
+              <div>
+                <small>Tank danach</small>
+                <b>{ecDanach != null ? `≈ ${zahl(ecDanach, 2)}` : '—'}</b>
+                <em>{ecDanach != null && restLiter != null && vorher.ec != null && literZahl != null && ecLoesung != null
+                  ? `Mischrechnung: ${zahl(restLiter, 0)} L mit EC ${zahl(vorher.ec, 2)} + ${zahl(literZahl, 0)} L mit EC ${zahl(ecLoesung, 2)}`
+                  : anlageLiter == null ? 'Ohne Anlagevolumen keine Mischrechnung'
+                    : vorher.ec == null ? 'Ohne EC vorher keine Mischrechnung'
+                      : literZahl != null && literZahl > anlageLiter ? `Mehr als die Anlage fasst (${zahl(anlageLiter, 0)} L)`
+                        : 'Trag die nachgefüllten Liter ein'}</em>
+              </div>
+              {rechnerErgebnis && vorschlag?.ecZielGesamt != null && vorher.ec != null && ecLoesung != null && restLiter != null && (
+                <div data-audit="addback-rechner">
+                  <small>Addback-Rechner</small>
+                  {rechnerErgebnis.errorMessage
+                    ? <em>Deine Lösung (EC ≈ {zahl(ecLoesung, 2)}) ist nicht stärker als das Ziel {zahl(vorschlag.ecZielGesamt, 2)} — Nachfüllen bringt den Tank nicht dorthin.</em>
+                    : !rechnerErgebnis.needsAddback
+                      ? <em>EC vorher ({zahl(vorher.ec, 2)}) liegt schon auf dem Ziel {zahl(vorschlag.ecZielGesamt, 2)} oder darüber — reines Wasser senkt ihn.</em>
+                      : (
+                        <>
+                          <b>≈ {zahl(rechnerErgebnis.litersToAdd ?? 0, 1)} L</b>
+                          <em>deiner Lösung brächten {zahl(restLiter, 0)} L von EC {zahl(vorher.ec, 2)} auf das Ziel {zahl(vorschlag.ecZielGesamt, 2)}.</em>
+                        </>
+                      )}
+                </div>
+              )}
+            </div>
+          )}
+          {vorschlag?.calMagHinweis && !nurWasser && <V1Alert tone="neutral" message={vorschlag.calMagHinweis} />}
 
           <div className="wa-tabelle-kopf">
             <span>{geaendert > 0 ? `${geaendert} ${geaendert === 1 ? 'Wert' : 'Werte'} von dir geändert` : 'Alles wie vorgeschlagen'}</span>
@@ -496,7 +669,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
             </span>
           </div>
 
-          <div className="wa-tabelle" role="table" aria-label="Mischplan" data-audit="wasserwechsel-tabelle">
+          <div className="wa-tabelle" role="table" aria-label="Mischplan" data-audit={`${t.audit}-tabelle`}>
             <div className="wa-tr wa-th" role="row">
               <span role="columnheader">Produkt</span>
               <span role="columnheader">{literZahl != null ? `Vorschlag für ${zahl(literZahl, 0)} L` : 'Vorschlag'}</span>
@@ -559,7 +732,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
               {artikel.filter((a) => !zeilen.some((z) => z.artikelId === a.id) && !['leitungswasser', 'osmosewasser'].includes(a.name.trim().toLowerCase()))
                 .map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
-            <V1Button variant="ghost" disabled={produktWahl === ''} audit="wasserwechsel-produkt" onClick={() => {
+            <V1Button variant="ghost" disabled={produktWahl === ''} audit={`${t.audit}-produkt`} onClick={() => {
               const gewaehlt = artikel.find((a) => String(a.id) === produktWahl)
               if (gewaehlt) setExtra((alt) => [...alt, gewaehlt])
               setProduktWahl('')
@@ -570,7 +743,8 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
       )}
 
       {schritt === 3 && (
-        <V1Section title="Nachher — fertig angesetzt">
+        <V1Section title={t.titel3}>
+          {nachherVomSensor && <p className="wa-hinweis">EC, pH und Wasser sind Sensorwerte aus dem Link — überschreib sie, wenn du selbst gemessen hast.</p>}
           <div className="v1-form-grid wa-felder">
             {messFeld(nachher, setNachher, 'ec', 'EC', 'mS/cm', 'z. B. 1,15')}
             {messFeld(nachher, setNachher, 'ph', 'pH', '', 'z. B. 6,1')}
@@ -585,7 +759,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
             </p>
           )}
 
-          <div className="wa-vergleich" role="table" aria-label="Vorher-Nachher" data-audit="wasserwechsel-vergleich">
+          <div className="wa-vergleich" role="table" aria-label="Vorher-Nachher" data-audit={`${t.audit}-vergleich`}>
             <div className="wa-tr wa-th" role="row">
               <span role="columnheader" />
               <span role="columnheader">Vorher</span>
@@ -597,7 +771,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
             {vergleich('Wasser', '°C', vorher.wt, nach.wt, 1)}
             {vergleich('DO', 'mg/L', vorher.do, nach.do, 1)}
             {vergleich('ORP', 'mV', vorher.orp, nach.orp, 0)}
-            {vorschlag?.ecZielGesamt != null && (
+            {vorschlag?.ecZielGesamt != null && !nurWasser && (
               <div className="wa-tr" role="row">
                 <span role="cell" className="wa-vt-name">EC-Ziel</span>
                 <span role="cell" />
@@ -611,7 +785,7 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
             )}
           </div>
           <V1Field label="Notiz" wide hint="Landet mit im Tagebuch">
-            <textarea rows={3} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Warum so angesetzt, was aufgefallen ist …" />
+            <textarea rows={3} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder={istWechsel ? 'Warum so angesetzt, was aufgefallen ist …' : 'Warum nachgefüllt, was aufgefallen ist …'} />
           </V1Field>
           <V1Field label="Foto" wide hint={nachherHatWerte ? 'Hängt an der Messung „nachher".' : 'Ein Foto hängt an der Messung „nachher" — trag dafür mindestens einen Wert ein.'}>
             <FileInput accept="image/*" disabled={!nachherHatWerte && fotos.length === 0} fileNames={fotos.map((f) => f.name)} label="+ Foto" onFiles={setFotos} />
@@ -624,13 +798,15 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
 
       {schritt === 4 && (
         <V1Section title="Das wird gespeichert — als ein Vorgang">
-          <ul className="wa-liste" data-audit="wasserwechsel-zusammenfassung">
-            <li>✓ <b>Wasserwechsel</b> {art === 'Full' ? 'komplett' : 'teilweise'}, {literZahl != null ? `${zahl(literZahl, 0)} L` : '— L'} {WASSER_NAME[wasser]}{vorschlag?.wasserEc != null ? ` (EC ${zahl(vorschlag.wasserEc, 2)})` : ''}</li>
+          <ul className="wa-liste" data-audit={`${t.audit}-zusammenfassung`}>
+            {istWechsel
+              ? <li>✓ <b>Wasserwechsel</b> {wechselArt === 'Full' ? 'komplett' : 'teilweise'}, {literZahl != null ? `${zahl(literZahl, 0)} L` : '— L'} {WASSER_NAME[wasser]}{vorschlag?.wasserEc != null ? ` (EC ${zahl(vorschlag.wasserEc, 2)})` : ''}</li>
+              : <li>✓ <b>{NACHFUELL_ART[nachfuellArt]}</b> {literZahl != null ? `${zahl(literZahl, Number.isInteger(literZahl) ? 0 : 1)} L` : '— L'} {WASSER_NAME[wasser]}{nurWasser ? ', nur Wasser' : ', mit Dünger'}{vorschlag?.wasserEc != null ? ` (EC Wasser ${zahl(vorschlag.wasserEc, 2)})` : ''}</li>}
             <li>
               {vorherHatWerte || nachherHatWerte ? '✓' : '–'} <b>{[vorherHatWerte, nachherHatWerte].filter(Boolean).length} {[vorherHatWerte, nachherHatWerte].filter(Boolean).length === 1 ? 'Messwert' : 'Messwerte'}</b>
               {vorherHatWerte && `: vorher (${vorherHerkunft === 'Sensor' ? 'Sensor' : vorherHerkunft === 'gemischt' ? 'Sensor und von Hand' : 'von Hand'}${sensorGenutzt && sensorZeit ? `, ${uhrzeit(sensorZeit)}` : ''}${vorher.do != null ? `, DO ${zahl(vorher.do, 1)}` : ''})`}
               {vorherHatWerte && nachherHatWerte && ' ·'}
-              {nachherHatWerte && ` nachher (von Hand${nach.do != null ? `, DO ${zahl(nach.do, 1)}` : ''})`}
+              {nachherHatWerte && ` nachher (${nachherHerkunft === 'Sensor' ? 'Sensor' : nachherHerkunft === 'gemischt' ? 'Sensor und von Hand' : 'von Hand'}${nach.do != null ? `, DO ${zahl(nach.do, 1)}` : ''})`}
               {!vorherHatWerte && !nachherHatWerte && ' — keine Werte eingetragen'}
             </li>
             <li>
@@ -643,19 +819,22 @@ export function WasserwechselAblauf({ growId, stand, startSchritt = 1, onGespeic
           </ul>
           <V1Switch label="Ins Tagebuch" checked={insTagebuch} onChange={setInsTagebuch} hint="Eine Zeile mit Vorher → Nachher, Zugaben und Notiz." />
           {insTagebuch && (
-            <div className="wa-vorschau-zeile" data-audit="wasserwechsel-tagebuch-vorschau">
-              <span className="wa-tag">Wasserwechsel</span> <b>{tagebuch.titel}</b>
+            <div className="wa-vorschau-zeile" data-audit={`${t.audit}-tagebuch-vorschau`}>
+              <span className="wa-tag">{istWechsel ? 'Wasserwechsel' : 'Addback'}</span> <b>{tagebuch.titel}</b>
               {tagebuch.text.split('\n').map((zeile) => <p key={zeile}>{zeile}</p>)}
             </div>
           )}
-          <V1Switch label="Wasserwechsel-Erinnerung neu starten" checked={erinnerung} onChange={setErinnerung}
-            hint={erinnerung
-              ? (stand && naechsterWechsel ? `Nächster Wechsel fällig in ${stand.intervallTage} Tagen (${naechsterWechsel}).` : 'Die Erinnerung zählt ab diesem Wechsel.')
-              : 'Der Wechsel wird eingetragen, zählt aber nicht für die Erinnerung — etwa ein kleiner Teilwechsel. Die Dosierung rechnet trotzdem ab hier mit frischem Wasser.'} />
+          {istWechsel && (
+            <V1Switch label="Wasserwechsel-Erinnerung neu starten" checked={erinnerung} onChange={setErinnerung}
+              hint={erinnerung
+                ? (stand && naechsterWechsel ? `Nächster Wechsel fällig in ${stand.intervallTage} Tagen (${naechsterWechsel}).` : 'Die Erinnerung zählt ab diesem Wechsel.')
+                : 'Der Wechsel wird eingetragen, zählt aber nicht für die Erinnerung — etwa ein kleiner Teilwechsel. Die Dosierung rechnet trotzdem ab hier mit frischem Wasser.'} />
+          )}
+          {!istWechsel && <p className="wa-hinweis">Nachfüllen ist kein Wasserwechsel — die Wechsel-Erinnerung zählt weiter.</p>}
           <p className="wa-hinweis">Später löschen: immer den ganzen Vorgang — Messwerte, Buchungen und Tagebuchzeile gehen mit.</p>
           <div className="wa-weiter">
-            <V1Button type="submit" variant="primary" disabled={speichert || sensorLaedt} audit="wasserwechsel-speichern">
-              {speichert ? 'Speichert …' : sensorLaedt ? 'Sensorwerte werden geladen …' : 'Wasserwechsel speichern'}
+            <V1Button type="submit" variant="primary" disabled={speichert || sensorLaedt} audit={`${t.audit}-speichern`}>
+              {speichert ? 'Speichert …' : sensorLaedt ? 'Sensorwerte werden geladen …' : t.speichern}
             </V1Button>
           </div>
         </V1Section>

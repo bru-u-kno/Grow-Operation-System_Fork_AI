@@ -32,9 +32,11 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         WasserwechselStandService wasserwechselStand,
         WaterProfileStore? waterProfile = null,
         Services.GrowPlan.GrowPlanService? plaene = null,
-        WasserwechselVorgangRepository? vorgaenge = null)
+        WasserwechselVorgangRepository? vorgaenge = null,
+        AddbackVorgangRepository? nachfuellVorgaenge = null)
     {
         _vorgaenge = vorgaenge;
+        _nachfuellVorgaenge = nachfuellVorgaenge;
         _plaene = plaene;
         _repository = repository;
         _harvestRepository = harvestRepository;
@@ -52,6 +54,9 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
 
     // A-006: ein Wechsel aus dem Ablauf gehoert zu einem Vorgang — Loeschen nimmt ihn ganz.
     private readonly WasserwechselVorgangRepository? _vorgaenge;
+
+    // A-006 Etappe 3: ein Addback aus dem Ablauf gehoert zu einem Vorgang — Loeschen nimmt ihn ganz.
+    private readonly AddbackVorgangRepository? _nachfuellVorgaenge;
 
     // Fork AI (Grow-Plan): die Ernte schließt den Grow ab — dann wird sein Plan eingefroren.
     private readonly Services.GrowPlan.GrowPlanService? _plaene;
@@ -425,6 +430,15 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         if (_repository.GetGrow(id) is null)
         {
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
+        }
+
+        // A-006 Etappe 3: gehoert der Eintrag zu einem Nachfuell-Vorgang, geht der
+        // ganze Vorgang — wie beim Wechsel. Sonst blieben Messungen, Buchungen und
+        // Tagebuchzeile ohne ihren Eintrag stehen. Ein Weg, nicht zwei.
+        if (_nachfuellVorgaenge?.ZumEintrag(id, logId) is { } vorgang)
+        {
+            _nachfuellVorgaenge.Loeschen(id, vorgang.Id);
+            return NoContent();
         }
 
         return _repository.DeleteAddbackLog(id, logId)

@@ -72,6 +72,13 @@ export interface TagebuchAddbackDto {
   phNachher: number | null
   wasser: string | null
   notiz: string | null
+  /** Der Nachfüll-Vorgang (A-006, Etappe 3) — null bei Altdaten. */
+  vorgangId?: number | null
+  /** Nur am Vorgang: Messung vorher/nachher mit allen Werten. */
+  vorher?: TagebuchWerteDto | null
+  nachher?: TagebuchWerteDto | null
+  /** Nur am Vorgang: seine Tagebuchzeile. */
+  journal?: TagebuchNotizDto | null
 }
 
 export interface TagebuchDosisDto {

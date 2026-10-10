@@ -9,8 +9,9 @@
 |---|---|
 | Pumpenliste, kalibrieren, von Hand dosieren, „Was wäre jetzt nötig?" | Betrieb → Dosierung, `/dosierung` |
 | Pumpe anlegen bzw. einstellen | `/dosierung/neu`, `/dosierung/:pumpId` |
-| Addback-Übersicht: Grow wählen, letzter Stand, Verlauf | Jetzt → Addback, `/addback` |
-| Addback-Assistent für einen Grow (messen → Ziel → dosieren → Kontrolle) | `/grows/:growId/addback` |
+| Nachfüllen (Addback) als ein Ablauf: vorher → nachfüllen → nachher → speichern, darunter die bisherigen Einträge | Jetzt → Addback, `/addback?growId=…` |
+| Alte Adresse des Addback-Assistenten — leitet mit allen Suchparametern auf `/addback?growId=:growId` | `/grows/:growId/addback` |
+| Nachfüllen vorbelegt öffnen (Grow-Tagebuch, „Nachfüllen eintragen") | `/addback?growId=…&zeitpunkt=…&ecVorher=…&ecNachher=…&liter=…` — siehe unten |
 | Wasserwechsel: Stand, eintragen, nachtragen, Verlauf | Jetzt → **Wasserwechsel**, `/wasserwechsel` |
 | Stand des Wasserwechsels (ohne Formular, mit Weg dorthin) | Abschnitt „Wasserwechsel" auf `/addback` |
 | Befunde des Pumpen-Wächters | Jetzt → Aufgaben, `/aufgaben` — ganz oben, vor allem anderen |
@@ -44,6 +45,30 @@ beide konzentriert zusammenkommen. Also: A läuft, Trennzeit, dann B — als
 `Liter = V · (Ziel − Ist) / (Stock − Ziel)`. Liegt der Ist-EC schon auf Ziel, ist
 nichts zu tun. Gemischt wird von Hand nach SOP `nutrient-addback`; Grow OS rechnet
 und protokolliert.
+
+**Nachfüllen als ein Vorgang (A-006, Etappe 3).** Wie der Wasserwechsel: ein
+Speichern legt Addback-Eintrag, Messung vorher und nachher, Verbrauch (Zugaben
+und Wasser) und eine Tagebuchzeile (Art „Fütterung") in **einer** Transaktion an
+(`POST /api/grows/{id}/addback/vorgaenge`, Tabelle `ForkAddbackVorgaenge`,
+Buchungen über `ForkVerbraeuche.AddbackVorgangId`). Löschen am Vorgang
+(`DELETE …/addback/vorgaenge/{id}`) oder am Eintrag (`DELETE …/addback/logs/{id}`)
+nimmt alles mit. Die Zugaben schlägt der Mischplan auf die **nachgefüllten** Liter
+vor (`GET …/mixing-plan/vorschlag`, Wasser-EC und CalMag nach Wasserart — dieselbe
+Rechnung wie beim Wechsel). Im Schritt „Nachfüllen" stehen zwei Rechnungen mit
+Etikett: „Tank danach" (Mischrechnung nach Volumen: Rest × EC vorher + Liter × EC
+der Lösung) und der Addback-Rechner oben — wie viel der eigenen Lösung den Tank
+auf das EC-Ziel brächte. Nachfüllen ist kein Lösungswechsel: die
+Wechsel-Erinnerung zählt weiter. Einträge des früheren Assistenten (ohne Vorgang)
+bleiben lesbar und zählen weiter.
+
+**Vorbelegung per Link.** `/addback?growId=1&zeitpunkt=2026-10-03T14:55:00Z&ecVorher=1.75&ecNachher=1.61&liter=20`
+öffnet den Ablauf mit diesen Werten. `zeitpunkt` als ISO mit Zone oder Ortszeit
+`yyyy-MM-ddTHH:mm`; Zahlen in Maschinenform (`1.75`) für `liter`, `ecVorher`,
+`phVorher`, `wtVorher`, `ecNachher`, `phNachher`, `wtNachher`; dazu `wasser`
+(`Tap`/`RO`/`Mixed`), `notiz` und `quelle` (`sensor`, Standard, oder `hand`). Mit
+`quelle=sensor` gelten die Werte vorher als Sensorwerte, solange „Wann" nicht
+verstellt wird. Gelesen von `vorbelegungAusLink` in
+`src/features/vorgang/ablauf-rechnung.ts`.
 
 **Wasserwechsel.** Teil- oder Komplettwechsel mit EC/pH vor und nach und der
 benutzten Wasserquelle — und er schneidet das Lernfenster der Pumpen
@@ -84,7 +109,6 @@ Watt schaut.
 | Addback-Behälter | 18,9 L, zu 90 % füllen (klein: 50 %) | `knowledge-defaults/guidance/addback-mixing-procedure.json`; Quelle „RDWC Recirculating Deep Water Culture Procedure (Metric)" |
 | Höchstmenge je Komponente | 500 ml je Behälter | `knowledge-defaults/guidance/addback-part-limit.json`; gleiche Quelle |
 | pH des Anmischwassers | 6,0 | `knowledge-defaults/sops/nutrient-addback.json`, Schritt `a5` |
-| Kontrolle nach dem Addback | nach 15 min nachmessen | `AddbackPage.tsx`, Schritt „KONTROLLE" — die SOP lässt in Schritt `a13` 30 min umwälzen (`waitMinutes`), bevor sie misst |
 | Komplettwechsel | fest 100 % | `ChangeoutsPanel.tsx` (Feld gesperrt) |
 
 ## Was es bewusst NICHT tut
@@ -122,10 +146,11 @@ Watt schaut.
 | A + B: Verhältnis, Trennzeit, Prüfung des Paares | `GrowDiary.Web/Services/PartnerDosing.cs` |
 | Endpunkte: Pumpen, Kalibrierung, Dosis, Stopp, Vorschlag, Protokoll | `GrowDiary.Web/Api/Controllers/DosingApiController.cs` |
 | Addback: Rechnung, Endpunkte, Einträge | `GrowDiary.Web/Services/AddbackCalculator.cs`, `Api/Controllers/GrowWorkflowApiController.cs`, `Models/AddbackLogEntry.cs`, `Models/ChangeoutEntry.cs`, `Infrastructure/AddbackRepository.cs` |
+| Vorgang (Wechsel und Nachfüllen): anlegen, löschen, gemeinsame Bausteine | `Api/Controllers/AddbackVorgangApiController.cs`, `WasserwechselApiController.cs`, `VorgangEingabe.cs`, `Infrastructure/AddbackVorgangRepository.cs`, `WasserwechselVorgangRepository.cs`, `VorgangBausteine.cs` |
 | Pumpen-Wächter: Urteil / Meldung | `GrowDiary.Web/Services/PumpWatchService.cs`, `PumpWatchNotifier.cs` |
 | Wann zuletzt gewechselt wurde — **die einzige Antwort** | `GrowDiary.Web/Services/Wasserwechsel.cs` |
 | Stand (Tage seit, fällig/überfällig, Plan) | `GrowDiary.Web/Services/WasserwechselStandService.cs`, Endpunkt `GET /api/grows/{id}/changeouts/stand` |
-| Oberfläche | `GrowDiary.React/src/pages/DosingPage.tsx`, `DosingPumpSetupPage.tsx`, `AddbackHubPage.tsx`, `AddbackPage.tsx`, `WasserwechselPage.tsx`, `src/features/changeouts/` (`ChangeoutsPanel.tsx`, `WasserwechselStand.tsx`, `routine-weg.ts`), `src/features/dosing/calibration.ts` |
+| Oberfläche | `GrowDiary.React/src/pages/DosingPage.tsx`, `DosingPumpSetupPage.tsx`, `AddbackPage.tsx`, `WasserwechselPage.tsx`, `src/features/vorgang/` (`VorgangAblauf.tsx`, `ablauf-rechnung.ts`), `src/features/addback/NachfuellListe.tsx`, `src/features/changeouts/` (`ChangeoutsPanel.tsx`, `WasserwechselStand.tsx`, `routine-weg.ts`), `src/features/dosing/calibration.ts` |
 | Fachwissen mit Quellen | `GrowDiary.Web/wwwroot/knowledge-defaults/sops/nutrient-addback.json`, `guidance/addback-mixing-procedure.json`, `guidance/addback-part-limit.json` |
 
 ## Fallen

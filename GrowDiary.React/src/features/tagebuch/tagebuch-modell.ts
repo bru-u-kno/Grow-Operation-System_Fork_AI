@@ -133,9 +133,3 @@ export function tagTitel(datum: string, wochentag: string): string {
   return `${wochentag}, ${tag}.${monat}.`
 }
 
-/** `2026-10-03T14:10:00Z` → `2026-10-03T16:10` für ein Datum-Uhrzeit-Feld (Ortszeit des Browsers). */
-export function alsEingabeZeit(utc: string): string {
-  const d = new Date(utc)
-  const lokal = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-  return lokal.toISOString().slice(0, 16)
-}
