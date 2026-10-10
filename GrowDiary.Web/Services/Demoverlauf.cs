@@ -388,6 +388,7 @@ public static class Demoverlauf
         "outside-temperature" => Math.Round(AussenTempC(ortszeit), 1),
         "outside-humidity" => Math.Round(AussenFeuchtePercent(ortszeit), 0),
         "outside-vpd" => Math.Round(AussenVpdKpa(ortszeit), 2),
+        "power" => Math.Round(DemoData.StromLeistungW(ortszeit.ToUniversalTime()), 0),
         _ => null,
     };
 
@@ -403,6 +404,7 @@ public static class Demoverlauf
         "reservoir-ph", "reservoir-ec", "reservoir-temp", "reservoir-level-cm",
         "orp", "dissolved-oxygen",
         "outside-temperature", "outside-humidity", "outside-vpd",
+        "power",
     ];
 
     /// <summary>Die Einheit zu einem Schlüssel — leer, wo es keine gibt (pH).</summary>
@@ -413,6 +415,7 @@ public static class Demoverlauf
         "outside-vpd" => "kPa",
         "co2" => "ppm",
         "ppfd" => "µmol/m²/s",
+        "power" => "W",
         "reservoir-ec" => "mS/cm",
         "reservoir-level-cm" => "cm",
         "orp" => "mV",

@@ -55,6 +55,10 @@ export const KURVEN_FARBEN: Readonly<Record<string, string>> = {
   'reservoir-level': '#65a30d',
   orp: '#14b8a6',
   'dissolved-oxygen': '#64748b',
+  // Dunkles Türkis: Gelb lag nur 16 Lab-Einheiten neben PPFD-Orange. Dieses hat zu allen vierzehn
+  // anderen mindestens 26 (die engsten Paare der Tabelle: 22) und über 3:1 in beiden Themen
+  // (hell 5,2 / dunkel 3,4; gerechnet wie bei den Außenwerten).
+  power: '#0f766e',
   // Die Luft außerhalb des Zelts: dunkler als die übrigen, damit sie neben den
   // Innenwerten nicht verschwimmt. Ausgesucht über den Farbabstand zu allen
   // elf oben (CIE-Lab ≥ 22, so weit wie die engsten Paare der Tabelle) und den

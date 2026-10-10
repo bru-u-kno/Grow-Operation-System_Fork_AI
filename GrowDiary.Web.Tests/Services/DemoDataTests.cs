@@ -70,6 +70,8 @@ public sealed class DemoDataTests
         ["outside-temperature"] = (12, 30),
         ["outside-humidity"] = (25, 85),
         ["outside-vpd"] = (0.2, 2.5),
+        // Steckdosenleiste vor beiden Zelten: Grundlast 160 W, mit beiden LED 880 W.
+        ["power"] = (100, 1000),
     };
 
     /// <summary>

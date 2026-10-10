@@ -53,6 +53,7 @@ export const KNOWN_METRICS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'reservoir-level-cm', label: 'Wasserstand (cm)' },
   { key: 'orp', label: 'ORP' },
   { key: 'dissolved-oxygen', label: 'Sauerstoff' },
+  { key: 'power', label: 'Strom' },
 ]
 
 /**

@@ -16,8 +16,9 @@ public sealed class TentsController : Controller
     private readonly AppPaths _paths;
     private readonly NachtabsenkungWriter _absenkung;
     private readonly AppSettingsRepository _einstellungen;
+    private readonly StromKachel _strom;
 
-    public TentsController(GrowRepository repository, HomeAssistantService homeAssistantService, GrowDashboardComposer composer, GrowAlertService growAlertService, AppPaths paths, NachtabsenkungWriter absenkung, AppSettingsRepository einstellungen)
+    public TentsController(GrowRepository repository, HomeAssistantService homeAssistantService, GrowDashboardComposer composer, GrowAlertService growAlertService, AppPaths paths, NachtabsenkungWriter absenkung, AppSettingsRepository einstellungen, StromKachel strom)
     {
         _repository = repository;
         _homeAssistantService = homeAssistantService;
@@ -26,6 +27,7 @@ public sealed class TentsController : Controller
         _paths = paths;
         _absenkung = absenkung;
         _einstellungen = einstellungen;
+        _strom = strom;
     }
 
     [HttpGet("")]
@@ -57,7 +59,9 @@ public sealed class TentsController : Controller
            die zweite Wahrheit und faellt weg. */
         var measurements = _repository.GetMeasurementsForTent(id);
         var states = await _homeAssistantService.GetStatesAsync(settings, tent, cancellationToken);
+        await _strom.ErgaenzenAsync(tent.Id, states, settings, cancellationToken);
         var metrics = _composer.BuildTentMetrics(tent, states, measurements);
+        await _strom.KartenErgaenzenAsync(metrics, tent, settings, cancellationToken);
         var alerts = tent.ActiveGrows
             .SelectMany(grow => _growAlertService.BuildAlertsForGrow(grow, maxCount: 2))
             .Take(8)
