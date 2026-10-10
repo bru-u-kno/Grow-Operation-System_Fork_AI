@@ -4,7 +4,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 /**
  * A-016 (Etappe 6): Die Bluelab-Anleitung oben im Reiter „Rollen".
  *
- * Der erste Fall läuft gegen die echte Demo-App (frisch: nichts zugeordnet). Die übrigen bekommen die Rollen-Seite und
+ * Der erste Fall läuft gegen die echte Demo-App; ohne Backend (Rauchtest) überspringt sich die ganze Datei (frisch: nichts zugeordnet). Die übrigen bekommen die Rollen-Seite und
  * den Stand der Übertragung vorgegeben (`page.route`): die Demo hat kein Bluelab-Gerät, und geprüft wird, was die
  * Anleitung aus dem Stand macht — Häkchen, Warnung, Zuklappen.
  */
@@ -30,8 +30,13 @@ async function seite(page: Page, zeilen: Json[], stand: Json | null) {
 
 const anleitung = (page: Page) => page.locator('[data-audit="bluelab-anleitung"]')
 
-test('frisch: die Anleitung ist offen und nennt, was fehlt (echte Demo)', async ({ page, request }) => {
+// Die Geräteseite braucht für ihren Rahmen weitere Antworten des Backends; ohne Backend (Rauchtest) rendert sie die
+// Rollen gar nicht. Dort überspringt sich die Datei — alle Fälle, nicht nur der erste.
+test.beforeEach(async ({ request }) => {
   darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend unter GROW_OS_URL — die Rollen-Seite braucht die laufende App.')
+})
+
+test('frisch: die Anleitung ist offen und nennt, was fehlt (echte Demo)', async ({ page }) => {
   await page.goto('/geraete?reiter=rollen&modul=bluelab')
   await expect(anleitung(page)).toBeVisible()
   await expect(anleitung(page).locator('ol li')).toHaveCount(4)
