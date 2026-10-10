@@ -383,6 +383,9 @@ public sealed class PushZielJeAbsenderTests : IDisposable
             .AddSingleton(_grows)
             .AddSingleton(new SensorReadingRepository(_pfade))
             .AddSingleton(ha)
+            .AddSingleton(new StromKachel(new AppSettingsRepository(_pfade), ha))
+            .AddSingleton(new DashboardLayoutRepository(_pfade))
+            .AddSingleton(new AppSettingsRepository(_pfade))
             .AddSingleton(new LightStatusTransitionService(_grows))
             .AddSingleton(new LightWatchService(
                 new LightCycleReader(new LightRepository(_pfade)), Benachrichtigung(handler), NullLogger<LightWatchService>.Instance))

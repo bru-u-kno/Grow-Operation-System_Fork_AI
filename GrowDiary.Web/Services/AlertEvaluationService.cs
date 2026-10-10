@@ -326,6 +326,7 @@ public sealed class AlertEvaluationService
         "outside-temperature" => ("Außen Temp.", " °C"),
         "outside-humidity" => ("Außen RLF", " %"),
         "outside-vpd" => ("Außen VPD", " kPa"),
+        "power" => ("Strom", " W"),
         _ => (metricKey, ""),
     };
 }

@@ -5,7 +5,7 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
-## 2.0.0-forkai.202
+## 2.0.0-forkai.203
 
 **Fork AI.** Addback (A-006, Etappe 3): Nachfüllen auf einer Seite — für „18 L Leitungswasser" genügen die Quelle und die Liter.
 
@@ -19,6 +19,16 @@
 - **Zeitpunkt und Verbrauch:** Der Zeitpunkt hat einen Kalender- und Uhrzeit-Wähler mit „Jetzt", „vor 30 min", „vor 1 Std.", „gestern". Der Verbrauch seit dem letzten Mal steht in Litern und ist optional — die Rechnung braucht ihn nicht.
 - **Aufgeräumt:** Der 4-Schritte-Ablauf für das Nachfüllen (nie ausgeliefert) ist weg; der Ablauf im Wasserwechsel ist jetzt nur noch der Wechsel. Die Oberfläche „Prüfen & Dosierung berechnen" mit Ziel-EC und Stamm-Lösung gibt es nicht mehr.
 - **Tagebuch:** „Nachfüllen eintragen" an einer Auffälligkeit öffnet dieselbe Seite, vorbelegt mit Zeitpunkt, Liter und den gemessenen Werten.
+
+## 2.0.0-forkai.202
+
+**Fork AI.** Live: Die Kachel „Strom" — Leistung, Verbrauch von heute und Kosten, mit Verlauf wie pH und EC.
+
+- **Neue Kachel „Strom":** Sie zeigt die Leistung der Steckdose vor dem Zelt in Watt und darunter „heute 12,4 kWh · ca. 3,60 €". Die Leistung kommt von der Kostenseite (Strom-Quelle → Leistung); wer dort nichts eingetragen hat, sieht die Kachel nicht. Sie hat kein Ziel und keine Ampel, denn Strom wird nicht geregelt. Der Verbrauch seit Mitternacht ist aus dem Verlauf des kWh-Zählers gerechnet (dieselbe Rechnung wie bei den Entfeuchtern), der Preis der aus den Kosten-Einstellungen; fehlt eines von beiden, steht nur das andere da. Meldet der Sensor kW, rechnet die Kachel in W um.
+- **Antippen öffnet den Verlauf:** Wie bei pH und EC geht das Verlaufsdiagramm auf, mit „Strom" im Fokus (Zeiträume 1 Std bis 7 Tage, Zusammen/Einzeln, Max/Min/Ø). Im Verlaufs-Bereich steht „Strom" als zusätzlicher Wert-Knopf, in dunklem Türkis. Dafür schreibt der Erfassungstakt die Leistung alle fünf Minuten mit in die Rohwerte (sieben Tage) und gestern in die Tageswerte; die Kurve füllt sich also ab der Installation, nicht rückwirkend. Der Knopf erscheint, sobald zwei Punkte da sind.
+- **Wer ein eigenes Layout hat:** Die Kachel kommt einmal von selbst in den Klima-Bereich, hinter die letzte Messwert-Kachel — beim nächsten Erfassungstakt (wenige Minuten), sobald auf der Kostenseite eine Leistung eingetragen ist. Wer sie entfernt, bei dem kommt sie nicht wieder. Wer das Standard-Layout hat, bekommt sie ohnehin. Im Anpassen-Modus steht „Strom" in der Liste der Messwerte.
+- **Zelte mit eigenem kWh-Zähler** (Kostenseite → Zelt-Zähler) bekommen keine Strom-Kachel und keinen Strom-Verlauf: Die Leistung dort ist die der gemeinsamen Steckdose, und sie neben die kWh eines anderen Zählers zu stellen, wäre falsch.
+- Im Testbetrieb gibt es die Kachel mit der Demo-Steckdosenleiste (160 W Grundlast, mit beiden LED 880 W).
 
 ## 2.0.0-forkai.201
 

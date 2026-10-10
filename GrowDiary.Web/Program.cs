@@ -122,6 +122,8 @@ builder.Services.AddSingleton<AddbackVorgangRepository>(); // A-006 Etappe 3: Na
 // Fork AI (forkai.77): Verbrauch je Artikel ueber einen Zeitraum.
 builder.Services.AddScoped<VerbrauchsansichtService>();
 builder.Services.AddScoped<KostenSeiteService>();
+// Fork AI: Live-Kachel „Strom" (Leistung, heute kWh, Kosten) aus der Strom-Quelle der Kostenseite.
+builder.Services.AddScoped<StromKachel>();
 builder.Services.AddScoped<ZaehlerstandImportService>();
 // Fork AI (forkai.20): Steuerung — CO₂-Leitstand
 builder.Services.AddSingleton<SteuerungRepository>();

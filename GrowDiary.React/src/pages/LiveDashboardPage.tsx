@@ -181,8 +181,11 @@ function LiveDashboardPage() {
   // Was im Klima-Band wirklich steht — Licht haengt hinten dran. Der
   // Anpassen-Modus saet daraus, damit beim Umschalten nichts erscheint oder
   // verschwindet, was vorher nicht da war.
+  // Strom hängt ganz hinten dran — und nur, wenn die Kostenseite eine Leistung liefert.
+  const stromMetric = findMetric(live?.metrics ?? [], ['power'])
   const climateForScreen = climateMetrics.concat(
-    lightMetric ? [{ ...lightMetric, label: lightMetric.key === 'ppfd' ? 'PPFD' : 'Licht' }] : [])
+    lightMetric ? [{ ...lightMetric, label: lightMetric.key === 'ppfd' ? 'PPFD' : 'Licht' }] : [],
+    stromMetric ? [{ ...stromMetric, label: 'Strom' }] : [])
   const hasHydroGrow = primaryGrow ? primaryGrow.hydroStyle === 'DWC' || primaryGrow.hydroStyle === 'RDWC' : false
   const risksForContext = state.risks
     .filter((risk) => risk.status === 'Open' || risk.status === 'Acknowledged')

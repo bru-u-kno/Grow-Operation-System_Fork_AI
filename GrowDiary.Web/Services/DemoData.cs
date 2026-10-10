@@ -239,6 +239,9 @@ public static class DemoData
         ["outside-temperature"] = (20, 1, 24, 0, "°C", "Demo Controller Außen Temperatur"),
         ["outside-humidity"] = (60, 4, 24, 0, "%", "Demo Controller Außen Luftfeuchte"),
         ["outside-vpd"] = (0.94, 0.15, 24, 0, "kPa", "Demo Controller Außen VPD"),
+        // „power" steht absichtlich NICHT hier: die Leistung kommt im Betrieb über die Strom-Quelle der
+        // Kostenseite (StromKachel), und der Testbestand soll genau diesen Weg gehen — sonst läuft er nie.
+        // Der Verlauf dazu steht in Demoverlauf.
     };
 
     public static IReadOnlyCollection<string> MetricKeys => Shape.Keys;

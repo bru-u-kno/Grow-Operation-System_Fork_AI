@@ -145,11 +145,27 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
         var nachtabsenkung = scope.ServiceProvider.GetRequiredService<NachtabsenkungWriter>();
         var notifications = scope.ServiceProvider.GetRequiredService<NotificationService>();
         var heartbeat   = scope.ServiceProvider.GetRequiredService<SystemHeartbeat>();
+        var strom       = scope.ServiceProvider.GetRequiredService<StromKachel>();
 
         var settings = repository.GetEffectiveHomeAssistantSettings();
         // The worker is alive either way — record the round even when HA is unconfigured,
         // so the watchdog does not mistake "nothing to do" for "stalled".
         heartbeat.MarkSnapshotRun(DateTime.UtcNow);
+
+        // Die Strom-Kachel kommt in jedes eigene Layout — unabhängig davon, ob Home Assistant gerade antwortet.
+        try
+        {
+            var gelegt = StromKachel.AnbietenFuerAlleZelte(
+                repository,
+                scope.ServiceProvider.GetRequiredService<DashboardLayoutRepository>(),
+                scope.ServiceProvider.GetRequiredService<AppSettingsRepository>());
+            if (gelegt > 0) _logger.LogInformation("Strom-Kachel in {Anzahl} eigene Layouts gelegt.", gelegt);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Strom-Kachel konnte nicht ins eigene Layout gelegt werden.");
+        }
+
         if (!settings.IsConfigured) return;
 
         var tents = repository.GetTents();
@@ -158,6 +174,9 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
             try
             {
                 var states      = await haService.GetStatesAsync(settings, tent, cancellationToken);
+                // Die Leistung der Steckdose läuft als Messgröße „power" mit: ohne diese Zeile
+                // hätte die Strom-Kachel keinen Verlauf, weil nichts in die Rohwerte käme.
+                await strom.ErgaenzenAsync(tent.Id, states, settings, cancellationToken);
                 var capturedAt  = DateTime.UtcNow;
                 heartbeat.MarkHomeAssistantSuccess(capturedAt);
 
@@ -365,6 +384,8 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
         var repository  = scope.ServiceProvider.GetRequiredService<GrowRepository>();
         var sensorRepo  = scope.ServiceProvider.GetRequiredService<SensorReadingRepository>();
 
+        var stromQuelle = KostenSeiteService.StromQuelleLesen(scope.ServiceProvider.GetRequiredService<AppSettingsRepository>());
+        var stromEingerichtet = !string.IsNullOrWhiteSpace(stromQuelle.LeistungEntityId);
         var tents = repository.GetTents();
         foreach (var tent in tents)
         {
@@ -392,6 +413,10 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
                     "dissolved-oxygen"
                 ];
             }
+
+            // Die Strom-Leistung gehört keinem Sensor des Zelts, hat aber Rohwerte — also auch Tageswerte,
+            // sonst endet der Verlauf nach sieben Tagen.
+            if (stromEingerichtet && !stromQuelle.HatEigenenZaehler(tent.Id) && !metricKeys.Contains(StromKachel.Key)) metricKeys.Add(StromKachel.Key);
 
             foreach (var key in metricKeys)
             {

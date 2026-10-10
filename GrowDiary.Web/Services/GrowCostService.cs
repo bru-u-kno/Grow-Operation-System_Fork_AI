@@ -63,20 +63,23 @@ public sealed class GrowCostService
     /// <summary>Der Strompreis in Cent je kWh, wie in den Einstellungen hinterlegt.</summary>
     public double? StrompreisCentProKwh
     {
-        get
-        {
-            var raw = _settings.GetValue(PreisKey);
-            if (string.IsNullOrWhiteSpace(raw)) return null;
-            try
-            {
-                return JsonSerializer.Deserialize<KostenEinstellungen>(raw, Json)?.StrompreisCentProKwh;
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
+        get => StrompreisLesen(_settings);
         set => StrompreisSchreiben(_settings, value);
+    }
+
+    /// <summary>Den Strompreis lesen — statisch wie das Schreiben, damit auch die Strom-Kachel ohne diesen Dienst auskommt.</summary>
+    public static double? StrompreisLesen(AppSettingsRepository settings)
+    {
+        var raw = settings.GetValue(PreisKey);
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<KostenEinstellungen>(raw, Json)?.StrompreisCentProKwh;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Den Strompreis schreiben — statisch, damit der Demobestand denselben Weg nimmt.</summary>

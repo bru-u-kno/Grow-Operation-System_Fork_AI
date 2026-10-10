@@ -275,6 +275,11 @@ public sealed class GrowDashboardComposer
             cards.Add(Build(beschriftung, aussen, _ => null, explicitUnit: einheit.Trim()));
         }
 
+        // Die Leistung der Steckdose vor dem Zelt (Strom-Quelle der Kostenseite) — nur mit
+        // Wert, kein leerer Platzhalter. Ohne Ziel: Strom ist eine Information, keine Regelgröße.
+        if (states.ContainsKey(StromKachel.Key))
+            cards.Add(Build("Strom", StromKachel.Key, _ => null, explicitUnit: "W"));
+
         var hasActiveHydro = tent.ActiveGrows.Any(g => g.IrrigationType == IrrigationType.ActiveHydro);
 
         // A reservoir metric is shown when its sensor is mapped and Home Assistant returns a
@@ -728,6 +733,8 @@ public sealed class GrowDashboardComposer
             "outside-temperature" => value.ToString("0.0"),
             "outside-humidity"    => value.ToString("0"),
             "outside-vpd"         => value.ToString("0.00"),
+            // Watt ganz: auf der Zehntelstelle zappelt die Kachel mit jedem Messschritt.
+            "power"               => value.ToString("0"),
             _                 => value.ToString("0.#")
         };
     }

@@ -20,6 +20,9 @@ export const VERLAUFS_METRIKEN = [
   'outside-temperature', 'outside-humidity', 'outside-vpd',
   'co2', 'ppfd',
   'reservoir-ph', 'reservoir-ec', 'reservoir-temp', 'reservoir-level', 'orp', 'dissolved-oxygen',
+  // Die Leistung der Steckdose vor dem Zelt (Strom-Quelle der Kostenseite) — ganz hinten, weil
+  // sie nichts mit dem Zeltklima zu tun hat und nur mit eingetragener Quelle Punkte liefert.
+  'power',
 ] as const
 
 const SPARK_METRICS = VERLAUFS_METRIKEN.join(',')
