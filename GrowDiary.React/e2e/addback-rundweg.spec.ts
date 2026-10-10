@@ -132,6 +132,14 @@ test.describe('Nachfüll-Rundweg', () => {
     await f.getByLabel('Wie viel Wasser?').fill('10')
     await expect(zeileA).toHaveValue(vorschlagA)
 
+    // ---- Abgewählte Dünger zählen nicht mit: die Erwartung für den EC ändert sich, wenn ein Grunddünger wegfällt
+    const erwartung = page.locator('[data-audit="nachfuellen-erwartung"]')
+    const mitDuenger = await erwartung.innerText()
+    await f.getByLabel('Aqua Vega A zugegeben').uncheck()
+    await expect.poll(async () => erwartung.innerText(), { message: 'Die EC-Erwartung rechnet den abgewählten Dünger weiter mit.' }).not.toBe(mitDuenger)
+    await f.getByLabel('Aqua Vega A zugegeben').check()
+    await expect.poll(async () => erwartung.innerText()).toBe(mitDuenger)
+
     // ---- Eigene Menge, zurück auf den Vorschlag, wieder die eigene
     await zeileA.fill('25')
     await expect(f.getByText('von dir geändert')).toBeVisible()
@@ -251,7 +259,14 @@ test.describe('Nachfüll-Rundweg', () => {
     await page.locator('[data-audit="nachfuellen-speichern"]').click()
     await expect(page.getByText('Was hast du zugegeben?')).toBeVisible()
 
+    // Ein vorhandener Artikel wird gewählt, die Zeile nimmt seinen Namen — und wer sie danach umbenennt, bucht NICHT mehr auf ihn.
     await f.getByRole('button', { name: '+ Anderer …' }).click()
+    await f.getByLabel('Name des Zusatzes').fill('Unbekannter Zusatz')
+    await f.getByLabel('Vorhandenen Artikel für Unbekannter Zusatz wählen').selectOption({ label: 'Purolyt' })
+    await expect(f.getByLabel('Name des Zusatzes')).toHaveValue('Purolyt')
+    await f.getByLabel('Name des Zusatzes').fill('Zitronensaft-Rundweg')
+    await expect(page.locator('[data-audit="nachfuellen-artikel-fehlt"]')).toContainText('Zitronensaft-Rundweg')
+    await expect(page.locator('[data-audit="nachfuellen-artikel-da"]')).toHaveCount(0)
     await f.getByLabel('Name des Zusatzes').fill('Purolyt')
     await f.getByLabel('Purolyt Menge').fill('12')
     await expect(page.locator('[data-audit="nachfuellen-erwartung"]')).toContainText('unverändert')
@@ -304,9 +319,10 @@ test.describe('Nachfüll-Rundweg', () => {
     const f = formular(page)
     await f.getByLabel('Wie viel Wasser?').fill('8')
 
-    // Die Nachmessung fällt auf einen Zeitpunkt, für den es einen echten Rohwert gibt: der Zeitpunkt liegt
-    // 30 Minuten vor dem neuesten Wert im Verlauf des Zelts. Ein fester „vor einer Stunde" hinge am Alter
-    // der Demo-App — deren Sensorverlauf endet beim Start.
+    // Die Nachmessung fällt auf einen Zeitpunkt, für den es einen echten Rohwert gibt: eine Minute NACH dem neuesten
+    // Wert im Verlauf des Zelts (der Zeitpunkt liegt 30 Minuten davor, die Nachmessung kommt 30 Minuten danach). Ein fester
+    // „vor einer Stunde" hinge am Alter der Demo-App — deren Sensorverlauf endet beim Start und hat 15 Minuten Abstand,
+    // das Suchfenster der Nachmessung sind 10: die Fälligkeit muss also hinter einem Wert liegen, nicht davor.
     const verlauf = await (await page.request.get(`/api/tents/${eigener!.tentId}/history?metrics=reservoir-ec&days=2&resolution=raw`)).json() as { series: Array<{ points: Array<{ t: string }> }> }
     const punkte = verlauf.series[0]?.points ?? []
     darfUeberspringen(punkte.length === 0, 'Das Zelt hat keinen Sensorverlauf — ohne Rohwerte gibt es nichts nachzumessen.')
@@ -314,12 +330,16 @@ test.describe('Nachfüll-Rundweg', () => {
     await weitereAngabenOeffnen(page)
     await f.getByRole('button', { name: 'vor 1 Std.' }).click()
     await expect(f.getByLabel('Zeitpunkt')).not.toHaveValue('')
-    await f.getByLabel('Zeitpunkt').fill(feldzeit(new Date(neuester.getTime() - 30 * 60_000)))
+    await f.getByLabel('Zeitpunkt').fill(feldzeit(new Date(neuester.getTime() + 60_000 - 30 * 60_000)))
     await expect(page.locator('[data-audit="nachfuellen-nachmessung"]')).toContainText('liegt schon in der Vergangenheit')
 
     // Minuten ändern und als Standard merken
     await f.getByRole('button', { name: '30 min', exact: true }).click()
     await expect(f.getByLabel('Minuten bis zur Nachmessung')).toHaveValue('30')
+    // „Als Standard merken" bleibt auch bei ausgeschalteter Automatik sichtbar — sonst würde „aus" unsichtbar gespeichert.
+    await f.getByLabel('Nachmessung automatisch eintragen').uncheck()
+    await expect(f.getByLabel('als meinen Standard merken')).toBeVisible()
+    await f.getByLabel('Nachmessung automatisch eintragen').check()
     await f.getByLabel('als meinen Standard merken').check()
     const gemerkt = page.waitForResponse((r) => /\/api\/addback\/einstellungen$/.test(r.url()) && r.request().method() === 'PUT')
     const vorgang = await speichern(page)

@@ -4,7 +4,7 @@
  * hell und dunkel. Gemessen wird dagegen in e2e/addback-rundweg.spec.ts (Handy, kein Überlauf).
  */
 .nf *{box-sizing:border-box}
-.nf{overflow-wrap:anywhere}
+.nf{overflow-wrap:break-word}
 .nf .v1-eyebrow,.nf .v1-section-head h2{white-space:normal;line-height:1.5}
 .nf .v1-alert{display:flex;flex-direction:column;align-items:flex-start;gap:4px;line-height:1.55}
 .nf p{line-height:1.55}
@@ -115,3 +115,10 @@
 
 .nf-klapp{margin-top:var(--s-4)}
 .nf-vorbelegt{margin:0 0 var(--s-3);padding:var(--s-2) var(--s-3);border-radius:var(--r-sm);background:var(--accent-wash)}
+.nf-merken{margin-top:var(--s-2)}
+/* Handy (320 px): Name oben, Menge darunter — sonst bleibt für den Namen ein schmaler Streifen und Wörter brechen mittendrin. */
+@media(max-width:420px){
+  .nf-zr{grid-template-columns:minmax(0,1fr)}
+  .nf-zr .nf-mit{grid-column:1;grid-row:auto;padding-left:28px}
+  .nf-zr .nf-mit input{flex:1;width:auto;min-width:0}
+}

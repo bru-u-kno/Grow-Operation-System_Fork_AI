@@ -65,6 +65,8 @@ public sealed class AddbackNachmessungService
             return true;
         }
 
+        // Vorbeugend: heute hängt nichts eine Messung „nachher“ nachträglich an einen Vorgang (mit Handwerten beim
+        // Speichern wird gar kein Auftrag angelegt). Kommt „Vorgang bearbeiten“ (A-006 V8), greift diese Zeile.
         if (vorgang.MessungNachherId is not null)
         {
             _vorgaenge.NachmessungAbschliessen(auftrag.Id, AddbackNachmessung.Uebersprungen, "Es gibt schon eine Messung „nachher“.", jetztUtc);

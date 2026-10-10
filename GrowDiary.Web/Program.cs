@@ -89,9 +89,8 @@ builder.Services.AddSingleton<AutoMeasurementValueGuard>();
 builder.Services.AddSingleton<PhotoStorageService>();
 builder.Services.AddSingleton<GrowDashboardComposer>();
 builder.Services.AddScoped<SensorReadingRepository>();
-builder.Services.AddScoped<TankSensorService>();
+builder.Services.AddScoped<TankSensorService>(); // Tankwerte kurz vor einem Zeitpunkt: Wasserwechsel, Nachfüllen, Nachmessung
 builder.Services.AddScoped<AddbackNachmessungService>(); // automatische Nachmessung nach dem Nachfüllen
-builder.Services.AddScoped<AddbackNachmessungService>(); // automatische Nachmessung nach dem Nachfüllen // Tankwerte kurz vor einem Zeitpunkt: Wasserwechsel, Nachfüllen, Nachmessung
 builder.Services.AddScoped<AutoMeasurementExecutionService>();
 // Singleton wie die uebrigen zustandslosen Repositories: der Live-Bildschirm und
 // die Diagnose sind Singletons und muessen die Grenzwerte des Nutzers lesen
@@ -184,7 +183,6 @@ builder.Services.AddScoped<IProbelaufMeldung, ProbelaufMeldung>();
 builder.Services.AddScoped<ProbelaufService>();
 builder.Services.AddScoped<KenntnisstandService>();
 builder.Services.AddHostedService<ProbelaufWorker>();
-builder.Services.AddHostedService<AddbackNachmessungWorker>(); // Nachfüllen: Nachmessung nach X Minuten aus den Sensoren
 builder.Services.AddHostedService<AddbackNachmessungWorker>(); // Nachfüllen: Nachmessung nach X Minuten aus den Sensoren
 builder.Services.AddSingleton<EinkaufslisteService>();
 builder.Services.AddSingleton<BeobachtungsWegweiser>();

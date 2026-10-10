@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { anteilPlanDosis, mengeDerZeile, type AblaufZeile } from '../vorgang/ablauf-rechnung'
 import {
   alterMinuten,
   alterText,
@@ -11,6 +12,7 @@ import {
   nachfuellTagebuch,
   normalisiert,
   uhrzeitText,
+  wirksameWerte,
 } from './nachfuell-rechnung'
 
 describe('Art je Fall', () => {
@@ -126,5 +128,29 @@ describe('Tagebuchzeile', () => {
     expect(zeile.titel).toBe('Zusätze zugegeben')
     expect(zeile.titel).not.toMatch(/\bL\b/)
     expect(zeile.text).toContain('Zugaben: Purolyt 12\u00a0ml')
+  })
+})
+
+describe('Abgewählte Zeilen zählen nicht', () => {
+  const zeile = (name: string, ml: number): AblaufZeile => ({ schluessel: `plan:${name}`, name, art: 'plan', rolle: 'Grundduenger', vorschlagMl: ml, hinweis: null, artikelId: 1, einheit: 'ml' })
+  const A = zeile('Aqua Flores A', 100)
+  const B = zeile('Aqua Flores B', 100)
+
+  it('ohne Abwahl bleibt der Vorschlag, mit Abwahl wird die Zeile zu 0', () => {
+    expect(wirksameWerte({}, new Set())).toEqual({})
+    const wirksam = wirksameWerte({}, new Set([A.schluessel]))
+    expect(mengeDerZeile(A, wirksam)).toBe(0)
+    expect(mengeDerZeile(B, wirksam)).toBe(100)
+  })
+
+  it('die Dosis sinkt, wenn ein Grunddünger abgewählt ist — der EC-Anteil rechnet nicht mit dem Vorschlag weiter', () => {
+    expect(anteilPlanDosis([A, B], {})).toBe(1)
+    expect(anteilPlanDosis([A, B], wirksameWerte({}, new Set([A.schluessel])))).toBe(0.5)
+    expect(anteilPlanDosis([A, B], wirksameWerte({}, new Set([A.schluessel, B.schluessel])))).toBe(0)
+  })
+
+  it('eine eigene Menge wird von der Abwahl überstimmt, nicht umgekehrt', () => {
+    expect(mengeDerZeile(A, wirksameWerte({ [A.schluessel]: '250' }, new Set([A.schluessel])))).toBe(0)
+    expect(mengeDerZeile(A, wirksameWerte({ [A.schluessel]: '250' }, new Set()))).toBe(250)
   })
 })

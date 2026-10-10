@@ -40,6 +40,7 @@ import {
   nachfuellTagebuch,
   nachmessungZeit,
   uhrzeitText,
+  wirksameWerte,
   type Modus,
   type WasserWahl,
 } from './nachfuell-rechnung'
@@ -215,7 +216,9 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
 
   // ---- Zeilen: Plan (nur mit Dünger) und eigene Zusätze
   const artikelIdVon = (z: { schluessel: string; name: string; artikelId: number | null }): number | null =>
-    artikelWahl[z.schluessel] ?? z.artikelId ?? artikelFuerName(artikel, z.name)?.id ?? null
+    // Die Wahl „vorhandenen Artikel“ gilt nur für Plan-Zeilen (ihr Name steht fest). Bei eigenen Zusätzen übernimmt die Zeile
+    // den Namen des gewählten Artikels — sonst bliebe die Wahl nach dem Umbenennen hängen und buchte auf einen fremden Artikel.
+    (z.schluessel.startsWith('plan:') ? artikelWahl[z.schluessel] : undefined) ?? z.artikelId ?? artikelFuerName(artikel, z.name)?.id ?? null
   const einheitVon = (id: number | null, ersatz: string): string => artikel.find((a) => a.id === id)?.einheit ?? ersatz
 
   const zeilen: AblaufZeile[] = useMemo(() => {
@@ -251,7 +254,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
   // ---- Die Erwartung: Mischrechnung im Tank
   const wasserEc = ecEigenZahl ?? vorschlag?.wasserEc ?? null
   const ecLoesung = modus === 'mix'
-    ? (ecMitDeinenMengen(wasserEc, vorschlag?.ecZielDuenger ?? null, anteilPlanDosis(zeilen, eigen)) ?? wasserEc)
+    ? (ecMitDeinenMengen(wasserEc, vorschlag?.ecZielDuenger ?? null, anteilPlanDosis(zeilen, wirksameWerte(eigen, abgewaehlt))) ?? wasserEc)
     : wasserEc
   const ecErwartet = modus === 'zusatz' ? null : ecTankDanach(fl.vorher, vorherEc, literZahl, ecLoesung)
   const wasserPh = wasserWahl === 'eigen' ? zahlOderNull(eigenW.ph) : wasserWahl === 'Tap' ? (profil?.treatedPh ?? profil?.ph ?? null) : null
@@ -507,7 +510,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
             {wasserTeile.map((w) => (
               <ArtikelZeile key={w.name} name={w.name} menge={`${zahl(w.menge, 1)} L`} einheit="L"
                 artikel={artikelFuerName(artikel, w.name)} aus={buchenAus.has(`wasser:${w.name}`)}
-                frage={frage?.schluessel === `wasser:${w.name}` ? frage : null} frageFehler={frageFehler}
+                frage={frage?.schluessel === `wasser:${w.name}` ? frage : null} frageFehler={frageFehler} einheitFest="L"
                 onBuchen={(an) => umschalten(buchenAus, setBuchenAus, `wasser:${w.name}`, !an)}
                 onFrage={() => { setFrageFehler(null); setFrage({ schluessel: `wasser:${w.name}`, name: w.name, einheit: 'L' }) }}
                 onEinheit={(einheit) => frage && setFrage({ ...frage, einheit })} onAnlegen={() => void artikelAnlegen()} onNein={() => setFrage(null)} />
@@ -565,7 +568,11 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
                       <ArtikelZeile name={z.name} menge={null} einheit={einheit} artikel={a} aus={buchenAus.has(z.schluessel)}
                         frage={frage?.schluessel === z.schluessel ? frage : null} frageFehler={frageFehler}
                         auswahl={a == null ? artikel.filter((x) => !['leitungswasser', 'osmosewasser'].includes(x.name.trim().toLowerCase())) : undefined}
-                        onWahl={(artikelId) => setArtikelWahl((alt) => ({ ...alt, [z.schluessel]: artikelId }))}
+                        onWahl={(artikelId) => {
+                          if (z.art === 'plan') { setArtikelWahl((alt) => ({ ...alt, [z.schluessel]: artikelId })); return }
+                          const gewaehlt = artikel.find((x) => x.id === artikelId)
+                          if (gewaehlt) setExtra((alt) => alt.map((x) => (`extra:${x.id}` === z.schluessel ? { ...x, name: gewaehlt.name } : x)))
+                        }}
                         onBuchen={(ja) => umschalten(buchenAus, setBuchenAus, z.schluessel, !ja)}
                         onFrage={() => { setFrageFehler(null); setFrage({ schluessel: z.schluessel, name: z.name, einheit: 'ml' }) }}
                         onEinheit={(e) => frage && setFrage({ ...frage, einheit: e })} onAnlegen={() => void artikelAnlegen()} onNein={() => setFrage(null)} />
@@ -669,6 +676,12 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
               </small>
             </span>
           </label>
+          {sensorenDa && (
+            <label className="v1-switch nf-schalter nf-merken">
+              <input type="checkbox" checked={merken} onChange={(e) => setMerken(e.target.checked)} />
+              <span><small>als meinen Standard merken — an/aus und Minuten</small></span>
+            </label>
+          )}
           {nachmessungAuto && sensorenDa && (
             <div className="nf-nmz">
               <span>Nach</span>
@@ -677,10 +690,6 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
               <span className="nf-chips" style={{ margin: 0 }}>
                 {['15', '30', '60'].map((v) => <button key={v} type="button" aria-pressed={nachmessungMinuten === v} onClick={() => setNachmessungMinuten(v)}>{v} min</button>)}
               </span>
-              <label className="v1-switch nf-schalter" style={{ marginLeft: 'auto' }}>
-                <input type="checkbox" checked={merken} onChange={(e) => setMerken(e.target.checked)} />
-                <span><small>als meinen Standard merken</small></span>
-              </label>
               <span className="info">
                 {nachherHatWerte
                   ? 'Du trägst die Werte selbst ein — die Automatik entfällt.'
@@ -760,10 +769,12 @@ function FeldMit({ label, einheit, wert, onChange, hinweis, aria }: { label: str
  * Die Statuszeile unter einer Zugabe: gibt es den Artikel, wird gebucht; gibt es ihn nicht, steht das da
  * — und der Knopf „Als Artikel anlegen …" öffnet die Rückfrage. Angelegt wird erst nach „Ja, anlegen".
  */
-function ArtikelZeile({ name, menge, einheit, artikel, aus, frage, frageFehler, auswahl, onWahl, onBuchen, onFrage, onEinheit, onAnlegen, onNein }: {
+function ArtikelZeile({ name, menge, einheit, einheitFest, artikel, aus, frage, frageFehler, auswahl, onWahl, onBuchen, onFrage, onEinheit, onAnlegen, onNein }: {
   name: string
   menge: string | null
   einheit: string
+  /** Feste Einheit (Wasser: Liter) — dann gibt es dort nichts zu wählen. */
+  einheitFest?: string
   artikel: Artikel | null
   aus: boolean
   frage: Frage | null
@@ -803,9 +814,13 @@ function ArtikelZeile({ name, menge, einheit, artikel, aus, frage, frageFehler, 
           <strong>„{frage.name}“ als neuen Verbrauchsartikel anlegen?</strong>
           <div className="zl">
             <label htmlFor={`nf-einheit-${frage.schluessel}`}>Einheit</label>
-            <select id={`nf-einheit-${frage.schluessel}`} value={frage.einheit || einheit} onChange={(e) => onEinheit(e.target.value)}>
-              {EINHEITEN.map((e) => <option key={e}>{e}</option>)}
-            </select>
+            {einheitFest
+              ? <b id={`nf-einheit-${frage.schluessel}`}>{einheitFest}</b>
+              : (
+                <select id={`nf-einheit-${frage.schluessel}`} value={frage.einheit || einheit} onChange={(e) => onEinheit(e.target.value)}>
+                  {EINHEITEN.map((e) => <option key={e}>{e}</option>)}
+                </select>
+              )}
           </div>
           <span className="nf-klein">Der Artikel entsteht ohne Preis. Die Kosten trägst du später unter Kosten nach. Diese Zugabe wird sofort mitgebucht.</span>
           {frageFehler && <span className="nf-fehler" role="alert">{frageFehler}</span>}

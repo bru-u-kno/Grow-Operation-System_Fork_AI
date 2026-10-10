@@ -1,6 +1,6 @@
 import type { AddbackLogKind, WaterSource } from '../../types'
 import { istUnlesbar, zahlOderNull } from '../../zahlenfeld'
-import { NACHFUELL_ART, tagebuchZeile, zahl, type TagebuchWerte } from '../vorgang/ablauf-rechnung'
+import { NACHFUELL_ART, tagebuchZeile, zahl, type TagebuchWerte, type Werte } from '../vorgang/ablauf-rechnung'
 
 /**
  * Das vereinfachte Addback (A-006, Etappe 3, 10.10.2026) — die Regeln ohne Oberfläche.
@@ -114,4 +114,14 @@ export function nachfuellTagebuch(modus: Modus, w: TagebuchWerte): { titel: stri
   if (modus !== 'zusatz') return tagebuchZeile({ ...w, titel: NACHFUELL_ART[ART_VON_MODUS[modus]] })
   const zeile = tagebuchZeile({ ...w, liter: 0, titel: 'Zusätze' })
   return { titel: 'Zusätze zugegeben', text: zeile.text }
+}
+
+/**
+ * Die Mengen, die wirklich zugegeben werden: abgewählte Zeilen zählen 0.
+ *
+ * Die Erwartung für den EC rechnet mit der Dosis der Grunddünger (`anteilPlanDosis`); eine abgewählte Zeile darf dort nicht
+ * mit ihrem Vorschlag weiterzählen, sonst steht „≈ 1,80“, obwohl der Dünger gar nicht hineinkam (Befund des Prüfers, 10.10.2026).
+ */
+export function wirksameWerte(eigen: Werte, abgewaehlt: ReadonlySet<string>): Werte {
+  return { ...eigen, ...Object.fromEntries([...abgewaehlt].map((schluessel) => [schluessel, '0'])) }
 }

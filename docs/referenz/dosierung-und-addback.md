@@ -89,8 +89,9 @@ keine Wasserquelle (`art = Correction`, `Liter` darf fehlen).
   (alle 30 s) ruft `AddbackNachmessungService` und trägt EC, pH und Wassertemperatur
   **zur Fälligkeit** aus den Rohwerten als Messung „nachher" ein — auch nach einem
   Neustart oder bei einem Zeitpunkt in der Vergangenheit. Eigene Werte „nachher" haben
-  Vorrang (dann wird kein Auftrag angelegt, und ein Auftrag mit späterer Handmessung
-  wird `uebersprungen`). Ohne Wert in den zehn Minuten davor (plus zehn Minuten
+  Vorrang (dann wird kein Auftrag angelegt). Eine andere Handmessung desselben Grows
+  zwischen Nachfüllen und Fälligkeit verhindert die Nachmessung nicht; `uebersprungen`
+  gibt es nur vorbeugend für „Vorgang bearbeiten". Ohne Wert in den zehn Minuten davor (plus zehn Minuten
   Nachfrist) oder bei unplausiblem Wert (`MeasurementSanityService`) schließt der
   Auftrag mit `ohneWert`, ohne eine Phantom-Messung. Die Vorgabe des Nutzers
   („als Standard merken") liegt in `AppSettings` (`GET/PUT /api/addback/einstellungen`,
