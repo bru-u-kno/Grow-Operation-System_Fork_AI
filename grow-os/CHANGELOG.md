@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.204
+
+**Fork AI.** Addback und Wasserwechsel: Nachbesserungen nach dem ersten Blick auf dem Handy.
+
+- **Keine doppelten Werte mehr auf der Addback-Seite:** Oben stand ein Streifen mit pH und EC aus der *letzten Messung* (5,98), darunter der Block „Live jetzt" aus den Sensoren (6,0) — zwei Zahlen für dasselbe, und nicht einmal dieselben. Der Streifen zeigt jetzt nur noch „Zuletzt nachgefüllt" und die Zahl der Einträge; pH und EC stehen einmal, im Block „Live jetzt". Der pH hat dort wie überall zwei Stellen (6,03 statt 6,0).
+- **Der Wasserwechsel fragt, bevor er einen Wasser-Artikel anlegt:** Bisher legte das Speichern „Leitungswasser" oder „Osmosewasser" still als Verbrauchsartikel an. Jetzt steht unter der Ansetz-Tabelle „Noch kein Artikel „Osmosewasser" — wird nicht gebucht" mit „Als Artikel anlegen …"; erst nach „Ja, anlegen" entsteht der Artikel (ohne Preis, den trägst du unter Kosten nach) und das Wasser wird mitgebucht. Dieselbe Regel wie beim Addback, die Zeile dafür ist jetzt eine gemeinsame Komponente. Wer die Schnittstelle direkt aufruft (KI-Assistenten), bekommt weiter den alten Weg.
+- **Geprüft, ohne dass sich etwas ändern musste:** Ein Neustart des Fork mit offener Nachmessung. Der Auftrag überlebt den Stopp und wird nach dem Start nachgeholt — mit dem Sensorwert, der zur Fälligkeit galt. Während der Fork aus ist, schreibt er keine Sensorwerte; liegt der letzte Wert vor dem Ausfall mehr als zehn Minuten vor der Fälligkeit, gibt es für diesen Zeitpunkt keinen Rohwert, und der Auftrag endet ohne Eintrag („ohne Wert" in der Liste) — das ist so gebaut, am echten System aber nicht ausprobiert.
+
 ## 2.0.0-forkai.203
 
 **Fork AI.** Addback (A-006, Etappe 3): Nachfüllen auf einer Seite — für „18 L Leitungswasser" genügen die Quelle und die Liter.

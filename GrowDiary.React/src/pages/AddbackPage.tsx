@@ -10,7 +10,7 @@ import { NachfuellFormular } from '../features/addback/NachfuellFormular'
 import { MODI } from '../features/addback/nachfuell-rechnung'
 import { vorbelegungAusLink } from '../features/vorgang/ablauf-rechnung'
 import type { AddbackLogDto, AddbackVorgangDto, WasserwechselStandDto } from '../types'
-import { formatDateTime, formatNumber } from '../utils'
+import { formatDateTime } from '../utils'
 
 /**
  * Addback — das Nachfüllen auf einer Seite (A-006, Etappe 3, freigegeben von Bru am 10.10.2026).
@@ -103,15 +103,8 @@ export default function AddbackPage() {
         />
       ) : !grow ? null : (
         <>
+          {/* pH und EC stehen im Block „Live jetzt" des Formulars — aus den Sensoren, nicht aus der letzten Messung. Hier nur, was das Formular nicht zeigt. */}
           <div className="co-strip" data-audit="addback-status">
-            <div className="co-cell">
-              <div className="co-cell-label">pH</div>
-              <div className="co-cell-value is-lg">{formatNumber(grow.latestReservoirPh, 2)}</div>
-            </div>
-            <div className="co-cell">
-              <div className="co-cell-label">EC</div>
-              <div className="co-cell-value is-lg">{formatNumber(grow.latestReservoirEc, 2)}<span className="co-unit">mS/cm</span></div>
-            </div>
             <div className="co-cell">
               <div className="co-cell-label">Zuletzt nachgefüllt</div>
               <div className="co-cell-value is-md">{letzter ? formatDateTime(letzter.performedAtUtc) : '–'}</div>

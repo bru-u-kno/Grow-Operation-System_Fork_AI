@@ -82,16 +82,7 @@
 .nf-ein .pill.nein{background:color-mix(in srgb,var(--warn) 28%,transparent)}
 .nf-ein .pill.aus{background:transparent;border:1px dashed var(--hair-2);color:var(--faint)}
 @media(max-width:560px){.nf-ein .z{grid-template-columns:minmax(0,1fr);gap:2px}}
-.nf-ab{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:var(--fs-klein);line-height:1.5;padding-left:28px;color:var(--faint)}
-.nf-ab.ok{color:var(--accent-text,var(--ink))}.nf-ab.fehlt{color:var(--warn-text,var(--ink))}
-.nf-ab label{display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
-.nf-ab button{font:inherit;font-size:var(--fs-klein);padding:5px 12px;border-radius:999px;border:1px solid var(--accent);background:transparent;color:var(--ink);cursor:pointer}
-.nf-frage{grid-column:1/-1;margin:6px 0 4px 28px;padding:var(--s-3) var(--s-4);border:1.5px solid var(--accent);border-radius:var(--r);background:var(--accent-wash);display:flex;flex-direction:column;gap:10px;line-height:1.5}
-.nf-frage .zl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
-.nf-frage select{font:inherit;padding:7px 10px;border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--sunk,transparent);color:var(--ink)}
-.nf-frage button{font:inherit;padding:8px 16px;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
-.nf-frage button.sek{background:transparent;color:var(--ink);border-color:var(--hair-2)}
-.nf-wz{margin-top:var(--s-3)}.nf-wz .nf-ab{padding-left:0}.nf-wz .nf-frage{margin-left:0}.nf-wz .nf-ab+.nf-ab{margin-top:4px}
+.nf-wz{margin-top:var(--s-3)}.nf-wz .az-ab{padding-left:0}.nf-wz .az-frage{margin-left:0}.nf-wz .az-ab+.az-ab{margin-top:4px}
 .nf-nm{display:flex;flex-direction:column;gap:var(--s-3)}
 .nf-nmz{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-left:2.2rem}
 .nf-nmz input[type=text],.nf-nmz input:not([type]){width:84px;font:inherit;padding:8px 10px;border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--sunk,transparent);color:var(--ink);text-align:right}
@@ -101,7 +92,6 @@
 .nf-dt input{flex:1 1 230px}
 .nf-klapp .st-kk-body{padding-top:var(--s-3)}
 .nf-fehler{color:var(--danger-text,var(--ink));font-size:var(--fs-klein);line-height:1.5}
-.nf-wahl{font:inherit;padding:8px 10px;border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--sunk,transparent);color:var(--ink);max-width:100%}
 .nf-zeile-weg{font:inherit;font-size:var(--fs-klein);padding:2px 8px;border:0;background:transparent;color:var(--faint);cursor:pointer;text-decoration:underline}
 .nf-zurueck{font:inherit;font-size:var(--fs-klein);padding:2px 8px;border-radius:999px;border:1px solid var(--hair-2);background:transparent;color:var(--ink);cursor:pointer}
 

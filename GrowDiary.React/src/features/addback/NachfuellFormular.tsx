@@ -44,14 +44,12 @@ import {
   type Modus,
   type WasserWahl,
 } from './nachfuell-rechnung'
+import { ArtikelZeile, type Artikel, type Frage } from '../vorgang/ArtikelZeile'
 import './nachfuell-formular.css'
 
-type Artikel = { id: number; name: string; einheit: string; aktiv: boolean }
 type Wasserprofil = { ph: number | null; treatedPh: number | null }
 type Extra = { id: number; name: string }
-type Frage = { schluessel: string; name: string; einheit: string }
 
-const EINHEITEN = ['ml', 'L', 'g', 'kg', 'Stück']
 const WASSER_NAMEN: Record<WaterSource, string> = { Tap: 'Leitungswasser', RO: 'Osmosewasser', Mixed: 'Mischung' }
 
 function fehlerText(caught: unknown, ersatz: string): string {
@@ -423,7 +421,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
         {!keinLive && sensorJetzt && (
           <div className="nf-kachel4">
             <div className="nf-k"><span className="k">EC</span><span className="z">{sensorJetzt.ec ? zahl(sensorJetzt.ec.wert, 2) : '–'}<small>mS/cm</small></span></div>
-            <div className="nf-k"><span className="k">pH</span><span className="z">{sensorJetzt.ph ? zahl(sensorJetzt.ph.wert, 1) : '–'}</span></div>
+            <div className="nf-k"><span className="k">pH</span><span className="z">{sensorJetzt.ph ? zahl(sensorJetzt.ph.wert, 2) : '–'}</span></div>
             <div className="nf-k"><span className="k">Wasser-Temp.</span><span className="z">{sensorJetzt.wasserTemp ? zahl(sensorJetzt.wasserTemp.wert, 1) : '–'}<small>°C</small></span></div>
             <div className="nf-k"><span className="k">Volumen</span><span className="z">{anlageLiter != null ? zahl(anlageLiter, 0) : '–'}<small>L</small></span><span className="n">Anlage (Hydro-System)</span></div>
           </div>
@@ -627,7 +625,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
         </div>
         <div>
           <div className="k">pH</div>
-          <div className="z">{vorherPh != null ? zahl(vorherPh, 1) : '–'}</div>
+          <div className="z">{vorherPh != null ? zahl(vorherPh, 2) : '–'}</div>
           <div className="n">{modus === 'zusatz' ? 'pH-Zusätze ändern ihn — nachmessen' : wasserPh != null && wasserWahl !== 'RO' ? `${wasserName} hat pH ${zahl(wasserPh, 1)} — nachmessen` : 'nach dem Durchmischen nachmessen'}</div>
         </div>
       </div>
@@ -762,74 +760,5 @@ function FeldMit({ label, einheit, wert, onChange, hinweis, aria }: { label: str
       </span>
       {hinweis && <small>{hinweis}</small>}
     </label>
-  )
-}
-
-/**
- * Die Statuszeile unter einer Zugabe: gibt es den Artikel, wird gebucht; gibt es ihn nicht, steht das da
- * — und der Knopf „Als Artikel anlegen …" öffnet die Rückfrage. Angelegt wird erst nach „Ja, anlegen".
- */
-function ArtikelZeile({ name, menge, einheit, einheitFest, artikel, aus, frage, frageFehler, auswahl, onWahl, onBuchen, onFrage, onEinheit, onAnlegen, onNein }: {
-  name: string
-  menge: string | null
-  einheit: string
-  /** Feste Einheit (Wasser: Liter) — dann gibt es dort nichts zu wählen. */
-  einheitFest?: string
-  artikel: Artikel | null
-  aus: boolean
-  frage: Frage | null
-  frageFehler: string | null
-  /** Vorhandene Artikel, falls der Plan-Name einem anderen Artikel gehört. */
-  auswahl?: Artikel[]
-  onWahl?: (artikelId: number) => void
-  onBuchen: (an: boolean) => void
-  onFrage: () => void
-  onEinheit: (einheit: string) => void
-  onAnlegen: () => void
-  onNein: () => void
-}) {
-  const zusatz = menge ? ` · ${menge}` : ''
-  if (artikel) {
-    return (
-      <div className="nf-ab ok" data-audit="nachfuellen-artikel-da">
-        <span>✓ Artikel „{artikel.name}“ vorhanden{zusatz}</span>
-        <label><input type="checkbox" checked={!aus} onChange={(e) => onBuchen(e.target.checked)} /> {aus ? 'wird nicht gebucht' : 'wird als Verbrauch gebucht'}</label>
-      </div>
-    )
-  }
-  return (
-    <>
-      <div className="nf-ab fehlt" data-audit="nachfuellen-artikel-fehlt">
-        <span>Noch kein Artikel „{name}“{zusatz} — {frage ? 'bisher wird nichts gebucht.' : 'wird nicht gebucht, nur im Tagebuch notiert.'}</span>
-        {!frage && <button type="button" onClick={onFrage}>Als Artikel anlegen …</button>}
-        {!frage && auswahl && auswahl.length > 0 && onWahl && (
-          <select className="nf-wahl" value="" aria-label={`Vorhandenen Artikel für ${name} wählen`} onChange={(e) => e.target.value && onWahl(Number(e.target.value))}>
-            <option value="">oder vorhandenen wählen …</option>
-            {auswahl.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        )}
-      </div>
-      {frage && (
-        <div className="nf-frage" role="group" aria-label="Neuen Verbrauchsartikel anlegen">
-          <strong>„{frage.name}“ als neuen Verbrauchsartikel anlegen?</strong>
-          <div className="zl">
-            <label htmlFor={`nf-einheit-${frage.schluessel}`}>Einheit</label>
-            {einheitFest
-              ? <b id={`nf-einheit-${frage.schluessel}`}>{einheitFest}</b>
-              : (
-                <select id={`nf-einheit-${frage.schluessel}`} value={frage.einheit || einheit} onChange={(e) => onEinheit(e.target.value)}>
-                  {EINHEITEN.map((e) => <option key={e}>{e}</option>)}
-                </select>
-              )}
-          </div>
-          <span className="nf-klein">Der Artikel entsteht ohne Preis. Die Kosten trägst du später unter Kosten nach. Diese Zugabe wird sofort mitgebucht.</span>
-          {frageFehler && <span className="nf-fehler" role="alert">{frageFehler}</span>}
-          <div className="zl">
-            <button type="button" onClick={onAnlegen}>Ja, anlegen</button>
-            <button type="button" className="sek" onClick={onNein}>Nicht jetzt</button>
-          </div>
-        </div>
-      )}
-    </>
   )
 }

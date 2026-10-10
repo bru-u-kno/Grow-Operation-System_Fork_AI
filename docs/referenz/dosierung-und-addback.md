@@ -79,9 +79,10 @@ keine Wasserquelle (`art = Correction`, `Liter` darf fehlen).
   Verbrauchsartikel gehört (Namensvergleich ohne Groß/Klein). Fehlt er, steht in der
   Zeile „Noch kein Artikel …" und „Als Artikel anlegen …"; erst nach „Ja, anlegen"
   entsteht er (ohne Preis, `AufGrowBuchen`) und die Zugabe wird mitgebucht. Das gilt
-  auch für Wasser — anders als der Wasserwechsel, der den Wasser-Artikel still anlegt.
-  Wer die API mit `wasser` statt `artikelId` aufruft (KI-Assistenten), bekommt weiter
-  den alten Weg.
+  auch für Wasser und seit forkai.204 ebenso im Wasserwechsel (gemeinsame Zeile
+  `features/vorgang/ArtikelZeile.tsx`). Wer die API mit `wasser` statt `artikelId`
+  aufruft (KI-Assistenten), bekommt weiter den alten Weg: der Server legt den
+  Wasser-Artikel dann beim ersten Buchen selbst an.
 - **Verbrauch** (`VerbrauchLiter`, `AddbackLogs.ConsumedLiters`) ist optional und nur
   zum Festhalten; die Rechnung braucht ihn nicht, er steckt in den Messwerten.
 - **Automatische Nachmessung.** `NachmessungMinuten` (1–240) legt einen Auftrag an

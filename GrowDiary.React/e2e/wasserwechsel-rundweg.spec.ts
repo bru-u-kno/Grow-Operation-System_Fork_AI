@@ -141,6 +141,22 @@ test.describe('Wasserwechsel-Rundweg', () => {
     await ablauf.getByRole('combobox', { name: 'Wasser' }).selectOption('RO')
     await expect(ablauf.getByLabel('Aqua Vega A eingesetzt'), 'Der zweite Vorgang erbte den Wert „120" vom ersten.')
       .not.toHaveValue('120')
+    // Der Wasser-Artikel entsteht nur nach Rückfrage — nie beim Speichern (Bru, 10.10.2026). „Nicht jetzt" legt nichts an,
+    // „Ja, anlegen" legt ihn an und bucht das Wasser mit. (Gibt es „Osmosewasser" schon, entfällt die Rückfrage.)
+    const osmose = page.locator('[data-audit="nachfuellen-artikel-fehlt"]').filter({ hasText: 'Osmosewasser' })
+    if (await osmose.count() > 0) {
+      const gibtEs = async () => ((await (await page.request.get('/api/kosten/artikel')).json()) as Array<{ name: string }>).some((x) => x.name === 'Osmosewasser')
+      await expect(osmose).toContainText('wird nicht gebucht')
+      await osmose.getByRole('button', { name: 'Als Artikel anlegen …' }).click()
+      const frage = page.getByRole('group', { name: 'Neuen Verbrauchsartikel anlegen' })
+      await expect(frage).toContainText('ohne Preis')
+      await frage.getByRole('button', { name: 'Nicht jetzt' }).click()
+      expect(await gibtEs(), 'Der Artikel „Osmosewasser" entstand ohne „Ja, anlegen".').toBe(false)
+      await osmose.getByRole('button', { name: 'Als Artikel anlegen …' }).click()
+      await frage.getByRole('button', { name: 'Ja, anlegen' }).click()
+      await expect(page.locator('[data-audit="nachfuellen-artikel-fehlt"]').filter({ hasText: 'Osmosewasser' })).toHaveCount(0)
+      expect(await gibtEs()).toBe(true)
+    }
     // Befund des Prüfers: ein Foto ohne Messung „nachher" ging still verloren.
     await schritt(page, '3 · Nachher')
     await ablauf.getByPlaceholder('z. B. 1,15').fill('1,2')

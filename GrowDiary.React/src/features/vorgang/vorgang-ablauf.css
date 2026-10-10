@@ -87,3 +87,8 @@
     .wa-vergleich .wa-th > span { overflow-wrap: anywhere; }
   }
 }
+
+/* Rückfrage „Wasser-Artikel anlegen?" unter der Ansetz-Tabelle (ArtikelZeile) */
+.wa-artikelfrage{margin-top:var(--s-2)}
+.wa-artikelfrage .az-ab{padding-left:0}
+.wa-artikelfrage .az-frage{margin-left:0}

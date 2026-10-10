@@ -1,0 +1,13 @@
+/* Die Rückfrage-Zeile unter einer Zugabe (Nachfüllen und Wasserwechsel): Artikel da → buchen, Artikel fehlt → „Als Artikel anlegen …". */
+.az-ab{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:var(--fs-klein);line-height:1.5;padding-left:28px;color:var(--faint)}
+.az-ab.ok{color:var(--accent-text,var(--ink))}.az-ab.fehlt{color:var(--warn-text,var(--ink))}
+.az-ab label{display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
+.az-ab button{font:inherit;font-size:var(--fs-klein);padding:5px 12px;border-radius:999px;border:1px solid var(--accent);background:transparent;color:var(--ink);cursor:pointer}
+.az-frage{grid-column:1/-1;margin:6px 0 4px 28px;padding:var(--s-3) var(--s-4);border:1.5px solid var(--accent);border-radius:var(--r);background:var(--accent-wash);display:flex;flex-direction:column;gap:10px;line-height:1.5}
+.az-frage .zl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.az-frage select{font:inherit;padding:7px 10px;border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--sunk,transparent);color:var(--ink)}
+.az-frage button{font:inherit;padding:8px 16px;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.az-frage button.sek{background:transparent;color:var(--ink);border-color:var(--hair-2)}
+.az-wahl{font:inherit;padding:8px 10px;border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--sunk,transparent);color:var(--ink);max-width:100%}
+.az-klein{display:block;color:var(--faint);font-size:var(--fs-klein);line-height:1.5}
+.az-fehler{color:var(--danger-text,var(--ink));font-size:var(--fs-klein);line-height:1.5}

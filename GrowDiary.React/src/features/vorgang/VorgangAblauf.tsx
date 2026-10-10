@@ -34,11 +34,12 @@ import {
   type Vorbelegung,
   type Werte,
 } from './ablauf-rechnung'
+import { artikelFuerName } from '../addback/nachfuell-rechnung'
+import { ArtikelZeile, type Artikel, type Frage } from './ArtikelZeile'
 import './vorgang-ablauf.css'
 
 type Schritt = 1 | 2 | 3 | 4
 type Messfelder = { ec: string; ph: string; wt: string; do: string; orp: string }
-type Artikel = { id: number; name: string; einheit: string; aktiv: boolean }
 
 const LEER: Messfelder = { ec: '', ph: '', wt: '', do: '', orp: '' }
 const WASSER_NAME: Record<WaterSource, string> = { Tap: 'Leitungswasser', RO: 'Osmose', Mixed: 'Mischung' }
@@ -151,6 +152,9 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
   const [buchenAus, setBuchenAus] = useState<Set<string>>(() => new Set())
   const [wasserBuchen, setWasserBuchen] = useState(true)
   const [artikel, setArtikel] = useState<Artikel[]>([])
+  // Das Wasser-Artikel-Rückfragen: ein Artikel entsteht nur nach „Ja, anlegen" (Bru, 10.10.2026) — nie beim Speichern.
+  const [frage, setFrage] = useState<Frage | null>(null)
+  const [frageFehler, setFrageFehler] = useState<string | null>(null)
   const [produktWahl, setProduktWahl] = useState('')
 
   // Schritt 3 — nachher
@@ -285,12 +289,12 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
   const anteil = anteilPlanDosis(zeilen, eigen)
   const ecErwartet = ecMitDeinenMengen(vorschlag?.wasserEc ?? null, vorschlag?.ecZielDuenger ?? null, anteil)
   const wasserListe = literZahl != null && literZahl > 0 ? wasserZeilen(literZahl, wasser, vorschlag?.osmoseAnteil ?? (wasser === 'RO' ? 1 : wasser === 'Mixed' ? (osmoseZahl ?? 0) / 100 : 0)) : []
-  const osmoseArtikelFehlt = !artikel.some((a) => a.name.trim().toLowerCase() === 'osmosewasser')
-  const leitungArtikelFehlt = !artikel.some((a) => a.name.trim().toLowerCase() === 'leitungswasser')
 
   const wirdGebucht = (z: AblaufZeile) => z.artikelId != null && mengeDerZeile(z, eigen) > 0 && !buchenAus.has(z.schluessel)
   const gebucht = zeilen.filter(wirdGebucht)
-  const wasserGebucht = wasserBuchen ? wasserListe.filter((w) => w.menge > 0) : []
+  // Gebucht wird nur Wasser, zu dem es einen Artikel gibt; ohne Artikel steht es im Tagebuch, aber nicht im Verbrauch.
+  const wasserGebucht = wasserBuchen ? wasserListe.filter((w) => w.menge > 0 && artikelFuerName(artikel, w.name) != null) : []
+  const wasserOhneArtikel = wasserBuchen ? wasserListe.filter((w) => w.menge > 0 && artikelFuerName(artikel, w.name) == null) : []
 
   // ---- Werte vorher/nachher, wie sie gespeichert werden
   const hand = (text: string) => zahlOderNull(text)
@@ -345,6 +349,22 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
     </div>
   )
 
+  /** Legt den Wasser-Artikel an — erst nach „Ja, anlegen" in der Rückfrage. Ohne Preis; den trägt der Nutzer unter Kosten nach. */
+  async function artikelAnlegen() {
+    if (!frage) return
+    setFrageFehler(null)
+    try {
+      const neu = await apiFetch<Artikel>('/api/kosten/artikel', {
+        method: 'POST',
+        body: JSON.stringify({ name: frage.name.trim(), einheit: 'L', aktiv: true, aufGrowBuchen: true, notiz: 'Angelegt beim Wasserwechsel. Preis je Liter hier nachtragen, dann rechnet die Kostenseite das Wasser mit.' }),
+      })
+      setArtikel((alt) => [...alt.filter((a) => a.id !== neu.id), neu])
+      setFrage(null)
+    } catch (caught) {
+      setFrageFehler(fehlerText(caught, 'Der Artikel konnte nicht angelegt werden.'))
+    }
+  }
+
   async function speichern(event: FormEvent) {
     event.preventDefault()
     // Enter in einem Feld schickt das Formular ab — vor Schritt 4 heißt das „weiter".
@@ -374,7 +394,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
         : null
 
     const buchungen: VorgangBuchungRequest[] = [
-      ...wasserGebucht.map((w) => ({ wasser: w.wasser, menge: w.menge })),
+      ...wasserGebucht.map((w) => ({ artikelId: artikelFuerName(artikel, w.name)!.id, menge: w.menge })),
       ...gebucht.map((z) => ({ artikelId: z.artikelId, menge: mengeDerZeile(z, eigen) })),
     ]
 
@@ -608,10 +628,10 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
               )
             })}
             {wasserListe.map((w) => {
-              const fehlt = w.wasser === 'RO' ? osmoseArtikelFehlt : leitungArtikelFehlt
+              const fehlt = artikelFuerName(artikel, w.name) == null
               return (
                 <div key={w.name} className="wa-tr is-zusatz" role="row">
-                  <span role="cell"><b>{w.name}</b><small>{fehlt ? 'Artikel fehlt noch — wird beim Speichern angelegt' : 'Kosten je Liter im Artikel'}</small></span>
+                  <span role="cell"><b>{w.name}</b><small>{fehlt ? 'Noch kein Artikel — wird nicht gebucht' : 'Kosten je Liter im Artikel'}</small></span>
                   <span role="cell" className="wa-vorschlag">—</span>
                   <span role="cell" className="wa-eingabe"><input value={zahl(w.menge, Number.isInteger(w.menge) ? 0 : 1)} readOnly aria-label={`${w.name} eingesetzt`} /> L</span>
                   <span role="cell"><input type="checkbox" checked={wasserBuchen} onChange={(e) => setWasserBuchen(e.target.checked)} aria-label={`${w.name} buchen`} /></span>
@@ -619,6 +639,15 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
               )
             })}
           </div>
+          {wasserOhneArtikel.map((w) => (
+            <div key={w.name} className="wa-artikelfrage">
+              <ArtikelZeile name={w.name} menge={`${zahl(w.menge, Number.isInteger(w.menge) ? 0 : 1)} L`} einheit="L" einheitFest="L" artikel={null} aus={false}
+                frage={frage?.schluessel === `wasser:${w.name}` ? frage : null} frageFehler={frageFehler}
+                onBuchen={() => undefined}
+                onFrage={() => { setFrageFehler(null); setFrage({ schluessel: `wasser:${w.name}`, name: w.name, einheit: 'L' }) }}
+                onEinheit={() => undefined} onAnlegen={() => void artikelAnlegen()} onNein={() => setFrage(null)} />
+            </div>
+          ))}
 
           <div className="wa-knoepfe">
             <select value={produktWahl} onChange={(e) => setProduktWahl(e.target.value)} aria-label="Produkt hinzufügen" className="wa-produkt-wahl">
@@ -705,8 +734,8 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
               {zugaben.length > 0 ? '✓' : '–'} <b>{zugaben.length} {zugaben.length === 1 ? 'Verbrauchsbuchung' : 'Verbrauchsbuchungen'}</b>
               {zugaben.length > 0 && ` → Kosten: ${zugaben.map((z) => `${z.name} ${zahl(z.menge, Number.isInteger(z.menge) ? 0 : 1)}\u00a0${z.einheit}`).join(' · ')}`}
             </li>
-            {wasserGebucht.some((w) => (w.wasser === 'RO' && osmoseArtikelFehlt) || (w.wasser === 'Tap' && leitungArtikelFehlt)) && (
-              <li>✓ <b>Neuer Artikel</b> „{wasserGebucht.find((w) => (w.wasser === 'RO' && osmoseArtikelFehlt) || (w.wasser === 'Tap' && leitungArtikelFehlt))!.name}" unter Kosten (Preis je Liter dort nachtragen)</li>
+            {wasserOhneArtikel.length > 0 && (
+              <li>⚠ <b>Ohne Artikel, nicht gebucht:</b> {wasserOhneArtikel.map((w) => w.name).join(', ')} — „Als Artikel anlegen …“ in Schritt 2 bucht es mit.</li>
             )}
           </ul>
           <V1Switch label="Ins Tagebuch" checked={insTagebuch} onChange={setInsTagebuch} hint="Eine Zeile mit Vorher → Nachher, Zugaben und Notiz." />
