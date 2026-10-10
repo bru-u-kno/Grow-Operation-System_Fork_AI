@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.206
+
+**Fork AI.** Nur ein Test, keine Änderung an der App: der wackelnde E2E-Fall „Grenzwert-Meldung öffnet Live mit dem Zelt der Meldung" ist behoben.
+
+- **Ursache:** Der Fall liest den Namen des Grows im Kopf der Live-Seite („White Widow"). Grow 1 gehört diesem Zelt, und `formularfelder-kommen-an` benennt ihn zeitweise in „Probe 0" um. Beide Dateien liefen gleichzeitig; traf es sich, stand „Probe 0" im Kopf. Reproduziert: Beide zusammen vier Mal gestartet, zwei Mal rot mit genau dieser Meldung.
+- **Behebung:** Der Fall nimmt jetzt wie die vier anderen Grow-1-Dateien das Schloss (`schloss.ts`). Dieselbe Reihe danach: vier von vier grün.
+
 ## 2.0.0-forkai.205
 
 **Fork AI.** Addback: Die Seite zeigt jetzt, was die neue Lösung hat und was sie im Tank bewirkt.
