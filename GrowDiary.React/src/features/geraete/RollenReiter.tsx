@@ -7,6 +7,7 @@ import type { V1Option } from '../../components/V1Select'
 import type { HomeAssistantEntity } from '../../types'
 import type { GeraeteSeite, GeraetZeile } from '../steuerung/steuerung-typen'
 import { EntfeuchterNamen } from './EntfeuchterNamen'
+import { BluelabAnleitung } from './BluelabAnleitung'
 import { haWert } from '../../utils'
 import '../steuerung/steuerung.css'
 
@@ -176,6 +177,9 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
 
       {/* A-009: Der Anzeigename gilt für beide Entfeuchter — er steht bei beiden Steuerungen. */}
       {(modul?.modul === 'entfeuchter' || modul?.modul === 'entfeuchter-zusatz') && <EntfeuchterNamen />}
+
+      {/* A-016 (Etappe 6): Was der Nutzer für die Bluelab-Übertragung in Home Assistant braucht — mit Häkchen aus dem Stand. */}
+      {modul?.modul === 'bluelab' && <BluelabAnleitung zeilen={modul.zeilen} />}
 
       {modul && GRUPPEN.filter((gruppe) => modul.zeilen.some((zeile) => zeile.gruppe === gruppe.key)).map((gruppe) => {
         const zeilen = modul.zeilen.filter((zeile) => zeile.gruppe === gruppe.key)

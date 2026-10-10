@@ -107,6 +107,19 @@
   .st-schritte li.is-fertig { color: var(--accent-text); }
   .st-eingerueckt { margin-left: var(--s-4); }
   .st-fuss-link a { color: inherit; }
+  /* A-016, Etappe 6: Bluelab-Anleitung */
+  .st-anleitung-kopf { display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: var(--s-2); padding: 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .st-anleitung-stand { flex: 0 0 auto; font-size: var(--fs-etikett); color: var(--faint); }
+  .st-anleitung-stand.is-ok { color: var(--accent-text); }
+  .st-schrittliste { display: grid; gap: var(--s-2); margin: var(--s-2) 0 0; padding: 0; list-style: none; }
+  .st-schrittliste li { display: flex; gap: var(--s-2); align-items: flex-start; }
+  .st-schrittliste b { display: block; font-weight: 600; }
+  .st-schrittliste small { display: block; margin-top: 2px; color: var(--faint); font-size: var(--fs-etikett); line-height: 1.5; overflow-wrap: anywhere; }
+  .st-schrittliste code { font-size: .92em; }
+  .st-schrittliste details summary { cursor: pointer; margin-top: 4px; color: var(--accent-text); font-size: var(--fs-etikett); }
+  .st-schritt-zeichen { flex: 0 0 1.4rem; height: 1.4rem; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--faint); font-size: var(--fs-etikett); color: var(--faint); }
+  .st-schrittliste li.is-ok .st-schritt-zeichen { background: var(--accent-text); border-color: var(--accent-text); color: var(--surface); }
+  .st-schrittliste li.is-warn .st-schritt-zeichen { border-color: var(--warn-text); color: var(--warn-text); }
   .st-auswahl { margin-top: var(--s-3); display: grid; gap: var(--s-2); }
   .st-hinweis { margin: var(--s-2) 0 0; font-size: var(--fs-etikett); color: var(--faint); line-height: 1.5; }
   /* Fork AI: Ein Befund der Absicherung — Titel, Erklärung, ggf. was fehlt. */

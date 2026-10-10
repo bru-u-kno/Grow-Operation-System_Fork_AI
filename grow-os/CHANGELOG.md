@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.200
+
+**Fork AI.** Einrichtung (A-016, Etappe 6): Eine Anleitung für die Bluelab-Übertragung — mit Häkchen aus dem echten Stand.
+
+- **Was fehlte:** Der Fork kann seine Grenzwerte (pH, EC, Wassertemperatur) an die Alarmgrenzen eines Bluelab Guardian übertragen, braucht dafür aber zwei Dinge in Home Assistant, die er nicht anlegen kann: sechs Alarm-Zahlen als `number`-Entitäten und ein Skript, das eine Grenze beim Hersteller setzt (Felder `setting_key` und `value`). Wer das nicht wusste, sah nur leere Zeilen im Reiter „Rollen".
+- **Jetzt:** Oben im Reiter „Geräte & Entitäten → Rollen", sobald „Bluelab" gewählt ist, steht eine Checkliste mit vier Schritten: Alarm-Zahlen (n von 6 zugeordnet und gefunden), Skript (zugeordnet und gefunden — mit den sechs Schlüsseln zum Aufklappen), Zuordnen, Übertragung (zuletzt geschrieben oder die Störung im Wortlaut). Ist alles in Ordnung, klappt sie zu einer Zeile „eingerichtet ✓" zusammen. Zugeordnet, aber in Home Assistant nicht gefunden, warnt statt „fehlt" zu sagen.
+- **Was sie nicht tut:** Sie legt nichts an und beschreibt nicht, wie man sich beim Hersteller anmeldet — das hängt am Konto, und die Zugangsdaten sieht und speichert der Fork nie. Ein Test hält die Schlüsselliste der Anleitung an die des Dienstes fest.
+
 ## 2.0.0-forkai.199
 
 **Fork AI.** Einrichtung (A-016, Etappe 5): Nichts aus der ersten Anlage steht mehr als Vorgabe im Code — und zwei Fehler, die nur bei einer Neuinstallation auftraten, sind behoben.
