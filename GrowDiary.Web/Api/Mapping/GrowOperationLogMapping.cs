@@ -24,7 +24,8 @@ public static class GrowOperationLogMapping
         entry.WaterUsed,
         entry.WaterEcMsCm,
         entry.Notes,
-        entry.CreatedAtUtc);
+        entry.CreatedAtUtc,
+        entry.ConsumedLiters);
 
     public static ChangeoutDto ToDto(this ChangeoutEntry entry) => new(
         entry.Id,

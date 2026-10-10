@@ -47,7 +47,8 @@ public sealed record AddbackLogDto(
     WaterSource? WaterUsed,
     double? WaterEcMsCm,
     string? Notes,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    double? ConsumedLiters = null);
 
 public sealed class CreateChangeoutRequest
 {

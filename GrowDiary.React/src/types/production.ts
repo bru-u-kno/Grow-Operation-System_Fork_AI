@@ -303,6 +303,12 @@ export interface WasserwechselVorgangDto {
   vorherSensorZeitUtc: string | null
 }
 
+/** Die Vorgabe der automatischen Nachmessung — `GET/PUT /api/addback/einstellungen`. */
+export interface AddbackEinstellungenDto {
+  nachmessungAutomatisch: boolean
+  nachmessungMinuten: number
+}
+
 /* ---------------------------------------------------------------------------
  * A-006 Etappe 3: das Nachfüllen als ein Vorgang. Verträge aus
  * `Api/Contracts/AddbackVorgangContracts.cs`. Messung, Buchung und
@@ -322,6 +328,12 @@ export interface AddbackVorgangRequest {
   buchungen: VorgangBuchungRequest[]
   notiz: string | null
   tagebuch: { titel: string; text: string } | null
+  /** Wasserverbrauch seit dem letzten Mal in Litern — optional, nur zum Festhalten. */
+  verbrauchLiter?: number | null
+  /** Füllstand nach dem Nachfüllen; leer = wieder voll (Anlagevolumen). */
+  fuellstandDanachLiter?: number | null
+  /** Nach so vielen Minuten (1–240) trägt der Fork EC und pH aus den Sensoren ein. */
+  nachmessungMinuten?: number | null
 }
 
 export interface AddbackVorgangDto {
@@ -336,4 +348,8 @@ export interface AddbackVorgangDto {
   osmoseProzent: number | null
   vorherHerkunft: string | null
   vorherSensorZeitUtc: string | null
+  /** `offen`, `erledigt`, `ohneWert` oder `uebersprungen`; `null`, wenn keine Nachmessung geplant war. */
+  nachmessungStatus?: 'offen' | 'erledigt' | 'ohneWert' | 'uebersprungen' | null
+  nachmessungFaelligUtc?: string | null
+  nachmessungHinweis?: string | null
 }

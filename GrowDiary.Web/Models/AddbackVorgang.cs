@@ -35,6 +35,28 @@ public sealed class AddbackVorgang
     public DateTime ErstelltAmUtc { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Die automatische Nachmessung eines Nachfüllens: nach einer eingestellten Zeit liest der Fork
+/// EC und pH aus den Sensoren und hängt sie als Messung „nachher" an den Vorgang.
+/// </summary>
+public sealed class AddbackNachmessung
+{
+    public const string Offen = "offen";
+    public const string Erledigt = "erledigt";
+    /// <summary>Kein (plausibler) Sensorwert zur Zeit der Nachmessung — es bleibt bei „nachher" von Hand.</summary>
+    public const string OhneWert = "ohneWert";
+    /// <summary>Es gab inzwischen eine Messung „nachher" von Hand — sie hat Vorrang.</summary>
+    public const string Uebersprungen = "uebersprungen";
+
+    public int Id { get; set; }
+    public int VorgangId { get; set; }
+    public int GrowId { get; set; }
+    public DateTime FaelligUtc { get; set; }
+    public string Status { get; set; } = Offen;
+    public DateTime? ErledigtUtc { get; set; }
+    public string? Hinweis { get; set; }
+}
+
 /// <summary>Alles, was ein Nachfüll-Vorgang in EINER Transaktion anlegt.</summary>
 public sealed class AddbackVorgangEntwurf
 {
@@ -47,4 +69,7 @@ public sealed class AddbackVorgangEntwurf
     public double? OsmoseProzent { get; init; }
     public string? VorherHerkunft { get; init; }
     public DateTime? VorherSensorZeitUtc { get; init; }
+
+    /// <summary>Wann die automatische Nachmessung fällig ist (UTC) — <c>null</c> ohne Nachmessung.</summary>
+    public DateTime? NachmessungFaelligUtc { get; init; }
 }

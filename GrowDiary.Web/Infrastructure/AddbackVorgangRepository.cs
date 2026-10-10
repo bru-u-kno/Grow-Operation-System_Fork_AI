@@ -57,6 +57,19 @@ public sealed class AddbackVorgangRepository : RepositoryBase
             CREATE INDEX IF NOT EXISTS IX_ForkAddbackVorgaenge_Grow ON ForkAddbackVorgaenge(GrowId);
             CREATE INDEX IF NOT EXISTS IX_ForkAddbackVorgaenge_Log ON ForkAddbackVorgaenge(AddbackLogId);
             CREATE INDEX IF NOT EXISTS IX_ForkVerbraeuche_AddbackVorgang ON ForkVerbraeuche(AddbackVorgangId);
+
+            -- Die automatische Nachmessung: ein Auftrag je Vorgang, vom Takt (AddbackNachmessungWorker) abgearbeitet.
+            CREATE TABLE IF NOT EXISTS ForkAddbackNachmessungen (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                VorgangId INTEGER NOT NULL REFERENCES ForkAddbackVorgaenge(Id) ON DELETE CASCADE,
+                GrowId INTEGER NOT NULL,
+                FaelligUtc TEXT NOT NULL,
+                Status TEXT NOT NULL DEFAULT 'offen',
+                ErledigtUtc TEXT NULL,
+                Hinweis TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_ForkAddbackNachmessungen_Status ON ForkAddbackNachmessungen(Status, FaelligUtc);
+            CREATE UNIQUE INDEX IF NOT EXISTS IX_ForkAddbackNachmessungen_Vorgang ON ForkAddbackNachmessungen(VorgangId);
             """;
         command.ExecuteNonQuery();
     }
@@ -101,6 +114,13 @@ public sealed class AddbackVorgangRepository : RepositoryBase
             insert.Parameters.AddWithValue("$sensorZeit", vorgang.VorherSensorZeitUtc is { } z ? ToStorageUtc(z) : DBNull.Value);
             insert.Parameters.AddWithValue("$erstellt", ToStorageUtc(vorgang.ErstelltAmUtc));
             vorgang.Id = Convert.ToInt32((long)insert.ExecuteScalar()!, CultureInfo.InvariantCulture);
+        }
+
+        if (entwurf.NachmessungFaelligUtc is { } faellig)
+        {
+            VorgangBausteine.Ausfuehren(connection, transaction,
+                "INSERT INTO ForkAddbackNachmessungen (VorgangId, GrowId, FaelligUtc, Status) VALUES ($vorgang, $growId, $faellig, 'offen');",
+                ("$vorgang", vorgang.Id), ("$growId", entwurf.GrowId), ("$faellig", ToStorageUtc(faellig)));
         }
 
         VorgangBausteine.Buchen(entwurf.Buchungen, entwurf.GrowId, nachherId, eintrag.PerformedAtUtc, "addback",
@@ -179,9 +199,108 @@ public sealed class AddbackVorgangRepository : RepositoryBase
             .FirstOrDefault();
     }
 
+    /// <summary>Ein Vorgang ohne Grow-Angabe — für den Hintergrundtakt, der nur die Vorgangs-Id kennt.</summary>
+    public AddbackVorgang? GetOhneGrow(int vorgangId)
+    {
+        using var connection = Open();
+        return Lesen(connection, null, "WHERE Id = $id", c => c.Parameters.AddWithValue("$id", vorgangId)).FirstOrDefault();
+    }
+
+    /// <summary>Die Nachmessung zu einem Vorgang — oder <c>null</c>, wenn keine geplant war.</summary>
+    public AddbackNachmessung? NachmessungZu(int vorgangId)
+    {
+        using var connection = Open();
+        return NachmessungenLesen(connection, null, "WHERE VorgangId = $id", c => c.Parameters.AddWithValue("$id", vorgangId)).FirstOrDefault();
+    }
+
+    /// <summary>Alle offenen Nachmessungen, die bis <paramref name="jetztUtc"/> fällig sind.</summary>
+    public List<AddbackNachmessung> FaelligeNachmessungen(DateTime jetztUtc)
+    {
+        using var connection = Open();
+        return NachmessungenLesen(connection, null, "WHERE Status = 'offen' AND FaelligUtc <= $jetzt ORDER BY FaelligUtc",
+            c => c.Parameters.AddWithValue("$jetzt", ToStorageUtc(jetztUtc)));
+    }
+
+    /// <summary>Schließt eine Nachmessung ab, ohne Werte einzutragen (kein Sensorwert, oder von Hand schon da).</summary>
+    public void NachmessungAbschliessen(int nachmessungId, string status, string? hinweis, DateTime jetztUtc)
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        VorgangBausteine.Ausfuehren(connection, transaction,
+            "UPDATE ForkAddbackNachmessungen SET Status = $status, Hinweis = $hinweis, ErledigtUtc = $jetzt WHERE Id = $id;",
+            ("$status", status), ("$hinweis", (object?)hinweis ?? DBNull.Value), ("$jetzt", ToStorageUtc(jetztUtc)), ("$id", nachmessungId));
+        transaction.Commit();
+    }
+
+    /// <summary>
+    /// Trägt die gemessenen Werte als Messung „nachher" ein — Messung, Vorgang, Addback-Eintrag und
+    /// Tagebuchzeile in einer Transaktion.
+    /// </summary>
+    public void NachmessungEintragen(AddbackNachmessung nachmessung, AddbackVorgang vorgang, Measurement messung, string tagebuchZusatz, DateTime jetztUtc)
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        var messungId = VorgangBausteine.MessungAnlegen(messung, connection, transaction);
+
+        VorgangBausteine.Ausfuehren(connection, transaction,
+            "UPDATE ForkAddbackVorgaenge SET MessungNachherId = $messung WHERE Id = $id;",
+            ("$messung", (object?)messungId ?? DBNull.Value), ("$id", vorgang.Id));
+
+        if (vorgang.AddbackLogId is { } logId)
+        {
+            VorgangBausteine.Ausfuehren(connection, transaction,
+                "UPDATE AddbackLogs SET EcAfter = COALESCE(EcAfter, $ec), PhAfter = COALESCE(PhAfter, $ph) WHERE Id = $id;",
+                ("$ec", (object?)messung.ReservoirEc ?? DBNull.Value), ("$ph", (object?)messung.ReservoirPh ?? DBNull.Value), ("$id", logId));
+        }
+
+        if (vorgang.JournalId is { } journalId)
+        {
+            // Die Zeile hängt an der Messung „nachher" (wie beim Anlegen) und bekommt die Werte unten angefügt.
+            VorgangBausteine.Ausfuehren(connection, transaction,
+                """
+                UPDATE JournalEntries
+                SET Body = CASE WHEN Body IS NULL OR Body = '' THEN $zusatz ELSE Body || char(10) || $zusatz END,
+                    MeasurementId = COALESCE(MeasurementId, $messung),
+                    UpdatedAtUtc = $jetzt
+                WHERE Id = $id;
+                """,
+                ("$zusatz", tagebuchZusatz), ("$messung", (object?)messungId ?? DBNull.Value), ("$jetzt", ToStorageUtc(jetztUtc)), ("$id", journalId));
+        }
+
+        VorgangBausteine.Ausfuehren(connection, transaction,
+            "UPDATE ForkAddbackNachmessungen SET Status = 'erledigt', ErledigtUtc = $jetzt, Hinweis = NULL WHERE Id = $id;",
+            ("$jetzt", ToStorageUtc(jetztUtc)), ("$id", nachmessung.Id));
+        transaction.Commit();
+    }
+
     /// <summary>Die Buchungen eines Vorgangs.</summary>
     public List<Verbrauch> Buchungen(int vorgangId)
         => _kosten.GetVerbraeuche().Where(v => v.AddbackVorgangId == vorgangId).OrderBy(v => v.Id).ToList();
+
+    private static List<AddbackNachmessung> NachmessungenLesen(SqliteConnection connection, SqliteTransaction? transaction, string bedingung, Action<SqliteCommand> parameter)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"SELECT * FROM ForkAddbackNachmessungen {bedingung};";
+        parameter(command);
+        using var reader = command.ExecuteReader();
+        var liste = new List<AddbackNachmessung>();
+        while (reader.Read())
+        {
+            liste.Add(new AddbackNachmessung
+            {
+                Id = Convert.ToInt32(reader["Id"], CultureInfo.InvariantCulture),
+                VorgangId = Convert.ToInt32(reader["VorgangId"], CultureInfo.InvariantCulture),
+                GrowId = Convert.ToInt32(reader["GrowId"], CultureInfo.InvariantCulture),
+                FaelligUtc = ParseStoredUtcDateTime(reader["FaelligUtc"]?.ToString()) ?? DateTime.UtcNow,
+                Status = reader["Status"]?.ToString() ?? AddbackNachmessung.Offen,
+                ErledigtUtc = ParseStoredUtcDateTime(NullString(reader["ErledigtUtc"])),
+                Hinweis = NullString(reader["Hinweis"]),
+            });
+        }
+
+        return liste;
+    }
 
     private static List<AddbackVorgang> Lesen(SqliteConnection connection, SqliteTransaction? transaction, string bedingung, Action<SqliteCommand> parameter)
     {

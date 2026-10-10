@@ -97,8 +97,24 @@ public sealed class AddbackVorgangApiController : ApiControllerBase
         var zeitpunkt = eingabe.Zeitpunkt(request.ZeitpunktLokal, nameof(request.ZeitpunktLokal), "Ein Nachfüllen wird erfasst, nachdem es war.");
 
         // ---- Nachfüllen
-        eingabe.LiterPruefen(request.Liter, nameof(request.Liter), "Wie viele Liter hast du nachgefüllt?");
+        // „Nur Zusätze, ohne Wasser" (Korrektur) braucht keine Liter; jede andere Art schon.
+        if (request.Art == AddbackLogKind.Correction)
+        {
+            if (request.Liter is { } l && (!double.IsFinite(l) || l < 0))
+                ModelState.AddModelError(nameof(request.Liter), "Die Menge darf nicht negativ sein.");
+        }
+        else
+        {
+            eingabe.LiterPruefen(request.Liter, nameof(request.Liter), "Wie viele Liter hast du nachgefüllt?");
+        }
+
         if (!Enum.IsDefined(request.Art)) ModelState.AddModelError(nameof(request.Art), "Die Art des Nachfüllens ist ungültig.");
+        if (request.VerbrauchLiter is { } verbrauch && (!double.IsFinite(verbrauch) || verbrauch < 0 || verbrauch > 100000))
+            ModelState.AddModelError(nameof(request.VerbrauchLiter), "Der Verbrauch muss eine Zahl von 0 bis 100000 Litern sein.");
+        if (request.FuellstandDanachLiter is { } danach && (!double.IsFinite(danach) || danach <= 0 || danach > 100000))
+            ModelState.AddModelError(nameof(request.FuellstandDanachLiter), "Der Füllstand muss größer als 0 sein.");
+        if (request.NachmessungMinuten is { } minuten && (minuten < 1 || minuten > 240))
+            ModelState.AddModelError(nameof(request.NachmessungMinuten), "Die Nachmessung kann nach 1 bis 240 Minuten erfolgen.");
         eingabe.WasserPruefen(request.Wasser, request.OsmoseProzent, request.WasserEcMsCm);
         MeasurementSanityService.PhysikGrenze(ModelState, nameof(request.EcZiel), "ec", request.EcZiel, "Das EC-Ziel");
 
@@ -130,9 +146,12 @@ public sealed class AddbackVorgangApiController : ApiControllerBase
             EcAfter = nachher?.ReservoirEc,
             PhBefore = vorher?.ReservoirPh,
             PhAfter = nachher?.ReservoirPh,
-            LitersAdded = request.Liter,
-            WaterUsed = request.Wasser,
-            WaterEcMsCm = request.WasserEcMsCm,
+            LitersAdded = request.Art == AddbackLogKind.Correction ? null : request.Liter,
+            NewReservoirVolumeLiters = request.Art == AddbackLogKind.Correction ? null : request.FuellstandDanachLiter,
+            // „Nur Zusätze" bringt kein Wasser mit — eine Wasserquelle am Eintrag wäre erfunden.
+            WaterUsed = request.Art == AddbackLogKind.Correction ? null : request.Wasser,
+            WaterEcMsCm = request.Art == AddbackLogKind.Correction ? null : request.WasserEcMsCm,
+            ConsumedLiters = request.VerbrauchLiter,
             Notes = request.Notiz,
         };
 
@@ -148,6 +167,10 @@ public sealed class AddbackVorgangApiController : ApiControllerBase
             OsmoseProzent = request.Wasser == WaterSource.Mixed ? request.OsmoseProzent : null,
             VorherHerkunft = herkunft,
             VorherSensorZeitUtc = sensorZeit,
+            // Was der Nutzer selbst als „nachher" einträgt, hat Vorrang vor der Automatik.
+            NachmessungFaelligUtc = request.NachmessungMinuten is { } nm && nachher is null
+                ? zeitpunkt.ToUniversalTime().AddMinutes(nm)
+                : null,
         });
 
         foreach (var messung in new[] { vorher, nachher }.OfType<Measurement>())
@@ -180,7 +203,9 @@ public sealed class AddbackVorgangApiController : ApiControllerBase
     }
 
     private AddbackVorgangDto AlsDto(AddbackVorgang v, IReadOnlyDictionary<int, Verbrauchsartikel> artikel, IReadOnlyDictionary<int, AddbackLogEntry> eintraege)
-        => new(
+    {
+        var nachmessung = _vorgaenge.NachmessungZu(v.Id);
+        return new(
             v.Id,
             v.GrowId,
             v.ErstelltAmUtc,
@@ -191,5 +216,9 @@ public sealed class AddbackVorgangApiController : ApiControllerBase
             v.JournalId is { } jid ? _journal.Get(jid)?.ToDto() : null,
             v.OsmoseProzent,
             v.VorherHerkunft,
-            v.VorherSensorZeitUtc);
+            v.VorherSensorZeitUtc,
+            nachmessung?.Status,
+            nachmessung?.FaelligUtc,
+            nachmessung?.Hinweis);
+    }
 }

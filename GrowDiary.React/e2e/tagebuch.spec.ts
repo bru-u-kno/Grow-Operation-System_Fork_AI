@@ -203,23 +203,19 @@ test('Rundweg: AuffaelligAktionen — Notiz dazu und Nachfüllen eintragen, beid
   await page.reload({ waitUntil: 'networkidle' })
   await expect(auffaellig(page)).toHaveCount(1)
 
-  // --- Nachfüllen eintragen: führt in den Nachfüll-Ablauf (A-006, Etappe 3),
+  // --- Nachfüllen eintragen: führt auf die Addback-Seite (A-006, Etappe 3),
   // vorbelegt mit Zeitpunkt und EC davor/danach — ein Vorgang, kein zweites Formular.
   await auffaellig(page).locator('[data-audit="tagebuch-nachfuellen"]').click()
   await expect(page).toHaveURL(/\/addback\?growId=1&zeitpunkt=/)
-  const ablauf = page.locator('[data-audit="addback-ablauf"]')
-  await expect(ablauf.getByText('Vorbelegt aus dem Link')).toBeVisible()
-  await expect(page.locator('[data-audit="addback-sensor"]')).toContainText('Vom Sensor, aus dem Link')
-  await page.locator('[data-audit="addback-weiter-2"]').click()
-  await ablauf.getByLabel('Art des Nachfüllens').selectOption('TopOff')
-  await ablauf.getByLabel('Nachgefüllt in Litern').fill('12,5')
-  await page.locator('[data-audit="addback-weiter-3"]').click()
-  await expect(ablauf.getByPlaceholder('z. B. 1,15')).toHaveValue(/^\d,\d+$/)
-  await expect(ablauf.getByPlaceholder(/Warum nachgefüllt/)).toHaveValue(/Nachgetragen aus dem Tagebuch/)
-  await ablauf.getByPlaceholder(/Warum nachgefüllt/).fill(MARKE)
-  await page.locator('[data-audit="addback-weiter-4"]').click()
+  const formular = page.locator('[data-audit="nachfuellen-formular"]')
+  await expect(page.locator('[data-audit="nachfuellen-vorbelegt"]')).toBeVisible()
+  // Nur Wasser ist vorgewählt; die Liter trägt der Nutzer ein, der Rest steht schon da.
+  await formular.getByLabel('Wie viel Wasser?').fill('12,5')
+  await expect(formular.getByLabel('EC nachher')).toHaveValue(/^\d,\d+$/)
+  await expect(formular.getByLabel('Notiz')).toHaveValue(/Nachgetragen aus dem Tagebuch/)
+  await formular.getByLabel('Notiz').fill(MARKE)
   const rumpf = await gesendet(page, 'POST', /\/api\/grows\/1\/addback\/vorgaenge$/,
-    () => page.locator('[data-audit="addback-speichern"]').click())
+    () => page.locator('[data-audit="nachfuellen-speichern"]').click())
   expect(rumpf.art).toBe('TopOff')
   expect(rumpf.liter).toBe(12.5)
   const vorher = rumpf.vorher as { reservoirEc: number; herkunft: string }

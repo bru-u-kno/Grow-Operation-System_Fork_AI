@@ -49,6 +49,8 @@ export const AKTIONEN: ReadonlyArray<{ methode: string; muster: RegExp; getan: s
   { methode: 'DELETE', muster: /^\/api\/tasks\/\d+$/, getan: 'Aufgabe gelöscht', versuch: 'Aufgabe löschen' },
   { methode: 'POST', muster: /^\/api\/grows\/\d+\/addback\/logs$/, getan: 'Nachfüllen eingetragen', versuch: 'Nachfüllen eintragen' },
   { methode: 'POST', muster: /^\/api\/grows\/\d+\/addback\/calculate$/, getan: 'Nachfüllen berechnet', versuch: 'Nachfüllen berechnen' },
+  { methode: 'POST', muster: /^\/api\/grows\/\d+\/addback\/vorgaenge$/, getan: 'Nachfüllen als Vorgang eingetragen', versuch: 'Nachfüllen als Vorgang eintragen' },
+  { methode: 'DELETE', muster: /^\/api\/grows\/\d+\/addback\/vorgaenge\/\d+$/, getan: 'Nachfüll-Vorgang gelöscht', versuch: 'Nachfüll-Vorgang löschen' },
   { methode: 'POST', muster: /^\/api\/grows\/\d+\/changeouts$/, getan: 'Wasserwechsel eingetragen', versuch: 'Wasserwechsel eintragen' },
   { methode: 'DELETE', muster: /^\/api\/grows\/\d+\/changeouts\/\d+$/, getan: 'Wasserwechsel gelöscht', versuch: 'Wasserwechsel löschen' },
   { methode: 'POST', muster: /^\/api\/maintenance-events$/, getan: 'Wartung eingetragen', versuch: 'Wartung eintragen' },

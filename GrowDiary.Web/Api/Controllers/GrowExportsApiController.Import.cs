@@ -311,6 +311,7 @@ public sealed partial class GrowExportsApiController
             LitersAdded = dto.LitersAdded,
             NewReservoirVolumeLiters = dto.NewReservoirVolumeLiters,
             UsedHydroSetupVolume = dto.UsedHydroSetupVolume,
+            ConsumedLiters = dto.ConsumedLiters,
             Notes = dto.Notes
         };
 

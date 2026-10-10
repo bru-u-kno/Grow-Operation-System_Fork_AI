@@ -30,16 +30,8 @@ namespace GrowDiary.Web.Api.Controllers;
 [KiStufe(KiStufe.Dokumentieren)]
 public sealed class WasserwechselApiController : ApiControllerBase
 {
-    /// <summary>
-    /// So weit sucht „vorher" zurück: 30 Minuten.
-    /// </summary>
-    /// <remarks>
-    /// Annahme, kein Messwert: die Sensoren schreiben alle 5 Minuten
-    /// (<see cref="SensorHistoryApiController"/>). Sechs Takte Luft decken einen
-    /// kurzen Ausfall ab; was älter ist, zeigt nicht mehr den Tank „kurz vor dem
-    /// Wechsel". Dann trägt man von Hand ein.
-    /// </remarks>
-    public const int SensorFensterMinuten = 30;
+    /// <summary>So weit sucht „vorher“ zurück — die Zahl steht beim Dienst (<see cref="TankSensorService"/>).</summary>
+    public const int SensorFensterMinuten = TankSensorService.StandardFensterMinuten;
 
     private readonly GrowRepository _grows;
     private readonly WasserwechselVorgangRepository _vorgaenge;
@@ -47,7 +39,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
     private readonly JournalRepository _journal;
     private readonly AuditRepository _audit;
     private readonly MeasurementSanityService _sperre;
-    private readonly SensorReadingRepository _sensoren;
+    private readonly TankSensorService _tank;
     private readonly MischplanService _mischplan;
 
     public WasserwechselApiController(
@@ -57,7 +49,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
         JournalRepository journal,
         AuditRepository audit,
         MeasurementSanityService sperre,
-        SensorReadingRepository sensoren,
+        TankSensorService tank,
         MischplanService mischplan)
     {
         _grows = grows;
@@ -66,7 +58,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
         _journal = journal;
         _audit = audit;
         _sperre = sperre;
-        _sensoren = sensoren;
+        _tank = tank;
         _mischplan = mischplan;
     }
 
@@ -122,13 +114,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
             return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, null, null, null, "Der Grow steht in keinem Zelt — es gibt keine Sensoren dazu."));
         }
 
-        var von = bis.AddMinutes(-SensorFensterMinuten);
-        SensorWertDto? Juengster(string metrik)
-            => _sensoren.GetReadings(zelt, metrik, von, bis).LastOrDefault() is { } r ? new SensorWertDto(r.Value, r.CapturedAtUtc) : null;
-
-        var ec = Juengster("reservoir-ec");
-        var ph = Juengster("reservoir-ph");
-        var wt = Juengster("reservoir-temp");
+        var (ec, ph, wt) = _tank.Tankwerte(zelt, bis, SensorFensterMinuten);
         var hinweis = ec is null && ph is null && wt is null
             ? $"In den {SensorFensterMinuten} Minuten davor hat kein Sensor einen Tankwert geliefert — trag die Werte von Hand ein."
             : null;

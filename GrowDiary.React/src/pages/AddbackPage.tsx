@@ -6,32 +6,29 @@ import { NachfuellListe } from '../features/addback/NachfuellListe'
 import { WasserwechselStand } from '../features/changeouts/WasserwechselStand'
 import { GrowScopePicker } from '../features/grow-scope/GrowScopePicker'
 import { useSelectedGrow } from '../features/grow-scope/useSelectedGrow'
+import { NachfuellFormular } from '../features/addback/NachfuellFormular'
+import { MODI } from '../features/addback/nachfuell-rechnung'
 import { vorbelegungAusLink } from '../features/vorgang/ablauf-rechnung'
-import { VorgangAblauf } from '../features/vorgang/VorgangAblauf'
 import type { AddbackLogDto, AddbackVorgangDto, WasserwechselStandDto } from '../types'
 import { formatDateTime, formatNumber } from '../utils'
 
 /**
- * Addback — das Nachfüllen als ein Ablauf (A-006, Etappe 3, 05.10.2026).
+ * Addback — das Nachfüllen auf einer Seite (A-006, Etappe 3, freigegeben von Bru am 10.10.2026).
  *
  * <b>Vorher</b> gab es hier zwei Seiten: eine Übersicht (`/addback`) und einen
  * Assistenten je Grow (`/grows/:id/addback`) mit Stamm-EC, Komponentenliste in
  * der Notiz und ohne Verbrauch, Messung oder Tagebuch. Wer nachfüllte, trug
  * an drei Stellen ein.
  *
- * <b>Jetzt</b> derselbe Ablauf wie beim Wasserwechsel (`VorgangAblauf`):
- * vorher (Sensor oder Hand, DO/ORP von Hand), nachfüllen (Liter nach
- * Wasserart, Zugaben als Vorschlag aus dem Mischplan auf die nachgefüllten
- * Liter, ↺/↶, „+ Produkt", Buchen-Häkchen, Wasser wird gebucht), nachher,
- * speichern — Addback-Eintrag, Messungen, Verbrauch und Tagebuchzeile in einer
- * Transaktion. Der Addback-Rechner steht im Schritt „Nachfüllen", nicht auf
- * einer zweiten Seite: eine Hauptaktion, ein Weg. `/grows/:id/addback` leitet
- * hierher weiter.
+ * <b>Jetzt</b> fragt die Seite zuerst, was gemacht wurde — nur Wasser, Wasser mit Dünger und
+ * Zusätzen, oder nur Zusätze — und zeigt dann nur die Felder dazu (`NachfuellFormular`). Ein
+ * Speichern legt Addback-Eintrag, Messungen, Verbrauch und Tagebuchzeile in einer Transaktion
+ * an; auf Wunsch trägt der Fork die Nachmessung nach X Minuten aus den Sensoren selbst ein.
+ * `/grows/:id/addback` leitet hierher weiter.
  *
- * <b>Links.</b> `?vorgang=<id>` hebt einen Vorgang in der Liste hervor,
- * `?schritt=2` öffnet den Ablauf auf einem Schritt, und die Vorbelegung
- * (`?zeitpunkt=…&ecVorher=…&ecNachher=…&liter=…`, siehe `vorbelegungAusLink`)
- * ist der Weg vom Grow-Tagebuch („Nachfüllen eintragen" an einer Auffälligkeit).
+ * <b>Links.</b> `?vorgang=<id>` hebt einen Vorgang in der Liste hervor, und die Vorbelegung
+ * (`?zeitpunkt=…&ecVorher=…&ecNachher=…&liter=…`, siehe `vorbelegungAusLink`) ist der Weg vom
+ * Grow-Tagebuch („Nachfüllen eintragen" an einer Auffälligkeit).
  */
 export default function AddbackPage() {
   const { grows, growId, setGrowId, loading, error } = useSelectedGrow()
@@ -41,8 +38,9 @@ export default function AddbackPage() {
   // Die Vorbelegung gilt einmal: für den Grow aus dem Link und den ersten Ablauf.
   const [vorbelegung] = useState(() => vorbelegungAusLink(suche))
   const [vorbelegtFuer] = useState(() => suche.get('growId'))
-  const startSchritt = Number(suche.get('schritt'))
   const markiert = Number(suche.get('vorgang')) || null
+  // `?modus=mix|zusatz` öffnet die Seite auf dem Fall — für Links und die Oberflächen-Prüfungen (e2e/seiten.ts).
+  const startModus = MODI.map((m) => m.modus).find((m) => m === suche.get('modus')) ?? 'wasser'
 
   const [eintraege, setEintraege] = useState<AddbackLogDto[]>([])
   const [vorgaenge, setVorgaenge] = useState<AddbackVorgangDto[]>([])
@@ -88,7 +86,7 @@ export default function AddbackPage() {
     <V1Page
       eyebrow="Jetzt"
       title="Addback"
-      subtitle="Nachfüllen als ein Ablauf: vorher, nachfüllen, nachher. Verbrauch und Tagebuch gehen mit."
+      subtitle="Nachfüllen auf einer Seite: Was hast du gemacht? Verbrauch und Tagebuch gehen mit."
       action={<GrowScopePicker grows={grows} growId={growId} onChange={setGrowId} />}
     >
       {error && <V1Alert message={error} tone="critical" />}
@@ -128,14 +126,16 @@ export default function AddbackPage() {
           {gespeichert?.hinweis && <V1Alert message={gespeichert.hinweis} tone="warn" />}
 
           <div className="ww-ablauf-section">
-            <VorgangAblauf
-              art="addback"
+            <NachfuellFormular
               key={`${grow.id}-${ablaufNummer}`}
               growId={grow.id}
+              startModus={startModus}
               vorbelegung={ablaufNummer === 0 && (vorbelegtFuer == null || vorbelegtFuer === String(grow.id)) ? vorbelegung : null}
-              startSchritt={ablaufNummer === 0 && [1, 2, 3, 4].includes(startSchritt) ? startSchritt as 1 | 2 | 3 | 4 : 1}
-              onGespeichert={(teile, hinweis) => {
-                setGespeichert({ text: `Nachfüllen gespeichert — mit ${teile}.`, hinweis })
+              onGespeichert={(teile, hinweis, _vorgangId, nachmessung) => {
+                setGespeichert({
+                  text: `Nachfüllen gespeichert — mit ${teile}.${nachmessung ? ` Die Nachmessung trägt der Fork um ${nachmessung} selbst ein.` : ''}`,
+                  hinweis,
+                })
                 setAblaufNummer((wert) => wert + 1)
                 setNeuGeladen((wert) => wert + 1)
                 window.scrollTo({ top: 0 })

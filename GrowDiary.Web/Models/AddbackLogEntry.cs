@@ -29,6 +29,13 @@ public sealed class AddbackLogEntry
 
     /// <summary>EC des verwendeten Wassers in mS/cm, vor dem Duenger.</summary>
     public double? WaterEcMsCm { get; set; }
+
+    /// <summary>Wasserverbrauch seit dem letzten Nachfüllen oder Wasserwechsel in Litern — nur zum Festhalten, wenn der Nutzer ihn kennt.</summary>
+    /// <remarks>
+    /// Die Rechnung braucht ihn nicht: Sie startet bei den Messwerten, in denen der
+    /// Verbrauch schon steckt. Er dient der Statistik und als Gegenprobe zur nachgefüllten Menge.
+    /// </remarks>
+    public double? ConsumedLiters { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

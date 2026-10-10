@@ -67,13 +67,13 @@ const DETAILSEITEN = [
      die Routen aus App.tsx ab. */
   '/messungen/new',
   '/grows/1/harvest',
-  // A-006 Etappe 3: dasselbe für das Nachfüllen. Ohne Literzahl stünde in
-  // Schritt 2 keine Tabelle (Nachfüllen wird nicht mit dem Anlagevolumen
-  // vorbelegt) und die Prüfungen sähen eine leere Seite — deshalb mit
-  // Vorbelegung per Link, wie sie das Tagebuch schickt.
-  '/addback?growId=1&schritt=2&liter=20&ecVorher=1.75',
-  '/addback?growId=1&schritt=3&liter=20&ecVorher=1.75&ecNachher=1.61',
-  '/addback?growId=1&schritt=4&liter=20&ecVorher=1.75&ecNachher=1.61&phNachher=6.02',
+  // A-006 Etappe 3: das Nachfüllen in allen drei Fällen (`?modus=`) — mit Liter, damit der Mischplan
+  // und die Erwartung gerechnet werden und die Prüfungen keine leere Seite sehen; dazu die Vorbelegung
+  // per Link, wie sie das Tagebuch schickt (Weitere Angaben dann aufgeklappt).
+  '/addback?growId=1&liter=20',
+  '/addback?growId=1&modus=mix&liter=20',
+  '/addback?growId=1&modus=zusatz',
+  '/addback?growId=1&liter=20&ecVorher=1.75&ecNachher=1.61&phNachher=6.02',
   '/zelte/new',
   '/hydro/new',
   '/dosierung/neu',

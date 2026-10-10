@@ -19,8 +19,24 @@ public sealed class AddbackVorgangRequest
     /// <summary><c>Addback</c> = Wasser mit Dünger, <c>TopOff</c> = nur Wasser, <c>Correction</c> = Korrektur.</summary>
     public AddbackLogKind Art { get; set; } = AddbackLogKind.Addback;
 
-    /// <summary>Nachgefüllte Liter — Pflicht, größer 0.</summary>
+    /// <summary>Nachgefüllte Liter — Pflicht und größer 0; nur bei <c>Correction</c> („nur Zusätze, ohne Wasser") darf sie fehlen.</summary>
     public double? Liter { get; set; }
+
+    /// <summary>
+    /// Wasserverbrauch seit dem letzten Nachfüllen oder Wasserwechsel in Litern — optional, nur zum
+    /// Festhalten (Statistik, Gegenprobe zur nachgefüllten Menge). Die Rechnung braucht ihn nicht.
+    /// </summary>
+    public double? VerbrauchLiter { get; set; }
+
+    /// <summary>Füllstand nach dem Nachfüllen in Litern. Leer = das Reservoir ist wieder voll (Anlagevolumen).</summary>
+    public double? FuellstandDanachLiter { get; set; }
+
+    /// <summary>
+    /// Nach so vielen Minuten (1–240) trägt der Fork EC und pH aus den Sensoren als Messung „nachher" ein.
+    /// Leer = keine automatische Nachmessung. Wird ignoriert, wenn <see cref="Nachher"/> Werte trägt —
+    /// was der Nutzer selbst einträgt, hat Vorrang.
+    /// </summary>
+    public int? NachmessungMinuten { get; set; }
 
     /// <summary>Womit nachgefüllt wurde.</summary>
     public WaterSource Wasser { get; set; } = WaterSource.Tap;
@@ -62,4 +78,7 @@ public sealed record AddbackVorgangDto(
     JournalEntryDto? Tagebuch,
     double? OsmoseProzent,
     string? VorherHerkunft,
-    DateTime? VorherSensorZeitUtc);
+    DateTime? VorherSensorZeitUtc,
+    string? NachmessungStatus = null,
+    DateTime? NachmessungFaelligUtc = null,
+    string? NachmessungHinweis = null);

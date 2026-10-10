@@ -71,6 +71,7 @@ public sealed partial class DatabaseInitializer
         // weil der Osmose-Tank leer war, kann den EC-Sprung sonst nie erklaeren.
         EnsureColumn(connection, "AddbackLogs", "WaterUsed", "TEXT NULL");
         EnsureColumn(connection, "AddbackLogs", "WaterEcMsCm", "REAL NULL");
+        EnsureColumn(connection, "AddbackLogs", "ConsumedLiters", "REAL NULL"); // Verbrauch seit dem letzten Mal, in Litern
         EnsureColumn(connection, "ChangeoutEntries", "WaterUsed", "TEXT NULL");
         EnsureColumn(connection, "ChangeoutEntries", "WaterEcMsCm", "REAL NULL");
         // A-006 (05.10.2026): ob ein Wechsel die Erinnerung neu startet. Altdaten

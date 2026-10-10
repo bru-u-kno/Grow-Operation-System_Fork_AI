@@ -13,7 +13,7 @@ import { maschinenZahl, zahlOderNull } from '../../zahlenfeld'
  */
 
 /** Wie ein Nachfüllen heißt — im Titel der Tagebuchzeile und in der Liste. */
-export const NACHFUELL_ART: Record<AddbackLogKind, string> = { Addback: 'Addback', TopOff: 'Nachfüllen', Correction: 'Korrektur' }
+export const NACHFUELL_ART: Record<AddbackLogKind, string> = { Addback: 'Addback', TopOff: 'Nachfüllen', Correction: 'Zusätze' }
 
 /** Eine Zeile der Ansetz-Tabelle. */
 export type AblaufZeile = {

@@ -514,6 +514,8 @@ export interface AddbackLogDto {
   /** Womit aufgefüllt wurde — `null` heißt „nicht festgehalten". */
   waterUsed?: WaterSource | null
   waterEcMsCm?: number | null
+  /** Wasserverbrauch seit dem letzten Mal in Litern — nur zum Festhalten. */
+  consumedLiters?: number | null
   notes: string | null
   createdAtUtc: string
 }

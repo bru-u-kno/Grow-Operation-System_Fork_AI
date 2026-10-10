@@ -5,6 +5,21 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.202
+
+**Fork AI.** Addback (A-006, Etappe 3): Nachfüllen auf einer Seite — für „18 L Leitungswasser" genügen die Quelle und die Liter.
+
+- **Erst fragen, was du gemacht hast:** Die Seite „Addback" hat jetzt drei Auswahlfelder — *Nur Wasser* (vorgewählt), *Wasser + Dünger & Zusätze* und *Nur Zusätze (ohne Wasser)* — und zeigt danach nur die Felder, die dazu gehören. Statt sieben Abschnitten mit über zwanzig Feldern: Wasserquelle und Liter, der Rest kommt aus dem Grow, dem Mischplan und den Sensoren. Darüber steht „Live jetzt" mit EC, pH, Wassertemperatur und Volumen.
+- **Nachfüllen als ein Vorgang:** Ein Speichern legt Addback-Eintrag, Messung vorher und nachher, Verbrauchsbuchungen und eine Tagebuchzeile in einer Transaktion an; Löschen nimmt alles mit. (Das war als Branch fertig, nie ausgeliefert, und kommt jetzt mit.)
+- **Gerechnet wird mit den Sensoren, nicht mit der letzten Messung:** EC und pH „vorher" holt der Fork für den Zeitpunkt aus dem Sensorverlauf; fehlen sie, trägst du sie von Hand ein. Ohne Pegelsensor gilt: danach ist der Tank wieder voll (Anlagevolumen), vorher fehlten die nachgefüllten Liter — das Feld „Füllstand danach" ändert das. Die Erwartung für den EC ist die Mischrechnung (mit Etikett); für den pH gibt es keine erfundene Zahl, er wird nachgemessen.
+- **Mischung und eigene Wasserwerte:** Bei „Mischung" gibst du den Anteil Osmose in Prozent an; die Liter teilen sich auf, EC und pH der Mischung kommen aus dem Wasserprofil. „Eigene Werte" nimmt EC, pH, Härte und Temperatur für dieses eine Nachfüllen.
+- **Dünger nach Mischplan, überschreibbar:** Der Mischplan wird auf die eingefüllten Liter gerechnet; jede Menge lässt sich ändern („↺ Vorschlag" bringt sie zurück), jeder Haken abwählen, weitere Zusätze (Purolyt, Cannaboost …) kommen über „+ Zusatz" dazu.
+- **Artikel nur nach Rückfrage:** Gebucht wird, was einem Verbrauchsartikel gehört. Fehlt er, steht in der Zeile „Noch kein Artikel …" mit „Als Artikel anlegen …"; erst nach „Ja, anlegen" entsteht er (ohne Preis, den trägst du unter Kosten nach), und die Zugabe wird mitgebucht. Das gilt auch für Wasser. Der Wasserwechsel legt den Wasser-Artikel weiterhin selbst an.
+- **Nachmessung von allein:** Auf Wunsch trägt der Fork nach 15, 30, 60 oder selbst gewählten Minuten EC und pH aus den Sensoren als Messung „nachher" ein — im Hintergrund, auch nach einem Neustart und bei einem Zeitpunkt in der Vergangenheit (dann aus dem Sensorverlauf). Was du selbst einträgst, hat Vorrang. Gibt es keinen plausiblen Sensorwert, steht das in der Liste, und es entsteht keine Messung. „Als meinen Standard merken" speichert die Zeit.
+- **Zeitpunkt und Verbrauch:** Der Zeitpunkt hat einen Kalender- und Uhrzeit-Wähler mit „Jetzt", „vor 30 min", „vor 1 Std.", „gestern". Der Verbrauch seit dem letzten Mal steht in Litern und ist optional — die Rechnung braucht ihn nicht.
+- **Aufgeräumt:** Der 4-Schritte-Ablauf für das Nachfüllen (nie ausgeliefert) ist weg; der Ablauf im Wasserwechsel ist jetzt nur noch der Wechsel. Die Oberfläche „Prüfen & Dosierung berechnen" mit Ziel-EC und Stamm-Lösung gibt es nicht mehr.
+- **Tagebuch:** „Nachfüllen eintragen" an einer Auffälligkeit öffnet dieselbe Seite, vorbelegt mit Zeitpunkt, Liter und den gemessenen Werten.
+
 ## 2.0.0-forkai.201
 
 **Fork AI.** Einrichtung (A-016, Rest von Etappe 4): Der Assistent sagt, wovon eine Steuerung abhängt — und legt nichts an, was auf etwas Fehlendem aufbaut.

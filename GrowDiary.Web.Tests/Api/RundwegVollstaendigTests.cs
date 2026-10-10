@@ -79,6 +79,8 @@ public sealed class RundwegVollstaendigTests
         // Fork AI (forkai.6): welche HA-Entitaeten den Strom liefern.
         new("Strom-Quelle", null, "/api/kosten/strom-quelle", typeof(GrowDiary.Web.Models.StromQuelle)),
         new("Wasserprofil", null, "/api/water-profile", typeof(GrowDiary.Web.Models.WaterProfile)),
+        // Nachfüllen: ob und nach wie vielen Minuten der Fork die Nachmessung selbst einträgt.
+        new("Nachfüll-Vorgaben", null, "/api/addback/einstellungen", typeof(AddbackEinstellungenDto)),
         new("Benachrichtigungen", null, "/api/notifications/settings", typeof(NotificationSettingsDto)),
         // Fork AI (forkai.13): wohin das Haus-Zeichen in der Titelzeile springt.
         // Die Reihenfolge selbst (Items) ist eine Liste und wird von dieser

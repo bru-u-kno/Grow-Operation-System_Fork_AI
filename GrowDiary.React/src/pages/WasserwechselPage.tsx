@@ -120,7 +120,6 @@ export default function WasserwechselPage() {
 
           <div className="ww-ablauf-section">
             <VorgangAblauf
-              art="wasserwechsel"
               key={`${grow.id}-${ablaufNummer}`}
               growId={grow.id}
               stand={stand}

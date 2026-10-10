@@ -46,14 +46,14 @@ public sealed class AddbackRepository : RepositoryBase
                 GrowId, HydroSetupId, Kind, PerformedAtUtc, ReservoirLiters,
                 EcBefore, EcTarget, EcStock, EcAfter, PhBefore, PhAfter,
                 LitersAdded, NewReservoirVolumeLiters, UsedHydroSetupVolume,
-                WaterUsed, WaterEcMsCm,
+                WaterUsed, WaterEcMsCm, ConsumedLiters,
                 Notes, CreatedAtUtc
             )
             VALUES (
                 $growId, $hydroSetupId, $kind, $performedAtUtc, $reservoirLiters,
                 $ecBefore, $ecTarget, $ecStock, $ecAfter, $phBefore, $phAfter,
                 $litersAdded, $newReservoirVolumeLiters, $usedHydroSetupVolume,
-                $waterUsed, $waterEcMsCm,
+                $waterUsed, $waterEcMsCm, $consumedLiters,
                 $notes, $createdAtUtc
             );
             SELECT last_insert_rowid();
@@ -236,6 +236,7 @@ public sealed class AddbackRepository : RepositoryBase
                 ? Enum.TryParse<WaterSource>(wq, out var quelle) ? quelle : null
                 : null,
             WaterEcMsCm = HasColumn(reader, "WaterEcMsCm") ? NullableDouble(reader["WaterEcMsCm"]) : null,
+            ConsumedLiters = HasColumn(reader, "ConsumedLiters") ? NullableDouble(reader["ConsumedLiters"]) : null,
             Notes = NullString(reader["Notes"]),
             CreatedAtUtc = ParseStoredUtcDateTime(reader["CreatedAtUtc"]?.ToString()) ?? DateTime.UtcNow
         };
@@ -288,6 +289,7 @@ public sealed class AddbackRepository : RepositoryBase
         command.Parameters.AddWithValue("$usedHydroSetupVolume", entry.UsedHydroSetupVolume ? 1 : 0);
         command.Parameters.AddWithValue("$waterUsed", (object?)entry.WaterUsed?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$waterEcMsCm", (object?)entry.WaterEcMsCm ?? DBNull.Value);
+        AddNullable(command, "$consumedLiters", entry.ConsumedLiters);
         command.Parameters.AddWithValue("$notes", (object?)entry.Notes ?? DBNull.Value);
         command.Parameters.AddWithValue("$createdAtUtc", ToStorageUtc(entry.CreatedAtUtc));
     }

@@ -4,6 +4,7 @@ import { V1Alert, V1Empty, V1Section } from '../../components/v1'
 import type { AddbackLogDto, AddbackVorgangDto } from '../../types'
 import { classNames, formatDateTime, formatNumber } from '../../utils'
 import { NACHFUELL_ART, teileText } from '../vorgang/ablauf-rechnung'
+import { uhrzeitText } from './nachfuell-rechnung'
 import '../changeouts/changeouts.css'
 
 function paar(vorher: number | null, nachher: number | null): string {
@@ -82,9 +83,15 @@ export function NachfuellListe({ growId, growName, eintraege, vorgaenge, laedt, 
                   {` · EC ${paar(eintrag.ecBefore, eintrag.ecAfter)} · pH ${paar(eintrag.phBefore, eintrag.phAfter)}`}
                   {/* Altdaten: der frühere Assistent schrieb seine Komponentenliste in die Notiz. */}
                   {eintrag.notes && !vorgang ? <small className="changeouts-vorgang nachfuell-notiz">{eintrag.notes}</small> : eintrag.notes ? ` · ${eintrag.notes}` : ''}
+                  {eintrag.consumedLiters != null && <small className="changeouts-vorgang">Verbrauch seit dem letzten Mal: {formatNumber(eintrag.consumedLiters, 1)} L</small>}
                   {vorgang && <small className="changeouts-vorgang">Vorgang: {teileText(vorgang)}</small>}
+                  {vorgang?.nachmessungStatus === 'offen' && vorgang.nachmessungFaelligUtc && (
+                    <small className="changeouts-vorgang" data-audit="nachfuellen-nachmessung-offen">Nachmessung: der Fork trägt EC und pH um {uhrzeitText(new Date(vorgang.nachmessungFaelligUtc))} selbst ein.</small>
+                  )}
+                  {vorgang?.nachmessungStatus === 'erledigt' && <small className="changeouts-vorgang">Nachmessung automatisch eingetragen.</small>}
+                  {vorgang?.nachmessungStatus === 'ohneWert' && <small className="changeouts-vorgang">Nachmessung ohne Wert: {vorgang.nachmessungHinweis ?? 'Die Sensoren lieferten nichts.'}</small>}
                 </span>
-                <em>{eintrag.kind === 'TopOff' ? 'Wasser' : eintrag.kind === 'Correction' ? 'Korr.' : 'Dünger'}</em>
+                <em>{eintrag.kind === 'TopOff' ? 'Wasser' : eintrag.kind === 'Correction' ? 'Zusätze' : 'Dünger'}</em>
                 <button
                   type="button"
                   className="ls-btn is-small changeouts-weg"

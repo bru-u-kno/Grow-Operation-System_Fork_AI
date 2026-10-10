@@ -9,7 +9,7 @@
 |---|---|
 | Pumpenliste, kalibrieren, von Hand dosieren, „Was wäre jetzt nötig?" | Betrieb → Dosierung, `/dosierung` |
 | Pumpe anlegen bzw. einstellen | `/dosierung/neu`, `/dosierung/:pumpId` |
-| Nachfüllen (Addback) als ein Ablauf: vorher → nachfüllen → nachher → speichern, darunter die bisherigen Einträge | Jetzt → Addback, `/addback?growId=…` |
+| Nachfüllen (Addback) auf einer Seite: erst „Was hast du gemacht?" (nur Wasser · Wasser + Dünger & Zusätze · nur Zusätze), dann nur die Felder dazu; darunter die bisherigen Einträge. `?modus=mix` oder `?modus=zusatz` öffnet die Seite auf dem Fall | Jetzt → Addback, `/addback?growId=…` |
 | Alte Adresse des Addback-Assistenten — leitet mit allen Suchparametern auf `/addback?growId=:growId` | `/grows/:growId/addback` |
 | Nachfüllen vorbelegt öffnen (Grow-Tagebuch, „Nachfüllen eintragen") | `/addback?growId=…&zeitpunkt=…&ecVorher=…&ecNachher=…&liter=…` — siehe unten |
 | Wasserwechsel: Stand, eintragen, nachtragen, Verlauf | Jetzt → **Wasserwechsel**, `/wasserwechsel` |
@@ -54,15 +54,50 @@ Buchungen über `ForkVerbraeuche.AddbackVorgangId`). Löschen am Vorgang
 (`DELETE …/addback/vorgaenge/{id}`) oder am Eintrag (`DELETE …/addback/logs/{id}`)
 nimmt alles mit. Die Zugaben schlägt der Mischplan auf die **nachgefüllten** Liter
 vor (`GET …/mixing-plan/vorschlag`, Wasser-EC und CalMag nach Wasserart — dieselbe
-Rechnung wie beim Wechsel). Im Schritt „Nachfüllen" stehen zwei Rechnungen mit
-Etikett: „Tank danach" (Mischrechnung nach Volumen: Rest × EC vorher + Liter × EC
-der Lösung) und der Addback-Rechner oben — wie viel der eigenen Lösung den Tank
-auf das EC-Ziel brächte. Nachfüllen ist kein Lösungswechsel: die
+Rechnung wie beim Wechsel). Nachfüllen ist kein Lösungswechsel: die
 Wechsel-Erinnerung zählt weiter. Einträge des früheren Assistenten (ohne Vorgang)
 bleiben lesbar und zählen weiter.
 
+**Die Seite (10.10.2026).** Eine Seite statt vier Schritten (`NachfuellFormular`):
+*Nur Wasser* braucht Quelle und Liter und sonst nichts — Leitungswasser, Osmose,
+Mischung (Anteil Osmose in Prozent, die Liter teilen sich auf) oder eigene Werte
+(EC, pH, Härte, Temperatur). *Wasser + Dünger & Zusätze* zeigt dazu den Mischplan
+auf die Liter gerechnet; jede Menge ist überschreibbar, jeder Haken abwählbar,
+weitere Zusätze kommen über „+ Zusatz" dazu. *Nur Zusätze* hat keine Liter und
+keine Wasserquelle (`art = Correction`, `Liter` darf fehlen).
+
+- **Gerechnet wird mit den Sensorwerten zum Zeitpunkt** (`GET …/wasserwechsel/sensor`,
+  Rohwerte, sieben Tage), nicht mit der letzten Messung; ohne Sensorwert trägt der
+  Nutzer EC und pH von Hand ein. Die Quelle der Tankwerte ist einmal
+  `Services/TankSensorService.cs`.
+- **Ohne Pegelsensor** gilt: danach ist der Tank wieder voll (Anlagevolumen), vorher
+  fehlten die nachgefüllten Liter. „Füllstand danach" (`FuellstandDanachLiter`) ändert
+  das und wird nur gespeichert, wenn es vom Anlagevolumen abweicht. Die Erwartung für
+  EC ist die Mischrechnung (Etikett auf der Seite); für pH gibt es **keine** Zahl —
+  nach dem Durchmischen wird nachgemessen.
+- **Artikel nur nach Rückfrage.** Gebucht wird nur, was einem bestehenden
+  Verbrauchsartikel gehört (Namensvergleich ohne Groß/Klein). Fehlt er, steht in der
+  Zeile „Noch kein Artikel …" und „Als Artikel anlegen …"; erst nach „Ja, anlegen"
+  entsteht er (ohne Preis, `AufGrowBuchen`) und die Zugabe wird mitgebucht. Das gilt
+  auch für Wasser — anders als der Wasserwechsel, der den Wasser-Artikel still anlegt.
+  Wer die API mit `wasser` statt `artikelId` aufruft (KI-Assistenten), bekommt weiter
+  den alten Weg.
+- **Verbrauch** (`VerbrauchLiter`, `AddbackLogs.ConsumedLiters`) ist optional und nur
+  zum Festhalten; die Rechnung braucht ihn nicht, er steckt in den Messwerten.
+- **Automatische Nachmessung.** `NachmessungMinuten` (1–240) legt einen Auftrag an
+  (`ForkAddbackNachmessungen`, ein Auftrag je Vorgang); der Takt `AddbackNachmessungWorker`
+  (alle 30 s) ruft `AddbackNachmessungService` und trägt EC, pH und Wassertemperatur
+  **zur Fälligkeit** aus den Rohwerten als Messung „nachher" ein — auch nach einem
+  Neustart oder bei einem Zeitpunkt in der Vergangenheit. Eigene Werte „nachher" haben
+  Vorrang (dann wird kein Auftrag angelegt, und ein Auftrag mit späterer Handmessung
+  wird `uebersprungen`). Ohne Wert in den zehn Minuten davor (plus zehn Minuten
+  Nachfrist) oder bei unplausiblem Wert (`MeasurementSanityService`) schließt der
+  Auftrag mit `ohneWert`, ohne eine Phantom-Messung. Die Vorgabe des Nutzers
+  („als Standard merken") liegt in `AppSettings` (`GET/PUT /api/addback/einstellungen`,
+  Standard: an, 15 min).
+
 **Vorbelegung per Link.** `/addback?growId=1&zeitpunkt=2026-10-03T14:55:00Z&ecVorher=1.75&ecNachher=1.61&liter=20`
-öffnet den Ablauf mit diesen Werten. `zeitpunkt` als ISO mit Zone oder Ortszeit
+öffnet die Seite mit diesen Werten („Weitere Angaben" dann aufgeklappt). `zeitpunkt` als ISO mit Zone oder Ortszeit
 `yyyy-MM-ddTHH:mm`; Zahlen in Maschinenform (`1.75`) für `liter`, `ecVorher`,
 `phVorher`, `wtVorher`, `ecNachher`, `phNachher`, `wtNachher`; dazu `wasser`
 (`Tap`/`RO`/`Mixed`), `notiz` und `quelle` (`sensor`, Standard, oder `hand`). Mit
@@ -147,10 +182,11 @@ Watt schaut.
 | Endpunkte: Pumpen, Kalibrierung, Dosis, Stopp, Vorschlag, Protokoll | `GrowDiary.Web/Api/Controllers/DosingApiController.cs` |
 | Addback: Rechnung, Endpunkte, Einträge | `GrowDiary.Web/Services/AddbackCalculator.cs`, `Api/Controllers/GrowWorkflowApiController.cs`, `Models/AddbackLogEntry.cs`, `Models/ChangeoutEntry.cs`, `Infrastructure/AddbackRepository.cs` |
 | Vorgang (Wechsel und Nachfüllen): anlegen, löschen, gemeinsame Bausteine | `Api/Controllers/AddbackVorgangApiController.cs`, `WasserwechselApiController.cs`, `VorgangEingabe.cs`, `Infrastructure/AddbackVorgangRepository.cs`, `WasserwechselVorgangRepository.cs`, `VorgangBausteine.cs` |
+| Nachfüllen: Tankwerte aus den Sensoren, automatische Nachmessung, Vorgabe | `Services/TankSensorService.cs`, `AddbackNachmessungService.cs`, `AddbackNachmessungWorker.cs`, `Api/Controllers/AddbackEinstellungenApiController.cs` |
 | Pumpen-Wächter: Urteil / Meldung | `GrowDiary.Web/Services/PumpWatchService.cs`, `PumpWatchNotifier.cs` |
 | Wann zuletzt gewechselt wurde — **die einzige Antwort** | `GrowDiary.Web/Services/Wasserwechsel.cs` |
 | Stand (Tage seit, fällig/überfällig, Plan) | `GrowDiary.Web/Services/WasserwechselStandService.cs`, Endpunkt `GET /api/grows/{id}/changeouts/stand` |
-| Oberfläche | `GrowDiary.React/src/pages/DosingPage.tsx`, `DosingPumpSetupPage.tsx`, `AddbackPage.tsx`, `WasserwechselPage.tsx`, `src/features/vorgang/` (`VorgangAblauf.tsx`, `ablauf-rechnung.ts`), `src/features/addback/NachfuellListe.tsx`, `src/features/changeouts/` (`ChangeoutsPanel.tsx`, `WasserwechselStand.tsx`, `routine-weg.ts`), `src/features/dosing/calibration.ts` |
+| Oberfläche | `GrowDiary.React/src/pages/DosingPage.tsx`, `DosingPumpSetupPage.tsx`, `AddbackPage.tsx`, `WasserwechselPage.tsx`, `src/features/vorgang/` (`VorgangAblauf.tsx` — nur noch der Wechsel —, `ablauf-rechnung.ts`), `src/features/addback/` (`NachfuellFormular.tsx`, `nachfuell-rechnung.ts`, `NachfuellListe.tsx`), `src/features/changeouts/` (`ChangeoutsPanel.tsx`, `WasserwechselStand.tsx`, `routine-weg.ts`), `src/features/dosing/calibration.ts` |
 | Fachwissen mit Quellen | `GrowDiary.Web/wwwroot/knowledge-defaults/sops/nutrient-addback.json`, `guidance/addback-mixing-procedure.json`, `guidance/addback-part-limit.json` |
 
 ## Fallen
