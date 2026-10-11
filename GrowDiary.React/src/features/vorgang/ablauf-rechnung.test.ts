@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ecNullHinweis,
   aenderung,
   alleAufVorschlag,
   anteilPlanDosis,
@@ -146,5 +147,17 @@ describe('Nachfüllen (A-006, Etappe 3)', () => {
     expect(teileText({ vorher: {}, nachher: {}, buchungen: [{ id: 1, artikelId: 1, artikelName: 'A', einheit: 'ml', menge: 3 }], tagebuch: {} }))
       .toBe('2 Messwerten, 1 Buchung und der Tagebuchzeile')
     expect(teileText({ vorher: null, nachher: null, buchungen: [], tagebuch: null })).toBe('nichts weiter')
+  })
+})
+
+describe('Hinweis bei EC 0,00 vom Sensor', () => {
+  it('nennt den Nullwert und den Wert, der stattdessen gilt', () => {
+    expect(ecNullHinweis(0, '11:02', '10:57')).toBe('Um 11:02 Uhr zeigte der Sensor EC 0,00 — das ist kein brauchbarer Messwert. Es gilt der letzte Wert davor (10:57 Uhr).')
+  })
+
+  it('ohne Wert davor bittet er um Handeingabe und behauptet keine Ursache', () => {
+    const text = ecNullHinweis(0, '11:02', null)
+    expect(text).toBe('Um 11:02 Uhr zeigte der Sensor EC 0,00 — das ist kein brauchbarer Messwert. Trag die EC von Hand ein.')
+    expect(text).not.toMatch(/leer|trocken/i)
   })
 })

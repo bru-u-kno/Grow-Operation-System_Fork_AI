@@ -455,6 +455,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
       {/* ---- Dein Plan heute */}
       {plan?.programmName && (
         <PlanKasten
+          audit="nachfuellen-plan"
           programmName={plan.programmName}
           anker={anker}
           ecZielGesamt={ecZielGesamt}

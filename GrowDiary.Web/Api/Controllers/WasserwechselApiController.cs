@@ -98,6 +98,8 @@ public sealed class WasserwechselApiController : ApiControllerBase
     /// Wechsel.</para>
     /// <para><b>Grenze.</b> Rohwerte bleiben sieben Tage. Wer einen Wechsel
     /// später nachträgt, bekommt hier nichts — dann gelten die Handwerte.</para>
+    /// <para><b>Kein Messwert.</b> Ein Tank-EC unter <see cref="TankSensorService.EcMindestwert"/> zählt nicht; es gilt der letzte Wert davor,
+    /// der übersprungene steht in <c>UebersprungenEc</c>.</para>
     /// <para>DO und ORP fehlen absichtlich: Brus Anlage hat dafür keinen Sensor.</para>
     /// </remarks>
     [HttpGet("sensor")]
@@ -111,14 +113,14 @@ public sealed class WasserwechselApiController : ApiControllerBase
         var bis = zeitpunkt is { } z ? VorgangEingabe.ZuUtc(z) : DateTime.UtcNow;
         if (grow.TentId is not { } zelt)
         {
-            return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, null, null, null, "Der Grow steht in keinem Zelt — es gibt keine Sensoren dazu."));
+            return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, null, null, null, "Der Grow steht in keinem Zelt — es gibt keine Sensoren dazu.", null));
         }
 
-        var (ec, ph, wt) = _tank.Tankwerte(zelt, bis, SensorFensterMinuten);
+        var (ec, ph, wt, uebersprungen) = _tank.Tankwerte(zelt, bis, SensorFensterMinuten);
         var hinweis = ec is null && ph is null && wt is null
             ? $"In den {SensorFensterMinuten} Minuten davor hat kein Sensor einen Tankwert geliefert — trag die Werte von Hand ein."
             : null;
-        return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, ec, ph, wt, hinweis));
+        return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, ec, ph, wt, hinweis, uebersprungen));
     }
 
     /// <summary>Legt den Vorgang an — alles in einer Transaktion.</summary>

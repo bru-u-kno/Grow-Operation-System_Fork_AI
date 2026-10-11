@@ -156,14 +156,21 @@ export function ecZielAnzeige(gesamt: number | null, duenger: number | null): { 
   return null
 }
 
-/** „Jetzt im Tank: EC 1,18 · Ziel 1,20 → 0,02 darunter" — oder `null`, wenn eine der beiden Zahlen fehlt. */
-export function zielAbstandEc(ec: number | null, ziel: number | null, vorspann = 'Jetzt im Tank'): string | null {
+/** Der Wert als Abstand in Worten: „0,02 darunter", „0,15 darüber" oder „im Ziel" — auf die angezeigten zwei Stellen gerundet. */
+function lageText(abstand: number): string {
+  return abstand === 0 ? 'im Ziel' : `${zahl(Math.abs(abstand), 2)} ${abstand < 0 ? 'darunter' : 'darüber'}`
+}
+
+/** „0,02 darunter" / „im Ziel" — der EC gegen das Ziel; `null`, wenn eine der beiden Zahlen fehlt. */
+export function ecLage(ec: number | null, ziel: number | null): string | null {
   if (ec == null || ziel == null) return null
-  const e = zweiStellen(ec)
-  const z = zweiStellen(ziel)
-  const abstand = zweiStellen(e - z)
-  const lage = abstand === 0 ? 'im Ziel' : `${zahl(Math.abs(abstand), 2)} ${abstand < 0 ? 'darunter' : 'darüber'}`
-  return `${vorspann}: EC ${zahl(e, 2)} · Ziel ${zahl(z, 2)} → ${lage}`
+  return lageText(zweiStellen(zweiStellen(ec) - zweiStellen(ziel)))
+}
+
+/** „Tank jetzt 1,18 · 0,02 darunter" — der EC gegen das Ziel; `null`, wenn eine der beiden Zahlen fehlt. */
+export function zielAbstandEc(ec: number | null, ziel: number | null, vorspann = 'Tank jetzt'): string | null {
+  const lage = ecLage(ec, ziel)
+  return lage == null ? null : `${vorspann} ${zahl(zweiStellen(ec!), 2)} · ${lage}`
 }
 
 /** Wie alt ein Sensorwert höchstens sein darf, bevor der Kasten ihn als veraltet kennzeichnet. */
@@ -201,13 +208,15 @@ export function vorschlagPasst(
 }
 
 /**
- * Wo der pH gegen das Band des Plans liegt. `null`, wenn der Wert oder eine Grenze fehlt — und bei
- * einem Punktziel (Min = Max, etwa 5,8): ohne Breite gäbe es „darüber" schon bei 5,86 (Befund an der Demo-App, 10.10.2026).
+ * „Tank jetzt 6,12 · 0,32 darüber" — der pH gegen das Band des Plans (Abstand zur nächsten Grenze).
+ * `null`, wenn Wert oder Grenze fehlen — und bei einem Punktziel (Min = Max, etwa 5,8): ohne Breite gäbe es „darüber"
+ * schon bei 5,86 (Befund an der Demo-App, 10.10.2026).
  */
-export function phLage(ph: number | null, min: number | null, max: number | null): 'im Ziel' | 'darunter' | 'darüber' | null {
+export function phAbstand(ph: number | null, min: number | null, max: number | null, vorspann = 'Tank jetzt'): string | null {
   if (ph == null || min == null || max == null || min === max) return null
-  const gerundet = zweiStellen(ph)
-  return gerundet < min ? 'darunter' : gerundet > max ? 'darüber' : 'im Ziel'
+  const p = zweiStellen(ph)
+  const abstand = p < min ? zweiStellen(p - min) : p > max ? zweiStellen(p - max) : 0
+  return `${vorspann} ${zahl(p, 2)} · ${lageText(abstand)}`
 }
 
 /** Was die neue Lösung im Tank am EC ändert: „Wirkung −0,21 – EC sinkt". Auf die angezeigten zwei Stellen gerundet. */

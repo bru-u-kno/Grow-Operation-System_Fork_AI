@@ -101,9 +101,17 @@ test.describe('Wasserwechsel-Rundweg', () => {
     // Calcium im Leitungswasser: CalMag steht auf 0 (Wasserprofil der Testdaten).
     await expect(ablauf.getByLabel('CalMag Agent eingesetzt')).toHaveValue('0')
 
-    // + Produkt aus den Kosten-Artikeln
+    // Der gemeinsame Plankasten (derselbe wie beim Nachfüllen): Plan, Ziele und die Rechnung mit deinen Mengen.
+    const planKasten = page.locator('[data-audit="wasserwechsel-ziel"]')
+    await expect(planKasten, 'Der Plankasten fehlt in Schritt 2.').toContainText('Dein Plan heute')
+    await expect(planKasten).toContainText('EC-Ziel')
+    await expect(planKasten).toContainText('pH-Ziel')
+    await expect(planKasten).toContainText('EC mit deinen Mengen')
+
+    // Produkt aus den Kosten-Artikeln
     await ablauf.getByLabel('Produkt hinzufügen').selectOption({ label: 'Purolyt' })
-    await ablauf.getByRole('button', { name: '+ Produkt' }).click()
+    // Die Auswahl legt die Zeile sofort an und setzt den Cursor ins Mengenfeld (kein „+ Produkt"-Knopf mehr).
+    await expect(ablauf.getByLabel('Purolyt eingesetzt')).toBeFocused()
     await ablauf.getByLabel('Purolyt eingesetzt').fill('200')
     await page.locator('[data-audit="wasserwechsel-weiter-3"]').click()
 
@@ -114,6 +122,12 @@ test.describe('Wasserwechsel-Rundweg', () => {
     const marke = `Rundweg ${Date.now()}`
     await ablauf.getByPlaceholder(/Warum so angesetzt/).fill(marke)
     await expect(page.locator('[data-audit="wasserwechsel-vergleich"]')).toContainText('−0,48')
+    // Die Ziele stehen über den Feldern; nach dem Eintrag steht der Abstand des Tanks dabei.
+    const zielNachher = page.locator('[data-audit="wasserwechsel-ziel-nachher"]')
+    await expect(zielNachher, 'Der Plankasten fehlt in Schritt 3.').toContainText('EC-Ziel')
+    await expect(zielNachher).toContainText('pH-Ziel')
+    await expect(zielNachher).toContainText(/Tank nachher 1,15 · (im Ziel|\d,\d\d (darunter|darüber))/)
+    await expect(zielNachher).toContainText(/Tank nachher 6,15/)
     await page.locator('[data-audit="wasserwechsel-weiter-4"]').click()
 
     // ---- Schritt 4: Vorschau, speichern

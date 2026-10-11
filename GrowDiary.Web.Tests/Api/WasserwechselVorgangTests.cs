@@ -442,5 +442,44 @@ public sealed class WasserwechselVorgangTests
         Assert.NotNull(spaeter.Hinweis);
     }
 
+    [Fact]
+    public async Task SensorVorherUeberspringtEcNull_wieAmElftenOktober()
+    {
+        // Der Fall vom 11.10.2026: der Guardian meldete beim Wechsel kurz EC 0,0; der 5-Minuten-Punkt davor zeigte 1,18.
+        var grows = Dienst<GrowRepository>();
+        var zelt = grows.CreateTent("Sensor-Null " + Guid.NewGuid().ToString("N")[..6]);
+        var growId = grows.CreateGrow(new GrowRun
+        {
+            Name = "Sensor-Null " + Guid.NewGuid().ToString("N")[..6], TentId = zelt.Id, HydroStyle = HydroStyle.RDWC,
+            Status = GrowStatus.Completed, StartDate = DateTime.Today.AddDays(-30),
+        });
+        var client = _app.IngressClient();
+        var grow = grows.GetGrow(growId)!;
+        var zeitpunkt = DateTime.UtcNow.AddMinutes(-3);
+        string Anfrage(DateTime z) => $"/api/grows/{growId}/wasserwechsel/sensor?zeitpunkt={Uri.EscapeDataString(z.ToString("O"))}";
+
+        using (var bereich = _app.Services.CreateScope())
+        {
+            var sensoren = bereich.ServiceProvider.GetRequiredService<SensorReadingRepository>();
+            sensoren.AddReading(new TentSensorReading { TentId = grow.TentId!.Value, MetricKey = "reservoir-ec", Value = 1.18, CapturedAtUtc = zeitpunkt.AddMinutes(-6) });
+            sensoren.AddReading(new TentSensorReading { TentId = grow.TentId!.Value, MetricKey = "reservoir-ec", Value = 0.0, CapturedAtUtc = zeitpunkt.AddMinutes(-1) });
+        }
+
+        var dto = await client.GetFromJsonAsync<WasserwechselSensorDto>(Anfrage(zeitpunkt), Json);
+        Assert.Equal(1.18, dto!.Ec!.Wert);
+        Assert.Equal(0.0, dto.UebersprungenEc!.Wert);
+        Assert.True(dto.UebersprungenEc.ZeitUtc > dto.Ec.ZeitUtc, "Der übersprungene Wert ist jünger als der gelieferte.");
+
+        // Vor dem Nullwert gefragt: nichts übersprungen.
+        var davor = await client.GetFromJsonAsync<WasserwechselSensorDto>(Anfrage(zeitpunkt.AddMinutes(-4)), Json);
+        Assert.Equal(1.18, davor!.Ec!.Wert);
+        Assert.Null(davor.UebersprungenEc);
+
+        // Nur der Nullwert im Fenster (das Fenster reicht 30 Minuten zurück und lässt den Wert von vorher aus): kein EC, aber der Nullwert wird gemeldet.
+        var nurNull = await client.GetFromJsonAsync<WasserwechselSensorDto>(Anfrage(zeitpunkt.AddMinutes(25)), Json);
+        Assert.Null(nurNull!.Ec);
+        Assert.NotNull(nurNull.UebersprungenEc);
+    }
+
     private const int WasserwechselApiController_Fenster = GrowDiary.Web.Api.Controllers.WasserwechselApiController.SensorFensterMinuten;
 }

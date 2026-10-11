@@ -108,10 +108,12 @@ public sealed record SensorWertDto(double Wert, DateTime ZeitUtc);
 /// </summary>
 /// <param name="FensterMinuten">Wie weit zurück gesucht wurde.</param>
 /// <param name="Hinweis">Warum nichts da ist (kein Zelt, keine Werte im Fenster …), sonst <c>null</c>.</param>
+/// <param name="UebersprungenEc">Ein EC-Wert unter dem Mindestwert (kein Messwert), jünger als <c>Ec</c> — oder bei fehlendem <c>Ec</c> der jüngste; sonst <c>null</c>.</param>
 public sealed record WasserwechselSensorDto(
     DateTime ZeitpunktUtc,
     int FensterMinuten,
     SensorWertDto? Ec,
     SensorWertDto? Ph,
     SensorWertDto? WasserTemp,
-    string? Hinweis);
+    string? Hinweis,
+    SensorWertDto? UebersprungenEc);

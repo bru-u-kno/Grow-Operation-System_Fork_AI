@@ -21,6 +21,7 @@ import {
   alleAufVorschlag,
   anteilPlanDosis,
   ecMitDeinenMengen,
+  ecNullHinweis,
   istGeaendert,
   meineWiederEinsetzen,
   meinsVerfuegbar,
@@ -34,7 +35,8 @@ import {
   type Vorbelegung,
   type Werte,
 } from './ablauf-rechnung'
-import { artikelFuerName } from '../addback/nachfuell-rechnung'
+import { PlanKasten } from '../addback/PlanKasten'
+import { artikelFuerName, vorschlagPasst } from '../addback/nachfuell-rechnung'
 import { ArtikelZeile, type Artikel, type Frage } from './ArtikelZeile'
 import './vorgang-ablauf.css'
 
@@ -60,7 +62,6 @@ const TEXTE = {
   literAria: 'Neues Wasser in Litern',
   literFehlt: 'Wie viele Liter hast du neu angesetzt? Trag sie in Schritt 2 ein.',
   titel3: 'Nachher — fertig angesetzt',
-  loesung: 'Mit deinen Mengen',
   fotoTitel: 'Nach dem Wasserwechsel',
   fotoFehlt: 'Der Wechsel ist gespeichert, das Foto nicht',
   speichern: 'Wasserwechsel speichern',
@@ -155,7 +156,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
   // Das Wasser-Artikel-Rückfragen: ein Artikel entsteht nur nach „Ja, anlegen" (Bru, 10.10.2026) — nie beim Speichern.
   const [frage, setFrage] = useState<Frage | null>(null)
   const [frageFehler, setFrageFehler] = useState<string | null>(null)
-  const [produktWahl, setProduktWahl] = useState('')
+  const [anker, setAnker] = useState<GrowDetail['phasenanker'] | null>(null)
 
   // Schritt 3 — nachher
   const [nachher, setNachher] = useState<Messfelder>(vorbelegtNachher)
@@ -181,6 +182,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
       if (controller.signal.aborted) return
       if (plan?.volumenLiter != null) setLiter((alt) => alt === '' ? zahl(plan.volumenLiter!, 0) : alt)
       if (grow?.waterSource && !vorbelegung?.wasser) setWasser(grow.waterSource)
+      setAnker(grow?.phasenanker ?? null)
       setArtikel(liste.filter((a) => a.aktiv))
     })()
     return () => controller.abort()
@@ -221,6 +223,9 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
       hinweis: null,
     }
     : sensorGeladen
+  // Meldete der Sensor kurz EC 0,00, nahm das Backend den Wert davor — das sagt die Box dazu.
+  const ecNullWert = !vorbelegtVorher ? sensorGeladen?.uebersprungenEc ?? null : null
+  const ecNull = ecNullWert ? ecNullHinweis(ecNullWert.wert, uhrzeit(ecNullWert.zeitUtc), sensor?.ec ? uhrzeit(sensor.ec.zeitUtc) : null) : null
   const sensorLaedt = !vorbelegtVorher && sensorGeladen == null && sensorFehler == null && !Number.isNaN(new Date(zeitpunkt).getTime())
   const literZahl = zahlOderNull(liter)
   const ecEigen = ecEigenJe[wasser] ?? null
@@ -268,6 +273,14 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
     })),
   ], [vorschlag, extra, artikel, artikelWahl])
 
+  /** Nimmt ein Produkt aus den Kosten-Artikeln in die Tabelle auf und setzt den Cursor ins Mengenfeld. */
+  const hinzufuegen = (artikelId: string) => {
+    const gewaehlt = artikel.find((a) => String(a.id) === artikelId)
+    if (!gewaehlt) return
+    setExtra((alt) => [...alt, gewaehlt])
+    window.setTimeout(() => document.querySelector<HTMLInputElement>(`input[aria-label="${gewaehlt.name} eingesetzt"]`)?.focus(), 0)
+  }
+
   const setze = (schluessel: string, wert: string | null) => {
     setEigen((alt) => {
       const neu = { ...alt }
@@ -287,6 +300,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
   const geaendert = zeilen.filter((z) => istGeaendert(z, eigen)).length + (ecEigen != null ? 1 : 0)
   const zurueckholbar = zeilen.filter((z) => meinsVerfuegbar(z, eigen, gemerkt)).length + (ecMeinsVerfuegbar ? 1 : 0)
   const anteil = anteilPlanDosis(zeilen, eigen)
+  const vorschlagAktuell = vorschlagPasst(vorschlag, { liter: literZahl, wasser, osmoseProzent: osmoseZahl, wasserEcEigen: ecEigenZahl })
   const ecErwartet = ecMitDeinenMengen(vorschlag?.wasserEc ?? null, vorschlag?.ecZielDuenger ?? null, anteil)
   const wasserListe = literZahl != null && literZahl > 0 ? wasserZeilen(literZahl, wasser, vorschlag?.osmoseAnteil ?? (wasser === 'RO' ? 1 : wasser === 'Mixed' ? (osmoseZahl ?? 0) / 100 : 0)) : []
 
@@ -494,6 +508,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
                   <div><small>pH</small><b>{sensor.ph ? zahl(sensor.ph.wert, 2) : '—'}</b></div>
                   <div><small>Wasser</small><b>{sensor.wasserTemp ? `${zahl(sensor.wasserTemp.wert, 1)} °C` : '—'}</b></div>
                 </div>
+                {ecNull && <p className="wa-warnung" data-audit={`${t.audit}-ec-null`}>{ecNull}</p>}
                 <p className="wa-hinweis">Steht unten nichts drin, gelten diese Werte. DO und ORP haben keinen Sensor — die misst du von Hand, wenn du magst.</p>
               </>
             ) : (
@@ -551,24 +566,11 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
           {vorschlagFehler && <V1Alert message={vorschlagFehler} tone="warn" />}
           {vorschlag?.luecke && <V1Alert message={vorschlag.luecke} tone="neutral" />}
 
-          {vorschlag && !vorschlag.luecke && (
-            <div className="wa-ziel" data-audit={`${t.audit}-ziel`}>
-              <div><small>Plan</small><b>{vorschlag.programmName}{vorschlag.spalteLabel ? ` · ${vorschlag.spalteLabel}` : ''}</b></div>
-              <div>
-                <small>EC-Ziel gesamt</small>
-                <b>{vorschlag.ecZielGesamt != null ? zahl(vorschlag.ecZielGesamt, 2) : '—'}</b>
-                <em>{vorschlag.ecZielDuenger != null && vorschlag.wasserEc != null
-                  ? `= ${zahl(vorschlag.ecZielDuenger, 2)} Dünger + ${zahl(vorschlag.wasserEc, 2)} Wasser`
-                  : 'ohne Wasser-EC kein Gesamtziel'}</em>
-              </div>
-              <div>
-                <small>{t.loesung}</small>
-                <b className={classNames(ecErwartet != null && vorschlag.ecZielGesamt != null && ecErwartet < vorschlag.ecZielGesamt - 0.15 && 'is-warn')}>
-                  {ecErwartet != null ? `≈ ${zahl(ecErwartet, 2)}` : '—'}
-                </b>
-                <em>{anteil != null ? `${zahl(anteil * 100, 0)} % der Plan-Dosis · Faustregel: Dünger-EC wächst mit der Dosis` : 'Plan nennt keine Grunddünger'}</em>
-              </div>
-            </div>
+          {vorschlag && !vorschlag.luecke && vorschlag.programmName && (
+            <PlanKasten audit={`${t.audit}-ziel`} programmName={vorschlag.programmName} anker={anker}
+              ecZielGesamt={vorschlag.ecZielGesamt} ecZielDuenger={vorschlag.ecZielDuenger} wasserEc={vorschlag.wasserEc}
+              phMin={vorschlag.phMin} phMax={vorschlag.phMax} tank={null}
+              erwartung={vorschlagAktuell ? { ec: ecErwartet } : null} />
           )}
           {vorschlag?.calMagHinweis && <V1Alert tone="neutral" message={vorschlag.calMagHinweis} />}
 
@@ -650,16 +652,12 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
           ))}
 
           <div className="wa-knoepfe">
-            <select value={produktWahl} onChange={(e) => setProduktWahl(e.target.value)} aria-label="Produkt hinzufügen" className="wa-produkt-wahl">
-              <option value="">Produkt wählen …</option>
+            {/* Die Auswahl legt die Zeile sofort an — kein zweiter Knopf (Bru, 11.10.2026). */}
+            <select value="" onChange={(e) => hinzufuegen(e.target.value)} aria-label="Produkt hinzufügen" className="wa-produkt-wahl" data-audit={`${t.audit}-produkt`}>
+              <option value="">+ Produkt hinzufügen …</option>
               {artikel.filter((a) => !zeilen.some((z) => z.artikelId === a.id) && !['leitungswasser', 'osmosewasser'].includes(a.name.trim().toLowerCase()))
                 .map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
-            <V1Button variant="ghost" disabled={produktWahl === ''} audit={`${t.audit}-produkt`} onClick={() => {
-              const gewaehlt = artikel.find((a) => String(a.id) === produktWahl)
-              if (gewaehlt) setExtra((alt) => [...alt, gewaehlt])
-              setProduktWahl('')
-            }}>+ Produkt</V1Button>
           </div>
           {weiter(3)}
         </V1Section>
@@ -667,6 +665,13 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
 
       {schritt === 3 && (
         <V1Section title={t.titel3}>
+          {vorschlag && !vorschlag.luecke && vorschlag.programmName && (
+            <PlanKasten audit={`${t.audit}-ziel-nachher`} programmName={vorschlag.programmName} anker={anker}
+              ecZielGesamt={vorschlag.ecZielGesamt} ecZielDuenger={vorschlag.ecZielDuenger} wasserEc={vorschlag.wasserEc}
+              phMin={vorschlag.phMin} phMax={vorschlag.phMax}
+              tank={{ ec: nach.ec, ph: nach.ph, etikett: 'nachher', alterMinuten: null }}
+              erwartung={vorschlagAktuell ? { ec: ecErwartet } : null} />
+          )}
           {nachherVomSensor && <p className="wa-hinweis">EC, pH und Wasser sind Sensorwerte aus dem Link — überschreib sie, wenn du selbst gemessen hast.</p>}
           <div className="v1-form-grid wa-felder">
             {messFeld(nachher, setNachher, 'ec', 'EC', 'mS/cm', 'z. B. 1,15')}
@@ -694,18 +699,6 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
             {vergleich('Wasser', '°C', vorher.wt, nach.wt, 1)}
             {vergleich('DO', 'mg/L', vorher.do, nach.do, 1)}
             {vergleich('ORP', 'mV', vorher.orp, nach.orp, 0)}
-            {vorschlag?.ecZielGesamt != null && (
-              <div className="wa-tr" role="row">
-                <span role="cell" className="wa-vt-name">EC-Ziel</span>
-                <span role="cell" />
-                <span role="cell">{zahl(vorschlag.ecZielGesamt, 2)}</span>
-                <span role="cell" className="wa-diff">
-                  {nach.ec != null ? (nach.ec < vorschlag.ecZielGesamt
-                    ? `${zahl(vorschlag.ecZielGesamt - nach.ec, 2)} darunter`
-                    : nach.ec > vorschlag.ecZielGesamt ? `${zahl(nach.ec - vorschlag.ecZielGesamt, 2)} darüber` : 'genau') : ''}
-                </span>
-              </div>
-            )}
           </div>
           <V1Field label="Notiz" wide hint="Landet mit im Tagebuch">
             <textarea rows={3} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="Warum so angesetzt, was aufgefallen ist …" />

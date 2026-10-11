@@ -5,20 +5,16 @@
   .wa-felder { margin-top: 12px; }
   .wa-weiter { display: flex; justify-content: flex-end; margin-top: 14px; }
   .wa-hinweis { color: var(--muted); font-size: var(--fs-klein); margin: 0; }
+  .wa-warnung { color: var(--warn-text); font-size: var(--fs-klein); margin: 8px 0 0; }
 
   /* Schritt 1: die Sensorwerte „vorher" */
   .wa-sensorbox { margin-top: 12px; border: 1px solid var(--hair); border-radius: var(--r); padding: 12px; background: var(--panel-2); display: grid; gap: 10px; justify-items: start; }
   .wa-herkunft { font: 400 var(--fs-etikett)/1.2 var(--font-mono); color: var(--muted); padding: 3px 6px; border: 1px solid var(--hair); border-radius: var(--r-pill); }
   .wa-gross { display: flex; gap: 12px 28px; flex-wrap: wrap; }
-  .wa-gross small, .wa-ziel small { display: block; color: var(--muted); font-size: var(--fs-etikett); text-transform: uppercase; letter-spacing: .08em; }
+  .wa-gross small { display: block; color: var(--muted); font-size: var(--fs-etikett); text-transform: uppercase; letter-spacing: .08em; }
   .wa-gross b { font: 600 var(--fs-zahl)/1.1 var(--font-mono); white-space: nowrap; }
 
   /* Schritt 2: Ziel, Tabelle, Vorschlag-Knöpfe */
-  .wa-ziel { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 10px; margin: 14px 0 10px; }
-  .wa-ziel > div { border: 1px solid var(--hair); border-radius: var(--r-sm); padding: 8px 10px; background: var(--panel-2); min-width: 0; }
-  .wa-ziel b { font: 600 var(--fs-text)/1.4 var(--font-mono); }
-  .wa-ziel b.is-warn { color: var(--warn-text); }
-  .wa-ziel em { display: block; font-style: normal; color: var(--muted); font-size: var(--fs-etikett); }
 
   .wa-feldhinweis { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
   .wa-tabelle-kopf { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 14px; font-size: var(--fs-klein); color: var(--warn-text); }

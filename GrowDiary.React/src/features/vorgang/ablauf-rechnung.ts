@@ -248,3 +248,15 @@ export function vorbelegungAusLink(suche: URLSearchParams): Vorbelegung | null {
     notiz: suche.get('notiz')?.trim() || null,
   }
 }
+
+/**
+ * Der Hinweis unter den Sensorwerten „vorher", wenn der Sensor kurz EC 0,00 meldete (Tank-EC unter dem Mindestwert des Backends,
+ * `TankSensorService.EcMindestwert`) — ohne eine Ursache zu behaupten: warum der Sensor 0 meldet, weiß der Fork nicht.
+ *
+ * @param zeit Uhrzeit des Nullwerts, schon als Text („11:02").
+ * @param davor Uhrzeit des Werts, der stattdessen gilt; `null`, wenn es keinen gibt.
+ */
+export function ecNullHinweis(wert: number, zeit: string, davor: string | null): string {
+  const kopf = `Um ${zeit} Uhr zeigte der Sensor EC ${zahl(wert, 2)} — das ist kein brauchbarer Messwert.`
+  return davor != null ? `${kopf} Es gilt der letzte Wert davor (${davor} Uhr).` : `${kopf} Trag die EC von Hand ein.`
+}

@@ -16,7 +16,8 @@ import {
   nachmessungZeit,
   nachfuellTagebuch,
   normalisiert,
-  phLage,
+  ecLage,
+  phAbstand,
   phZielText,
   planChips,
   uhrzeitText,
@@ -179,24 +180,31 @@ describe('Dein Plan heute (A-006, Plankasten)', () => {
   })
 
   it('Abstand zum EC-Ziel in Worten', () => {
-    expect(zielAbstandEc(1.18, 1.2)).toBe('Jetzt im Tank: EC 1,18 · Ziel 1,20 → 0,02 darunter')
-    expect(zielAbstandEc(1.35, 1.2)).toBe('Jetzt im Tank: EC 1,35 · Ziel 1,20 → 0,15 darüber')
-    expect(zielAbstandEc(1.2, 1.2)).toBe('Jetzt im Tank: EC 1,20 · Ziel 1,20 → im Ziel')
+    expect(zielAbstandEc(1.18, 1.2)).toBe('Tank jetzt 1,18 · 0,02 darunter')
+    expect(zielAbstandEc(1.35, 1.2)).toBe('Tank jetzt 1,35 · 0,15 darüber')
+    expect(zielAbstandEc(1.2, 1.2)).toBe('Tank jetzt 1,20 · im Ziel')
     expect(zielAbstandEc(null, 1.2)).toBeNull()
     expect(zielAbstandEc(1.2, null)).toBeNull()
   })
 
-  it('pH-Lage gegen das Band des Plans', () => {
-    expect(phLage(6.06, 5.8, 6.2)).toBe('im Ziel')
-    expect(phLage(5.5, 5.8, 6.2)).toBe('darunter')
-    expect(phLage(6.5, 5.8, 6.2)).toBe('darüber')
-    expect(phLage(6.06, null, 6.2)).toBeNull()
-    expect(phLage(null, 5.8, 6.2)).toBeNull()
-    // Punktziel: kein Band, also keine Lage und nur eine Zahl im Text
-    expect(phLage(5.86, 5.8, 5.8)).toBeNull()
+  it('EC-Lage ohne Vorspann (für die Erwartungszeile)', () => {
+    expect(ecLage(0.9, 0.9)).toBe('im Ziel')
+    expect(ecLage(0.75, 0.9)).toBe('0,15 darunter')
+    expect(ecLage(null, 0.9)).toBeNull()
+  })
+
+  it('pH-Ziel als Text: Band oder Punktziel', () => {
     expect(phZielText(5.8, 5.8)).toBe('5,8')
     expect(phZielText(5.8, 6.2)).toBe('5,8–6,2')
     expect(phZielText(null, 6.2)).toBeNull()
+  })
+
+  it('pH-Abstand zum Band des Plans in Worten', () => {
+    expect(phAbstand(6.12, 5.6, 5.8)).toBe('Tank jetzt 6,12 · 0,32 darüber')
+    expect(phAbstand(5.5, 5.6, 5.8, 'Tank nachher')).toBe('Tank nachher 5,50 · 0,10 darunter')
+    expect(phAbstand(5.7, 5.6, 5.8)).toBe('Tank jetzt 5,70 · im Ziel')
+    expect(phAbstand(5.7, 5.8, 5.8)).toBeNull()
+    expect(phAbstand(null, 5.6, 5.8)).toBeNull()
   })
 
   it('Wirkung auf den Tank: bleibt, sinkt, steigt', () => {
@@ -216,10 +224,10 @@ describe('Plankasten — eine Wahrheit je Zahl (Prüfer-Befund zu 205, 10.10.202
   })
 
   it('Abstand und Lage rechnen mit den angezeigten, gerundeten Werten', () => {
-    expect(zielAbstandEc(1.184, 1.176)).toBe('Jetzt im Tank: EC 1,18 · Ziel 1,18 → im Ziel')
-    expect(zielAbstandEc(1.18, 1.2, 'Tank vorher')).toBe('Tank vorher: EC 1,18 · Ziel 1,20 → 0,02 darunter')
-    expect(phLage(6.204, 5.8, 6.2)).toBe('im Ziel')
-    expect(phLage(6.206, 5.8, 6.2)).toBe('darüber')
+    expect(zielAbstandEc(1.184, 1.176)).toBe('Tank jetzt 1,18 · im Ziel')
+    expect(zielAbstandEc(1.18, 1.2, 'Tank vorher')).toBe('Tank vorher 1,18 · 0,02 darunter')
+    expect(phAbstand(6.204, 5.8, 6.2)).toBe('Tank jetzt 6,20 · im Ziel')
+    expect(phAbstand(6.206, 5.8, 6.2)).toBe('Tank jetzt 6,21 · 0,01 darüber')
     expect(ecWirkung(1.184, 1.176)).toEqual({ text: 'Wirkung ±0,00 – EC bleibt', richtung: 'gleich' })
   })
 

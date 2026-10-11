@@ -252,6 +252,8 @@ export interface WasserwechselSensorDto {
   ph: SensorWertDto | null
   wasserTemp: SensorWertDto | null
   hinweis: string | null
+  /** Ein EC unter dem Mindestwert (kein Messwert), jünger als `ec` — oder bei fehlendem `ec` der jüngste. */
+  uebersprungenEc?: SensorWertDto | null
 }
 
 export interface VorgangMessungRequest {
