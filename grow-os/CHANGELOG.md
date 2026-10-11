@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.207
+
+**Fork AI.** Live-Kacheln auf dem Handy: Die Zahlen unter dem Zielband überlappen sich nicht mehr, und die Strom-Zeile bricht nicht mehr mitten in der Zahl um.
+
+- **Skalenzahlen ohne Überlappung:** Auf einem 390-px-Handy stand beim pH „55,46,66,24" statt 5,5 · 5,6 · 6,2 · 6,4, bei CO₂ „600800" und beim EC liefen „−0,1/0,05" und „0,75/0,95" ineinander. Ursache: Unter dem Band standen alle vier Zahlen (zwei Grenzen, zwei Zielwerte), obwohl das Ziel direkt darüber bei „ZIEL" schon steht — und auf 28 Pixel Breite passen vier Zahlen nicht nebeneinander. Jetzt stehen unter dem Band nur noch die gelben Grenzwerte (pH 5,5 · 6,4, ORP 250 · 350, Wassertemp. 13 · 17); die grünen Zielwerte stehen einmal, bei „ZIEL". Hat eine Kachel gar keinen Zieltext, bleiben die Zielzahlen unter dem Band wie bisher.
+- **Strom-Zeile:** „heute 10,5 kWh · ca. 3,35 €" bricht bei schmaler Kachel nur noch an dem Punkt „·" um, nie mehr zwischen „ca." und „3,35" oder vor „€". Feste Leerzeichen im Text der Kachel.
+- **Fußzeilen mit normalem Zeilenabstand:** Die Zeile unter Strom, die Herkunft („Hand · vor 7 Tagen") und die Mahnung („— nachmessen?") hatten Zeilenabstand 1; bei zwei Zeilen lagen sie dicht aufeinander. Jetzt 1,35.
+- **Unverändert:** Bei „Wassertemp." rutscht „+0,3 K" weiter in eine zweite Zeile unter den Namen. Gemessen: Auf dem 390-px-Handy bleiben 128 Pixel, nötig wären 142; bei 360 px sind es 113. Das Umbrechen ist gewollt — es hält den Status von der Klappe rechts oben fern. Eine engere Schrift würde nur auf einigen Handys helfen und ist deshalb nicht Teil dieses Releases.
+- **Geprüft:** An der gebauten Demo-App bei 390 px mit Touch: pH zeigt nur 5,5 und 6,3 (Ziel 5,8–6,2 steht darüber), Wassertemp. 17 und 22. Drei neue Fälle für die Skalenzahlen; ohne die Änderung werden alle drei rot, mit ihr sind 13 von 13 Fällen der Datei grün.
+
 ## 2.0.0-forkai.206
 
 **Fork AI.** Nur ein Test, keine Änderung an der App: der wackelnde E2E-Fall „Grenzwert-Meldung öffnet Live mit dem Zelt der Meldung" ist behoben.

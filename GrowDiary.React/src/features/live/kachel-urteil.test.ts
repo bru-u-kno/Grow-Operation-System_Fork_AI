@@ -64,4 +64,24 @@ describe('bandGeometrie', () => {
     expect(b.skala.map((s) => [s.text, s.art])).toEqual([['1,2', 'grenze'], ['1,4', 'ziel'], ['1,6', 'ziel'], ['1,8', 'grenze']])
     expect(b.zone!.links).toBeGreaterThan(0)
   })
+
+  it('ohne Zielzahlen: nur die Grenzen unter dem Band, Zone und Marken bleiben', () => {
+    // pH-Kachel vom 11.10.2026 (Handy, 390 px): vier Zahlen auf ~28 px überlappten sich.
+    const b = bandGeometrie(2.9, { min: 5.6, max: 6.2 }, { min: 5.5, max: 6.4 }, kurz, false)!
+    expect(b.skala.map((s) => [s.text, s.art])).toEqual([['5,5', 'grenze'], ['6,4', 'grenze']])
+    expect(b.zone).not.toBeNull()
+    expect(b.grenzen).toHaveLength(2)
+  })
+
+  it('ohne Zielzahlen: Einzelwert-Ziel (ORP 300) lässt nur 250 und 350 stehen, die Zielmarke bleibt', () => {
+    const b = bandGeometrie(450, { min: 300, max: 300 }, { min: 250, max: 350 }, kurz, false)!
+    expect(b.skala.map((s) => s.text)).toEqual(['250', '350'])
+    expect(b.zielMarke).not.toBeNull()
+  })
+
+  it('ohne Zielzahlen und ohne Grenzen: keine Zahl, aber das Band wird gezeichnet', () => {
+    const b = bandGeometrie(5, { min: 4, max: 6 }, { min: null, max: null }, kurz, false)!
+    expect(b.skala).toEqual([])
+    expect(b.zone).not.toBeNull()
+  })
 })

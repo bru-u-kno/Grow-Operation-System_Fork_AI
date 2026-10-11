@@ -162,9 +162,9 @@ public sealed class StromKachelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(12.4, 29.0, "heute 12,4 kWh · ca. 3,60 €")]
-    [InlineData(0.0, 29.0, "heute 0,0 kWh · ca. 0,00 €")]
-    [InlineData(12.4, null, "heute 12,4 kWh")]
+    [InlineData(12.4, 29.0, "heute\u00A012,4\u00A0kWh · ca.\u00A03,60\u00A0€")]
+    [InlineData(0.0, 29.0, "heute\u00A00,0\u00A0kWh · ca.\u00A00,00\u00A0€")]
+    [InlineData(12.4, null, "heute\u00A012,4\u00A0kWh")]
     public void Die_Fusszeile_nennt_Verbrauch_und_Kosten_auf_Deutsch(double kwh, double? cent, string erwartet)
         => Assert.Equal(erwartet, StromKachel.Fusszeile(kwh, cent));
 
@@ -359,7 +359,7 @@ public sealed class StromKachelTests : IDisposable
         await kachel.KartenErgaenzenAsync(karten, Zelt(), Ha, CancellationToken.None);
         await kachel.KartenErgaenzenAsync(karten, Zelt(), Ha, CancellationToken.None);
 
-        Assert.Equal("heute 12,4 kWh · ca. 3,60 €", karten[0].Hint);
+        Assert.Equal("heute\u00A012,4\u00A0kWh · ca.\u00A03,60\u00A0€", karten[0].Hint);
         Assert.Single(handler.Requests, r => r.Uri.AbsolutePath.Contains("/api/history/period/", StringComparison.Ordinal));
     }
 
