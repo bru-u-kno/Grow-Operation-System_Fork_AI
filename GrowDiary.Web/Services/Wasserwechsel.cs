@@ -87,6 +87,44 @@ public static class Wasserwechsel
         return Juengster(ausMessung, ausFormular);
     }
 
+    /// <summary>
+    /// Ob zwischen zwei Messungen Wasser gewechselt wurde — für alle Trendvergleiche
+    /// („Wert ist um X gestiegen/gefallen"), die sonst den Wechsel selbst als
+    /// Abweichung melden.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Der Anlass (11.10.2026).</b> Vollwechsel 11:07, Messung davor
+    /// EC 1,30, Messung danach EC 0,61: Das Risiko „EC: Abweichung prüfen — um
+    /// −0,69 gefallen" blieb stehen, obwohl der Wechsel als Vorgang erfasst war
+    /// und der Wert im Zielband lag. Die Analyse kannte den Wechsel nicht.</para>
+    ///
+    /// <para><b>Gezählt wird jeder Wechsel</b>, auch einer, der die Erinnerung
+    /// nicht neu startet — es geht um die Lösung selbst, wie bei
+    /// <see cref="ZuletztFuerDieLoesungUtc"/>. Das Fenster ist <c>(von, bis]</c>:
+    /// Ein Wechsel an der Messung „nachher" (dort setzt der Vorgang
+    /// <c>SolutionChange</c>) trennt das Paar; ein Wechsel an der Messung
+    /// „vorher" nicht mehr.</para>
+    /// </remarks>
+    /// <param name="von">Zeitpunkt der älteren Messung (Ortszeit, wie <c>Measurement.TakenAt</c>).</param>
+    /// <param name="bis">Zeitpunkt der jüngeren Messung (Ortszeit).</param>
+    public static bool LiegtDazwischen(
+        DateTime von,
+        DateTime bis,
+        IEnumerable<Measurement>? messungen,
+        IEnumerable<ChangeoutEntry>? wechsel)
+    {
+        var vonUtc = von.ToUniversalTime();
+        var bisUtc = bis.ToUniversalTime();
+
+        var ausMessung = messungen is not null && messungen.Any(m =>
+            m.SolutionChange
+            && m.TakenAt.ToUniversalTime() > vonUtc
+            && m.TakenAt.ToUniversalTime() <= bisUtc);
+        var ausFormular = wechsel is not null && wechsel.Any(w =>
+            w.PerformedAtUtc > vonUtc && w.PerformedAtUtc <= bisUtc);
+        return ausMessung || ausFormular;
+    }
+
     private static DateTime? AusMessungen(IEnumerable<Measurement>? messungen)
         => messungen is null
             ? null

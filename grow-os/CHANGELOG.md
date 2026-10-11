@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.209
+
+**Fork AI.** Nach einem Wasserwechsel meldet die Diagnose den Sprung von EC und pH nicht mehr als Abweichung.
+
+- **Kein „EC: Abweichung prüfen" über einen Wasserwechsel hinweg:** Am 11.10.2026 stand nach dem Vollwechsel um 11:07 Uhr (130 L Leitungswasser) das Risiko „Reservoir-EC ist um −0,69 mS/cm gefallen — EC-Boost: Konzentrierter Addback", obwohl der neue Wert 0,61 im Zielband (0,05–0,75) lag und der Wechsel als Vorgang erfasst war. Ursache: Die Diagnose vergleicht die letzten beiden Messungen und meldet jeden Sprung über 0,2 mS/cm; den Wasserwechsel kannte sie nicht. Jetzt gilt: Liegt zwischen den beiden Messungen ein Wasserwechsel (Vorgang aus dem Wasserwechsel-Ablauf oder das Häkchen „Lösung gewechselt" an der Messung), wird der Sprung nicht gemeldet. Der Zielbereich des neuen Werts wird weiter geprüft: Liegt der EC nach dem Wechsel außerhalb des Bands, kommt die Meldung wie bisher.
+- **Dasselbe für die pH-Drift:** „pH ist in 6 h um 0,32 Punkte gestiegen" (5,80 vor, 6,12 nach dem Wechsel) war derselbe Fall und entfällt über einen Wechsel hinweg ebenfalls.
+- **Danach zählt der Vergleich neu:** Wer nach dem Wechsel weiter misst, wird mit der ersten Messung nach dem Wechsel verglichen. Ein echter Sprung danach (zum Beispiel EC 0,61 → 1,05 ohne Wechsel) wird weiter gemeldet.
+- **Bestehende Risiken räumen sich selbst auf:** Sobald die Diagnose den Sprung nicht mehr erkennt, schließt der Fork das offene Risiko beim nächsten Abgleich von allein; ein Eingriff ist nicht nötig.
+- **Geprüft:** Sieben neue Backend-Tests, darunter je eine Kontrolle ohne Wechsel (dort wird der Sprung weiter gemeldet), Wechsel vor der älteren und nach der jüngeren Messung (trennt das Paar nicht) und die Fenstergrenzen. Ohne die Änderung werden zwei der sieben rot, mit ihr sind alle grün.
+
 ## 2.0.0-forkai.208
 
 **Fork AI.** Wasserwechsel: ein EC von 0,00 „vorher" kommt nicht mehr vor, Produkte erscheinen sofort mit Mengenfeld, und der Plan-Kasten mit den Zielwerten steht jetzt auch hier — als dieselbe Komponente wie beim Nachfüllen.

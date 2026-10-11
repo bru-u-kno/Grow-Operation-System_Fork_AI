@@ -86,7 +86,7 @@ public sealed class GrowsApiController : ApiControllerBase
         }
 
         var measurements = _repository.GetMeasurementsForGrow(growId);
-        return Ok(_deviationAnalyzer.Analyze(grow, measurements, LeafOffsetFor(grow), SystemProfilFuer(grow)).ToList());
+        return Ok(_deviationAnalyzer.Analyze(grow, measurements, LeafOffsetFor(grow), SystemProfilFuer(grow), _repository.GetChangeoutsForGrow(growId).ToList()).ToList());
     }
 
     [HttpGet("{growId:int}/treatment-recommendations")]
@@ -101,7 +101,7 @@ public sealed class GrowsApiController : ApiControllerBase
         }
 
         var measurements = _repository.GetMeasurementsForGrow(growId);
-        var deviations = _deviationAnalyzer.Analyze(grow, measurements, LeafOffsetFor(grow), SystemProfilFuer(grow));
+        var deviations = _deviationAnalyzer.Analyze(grow, measurements, LeafOffsetFor(grow), SystemProfilFuer(grow), _repository.GetChangeoutsForGrow(growId).ToList());
         return Ok(_treatmentRecommender.Recommend(grow, deviations));
     }
 

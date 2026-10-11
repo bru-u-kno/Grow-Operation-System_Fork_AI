@@ -38,7 +38,7 @@ public sealed class DeviationRiskEventSyncService
     {
         var measurements = _repository.GetMeasurementsForGrow(grow.Id);
         var deviations = _deviationAnalyzer
-            .Analyze(grow, measurements)
+            .Analyze(grow, measurements, wechsel: _repository.GetChangeoutsForGrow(grow.Id).ToList())
             .Where(IsActionable)
             .GroupBy(deviation => deviation.StableKey, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(deviation => deviation.Severity).First())

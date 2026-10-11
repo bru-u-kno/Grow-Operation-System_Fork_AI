@@ -117,7 +117,11 @@ public sealed class DeviationAnalyzerService
         // Kette Grow -> System -> Anbaustil. Der Aufrufer reicht sie durch,
         // weil dieser Dienst als Singleton keinen Zugriff auf die
         // Hydro-Ablage hat.
-        string? systemProfileId = null)
+        string? systemProfileId = null,
+        // Die Wasserwechsel des Grows aus dem Formular. Ein Sprung zwischen zwei
+        // Messungen, zwischen denen gewechselt wurde, ist der Wechsel und keine
+        // Abweichung — siehe Wasserwechsel.LiegtDazwischen.
+        IReadOnlyList<ChangeoutEntry>? wechsel = null)
     {
         /* Hier stand ein frueher Ausstieg auf IrrigationType und
            Profile.IsHydro. Er konnte nie greifen: IrrigationType hat genau
@@ -196,8 +200,11 @@ public sealed class DeviationAnalyzerService
         var deviations = new List<GrowDeviation>();
 
         CheckPh(grow, sorted, targets, UserTargets.For("reservoir-ph", regeln), deviations);
-        CheckEc(grow, sorted, targets, deviations);
-        CheckPhDriftRate(grow, sorted, deviations);
+        bool WechselDazwischen(Measurement aelter, Measurement juenger)
+            => Wasserwechsel.LiegtDazwischen(aelter.TakenAt, juenger.TakenAt, sorted, wechsel);
+
+        CheckEc(grow, sorted, targets, deviations, WechselDazwischen);
+        CheckPhDriftRate(grow, sorted, deviations, WechselDazwischen);
         CheckOrp(grow, sorted, targets, deviations);
         CheckWaterTemp(grow, sorted, ohneNutzer, Wasserband.RampenBodenC(
             grow,
@@ -265,7 +272,12 @@ public sealed class DeviationAnalyzerService
             participants));
     }
 
-    private static void CheckEc(GrowRun grow, List<Measurement> sorted, HydroTargetValues? targets, List<GrowDeviation> result)
+    private static void CheckEc(
+        GrowRun grow,
+        List<Measurement> sorted,
+        HydroTargetValues? targets,
+        List<GrowDeviation> result,
+        Func<Measurement, Measurement, bool> wechselDazwischen)
     {
         sorted = sorted.Where(measurement => measurement.ReservoirEc.HasValue).ToList();
         if (sorted.Count == 0 || sorted[0].ReservoirEc is not { } actual)
@@ -275,7 +287,7 @@ public sealed class DeviationAnalyzerService
 
         var critical = actual < 0 || actual > 3.0;
         var outsideTarget = targets is not null && (actual < targets.EcMin || actual > targets.EcMax);
-        var trendParticipants = GetEcTrendParticipants(sorted);
+        var trendParticipants = GetEcTrendParticipants(sorted, wechselDazwischen);
 
         if (!critical && !outsideTarget && trendParticipants.Count == 0)
         {
@@ -371,7 +383,11 @@ public sealed class DeviationAnalyzerService
     /// chemical or microbial instability and calls for immediate checks. A jump from 5,8 to
     /// 6,3 overnight never leaves the comfort band, so nothing else in this class notices it.
     /// </summary>
-    private static void CheckPhDriftRate(GrowRun grow, List<Measurement> sorted, List<GrowDeviation> result)
+    private static void CheckPhDriftRate(
+        GrowRun grow,
+        List<Measurement> sorted,
+        List<GrowDeviation> result,
+        Func<Measurement, Measurement, bool> wechselDazwischen)
     {
         sorted = sorted.Where(measurement => measurement.ReservoirPh.HasValue).ToList();
         if (sorted.Count < 2
@@ -383,6 +399,13 @@ public sealed class DeviationAnalyzerService
 
         var hours = (sorted[0].TakenAt - sorted[1].TakenAt).TotalHours;
         if (hours <= 0 || hours > PhDriftWindowHours)
+        {
+            return;
+        }
+
+        // Frisches Wasser puffert anders und wird nachgestellt: der pH-Sprung
+        // über einen Wechsel hinweg ist der Wechsel, keine Drift.
+        if (wechselDazwischen(sorted[1], sorted[0]))
         {
             return;
         }
@@ -668,9 +691,19 @@ public sealed class DeviationAnalyzerService
         return result;
     }
 
-    private static IReadOnlyList<Measurement> GetEcTrendParticipants(List<Measurement> sorted)
+    private static IReadOnlyList<Measurement> GetEcTrendParticipants(
+        List<Measurement> sorted,
+        Func<Measurement, Measurement, bool> wechselDazwischen)
     {
         if (sorted.Count < 2 || !sorted[1].ReservoirEc.HasValue || !sorted[0].ReservoirEc.HasValue)
+        {
+            return Array.Empty<Measurement>();
+        }
+
+        // Über einen Wasserwechsel springt der EC mit Absicht (11.10.2026:
+        // 1,30 → 0,61 nach Vollwechsel). Der Zielbereich-Zweig in CheckEc
+        // prüft den neuen Wert trotzdem weiter.
+        if (wechselDazwischen(sorted[1], sorted[0]))
         {
             return Array.Empty<Measurement>();
         }
