@@ -479,6 +479,7 @@ public sealed class WasserwechselVorgangTests
         var nurNull = await client.GetFromJsonAsync<WasserwechselSensorDto>(Anfrage(zeitpunkt.AddMinutes(25)), Json);
         Assert.Null(nurNull!.Ec);
         Assert.NotNull(nurNull.UebersprungenEc);
+        Assert.Null(nurNull.Hinweis); // Es wurde ein Wert geliefert, nur kein brauchbarer: die Oberfläche sagt das selbst, nicht „kein Sensor hat geliefert".
     }
 
     private const int WasserwechselApiController_Fenster = GrowDiary.Web.Api.Controllers.WasserwechselApiController.SensorFensterMinuten;

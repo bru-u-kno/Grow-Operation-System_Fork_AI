@@ -117,7 +117,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
         }
 
         var (ec, ph, wt, uebersprungen) = _tank.Tankwerte(zelt, bis, SensorFensterMinuten);
-        var hinweis = ec is null && ph is null && wt is null
+        var hinweis = ec is null && ph is null && wt is null && uebersprungen is null
             ? $"In den {SensorFensterMinuten} Minuten davor hat kein Sensor einen Tankwert geliefert — trag die Werte von Hand ein."
             : null;
         return Ok(new WasserwechselSensorDto(bis, SensorFensterMinuten, ec, ph, wt, hinweis, uebersprungen));

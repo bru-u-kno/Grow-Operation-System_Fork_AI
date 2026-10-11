@@ -224,8 +224,8 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
     }
     : sensorGeladen
   // Meldete der Sensor kurz EC 0,00, nahm das Backend den Wert davor — das sagt die Box dazu.
-  const ecNullWert = !vorbelegtVorher ? sensorGeladen?.uebersprungenEc ?? null : null
-  const ecNull = ecNullWert ? ecNullHinweis(ecNullWert.wert, uhrzeit(ecNullWert.zeitUtc), sensor?.ec ? uhrzeit(sensor.ec.zeitUtc) : null) : null
+  const ecNullWert = vorbelegtVorher?.ec == null ? sensorGeladen?.uebersprungenEc ?? null : null
+  const ecNull = ecNullWert ? ecNullHinweis(ecNullWert.wert, uhrzeit(ecNullWert.zeitUtc), sensor?.ec && sensor.ec.zeitUtc !== '' ? uhrzeit(sensor.ec.zeitUtc) : null) : null
   const sensorLaedt = !vorbelegtVorher && sensorGeladen == null && sensorFehler == null && !Number.isNaN(new Date(zeitpunkt).getTime())
   const literZahl = zahlOderNull(liter)
   const ecEigen = ecEigenJe[wasser] ?? null
@@ -278,7 +278,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
     const gewaehlt = artikel.find((a) => String(a.id) === artikelId)
     if (!gewaehlt) return
     setExtra((alt) => [...alt, gewaehlt])
-    window.setTimeout(() => document.querySelector<HTMLInputElement>(`input[aria-label="${gewaehlt.name} eingesetzt"]`)?.focus(), 0)
+    window.setTimeout(() => document.querySelector<HTMLInputElement>(`input[aria-label="${CSS.escape(`${gewaehlt.name} eingesetzt`)}"]`)?.focus(), 0)
   }
 
   const setze = (schluessel: string, wert: string | null) => {
@@ -512,7 +512,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
                 <p className="wa-hinweis">Steht unten nichts drin, gelten diese Werte. DO und ORP haben keinen Sensor — die misst du von Hand, wenn du magst.</p>
               </>
             ) : (
-              <p className="wa-hinweis">{sensorFehler ?? sensor?.hinweis ?? 'Sensorwerte werden gesucht …'}</p>
+              <p className={ecNull ? 'wa-warnung' : 'wa-hinweis'} data-audit={ecNull ? `${t.audit}-ec-null` : undefined}>{ecNull ?? sensorFehler ?? sensor?.hinweis ?? 'Sensorwerte werden gesucht …'}</p>
             )}
           </div>
           <div className="v1-form-grid wa-felder">
