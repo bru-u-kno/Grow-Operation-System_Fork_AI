@@ -7,7 +7,11 @@ import {
   artikelFuerName,
   eigenesWasserZeile,
   fuellstand,
+  alterZeile,
   ecWirkung,
+  ecZielAnzeige,
+  herkunftEtikett,
+  vorschlagPasst,
   MODI,
   nachmessungZeit,
   nachfuellTagebuch,
@@ -203,3 +207,46 @@ describe('Dein Plan heute (A-006, Plankasten)', () => {
     expect(ecWirkung(null, 1.3)).toBeNull()
   })
 })
+
+describe('Plankasten — eine Wahrheit je Zahl (Prüfer-Befund zu 205, 10.10.2026)', () => {
+  it('EC-Ziel: Gesamtziel hat den Namen „EC-Ziel", das Dünger-Ziel allein heißt „Dünger-Ziel" und hat keinen Abstand', () => {
+    expect(ecZielAnzeige(1.6, 1.2)).toEqual({ wert: 1.6, etikett: 'EC-Ziel', gesamt: true })
+    expect(ecZielAnzeige(null, 1.2)).toEqual({ wert: 1.2, etikett: 'Dünger-Ziel', gesamt: false })
+    expect(ecZielAnzeige(null, null)).toBeNull()
+  })
+
+  it('Abstand und Lage rechnen mit den angezeigten, gerundeten Werten', () => {
+    expect(zielAbstandEc(1.184, 1.176)).toBe('Jetzt im Tank: EC 1,18 · Ziel 1,18 → im Ziel')
+    expect(zielAbstandEc(1.18, 1.2, 'Tank vorher')).toBe('Tank vorher: EC 1,18 · Ziel 1,20 → 0,02 darunter')
+    expect(phLage(6.204, 5.8, 6.2)).toBe('im Ziel')
+    expect(phLage(6.206, 5.8, 6.2)).toBe('darüber')
+    expect(ecWirkung(1.184, 1.176)).toEqual({ text: 'Wirkung ±0,00 – EC bleibt', richtung: 'gleich' })
+  })
+
+  it('Alter der Sensorwerte: Text, und ab einer Stunde als veraltet markiert', () => {
+    expect(alterZeile(4)).toEqual({ text: 'Sensorwert vor 4 min', alt: false })
+    expect(alterZeile(60)).toEqual({ text: 'Sensorwert vor 60 min', alt: false })
+    expect(alterZeile(180)).toEqual({ text: 'Sensorwert vor 3 Std. – veraltet, neu messen', alt: true })
+    expect(alterZeile(null)).toBeNull()
+  })
+
+  it('Etikett am pH nach Herkunft: von Hand, jetzt (nur wenn der Zeitpunkt jetzt ist), zum Zeitpunkt', () => {
+    const jetzt = new Date('2026-10-10T12:00:00')
+    expect(herkunftEtikett(true, '2026-10-10T11:58', jetzt)).toBe('von Hand')
+    expect(herkunftEtikett(false, '2026-10-10T11:58', jetzt)).toBe('jetzt')
+    expect(herkunftEtikett(false, '2026-10-08T10:15', jetzt)).toBe('zum Zeitpunkt')
+  })
+
+  it('der Vorschlag passt nur, wenn er zur aktuellen Eingabe gehört', () => {
+    const v = { liter: 10, wasser: 'Tap' as const, osmoseAnteil: 0, wasserEc: 0.4 }
+    expect(vorschlagPasst(v, { liter: 10, wasser: 'Tap', osmoseProzent: null, wasserEcEigen: null })).toBe(true)
+    expect(vorschlagPasst(v, { liter: 12, wasser: 'Tap', osmoseProzent: null, wasserEcEigen: null })).toBe(false)
+    expect(vorschlagPasst(v, { liter: 10, wasser: 'RO', osmoseProzent: null, wasserEcEigen: null })).toBe(false)
+    // eigener Wasser-EC eben getippt, der Vorschlag trägt noch den alten
+    expect(vorschlagPasst(v, { liter: 10, wasser: 'Tap', osmoseProzent: null, wasserEcEigen: 0.9 })).toBe(false)
+    expect(vorschlagPasst({ ...v, wasser: 'Mixed', osmoseAnteil: 0.8 }, { liter: 10, wasser: 'Mixed', osmoseProzent: 80, wasserEcEigen: null })).toBe(true)
+    expect(vorschlagPasst({ ...v, wasser: 'Mixed', osmoseAnteil: 0.8 }, { liter: 10, wasser: 'Mixed', osmoseProzent: 50, wasserEcEigen: null })).toBe(false)
+    expect(vorschlagPasst(null, { liter: 10, wasser: 'Tap', osmoseProzent: null, wasserEcEigen: null })).toBe(false)
+  })
+})
+

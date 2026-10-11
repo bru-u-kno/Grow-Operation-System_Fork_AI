@@ -140,12 +140,64 @@ export function planChips(anker: { phase: Ankerphase; tagInPhase: number; wocheI
   return { tag: `Tag ${anker.tagInPhase}`, woche }
 }
 
+/** Auf die angezeigten zwei Stellen — Abstände und Lagen rechnen mit dem, was der Nutzer liest (Prüfer-Befund 10.10.2026: 1,184 und 1,176 zeigen beide „1,18"). */
+const zweiStellen = (wert: number) => Number(wert.toFixed(2))
+
+/**
+ * Das EC-Ziel im Plankasten — eine Größe, ein Name.
+ *
+ * `gesamt` ist Dünger + Wasser-EC und das Ziel, gegen das der Tank gemessen wird („EC-Ziel").
+ * Ohne Gesamtziel (noch keine Liter, Modus „Nur Zusätze") gibt es nur das Dünger-Ziel; das heißt dann
+ * „Dünger-Ziel" und bekommt keinen Abstand zum Tank, weil der Tank das Wasser-EC schon enthält.
+ */
+export function ecZielAnzeige(gesamt: number | null, duenger: number | null): { wert: number; etikett: 'EC-Ziel' | 'Dünger-Ziel'; gesamt: boolean } | null {
+  if (gesamt != null) return { wert: gesamt, etikett: 'EC-Ziel', gesamt: true }
+  if (duenger != null) return { wert: duenger, etikett: 'Dünger-Ziel', gesamt: false }
+  return null
+}
+
 /** „Jetzt im Tank: EC 1,18 · Ziel 1,20 → 0,02 darunter" — oder `null`, wenn eine der beiden Zahlen fehlt. */
-export function zielAbstandEc(ec: number | null, ziel: number | null): string | null {
+export function zielAbstandEc(ec: number | null, ziel: number | null, vorspann = 'Jetzt im Tank'): string | null {
   if (ec == null || ziel == null) return null
-  const abstand = Number((ec - ziel).toFixed(2))
+  const e = zweiStellen(ec)
+  const z = zweiStellen(ziel)
+  const abstand = zweiStellen(e - z)
   const lage = abstand === 0 ? 'im Ziel' : `${zahl(Math.abs(abstand), 2)} ${abstand < 0 ? 'darunter' : 'darüber'}`
-  return `Jetzt im Tank: EC ${zahl(ec, 2)} · Ziel ${zahl(ziel, 2)} → ${lage}`
+  return `${vorspann}: EC ${zahl(e, 2)} · Ziel ${zahl(z, 2)} → ${lage}`
+}
+
+/** Wie alt ein Sensorwert höchstens sein darf, bevor der Kasten ihn als veraltet kennzeichnet. */
+export const SENSOR_ALT_AB_MINUTEN = 60
+
+/** Das Alter des Sensorwerts als Zeile für den Plankasten; ab einer Stunde mit Warnung. `null` ohne Alter (Handwert, Vorbelegung). */
+export function alterZeile(minuten: number | null): { text: string; alt: boolean } | null {
+  if (minuten == null) return null
+  const alt = minuten > SENSOR_ALT_AB_MINUTEN
+  return { text: `Sensorwert ${alterText(minuten)}${alt ? ' – veraltet, neu messen' : ''}`, alt }
+}
+
+/**
+ * Woher ein „vorher"-Wert kommt: selbst eingetragen, vom Sensor „jetzt" (nur wenn der Zeitpunkt wirklich jetzt ist)
+ * oder vom Sensor zum gewählten Zeitpunkt.
+ */
+export function herkunftEtikett(vonHand: boolean, zeitpunktLokal: string, jetzt: Date = new Date()): 'von Hand' | 'jetzt' | 'zum Zeitpunkt' {
+  if (vonHand) return 'von Hand'
+  const zeit = new Date(zeitpunktLokal).getTime()
+  return Number.isNaN(zeit) || Math.abs(jetzt.getTime() - zeit) > 5 * 60_000 ? 'zum Zeitpunkt' : 'jetzt'
+}
+
+/**
+ * Gehört der geladene Vorschlag zur aktuellen Eingabe? Während nach einer Änderung (Liter, Wasserart, Anteil, eigenes Wasser-EC)
+ * noch der alte Vorschlag steht, darf nichts wie „= Ziel laut Plan ✓" aussehen.
+ */
+export function vorschlagPasst(
+  vorschlag: { liter: number; wasser: WaterSource; osmoseAnteil: number; wasserEc: number | null } | null,
+  eingabe: { liter: number | null; wasser: WaterSource; osmoseProzent: number | null; wasserEcEigen: number | null },
+): boolean {
+  if (vorschlag == null || eingabe.liter == null || vorschlag.liter !== eingabe.liter || vorschlag.wasser !== eingabe.wasser) return false
+  if (eingabe.wasser === 'Mixed' && (eingabe.osmoseProzent == null || Math.abs(vorschlag.osmoseAnteil * 100 - eingabe.osmoseProzent) > 0.01)) return false
+  if (eingabe.wasserEcEigen != null && vorschlag.wasserEc !== eingabe.wasserEcEigen) return false
+  return true
 }
 
 /**
@@ -154,14 +206,18 @@ export function zielAbstandEc(ec: number | null, ziel: number | null): string | 
  */
 export function phLage(ph: number | null, min: number | null, max: number | null): 'im Ziel' | 'darunter' | 'darüber' | null {
   if (ph == null || min == null || max == null || min === max) return null
-  return ph < min ? 'darunter' : ph > max ? 'darüber' : 'im Ziel'
+  const gerundet = zweiStellen(ph)
+  return gerundet < min ? 'darunter' : gerundet > max ? 'darüber' : 'im Ziel'
 }
 
-/** Was die neue Lösung im Tank am EC ändert: „Wirkung −0,21 – EC sinkt". Auf zwei Stellen gerundet, wie angezeigt. */
+/** Was die neue Lösung im Tank am EC ändert: „Wirkung −0,21 – EC sinkt". Auf die angezeigten zwei Stellen gerundet. */
 export function ecWirkung(vorher: number | null, nachher: number | null): { text: string; richtung: 'gleich' | 'sinkt' | 'steigt' } | null {
-  const text = aenderung(vorher, nachher, 2)
-  if (text == null || vorher == null || nachher == null) return null
-  const diff = Number((nachher - vorher).toFixed(2))
+  if (vorher == null || nachher == null) return null
+  const v = zweiStellen(vorher)
+  const n = zweiStellen(nachher)
+  const text = aenderung(v, n, 2)
+  if (text == null) return null
+  const diff = zweiStellen(n - v)
   if (diff === 0) return { text: `Wirkung ${text} – EC bleibt`, richtung: 'gleich' }
   return diff < 0 ? { text: `Wirkung ${text} – EC sinkt`, richtung: 'sinkt' } : { text: `Wirkung ${text} – EC steigt`, richtung: 'steigt' }
 }
