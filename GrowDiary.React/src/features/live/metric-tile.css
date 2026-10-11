@@ -98,11 +98,11 @@
      mitten in „5 h 52 min" — sonst steht „min" allein auf der zweiten Zeile. */
   .gos-metric-source .dauer { white-space: nowrap; }
 
-  .gos-metric-target { margin-top: 6px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--faint); }
-  .gos-metric-stale { margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--warn-text); }
+  .gos-metric-target { margin-top: 6px; font: 400 var(--fs-etikett)/1.35 var(--font-mono); color: var(--faint); }
+  .gos-metric-stale { margin-top: 3px; font: 400 var(--fs-etikett)/1.35 var(--font-mono); color: var(--warn-text); }
   /* Herkunft ist Auskunft, keine Warnung — deshalb gedeckt statt amber.
      --muted statt --faint: die Zeile traegt Bedeutung, nicht Dekor. */
-  .gos-metric-source { margin-top: 3px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--muted); }
+  .gos-metric-source { margin-top: 3px; font: 400 var(--fs-etikett)/1.35 var(--font-mono); color: var(--muted); }
 
   /* Fork AI (F-041, Mockup v3): „ZIEL" + Wert, Band wie auf der Grenzwerte-Seite. */
   .gos-metric-ziel { margin-top: 9px; }

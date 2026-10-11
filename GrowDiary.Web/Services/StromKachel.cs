@@ -105,8 +105,9 @@ public sealed class StromKachel
     {
         if (kwh is not { } k) return null;
         var de = CultureInfo.GetCultureInfo(Deutsch.Kennung);
-        var text = $"heute {k.ToString("0.0", de)} kWh";
-        return centProKwh is { } preis ? $"{text} · ca. {(k * preis / 100).ToString("0.00", de)} €" : text;
+        // Feste Leerzeichen (U+00A0): bricht die Zeile um, dann nur an „·" — nie mitten in „ca. 3,60 €".
+        var text = $"heute\u00A0{k.ToString("0.0", de)}\u00A0kWh";
+        return centProKwh is { } preis ? $"{text} · ca.\u00A0{(k * preis / 100).ToString("0.00", de)}\u00A0€" : text;
     }
 
     /// <summary>

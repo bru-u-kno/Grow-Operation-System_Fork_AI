@@ -287,6 +287,9 @@ export function bandGeometrie(
   ziel: { min: number | null; max: number | null },
   grenze: { min: number | null; max: number | null },
   kurz: (x: number) => string,
+  /** Zielzahlen unter dem Band. Aus, wo „ZIEL" darüber sie schon nennt: dieselbe Zahl
+   *  zweimal, dicht an den Grenzen, überlappte auf schmalen Kacheln (11.10.2026). */
+  zielZahlen = true,
 ): BandGeometrie | null {
   if (wert == null || Number.isNaN(wert)) return null
   if (ziel.min == null && ziel.max == null && grenze.min == null && grenze.max == null) return null
@@ -311,7 +314,7 @@ export function bandGeometrie(
   const skala: BandGeometrie['skala'] = []
   for (const g of grenzWerte) skala.push({ pos: pos(g), text: kurz(g), art: 'grenze' })
   const zielWerte = einzel ? [ziel.min as number] : [ziel.min, ziel.max].filter((x): x is number => x != null)
-  for (const z of zielWerte) {
+  for (const z of zielZahlen ? zielWerte : []) {
     if (grenzWerte.some((g) => Math.abs(g - z) < 1e-9)) continue // gleiche Stelle: gelb gewinnt
     skala.push({ pos: pos(z), text: kurz(z), art: 'ziel' })
   }
