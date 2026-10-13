@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.215
+
+**Fork AI.** Wer im Plan „auch ins Programm" speichert, nutzt die entstandene eigene Kopie danach auch als Programm des Grows.
+
+- **Häkchen beim ersten Speichern:** Legt „Auch ins Programm" zum ersten Mal eine eigene Kopie an, fragt das Blatt „Änderungen speichern" zusätzlich „Dieses Programm für den Grow verwenden" — vorbelegt mit Ja. Der Grow trägt die Kopie dann am Grow und im Plan (der bestehende Programmwechsel mit „Änderungen behalten", eigene Werte anderer Wochen und das Änderungsbuch bleiben erhalten). Gibt es die Kopie schon, entfällt die Frage; das Blatt nennt nur, welches Programm der Grow nutzt. Wer das Häkchen abwählt, behält die Vorlage — auch über einen Neustart hinaus.
+- **Grow bearbeiten zeigt die Kopie:** Bisher blieb der Grow auf der mitgelieferten Vorlage, die Kopie hing nur im Plan — die Bearbeiten-Seite zeigte deshalb „SKX Canna Aqua" statt „SKX Canna Aqua (eigen)". Jetzt steht dort die Kopie, und das Programmfeld am Grow ist gesetzt.
+- **Einmalige Umstellung beim Start:** Jeder laufende Grow, dessen Plan eine eigene Kopie trägt (und bei dem nicht abgelehnt wurde), nutzt sie ab diesem Update als Programm. Abgeschlossene Grows und Grows ohne Kopie bleiben unberührt; ein zweiter Start ändert nichts mehr. Ein Fehler bei einem Grow stoppt die übrigen nicht, und steht der Plan schon auf der Kopie, der Grow aber nicht, wird nur das Feld am Grow nachgezogen.
+- **Was sich nicht ändert:** Mischplan, Wochenziele, Kacheln und Alarme lesen schon vorher den Plan des Grows — die Zahlen bleiben gleich. Wie bei jedem Programmwechsel ist die Kopie danach der Vergleichswert: „Zurück auf Start" einer Woche stellt den Wert der Kopie wieder her, nicht den der mitgelieferten Vorlage.
+- **Geprüft:** 7 neue Backend-Tests (Umstellung mit Werten und Änderungsbuch, Wiederholung, nichts zu tun ohne Kopie oder bei eingefrorenem Plan, Ablehnung hält beim Start, Nachziehen des Felds, Fehler eines Grows stoppt die übrigen, Start-Umstellung) und 1 Oberflächen-Test; ohne die Zweige für Ablehnung, Nachziehen und Fehlerbehandlung werden 3 davon rot (belegt). Am laufenden Stand: erstes Speichern setzt Programmfeld und Plan auf die Kopie, das zweite fragt nicht mehr, die Bearbeiten-Seite zeigt die Kopie.
+
 ## 2.0.0-forkai.214
 
 **Fork AI.** Der Datenschutz-Test enthält die verbotenen Wörter nicht mehr im Klartext.

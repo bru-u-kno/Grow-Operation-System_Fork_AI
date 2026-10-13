@@ -77,6 +77,8 @@ export type PlanAnfrage = {
   werte: Array<{ feld: string; wert: number | null }>
   dosierung: Array<{ komponente: string; mlProLiter: number }> | null
   auchInsProgramm: boolean
+  /** Der Grow nutzt die neu angelegte Kopie danach als sein Programm (nur beim ersten Mal gefragt). */
+  programmVerwenden: boolean
   programmName: string | null
   grund: string | null
 }
@@ -131,7 +133,7 @@ export function anfragen(
   werte: readonly Aenderung[],
   dosis: DosisEntwurf,
   spalten: readonly PlanSpalte[],
-  wahl: { auchInsProgramm: boolean; programmName: string; grund: string },
+  wahl: { auchInsProgramm: boolean; programmName: string; grund: string; programmVerwenden?: boolean },
 ): PlanAnfrage[] {
   const ids = new Set<string>(werte.map((w) => w.spalteId))
   for (const s of spalten) {
@@ -149,6 +151,7 @@ export function anfragen(
           ? aktiveZeilen(zeilen).map((z) => ({ komponente: z.name.trim(), mlProLiter: zahlOderNull(z.ml) ?? 0 }))
           : null,
         auchInsProgramm: wahl.auchInsProgramm,
+        programmVerwenden: wahl.auchInsProgramm && wahl.programmVerwenden === true,
         programmName: wahl.auchInsProgramm && wahl.programmName.trim() !== '' ? wahl.programmName.trim() : null,
         grund: wahl.grund.trim() === '' ? null : wahl.grund.trim(),
       }

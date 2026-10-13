@@ -271,6 +271,13 @@ try
     var laufende = app.Services.GetRequiredService<GrowRepository>().GetActiveGrows();
     var uebernommen = growPlaene.FehlendePlaeneAnlegen(laufende);
     var nachgetragen = growPlaene.FehlendeFelderNachtragen(laufende);
+    // Fork AI (forkai.215): wer eine eigene Programmkopie im Plan hat, nutzt sie auch als Programm.
+    var growRepo = app.Services.GetRequiredService<GrowRepository>();
+    var eigeneUebernommen = growPlaene.EigeneProgrammeVerwenden(laufende, growRepo.UpdateGrow);
+    if (eigeneUebernommen > 0)
+    {
+        app.Logger.LogInformation("Grow-Plan: {Anzahl} Grow(s) auf das eigene Programm umgestellt.", eigeneUebernommen);
+    }
     var abgeglichen = growPlaene.AlleAbgleichen(app.Services.GetRequiredService<GrowRepository>().GetGrow);
     // Fork AI (02.10.2026): Phasen, die länger laufen als ihr Plan, bekommen ihre Wochen.
     var angehaengt = growPlaene.AlleNachziehen(laufende, DateTime.Today);

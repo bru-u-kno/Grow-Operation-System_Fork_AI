@@ -43,6 +43,8 @@ export function PlanReiter() {
   const [dosis, setDosis] = useState<DosisEntwurf>({})
   const [blatt, setBlatt] = useState(false)
   const [insProgramm, setInsProgramm] = useState(false)
+  // Beim ersten Mal (Kopie entsteht) vorbelegt: der Grow nutzt die Kopie danach selbst.
+  const [verwenden, setVerwenden] = useState(true)
   const [programmName, setProgrammName] = useState('')
   const [grund, setGrund] = useState('')
   const [speichert, setSpeichert] = useState(false)
@@ -170,6 +172,7 @@ export function PlanReiter() {
 
   function blattOeffnen() {
     setInsProgramm(false)
+    setVerwenden(true)
     setProgrammName(eigenesName ?? `${daten!.arbeit.programmName} (eigen)`)
     setGrund('')
     setBlatt(true)
@@ -179,7 +182,7 @@ export function PlanReiter() {
     if (!daten) return
     setSpeichert(true)
     setMeldung(null)
-    const liste = anfragen(offeneWerte, dosis, spalten, { auchInsProgramm: insProgramm, programmName, grund })
+    const liste = anfragen(offeneWerte, dosis, spalten, { auchInsProgramm: insProgramm, programmName, grund, programmVerwenden: !eigenesName && verwenden })
     let gespeichert = 0
     let programm: string | null = null
     try {
@@ -488,6 +491,19 @@ export function PlanReiter() {
             <V1Field label="Name des eigenen Programms">
               <input value={programmName} onChange={(e) => setProgrammName(e.target.value)} maxLength={80} />
             </V1Field>
+          )}
+          {insProgramm && !eigenesName && (
+            <div data-audit="plan-programm-verwenden">
+              <V1Switch
+                label={`Dieses Programm für ${daten.growName} verwenden`}
+                checked={verwenden}
+                onChange={setVerwenden}
+                hint="Der Grow trägt dann das eigene Programm. Die Werte ändern sich dadurch nicht."
+              />
+            </div>
+          )}
+          {insProgramm && eigenesName && (
+            <p className="wb-hinweis">{daten.growName} nutzt „{eigenesName}“.</p>
           )}
         </section>
         <section className="wb-block">

@@ -705,6 +705,108 @@ public sealed class GrowPlanService
     }
 
     /// <summary>
+    /// Der Grow läuft ab jetzt nach der eigenen Kopie, die sein Plan trägt.
+    /// </summary>
+    /// <remarks>
+    /// Wer „auch ins Programm" speichert, bekommt eine eigene Kopie — sie hing aber
+    /// nur als <see cref="GrowPlanInhalt.EigenesProgrammId"/> am Plan, während Grow
+    /// und Plan bei der Vorlage blieben (Bearbeiten-Seite zeigte die Vorlage).
+    /// Das hier ist der bestehende Programmwechsel mit „Änderungen behalten" auf
+    /// die Kopie: die trägt die Änderungen schon, die Werte bleiben also gleich.
+    /// </remarks>
+    /// <returns>Das Ergebnis des Wechsels — oder null, wenn nichts zu tun ist
+    /// (kein Plan, eingefroren, keine Kopie, Kopie schon das Programm).</returns>
+    public ProgrammwechselErgebnis? EigenesProgrammVerwenden(GrowRun grow, DateTime? jetztUtc = null)
+    {
+        if (_eigene is null) return null;
+        if (_repo.Laden(grow.Id, GrowPlanStaende.Ende) is not null) return null;
+        if (_repo.Laden(grow.Id, GrowPlanStaende.Arbeit) is not { } arbeit) return null;
+        var eigenId = arbeit.Inhalt.EigenesProgrammId;
+        if (string.IsNullOrWhiteSpace(eigenId)
+            || arbeit.Inhalt.EigenesProgrammNichtVerwenden
+            || string.Equals(eigenId, arbeit.Inhalt.ProgrammId, StringComparison.OrdinalIgnoreCase)
+            || _eigene.Finden(eigenId) is null) return null;
+        return ProgrammWechseln(grow, eigenId, aenderungenBehalten: true, jetztUtc);
+    }
+
+    /// <summary>
+    /// Merkt, dass der Nutzer die Kopie bewusst nicht als Programm verwenden wollte —
+    /// die Umstellung beim Start lässt diesen Grow dann in Ruhe.
+    /// </summary>
+    public void EigenesProgrammAblehnen(int growId, DateTime? jetztUtc = null)
+    {
+        lock (_lock)
+        {
+            EndstandSperre(growId);
+            var arbeit = _repo.Laden(growId, GrowPlanStaende.Arbeit)
+                ?? throw new InvalidOperationException($"Grow {growId} hat keinen Plan.");
+            arbeit.Inhalt.EigenesProgrammNichtVerwenden = true;
+            _repo.Speichern([arbeit with { GeaendertUtc = jetztUtc ?? DateTime.UtcNow }], []);
+            GrowPlanRegister.Setzen(growId, arbeit.Inhalt);
+        }
+    }
+
+    /// <summary>
+    /// Umstellung beim Start: jeder laufende Grow, dessen Plan eine eigene Kopie trägt,
+    /// nutzt sie als Programm. Danach ist nichts mehr zu tun (idempotent).
+    /// </summary>
+    /// <remarks>
+    /// Ein Fehler bei einem Grow stoppt die übrigen nicht. Ist der Plan schon auf der
+    /// Kopie, der Grow aber nicht (ein früherer Lauf brach zwischen Plan und Grow ab),
+    /// wird nur das Feld am Grow nachgezogen — sonst lehnte das Grow-Formular jedes
+    /// Speichern ab.
+    /// </remarks>
+    /// <param name="speichern">Schreibt Programm und Name am Grow zurück.</param>
+    /// <returns>Wie viele Grows umgestellt oder nachgezogen wurden.</returns>
+    public int EigeneProgrammeVerwenden(IEnumerable<GrowRun> laufendeGrows, Action<GrowRun> speichern)
+    {
+        var umgestellt = 0;
+        foreach (var grow in laufendeGrows)
+        {
+            if (grow.IsArchived) continue;
+            try
+            {
+                var ergebnis = EigenesProgrammVerwenden(grow);
+                if (ergebnis is not null)
+                {
+                    grow.FeedProgramId = ergebnis.ProgrammId;
+                    grow.Nutrients = ergebnis.ProgrammName;
+                    if (ergebnis.Entfallen > 0)
+                    {
+                        _logger.LogWarning("Grow-Plan: Grow {Grow} — {Anzahl} eigene Änderung(en) an Wochen entfielen beim Umstellen auf das eigene Programm.", grow.Id, ergebnis.Entfallen);
+                    }
+                }
+                else if (PlanProgrammFuerNachzug(grow) is { } nachzuziehen)
+                {
+                    grow.FeedProgramId = nachzuziehen.Id;
+                    grow.Nutrients = nachzuziehen.Name;
+                }
+                else continue;
+
+                speichern(grow);
+                umgestellt++;
+                _logger.LogInformation("Grow-Plan: Grow {Grow} nutzt jetzt sein eigenes Programm {Programm}.", grow.Id, grow.FeedProgramId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Grow-Plan: Grow {Grow} ließ sich nicht auf sein eigenes Programm umstellen.", grow.Id);
+            }
+        }
+        return umgestellt;
+    }
+
+    /// <summary>Das eigene Programm, auf dem der Plan schon steht, während der Grow noch ein anderes trägt.</summary>
+    private (string Id, string Name)? PlanProgrammFuerNachzug(GrowRun grow)
+    {
+        if (_repo.Laden(grow.Id, GrowPlanStaende.Ende) is not null) return null;
+        if (_repo.Laden(grow.Id, GrowPlanStaende.Arbeit) is not { } arbeit) return null;
+        var inhalt = arbeit.Inhalt;
+        if (!EigeneProgramme.IstEigen(inhalt.ProgrammId)
+            || string.Equals(grow.FeedProgramId, inhalt.ProgrammId, StringComparison.OrdinalIgnoreCase)) return null;
+        return (inhalt.ProgrammId, inhalt.ProgrammName);
+    }
+
+    /// <summary>
     /// Hält den Endstand passend zum Status des Grows: abgeschlossen ⇒ einfrieren,
     /// wieder geöffnet ⇒ Einfrieren aufheben. Beides steht im Änderungsbuch.
     /// </summary>

@@ -362,6 +362,158 @@ public sealed class GrowPlanTests : IDisposable
     }
 
     [Fact]
+    public void EigenesProgrammVerwendenStelltDenPlanUmUndLaesstDieWerteGleich()
+    {
+        var grow = Grow(26, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: "Mimosa RDWC", Grund: null));
+        // Vorher: die Kopie hängt nur am Plan, das Programm bleibt die Vorlage.
+        var vorher = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt;
+        Assert.Equal("skx-canna-aqua", vorher.ProgrammId);
+        Assert.Equal("eigen-mimosa-rdwc", vorher.EigenesProgrammId);
+
+        var ergebnis = _dienst.EigenesProgrammVerwenden(grow);
+
+        Assert.NotNull(ergebnis);
+        Assert.Equal("eigen-mimosa-rdwc", ergebnis!.ProgrammId);
+        var danach = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt;
+        Assert.Equal("eigen-mimosa-rdwc", danach.ProgrammId);
+        Assert.Equal("Mimosa RDWC", danach.ProgrammName);
+        Assert.Equal("eigen-mimosa-rdwc", danach.EigenesProgrammId);
+        // Das Register (Mischplan, Zielwerte) und die Werte bleiben, wie sie waren.
+        Assert.Equal("eigen-mimosa-rdwc", GrowPlanRegister.Programm(grow.Id)!.Id);
+        Assert.Equal(1.45, danach.Chart.Columns.Single(c => c.Id == "flower-w5").EcTarget);
+        Assert.Equal(1.4, danach.Chart.Columns.Single(c => c.Id == "flower-w4").EcTarget);
+
+        // Zweites Mal: nichts mehr zu tun.
+        Assert.Null(_dienst.EigenesProgrammVerwenden(grow));
+    }
+
+    [Fact]
+    public void EigenesProgrammVerwendenTutNichtsOhneKopieUndBeiEingefrorenemPlan()
+    {
+        var ohne = Grow(27, "skx-canna-aqua");
+        _dienst.Anlegen(ohne);
+        Assert.Null(_dienst.EigenesProgrammVerwenden(ohne));
+        Assert.Equal("skx-canna-aqua", _repo.Laden(ohne.Id, GrowPlanStaende.Arbeit)!.Inhalt.ProgrammId);
+
+        var eingefroren = Grow(28, "skx-canna-aqua");
+        var plan = _dienst.Anlegen(eingefroren)!;
+        _dienst.Speichern(eingefroren.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: "Eingefroren RDWC", Grund: null));
+        _repo.Speichern([_repo.Laden(eingefroren.Id, GrowPlanStaende.Arbeit)! with { Stand = GrowPlanStaende.Ende }], []);
+        Assert.Null(_dienst.EigenesProgrammVerwenden(eingefroren));
+    }
+
+    [Fact]
+    public void BeimStartNutzenLaufendeGrowsIhreKopieUndArchivierteBleibenUnberuehrt()
+    {
+        var laufend = Grow(29, "skx-canna-aqua");
+        var archiviert = Grow(30, "skx-canna-aqua");
+        archiviert.Status = GrowStatus.Completed;
+        foreach (var g in new[] { laufend, archiviert })
+        {
+            _dienst.Anlegen(g);
+            _dienst.Speichern(g.Id, new PlanSpeichernAnfrage(
+                "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: $"Kopie {g.Id}", Grund: null));
+        }
+        var gespeichert = new List<GrowRun>();
+
+        var anzahl = _dienst.EigeneProgrammeVerwenden([laufend, archiviert], gespeichert.Add);
+
+        Assert.Equal(1, anzahl);
+        Assert.Equal([laufend], gespeichert);
+        Assert.Equal($"eigen-kopie-{laufend.Id}", laufend.FeedProgramId);
+        Assert.Equal($"Kopie {laufend.Id}", laufend.Nutrients);
+        Assert.Equal("skx-canna-aqua", _repo.Laden(archiviert.Id, GrowPlanStaende.Arbeit)!.Inhalt.ProgrammId);
+        // Wiederholt sich beim nächsten Start nichts.
+        Assert.Equal(0, _dienst.EigeneProgrammeVerwenden([laufend, archiviert], gespeichert.Add));
+    }
+
+    [Fact]
+    public void DieUmstellungBehaeltEigeneWerteAndererWochenUndIhreHerkunft()
+    {
+        var grow = Grow(31, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        // Nur für den Grow, andere Woche als die, die gleich in die Kopie geht.
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w6", [("ecTarget", 1.7)], null, AuchInsProgramm: false, ProgrammName: null, Grund: null));
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: "Behalten RDWC", Grund: null));
+
+        var ergebnis = _dienst.EigenesProgrammVerwenden(grow)!;
+
+        Assert.Equal(0, ergebnis.Entfallen);
+        var inhalt = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt;
+        Assert.Equal(1.7, inhalt.Chart.Columns.Single(c => c.Id == "flower-w6").EcTarget);
+        Assert.Equal(GrowPlanHerkunft.Eigen, inhalt.HerkunftVon("flower-w6", "ecTarget"));
+        Assert.Equal(1.45, inhalt.Chart.Columns.Single(c => c.Id == "flower-w5").EcTarget);
+        Assert.Equal(14, inhalt.Chart.Columns.Count);
+        // Das Änderungsbuch behält die früheren Einträge und bekommt den Programmwechsel dazu.
+        var buch = _repo.Buch(grow.Id);
+        Assert.Contains(buch, e => e.Art == GrowPlanArten.Programmwechsel);
+        Assert.True(buch.Count(e => e.Feld == "ecTarget") >= 2, "Die Werteinträge vor dem Wechsel fehlen im Änderungsbuch.");
+    }
+
+    [Fact]
+    public void WerAbgelehntHatWirdAuchBeimStartNichtUmgestellt()
+    {
+        var grow = Grow(32, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: "Abgelehnt RDWC", Grund: null));
+        _dienst.EigenesProgrammAblehnen(grow.Id);
+
+        Assert.Null(_dienst.EigenesProgrammVerwenden(grow));
+        Assert.Equal(0, _dienst.EigeneProgrammeVerwenden([grow], _ => { }));
+        var inhalt = _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt;
+        Assert.Equal("skx-canna-aqua", inhalt.ProgrammId);
+        Assert.Equal("eigen-abgelehnt-rdwc", inhalt.EigenesProgrammId);
+        // Auch das Register (Mischplan, Zielwerte) trägt die Entscheidung.
+        Assert.True(GrowPlanRegister.Inhalt(grow.Id)!.EigenesProgrammNichtVerwenden);
+    }
+
+    [Fact]
+    public void BeimStartZiehtDasFeldAmGrowNachWennNurDerPlanUmgestelltIst()
+    {
+        var grow = Grow(33, "skx-canna-aqua");
+        _dienst.Anlegen(grow);
+        _dienst.Speichern(grow.Id, new PlanSpeichernAnfrage(
+            "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: "Nachzug RDWC", Grund: null));
+        Assert.NotNull(_dienst.EigenesProgrammVerwenden(grow));
+        // Ein früherer Lauf brach nach dem Plan ab: der Grow trägt noch die Vorlage.
+        grow.FeedProgramId = "skx-canna-aqua";
+        var gespeichert = new List<GrowRun>();
+
+        Assert.Equal(1, _dienst.EigeneProgrammeVerwenden([grow], gespeichert.Add));
+
+        Assert.Equal("eigen-nachzug-rdwc", grow.FeedProgramId);
+        Assert.Equal("Nachzug RDWC", grow.Nutrients);
+        Assert.Equal("eigen-nachzug-rdwc", _repo.Laden(grow.Id, GrowPlanStaende.Arbeit)!.Inhalt.ProgrammId);
+        Assert.Equal(0, _dienst.EigeneProgrammeVerwenden([grow], gespeichert.Add));
+    }
+
+    [Fact]
+    public void EinFehlerBeimStartStopptDieUebrigenGrowsNicht()
+    {
+        var erster = Grow(34, "skx-canna-aqua");
+        var zweiter = Grow(35, "skx-canna-aqua");
+        foreach (var g in new[] { erster, zweiter })
+        {
+            _dienst.Anlegen(g);
+            _dienst.Speichern(g.Id, new PlanSpeichernAnfrage(
+                "flower-w5", [("ecTarget", 1.45)], null, AuchInsProgramm: true, ProgrammName: $"Fehler {g.Id}", Grund: null));
+        }
+
+        var anzahl = _dienst.EigeneProgrammeVerwenden([erster, zweiter],
+            g => { if (g.Id == erster.Id) throw new InvalidOperationException("Datenbank gesperrt"); });
+
+        Assert.Equal(1, anzahl);
+        Assert.Equal($"eigen-fehler-{zweiter.Id}", zweiter.FeedProgramId);
+    }
+
+    [Fact]
     public void EinEingefrorenerPlanLaesstSichNichtSpeichern()
     {
         var grow = Grow(25, "skx-canna-aqua");
