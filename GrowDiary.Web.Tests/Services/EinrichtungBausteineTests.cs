@@ -79,10 +79,10 @@ public sealed class EinrichtungBausteineTests
     // -------------------------------------------------- Entfeuchter-Rechenwerte
 
     [Theory]
-    [InlineData("sensor.trotec_feuchte_ein_aktiv")]
-    [InlineData("sensor.trotec_feuchte_aus_aktiv")]
-    [InlineData("sensor.trotec_temp_max_aktiv")]
-    [InlineData("binary_sensor.trotec_feuchte_uber_ein")]
+    [InlineData("sensor.fork_entfeuchter_feuchte_ein_aktiv")]
+    [InlineData("sensor.fork_entfeuchter_feuchte_aus_aktiv")]
+    [InlineData("sensor.fork_entfeuchter_temp_max_aktiv")]
+    [InlineData("binary_sensor.fork_entfeuchter_feuchte_ueber_ein")]
     public void JederEntfeuchterRechenwertWirdMitPflichtRollenAngelegt(string entity)
     {
         var b = Assert.Single(SteuerungBauteile.FuerModul("entfeuchter"), x => x.EntityId == entity);
@@ -101,17 +101,17 @@ public sealed class EinrichtungBausteineTests
         string Text(string e) => SteuerungBauteile.VorlageFuellen(
             SteuerungBauteile.FuerModul("entfeuchter").Single(b => b.EntityId == e).Vorlage!, rollen)!;
 
-        var ein = Text("sensor.trotec_feuchte_ein_aktiv");
+        var ein = Text("sensor.fork_entfeuchter_feuchte_ein_aktiv");
         Assert.Contains("states('binary_sensor.t_licht_zustand')", ein);
         Assert.Contains("states('sensor.t_zelt_temp')", ein);
         Assert.Contains("input_number.vpd_ziel_unten", ein);
-        Assert.Contains("input_number.trotec_feuchte_ein_tag", ein);
+        Assert.Contains("input_number.fork_entfeuchter_feuchte_ein_tag", ein);
 
-        var aus = Text("sensor.trotec_feuchte_aus_aktiv");
+        var aus = Text("sensor.fork_entfeuchter_feuchte_aus_aktiv");
         Assert.Contains("input_number.vpd_ziel_abschaltung", aus);
-        Assert.Contains("input_number.trotec_hysterese", aus);
+        Assert.Contains("input_number.fork_entfeuchter_hysterese", aus);
 
-        Assert.Contains("states('sensor.t_zelt_rh')", Text("binary_sensor.trotec_feuchte_uber_ein"));
+        Assert.Contains("states('sensor.t_zelt_rh')", Text("binary_sensor.fork_entfeuchter_feuchte_ueber_ein"));
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public sealed class EinrichtungBausteineTests
     {
         // Nutzer-Fassung fiel ohne die CO₂-Helfer auf 65 − 3 = 62 % zurück — für jeden, der keine
         // CO₂-Begasung hat, wäre das eine fremde, unsichtbare Obergrenze gewesen.
-        foreach (var e in new[] { "sensor.trotec_feuchte_ein_aktiv", "sensor.trotec_feuchte_aus_aktiv" })
+        foreach (var e in new[] { "sensor.fork_entfeuchter_feuchte_ein_aktiv", "sensor.fork_entfeuchter_feuchte_aus_aktiv" })
         {
             var v = SteuerungBauteile.FuerModul("entfeuchter").Single(b => b.EntityId == e).Vorlage!;
             Assert.Contains("input_number.co2_rh_obergrenze') | float(100)", v);
@@ -157,7 +157,7 @@ public sealed class EinrichtungBausteineTests
         var text = Wirksam(f);
         Assert.DoesNotContain("rh_hoch_lang", text);
         Assert.DoesNotContain("zuluft", text);
-        Assert.DoesNotContain("trotec_wartezeit_aussenluft", text);
+        Assert.DoesNotContain("fork_entfeuchter_wartezeit_aussenluft", text);
 
         // Kein leerer or/and-Block: Home Assistant lehnt die ganze Automation ab.
         foreach (var o in Objekte(f).Where(o => o["conditions"] is JsonArray && o["condition"] is not null))
@@ -275,7 +275,9 @@ public sealed class EntfeuchterAutomatikKennungTests
         var e = EntfeuchterSteuerungService.AusHomeAssistant(zustaende, ["automation.entfeuchter_regelung_tag_nacht"]);
         Assert.False(e.AutomatikAktiv);
 
-        // Ohne die Kennung der Fork-Regelung wüsste die Seite nichts vom Zustand und bliebe bei der Vorgabe.
-        Assert.True(EntfeuchterSteuerungService.AusHomeAssistant(zustaende).AutomatikAktiv);
+        // Im neuen Namensraum ist die Katalog-Kennung die der Fork-Regelung — sie wird auch ohne Liste gelesen. Im
+        // Bestand ist es die handgebaute; dort bleibt die Seite ohne die Kennung der Fork-Regelung bei der Vorgabe
+        // (belegt in KennungsRaumTests).
+        Assert.False(EntfeuchterSteuerungService.AusHomeAssistant(zustaende).AutomatikAktiv);
     }
 }

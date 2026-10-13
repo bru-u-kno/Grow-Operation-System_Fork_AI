@@ -683,17 +683,19 @@ public sealed class EntfeuchterZusatzTests
         var liste = EntfeuchterZusatzSteuerungService.Schreibliste(alt, neu);
 
         Assert.Equal(2, liste.Count);
-        Assert.Contains(liste, l => l is { Entitaet: EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit, Wert: 20, Dienst: "set_value" });
-        Assert.Contains(liste, l => l is { Entitaet: EntfeuchterZusatzSteuerungService.Entitaeten.Melden, Dienst: "turn_on", Wert: null });
+        Assert.Contains(liste, l => l.Entitaet == EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit && l is { Wert: 20, Dienst: "set_value" });
+        Assert.Contains(liste, l => l.Entitaet == EntfeuchterZusatzSteuerungService.Entitaeten.Melden && l is { Dienst: "turn_on", Wert: null });
     }
 
     [Fact]
     public void JedeEntitaetDesDienstes_StehtImKatalog_MitDerRichtigenDomaene()
     {
         // Eine Kennung aus dem Kopf ist ein Tippfehler, der still ins Leere schreibt (CLAUDE.md, Prüfung 3).
-        var konstanten = typeof(EntfeuchterZusatzSteuerungService.Entitaeten)
+        var typ = typeof(EntfeuchterZusatzSteuerungService.Entitaeten);
+        var konstanten = typ
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
             .Select(f => (string)f.GetRawConstantValue()!)
+            .Concat(typ.GetProperties(BindingFlags.Public | BindingFlags.Static).Select(pr => (string)pr.GetValue(null)!))
             .ToList();
         Assert.True(konstanten.Count >= 12, $"Nur {konstanten.Count} Kennungen gefunden — die Reflexion sieht sie nicht.");
 
@@ -747,8 +749,8 @@ public sealed class EntfeuchterZusatzTests
         var liste = EntfeuchterZusatzSteuerungService.Schreibliste(stand, Anwenden(a, stand), a);
 
         Assert.Equal(2, liste.Count);
-        Assert.Contains(liste, l => l is { Entitaet: EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand, Wert: 2 });
-        Assert.Contains(liste, l => l is { Entitaet: EntfeuchterZusatzSteuerungService.Entitaeten.Melden, Dienst: "turn_off" });
+        Assert.Contains(liste, l => l.Entitaet == EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand && l is { Wert: 2 });
+        Assert.Contains(liste, l => l.Entitaet == EntfeuchterZusatzSteuerungService.Entitaeten.Melden && l is { Dienst: "turn_off" });
         // Ohne Kenntnis der Änderung bleibt es beim Vergleich: gleich = nichts.
         Assert.Empty(EntfeuchterZusatzSteuerungService.Schreibliste(stand, Anwenden(a, stand)));
     }
@@ -763,7 +765,7 @@ public sealed class EntfeuchterZusatzTests
 
         Assert.Equal(
             new[] { "folge_abstand", "mindestpause", "vpd_hysterese", "wieder_ein_abstand", "zuschalt_verzogerung" },
-            liste.Select(l => l.Entitaet.Replace("input_number.trotec_zelt_", "")).Order());
+            liste.Select(l => l.Entitaet.Replace("input_number.fork_entfeuchter_zusatz_", "")).Order());
         // „aus" und „eigene" nennen keinen Helfer.
         Assert.Empty(EntfeuchterZusatzSteuerungService.Schreibliste(stand, stand, new EntfeuchterZusatzAenderung { Hilfe = "aus" }));
         Assert.Empty(EntfeuchterZusatzSteuerungService.Schreibliste(stand, stand, new EntfeuchterZusatzAenderung { Hilfe = "eigene" }));

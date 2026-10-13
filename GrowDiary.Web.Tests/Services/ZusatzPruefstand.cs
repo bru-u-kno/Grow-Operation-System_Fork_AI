@@ -198,7 +198,7 @@ public sealed class ZusatzPruefstand : IDisposable
         Setze("sensor.zusatz_entfeuchter_energie", "7.27", "Dehumi RDWC Tent Energie", "kWh");
 
         // Die handgebaute Regelung: läuft.
-        Setze("automation.rdwc_trotec_zelt_shelly_plan_regelung", "on", "RDWC Trotec Zelt (Shelly) Plan-Regelung", kennung: "1791297367181");
+        Setze("automation.zusatz_entfeuchter_regelung", "on", "RDWC Trotec Zelt (Shelly) Plan-Regelung", kennung: "1791297367181");
     }
 
     // ---- Vergleichshilfen -------------------------------------------------

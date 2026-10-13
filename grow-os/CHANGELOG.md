@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.217
+
+**Fork AI.** Die Helfer und Regelungen der Entfeuchter tragen neutrale Namen mit Fork-Präfix — wer den Fork neu installiert, bekommt keine Kennungen mit fremder Marke mehr, und die Anlage kollidiert nicht mit eigenen Helfern.
+
+- **Neuer Namensraum für neue Installationen:** Die Entfeuchter-Helfer heißen `fork_entfeuchter_*` (Zusatz-Entfeuchter `fork_entfeuchter_zusatz_*`), die Rechen-Sensoren `sensor.fork_entfeuchter_*`, die Regelungen `automation.entfeuchter_regelung_tag_nacht` und `automation.zusatz_entfeuchter_regelung`. Vorher standen dort `trotec_*` und die handgebauten Port-Namen der Anlage des Entwicklers. Die Einrichtung legt alles selbst an; nur die Geräte gibt der Nutzer an.
+- **Bestand bleibt unberührt:** Eine Installation, die schon Einstellungen oder Geräte der Entfeuchter gespeichert hatte, behält ihre alten Kennungen — Zeichen für Zeichen (34 Kennungen, ein Test hält den alten Stand fest). Nichts wird umbenannt, nichts doppelt angelegt, keine laufende Regelung angefasst. Der Fork entscheidet das einmal beim ersten Start und speichert es; später gespeicherte Einstellungen ändern ihn nicht.
+- **Fremde Objekte bleiben fremd:** Liegt unter der neuen Regelungs-Kennung eine Automation, die der Fork nicht angelegt hat, legt er keine daneben an.
+- **Sichtbar:** Der Untertitel der Seite Entfeuchtung nennt keine Gerätemarke mehr („Entfeuchter im Zelt").
+- **Nicht angefasst:** CO₂, Zuluft und Chiller behalten ihre Kennungen (eigener Schritt).
+
 ## 2.0.0-forkai.216
 
 **Fork AI.** Tests und Testdaten tragen keine privaten Gerätenamen des Entwicklers mehr.

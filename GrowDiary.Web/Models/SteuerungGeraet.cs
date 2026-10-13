@@ -231,7 +231,7 @@ public static class SteuerungGeraeteRollen
             new[] { "binary_sensor", "switch", "light" },
             Hinweis: "Entscheidet zwischen Tag- und Nachtschwellen."),
         // Fork AI (A-016, 09.10.2026): Die Zuluft-Steuerung läuft neben dem Entfeuchter. Trocknet
-        // die Außenluft ohnehin, wartet er länger, bevor er anspringt (trotec_wartezeit_aussenluft).
+        // die Außenluft ohnehin, wartet er länger, bevor er anspringt (fork_entfeuchter_wartezeit_aussenluft).
         // Beides optional: wer keine Zuluft-Steuerung hat, lässt die Rollen leer, und die
         // Regelung schaltet nach der Einschaltverzögerung allein.
         new("entfeuchter", "zuluft_bedarf", "Zuluft · Bedarf", GruppeUmfeld,
@@ -241,7 +241,7 @@ public static class SteuerungGeraeteRollen
             new[] { "sensor", "number" }, Pflicht: false,
             Hinweis: "Läuft die Zuluft wirklich? Ohne sie zählt allein der Bedarf."),
 
-        // Fork AI (A-009, 06.10.2026): Zusatz-Entfeuchter — ein zweiter Trotec an
+        // Fork AI (A-009, 06.10.2026): Zusatz-Entfeuchter — ein zweiter Entfeuchter an
         // einer Shelly-Steckdose. Zelt-Fühler und Licht werden NICHT noch einmal
         // zugeordnet, sondern aus dem Modul „entfeuchter" mitbenutzt
         // (siehe MitbenutztVon).

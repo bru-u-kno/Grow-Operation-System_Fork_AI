@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace GrowDiary.Web.Models;
 
 /// <summary>
-/// Fork AI (A-009, 06.10.2026): Der Zusatz-Entfeuchter — ein zweiter Trotec im
+/// Fork AI (A-009, 06.10.2026): Der Zusatz-Entfeuchter — ein zweiter Entfeuchter im
 /// Zelt (Shelly-Steckdose), der neben dem Entfeuchter am AC-Infinity-Port läuft.
 /// </summary>
 /// <remarks>

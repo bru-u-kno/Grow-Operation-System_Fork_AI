@@ -1,44 +1,44 @@
 {
   "alias": "Entfeuchter Regelung Tag/Nacht",
-  "description": "Schaltet den Entfeuchter nach Zeltfeuchte mit getrennten Tag- und Nachtschwellen. Tag/Nacht folgt dem Licht (Rolle licht_zustand). Die gerade gueltigen Schwellen liefern sensor.trotec_feuchte_ein_aktiv, sensor.trotec_feuchte_aus_aktiv und sensor.trotec_temp_max_aktiv (Tag: input_number.trotec_feuchte_ein_tag, _aus_tag, trotec_temp_max_tag; Nacht: input_number.trotec_feuchte_ein, _aus, trotec_temp_max; mit input_boolean.trotec_vpd_regelung aus dem VPD-Band des Plans). Tagbetrieb nur, wenn input_boolean.trotec_tagbetrieb_erlauben an ist (aus = nur nachts). EIN: Zeltfeuchte laenger als input_number.trotec_einschaltverzoegerung Minuten ueber der EIN-Schwelle UND Zelttemperatur unter dem Limit; laeuft die Zuluft und bringt die Aussenluft einen Trockenvorteil (Rollen zuluft_bedarf, zuluft_stufe_ist), gilt stattdessen input_number.trotec_wartezeit_aussenluft - ohne diese Rollen immer die kurze Wartezeit. AUS: Zeltfeuchte unter der AUS-Schwelle (erst nach input_number.trotec_mindestlaufzeit Minuten), Zelttemperatur ueber dem Limit oder Tagbetrieb nicht erlaubt - Uebertemperatur und fehlende Tagfreigabe schalten sofort ab. Eine Pruefung alle 5 Minuten und beim Start von Home Assistant faengt verpasste Faelle ab. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter/regelung/1. Abweichung zur handgebauten Fassung: Die Sperre 'nicht waehrend der CO2-Drosselung abschalten' fehlt hier - sie haengt an Abluft-Regler und CO2-Helfern, die ein Entfeuchter-Nutzer nicht haben muss.",
+  "description": "Schaltet den Entfeuchter nach Zeltfeuchte mit getrennten Tag- und Nachtschwellen. Tag/Nacht folgt dem Licht (Rolle licht_zustand). Die gerade gueltigen Schwellen liefern sensor.fork_entfeuchter_feuchte_ein_aktiv, sensor.fork_entfeuchter_feuchte_aus_aktiv und sensor.fork_entfeuchter_temp_max_aktiv (Tag: input_number.fork_entfeuchter_feuchte_ein_tag, input_number.fork_entfeuchter_feuchte_aus_tag, input_number.fork_entfeuchter_temp_max_tag; Nacht: input_number.fork_entfeuchter_feuchte_ein_nacht, input_number.fork_entfeuchter_feuchte_aus_nacht, input_number.fork_entfeuchter_temp_max_nacht; mit input_boolean.fork_entfeuchter_vpd_regelung aus dem VPD-Band des Plans). Tagbetrieb nur, wenn input_boolean.fork_entfeuchter_tagbetrieb_erlauben an ist (aus = nur nachts). EIN: Zeltfeuchte laenger als input_number.fork_entfeuchter_einschaltverzoegerung Minuten ueber der EIN-Schwelle UND Zelttemperatur unter dem Limit; laeuft die Zuluft und bringt die Aussenluft einen Trockenvorteil (Rollen zuluft_bedarf, zuluft_stufe_ist), gilt stattdessen input_number.fork_entfeuchter_wartezeit_aussenluft - ohne diese Rollen immer die kurze Wartezeit. AUS: Zeltfeuchte unter der AUS-Schwelle (erst nach input_number.fork_entfeuchter_mindestlaufzeit Minuten), Zelttemperatur ueber dem Limit oder Tagbetrieb nicht erlaubt - Uebertemperatur und fehlende Tagfreigabe schalten sofort ab. Eine Pruefung alle 5 Minuten und beim Start von Home Assistant faengt verpasste Faelle ab. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/entfeuchter/regelung/1. Abweichung zur handgebauten Fassung: Die Sperre 'nicht waehrend der CO2-Drosselung abschalten' fehlt hier - sie haengt an Abluft-Regler und CO2-Helfern, die ein Entfeuchter-Nutzer nicht haben muss.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [
     {
       "trigger": "numeric_state",
       "entity_id": "[[zelt_rh]]",
-      "above": "sensor.trotec_feuchte_ein_aktiv",
+      "above": "sensor.fork_entfeuchter_feuchte_ein_aktiv",
       "id": "rh_hoch",
       "for": {
-        "minutes": "{{ states('input_number.trotec_einschaltverzoegerung') | int(10) }}"
+        "minutes": "{{ states('input_number.fork_entfeuchter_einschaltverzoegerung') | int(10) }}"
       }
     },
     {
       "wenn": "zuluft_bedarf",
       "trigger": "numeric_state",
       "entity_id": "[[zelt_rh]]",
-      "above": "sensor.trotec_feuchte_ein_aktiv",
+      "above": "sensor.fork_entfeuchter_feuchte_ein_aktiv",
       "id": "rh_hoch_lang",
       "for": {
-        "minutes": "{{ states('input_number.trotec_wartezeit_aussenluft') | int(25) }}"
+        "minutes": "{{ states('input_number.fork_entfeuchter_wartezeit_aussenluft') | int(25) }}"
       }
     },
     {
       "trigger": "numeric_state",
       "entity_id": "[[zelt_rh]]",
-      "below": "sensor.trotec_feuchte_aus_aktiv",
+      "below": "sensor.fork_entfeuchter_feuchte_aus_aktiv",
       "id": "rh_ok"
     },
     {
       "trigger": "numeric_state",
       "entity_id": "[[zelt_temp]]",
-      "above": "sensor.trotec_temp_max_aktiv",
+      "above": "sensor.fork_entfeuchter_temp_max_aktiv",
       "id": "zu_warm"
     },
     {
       "trigger": "numeric_state",
       "entity_id": "[[zelt_temp]]",
-      "below": "sensor.trotec_temp_max_aktiv",
+      "below": "sensor.fork_entfeuchter_temp_max_aktiv",
       "id": "wieder_kuehl",
       "for": "00:05:00"
     },
@@ -58,14 +58,14 @@
     },
     {
       "trigger": "state",
-      "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+      "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
       "from": "on",
       "to": "off",
       "id": "modus_wechsel"
     },
     {
       "trigger": "state",
-      "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+      "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
       "from": "off",
       "to": "on",
       "id": "modus_wechsel"
@@ -115,7 +115,7 @@
                   "entity_id": "[[port_schalter]]",
                   "state": "On",
                   "for": {
-                    "minutes": "{{ states('input_number.trotec_mindestlaufzeit') | int(20) }}"
+                    "minutes": "{{ states('input_number.fork_entfeuchter_mindestlaufzeit') | int(20) }}"
                   }
                 }
               ]
@@ -150,7 +150,7 @@
             },
             {
               "condition": "state",
-              "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+              "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
               "state": "off"
             },
             {
@@ -191,7 +191,7 @@
                 {
                   "condition": "numeric_state",
                   "entity_id": "[[zelt_temp]]",
-                  "above": "sensor.trotec_temp_max_aktiv"
+                  "above": "sensor.fork_entfeuchter_temp_max_aktiv"
                 },
                 {
                   "condition": "and",
@@ -199,7 +199,7 @@
                     {
                       "condition": "numeric_state",
                       "entity_id": "[[zelt_rh]]",
-                      "below": "sensor.trotec_feuchte_aus_aktiv"
+                      "below": "sensor.fork_entfeuchter_feuchte_aus_aktiv"
                     },
                     {
                       "alias": "Mindestlaufzeit erreicht",
@@ -207,7 +207,7 @@
                       "entity_id": "[[port_schalter]]",
                       "state": "On",
                       "for": {
-                        "minutes": "{{ states('input_number.trotec_mindestlaufzeit') | int(20) }}"
+                        "minutes": "{{ states('input_number.fork_entfeuchter_mindestlaufzeit') | int(20) }}"
                       }
                     }
                   ]
@@ -247,7 +247,7 @@
                 },
                 {
                   "condition": "state",
-                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
                   "state": "on"
                 }
               ]
@@ -255,12 +255,12 @@
             {
               "condition": "numeric_state",
               "entity_id": "[[zelt_rh]]",
-              "above": "sensor.trotec_feuchte_ein_aktiv"
+              "above": "sensor.fork_entfeuchter_feuchte_ein_aktiv"
             },
             {
               "condition": "numeric_state",
               "entity_id": "[[zelt_temp]]",
-              "below": "sensor.trotec_temp_max_aktiv"
+              "below": "sensor.fork_entfeuchter_temp_max_aktiv"
             },
             {
               "condition": "state",
@@ -299,7 +299,7 @@
                 },
                 {
                   "condition": "state",
-                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
                   "state": "on"
                 }
               ]
@@ -307,7 +307,7 @@
             {
               "condition": "numeric_state",
               "entity_id": "[[zelt_temp]]",
-              "below": "sensor.trotec_temp_max_aktiv"
+              "below": "sensor.fork_entfeuchter_temp_max_aktiv"
             },
             {
               "alias": "Aussenluft bringt keinen Trockenvorteil",
@@ -365,7 +365,7 @@
                 },
                 {
                   "condition": "state",
-                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
                   "state": "on"
                 }
               ]
@@ -373,7 +373,7 @@
             {
               "condition": "numeric_state",
               "entity_id": "[[zelt_temp]]",
-              "below": "sensor.trotec_temp_max_aktiv"
+              "below": "sensor.fork_entfeuchter_temp_max_aktiv"
             },
             {
               "condition": "state",
@@ -412,23 +412,23 @@
                 },
                 {
                   "condition": "state",
-                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
                   "state": "on"
                 }
               ]
             },
             {
               "condition": "state",
-              "entity_id": "binary_sensor.trotec_feuchte_uber_ein",
+              "entity_id": "binary_sensor.fork_entfeuchter_feuchte_ueber_ein",
               "state": "on",
               "for": {
-                "minutes": "{{ states('input_number.trotec_einschaltverzoegerung') | int(10) }}"
+                "minutes": "{{ states('input_number.fork_entfeuchter_einschaltverzoegerung') | int(10) }}"
               }
             },
             {
               "condition": "numeric_state",
               "entity_id": "[[zelt_temp]]",
-              "below": "sensor.trotec_temp_max_aktiv"
+              "below": "sensor.fork_entfeuchter_temp_max_aktiv"
             },
             {
               "alias": "Aussenluft bringt keinen Trockenvorteil",
@@ -486,23 +486,23 @@
                 },
                 {
                   "condition": "state",
-                  "entity_id": "input_boolean.trotec_tagbetrieb_erlauben",
+                  "entity_id": "input_boolean.fork_entfeuchter_tagbetrieb_erlauben",
                   "state": "on"
                 }
               ]
             },
             {
               "condition": "state",
-              "entity_id": "binary_sensor.trotec_feuchte_uber_ein",
+              "entity_id": "binary_sensor.fork_entfeuchter_feuchte_ueber_ein",
               "state": "on",
               "for": {
-                "minutes": "{{ states('input_number.trotec_wartezeit_aussenluft') | int(25) }}"
+                "minutes": "{{ states('input_number.fork_entfeuchter_wartezeit_aussenluft') | int(25) }}"
               }
             },
             {
               "condition": "numeric_state",
               "entity_id": "[[zelt_temp]]",
-              "below": "sensor.trotec_temp_max_aktiv"
+              "below": "sensor.fork_entfeuchter_temp_max_aktiv"
             },
             {
               "condition": "state",

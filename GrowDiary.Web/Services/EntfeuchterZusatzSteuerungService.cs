@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Services;
 /// <remarks>
 /// <para><b>Geregelt wird in Home Assistant</b> (Vorlage
 /// <c>Vorlagen/entfeuchter-zusatz/regelung.json</c>, beim Nutzer die handgebaute
-/// <c>automation.rdwc_trotec_zelt_shelly_plan_regelung</c>). Der Fork schreibt
+/// <c>automation.zusatz_entfeuchter_regelung</c>). Der Fork schreibt
 /// nur die Helfer und schaltet die Automation.</para>
 ///
 /// <para><b>Speichern schreibt nur, was geändert wurde.</b> Das Gegenstück zum
@@ -54,18 +54,18 @@ public sealed class EntfeuchterZusatzSteuerungService
     /// <summary>Die Objekte der Steuerung selbst — sie gehören keinem Gerät (Katalog: <see cref="SteuerungBauteile"/>).</summary>
     public static class Entitaeten
     {
-        public const string VpdHysterese = "input_number.trotec_zelt_vpd_hysterese";
-        public const string Mindestlaufzeit = "input_number.trotec_zelt_mindestlaufzeit";
-        public const string Mindestpause = "input_number.trotec_zelt_mindestpause";
-        public const string FolgeAbstand = "input_number.trotec_zelt_folge_abstand";
-        public const string WiederEinAbstand = "input_number.trotec_zelt_wieder_ein_abstand";
-        public const string ZuschaltVerzoegerung = "input_number.trotec_zelt_zuschalt_verzogerung";
-        public const string Tagbetrieb = "input_boolean.trotec_zelt_tagbetrieb_erlauben";
-        public const string NachtDurchlaufen = "input_boolean.trotec_zelt_nacht_durchlaufen";
-        public const string Melden = "input_boolean.trotec_zelt_melden";
-        public const string MeldeGrenze = "input_number.trotec_zelt_melde_grenze_w";
-        public const string MeldeDauer = "input_number.trotec_zelt_melde_dauer_min";
-        public const string MeldeWiederholung = "input_number.trotec_zelt_melde_wiederholung_h";
+        public static string VpdHysterese => Kennungen.Id("input_number.fork_entfeuchter_zusatz_vpd_hysterese");
+        public static string Mindestlaufzeit => Kennungen.Id("input_number.fork_entfeuchter_zusatz_mindestlaufzeit");
+        public static string Mindestpause => Kennungen.Id("input_number.fork_entfeuchter_zusatz_mindestpause");
+        public static string FolgeAbstand => Kennungen.Id("input_number.fork_entfeuchter_zusatz_folge_abstand");
+        public static string WiederEinAbstand => Kennungen.Id("input_number.fork_entfeuchter_zusatz_wieder_ein_abstand");
+        public static string ZuschaltVerzoegerung => Kennungen.Id("input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung");
+        public static string Tagbetrieb => Kennungen.Id("input_boolean.fork_entfeuchter_zusatz_tagbetrieb_erlauben");
+        public static string NachtDurchlaufen => Kennungen.Id("input_boolean.fork_entfeuchter_zusatz_nacht_durchlaufen");
+        public static string Melden => Kennungen.Id("input_boolean.fork_entfeuchter_zusatz_melden");
+        public static string MeldeGrenze => Kennungen.Id("input_number.fork_entfeuchter_zusatz_melde_grenze_w");
+        public static string MeldeDauer => Kennungen.Id("input_number.fork_entfeuchter_zusatz_melde_dauer_min");
+        public static string MeldeWiederholung => Kennungen.Id("input_number.fork_entfeuchter_zusatz_melde_wiederholung_h");
     }
 
     private readonly SteuerungRepository _repo;
@@ -529,7 +529,7 @@ public sealed class EntfeuchterZusatzSteuerungService
 
     /// <summary>
     /// Unter welchen Entity-IDs die Regel-Automation in Home Assistant steht —
-    /// handgebaut (<c>automation.rdwc_trotec_zelt_shelly_plan_regelung</c>) oder vom
+    /// handgebaut (<c>automation.zusatz_entfeuchter_regelung</c>) oder vom
     /// Fork angelegt (Entity-ID aus dem Alias der Vorlage). Ohne Entitätenliste
     /// (Home Assistant antwortet nicht) die Katalog-Kennung; leer, wenn es sie nicht gibt.
     /// </summary>

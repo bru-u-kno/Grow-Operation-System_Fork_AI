@@ -26,7 +26,7 @@ export function bausteinModule(gewaehlt: Array<{ module: string[] }>, zusatz: bo
 
 /**
  * Welches Modul zuerst vollständig angelegt sein muss: Die Rechenwerte und die Regelung des Zusatz-Entfeuchters lesen
- * `sensor.trotec_temp_max_aktiv` und die VPD-Zielwerte des Entfeuchters. Entstehen sie vor ihnen — oder scheitert der
+ * `sensor.fork_entfeuchter_temp_max_aktiv` und die VPD-Zielwerte des Entfeuchters. Entstehen sie vor ihnen — oder scheitert der
  * Entfeuchter —, steht der Zusatz auf „nicht verfügbar" und seine Regelung schaltet nicht ein.
  */
 export const VORAUSSETZUNG: Readonly<Record<string, string>> = { 'entfeuchter-zusatz': 'entfeuchter' }

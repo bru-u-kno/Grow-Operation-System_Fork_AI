@@ -114,7 +114,7 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
 
   const subtitle = hatZusatz
     ? 'Haupt- und Zusatz-Entfeuchter arbeiten zusammen — geregelt in Home Assistant'
-    : 'Trotec am RDWC-Zelt — geregelt in Home Assistant'
+    : 'Entfeuchter im Zelt — geregelt in Home Assistant'
   const fehler = h.fehler ?? (hatZusatz ? z.fehler : null)
   const meldung = h.meldung ?? (hatZusatz ? z.meldung : null)
 

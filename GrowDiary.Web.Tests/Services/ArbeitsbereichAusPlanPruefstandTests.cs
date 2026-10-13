@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </summary>
 public sealed class ArbeitsbereichAusPlanPruefstandTests
 {
-    private const string FeuchteEinTag = "input_number.trotec_feuchte_ein_tag";
+    private const string FeuchteEinTag = "input_number.fork_entfeuchter_feuchte_ein_tag";
     private static string Helfer(ZusatzPruefstand p, string entitaet) =>
         p.Schreibaufrufe().LastOrDefault(a => a.Entitaet == entitaet && a.Dienst == "input_number/set_value").Daten["value"]?.ToString() ?? "(nicht geschrieben)";
 
@@ -44,9 +44,9 @@ public sealed class ArbeitsbereichAusPlanPruefstandTests
 
         Assert.Empty(fehler);
         Assert.Equal("50", Helfer(p, FeuchteEinTag));
-        Assert.Equal("46", Helfer(p, "input_number.trotec_feuchte_aus_tag"));
-        Assert.Equal("50", Helfer(p, "input_number.trotec_feuchte_ein"));
-        Assert.Equal("46", Helfer(p, "input_number.trotec_feuchte_aus"));
+        Assert.Equal("46", Helfer(p, "input_number.fork_entfeuchter_feuchte_aus_tag"));
+        Assert.Equal("50", Helfer(p, "input_number.fork_entfeuchter_feuchte_ein_nacht"));
+        Assert.Equal("46", Helfer(p, "input_number.fork_entfeuchter_feuchte_aus_nacht"));
         // Auch der gespeicherte Stand trägt sie — die Seite zeigt nach dem Speichern, was in Home Assistant liegt.
         Assert.Equal(50, gespeichert!.FeuchteEinTag);
         Assert.Equal(46, gespeichert.FeuchteAusNacht);
@@ -64,7 +64,7 @@ public sealed class ArbeitsbereichAusPlanPruefstandTests
         await p.Entfeuchter().SpeichernAsync(e, CancellationToken.None);
 
         Assert.Equal("58", Helfer(p, FeuchteEinTag));
-        Assert.Equal("54", Helfer(p, "input_number.trotec_feuchte_aus_tag"));
+        Assert.Equal("54", Helfer(p, "input_number.fork_entfeuchter_feuchte_aus_tag"));
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class ArbeitsbereichAusPlanPruefstandTests
 
         Assert.Equal(4, geschrieben);
         Assert.Equal("46", Helfer(p, FeuchteEinTag));
-        Assert.Equal("42", Helfer(p, "input_number.trotec_feuchte_aus_tag"));
+        Assert.Equal("42", Helfer(p, "input_number.fork_entfeuchter_feuchte_aus_tag"));
         // Der gespeicherte Stand folgt, sonst zeigte die Seite noch die alte Woche.
         var stand = p.Repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul)!;
         Assert.Equal(46, stand.FeuchteEinTag);

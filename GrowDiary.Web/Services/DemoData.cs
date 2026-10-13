@@ -130,7 +130,7 @@ public static class DemoData
     /// <summary>Der Zählerstand der Zusatz-Steckdose, in kWh.</summary>
     public const string ZusatzEnergie = "sensor.demo_zusatz_entfeuchter_energie";
 
-    /// <summary>Normalbetrieb eines Trotec: gemessen 300–335 W.</summary>
+    /// <summary>Normalbetrieb eines Raumentfeuchters: gemessen 300–335 W.</summary>
     private const double ZusatzBetriebW = 312;
 
     /// <summary>Beide Entfeuchter laufen in der Dunkelphase; am Tag nimmt die Lüftung die Feuchte mit.</summary>

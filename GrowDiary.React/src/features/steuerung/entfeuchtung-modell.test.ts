@@ -8,8 +8,8 @@ const modul = (kennung: string, titel: string, status: string, unterzeile = 'ber
 describe('Entfeuchtung als ein Eintrag (A-015)', () => {
   it('fasst Hauptentfeuchter und Zusatz an der Stelle des ersten zusammen', () => {
     const liste = mitEntfeuchtung([
-      modul('co2', 'CO₂', 'an'), modul('entfeuchter', 'RDWC Dehumi', 'an', 'entfeuchtet'),
-      modul('entfeuchter-zusatz', 'Dehumi Tent', 'aus', 'bereit'), modul('chiller', 'Chiller', 'an'),
+      modul('co2', 'CO₂', 'an'), modul('entfeuchter', 'Entfeuchter', 'an', 'entfeuchtet'),
+      modul('entfeuchter-zusatz', 'Zusatz-Entfeuchter', 'aus', 'bereit'), modul('chiller', 'Chiller', 'an'),
     ])
     expect(liste.map((m) => m.kennung)).toEqual(['co2', 'entfeuchtung', 'chiller'])
     const e = liste[1]
@@ -25,9 +25,9 @@ describe('Entfeuchtung als ein Eintrag (A-015)', () => {
   })
 
   it('ohne bekannten Zusatz bleibt es bei den Angaben des Hauptentfeuchters', () => {
-    const liste = mitEntfeuchtung([modul('entfeuchter', 'RDWC Dehumi', 'aus'), modul('entfeuchter-zusatz', 'Dehumi Tent', 'aus', 'Zustand unbekannt')])
+    const liste = mitEntfeuchtung([modul('entfeuchter', 'Entfeuchter', 'aus'), modul('entfeuchter-zusatz', 'Zusatz-Entfeuchter', 'aus', 'Zustand unbekannt')])
     expect(liste).toHaveLength(1)
-    expect(liste[0].kurz).toBe('kurz RDWC Dehumi')
+    expect(liste[0].kurz).toBe('kurz Entfeuchter')
     expect(liste[0].unterzeile).toBe('bereit')
   })
 

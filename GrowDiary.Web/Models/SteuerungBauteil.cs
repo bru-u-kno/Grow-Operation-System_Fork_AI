@@ -182,8 +182,31 @@ public static class SteuerungBauteile
     private static readonly string[] BrauchtStufe = { "port_stufe" };
     private static readonly string[] BrauchtZusatzLeistung = { "zusatz_leistung" };
 
-    /// <summary>Alle Bauteile aller Steuerungen.</summary>
-    public static IReadOnlyList<Bauteil> Alle { get; } = new Bauteil[]
+    /// <summary>
+    /// Alle Bauteile aller Steuerungen im Namensraum dieser Installation (<see cref="Kennungen.Raum"/>).
+    /// </summary>
+    public static IReadOnlyList<Bauteil> Alle => FuerRaum(Kennungen.Raum);
+
+    private static readonly Lazy<IReadOnlyList<Bauteil>> BestandListe = new(() => Umgesetzt(Basis, KennungsRaum.Bestand));
+
+    /// <summary>
+    /// Fork AI (forkai.217): Der Katalog in einem Namensraum. <see cref="KennungsRaum.Neu"/> ist die Grundliste; im
+    /// <see cref="KennungsRaum.Bestand"/> tragen die umbenannten Bauteile ihre alten Kennungen und Namen, und die
+    /// Rechenvorschriften verweisen auf die alten Kennungen.
+    /// </summary>
+    public static IReadOnlyList<Bauteil> FuerRaum(KennungsRaum raum)
+        => raum == KennungsRaum.Neu ? Basis : BestandListe.Value;
+
+    private static IReadOnlyList<Bauteil> Umgesetzt(IReadOnlyList<Bauteil> basis, KennungsRaum raum)
+        => basis.Select(b => b with
+        {
+            EntityId = Kennungen.Id(b.EntityId, raum),
+            Name = Kennungen.Name(b.EntityId, b.Name, raum),
+            Vorlage = b.Vorlage is null ? null : Kennungen.Uebersetzen(b.Vorlage, raum),
+            Verfuegbarkeit = b.Verfuegbarkeit is null ? null : Kennungen.Uebersetzen(b.Verfuegbarkeit, raum),
+        }).ToList();
+
+    private static readonly IReadOnlyList<Bauteil> Basis = new Bauteil[]
     {
         // --- Ziel ---------------------------------------------------------
         new(Co2, "input_number.co2_zielwert", "CO2 Zielwert", BauteilArt.Zahl,
@@ -482,29 +505,29 @@ public static class SteuerungBauteile
         // nicht hier. Die Rechenwerte (EIN/AUS/Temp max. aktiv) und die
         // Automation haben noch keine Vorlage für Neuanlagen — offen in F-023.
         // ====================================================================
-        new(Entfeuchter, "input_boolean.trotec_vpd_regelung", "Trotec VPD Regelung", BauteilArt.Schalter,
+        new(Entfeuchter, "input_boolean.fork_entfeuchter_vpd_regelung", "Fork Entfeuchter VPD Regelung", BauteilArt.Schalter,
             "An: Schwellen wandern mit Temperatur und VPD-Band. Aus: feste Schwellen."),
-        new(Entfeuchter, "input_number.trotec_hysterese", "Trotec Hysterese", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_hysterese", "Fork Entfeuchter Hysterese", BauteilArt.Zahl,
             "Wie weit die Feuchte unter EIN fallen muss, bevor er ausgeht.", Min: 1, Max: 10, Schritt: 0.5, Einheit: "%"),
-        new(Entfeuchter, "input_number.trotec_mindestlaufzeit", "Trotec Mindestlaufzeit", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_mindestlaufzeit", "Fork Entfeuchter Mindestlaufzeit", BauteilArt.Zahl,
             "Vorher schaltet ihn erreichte Feuchte nicht ab.", Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
-        new(Entfeuchter, "input_number.trotec_einschaltverzoegerung", "Trotec Einschaltverzoegerung", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_einschaltverzoegerung", "Fork Entfeuchter Einschaltverzoegerung", BauteilArt.Zahl,
             "So lange muss die Feuchte über EIN liegen, bevor er anspringt.", Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
-        new(Entfeuchter, "input_number.trotec_wartezeit_aussenluft", "Trotec Wartezeit Aussenluft", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_wartezeit_aussenluft", "Fork Entfeuchter Wartezeit Aussenluft", BauteilArt.Zahl,
             "Wartezeit, solange die Zuluft trocknet.", Min: 0, Max: 120, Schritt: 1, Einheit: "min"),
-        new(Entfeuchter, "input_boolean.trotec_tagbetrieb_erlauben", "Trotec Tagbetrieb erlauben", BauteilArt.Schalter,
+        new(Entfeuchter, "input_boolean.fork_entfeuchter_tagbetrieb_erlauben", "Fork Entfeuchter Tagbetrieb erlauben", BauteilArt.Schalter,
             "Aus: nur in der Dunkelphase."),
-        new(Entfeuchter, "input_number.trotec_temp_max_tag", "Trotec Temp max Tag", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_temp_max_tag", "Fork Entfeuchter Temp max Tag", BauteilArt.Zahl,
             "Darüber geht er tagsüber aus.", Min: 15, Max: 35, Schritt: 0.5, Einheit: "°C"),
-        new(Entfeuchter, "input_number.trotec_temp_max", "Trotec Temp max", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_temp_max_nacht", "Fork Entfeuchter Temp max Nacht", BauteilArt.Zahl,
             "Darüber geht er nachts aus.", Min: 15, Max: 35, Schritt: 0.5, Einheit: "°C"),
-        new(Entfeuchter, "input_number.trotec_feuchte_ein_tag", "Trotec Feuchte EIN Tag", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_feuchte_ein_tag", "Fork Entfeuchter Feuchte EIN Tag", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung.", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
-        new(Entfeuchter, "input_number.trotec_feuchte_aus_tag", "Trotec Feuchte AUS Tag", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_feuchte_aus_tag", "Fork Entfeuchter Feuchte AUS Tag", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung.", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
-        new(Entfeuchter, "input_number.trotec_feuchte_ein", "Trotec Feuchte EIN", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_feuchte_ein_nacht", "Fork Entfeuchter Feuchte EIN Nacht", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
-        new(Entfeuchter, "input_number.trotec_feuchte_aus", "Trotec Feuchte AUS", BauteilArt.Zahl,
+        new(Entfeuchter, "input_number.fork_entfeuchter_feuchte_aus_nacht", "Fork Entfeuchter Feuchte AUS Nacht", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung (Nacht).", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
         // --- Plan-Zielwerte (Fork AI, A-016) --------------------------------
         // Die Zielwerte, die der Wochenplan schreibt (WochenplanSyncService). Bisher wurden sie
@@ -524,70 +547,70 @@ public static class SteuerungBauteile
         // Die aktiven Schwellen: je nach Licht die Tag- oder Nachtwerte, bei eingeschalteter
         // VPD-Regelung aus dem VPD-Band des Plans. Der Deckel (Feuchte-Obergrenze minus Hysterese)
         // kommt aus den CO₂-Helfern, sofern es sie gibt — ohne sie gilt kein Deckel (100 %).
-        new(Entfeuchter, "sensor.trotec_feuchte_ein_aktiv", "Trotec Feuchte EIN aktiv", BauteilArt.RechenSensor,
+        new(Entfeuchter, "sensor.fork_entfeuchter_feuchte_ein_aktiv", "Fork Entfeuchter Feuchte EIN aktiv", BauteilArt.RechenSensor,
             "Ab welcher Zeltfeuchte der Entfeuchter einschaltet — gerade gültig für Tag oder Nacht.",
             Einheit: "%", Zustandsklasse: "measurement",
-            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set fest = states('input_number.trotec_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.trotec_feuchte_ein') | float(62) %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% if is_state('input_boolean.trotec_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ziel = states('input_number.vpd_ziel_unten') | float(1.2) %}{% set ein = [ [ ((svb - ziel) / svl * 100), 45 ] | max, 85 ] | min %}{{ [ein, deckel] | min | round(1) }}{% elif led in ['on','off'] %}{{ [fest, deckel] | min }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.trotec_feuchte_ein') | float(62) }}{% endif %}"),
-        new(Entfeuchter, "sensor.trotec_feuchte_aus_aktiv", "Trotec Feuchte AUS aktiv", BauteilArt.RechenSensor,
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set fest = states('input_number.fork_entfeuchter_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.fork_entfeuchter_feuchte_ein_nacht') | float(62) %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% if is_state('input_boolean.fork_entfeuchter_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ziel = states('input_number.vpd_ziel_unten') | float(1.2) %}{% set ein = [ [ ((svb - ziel) / svl * 100), 45 ] | max, 85 ] | min %}{{ [ein, deckel] | min | round(1) }}{% elif led in ['on','off'] %}{{ [fest, deckel] | min }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.fork_entfeuchter_feuchte_ein_nacht') | float(62) }}{% endif %}"),
+        new(Entfeuchter, "sensor.fork_entfeuchter_feuchte_aus_aktiv", "Fork Entfeuchter Feuchte AUS aktiv", BauteilArt.RechenSensor,
             "Bei welcher Zeltfeuchte der Entfeuchter wieder ausschaltet (mindestens die Hysterese unter EIN).",
             Einheit: "%", Zustandsklasse: "measurement",
-            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set hyst = states('input_number.trotec_hysterese') | float(4) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% set fest_ein = states('input_number.trotec_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.trotec_feuchte_ein') | float(62) %}{% set fest_aus = states('input_number.trotec_feuchte_aus_tag') | float(57) if led == 'on' else states('input_number.trotec_feuchte_aus') | float(60) %}{% if is_state('input_boolean.trotec_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ein_roh = [ [ ((svb - (states('input_number.vpd_ziel_unten') | float(1.2))) / svl * 100), 45 ] | max, 85 ] | min %}{% set ein = [ein_roh, deckel] | min %}{% set aus = ((svb - (states('input_number.vpd_ziel_abschaltung') | float(1.3))) / svl * 100) %}{{ [ [ aus, ein - hyst ] | min, 35 ] | max | round(1) }}{% elif led in ['on','off'] %}{{ [ fest_aus, [fest_ein, deckel] | min - hyst ] | min | round(1) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.trotec_feuchte_aus') | float(60) }}{% endif %}"),
-        new(Entfeuchter, "sensor.trotec_temp_max_aktiv", "Trotec Temp Max aktiv", BauteilArt.RechenSensor,
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set hyst = states('input_number.fork_entfeuchter_hysterese') | float(4) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% set fest_ein = states('input_number.fork_entfeuchter_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.fork_entfeuchter_feuchte_ein_nacht') | float(62) %}{% set fest_aus = states('input_number.fork_entfeuchter_feuchte_aus_tag') | float(57) if led == 'on' else states('input_number.fork_entfeuchter_feuchte_aus_nacht') | float(60) %}{% if is_state('input_boolean.fork_entfeuchter_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ein_roh = [ [ ((svb - (states('input_number.vpd_ziel_unten') | float(1.2))) / svl * 100), 45 ] | max, 85 ] | min %}{% set ein = [ein_roh, deckel] | min %}{% set aus = ((svb - (states('input_number.vpd_ziel_abschaltung') | float(1.3))) / svl * 100) %}{{ [ [ aus, ein - hyst ] | min, 35 ] | max | round(1) }}{% elif led in ['on','off'] %}{{ [ fest_aus, [fest_ein, deckel] | min - hyst ] | min | round(1) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.fork_entfeuchter_feuchte_aus_nacht') | float(60) }}{% endif %}"),
+        new(Entfeuchter, "sensor.fork_entfeuchter_temp_max_aktiv", "Fork Entfeuchter Temp Max aktiv", BauteilArt.RechenSensor,
             "Die gerade gültige Höchsttemperatur — Tag- oder Nachtwert, je nach Licht.",
             Einheit: "°C", Zustandsklasse: "measurement",
-            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% if led == 'on' %}{{ states('input_number.trotec_temp_max_tag') | float(28.5) }}{% elif led == 'off' %}{{ states('input_number.trotec_temp_max') | float(30) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.trotec_temp_max') | float(30) }}{% endif %}"),
-        new(Entfeuchter, "binary_sensor.trotec_feuchte_uber_ein", "Trotec Feuchte uber EIN", BauteilArt.RechenSchalter,
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% if led == 'on' %}{{ states('input_number.fork_entfeuchter_temp_max_tag') | float(28.5) }}{% elif led == 'off' %}{{ states('input_number.fork_entfeuchter_temp_max_nacht') | float(30) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.fork_entfeuchter_temp_max_nacht') | float(30) }}{% endif %}"),
+        new(Entfeuchter, "binary_sensor.fork_entfeuchter_feuchte_ueber_ein", "Fork Entfeuchter Feuchte ueber EIN", BauteilArt.RechenSchalter,
             "An, solange die Zeltfeuchte über der Einschaltschwelle liegt. Die Regelung misst daran, wie lange schon.",
-            Vorlage: "{{ states('[[zelt_rh]]') | float(0) > states('sensor.trotec_feuchte_ein_aktiv') | float(100) }}"),
+            Vorlage: "{{ states('[[zelt_rh]]') | float(0) > states('sensor.fork_entfeuchter_feuchte_ein_aktiv') | float(100) }}"),
 
-        new(Entfeuchter, "automation.rdwc_trotec_nachtregelung_port_7_dehumi", "RDWC Trotec Regelung", BauteilArt.Automation,
+        new(Entfeuchter, "automation.entfeuchter_regelung_tag_nacht", "Entfeuchter Regelung Tag/Nacht", BauteilArt.Automation,
             "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft.",
             VorlagenDatei: "regelung", Probelauf: ProbelaufRolle.Pausieren),
 
         // ====================================================================
-        // Zusatz-Entfeuchter — Fork AI (A-009). Ein zweiter Trotec an einer
+        // Zusatz-Entfeuchter — Fork AI (A-009). Ein zweiter Entfeuchter an einer
         // Shelly-Steckdose, Folgegerät neben dem Entfeuchter. Die Höchsttemperatur
-        // und die Plan-Schwellen (sensor.trotec_temp_max_aktiv, vpd_ziel_*,
-        // sensor.trotec_feuchte_*_aktiv) gehören dem Entfeuchter und dem Plan und
+        // und die Plan-Schwellen (sensor.fork_entfeuchter_temp_max_aktiv, vpd_ziel_*,
+        // sensor.fork_entfeuchter_feuchte_*_aktiv) gehören dem Entfeuchter und dem Plan und
         // stehen deshalb NICHT hier: die Vorlagen lesen sie nur.
         // Die Helfer-Kennungen sind die, die beim Nutzer schon laufen.
         // ====================================================================
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_vpd_hysterese", "Trotec Zelt VPD Hysterese", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_vpd_hysterese", "Fork Entfeuchter Zusatz VPD Hysterese", BauteilArt.Zahl,
             "Abstand des VPD-Bands um das Plan-Ziel: EIN unter Ziel minus Wert, AUS über Ziel plus Wert.",
             Min: 0.05, Max: 0.6, Schritt: 0.05, Einheit: "kPa"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_mindestlaufzeit", "Trotec Zelt Mindestlaufzeit", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_mindestlaufzeit", "Fork Entfeuchter Zusatz Mindestlaufzeit", BauteilArt.Zahl,
             "Vorher schaltet ihn erreichter VPD oder erreichte Feuchte nicht ab. Übertemperatur schon.",
             Min: 1, Max: 120, Schritt: 1, Einheit: "min"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_mindestpause", "Trotec Zelt Mindestpause", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_mindestpause", "Fork Entfeuchter Zusatz Mindestpause", BauteilArt.Zahl,
             "So lange bleibt er nach dem Ausschalten mindestens aus (Kompressorschutz).",
             Min: 1, Max: 120, Schritt: 1, Einheit: "min"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_folge_abstand", "Trotec Zelt Folge Abstand", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_folge_abstand", "Fork Entfeuchter Zusatz Folge Abstand", BauteilArt.Zahl,
             "Der Zusatz geht so viel früher aus als die Höchsttemperatur — nur wenn das Führungsgerät läuft.",
             Min: 0.5, Max: 3, Schritt: 0.5, Einheit: "K"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_wieder_ein_abstand", "Trotec Zelt Wieder Ein Abstand", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_wieder_ein_abstand", "Fork Entfeuchter Zusatz Wieder Ein Abstand", BauteilArt.Zahl,
             "Wieder an erst so viel unter der Folge-AUS-Temperatur.",
             Min: 0.5, Max: 3, Schritt: 0.5, Einheit: "K"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_zuschalt_verzogerung", "Trotec Zelt Zuschalt Verzogerung", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung", "Fork Entfeuchter Zusatz Zuschalt Verzogerung", BauteilArt.Zahl,
             "So lange muss das Führungsgerät laufen, bevor der Zusatz zuschaltet. Läuft es nicht, startet der Zusatz sofort.",
             Min: 0, Max: 60, Schritt: 1, Einheit: "min"),
-        new(EntfeuchterZusatz, "input_boolean.trotec_zelt_tagbetrieb_erlauben", "Trotec Zelt Tagbetrieb erlauben", BauteilArt.Schalter,
+        new(EntfeuchterZusatz, "input_boolean.fork_entfeuchter_zusatz_tagbetrieb_erlauben", "Fork Entfeuchter Zusatz Tagbetrieb erlauben", BauteilArt.Schalter,
             "Aus: nur in der Dunkelphase."),
-        new(EntfeuchterZusatz, "input_boolean.trotec_zelt_nacht_durchlaufen", "Trotec Zelt Nacht durchlaufen", BauteilArt.Schalter,
+        new(EntfeuchterZusatz, "input_boolean.fork_entfeuchter_zusatz_nacht_durchlaufen", "Fork Entfeuchter Zusatz Nacht durchlaufen", BauteilArt.Schalter,
             "An: nachts läuft er, bis das Zelt zu warm wird — ohne Feuchte-Schwellen."),
 
         // --- Meldung „zieht nichts" -----------------------------------------
-        new(EntfeuchterZusatz, "input_boolean.trotec_zelt_melden", "Trotec Zelt Melden", BauteilArt.Schalter,
+        new(EntfeuchterZusatz, "input_boolean.fork_entfeuchter_zusatz_melden", "Fork Entfeuchter Zusatz Melden", BauteilArt.Schalter,
             "Melden, wenn der Zusatz an ist, aber nichts zieht (z. B. voller Tank).",
             Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“."),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_melde_grenze_w", "Trotec Zelt Melde Grenze W", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_melde_grenze_w", "Fork Entfeuchter Zusatz Melde Grenze W", BauteilArt.Zahl,
             "Darunter zieht er nichts. Normalbetrieb gemessen 300 bis 335 W.",
             Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.",
             Min: 5, Max: 200, Schritt: 5, Einheit: "W"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_melde_dauer_min", "Trotec Zelt Melde Dauer Min", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_melde_dauer_min", "Fork Entfeuchter Zusatz Melde Dauer Min", BauteilArt.Zahl,
             "So lange muss es bestehen, bevor gemeldet wird.",
             Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.",
             Min: 1, Max: 60, Schritt: 1, Einheit: "min"),
-        new(EntfeuchterZusatz, "input_number.trotec_zelt_melde_wiederholung_h", "Trotec Zelt Melde Wiederholung H", BauteilArt.Zahl,
+        new(EntfeuchterZusatz, "input_number.fork_entfeuchter_zusatz_melde_wiederholung_h", "Fork Entfeuchter Zusatz Melde Wiederholung H", BauteilArt.Zahl,
             "Wiederholung, solange es besteht.",
             Pflicht: false, HaengtAn: BrauchtZusatzLeistung, OhneDas: "Ohne Leistungsmesser gibt es keine Meldung „zieht nichts“.",
             Min: 1, Max: 24, Schritt: 1, Einheit: "h"),
@@ -596,32 +619,32 @@ public static class SteuerungBauteile
         // Alle vier lesen, was der Plan und der Entfeuchter liefern; fehlt eines
         // davon, sind sie „nicht verfügbar" — und die Regelung schaltet dann
         // nicht ein (numeric_state gegen eine fehlende Entität ist falsch).
-        new(EntfeuchterZusatz, "sensor.trotec_zelt_vpd_ein_schwelle", "Trotec Zelt VPD EIN Schwelle", BauteilArt.RechenSensor,
+        new(EntfeuchterZusatz, "sensor.fork_entfeuchter_zusatz_vpd_ein_schwelle", "Fork Entfeuchter Zusatz VPD EIN Schwelle", BauteilArt.RechenSensor,
             "Tag: EIN unter dieser VPD — Plan-Ziel unten minus Hysterese.",
             Einheit: "kPa", Zustandsklasse: "measurement",
-            Vorlage: "{{ (states('input_number.vpd_ziel_unten') | float - states('input_number.trotec_zelt_vpd_hysterese') | float) | round(2) }}",
-            Verfuegbarkeit: "{{ has_value('input_number.vpd_ziel_unten') and has_value('input_number.trotec_zelt_vpd_hysterese') }}"),
-        new(EntfeuchterZusatz, "sensor.trotec_zelt_vpd_aus_schwelle", "Trotec Zelt VPD AUS Schwelle", BauteilArt.RechenSensor,
+            Vorlage: "{{ (states('input_number.vpd_ziel_unten') | float - states('input_number.fork_entfeuchter_zusatz_vpd_hysterese') | float) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('input_number.vpd_ziel_unten') and has_value('input_number.fork_entfeuchter_zusatz_vpd_hysterese') }}"),
+        new(EntfeuchterZusatz, "sensor.fork_entfeuchter_zusatz_vpd_aus_schwelle", "Fork Entfeuchter Zusatz VPD AUS Schwelle", BauteilArt.RechenSensor,
             "Tag: AUS über dieser VPD — Plan-Ziel Abschaltung plus Hysterese.",
             Einheit: "kPa", Zustandsklasse: "measurement",
-            Vorlage: "{{ (states('input_number.vpd_ziel_abschaltung') | float + states('input_number.trotec_zelt_vpd_hysterese') | float) | round(2) }}",
-            Verfuegbarkeit: "{{ has_value('input_number.vpd_ziel_abschaltung') and has_value('input_number.trotec_zelt_vpd_hysterese') }}"),
-        new(EntfeuchterZusatz, "sensor.trotec_zelt_folge_aus_temperatur", "Trotec Zelt Folge AUS Temperatur", BauteilArt.RechenSensor,
+            Vorlage: "{{ (states('input_number.vpd_ziel_abschaltung') | float + states('input_number.fork_entfeuchter_zusatz_vpd_hysterese') | float) | round(2) }}",
+            Verfuegbarkeit: "{{ has_value('input_number.vpd_ziel_abschaltung') and has_value('input_number.fork_entfeuchter_zusatz_vpd_hysterese') }}"),
+        new(EntfeuchterZusatz, "sensor.fork_entfeuchter_zusatz_folge_aus_temperatur", "Fork Entfeuchter Zusatz Folge AUS Temperatur", BauteilArt.RechenSensor,
             "Darüber geht der Zusatz aus, solange das Führungsgerät läuft: aktive Höchsttemperatur minus Folge-Abstand.",
             Einheit: "°C", Zustandsklasse: "measurement",
-            Vorlage: "{{ (states('sensor.trotec_temp_max_aktiv') | float - states('input_number.trotec_zelt_folge_abstand') | float) | round(1) }}",
-            Verfuegbarkeit: "{{ has_value('sensor.trotec_temp_max_aktiv') and has_value('input_number.trotec_zelt_folge_abstand') }}"),
-        new(EntfeuchterZusatz, "sensor.trotec_zelt_wieder_ein_temperatur", "Trotec Zelt Wieder EIN Temperatur", BauteilArt.RechenSensor,
+            Vorlage: "{{ (states('sensor.fork_entfeuchter_temp_max_aktiv') | float - states('input_number.fork_entfeuchter_zusatz_folge_abstand') | float) | round(1) }}",
+            Verfuegbarkeit: "{{ has_value('sensor.fork_entfeuchter_temp_max_aktiv') and has_value('input_number.fork_entfeuchter_zusatz_folge_abstand') }}"),
+        new(EntfeuchterZusatz, "sensor.fork_entfeuchter_zusatz_wieder_ein_temperatur", "Fork Entfeuchter Zusatz Wieder EIN Temperatur", BauteilArt.RechenSensor,
             "Wieder an erst darunter: Folge-AUS-Temperatur minus Wieder-ein-Abstand.",
             Einheit: "°C", Zustandsklasse: "measurement",
-            Vorlage: "{{ (states('sensor.trotec_zelt_folge_aus_temperatur') | float - states('input_number.trotec_zelt_wieder_ein_abstand') | float) | round(1) }}",
-            Verfuegbarkeit: "{{ has_value('sensor.trotec_zelt_folge_aus_temperatur') and has_value('input_number.trotec_zelt_wieder_ein_abstand') }}"),
+            Vorlage: "{{ (states('sensor.fork_entfeuchter_zusatz_folge_aus_temperatur') | float - states('input_number.fork_entfeuchter_zusatz_wieder_ein_abstand') | float) | round(1) }}",
+            Verfuegbarkeit: "{{ has_value('sensor.fork_entfeuchter_zusatz_folge_aus_temperatur') and has_value('input_number.fork_entfeuchter_zusatz_wieder_ein_abstand') }}"),
 
         // --- Automationen ---------------------------------------------------
         // Die Regelung steht beim Nutzer handgebaut unter dieser Kennung; eine vom
         // Fork angelegte heißt automation.zusatz_entfeuchter_regelung und wird
         // über ihre Konfigurations-Kennung gefunden.
-        new(EntfeuchterZusatz, "automation.rdwc_trotec_zelt_shelly_plan_regelung", "Zusatz-Entfeuchter Regelung", BauteilArt.Automation,
+        new(EntfeuchterZusatz, "automation.zusatz_entfeuchter_regelung", "Zusatz-Entfeuchter Regelung", BauteilArt.Automation,
             "Schaltet den Zusatz-Entfeuchter nach dem Plan — und nie so, dass beide Entfeuchter gleichzeitig ausgehen.",
             VorlagenDatei: "regelung",
             Probelauf: ProbelaufRolle.Pausieren),
@@ -688,7 +711,9 @@ public static class SteuerungBauteile
     /// </remarks>
     public static string? VorlageFuellen(string vorlage, IReadOnlyDictionary<string, string> zuordnung)
     {
-        var fertig = vorlage;
+        // Fork AI (forkai.217): Die Vorlagen nennen die Objekte des Forks mit ihren neuen Kennungen;
+        // im Bestand werden daraus die alten. Rollen-Platzhalter bleiben davon unberührt.
+        var fertig = Kennungen.Uebersetzen(vorlage, Kennungen.Raum);
         foreach (var (rolle, entity) in zuordnung)
         {
             // Nur echte Entity-IDs. Eingesetzt wird roh in JSON- und Jinja-Text;

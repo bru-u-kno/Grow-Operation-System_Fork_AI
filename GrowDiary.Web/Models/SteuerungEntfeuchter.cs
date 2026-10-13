@@ -1,7 +1,7 @@
 namespace GrowDiary.Web.Models;
 
 /// <summary>
-/// Fork AI (forkai.129, F-023): Der Entfeuchter (Trotec am AC-Infinity-Port) als
+/// Fork AI (forkai.129, F-023): Der Entfeuchter (an einem Schaltport) als
 /// Leitstand im Fork.
 /// </summary>
 /// <remarks>
@@ -14,7 +14,7 @@ namespace GrowDiary.Web.Models;
 ///
 /// <para><b>Geregelt wird in Home Assistant.</b> Ein Kompressor darf nicht davon
 /// abhängen, ob dieses Add-on gerade neu startet. Der Fork schreibt die Helfer
-/// <c>input_number.trotec_*</c> / <c>input_boolean.trotec_*</c>.</para>
+/// <c>input_number.fork_entfeuchter_*</c> / <c>input_boolean.fork_entfeuchter_*</c> (im Bestand die alten <c>trotec_*</c>, siehe <see cref="Kennungen"/>).</para>
 /// </remarks>
 public sealed class EntfeuchterEinstellungen
 {
@@ -39,7 +39,7 @@ public sealed class EntfeuchterEinstellungen
     /// <summary>Aus hält die Regelung an; der Port bleibt, wie er ist. Einziger Aus-Knopf.</summary>
     public bool AutomatikAktiv { get; set; } = true;
 
-    // --- Temperatur max. (Geräteschutz: der Trotec gibt Wärme ab) ------------
+    // --- Temperatur max. (Geräteschutz: das Gerät gibt Wärme ab) ------------
 
     /// <summary><c>plan</c> = Plan-Luft + Abstand, <c>fest</c> = eigener Wert.</summary>
     public string TempMaxTagModus { get; set; } = TempMaxModus.Fest;

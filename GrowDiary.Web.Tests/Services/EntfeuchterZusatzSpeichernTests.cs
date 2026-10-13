@@ -20,7 +20,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
 
     public void Dispose() => _stand.Dispose();
 
-    private const string FolgeAbstand = EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand;
+    private static string FolgeAbstand => EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand;
 
     [Fact]
     public async Task ErsterAufruf_UebernimmtDieHelferUndSchreibtNichtsNachHomeAssistant()
@@ -228,7 +228,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Equal(new[]
         {
             // Die Stärke steht im Body, also wird auch der Zustand der Regelung (an) geschrieben.
-            "automation.rdwc_trotec_zelt_shelly_plan_regelung",
+            "automation.zusatz_entfeuchter_regelung",
             EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand,
             EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause,
             EntfeuchterZusatzSteuerungService.Entitaeten.VpdHysterese,
@@ -249,7 +249,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Empty(fehlerAus);
         Assert.Equal(EntfeuchterZusatzHilfe.Aus, EntfeuchterZusatzHilfe.Erkennen(aus!));
         var aufrufe = _stand.Schreibaufrufe();
-        Assert.Contains(aufrufe, a => a.Dienst == "automation/turn_off" && a.Entitaet == "automation.rdwc_trotec_zelt_shelly_plan_regelung");
+        Assert.Contains(aufrufe, a => a.Dienst == "automation/turn_off" && a.Entitaet == "automation.zusatz_entfeuchter_regelung");
         Assert.Contains(aufrufe, a => a.Dienst == "switch/turn_off" && a.Entitaet == "switch.zusatz_entfeuchter");
         // Die Einzelwerte bleiben, wie sie waren.
         Assert.Empty(aufrufe.Where(a => a.Dienst.StartsWith("input_number", StringComparison.Ordinal)));
@@ -263,7 +263,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         var (wieder, _, _) = await dienst.SpeichernAsync(
             new EntfeuchterZusatzAenderung { Hilfe = EntfeuchterZusatzHilfe.Normal }, CancellationToken.None);
         Assert.Equal(EntfeuchterZusatzHilfe.Normal, EntfeuchterZusatzHilfe.Erkennen(wieder!));
-        Assert.Contains(_stand.Schreibaufrufe(), a => a.Dienst == "automation/turn_on" && a.Entitaet == "automation.rdwc_trotec_zelt_shelly_plan_regelung");
+        Assert.Contains(_stand.Schreibaufrufe(), a => a.Dienst == "automation/turn_on" && a.Entitaet == "automation.zusatz_entfeuchter_regelung");
     }
 
     [Fact]
@@ -300,9 +300,11 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
     }
 
     [Fact]
-    public async Task AutomatikAusUndWieder_SchaltetDieHandgebauteUndDieVomForkAngelegte()
+    public async Task AutomatikAusUndWieder_SchaltetDieVomForkAngelegteGenauEinmal()
     {
-        // Eine vom Fork angelegte Regelung heißt anders — sie wird über ihre Konfigurations-Kennung gefunden.
+        // Im neuen Namensraum ist die Katalog-Kennung die der vom Fork angelegten Regelung; sie wird zusätzlich über
+        // ihre Konfigurations-Kennung gefunden und darf trotzdem nur einmal geschaltet werden. Dass im Bestand beide
+        // Wege zwei verschiedene Entitäten ergeben, belegen die Tests in KennungsRaumTests.
         _stand.Setze("automation.zusatz_entfeuchter_regelung", "on", kennung: "fork_ai_entfeuchter-zusatz_regelung");
         var dienst = _stand.Zusatz();
         await dienst.EinstellungenAsync(CancellationToken.None);
@@ -311,7 +313,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         await dienst.SpeichernAsync(new EntfeuchterZusatzAenderung { AutomatikAktiv = false }, CancellationToken.None);
 
         var geschaltet = _stand.Schreibaufrufe().Where(a => a.Dienst == "automation/turn_off").Select(a => a.Entitaet).Order().ToList();
-        Assert.Equal(["automation.rdwc_trotec_zelt_shelly_plan_regelung", "automation.zusatz_entfeuchter_regelung"], geschaltet);
+        Assert.Equal(["automation.zusatz_entfeuchter_regelung"], geschaltet);
     }
 
     [Fact]

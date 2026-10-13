@@ -508,17 +508,17 @@ test('Namen: die Geräte-Seite zeigt die Namen mit Vorgabe, speichert nur den ge
   await expect(knopf).toBeDisabled()
 
   // Durchgang 1: nur der Zusatz.
-  await zwei.fill('Zelt-Trotec')
+  await zwei.fill('Zelt-Entfeuchter')
   await knopf.click()
   await expect(page.getByText('Gespeichert.')).toBeVisible()
-  expect(puts).toEqual([{ zusatz: 'Zelt-Trotec' }])
+  expect(puts).toEqual([{ zusatz: 'Zelt-Entfeuchter' }])
   await expect(knopf).toBeDisabled()
 
   // Durchgang 2, ohne Neuladen: nur die Führung — der Zusatz steht schon in der Antwort und fehlt im Körper.
   await eins.fill('Hauptgerät')
   await knopf.click()
   await expect(knopf).toBeDisabled()
-  expect(puts).toEqual([{ zusatz: 'Zelt-Trotec' }, { fuehrung: 'Hauptgerät' }])
+  expect(puts).toEqual([{ zusatz: 'Zelt-Entfeuchter' }, { fuehrung: 'Hauptgerät' }])
 
   // Zurück auf die Vorgabe: leer geschickt.
   await page.locator('.st-feldzeile', { hasText: 'Entfeuchter 2 · Zusatz' }).getByRole('button', { name: 'Vorgabe', exact: true }).click()

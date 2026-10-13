@@ -41,24 +41,24 @@ public sealed class EntfeuchterSteuerungService
     /// <summary>Die Objekte der Steuerung selbst — sie gehören keinem Gerät.</summary>
     public static class Entitaeten
     {
-        public const string VpdRegelung = "input_boolean.trotec_vpd_regelung";
-        public const string Hysterese = "input_number.trotec_hysterese";
-        public const string Mindestlaufzeit = "input_number.trotec_mindestlaufzeit";
-        public const string Einschaltverzoegerung = "input_number.trotec_einschaltverzoegerung";
-        public const string WartezeitAussenluft = "input_number.trotec_wartezeit_aussenluft";
-        public const string Tagbetrieb = "input_boolean.trotec_tagbetrieb_erlauben";
-        public const string TempMaxTag = "input_number.trotec_temp_max_tag";
-        public const string TempMaxNacht = "input_number.trotec_temp_max";
-        public const string FeuchteEinTag = "input_number.trotec_feuchte_ein_tag";
-        public const string FeuchteAusTag = "input_number.trotec_feuchte_aus_tag";
-        public const string FeuchteEinNacht = "input_number.trotec_feuchte_ein";
-        public const string FeuchteAusNacht = "input_number.trotec_feuchte_aus";
-        public const string Automatik = "automation.rdwc_trotec_nachtregelung_port_7_dehumi";
+        public static string VpdRegelung => Kennungen.Id("input_boolean.fork_entfeuchter_vpd_regelung");
+        public static string Hysterese => Kennungen.Id("input_number.fork_entfeuchter_hysterese");
+        public static string Mindestlaufzeit => Kennungen.Id("input_number.fork_entfeuchter_mindestlaufzeit");
+        public static string Einschaltverzoegerung => Kennungen.Id("input_number.fork_entfeuchter_einschaltverzoegerung");
+        public static string WartezeitAussenluft => Kennungen.Id("input_number.fork_entfeuchter_wartezeit_aussenluft");
+        public static string Tagbetrieb => Kennungen.Id("input_boolean.fork_entfeuchter_tagbetrieb_erlauben");
+        public static string TempMaxTag => Kennungen.Id("input_number.fork_entfeuchter_temp_max_tag");
+        public static string TempMaxNacht => Kennungen.Id("input_number.fork_entfeuchter_temp_max_nacht");
+        public static string FeuchteEinTag => Kennungen.Id("input_number.fork_entfeuchter_feuchte_ein_tag");
+        public static string FeuchteAusTag => Kennungen.Id("input_number.fork_entfeuchter_feuchte_aus_tag");
+        public static string FeuchteEinNacht => Kennungen.Id("input_number.fork_entfeuchter_feuchte_ein_nacht");
+        public static string FeuchteAusNacht => Kennungen.Id("input_number.fork_entfeuchter_feuchte_aus_nacht");
+        public static string Automatik => Kennungen.Id("automation.entfeuchter_regelung_tag_nacht");
 
         // Nur gelesen — gepflegt woanders.
-        public const string EinAktiv = "sensor.trotec_feuchte_ein_aktiv";
-        public const string AusAktiv = "sensor.trotec_feuchte_aus_aktiv";
-        public const string TempMaxAktiv = "sensor.trotec_temp_max_aktiv";
+        public static string EinAktiv => Kennungen.Id("sensor.fork_entfeuchter_feuchte_ein_aktiv");
+        public static string AusAktiv => Kennungen.Id("sensor.fork_entfeuchter_feuchte_aus_aktiv");
+        public static string TempMaxAktiv => Kennungen.Id("sensor.fork_entfeuchter_temp_max_aktiv");
         public const string VpdUnten = "input_number.vpd_ziel_unten";
         public const string VpdOben = "input_number.vpd_ziel_abschaltung";
         public const string BlattOffset = "input_number.vpd_blatt_offset";

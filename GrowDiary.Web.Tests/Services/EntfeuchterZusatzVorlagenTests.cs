@@ -95,7 +95,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
         var uebertemperatur = Assert.Single(ohneFuehrung);
         Assert.StartsWith("AUS: ueber der Temperaturgrenze", uebertemperatur["alias"]!.ToString());
         // … und er schaltet nach der Grenze selbst, nicht nach der früheren Folge-Grenze.
-        Assert.Contains("sensor.trotec_temp_max_aktiv", uebertemperatur["conditions"]!.ToJsonString());
+        Assert.Contains("sensor.fork_entfeuchter_temp_max_aktiv", uebertemperatur["conditions"]!.ToJsonString());
         Assert.DoesNotContain("folge_aus", uebertemperatur["conditions"]!.ToJsonString());
 
         // Jeder andere Abschalt-Zweig verlangt „Führung läuft" — für beide Schreibweisen (select: On, Schalter: on).
@@ -115,7 +115,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
         Assert.True(Fordert(folge, rollen["fuehrung_zustand"], "On"));
         Assert.True(Fordert(folge, rollen["zusatz_schalter"], "on"));
         Assert.Contains($"\"entity_id\":\"{rollen["zelt_temp"]}\"", folge["conditions"]!.ToJsonString());
-        Assert.Contains("\"above\":\"sensor.trotec_zelt_folge_aus_temperatur\"", folge["conditions"]!.ToJsonString());
+        Assert.Contains("\"above\":\"sensor.fork_entfeuchter_zusatz_folge_aus_temperatur\"", folge["conditions"]!.ToJsonString());
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
             var laufzeit = Objekte(zw["conditions"]).Where(c => c["condition"]?.ToString() == "state"
                 && c["entity_id"]?.ToString() == rollen["zusatz_schalter"] && c["state"]?.ToString() == "on" && c["for"] is not null).ToList();
             var bedingung = Assert.Single(laufzeit);
-            Assert.Contains("trotec_zelt_mindestlaufzeit", bedingung["for"]!.ToJsonString());
+            Assert.Contains("fork_entfeuchter_zusatz_mindestlaufzeit", bedingung["for"]!.ToJsonString());
         }
     }
 
@@ -150,12 +150,12 @@ public sealed class EntfeuchterZusatzVorlagenTests
             // Mindestpause: aus seit N Minuten.
             var pause = Assert.Single(Objekte(zw["conditions"]), c => c["condition"]?.ToString() == "state"
                 && c["entity_id"]?.ToString() == rollen["zusatz_schalter"] && c["state"]?.ToString() == "off");
-            Assert.Contains("trotec_zelt_mindestpause", pause["for"]!.ToJsonString());
+            Assert.Contains("fork_entfeuchter_zusatz_mindestpause", pause["for"]!.ToJsonString());
             // Erst wieder an, wenn es kühl genug ist.
-            Assert.Contains("\"below\":\"sensor.trotec_zelt_wieder_ein_temperatur\"", text);
+            Assert.Contains("\"below\":\"sensor.fork_entfeuchter_zusatz_wieder_ein_temperatur\"", text);
             // Führung ist aus (dann sofort) ODER läuft seit der Zuschalt-Verzögerung.
             var oder = Assert.Single(Objekte(zw["conditions"]), c => c["condition"]?.ToString() == "or"
-                && c.ToJsonString().Contains("trotec_zelt_zuschalt_verzogerung", StringComparison.Ordinal));
+                && c.ToJsonString().Contains("fork_entfeuchter_zusatz_zuschalt_verzogerung", StringComparison.Ordinal));
             Assert.Contains("\"Off\"", oder.ToJsonString());
             Assert.Contains("\"On\"", oder.ToJsonString());
         }
@@ -168,12 +168,12 @@ public sealed class EntfeuchterZusatzVorlagenTests
         var text = Wirksam(Gefuellt("regelung"));
 
         // Tag: VPD-Band des Plans. Nacht: Plan-Feuchte, oder durchlaufen.
-        Assert.Contains("sensor.trotec_zelt_vpd_ein_schwelle", text);
-        Assert.Contains("sensor.trotec_zelt_vpd_aus_schwelle", text);
-        Assert.Contains("sensor.trotec_feuchte_ein_aktiv", text);
-        Assert.Contains("sensor.trotec_feuchte_aus_aktiv", text);
-        Assert.Contains("input_boolean.trotec_zelt_nacht_durchlaufen", text);
-        Assert.Contains("input_boolean.trotec_zelt_tagbetrieb_erlauben", text);
+        Assert.Contains("sensor.fork_entfeuchter_zusatz_vpd_ein_schwelle", text);
+        Assert.Contains("sensor.fork_entfeuchter_zusatz_vpd_aus_schwelle", text);
+        Assert.Contains("sensor.fork_entfeuchter_feuchte_ein_aktiv", text);
+        Assert.Contains("sensor.fork_entfeuchter_feuchte_aus_aktiv", text);
+        Assert.Contains("input_boolean.fork_entfeuchter_zusatz_nacht_durchlaufen", text);
+        Assert.Contains("input_boolean.fork_entfeuchter_zusatz_tagbetrieb_erlauben", text);
         Assert.Contains($"\"entity_id\":\"{rollen["licht_zustand"]}\"", text);
         Assert.Contains($"\"entity_id\":\"{rollen["zelt_vpd"]}\"", text);
         Assert.Contains($"\"entity_id\":\"{rollen["zelt_rh"]}\"", text);
@@ -192,7 +192,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
 
         var ausNacht = zweige.Single(zw => zw["alias"]!.ToString().StartsWith("AUS Nacht", StringComparison.Ordinal));
         // Aus wegen Feuchte nur OHNE „durchlaufen".
-        Assert.True(Fordert(ausNacht, "input_boolean.trotec_zelt_nacht_durchlaufen", "off"));
+        Assert.True(Fordert(ausNacht, "input_boolean.fork_entfeuchter_zusatz_nacht_durchlaufen", "off"));
 
         var einNacht = zweige.Single(zw => zw["alias"]!.ToString().StartsWith("EIN Nacht", StringComparison.Ordinal));
         var oder = Assert.Single(Objekte(einNacht["conditions"]), c => c["condition"]?.ToString() == "or"
@@ -249,15 +249,15 @@ public sealed class EntfeuchterZusatzVorlagenTests
         // (ein Neustart verliert die laufende Wiederholung; besteht es noch, beginnt sie neu).
         var ausloeser = meldung["triggers"]!.AsArray().Cast<JsonObject>().ToList();
         Assert.Contains(ausloeser, t => t["trigger"]!.ToString() == "numeric_state" && t["entity_id"]!.ToString() == leistung
-            && t["below"]!.ToString() == "input_number.trotec_zelt_melde_grenze_w"
-            && t["for"]!.ToJsonString().Contains("trotec_zelt_melde_dauer_min"));
+            && t["below"]!.ToString() == "input_number.fork_entfeuchter_zusatz_melde_grenze_w"
+            && t["for"]!.ToJsonString().Contains("fork_entfeuchter_zusatz_melde_dauer_min"));
         Assert.Contains(ausloeser, t => t["trigger"]!.ToString() == "homeassistant" && t["event"]!.ToString() == "start");
 
         // Bedingungen: Meldung eingeschaltet, Shelly an, Leistung unter der Grenze.
         var bedingungen = meldung["conditions"]!.AsArray().Cast<JsonObject>().ToList();
-        Assert.Contains(bedingungen, c => c["entity_id"]!.ToString() == "input_boolean.trotec_zelt_melden" && c["state"]!.ToString() == "on");
+        Assert.Contains(bedingungen, c => c["entity_id"]!.ToString() == "input_boolean.fork_entfeuchter_zusatz_melden" && c["state"]!.ToString() == "on");
         Assert.Contains(bedingungen, c => c["entity_id"]!.ToString() == z && c["state"]!.ToString() == "on");
-        Assert.Contains(bedingungen, c => c["entity_id"]!.ToString() == leistung && c["below"]!.ToString() == "input_number.trotec_zelt_melde_grenze_w");
+        Assert.Contains(bedingungen, c => c["entity_id"]!.ToString() == leistung && c["below"]!.ToString() == "input_number.fork_entfeuchter_zusatz_melde_grenze_w");
 
         // Die Wiederholung läuft NUR solange dieselben Bedingungen gelten …
         var wiederholung = Objekte(meldung["actions"]).Single(o => o["repeat"] is not null)["repeat"]!.AsObject();
@@ -266,7 +266,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
         // … im Abstand der eingestellten Stunden, und prüft vor jeder Wiederholung noch einmal — mit
         // „if", nicht mit einer Bedingung: die bräche den ganzen Lauf ab, und die Entwarnung unten bliebe aus.
         var schritte = wiederholung["sequence"]!.AsArray().Cast<JsonObject>().ToList();
-        Assert.Contains("trotec_zelt_melde_wiederholung_h", schritte[0]["timeout"]!.ToJsonString());
+        Assert.Contains("fork_entfeuchter_zusatz_melde_wiederholung_h", schritte[0]["timeout"]!.ToJsonString());
         Assert.True(schritte[0]["continue_on_timeout"]!.GetValue<bool>());
         Assert.NotNull(schritte[1]["if"]);
         Assert.Equal(bedingungen.Count, schritte[1]["if"]!.AsArray().Count);
@@ -399,7 +399,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
         foreach (var vorlage in new[] { "regelung", "meldung" })
         {
             var text = Wirksam(Gefuellt(vorlage));
-            foreach (Match m in Regex.Matches(text, @"(?:input_number|input_boolean|sensor)\.trotec_zelt_[a-z0-9_]+"))
+            foreach (Match m in Regex.Matches(text, @"(?:input_number|input_boolean|sensor)\.fork_entfeuchter_zusatz_[a-z0-9_]+"))
             {
                 gefunden.Add(m.Value);
             }
@@ -415,18 +415,18 @@ public sealed class EntfeuchterZusatzVorlagenTests
         string Vorschrift(string id) => SteuerungBauteile.FuerModul(Modul).Single(b => b.EntityId == id).Vorlage!;
 
         // EIN unter Ziel MINUS Hysterese, AUS über Ziel PLUS Hysterese.
-        Assert.Contains("vpd_ziel_unten') | float - states('input_number.trotec_zelt_vpd_hysterese", Vorschrift("sensor.trotec_zelt_vpd_ein_schwelle"));
-        Assert.Contains("vpd_ziel_abschaltung') | float + states('input_number.trotec_zelt_vpd_hysterese", Vorschrift("sensor.trotec_zelt_vpd_aus_schwelle"));
+        Assert.Contains("vpd_ziel_unten') | float - states('input_number.fork_entfeuchter_zusatz_vpd_hysterese", Vorschrift("sensor.fork_entfeuchter_zusatz_vpd_ein_schwelle"));
+        Assert.Contains("vpd_ziel_abschaltung') | float + states('input_number.fork_entfeuchter_zusatz_vpd_hysterese", Vorschrift("sensor.fork_entfeuchter_zusatz_vpd_aus_schwelle"));
         // Folge-AUS = aktive Höchsttemperatur − Folge-Abstand; Wieder-EIN = Folge-AUS − Wieder-ein-Abstand.
-        Assert.Contains("trotec_temp_max_aktiv') | float - states('input_number.trotec_zelt_folge_abstand", Vorschrift("sensor.trotec_zelt_folge_aus_temperatur"));
-        Assert.Contains("trotec_zelt_folge_aus_temperatur') | float - states('input_number.trotec_zelt_wieder_ein_abstand", Vorschrift("sensor.trotec_zelt_wieder_ein_temperatur"));
+        Assert.Contains("fork_entfeuchter_temp_max_aktiv') | float - states('input_number.fork_entfeuchter_zusatz_folge_abstand", Vorschrift("sensor.fork_entfeuchter_zusatz_folge_aus_temperatur"));
+        Assert.Contains("fork_entfeuchter_zusatz_folge_aus_temperatur') | float - states('input_number.fork_entfeuchter_zusatz_wieder_ein_abstand", Vorschrift("sensor.fork_entfeuchter_zusatz_wieder_ein_temperatur"));
     }
 
     [Fact]
     public void Katalog_ZeigtDieHandgebauteRegelungAlsVorhanden_UndLegtNieEineZweiteDaneben()
     {
         var regelung = SteuerungBauteile.FuerModul(Modul).Single(b => b.VorlagenDatei == "regelung");
-        Assert.Equal("automation.rdwc_trotec_zelt_shelly_plan_regelung", regelung.EntityId);
+        Assert.Equal("automation.zusatz_entfeuchter_regelung", regelung.EntityId);
 
         var handgebaut = new HomeAssistantEntity { EntityId = regelung.EntityId, Domain = "automation", State = "on", KonfigKennung = "1791297367181" };
 
@@ -465,14 +465,14 @@ public sealed class EntfeuchterZusatzVorlagenTests
         Assert.Equal(new[]
         {
             "automation.zusatz_entfeuchter_zieht_nichts",
-            "input_boolean.trotec_zelt_melden",
-            "input_number.trotec_zelt_melde_dauer_min",
-            "input_number.trotec_zelt_melde_grenze_w",
-            "input_number.trotec_zelt_melde_wiederholung_h",
+            "input_boolean.fork_entfeuchter_zusatz_melden",
+            "input_number.fork_entfeuchter_zusatz_melde_dauer_min",
+            "input_number.fork_entfeuchter_zusatz_melde_grenze_w",
+            "input_number.fork_entfeuchter_zusatz_melde_wiederholung_h",
         }, weg);
         // Mengenwächter: die Regelung und ihre Helfer bleiben (6 Zahlen, 2 Schalter, 4 Rechenwerte, 1 Automation).
         Assert.Equal(13, ohne.Count);
-        Assert.Contains("automation.rdwc_trotec_zelt_shelly_plan_regelung", ohne);
+        Assert.Contains("automation.zusatz_entfeuchter_regelung", ohne);
     }
 
     /// <summary>
@@ -484,7 +484,7 @@ public sealed class EntfeuchterZusatzVorlagenTests
     public void Regelgroesse_SchalterEntscheidetTagsZwischenVpdUndFeuchte()
     {
         var regelung = Gefuellt("regelung");
-        const string Schalter = "input_boolean.trotec_vpd_regelung";
+        const string Schalter = "input_boolean.fork_entfeuchter_vpd_regelung";
         var zweige = Zweige(regelung);
 
         var vpdZweige = zweige.Where(z => z["alias"]!.ToString().StartsWith("AUS Tag: VPD") || z["alias"]!.ToString().StartsWith("EIN Tag: VPD")).ToList();

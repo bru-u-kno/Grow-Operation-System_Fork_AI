@@ -671,7 +671,7 @@ public sealed class WochenplanSyncService
         // Fork AI (forkai.129): Das VPD-Band der Woche geht an den Entfeuchter —
         // EIN unter der Untergrenze, entfeuchten bis zur Obergrenze. Vorher standen
         // beide fest in HA und liefen der Woche hinterher (ab Blüte W7 will der
-        // Plan 1,4–1,6, der Trotec blieb bei 1,2–1,4).
+        // Plan 1,4–1,6, der Entfeuchter blieb bei 1,2–1,4).
         if (spalte.VpdMin is { } vpdUnten) yield return (Rollen.VpdUnten, vpdUnten);
         if (spalte.VpdMax is { } vpdOben) yield return (Rollen.VpdOben, vpdOben);
 

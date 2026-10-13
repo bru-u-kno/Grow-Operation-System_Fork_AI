@@ -96,7 +96,7 @@ bleibt es bei den gespeicherten festen Werten, und „Aus dem Plan" ist gesperrt
 
 ## Regelgröße: Luftfeuchte oder VPD — für alle Entfeuchter gleich
 
-Unter „Erweitert" steht der Schalter **Nach VPD regeln statt nach Luftfeuchte** (derselbe Schalter `input_boolean.trotec_vpd_regelung` in
+Unter „Erweitert" steht der Schalter **Nach VPD regeln statt nach Luftfeuchte** (derselbe Schalter `input_boolean.fork_entfeuchter_vpd_regelung` in
 Home Assistant; der Zusatz folgt ihm). **Luftfeuchte** ist der Standard: Ziel ist die Plan-Obergrenze. Bei **VPD** wandern die Schwellen
 mit Temperatur und VPD-Band aus dem Plan. Ob VPD sinnvoll ist, hängt vom Plan ab: ein VPD-Ziel von 1,6 kPa ist bei 21 °C erst bei rund
 30 % Luftfeuchte erreicht — die Entfeuchter würden dann dauernd laufen (nachgerechnet am 13.10.2026). Eine eigene Wahl mit Erreichbarkeits-
@@ -115,6 +115,18 @@ prüfung ist noch nicht gebaut.
 - „Getrennt" (jeder Entfeuchter regelt sich selbst) und mehr als zwei Entfeuchter gibt es noch nicht (A-015, Stufen 2 und 3).
 - Es gibt noch keine Vorrang-Einstellung „Feuchte vor Temperatur" (A-013) und keinen Verlauf der letzten Stunden im Überblick.
 - Die Mindestpause gibt es weiter nur beim Zusatz; für den Hauptentfeuchter bräuchte sie eine Änderung an der Regelung in Home Assistant.
+
+## Wie die Objekte in Home Assistant heißen (forkai.217)
+
+Die Helfer, Rechen-Sensoren und Automationen der Entfeuchter-Steuerungen tragen das Präfix `fork_entfeuchter_` (Zusatz-Entfeuchter:
+`fork_entfeuchter_zusatz_`); die Regelungen heißen `automation.entfeuchter_regelung_tag_nacht` und `automation.zusatz_entfeuchter_regelung`.
+Der Fork legt sie bei der Einrichtung selbst an (idempotent) — die Geräte (Entfeuchter, Fühler, Steckdose) gibt der Nutzer an.
+
+**Bestand.** Eine Installation, die vor forkai.217 schon Einstellungen oder Geräte der Entfeuchter-Steuerung gespeichert hatte, behält ihre
+alten Kennungen (`input_number.trotec_*`, `trotec_zelt_*`, handgebaute Automationen): nichts wird umbenannt, doppelt angelegt oder überschrieben.
+Der Fork entscheidet das **einmal** beim ersten Start und speichert es (Einstellungs-Modul `kennungsraum`); später gespeicherte Einstellungen
+ändern den Entscheid nicht. Im Quelltext stehen überall die neuen Kennungen; `Kennungen.Id(…)` und `Kennungen.Uebersetzen(…)` machen im
+Bestand die alten daraus. Nicht betroffen: CO₂, Zuluft und Chiller (eigene Kennungen, noch unverändert).
 
 ## Im Code
 

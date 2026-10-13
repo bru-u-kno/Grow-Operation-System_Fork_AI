@@ -46,7 +46,7 @@ const BRU: EntfeuchterZusatzEinstellungen = {
 
 /** Der Beispielstand aus VERTRAG.md. */
 const LIVE: EntfeuchterZusatzLive = {
-  haErreichbar: true, fuehrungName: 'RDWC Dehumi', zusatzName: 'Dehumi RDWC Tent',
+  haErreichbar: true, fuehrungName: 'Haupt-Entfeuchter', zusatzName: 'Entfeuchter Zelt',
   planWoche: 'Blütewoche 7', planLuftTagC: 20, planLuftNachtC: 16,
   tempMaxTagC: 26.5, tempMaxNachtC: 25,
   folgeAusTagC: 25.5, folgeAusNachtC: 24, wiederEinTagC: 24.5, wiederEinNachtC: 23,
@@ -112,7 +112,7 @@ describe('Hilfsstärke', () => {
     expect(hilfeText('kraeftig', 'X')).toContain('0,5 K früher aus')
     expect(hilfeText('kraeftig', 'X')).toContain('nach 5 min')
     expect(hilfeText('normal', 'X')).toContain('1,0 K früher aus')
-    expect(hilfeText('aus', 'RDWC Dehumi')).toBe('Nur RDWC Dehumi entfeuchtet. Der Zusatz bleibt aus.')
+    expect(hilfeText('aus', 'Haupt-Entfeuchter')).toBe('Nur Haupt-Entfeuchter entfeuchtet. Der Zusatz bleibt aus.')
   })
 })
 
@@ -284,13 +284,13 @@ describe('Höchsttemperatur und Folge-Rechnung', () => {
 
 describe('Bänder', () => {
   it('zeichnet das Temperatur-Band mit „an", „Zusatz" und „Haupt" in dieser Reihenfolge', () => {
-    const band = temperaturBand(tempGrenzen(BRU, 26.5), 25.1, 'RDWC Dehumi', 'Dehumi RDWC Tent')
+    const band = temperaturBand(tempGrenzen(BRU, 26.5), 25.1, 'Haupt-Entfeuchter', 'Entfeuchter Zelt')
     expect(band.marken.map((m) => [m.label, m.wert])).toEqual([['an', 24.5], ['Zusatz', 25.5], ['Haupt', 26.5]])
     const pos = band.marken.map((m) => m.pos)
     expect(pos[0]).toBeLessThan(pos[1])
     expect(pos[1]).toBeLessThan(pos[2])
     expect(band.istWarm).toBe(false)
-    expect(band.kurz).toBe('Dehumi RDWC Tent aus 25,5 · RDWC Dehumi aus 26,5')
+    expect(band.kurz).toBe('Entfeuchter Zelt aus 25,5 · Haupt-Entfeuchter aus 26,5')
   })
 
   it('färbt den Istwert warm, sobald das Zelt über „Zusatz aus" liegt — und weitet die Skala dafür', () => {
@@ -412,24 +412,24 @@ describe('Felder und Fehler', () => {
 
 describe('Namen', () => {
   const namen = {
-    fuehrung: { anzeigename: 'RDWC Dehumi', vorgabe: 'RDWC Dehumi' },
-    zusatz: { anzeigename: 'Zelt-Trotec', vorgabe: 'Dehumi RDWC Tent' },
+    fuehrung: { anzeigename: 'Haupt-Entfeuchter', vorgabe: 'Haupt-Entfeuchter' },
+    zusatz: { anzeigename: 'Zelt-Entfeuchter', vorgabe: 'Entfeuchter Zelt' },
   }
 
   it('schickt nichts, wenn sich kein Name ändert', () => {
-    expect(namenAenderung(namen, { fuehrung: 'RDWC Dehumi', zusatz: 'Zelt-Trotec' })).toEqual({})
+    expect(namenAenderung(namen, { fuehrung: 'Haupt-Entfeuchter', zusatz: 'Zelt-Entfeuchter' })).toEqual({})
   })
 
   it('schickt nur den geänderten Namen', () => {
-    expect(namenAenderung(namen, { fuehrung: 'Hauptgerät', zusatz: 'Zelt-Trotec' })).toEqual({ fuehrung: 'Hauptgerät' })
+    expect(namenAenderung(namen, { fuehrung: 'Hauptgerät', zusatz: 'Zelt-Entfeuchter' })).toEqual({ fuehrung: 'Hauptgerät' })
   })
 
   it('schickt leer, wenn ein eigener Name zurück auf die Vorgabe soll', () => {
-    expect(namenAenderung(namen, { fuehrung: 'RDWC Dehumi', zusatz: '  ' })).toEqual({ zusatz: '' })
+    expect(namenAenderung(namen, { fuehrung: 'Haupt-Entfeuchter', zusatz: '  ' })).toEqual({ zusatz: '' })
   })
 
   it('ein leeres Feld bei einem Namen, der schon die Vorgabe ist, ändert nichts', () => {
-    expect(namenAenderung(namen, { fuehrung: '', zusatz: 'Zelt-Trotec' })).toEqual({})
+    expect(namenAenderung(namen, { fuehrung: '', zusatz: 'Zelt-Entfeuchter' })).toEqual({})
     expect(wirksamerName('', 'Vorgabe')).toBe('Vorgabe')
     expect(wirksamerName(' Eigen ', 'Vorgabe')).toBe('Eigen')
   })
