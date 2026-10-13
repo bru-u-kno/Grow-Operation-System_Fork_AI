@@ -68,6 +68,18 @@ describe('Anfragen und Texte', () => {
     expect(liste[0]).toMatchObject({ werte: [{ feld: 'ecTarget', wert: 1.4 }], auchInsProgramm: true, programmName: 'Mimosa', grund: null })
   })
 
+  it('„Programm verwenden" geht nur mit, wenn auch ins Programm gespeichert wird', () => {
+    const werte = [{ spalteId: 'flower-w5', feld: 'ecTarget', wert: 1.4 }]
+    const mit = anfragen(werte, {}, [w5], { auchInsProgramm: true, programmName: 'Mimosa', grund: '', programmVerwenden: true })
+    expect(mit[0].programmVerwenden).toBe(true)
+    // Nur für den Grow gespeichert: es entsteht keine Kopie, also gibt es nichts zu verwenden.
+    const nurGrow = anfragen(werte, {}, [w5], { auchInsProgramm: false, programmName: '', grund: '', programmVerwenden: true })
+    expect(nurGrow[0].programmVerwenden).toBe(false)
+    // Ohne Angabe (Kopie gibt es schon, keine Frage): false.
+    const ohne = anfragen(werte, {}, [w5], { auchInsProgramm: true, programmName: '', grund: '' })
+    expect(ohne[0].programmVerwenden).toBe(false)
+  })
+
   it('Wertzeile nennt alt und neu, zurück auf Start heißt so', () => {
     const texte = aenderungsZeilen([{ spalteId: 'flower-w5', feld: 'ecTarget', wert: null }], {}, [w5], wochen)
     expect(texte[0].text).toBe('EC 1,5 → 1,5 (Start)')

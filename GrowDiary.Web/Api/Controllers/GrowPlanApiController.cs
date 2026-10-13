@@ -102,6 +102,8 @@ public sealed class PlanSpeichernRequest
     /// <summary>Die ganze Dosierung der Woche — <c>null</c> lässt sie unberührt.</summary>
     public List<PlanDosisDto>? Dosierung { get; set; }
     public bool AuchInsProgramm { get; set; }
+    /// <summary>Fork AI (forkai.215): der Grow nutzt die neu angelegte Kopie danach als sein Programm.</summary>
+    public bool ProgrammVerwenden { get; set; }
     public string? ProgrammName { get; set; }
     public string? Grund { get; set; }
 }
@@ -340,6 +342,7 @@ public sealed class GrowPlanApiController : ApiControllerBase
         var programmName = string.IsNullOrWhiteSpace(anfrage.ProgrammName) ? null : anfrage.ProgrammName.Trim();
         if (programmName is { Length: > 80 }) return ValidationError("Der Programmname darf höchstens 80 Zeichen lang sein.");
 
+        var neueKopie = anfrage.AuchInsProgramm && arbeit.Inhalt.EigenesProgrammId is null;
         var ergebnis = _plaene.Speichern(growId, new PlanSpeichernAnfrage(
             spalte.Id,
             anfrage.Werte.Select(w => (w.Feld, w.Wert)).ToList(),
@@ -347,6 +350,33 @@ public sealed class GrowPlanApiController : ApiControllerBase
             anfrage.AuchInsProgramm,
             programmName,
             grund));
+
+        // Fork AI (forkai.215): die neue Kopie auch als Programm des Grows eintragen —
+        // am Grow und im Plan in einem Zug, wie beim Programmwechsel. Wurde beim ersten
+        // Mal abgelehnt, merkt sich der Plan das (die Umstellung beim Start lässt ihn dann in Ruhe).
+        if (anfrage.AuchInsProgramm && _grows.GetGrow(growId) is { } growRun)
+        {
+            try
+            {
+                if (anfrage.ProgrammVerwenden)
+                {
+                    if (_plaene.EigenesProgrammVerwenden(growRun) is { } wechsel)
+                    {
+                        growRun.FeedProgramId = wechsel.ProgrammId;
+                        growRun.Nutrients = wechsel.ProgrammName;
+                        _grows.UpdateGrow(growRun);
+                    }
+                }
+                else if (neueKopie)
+                {
+                    _plaene.EigenesProgrammAblehnen(growId);
+                }
+            }
+            catch (Exception)
+            {
+                // Die Woche und die Kopie sind gespeichert; die Umstellung zieht der nächste Start nach.
+            }
+        }
 
         var uebergeben = 0;
         string? hinweis = null;

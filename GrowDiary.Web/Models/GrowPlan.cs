@@ -81,6 +81,13 @@ public sealed class GrowPlanInhalt
     public string? EigenesProgrammId { get; set; }
 
     /// <summary>
+    /// Fork AI (forkai.215): beim ersten „auch ins Programm" wurde abgelehnt, die Kopie
+    /// als Programm des Grows zu verwenden. Dann stellt auch die Umstellung beim Start
+    /// den Grow nicht um.
+    /// </summary>
+    public bool EigenesProgrammNichtVerwenden { get; set; }
+
+    /// <summary>
     /// Fork AI (forkai.130): Standard für alle Wochen dieses Grows — nachts gelten
     /// die Tageswerte (Luft, Luftfeuchte). Aus: Nachtwerte kommen aus dem Plan.
     /// </summary>
