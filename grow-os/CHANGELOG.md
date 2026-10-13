@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.216
+
+**Fork AI.** Tests und Testdaten tragen keine privaten Gerätenamen des Entwicklers mehr.
+
+- **Beispielnamen statt echter Gerätenamen:** In Tests und Testdaten standen Kennungen der Anlage des Entwicklers (Entfeuchter, Sonde, Abluft). Sie heißen jetzt `zusatz_entfeuchter`, `zeltsonde_sonden` und `beispiel_abluft`. Verhalten und Rechnungen der App sind unverändert; alle Tests laufen weiterhin grün.
+- **Bewusst nicht angefasst:** `script.edenic_set_alarm` bleibt (so heißt das Skript der Bluelab-Cloud, auf das der Fork wartet). Die Helfer `trotec_*` und die handgebauten Automations-Kennungen stehen noch im Katalog; ein eigener Namensraum mit Erkennung der Altnamen folgt als eigener Release.
+
 ## 2.0.0-forkai.215
 
 **Fork AI.** Wer im Plan „auch ins Programm" speichert, nutzt die entstandene eigene Kopie danach auch als Programm des Grows.
