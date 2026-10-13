@@ -205,8 +205,8 @@ public sealed class EntfeuchterSteuerungService
     {
         if (e.ArbeitsbereichQuelle != ArbeitsbereichQuellen.Plan || rhObergrenze is not { } rh || !double.IsFinite(rh)) return null;
         var kleinstes = 31 + Math.Ceiling(e.HystereseProzent);
-        var ein = Math.Round(Math.Clamp(rh - e.VorlaufProzent, kleinstes, 90), 1);
-        var aus = Math.Round(Math.Max(30, ein - e.HystereseProzent), 1);
+        var ein = Math.Round(Math.Clamp(rh - e.VorlaufProzent, kleinstes, 90), 1, MidpointRounding.AwayFromZero);
+        var aus = Math.Round(Math.Max(30, ein - e.HystereseProzent), 1, MidpointRounding.AwayFromZero);
         return (ein, aus);
     }
 

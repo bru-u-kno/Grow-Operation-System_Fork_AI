@@ -114,3 +114,9 @@ describe('Arbeitsbereich aus dem Plan (forkai.212) — dieselben Beispiele wie d
     expect(schwellenNachAbstand({ ...bestand, arbeitsbereichQuelle: 'plan' }, 6, null).feuchteEinTag).toBe(50)
   })
 })
+
+describe('arbeitsbereichAusPlan: halbe Zehntel', () => {
+  it('rundet wie das Backend (AwayFromZero)', () => {
+    expect(arbeitsbereichAusPlan(54.25, 4, 4)).toEqual({ ein: 50.3, aus: 46.3 })
+  })
+})

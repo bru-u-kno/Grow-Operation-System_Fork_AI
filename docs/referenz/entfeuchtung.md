@@ -92,7 +92,7 @@ Wie es gerechnet und geschrieben wird: Das Backend (`EntfeuchterSteuerungService
 eine Nachkommastelle gerundet, und schreibt die vier Helfer (EIN/AUS, Tag und Nacht). Das geschieht beim Speichern und täglich um 06:00 nach der Übergabe des Wochenplans
 (`PlanNachziehenAsync`, schreibt nur, was abweicht); der gespeicherte Stand folgt, damit die Seite zeigt, was in Home Assistant liegt. Nennt der Plan keine Obergrenze,
 bleibt es bei den gespeicherten festen Werten, und „Aus dem Plan" ist gesperrt. Die Seite rechnet vor dem Speichern dieselbe Vorschau (`arbeitsbereichAusPlan` in
-`entfeuchtung-schwellen.ts`); beide Seiten haben dieselben Beispiele in ihren Tests. Bei VPD-Regelung gilt die Wahl nicht (die Schwellen kommen aus dem VPD-Band).
+`entfeuchtung-schwellen.ts`); beide Seiten haben dieselben Beispiele in ihren Tests. Bei VPD-Regelung ignoriert die Regelung in Home Assistant diese Schwellen (sie gelten dort nur als Rückfallebene); der Fork schreibt sie trotzdem, damit nach dem Umschalten auf Luftfeuchte die Plan-Werte gelten.
 
 ## Regelgröße: Luftfeuchte oder VPD — für alle Entfeuchter gleich
 

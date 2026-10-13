@@ -18,6 +18,12 @@ public sealed class ArbeitsbereichAusPlanTests
     };
 
     [Fact]
+    public void HalbeZehntelRundenAufWieInDerSeite()
+    {
+        Assert.Equal((50.3d, 46.3d), EntfeuchterSteuerungService.ArbeitsbereichAusPlan(Plan(), 54.25));
+    }
+
+    [Fact]
     public void BrusZeltErgibtDieHeutigenWerte()
     {
         var b = EntfeuchterSteuerungService.ArbeitsbereichAusPlan(Plan(), 54);
