@@ -13,8 +13,8 @@ public sealed class ProbelaufEingriffTests
         var ha = new FakeProbelaufHa();
         ha.Regelungen.Add("automation.entfeuchter_regelung");
         ha.Zustaende["automation.entfeuchter_regelung"] = "on";
-        ha.Geraete["port_schalter"] = "select.rdwc_dehumi_aktiver_modus";
-        ha.Zustaende["select.rdwc_dehumi_aktiver_modus"] = "Auto";
+        ha.Geraete["port_schalter"] = "select.zusatz_entfeuchter_aktiver_modus";
+        ha.Zustaende["select.zusatz_entfeuchter_aktiver_modus"] = "Auto";
         var chiller = new FakeChillerRegler();
         return (ha, chiller, new ProbelaufEingriff(ha, chiller));
     }
@@ -39,7 +39,7 @@ public sealed class ProbelaufEingriffTests
         var (ok, _) = await eingriff.EingreifenAsync("entfeuchter", ausgang, default);
 
         Assert.True(ok);
-        Assert.Equal(["automation aus automation.entfeuchter_regelung", "aus select.rdwc_dehumi_aktiver_modus"], ha.Protokoll);
+        Assert.Equal(["automation aus automation.entfeuchter_regelung", "aus select.zusatz_entfeuchter_aktiver_modus"], ha.Protokoll);
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public sealed class ProbelaufEingriffTests
         var ok = await eingriff.ZurueckstellenAsync("entfeuchter", geaendert, default);
 
         Assert.True(ok);
-        Assert.Equal(["herstellen select.rdwc_dehumi_aktiver_modus=Auto", "automation an automation.entfeuchter_regelung"], ha.Protokoll);
-        Assert.Equal("Auto", ha.Zustaende["select.rdwc_dehumi_aktiver_modus"]);
+        Assert.Equal(["herstellen select.zusatz_entfeuchter_aktiver_modus=Auto", "automation an automation.entfeuchter_regelung"], ha.Protokoll);
+        Assert.Equal("Auto", ha.Zustaende["select.zusatz_entfeuchter_aktiver_modus"]);
         Assert.Equal("on", ha.Zustaende["automation.entfeuchter_regelung"]);
     }
 
@@ -82,7 +82,7 @@ public sealed class ProbelaufEingriffTests
 
         await eingriff.ZurueckstellenAsync("entfeuchter", geaendert, default);
 
-        Assert.Contains("herstellen select.rdwc_dehumi_aktiver_modus=Auto", ha.Protokoll);
+        Assert.Contains("herstellen select.zusatz_entfeuchter_aktiver_modus=Auto", ha.Protokoll);
         Assert.DoesNotContain(ha.Protokoll, p => p.Contains("ein_anderes_geraet"));
     }
 
@@ -92,7 +92,7 @@ public sealed class ProbelaufEingriffTests
         var (ha, _, eingriff) = Anlage();
         var ausgang = await eingriff.AusgangszustandLesenAsync("entfeuchter", default);
         var (_, geaendert) = await eingriff.EingreifenAsync("entfeuchter", ausgang, default);
-        ha.Haengt.Add("select.rdwc_dehumi_aktiver_modus");
+        ha.Haengt.Add("select.zusatz_entfeuchter_aktiver_modus");
         ha.Protokoll.Clear();
 
         var ok = await eingriff.ZurueckstellenAsync("entfeuchter", geaendert, default);
@@ -119,7 +119,7 @@ public sealed class ProbelaufEingriffTests
     public async Task Eingreifen_LaesstEinNichtErreichbaresGeraetUnangetastet()
     {
         var (ha, _, eingriff) = Anlage();
-        ha.Zustaende["select.rdwc_dehumi_aktiver_modus"] = "unavailable";
+        ha.Zustaende["select.zusatz_entfeuchter_aktiver_modus"] = "unavailable";
         var ausgang = await eingriff.AusgangszustandLesenAsync("entfeuchter", default);
 
         await eingriff.EingreifenAsync("entfeuchter", ausgang, default);

@@ -82,7 +82,7 @@ public sealed class Co2AbsicherungTests
         var neu = Co2Absicherung.Absichern(Echt("dosierung"), Rahmen);
         var oder = (JsonArray)Schleife(neu)["until"]![0]!["conditions"]!;
 
-        foreach (var entity in new[] { "binary_sensor.co2_bedarf", "binary_sensor.klein_abluft_zustand", "binary_sensor.co2_klima_ok" })
+        foreach (var entity in new[] { "binary_sensor.co2_bedarf", "binary_sensor.beispiel_abluft_zustand", "binary_sensor.co2_klima_ok" })
         {
             Assert.Contains(oder, b => b?["condition"]?.ToString() == "not"
                 && b["conditions"]![0]!["entity_id"]!.ToString() == entity
@@ -397,12 +397,12 @@ public sealed class Co2AbsicherungTests
     private static readonly IReadOnlyDictionary<string, string> Rollen = new Dictionary<string, string>
     {
         ["co2_sensor"] = Fuehler,
-        ["licht"] = "binary_sensor.klein_abluft_zustand",
+        ["licht"] = "binary_sensor.beispiel_abluft_zustand",
         ["port_zustand"] = "binary_sensor.big_port_5_zustand",
         ["port_schalter"] = "select.rdwc_venti_aktiver_modus_2",
         ["abluft_stufe"] = "number.rdwc_venti_einschaltleistung",
-        ["canopy"] = "sensor.big_probe_sensor_sonden_temperatur",
-        ["rh"] = "sensor.big_probe_sensor_sonden_luftfeuchtigkeit",
+        ["canopy"] = "sensor.zeltsonde_sonden_temperatur",
+        ["rh"] = "sensor.zeltsonde_sonden_luftfeuchtigkeit",
     };
 
     private static JsonObject Vorlage(string name)

@@ -794,9 +794,9 @@ public sealed class EntfeuchterZusatzTests
     // ------------------------------------------------------- Shelly ausschalten
 
     [Theory]
-    [InlineData("switch.grow_dehumi_tent", true)]
+    [InlineData("switch.zusatz_entfeuchter", true)]
     [InlineData("input_boolean.zusatz", true)]
-    [InlineData("select.rdwc_dehumi_aktiver_modus", false)]
+    [InlineData("select.zusatz_entfeuchter_aktiver_modus", false)]
     [InlineData("light.irgendwas", false)]
     [InlineData("climate.trotec", false)]
     [InlineData("automation.regelung", false)]

@@ -250,7 +250,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Equal(EntfeuchterZusatzHilfe.Aus, EntfeuchterZusatzHilfe.Erkennen(aus!));
         var aufrufe = _stand.Schreibaufrufe();
         Assert.Contains(aufrufe, a => a.Dienst == "automation/turn_off" && a.Entitaet == "automation.rdwc_trotec_zelt_shelly_plan_regelung");
-        Assert.Contains(aufrufe, a => a.Dienst == "switch/turn_off" && a.Entitaet == "switch.grow_dehumi_tent");
+        Assert.Contains(aufrufe, a => a.Dienst == "switch/turn_off" && a.Entitaet == "switch.zusatz_entfeuchter");
         // Die Einzelwerte bleiben, wie sie waren.
         Assert.Empty(aufrufe.Where(a => a.Dienst.StartsWith("input_number", StringComparison.Ordinal)));
 
@@ -392,7 +392,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
     [Fact]
     public async Task Livebild_ZiehtNichts_ErstWennDerShellySeitDerEingestelltenDauerAnIst()
     {
-        _stand.Setze("sensor.grow_dehumi_tent_leistung", "3.0", "Dehumi RDWC Tent Leistung", "W");
+        _stand.Setze("sensor.zusatz_entfeuchter_leistung", "3.0", "Dehumi RDWC Tent Leistung", "W");
 
         // Seit drei Stunden an (Standard des Prüfstands), 3 W: zieht nichts.
         var live = await _stand.Zusatz().LiveAsync(CancellationToken.None);
@@ -400,11 +400,11 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         Assert.Equal(3.0, live.LeistungW);
 
         // Erst seit einer Minute an: Anlaufphase, noch keine Meldung (Dauer 5 min).
-        _stand.Seit["switch.grow_dehumi_tent"] = DateTime.UtcNow.AddMinutes(-1);
+        _stand.Seit["switch.zusatz_entfeuchter"] = DateTime.UtcNow.AddMinutes(-1);
         Assert.False((await _stand.Zusatz().LiveAsync(CancellationToken.None)).ZiehtNichts);
 
         // Seit sechs Minuten: jetzt ja.
-        _stand.Seit["switch.grow_dehumi_tent"] = DateTime.UtcNow.AddMinutes(-6);
+        _stand.Seit["switch.zusatz_entfeuchter"] = DateTime.UtcNow.AddMinutes(-6);
         Assert.True((await _stand.Zusatz().LiveAsync(CancellationToken.None)).ZiehtNichts);
     }
 

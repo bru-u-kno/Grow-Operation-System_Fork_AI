@@ -16,7 +16,7 @@ namespace GrowDiary.Web.Tests;
 public sealed class ProbelaufServiceTests : IDisposable
 {
     private const string Regelung = "automation.entfeuchter_regelung";
-    private const string Port = "select.rdwc_dehumi_aktiver_modus";
+    private const string Port = "select.zusatz_entfeuchter_aktiver_modus";
 
     private readonly string _ordner;
     private readonly AppPaths _pfade;

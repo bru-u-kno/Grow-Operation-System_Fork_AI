@@ -347,14 +347,14 @@ public sealed class GeraeteUebersichtTests
                 "ac_infinity_34CDB02C4C16_port_5_loadState"),
             ["number.rdwc_venti_einschaltleistung"] = new("number.rdwc_venti_einschaltleistung", "ffcb63", "RDWC Venti",
                 "ac_infinity_34CDB02C4C16_port_1_onSelfSpead"),
-            ["binary_sensor.klein_abluft_zustand"] = new("binary_sensor.klein_abluft_zustand", "1abfe0", "Klein Abluft",
+            ["binary_sensor.beispiel_abluft_zustand"] = new("binary_sensor.beispiel_abluft_zustand", "1abfe0", "Klein Abluft",
                 "ac_infinity_4827E289FA8E_port_1_loadState"),
         };
 
         var geraete = Bauen(
             Verwendungen(("binary_sensor.big_port_5_zustand", "CO₂-Ventil"),
                          ("number.rdwc_venti_einschaltleistung", "Abluft Stufe"),
-                         ("binary_sensor.klein_abluft_zustand", "Licht-Status")),
+                         ("binary_sensor.beispiel_abluft_zustand", "Licht-Status")),
             herkunft: herkunft);
 
         var controller = geraete.Where(g => g.IstController).ToList();
@@ -362,7 +362,7 @@ public sealed class GeraeteUebersichtTests
 
         var ventil = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.big_port_5_zustand"));
         var abluft = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "number.rdwc_venti_einschaltleistung"));
-        var licht = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.klein_abluft_zustand"));
+        var licht = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.beispiel_abluft_zustand"));
 
         // Gleicher Controller, verschiedene Ports.
         Assert.Equal(ventil.ElternSchluessel, abluft.ElternSchluessel);
@@ -408,18 +408,18 @@ public sealed class GeraeteUebersichtTests
     {
         var hardware = new[]
         {
-            new HardwareItem { Id = 3, Name = "Aus dem Inventar", HaEntityId = "sensor.big_probe_sensor_sonden_temperatur" },
+            new HardwareItem { Id = 3, Name = "Aus dem Inventar", HaEntityId = "sensor.zeltsonde_sonden_temperatur" },
         };
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["sensor.big_probe_sensor_sonden_temperatur"] = new("sensor.big_probe_sensor_sonden_temperatur", "c3737f", "RDWC Probe Sensor", "ac_infinity_34CDB02C4C16_sensor_2_probeTemperature"),
+            ["sensor.zeltsonde_sonden_temperatur"] = new("sensor.zeltsonde_sonden_temperatur", "c3737f", "RDWC Probe Sensor", "ac_infinity_34CDB02C4C16_sensor_2_probeTemperature"),
         };
         var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
         {
             ["ha:c3737f"] = new() { Schluessel = "ha:c3737f", Name = "Big Probe Sensor" },
         };
 
-        var geraete = Bauen(Verwendungen(("sensor.big_probe_sensor_sonden_temperatur", "Messgröße AirTemperature")), hardware, gespeichert, herkunft: herkunft);
+        var geraete = Bauen(Verwendungen(("sensor.zeltsonde_sonden_temperatur", "Messgröße AirTemperature")), hardware, gespeichert, herkunft: herkunft);
 
         Assert.Equal("Big Probe Sensor", Assert.Single(geraete, g => g.Schluessel == "ha:c3737f").Name);
     }

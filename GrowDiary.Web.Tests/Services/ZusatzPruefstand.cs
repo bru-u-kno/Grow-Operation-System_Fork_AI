@@ -64,16 +64,16 @@ public sealed class ZusatzPruefstand : IDisposable
         var steuerung = new SteuerungRepository(_pfade);
         foreach (var (modul, rolle, entitaet) in new[]
                  {
-                     ("entfeuchter", "zelt_rh", "sensor.big_probe_sensor_sonden_luftfeuchtigkeit"),
-                     ("entfeuchter", "zelt_temp", "sensor.big_probe_sensor_sonden_temperatur"),
-                     ("entfeuchter", "zelt_vpd", "sensor.big_probe_sensor_sonden_vpd"),
-                     ("entfeuchter", "port_schalter", "select.rdwc_dehumi_aktiver_modus"),
+                     ("entfeuchter", "zelt_rh", "sensor.zeltsonde_sonden_luftfeuchtigkeit"),
+                     ("entfeuchter", "zelt_temp", "sensor.zeltsonde_sonden_temperatur"),
+                     ("entfeuchter", "zelt_vpd", "sensor.zeltsonde_sonden_vpd"),
+                     ("entfeuchter", "port_schalter", "select.zusatz_entfeuchter_aktiver_modus"),
                      ("entfeuchter", "port_zustand", "binary_sensor.big_port_7_zustand"),
-                     ("entfeuchter", "licht_zustand", "binary_sensor.klein_abluft_zustand"),
-                     (EntfeuchterZusatzSteuerungService.Modul, "zusatz_schalter", "switch.grow_dehumi_tent"),
-                     (EntfeuchterZusatzSteuerungService.Modul, "zusatz_leistung", "sensor.grow_dehumi_tent_leistung"),
-                     (EntfeuchterZusatzSteuerungService.Modul, "zusatz_energie", "sensor.grow_dehumi_tent_energie"),
-                     (EntfeuchterZusatzSteuerungService.Modul, "fuehrung_zustand", "select.rdwc_dehumi_aktiver_modus"),
+                     ("entfeuchter", "licht_zustand", "binary_sensor.beispiel_abluft_zustand"),
+                     (EntfeuchterZusatzSteuerungService.Modul, "zusatz_schalter", "switch.zusatz_entfeuchter"),
+                     (EntfeuchterZusatzSteuerungService.Modul, "zusatz_leistung", "sensor.zusatz_entfeuchter_leistung"),
+                     (EntfeuchterZusatzSteuerungService.Modul, "zusatz_energie", "sensor.zusatz_entfeuchter_energie"),
+                     (EntfeuchterZusatzSteuerungService.Modul, "fuehrung_zustand", "select.zusatz_entfeuchter_aktiver_modus"),
                  })
         {
             steuerung.SetGeraet(modul, rolle, entitaet);
@@ -188,14 +188,14 @@ public sealed class ZusatzPruefstand : IDisposable
         Setze(EntfeuchterSteuerungService.Entitaeten.AusAktiv, "35.0");
 
         // Geräte
-        Setze("sensor.big_probe_sensor_sonden_temperatur", "25.1", "Sonde Temperatur", "°C");
-        Setze("sensor.big_probe_sensor_sonden_luftfeuchtigkeit", "55.2", "Sonde Luftfeuchte", "%");
-        Setze("sensor.big_probe_sensor_sonden_vpd", "1.31", "Sonde VPD", "kPa");
-        Setze("binary_sensor.klein_abluft_zustand", "on", "Light LED Top Zustand");
-        Setze("select.rdwc_dehumi_aktiver_modus", "On", "RDWC Dehumi Aktiver Modus");
-        Setze("switch.grow_dehumi_tent", "on", "Dehumi RDWC Tent");
-        Setze("sensor.grow_dehumi_tent_leistung", "313.0", "Dehumi RDWC Tent Leistung", "W");
-        Setze("sensor.grow_dehumi_tent_energie", "7.27", "Dehumi RDWC Tent Energie", "kWh");
+        Setze("sensor.zeltsonde_sonden_temperatur", "25.1", "Sonde Temperatur", "°C");
+        Setze("sensor.zeltsonde_sonden_luftfeuchtigkeit", "55.2", "Sonde Luftfeuchte", "%");
+        Setze("sensor.zeltsonde_sonden_vpd", "1.31", "Sonde VPD", "kPa");
+        Setze("binary_sensor.beispiel_abluft_zustand", "on", "Light LED Top Zustand");
+        Setze("select.zusatz_entfeuchter_aktiver_modus", "On", "RDWC Dehumi Aktiver Modus");
+        Setze("switch.zusatz_entfeuchter", "on", "Dehumi RDWC Tent");
+        Setze("sensor.zusatz_entfeuchter_leistung", "313.0", "Dehumi RDWC Tent Leistung", "W");
+        Setze("sensor.zusatz_entfeuchter_energie", "7.27", "Dehumi RDWC Tent Energie", "kWh");
 
         // Die handgebaute Regelung: läuft.
         Setze("automation.rdwc_trotec_zelt_shelly_plan_regelung", "on", "RDWC Trotec Zelt (Shelly) Plan-Regelung", kennung: "1791297367181");
