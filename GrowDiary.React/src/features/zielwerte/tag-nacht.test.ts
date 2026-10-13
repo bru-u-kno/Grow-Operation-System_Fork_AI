@@ -64,7 +64,7 @@ describe('planKurz und weichtVomPlanAb', () => {
 })
 
 describe('zeilenBeiAbweichung (forkai.154: Abweichung rechnet live mit)', () => {
-  // Bru, 30.09.2026, Blütewoche 6: Plan 23 °C tags, 19 °C nachts, übergeben mit ± 3 K.
+  // 30.09.2026, Blütewoche 6: Plan 23 °C tags, 19 °C nachts, übergeben mit ± 3 K.
   const tag = zeilenStand([u('luft-unten', '20'), u('luft-oben', '26')], ['luft-unten', 'luft-oben'])
   const nacht = zeilenStand([u('luft-nacht-unten', '16'), u('luft-nacht-oben', '22')], ['luft-nacht-unten', 'luft-nacht-oben'])
   const start = { min: '20', max: '26', nachtMin: '16', nachtMax: '22', toleranz: '' }

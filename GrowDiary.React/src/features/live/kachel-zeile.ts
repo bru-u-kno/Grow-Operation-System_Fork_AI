@@ -4,7 +4,7 @@
  * Der Verlauf einer angetippten Kachel stand bisher unter dem GANZEN Bereich.
  * Am Telefon (zwei Spalten) lag er damit rund 1100 px unter der Kachel, hinter
  * drei Kachelzeilen und der Verlaufskarte: man tippte, und scheinbar geschah
- * nichts — oder irgendetwas (Bru, 05.10.2026). Jetzt kommt er direkt unter die
+ * nichts — oder irgendetwas (05.10.2026). Jetzt kommt er direkt unter die
  * Zeile, in der die Kachel steht.
  *
  * Wo eine Zeile endet, weiß nur das Layout: die Kacheln brechen frei um

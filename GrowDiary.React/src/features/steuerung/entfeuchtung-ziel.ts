@@ -5,7 +5,7 @@ import type { Zone } from './entfeuchter-zonen'
  * Fork AI (A-021): Das Ziel der Luftfeuchte und der Temperatur als BAND mit zwei Seiten — Rechenteil
  * ohne React.
  *
- * <b>Anlass (Bru, 13.10.2026).</b> Das grüne Band stand immer ganz links: es kannte nur eine
+ * <b>Anlass (13.10.2026).</b> Das grüne Band stand immer ganz links: es kannte nur eine
  * Obergrenze. „Aber grundsätzlich wäre es ja auch kritisch anzusehen, wenn die Luftfeuchtigkeit zu
  * niedrig ist. Genauso auch die Temperatur."
  *

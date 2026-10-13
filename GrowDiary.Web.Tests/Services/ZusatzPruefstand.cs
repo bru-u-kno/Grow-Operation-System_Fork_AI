@@ -15,7 +15,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// echte Dienste, echte Datenbank, nur das Netz ist eine Attrappe, die jeden Aufruf mitschreibt.
 /// </summary>
 /// <remarks>
-/// <para>Die Zustände sind <b>Brus Stand vom 06.10.2026</b> (Helfer, Plan-Sensoren, Shelly):
+/// <para>Die Zustände sind <b>Nutzer-Stand vom 06.10.2026</b> (Helfer, Plan-Sensoren, Shelly):
 /// Tag-Grenze 26,5 fest, Nacht 25, Folge-Abstand 1 K. Damit prüft jeder Fall gegen die Zahlen,
 /// die am 06.10. beim Speichern verloren gingen — nicht gegen Werkseinstellungen.</para>
 /// </remarks>
@@ -152,10 +152,10 @@ public sealed class ZusatzPruefstand : IDisposable
         return sb.Append(']').ToString();
     }
 
-    /// <summary>Brus Anlage am Abend des 06.10.2026.</summary>
+    /// <summary>Nutzer-Anlage am Abend des 06.10.2026.</summary>
     private void BruStand()
     {
-        // Zusatz-Helfer (bestehen bei Bru)
+        // Zusatz-Helfer (bestehen beim Nutzer)
         Setze(EntfeuchterZusatzSteuerungService.Entitaeten.VpdHysterese, "0.15");
         Setze(EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit, "15");
         Setze(EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause, "10");

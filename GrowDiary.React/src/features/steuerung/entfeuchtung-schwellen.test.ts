@@ -15,7 +15,7 @@ import {
 const BRU = { feuchteEinTag: 50, feuchteAusTag: 46, feuchteEinNacht: 50, feuchteAusNacht: 46 }
 
 describe('Einschalt-Schwelle der Luftfeuchte', () => {
-  it('AUS ist EIN minus Abstand — Brus Werte gehen auf (50 − 4 = 46)', () => {
+  it('AUS ist EIN minus Abstand — Nutzer-Werte gehen auf (50 − 4 = 46)', () => {
     expect(ausAusEin(50, 4)).toBe(46)
   })
 
@@ -88,7 +88,7 @@ describe('Einschalt-Schwelle der Luftfeuchte', () => {
 })
 
 describe('Arbeitsbereich aus dem Plan (forkai.212) — dieselben Beispiele wie das Backend', () => {
-  it('Brus Zelt: Obergrenze 54, Vorlauf 4, Abstand 4 ergibt 50/46', () => {
+  it('Nutzer-Zelt: Obergrenze 54, Vorlauf 4, Abstand 4 ergibt 50/46', () => {
     expect(arbeitsbereichAusPlan(54, 4, 4)).toEqual({ ein: 50, aus: 46 })
   })
 

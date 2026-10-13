@@ -10,7 +10,7 @@ namespace GrowDiary.Web.Models;
 /// „Ziele &amp; Meldungen" gepflegt. Diese Seite zeigt es nur an. Hier steht, wie
 /// das GERÄT arbeitet: wie ruhig es schaltet, wie lange es mindestens läuft, wie
 /// lange es auf die Außenluft wartet und ab wann es sich wegen Wärme abschaltet
-/// (abgestimmt mit Bru am 21.09.2026).</para>
+/// (abgestimmt mit dem Nutzer am 21.09.2026).</para>
 ///
 /// <para><b>Geregelt wird in Home Assistant.</b> Ein Kompressor darf nicht davon
 /// abhängen, ob dieses Add-on gerade neu startet. Der Fork schreibt die Helfer

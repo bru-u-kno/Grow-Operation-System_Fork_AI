@@ -17,7 +17,7 @@ import {
   type AblaufZeile,
 } from './ablauf-rechnung'
 
-/** Brus Wechsel vom 04.10.2026: 160 L, Plan Blütewoche 7. */
+/** Nutzer-Wechsel vom 04.10.2026: 160 L, Plan Blütewoche 7. */
 const zeile = (name: string, vorschlagMl: number | null, rolle: AblaufZeile['rolle'] = 'Grundduenger', art: AblaufZeile['art'] = 'plan'): AblaufZeile => ({
   schluessel: `${art}:${name}`, name, art, rolle, vorschlagMl, hinweis: null, artikelId: 1, einheit: 'ml',
 })

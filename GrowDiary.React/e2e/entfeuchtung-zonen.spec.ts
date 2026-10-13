@@ -52,7 +52,7 @@ const block = (page: Page, nr: 0 | 1) => page.locator('.ef-band .ef-block').nth(
 const nadel = (page: Page, nr: 0 | 1) => block(page, nr).locator('.gos-metric-band .nadel')
 
 test('Entfeuchtung: die Nadel trägt die Farbe ihrer Zone — und die Zone steht auch als Wort da', async ({ page, request }) => {
-  // Bru, 07.10.2026: 57,9 % bei Ziel 51 % ist „deutlich daneben", 22,7 °C bei 25 °C Höchsttemperatur im Ziel.
+  // 07.10.2026: 57,9 % bei Ziel 51 % ist „deutlich daneben", 22,7 °C bei 25 °C Höchsttemperatur im Ziel.
   await seiteMitWerten(page, request, { ...WERTE, feuchteProzent: 57.9, tempC: 22.7 })
   await expect(page.locator('.gos-metric-band .nadel')).toHaveCount(2)
   await expect(nadel(page, 0)).toHaveClass(/\bist-crit\b/)

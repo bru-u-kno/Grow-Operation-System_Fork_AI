@@ -100,7 +100,7 @@ public sealed class WasserwechselApiController : ApiControllerBase
     /// später nachträgt, bekommt hier nichts — dann gelten die Handwerte.</para>
     /// <para><b>Kein Messwert.</b> Ein Tank-EC unter <see cref="TankSensorService.EcMindestwert"/> zählt nicht; es gilt der letzte Wert davor,
     /// der übersprungene steht in <c>UebersprungenEc</c>.</para>
-    /// <para>DO und ORP fehlen absichtlich: Brus Anlage hat dafür keinen Sensor.</para>
+    /// <para>DO und ORP fehlen absichtlich: Nutzer-Anlage hat dafür keinen Sensor.</para>
     /// </remarks>
     [HttpGet("sensor")]
     [ProducesResponseType(typeof(WasserwechselSensorDto), StatusCodes.Status200OK)]

@@ -82,7 +82,7 @@ public static class GrowPlanBauer
     /// <remarks>
     /// <para><b>Nur im Plan des Grows.</b> Die Herstellertabelle im Programm (Wissen)
     /// behält ihre Begriffe — „Vega", „Flores" sind die Namen des Düngers, und die
-    /// bleiben unangetastet (Bru, 21.09.2026). Der Grow-Plan ist eine Kopie; nur
+    /// bleiben unangetastet (21.09.2026). Der Grow-Plan ist eine Kopie; nur
     /// dort wird umbenannt.</para>
     /// <para><b>Die Anzucht</b> heißt nach dem Startmaterial
     /// (<see cref="Anzuchtname"/>) — die Sonderspalte „Bewurzelung" bzw.

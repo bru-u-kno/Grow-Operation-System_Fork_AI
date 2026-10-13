@@ -58,7 +58,7 @@ describe('QR-Code', () => {
   })
 
   it('kommt mit einer nackten IP zurecht', () => {
-    const url = 'http://192.168.178.68:8123/app/local_grow_os'
+    const url = 'http://192.168.1.60:8123/app/local_grow_os'
 
     expect(scan(url)).toBe(url)
   })

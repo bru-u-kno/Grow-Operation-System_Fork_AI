@@ -41,7 +41,7 @@ public sealed class MeldungenApiController : ApiControllerBase
 
     /// <summary>
     /// Automationen mit „Wächter“ im Namen, die nichts melden — sie gehören nicht in
-    /// eine Liste der Absender. Nachgesehen in Brus HA am 16.09.2026.
+    /// eine Liste der Absender. Nachgesehen in Nutzer-HA am 16.09.2026.
     /// </summary>
     private static readonly HashSet<string> KeineAbsender = new(StringComparer.OrdinalIgnoreCase)
     {

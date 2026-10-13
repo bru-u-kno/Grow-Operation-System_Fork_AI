@@ -74,8 +74,8 @@ internal static class VorgangBausteine
     /// Der Artikel für das Wasser — gefunden über den Namen, beim ersten Mal angelegt.
     /// </summary>
     /// <remarks>
-    /// Bru hat „Leitungswasser" schon als Artikel (Einheit L). „Osmosewasser"
-    /// gibt es noch nicht; Bru hat entschieden, dass es beim ersten Vorgang
+    /// Der Nutzer hat „Leitungswasser" schon als Artikel (Einheit L). „Osmosewasser"
+    /// gibt es noch nicht; der Nutzer hat entschieden, dass es beim ersten Vorgang
     /// angelegt wird. Ohne Preis: die Kosten je Liter trägt er im Artikel nach.
     /// Verglichen wird ohne Groß/Klein und ohne Leerzeichen am Rand — wie
     /// <see cref="Stammdaten.Angleichen"/>.

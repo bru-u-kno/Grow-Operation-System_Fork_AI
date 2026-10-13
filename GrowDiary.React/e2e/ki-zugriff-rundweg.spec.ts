@@ -240,7 +240,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
   })
 
   /**
-   * Fork AI (A-003, 04.10.2026): Bru legte am Handy einen Schlüssel an, die
+   * Fork AI (A-003, 04.10.2026): der Nutzer legte am Handy einen Schlüssel an, die
    * Ansicht blieb unten stehen, und der Kasten mit dem Klartext lag über der
    * Bildkante — er hielt den Schlüssel für verloren. Gemessen wird deshalb im
    * schmalen Fenster (412 × 732 px, Telefon mit Browserleiste), ob der Kasten
@@ -309,7 +309,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
 
   /**
    * Fork AI (A-003, 04.10.2026 abends): forkai.166 rollte per scrollIntoView —
-   * im Chromium hier richtig, in Brus HA-App lag der Kasten trotzdem ein Stück
+   * im Chromium hier richtig, in Nutzer-HA-App lag der Kasten trotzdem ein Stück
    * unter der Kopfleiste (dieselbe Wirkung wie F-049). Nachgestellt werden zwei
    * vermutete Unterschiede der App-Ansicht (belegt ist nur die Wirkung): sie
    * beachtet `scroll-margin-top` nicht, und die Kopfleiste ist bei größerer
@@ -324,7 +324,7 @@ test.describe('Zugriff für KI-Assistenten', () => {
     await page.setViewportSize({ width: 412, height: 732 })
     const ids: number[] = []
     try {
-      // Mehrere Schlüssel wie bei Bru — sonst ist die Seite zu kurz, um weit unten zu sein.
+      // Mehrere Schlüssel wie beim Nutzer — sonst ist die Seite zu kurz, um weit unten zu sein.
       for (let i = 0; i < 4; i++) {
         const r = await page.request.post(`${WEG}/schluessel`, { data: { name: `Vorrat ${i} ${marke()}`, stufen: ['Dokumentieren'], rueckfrageBei: [] } })
         expect(r.ok()).toBe(true)

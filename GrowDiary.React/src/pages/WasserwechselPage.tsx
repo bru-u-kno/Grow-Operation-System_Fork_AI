@@ -43,7 +43,7 @@ export default function WasserwechselPage() {
   const [stand, setStand] = useState<WasserwechselStandDto | null>(null)
   const [standFehler, setStandFehler] = useState<string | null>(null)
   const [neuGeladen, setNeuGeladen] = useState(0)
-  // Nach dem Speichern beginnt ein frischer Vorgang — neu gerechnet, nichts gemerkt (Bru).
+  // Nach dem Speichern beginnt ein frischer Vorgang — neu gerechnet, nichts gemerkt (der Nutzer).
   const [ablaufNummer, setAblaufNummer] = useState(0)
   const [gespeichert, setGespeichert] = useState<{ text: string; hinweis: string | null } | null>(null)
   const [suche] = useSearchParams()

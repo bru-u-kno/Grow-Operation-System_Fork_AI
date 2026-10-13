@@ -121,7 +121,7 @@ export type ZielBandProps = {
 /**
  * Das Band im Stil der Live-Kacheln (`metric-tile.css`): grüner Streifen für das Ziel in der Mitte,
  * gelbe Striche für die Grenzen, Nadel für den Messwert. Unter dem Band stehen nur die Grenzen —
- * das Ziel steht schon darüber bei „ZIEL" (Bru, 11.10.2026).
+ * das Ziel steht schon darüber bei „ZIEL" (11.10.2026).
  */
 export function ZielBandAnzeige({ von, bis, zielVon, zielBis, grenzen, ist, urteil }: ZielBandProps) {
   const pos = (w: number) => Math.round(Math.max(0, Math.min(100, ((w - von) / (bis - von)) * 100)) * 10) / 10
@@ -146,7 +146,7 @@ export type HerkunftLink = { text: string; to?: string; springeZu?: string }
 
 /**
  * „Woher kommt das?" — eine Zeile zum Aufklappen; aufgeklappt eine Zeile je Quelle (Wert links, Herkunft
- * rechts) und darunter die Wege zum Ändern. Zugeklappt kostet es nur eine Zeile (Bru, 13.10.2026).
+ * rechts) und darunter die Wege zum Ändern. Zugeklappt kostet es nur eine Zeile (13.10.2026).
  */
 export function Herkunft({ titel = 'Woher kommt das?', zeilen, links, onSpringen }: {
   titel?: string

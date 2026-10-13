@@ -28,10 +28,10 @@ public sealed record Sprung(string MetricKey, DateTime LetzteRuheUtc, DateTime N
 /// </summary>
 /// <remarks>
 /// <para><b>Der Anlass.</b> Am 03.10.2026 fiel der EC in Zelt 1 zwischen 16:10
-/// und 16:35 Ortszeit von 1,74 auf 1,61 — und eingetragen war nichts. Bru:
+/// und 16:35 Ortszeit von 1,74 auf 1,61 — und eingetragen war nichts. Der Nutzer:
 /// „Nachgefüllt?" Genau diese Frage soll das Tagebuch selbst stellen.</para>
 ///
-/// <para><b>Wie ein echter Sprung aussieht</b> (aus Brus Rohdaten, 5-Minuten-Takt):
+/// <para><b>Wie ein echter Sprung aussieht</b> (aus Nutzer-Rohdaten, 5-Minuten-Takt):
 /// davor 45 Minuten zwischen 1,73 und 1,75, dann 1,29 · 1,67 · 1,62 · 1,70 —
 /// das Wasser mischt sich, die Sonde zappelt —, danach ruhig bei 1,60–1,61. Ein
 /// Vergleich zweier Nachbarwerte fände hier entweder vier Sprünge oder keinen.
@@ -64,7 +64,7 @@ public static class Sprungerkennung
 
     /// <summary>So lange darf das Durchmischen dauern.</summary>
     /// <remarks>
-    /// Brus Nachfüllen am 03.10.2026 brauchte 25 Minuten vom letzten ruhigen bis
+    /// Nutzer-Nachfüllen am 03.10.2026 brauchte 25 Minuten vom letzten ruhigen bis
     /// zum ersten ruhigen Wert, sein Wasserwechsel am 04.10. (Ablassen, Füllen,
     /// Anmischen) 50 Minuten. Was länger dauert, ist keine Stufe mehr, sondern
     /// eine Drift — die beobachten Trend-Wächter und Diagnose.
@@ -91,7 +91,7 @@ public static class Sprungerkennung
     /// <remarks>
     /// Faustregel Grow OS, aus der Mischungsrechnung: wer 1/20 des Beckens mit
     /// Wasser auffüllt, verdünnt die Lösung um rund 5 %. Kleiner als das ist ein
-    /// Nachfüllen nicht vom Tagesgang (±0,01) zu trennen. Brus Fall: 0,13 bei
+    /// Nachfüllen nicht vom Tagesgang (±0,01) zu trennen. Nutzer-Fall: 0,13 bei
     /// 1,74 — das Siebenfache des Rauschens.
     /// </remarks>
     public const double EcAnteil = 0.05;
@@ -178,7 +178,7 @@ public static class Sprungerkennung
             }
 
             // Der letzte ruhige Wert VOR dem Übergang — nicht der erste, bei dem
-            // die Stufe schon in Reichweite lag. Sonst begänne Brus Sprung um
+            // die Stufe schon in Reichweite lag. Sonst begänne Nutzer-Sprung um
             // 15:50 statt um 16:10.
             var letzte = i;
             while (letzte + 1 < t.Index

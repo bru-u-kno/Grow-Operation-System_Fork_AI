@@ -14,7 +14,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// <remarks>
 /// <para>Home Assistant leitet die Entity-ID aus dem Alias ab: aus der Vorlage
 /// „CO2 Dosierung" wird <c>automation.co2_dosierung</c>. Der Katalog kennt nur die
-/// handgebaute Kennung aus Brus Anlage (<c>automation.co2_dosierung_rdwc_port_5</c>).
+/// handgebaute Kennung aus Nutzer-Anlage (<c>automation.co2_dosierung_rdwc_port_5</c>).
 /// Vorher stand deshalb jede angelegte Automation für immer unter „fehlt".</para>
 /// <para>Die handgebauten müssen weiter gelten: sie laufen in der echten Anlage.</para>
 /// </remarks>
@@ -121,7 +121,7 @@ public sealed class AutomationKennungTests
     public async Task Bestand_DieHandgebautenGeltenWeiter()
     {
         var ha = new NachgebautesHa();
-        // Die echten Kennungen aus Brus Anlage (Konfigurations-ids wie in Daten/co2-handgebaut).
+        // Die echten Kennungen aus Nutzer-Anlage (Konfigurations-ids wie in Daten/co2-handgebaut).
         ha.Automationen.Add(("automation.co2_dosierung_rdwc_port_5", "1788411041559", "on"));
         ha.Automationen.Add(("automation.co2_wachter_rdwc_port_5", "1788930088786", "on"));
 

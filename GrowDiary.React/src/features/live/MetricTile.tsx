@@ -140,7 +140,7 @@ export function MetricTile({
     : null
   const zielText = targetMin == null && targetMax == null ? null : bandText(targetMin, targetMax, decimals)
   /* Unter dem Band stehen nur die Grenzen: das Ziel steht schon bei „ZIEL" darüber
-   * (Mockup live-kacheln, Bru 11.10.2026). Nur ohne Zieltext bleiben die Zielzahlen. */
+   * (Mockup live-kacheln, 11.10.2026). Nur ohne Zieltext bleiben die Zielzahlen. */
   const band = bandGeometrie(value, ziel, grenze, (x) => kurzeZahl(x, stellen), baender == null && zielText == null)
   // Nur für Kacheln ohne Ziel/Grenze, die trotzdem eine Fußzeile haben (z. B. „Kein Entity gemappt").
   const fusszeile = footer ?? (zielText == null ? targetLabel(targetMin, targetMax, unit, decimals) : null)

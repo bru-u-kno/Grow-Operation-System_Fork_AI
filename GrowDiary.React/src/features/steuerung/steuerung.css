@@ -367,7 +367,7 @@
   .ef-marken.ist-gestaffelt { height: 74px; }
   .ef-marken span.is-tief { top: 38px; }
 
-  /* A-021: Überblick und Einstellungen der Seite „Entfeuchtung" (Bru, 13.10.2026). */
+  /* A-021: Überblick und Einstellungen der Seite „Entfeuchtung" (13.10.2026). */
   /* Plaketten für Licht und Woche: gelten für Luftfeuchte und Temperatur zugleich. */
   .ef-kontext { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: 0 0 var(--s-3); }
   .ef-kontext span {

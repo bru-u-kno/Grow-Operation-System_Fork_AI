@@ -25,7 +25,7 @@ namespace GrowDiary.Web.Infrastructure;
 /// </remarks>
 public sealed class WasserwechselVorgangRepository : RepositoryBase
 {
-    /// <summary>So heißt der Artikel für Leitungswasser — derselbe Name wie in Brus Anlage (Artikel 10).</summary>
+    /// <summary>So heißt der Artikel für Leitungswasser — derselbe Name wie in Nutzer-Anlage (Artikel 10).</summary>
     public const string LeitungswasserArtikel = "Leitungswasser";
 
     /// <summary>So heißt der Artikel für Osmosewasser, der beim ersten Vorgang mit Osmose angelegt wird.</summary>

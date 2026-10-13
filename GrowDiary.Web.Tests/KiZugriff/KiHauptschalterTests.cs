@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Tests.KiZugriff;
 /// </summary>
 /// <remarks>
 /// Voreinstellung: aus. Eine Installation, in der der Zugriff für KI-Assistenten
-/// schon an ist (Brus), bleibt an, ohne dass etwas gespeichert werden muss —
+/// schon an ist (des Nutzers), bleibt an, ohne dass etwas gespeichert werden muss —
 /// und zwar solange, bis jemand den Schalter ausdrücklich setzt.
 /// </remarks>
 public sealed class KiHauptschalterTests : IDisposable

@@ -38,7 +38,7 @@ public sealed class NotificationService
     /// <remarks>
     /// <para>Ziel ist die Stelle, an der man die Sache <b>sieht</b>. forkai.168
     /// schickte Grenzwert und Risiko auf „Aufgaben" — dort steht aber keine
-    /// Grenzwert-Überschreitung und kein Trend-Befund. Bru bekam fast nur
+    /// Grenzwert-Überschreitung und kein Trend-Befund. Der Nutzer bekam fast nur
     /// Grenzwert-Meldungen und landete damit immer auf einer Seite, die mit der
     /// Meldung nichts zu tun hatte (04.10.2026).</para>
     /// <para>Absender, die das Zelt kennen, geben es per <c>seite</c> mit

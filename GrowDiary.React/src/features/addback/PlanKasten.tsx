@@ -6,7 +6,7 @@ import './plan-kasten.css'
 /**
  * „Dein Plan heute" — der Kasten mit Plan, Phasentag, Zielen und dem Abstand des Tanks zum Ziel.
  *
- * Eine Komponente für Addback und Wasserwechsel (Bru, 10.10.2026: eine Wahrheit je Zahl; 11.10.2026: mehrfach genutzte
+ * Eine Komponente für Addback und Wasserwechsel (10.10.2026: eine Wahrheit je Zahl; 11.10.2026: mehrfach genutzte
  * Bausteine an einer zentralen Stelle). Sie rechnet nichts selbst: Tag und Woche kommen vom Phasenanker des Grows,
  * Planname und Ziele aus dem Backend; die Texte stehen in `nachfuell-rechnung.ts`. Der pH des Tanks wird nie
  * vorausberechnet — nur Ziel und der gemessene Wert.

@@ -82,7 +82,7 @@ export async function kiImBrowserAn(page: Page): Promise<void> {
  * Fork AI (A-011): „KI-Funktionen" am Server einschalten — so, wie es ein Anwender zuerst tut.
  *
  * Ohne das antworten die KI-Endpunkte (Zugriff, Mappe, Home Assistant) mit 404 `ki_aus`.
- * Der Schalter bleibt danach an: „an" ist Brus Zustand, und keine andere Prüfung verlässt sich auf „aus".
+ * Der Schalter bleibt danach an: „an" ist Nutzer-Zustand, und keine andere Prüfung verlässt sich auf „aus".
  */
 export async function kiAmServerAn(request: APIRequestContext): Promise<void> {
   const antwort = await request.put('/api/settings/ki', { data: { aktiv: true } })

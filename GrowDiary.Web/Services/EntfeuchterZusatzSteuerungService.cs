@@ -11,7 +11,7 @@ namespace GrowDiary.Web.Services;
 /// </summary>
 /// <remarks>
 /// <para><b>Geregelt wird in Home Assistant</b> (Vorlage
-/// <c>Vorlagen/entfeuchter-zusatz/regelung.json</c>, bei Bru die handgebaute
+/// <c>Vorlagen/entfeuchter-zusatz/regelung.json</c>, beim Nutzer die handgebaute
 /// <c>automation.rdwc_trotec_zelt_shelly_plan_regelung</c>). Der Fork schreibt
 /// nur die Helfer und schaltet die Automation.</para>
 ///

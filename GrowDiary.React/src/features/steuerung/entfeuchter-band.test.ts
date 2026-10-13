@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { bandBerechnen, tempMax } from './entfeuchter-band'
 
 describe('bandBerechnen', () => {
-  it('zeigt nur den Ausschnitt um die Werte (Bru, 21.09.2026: 52/53,2/55 lagen auf 40–70 % zu dicht)', () => {
+  it('zeigt nur den Ausschnitt um die Werte (21.09.2026: 52/53,2/55 lagen auf 40–70 % zu dicht)', () => {
     const band = bandBerechnen({ aus: 46.1, ein: 52, deckel: 55, ist: 53.2 })!
     expect(band.von).toBe(42)
     expect(band.bis).toBe(59)

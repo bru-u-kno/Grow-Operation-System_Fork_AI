@@ -155,7 +155,7 @@ test.describe('Wasserwechsel-Rundweg', () => {
     await ablauf.getByRole('combobox', { name: 'Wasser' }).selectOption('RO')
     await expect(ablauf.getByLabel('Aqua Vega A eingesetzt'), 'Der zweite Vorgang erbte den Wert „120" vom ersten.')
       .not.toHaveValue('120')
-    // Der Wasser-Artikel entsteht nur nach Rückfrage — nie beim Speichern (Bru, 10.10.2026). „Nicht jetzt" legt nichts an,
+    // Der Wasser-Artikel entsteht nur nach Rückfrage — nie beim Speichern (10.10.2026). „Nicht jetzt" legt nichts an,
     // „Ja, anlegen" legt ihn an und bucht das Wasser mit. (Gibt es „Osmosewasser" schon, entfällt die Rückfrage.)
     const osmose = page.locator('[data-audit="nachfuellen-artikel-fehlt"]').filter({ hasText: 'Osmosewasser' })
     if (await osmose.count() > 0) {

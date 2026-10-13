@@ -15,7 +15,7 @@ import { expect, type Page } from '@playwright/test'
 
 export type Json = Record<string, unknown>
 
-/** Zusatz-Entfeuchter: Modus „fest" 26,5 / 25, Hilfsstärke normal (Bru, 06.10.2026). */
+/** Zusatz-Entfeuchter: Modus „fest" 26,5 / 25, Hilfsstärke normal (06.10.2026). */
 export const EINSTELLUNGEN: Json = {
   hilfe: 'normal',
   automatikAktiv: true,
@@ -89,7 +89,7 @@ export const MODULE = {
 }
 
 /**
- * Brus echte Anlage vom 12.10.2026 (Proxy-GET auf die Fork-API; nur der Zeitpunkt ist angepasst):
+ * echte Nutzer-Anlage vom 12.10.2026 (Proxy-GET auf die Fork-API; nur der Zeitpunkt ist angepasst):
  * Hauptentfeuchter Abstand 4, Einschalten nach 2, Mindestlauf 20, Außenluft 5, EIN 50 / AUS 46 Tag und Nacht;
  * Zusatz Mindestlauf 15, Zuschalten nach 2, Mindestpause 5, Hilfe „eigene". Nacht, Flush, 55,7 % rF bei 21 °C.
  */

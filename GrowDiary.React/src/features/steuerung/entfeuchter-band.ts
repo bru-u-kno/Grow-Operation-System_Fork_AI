@@ -23,7 +23,7 @@ const RAND = 4
  * Das Band zeigt nur den Ausschnitt, auf den es ankommt.
  *
  * <b>Warum kein fester Bereich.</b> Auf 40–70 % lagen EIN (52), Istwert (53,2)
- * und Plan-Deckel (55) so dicht, dass man den Punkt kaum sah (Bru, 21.09.2026).
+ * und Plan-Deckel (55) so dicht, dass man den Punkt kaum sah (21.09.2026).
  * Der Ausschnitt reicht vom kleinsten bis zum größten der vier Werte, plus
  * {@link RAND} Prozentpunkte — ganzzahlig, damit die Skala ruhig bleibt.
  */

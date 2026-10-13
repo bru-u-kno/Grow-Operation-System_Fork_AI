@@ -83,7 +83,7 @@ export function useHomeAssistantFrame(): HomeAssistantFrame {
  *
  * Zielt auf das Dashboard, nicht auf die Startseite: wer hier arbeitet, will in
  * aller Regel zu seinen Grow-Karten und nicht zur Übersicht aller Räume. Das
- * Ziel steht in den Einstellungen, damit es nicht auf Bru's Pfad festgenagelt
+ * Ziel steht in den Einstellungen, damit es nicht auf einen festen Pfad festgenagelt
  * ist — bei jemand anderem heißt das Dashboard anders.
  */
 export function zurueckZuHomeAssistant(pfad: string): void {

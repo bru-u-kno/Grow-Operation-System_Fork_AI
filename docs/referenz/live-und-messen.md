@@ -57,7 +57,7 @@ Fehlt ein Sensor, fällt die Kachel auf die letzte Messung zurück, **je Kennzah
 | EC-Sprung | ab 5 % des Werts davor, mind. 0,05 | Faustregel: so viel verdünnt 1/20 des Beckens Wasser (`Sprungerkennung.EcAnteil`) |
 | pH-Sprung | ab 0,2 | halbe Breite des Komfortbands 5,8–6,2 (`DeviationAnalyzerService.PhComfort*`) |
 | Wasserstand-Sprung | ab 5 % | dieselbe 1/20-Regel |
-| Erklärendes Fenster | 1 h davor bis 3 h danach | Faustregel: eingetragen wird nach der Arbeit (Brus Wechsel 04.10.: Sensor 16:44, Eintrag 17:30) |
+| Erklärendes Fenster | 1 h davor bis 3 h danach | Faustregel: eingetragen wird nach der Arbeit (Nutzer-Wechsel 04.10.: Sensor 16:44, Eintrag 17:30) |
 | Abgleich Hand/Sensor | ±0,1 pH, ±0,1 EC, ±1 °C | Herstellerangabe Bluelab Guardian Monitor |
 
 ## Was es bewusst NICHT tut

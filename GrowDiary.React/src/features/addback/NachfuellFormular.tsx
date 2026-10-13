@@ -62,7 +62,7 @@ function fehlerText(caught: unknown, ersatz: string): string {
 }
 
 /**
- * Das Nachfüllen auf einer Seite (A-006, Etappe 3, freigegeben von Bru am 10.10.2026).
+ * Das Nachfüllen auf einer Seite (A-006, Etappe 3, freigegeben vom Nutzer am 10.10.2026).
  *
  * Erst die Frage „Was hast du gemacht?" — nur Wasser, Wasser mit Dünger und Zusätzen, oder nur
  * Zusätze — und danach nur die Felder, die dazu gehören. Für „18 L Leitungswasser" sind das die

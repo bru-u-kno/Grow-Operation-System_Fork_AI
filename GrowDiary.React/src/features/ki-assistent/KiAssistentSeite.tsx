@@ -5,7 +5,7 @@ import { MappeReiter } from './MappeReiter'
 
 /**
  * KI-Assistent — die eine Stelle für alles, was mit einer eigenen KI zu tun hat
- * (Fork AI, 04.10.2026, Wunsch von Bru: „im Menü gibt es etwas mit KI und auch
+ * (Fork AI, 04.10.2026, Wunsch vom Nutzer: „im Menü gibt es etwas mit KI und auch
  * unter Einstellungen — das ist irreführend").
  *
  * Vorher verteilt auf drei Orte: die Mappe unter Wissen (`/berater`), den

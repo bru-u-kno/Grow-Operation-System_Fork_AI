@@ -31,7 +31,7 @@ const urteil = (zone: Zone | null): 'ok' | 'warn' | 'crit' | null => (zone == nu
 /**
  * Fork AI (A-015, A-021): Reiter „Überblick" — nur zum Lesen, nichts zum Eingeben.
  *
- * Aufbau (Bru, 08.10. und 13.10.2026): Lagemeldung · Messwerte und Zonen EINMAL für das Zelt, mit den
+ * Aufbau (08.10. und 13.10.2026): Lagemeldung · Messwerte und Zonen EINMAL für das Zelt, mit den
  * Plaketten für Licht und Woche oben (sie gelten für beides), je Messwert die große Zahl mit dem Urteil in
  * Worten, die ZIEL-Zeile, das Band mit zwei Seiten (zu feucht UND zu trocken, zu warm UND zu kühl) und
  * darunter eine Zeile „Woher kommt das?" · Geräte mit nur ihrem Status · „Warum läuft welches Gerät?" ·

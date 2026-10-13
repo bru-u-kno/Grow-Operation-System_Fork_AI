@@ -5,11 +5,11 @@ using GrowDiary.Web.Services.Knowledge.Schema;
 namespace GrowDiary.Web.Tests.Services;
 
 /// <summary>
-/// Der Mischplan-Vorschlag für den Wasserwechsel (A-006) — die Regeln, die Bru
+/// Der Mischplan-Vorschlag für den Wasserwechsel (A-006) — die Regeln, die der Nutzer
 /// am 05.10.2026 entschieden hat.
 /// </summary>
 /// <remarks>
-/// Zahlen aus Brus Wechsel vom 04.10.: 160 L, SKX Canna Aqua Blütewoche 7
+/// Zahlen aus Nutzer-Wechsel vom 04.10.: 160 L, SKX Canna Aqua Blütewoche 7
 /// (EC-Ziel 1,2, CalMag 0,5 ml/L, A/B je 2 ml/L, PK 1 ml/L), Leitungswasser mit
 /// 500 µS/cm, Calcium 66,7 mg/L, Magnesium 8,1 mg/L.
 /// </remarks>

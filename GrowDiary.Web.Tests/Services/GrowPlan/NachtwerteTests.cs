@@ -7,7 +7,7 @@ namespace GrowDiary.Web.Tests.Services.GrowPlan;
 
 /// <summary>
 /// Fork AI (forkai.130): Nachtwerte als Planwerte und der Schalter „Nachts gelten
-/// die Tageswerte" — Standard für den Grow, je Woche abweichend (Bru, 21.09.2026).
+/// die Tageswerte" — Standard für den Grow, je Woche abweichend (21.09.2026).
 /// </summary>
 public sealed class NachtwerteTests
 {

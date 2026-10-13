@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from '@playwright/test'
  * Fork AI (forkai.154): „Erlaubte Abweichung ± K" im Grenzwerte-Blatt der
  * Lufttemperatur — vom Tippen bis zum Speicher-Aufruf.
  *
- * <b>Der Anlass.</b> Bru, 30.09.2026, Blütewoche 6: Abweichung auf 4 gestellt, Tag
+ * <b>Der Anlass.</b> 30.09.2026, Blütewoche 6: Abweichung auf 4 gestellt, Tag
  * blieb 20–26 °C, Nacht 16–22 °C — die Zahl sah wirkungslos aus. Die erste
  * Reparatur rechnete die Zeilen live mit, schickte die Vorschau aber auch per PUT;
  * der Server hielt 19/27 dann für eine Handänderung und hätte die Grenzen nie

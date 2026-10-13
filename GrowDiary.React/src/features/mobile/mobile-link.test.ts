@@ -3,8 +3,8 @@ import { buildPanelUrl, judgeHost } from './mobile-link'
 
 describe('Adresse fürs Handy', () => {
   it('setzt Herkunft und Panel-Pfad zusammen', () => {
-    expect(buildPanelUrl('http://192.168.178.68:8123', '/app/local_grow_os'))
-      .toBe('http://192.168.178.68:8123/app/local_grow_os')
+    expect(buildPanelUrl('http://192.168.1.60:8123', '/app/local_grow_os'))
+      .toBe('http://192.168.1.60:8123/app/local_grow_os')
   })
 
   it('wirft den mitkopierten Ingress-Pfad weg', () => {
@@ -15,8 +15,8 @@ describe('Adresse fürs Handy', () => {
   })
 
   it('ergänzt ein fehlendes Schema', () => {
-    expect(buildPanelUrl('192.168.178.68:8123', '/app/local_grow_os'))
-      .toBe('http://192.168.178.68:8123/app/local_grow_os')
+    expect(buildPanelUrl('192.168.1.60:8123', '/app/local_grow_os'))
+      .toBe('http://192.168.1.60:8123/app/local_grow_os')
   })
 
   it('behält https, wenn es dasteht', () => {
@@ -52,7 +52,7 @@ describe('Taugt die Adresse für ein anderes Gerät', () => {
   })
 
   it('lässt eine IP im Netzwerk kommentarlos durch', () => {
-    expect(judgeHost('http://192.168.178.68:8123')).toEqual({ usable: true, warning: null })
+    expect(judgeHost('http://192.168.1.60:8123')).toEqual({ usable: true, warning: null })
   })
 
   it('lässt eine Nabu-Casa-Adresse kommentarlos durch', () => {

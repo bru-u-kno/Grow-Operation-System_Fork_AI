@@ -8,7 +8,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// Kosten bei mehreren gleichzeitigen Grows — Zähler statt Grow.
 /// </summary>
 /// <remarks>
-/// <para><b>Der Anlass (02.10.2026).</b> Bru fährt einen Grow zur Zeit; andere
+/// <para><b>Der Anlass (02.10.2026).</b> Der Nutzer fährt einen Grow zur Zeit; andere
 /// Anwender des Forks haben mehrere Zelte und Grows parallel. Für sie bekam der
 /// zweite laufende Grow nie Stromkosten (jeder Stand trug die Id des ältesten),
 /// der Import übersprang seine Tage oder löschte fremde Stände, und die

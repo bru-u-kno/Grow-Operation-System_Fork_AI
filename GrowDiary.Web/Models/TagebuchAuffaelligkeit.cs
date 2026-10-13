@@ -7,7 +7,7 @@ namespace GrowDiary.Web.Models;
 /// <para><b>Warum gespeichert und nicht jedes Mal gerechnet.</b> Die Rohwerte
 /// leben sieben Tage (<c>HomeAssistantSnapshotWorker.CleanupOldReadingsAsync</c>),
 /// danach bleiben nur Tageswerte — und in Min/Median/Max ist eine Stufe von
-/// 16:10 bis 16:35 nicht mehr zu sehen. Gerechnet am Lesen verschwände Brus
+/// 16:10 bis 16:35 nicht mehr zu sehen. Gerechnet am Lesen verschwände des Nutzers
 /// „EC fiel um 0,13" nach einer Woche still aus dem Tagebuch. Deshalb wird ein
 /// Sprung beim Erkennen festgehalten — beim Öffnen des Tagebuchs und jede Nacht
 /// vor dem Aufräumen der Rohwerte.</para>

@@ -29,7 +29,7 @@ describe('Art je Fall', () => {
   it('jeder der drei Fälle hat seine Art — „nur Zusätze" ist die Korrektur ohne Wasser', () => {
     expect(ART_VON_MODUS).toEqual({ wasser: 'TopOff', mix: 'Addback', zusatz: 'Correction' })
     expect(MODI.map((m) => m.modus)).toEqual(['wasser', 'mix', 'zusatz'])
-    // Der Name des dritten Falls nennt Purolyt und Co. mit: „Dünger/pH" war zu eng (Bru, 10.10.2026).
+    // Der Name des dritten Falls nennt Purolyt und Co. mit: „Dünger/pH" war zu eng (10.10.2026).
     expect(MODI[2].titel).toBe('Nur Zusätze (ohne Wasser)')
     expect(MODI[2].hinweis).toContain('Purolyt')
   })

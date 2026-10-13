@@ -72,7 +72,7 @@ public sealed class Co2SteuerungService
         public const string StartNachLichtAn = "input_number.co2_start_nach_licht_an";
         public const string EndeVorLichtAus = "input_number.co2_ende_vor_licht_aus";
         /// <summary>
-        /// Die Dosierung, wie sie in Brus Anlage handgebaut heißt. Eine vom Fork
+        /// Die Dosierung, wie sie in Nutzer-Anlage handgebaut heißt. Eine vom Fork
         /// angelegte heißt anders — geschaltet und gelesen wird deshalb über
         /// <see cref="AutomatikKennungen"/>, nicht direkt über diese Konstante.
         /// </summary>

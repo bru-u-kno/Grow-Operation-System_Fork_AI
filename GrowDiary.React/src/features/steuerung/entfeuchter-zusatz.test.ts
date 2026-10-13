@@ -26,7 +26,7 @@ import {
 } from './entfeuchter-zusatz'
 import type { EntfeuchterZusatzEinstellungen, EntfeuchterZusatzLive } from './steuerung-typen'
 
-/** Bru, 06.10.2026: Modus „fest" mit 26,5 / 25, Hilfsstärke normal. */
+/** 06.10.2026: Modus „fest" mit 26,5 / 25, Hilfsstärke normal. */
 const BRU: EntfeuchterZusatzEinstellungen = {
   hilfe: 'normal',
   automatikAktiv: true,

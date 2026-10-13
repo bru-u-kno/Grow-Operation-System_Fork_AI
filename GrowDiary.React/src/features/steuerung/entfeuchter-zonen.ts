@@ -2,7 +2,7 @@
  * Fork AI (A-014): Die drei Zonen der Entfeuchter-Seiten — im Ziel, knapp
  * daneben, deutlich daneben. Reiner Rechenteil ohne React.
  *
- * <b>Anlass (Bru, 07.10.2026).</b> Die Schwellen auf der Seite waren farblich
+ * <b>Anlass (07.10.2026).</b> Die Schwellen auf der Seite waren farblich
  * nicht zu unterscheiden: man sah nicht, ob man im Zielbereich, daneben oder im
  * kritischen Bereich liegt. Farbe allein reicht nicht — die Seite nennt die Zone
  * immer auch als Wort (`ZONEN_WORT`).

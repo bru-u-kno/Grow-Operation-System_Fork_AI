@@ -9,13 +9,13 @@ import './steuerung.css'
 /**
  * Fork AI (A-015): Reiter „Einrichtung" — welche Entfeuchter es gibt und wie sie arbeiten.
  *
- * <b>Der Nutzer sagt, wie viele Entfeuchter er hat</b> (Bru, 08.10.2026): Der Hauptentfeuchter ist
+ * <b>Der Nutzer sagt, wie viele Entfeuchter er hat</b> (08.10.2026): Der Hauptentfeuchter ist
  * immer da; der Zusatz-Entfeuchter lässt sich an- und abwählen. Danach richten sich die Seite und
  * die Steuerungs-Übersicht. Ohne Angabe schließt der Fork es aus der Zuordnung in „Geräte & Entitäten".
  * Die Regelung in Home Assistant wird dabei NICHT angefasst — wer den Zusatz abwählt, obwohl er
  * physisch läuft, bekommt einen Hinweis.
  *
- * <b>Die Geräte selbst (Namen, Zuordnung) pflegt Bru nur in „Geräte & Entitäten".</b>
+ * <b>Die Geräte selbst (Namen, Zuordnung) pflegt der Nutzer nur in „Geräte & Entitäten".</b>
  * Eine Frage nach dem Standort (Zelt/außerhalb) gibt es nicht: für die Regelung spielt sie keine Rolle.
  *
  * <b>Stand heute:</b> zusammen arbeiten (einer führt, der andere hilft) ist die einzige Regelung.

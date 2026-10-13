@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Models;
 /// einer frischen Installation schlicht nicht existieren: ein Helfer für die
 /// Hysterese, ein Sensor, der die Impulslänge rechnet, die Automation, die
 /// dosiert.</para>
-/// <para><b>Warum deklarativ.</b> Bei Bru sind diese Objekte über Tage von Hand
+/// <para><b>Warum deklarativ.</b> Beim Nutzer sind diese Objekte über Tage von Hand
 /// entstanden. Bei jedem anderen entstehen sie gar nicht, und die Steuerungsseite
 /// zeigt lauter „nicht verfügbar" ohne zu sagen, woran es liegt. Eine Liste, die
 /// Prüfen und Anlegen aus derselben Quelle speist, kann beides nicht
@@ -88,7 +88,7 @@ public enum BauteilArt
 /// Entitäts-Id mit ihrem Punkt genau das ist, was nach <c>states.</c> gehört.
 /// </para>
 /// <para>
-/// Die Vorschriften bilden den Stand ab, der in Brus Anlage läuft, samt
+/// Die Vorschriften bilden den Stand ab, der in Nutzer-Anlage läuft, samt
 /// Hysterese und dem Halten des letzten Zustands bei Geräteaussetzern. Ändert er
 /// dort etwas, laufen Anlage und Vorlage auseinander — der Abgleich meldet das,
 /// überschrieben wird nichts.
@@ -110,7 +110,7 @@ public enum BauteilArt
 /// null, wenn es keine gibt.
 /// <para>
 /// Fork AI (01.10.2026): <see cref="EntityId"/> ist bei Automationen die Kennung
-/// der <b>handgebauten</b> Fassung in Brus Anlage. Eine vom Fork angelegte heißt
+/// der <b>handgebauten</b> Fassung in Nutzer-Anlage. Eine vom Fork angelegte heißt
 /// anders, weil Home Assistant die Entity-ID aus dem Alias der Vorlage ableitet
 /// („CO2 Dosierung" → <c>automation.co2_dosierung</c>). Wiedergefunden wird sie
 /// über ihre Konfigurations-Kennung (<see cref="KonfigKennung"/>), siehe
@@ -245,7 +245,7 @@ public static class SteuerungBauteile
             Pflicht: false, HaengtAn: BrauchtCanopy,
             OhneDas: "Ohne Canopy-Fühler entfällt die Temperaturgrenze.",
             Min: 15, Max: 34, Schritt: 0.5, Einheit: "°C"),
-        // Fork AI (forkai.150): Sperre und Freigabe, wie sie in Brus Anlage laufen.
+        // Fork AI (forkai.150): Sperre und Freigabe, wie sie in Nutzer-Anlage laufen.
         new(Co2, "input_number.co2_klima_toleranz", "CO2 Klima Toleranz", BauteilArt.Zahl,
             "So lange muss die Feuchte über der Obergrenze liegen, bis gesperrt wird.",
             Pflicht: false, HaengtAn: BrauchtRh,
@@ -520,7 +520,7 @@ public static class SteuerungBauteile
             "Wie viel kälter das Blatt als die Luft ist; der VPD wird mit der Blatttemperatur gerechnet.",
             Min: -5, Max: 0, Schritt: 0.1, Einheit: "°C"),
 
-        // --- Rechenwerte (Fork AI, A-016; Brus Fassung vom 09.10.2026) -------
+        // --- Rechenwerte (Fork AI, A-016; Nutzer-Fassung vom 09.10.2026) -------
         // Die aktiven Schwellen: je nach Licht die Tag- oder Nachtwerte, bei eingeschalteter
         // VPD-Regelung aus dem VPD-Band des Plans. Der Deckel (Feuchte-Obergrenze minus Hysterese)
         // kommt aus den CO₂-Helfern, sofern es sie gibt — ohne sie gilt kein Deckel (100 %).
@@ -550,7 +550,7 @@ public static class SteuerungBauteile
         // und die Plan-Schwellen (sensor.trotec_temp_max_aktiv, vpd_ziel_*,
         // sensor.trotec_feuchte_*_aktiv) gehören dem Entfeuchter und dem Plan und
         // stehen deshalb NICHT hier: die Vorlagen lesen sie nur.
-        // Die Helfer-Kennungen sind die, die bei Bru schon laufen.
+        // Die Helfer-Kennungen sind die, die beim Nutzer schon laufen.
         // ====================================================================
         new(EntfeuchterZusatz, "input_number.trotec_zelt_vpd_hysterese", "Trotec Zelt VPD Hysterese", BauteilArt.Zahl,
             "Abstand des VPD-Bands um das Plan-Ziel: EIN unter Ziel minus Wert, AUS über Ziel plus Wert.",
@@ -618,7 +618,7 @@ public static class SteuerungBauteile
             Verfuegbarkeit: "{{ has_value('sensor.trotec_zelt_folge_aus_temperatur') and has_value('input_number.trotec_zelt_wieder_ein_abstand') }}"),
 
         // --- Automationen ---------------------------------------------------
-        // Die Regelung steht bei Bru handgebaut unter dieser Kennung; eine vom
+        // Die Regelung steht beim Nutzer handgebaut unter dieser Kennung; eine vom
         // Fork angelegte heißt automation.zusatz_entfeuchter_regelung und wird
         // über ihre Konfigurations-Kennung gefunden.
         new(EntfeuchterZusatz, "automation.rdwc_trotec_zelt_shelly_plan_regelung", "Zusatz-Entfeuchter Regelung", BauteilArt.Automation,
@@ -744,7 +744,7 @@ public static class SteuerungBauteile
     /// </summary>
     /// <remarks>
     /// <para>Zwei Wege, beide gelten: die handgebaute Fassung unter
-    /// <see cref="Bauteil.EntityId"/> (so läuft sie in Brus Anlage) und die vom
+    /// <see cref="Bauteil.EntityId"/> (so läuft sie in Nutzer-Anlage) und die vom
     /// Fork angelegte, gefunden über ihre Konfigurations-Kennung — deren Entity-ID
     /// leitet Home Assistant aus dem Alias ab, und die kennt der Katalog nicht.</para>
     /// <para>Vorher wurde nur die Katalog-Kennung angesprochen. „Automatik aus" schaltete

@@ -4,7 +4,7 @@ using GrowDiary.Web.Services;
 namespace GrowDiary.Web.Tests.Services;
 
 /// <summary>
-/// Fork AI (A-009): Speichern schreibt NUR, was geändert wurde — gegen Brus Stand vom 06.10.2026.
+/// Fork AI (A-009): Speichern schreibt NUR, was geändert wurde — gegen Nutzer-Stand vom 06.10.2026.
 /// </summary>
 /// <remarks>
 /// <para><b>Der Anlass.</b> Am 06.10.2026 hat ein Speichern der Seite unbemerkt die Tag-Grenze
@@ -30,7 +30,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
 
         var e = await dienst.EinstellungenAsync(CancellationToken.None);
 
-        // Die Werte kommen aus Brus Helfern, nicht aus den Werkseinstellungen.
+        // Die Werte kommen aus Nutzer-Helfern, nicht aus den Werkseinstellungen.
         Assert.Equal(15, e.MindestlaufzeitMin);
         Assert.Equal(10, e.MindestpauseMin);
         Assert.Equal(1.0, e.FolgeAbstandK);
@@ -102,7 +102,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         var vorher = await dienst.EinstellungenAsync(CancellationToken.None);
         _stand.Vergessen();
 
-        // Bru hat den Helfer in Home Assistant von Hand auf 3 gestellt; der Fork-Stand sagt weiter 15.
+        // Der Nutzer hat den Helfer in Home Assistant von Hand auf 3 gestellt; der Fork-Stand sagt weiter 15.
         var (nachher, _, erreicht) = await dienst.SpeichernAsync(
             new EntfeuchterZusatzAenderung { MindestlaufzeitMin = vorher.MindestlaufzeitMin }, CancellationToken.None);
 
@@ -146,7 +146,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
         var dienst = _stand.Zusatz();
         var vorher = await dienst.EinstellungenAsync(CancellationToken.None);
         var entfeuchterVorher = _stand.Repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul)!;
-        // Mengenwächter: der Entfeuchter-Stand ist Brus (Tag 26,5, nicht der Werkswert 29) und der
+        // Mengenwächter: der Entfeuchter-Stand ist des Nutzers (Tag 26,5, nicht der Werkswert 29) und der
         // Rest weicht vom Werkswert ab — sonst fiele ein zurückgesetztes Feld nicht auf.
         Assert.Equal(26.5, entfeuchterVorher.TempMaxTagFestC);
         var werk = new EntfeuchterEinstellungen();
@@ -362,7 +362,7 @@ public sealed class EntfeuchterZusatzSpeichernTests : IDisposable
     [Fact]
     public async Task Livebild_RechnetMitBrusWerten()
     {
-        // Brus Stand: Regelgröße VPD (der Prüfstand steht sonst auf Luftfeuchte).
+        // Nutzer-Stand: Regelgröße VPD (der Prüfstand steht sonst auf Luftfeuchte).
         _stand.Setze(EntfeuchterSteuerungService.Entitaeten.VpdRegelung, "on");
         var live = await _stand.Zusatz().LiveAsync(CancellationToken.None);
 

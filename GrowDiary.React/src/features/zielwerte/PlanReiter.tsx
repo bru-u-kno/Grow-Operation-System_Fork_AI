@@ -247,7 +247,7 @@ export function PlanReiter() {
         )}
 
         {/* Fork AI (forkai.131): die Knöpfe sagen, was nachts gilt — darunter, ob die
-            Woche dem ganzen Plan folgt (Mockup Stand 7, Bru 21.09.2026). */}
+            Woche dem ganzen Plan folgt (Mockup Stand 7, 21.09.2026). */}
         <div className="pr-nacht" data-audit="plan-nacht-woche">
           <div className="pr-nacht-wahl" role="radiogroup" aria-label={`Nachtwerte ${woche.label}`}>
             {([false, true] as const).map((wahl) => (

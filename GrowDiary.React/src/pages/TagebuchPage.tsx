@@ -28,7 +28,7 @@ export default function TagebuchPage() {
   const [laedt, setLaedt] = useState(true)
   const [fehler, setFehler] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('alles')
-  // Beim Öffnen ist jeder Tag zu (Bru, 05.10.2026) — das Aufklappen wird
+  // Beim Öffnen ist jeder Tag zu (05.10.2026) — das Aufklappen wird
   // bewusst NICHT gespeichert, anders als auf der Live-Seite.
   const [offen, setOffen] = useState<Set<string>>(() => new Set())
 

@@ -321,9 +321,9 @@ public sealed class EntfeuchterZusatzVorlagenTests
 
         // Mit der im Fork eingestellten Adresse: die.
         var rollen = Rollen();
-        rollen["push_dienst"] = "notify.mobile_app_bruno_smartphone_1";
+        rollen["push_dienst"] = "notify.mobile_app_pixel_7";
         var mit = SteuerungAutomationService.Fuellen(Laden("meldung"), rollen)!.ToJsonString();
-        Assert.Contains("\"action\":\"notify.mobile_app_bruno_smartphone_1\"", mit);
+        Assert.Contains("\"action\":\"notify.mobile_app_pixel_7\"", mit);
         Assert.DoesNotContain("notify.notify", mit);
     }
 
@@ -338,11 +338,11 @@ public sealed class EntfeuchterZusatzVorlagenTests
             TestDatabase.Initialize(pfade);
 
             // Eingestellt: genau diese Adresse landet in der angelegten Automation.
-            new NotificationSettingsRepository(pfade).SaveNotificationSettings(new NotificationSettings { NotifyService = "notify.mobile_app_bruno_smartphone_1" });
+            new NotificationSettingsRepository(pfade).SaveNotificationSettings(new NotificationSettings { NotifyService = "notify.mobile_app_pixel_7" });
             var (bilanz, configs) = await AnlegenAsync(pfade);
             Assert.Equal(SteuerungAutomationService.Stand.Angelegt, bilanz.Einzeln.Single(e => e.Name == "meldung").Stand);
             var angelegt = configs["fork_ai_entfeuchter-zusatz_meldung"].ToJsonString();
-            Assert.Contains("\"action\":\"notify.mobile_app_bruno_smartphone_1\"", angelegt);
+            Assert.Contains("\"action\":\"notify.mobile_app_pixel_7\"", angelegt);
             Assert.DoesNotContain("notify.notify", angelegt);
             Assert.DoesNotContain("[[", angelegt);
 

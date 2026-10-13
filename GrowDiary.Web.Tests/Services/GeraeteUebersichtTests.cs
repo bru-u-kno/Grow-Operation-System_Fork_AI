@@ -491,7 +491,7 @@ public sealed class GeraeteUebersichtTests
     [Fact]
     public void EineZugewanderteEntitaetBenenntIhrNeuesGeraetNichtUm()
     {
-        // Bru schob den CO2-Fuehler versehentlich in eine Kamera — und die Karte
+        // Der Nutzer schob den CO2-Fuehler versehentlich in eine Kamera — und die Karte
         // hiess danach „RDWC CO2 + Light Sensor". Der Name kam von der
         // zugewanderten Entitaet; gefunden hat er sie so nicht wieder.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)

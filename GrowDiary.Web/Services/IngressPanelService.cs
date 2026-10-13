@@ -11,7 +11,7 @@ namespace GrowDiary.Web.Services;
 /// <remarks>
 /// <para><b>Der Anlass (05.10.2026).</b> Seit forkai.168 öffnet ein Tipp auf eine
 /// Push-Meldung <c>/app/&lt;slug&gt;/&lt;seite&gt;</c>. Das ist das App-Panel von Home
-/// Assistant — mit der weißen HA-Kopfleiste darüber. Bru öffnet Grow OS am Handy
+/// Assistant — mit der weißen HA-Kopfleiste darüber. Der Nutzer öffnet Grow OS am Handy
 /// aber über ein Ingress-Panel mit <c>ui_mode: normal</c> (FORK.md, „Empfohlen:
 /// ohne die Kopfleiste"), und genau diese Leiste wollte er dort loswerden. Die
 /// Meldung landete auf der richtigen Seite, aber in der falschen Hülle.</para>

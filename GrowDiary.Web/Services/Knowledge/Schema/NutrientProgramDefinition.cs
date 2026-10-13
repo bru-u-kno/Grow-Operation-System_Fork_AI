@@ -193,7 +193,7 @@ public sealed class FeedChartColumn
     /// Nachts steigt die Feuchte von selbst, und eine lockerere Nachtgrenze wäre
     /// eine leisere Meldung bei Schimmelgefahr (Festlegung 13.09.2026). Eine eigene
     /// Nachtgrenze gibt es deshalb nur, wenn eine Woche sie ausdrücklich bekommt
-    /// (Bru, 21.09.2026).
+    /// (21.09.2026).
     /// </remarks>
     [JsonPropertyName("rhMaxNight")]
     public double? RhMaxNight { get; set; }

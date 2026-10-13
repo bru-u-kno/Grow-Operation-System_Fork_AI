@@ -409,7 +409,7 @@ public sealed class EntfeuchterZusatzTests
             zusatz, leistung, 2.9, fuehrung, automatik,
             ZusatzSeitUtc: anSeitMin is { } m ? Jetzt.AddMinutes(-m) : null, JetztUtc: Jetzt, RhObergrenzeProzent: rhMax, VpdRegelung: vpdRegelung);
 
-    private static EntfeuchterZusatzEinstellungen Bru() => new()
+    private static EntfeuchterZusatzEinstellungen Standardwerte() => new()
     {
         TempMaxTagModus = TempMaxModus.Fest, TempMaxTagFestC = 26.5,
         TempMaxNachtModus = TempMaxModus.Fest, TempMaxNachtFestC = 25,
@@ -418,7 +418,7 @@ public sealed class EntfeuchterZusatzTests
     [Fact]
     public void Livebild_RechnetSchwellenUndTemperaturen()
     {
-        var live = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang());
+        var live = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang());
 
         Assert.Equal((26.5, 25.0), (live.TempMaxTagC, live.TempMaxNachtC));
         Assert.Equal((25.5, 24.0), (live.FolgeAusTagC, live.FolgeAusNachtC));
@@ -434,7 +434,7 @@ public sealed class EntfeuchterZusatzTests
     public void Livebild_FolgtDerRegelgroesseDesEntfeuchters_LuftfeuchteGewaehltHeisstAuchTagsFeuchte()
     {
         // A-015: Steht „Nach VPD regeln" des Entfeuchters ausdrücklich auf aus, regelt der Zusatz auch am Tag nach der Feuchte.
-        var feuchte = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdRegelung: false));
+        var feuchte = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdRegelung: false));
         Assert.Equal(EntfeuchterZusatzSchaltgroesse.Feuchte, feuchte.Schaltgroesse);
         Assert.Null(feuchte.VpdZiel);
         Assert.False(feuchte.VpdRegelung);
@@ -443,13 +443,13 @@ public sealed class EntfeuchterZusatzTests
         // An, unbekannt oder fehlender Schalter: wie bisher VPD — ein fehlender Helfer schaltet nichts um.
         foreach (bool? stand in new bool?[] { true, null })
         {
-            var vpd = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdRegelung: stand));
+            var vpd = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdRegelung: stand));
             Assert.Equal(EntfeuchterZusatzSchaltgroesse.Vpd, vpd.Schaltgroesse);
             Assert.Equal(1.4, vpd.VpdZiel);
         }
 
         // Ohne Feuchte-Schwellen und ohne VPD-Wunsch gibt es keine Größe — „Plan unvollständig" bleibt möglich.
-        var keine = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdRegelung: false, feuchteEin: null, feuchteAus: null));
+        var keine = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdRegelung: false, feuchteEin: null, feuchteAus: null));
         Assert.Equal(EntfeuchterZusatzSchaltgroesse.Keine, keine.Schaltgroesse);
     }
 
@@ -457,14 +457,14 @@ public sealed class EntfeuchterZusatzTests
     public void Livebild_ReichtDiePlanObergrenzeDerLuftfeuchteDurch_SonstNull()
     {
         // A-014: Beide Entfeuchter-Seiten messen die Zone der Feuchte am selben Ziel — der Plan-Obergrenze.
-        Assert.Equal(51.0, EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(rhMax: 51)).RhObergrenzeProzent);
-        Assert.Null(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang()).RhObergrenzeProzent);
+        Assert.Equal(51.0, EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(rhMax: 51)).RhObergrenzeProzent);
+        Assert.Null(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang()).RhObergrenzeProzent);
     }
 
     [Fact]
     public void Livebild_FolgeUndWiederEinFolgenDenAbstaenden()
     {
-        var e = Bru();
+        var e = Standardwerte();
         e.FolgeAbstandK = 2;
         e.WiederEinAbstandK = 0.5;
         e.VpdHystereseKpa = 0.25;
@@ -479,7 +479,7 @@ public sealed class EntfeuchterZusatzTests
     [Fact]
     public void Livebild_HoechsttemperaturImPlanModus_IstPlanLuftPlusAbstand()
     {
-        var e = Bru();
+        var e = Standardwerte();
         e.TempMaxTagModus = TempMaxModus.Plan;
         e.TempMaxTagAbstandK = 6.5;
         e.TempMaxNachtModus = TempMaxModus.Plan;
@@ -500,7 +500,7 @@ public sealed class EntfeuchterZusatzTests
     [InlineData(null, null, null, null, "keine", true)]
     public void Schaltgroesse_VpdVorFeuchteVorKeine(double? vpdUnten, double? vpdOben, double? ein, double? aus, string erwartet, bool unvollstaendig)
     {
-        var live = EntfeuchterZusatzSteuerungService.Berechnen(Bru(),
+        var live = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(),
             Eingang(vpdUnten: vpdUnten, vpdOben: vpdOben, feuchteEin: ein, feuchteAus: aus));
 
         Assert.Equal(erwartet, live.Schaltgroesse);
@@ -510,7 +510,7 @@ public sealed class EntfeuchterZusatzTests
     [Fact]
     public void Schaltgroesse_NurEineVpdGrenze_ReichtNichtAus()
     {
-        var live = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: 1.4, vpdOben: null, feuchteEin: null, feuchteAus: null));
+        var live = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdUnten: 1.4, vpdOben: null, feuchteEin: null, feuchteAus: null));
         Assert.Equal(EntfeuchterZusatzSchaltgroesse.Keine, live.Schaltgroesse);
         Assert.Null(live.VpdZiel);
         Assert.Null(live.VpdEinSchwelle);
@@ -526,7 +526,7 @@ public sealed class EntfeuchterZusatzTests
     [InlineData("off", 313.0, false)]
     public void ZiehtNichts_NurBeiLaufendemShellyUnterDerGrenze(string zusatz, double leistung, bool erwartet)
     {
-        var live = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: zusatz, leistung: leistung));
+        var live = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(zusatz: zusatz, leistung: leistung));
         Assert.Equal(erwartet, live.ZiehtNichts);
     }
 
@@ -539,14 +539,14 @@ public sealed class EntfeuchterZusatzTests
     {
         // Ein Kompressor zieht in der ersten Minute nach dem Einschalten oft noch wenig — die Meldung
         // darf nicht schon dann kommen (Dauer = 5 min).
-        var live = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: "on", leistung: 3, anSeitMin: anSeitMin));
+        var live = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(zusatz: "on", leistung: 3, anSeitMin: anSeitMin));
         Assert.Equal(erwartet, live.ZiehtNichts);
     }
 
     [Fact]
     public void ZiehtNichts_FolgtDerEingestelltenDauerUndGrenze()
     {
-        var e = Bru();
+        var e = Standardwerte();
         e.Meldung.GrenzeW = 350;
         e.Meldung.DauerMin = 20;
         Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(e, Eingang(zusatz: "on", leistung: 313, anSeitMin: 19)).ZiehtNichts);
@@ -556,7 +556,7 @@ public sealed class EntfeuchterZusatzTests
     [Fact]
     public void ZiehtNichts_IstFalse_WennDieMeldungAusgeschaltetIst()
     {
-        var e = Bru();
+        var e = Standardwerte();
         e.Meldung.Aktiv = false;
         Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(e, Eingang(zusatz: "on", leistung: 3)).ZiehtNichts);
     }
@@ -569,22 +569,22 @@ public sealed class EntfeuchterZusatzTests
     [InlineData("on", 3.0, null)]   // seit wann er an ist, weiß Home Assistant nicht
     public void ZiehtNichts_OhneMesswertZustandOderZeitpunkt_IstFalse_NieErraten(string? zusatz, double? leistung, int? anSeitMin)
     {
-        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: zusatz, leistung: leistung, anSeitMin: anSeitMin)).ZiehtNichts);
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(zusatz: zusatz, leistung: leistung, anSeitMin: anSeitMin)).ZiehtNichts);
     }
 
     [Fact]
     public void PlanUnvollstaendig_NurMitHomeAssistant_OhneVerbindungWeissNiemandEtwasUeberDenPlan()
     {
-        var mitHa = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: null, vpdOben: null, feuchteEin: null, feuchteAus: null, ha: true));
+        var mitHa = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdUnten: null, vpdOben: null, feuchteEin: null, feuchteAus: null, ha: true));
         Assert.True(mitHa.PlanUnvollstaendig);
         Assert.Equal(EntfeuchterZusatzSchaltgroesse.Keine, mitHa.Schaltgroesse);
 
-        var ohneHa = EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: null, vpdOben: null, feuchteEin: null, feuchteAus: null, ha: false));
+        var ohneHa = EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdUnten: null, vpdOben: null, feuchteEin: null, feuchteAus: null, ha: false));
         Assert.False(ohneHa.PlanUnvollstaendig);
 
         // Mit Plan-Werten ist er nie unvollständig.
-        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(ha: true)).PlanUnvollstaendig);
-        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(vpdUnten: null, vpdOben: null, ha: true)).PlanUnvollstaendig);
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(ha: true)).PlanUnvollstaendig);
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(vpdUnten: null, vpdOben: null, ha: true)).PlanUnvollstaendig);
     }
 
     [Theory]
@@ -603,9 +603,9 @@ public sealed class EntfeuchterZusatzTests
     [Fact]
     public void ZusatzOnline_UnavailableIstOffline_FehlendIstUnbekannt()
     {
-        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: "unavailable")).ZusatzOnline);
-        Assert.True(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: "off")).ZusatzOnline);
-        Assert.Null(EntfeuchterZusatzSteuerungService.Berechnen(Bru(), Eingang(zusatz: null)).ZusatzOnline);
+        Assert.False(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(zusatz: "unavailable")).ZusatzOnline);
+        Assert.True(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(zusatz: "off")).ZusatzOnline);
+        Assert.Null(EntfeuchterZusatzSteuerungService.Berechnen(Standardwerte(), Eingang(zusatz: null)).ZusatzOnline);
     }
 
     // ---------------------------------------------------------- Energie heute
@@ -810,7 +810,7 @@ public sealed class EntfeuchterZusatzTests
     // ------------------------------------------------------------ Push-Adresse
 
     [Theory]
-    [InlineData("notify.mobile_app_bruno_smartphone_1", "notify.mobile_app_bruno_smartphone_1")]
+    [InlineData("notify.mobile_app_pixel_7", "notify.mobile_app_pixel_7")]
     [InlineData("  notify.mobile_app_pixel ", "notify.mobile_app_pixel")]
     [InlineData(null, "notify.notify")]
     [InlineData("", "notify.notify")]

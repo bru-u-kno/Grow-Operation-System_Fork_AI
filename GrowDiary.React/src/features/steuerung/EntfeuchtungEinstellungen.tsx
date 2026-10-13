@@ -34,7 +34,7 @@ const gemeinsam = (haupt: boolean, zusatz: boolean | null): Gemeinsam => (zusatz
 /**
  * Fork AI (A-021): Reiter „Einstellungen" — ersetzt die Reiter „Regel" und „Schutz".
  *
- * <b>Anlass (Bru, 13.10.2026).</b> Rund 36 Einzelwerte, doppelt für beide Geräte, mit Abhängigkeiten
+ * <b>Anlass (13.10.2026).</b> Rund 36 Einzelwerte, doppelt für beide Geräte, mit Abhängigkeiten
  * untereinander. Jetzt: je Frage EINE Antwort für beide Geräte, die Einzelwerte unter „Erweitert".
  * Jeder Wert bleibt änderbar — was nicht oben steht, steht unter „Erweitert“; gespeichert wird weiter über die zwei bekannten Wege (Hauptentfeuchter
  * ersetzt alles, Zusatz nur Geändertes) mit EINEM Knopf.

@@ -88,7 +88,7 @@ public sealed class TuerenTests
     [Theory]
     [InlineData("172.30.33.5")]   // ein anderes Add-on im internen Netz
     [InlineData("172.30.32.1")]   // das Gateway der Brücke, nicht der Proxy
-    [InlineData("192.168.178.20")] // ein Rechner im Heimnetz
+    [InlineData("192.168.1.21")] // ein Rechner im Heimnetz
     [InlineData("fd0c:ac1e:2100::2")] // IPv6 im Add-on-Netz — vergibt Docker frei
     public void TheSetupPageAnswersOnlyTheIngressProxy(string adresse)
     {
@@ -117,7 +117,7 @@ public sealed class TuerenTests
     }
 
     [Theory]
-    [InlineData("192.168.178.20")]
+    [InlineData("192.168.1.21")]
     [InlineData("172.30.33.5")]
     [InlineData("10.0.0.7")]
     public void TheInterfaceStaysOpenForEveryAddressWithTheKey(string adresse)

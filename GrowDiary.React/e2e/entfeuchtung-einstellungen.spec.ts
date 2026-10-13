@@ -13,12 +13,12 @@ import type { Stand, Vorgaben } from './entfeuchtung-vorgaben'
  * (`entfeuchtung-vorgaben.ts`), geprüft wird, was die Seite daraus macht und was sie beim Speichern schickt. Sie läuft
  * ohne Backend und überspringt sich nie.
  *
- * <b>Die Zusagen, um die es geht</b> (Bru, 13.10.2026):
+ * <b>Die Zusagen, um die es geht</b> (13.10.2026):
  * <ul>
  * <li>Eine Wahl „Ruhig · Normal · Schnell" setzt Abstand, „Einschalten nach" und Mindestlaufzeit des Hauptentfeuchters und die
  *   Mindestlaufzeit des Zusatzes — und sonst nichts. Der Hauptentfeuchter schickt dabei ALLE Felder, der Zusatz nur das
  *   Geänderte. „Ruhig" hebt die Wartezeit auf Außenluft mit an (das Backend verlangt: nie kürzer als „Einschalten nach").</li>
- * <li>Brus echte Werte ergeben „Normal" und „Eigene Werte" bei der Hilfsstärke — und nichts ist dabei geändert.</li>
+ * <li>echte Nutzer-Werte ergeben „Normal" und „Eigene Werte" bei der Hilfsstärke — und nichts ist dabei geändert.</li>
  * <li>Automatik und „Wann darf entfeuchtet werden?" setzen BEIDE Geräte.</li>
  * <li>„Einschalten über" ist ein Wert für Tag und Nacht; AUS folgt als EIN minus Abstand — aber nur, wenn der Nutzer
  *   EIN oder den Abstand anfasst.</li>
@@ -32,7 +32,7 @@ const stufe = (page: Page, name: 'Ruhig' | 'Normal' | 'Schnell') => stufenWahl(p
 const hilfsWahl = (page: Page) => page.getByRole('radiogroup', { name: 'Hilfsstärke' })
 const wannWahl = (page: Page) => page.getByRole('radiogroup', { name: 'Wann darf entfeuchtet werden?' })
 
-/** Brus Anlage vom 12.10.2026 vorgeben (Nacht, Flush, 55,7 % rF bei 21 °C). */
+/** Nutzer-Anlage vom 12.10.2026 vorgeben (Nacht, Flush, 55,7 % rF bei 21 °C). */
 const bruAnlage = (page: Page, nachVorgaben: Vorgaben = {}): Promise<Stand> =>
   backendVorgeben(page, BRU_ZUSATZ_LIVE, BRU_HAUPT_LIVE, { haupt: BRU_HAUPT_EINSTELLUNGEN, zusatz: BRU_ZUSATZ_EINSTELLUNGEN, zielwerte: BRU_ZIELWERTE, ...nachVorgaben })
 
@@ -89,9 +89,9 @@ test('Stufe „Schnell": der Haupt-PUT trägt alle Felder samt Abstand, Einschal
   await expect(speichern(page)).toHaveCount(0)
 })
 
-// ------------------------------------------------------------------ b) Brus echte Werte
+// ------------------------------------------------------------------ b) echte Nutzer-Werte
 
-test('Brus echte Werte ergeben „Normal" bei den Reaktionen und „Eigene Werte" bei der Hilfsstärke — nichts ist geändert', async ({ page }) => {
+test('echte Nutzer-Werte ergeben „Normal" bei den Reaktionen und „Eigene Werte" bei der Hilfsstärke — nichts ist geändert', async ({ page }) => {
   const stand = await bruAnlage(page)
   await seiteOeffnen(page)
   for (const durchgang of [1, 2]) {
@@ -284,9 +284,9 @@ test('wer EIN und Abstand nicht anfasst, behält sein gespeichertes AUS — die 
   expect(stand.hauptPuts[0]).toMatchObject({ tempMaxTagFestC: 27, feuchteAusTag: 57, feuchteAusNacht: 55 })
 })
 
-// ------------------------------------------------------------------ f) Überblick mit Brus Live-Werten
+// ------------------------------------------------------------------ f) Überblick mit Nutzer-Live-Werten
 
-test('Überblick mit Brus Live-Werten: „knapp" in Worten, ZIEL-Zeilen, Band, „Woher kommt das?" zu bis zum Klick — zweimal', async ({ page }) => {
+test('Überblick mit Nutzer-Live-Werten: „knapp" in Worten, ZIEL-Zeilen, Band, „Woher kommt das?" zu bis zum Klick — zweimal', async ({ page }) => {
   const stand = await bruAnlage(page)
   await seiteOeffnen(page)
 
@@ -437,10 +437,10 @@ test('„Ein-/Ausschalten einstellen" im Überblick bringt die Kachel „Ziel ·
   await expect.poll(() => kachelImBild(kachel), { timeout: 5_000, message: 'die Kachel „Ziel · Luftfeuchte" liegt nicht im Bild' }).toBe('im Bild')
 })
 
-// ------------------------------------------------------------------ h) Handy mit Brus Werten
+// ------------------------------------------------------------------ h) Handy mit Nutzer-Werten
 
 for (const breite of [360, 390]) {
-  test(`Handy ${breite} px, Brus Werte: nichts ragt über den Rand — auf allen drei Reitern, mit offenen Kacheln und offenem „Woher kommt das?"`, async ({ page }) => {
+  test(`Handy ${breite} px, Nutzer-Werte: nichts ragt über den Rand — auf allen drei Reitern, mit offenen Kacheln und offenem „Woher kommt das?"`, async ({ page }) => {
     await page.setViewportSize({ width: breite, height: 800 })
     await bruAnlage(page)
     await seiteOeffnen(page)
@@ -504,7 +504,7 @@ const bereich = (page: Page, name: 'Aus dem Plan' | 'Fest') => bereichWahl(page)
 const einFeld = (page: Page) => page.getByLabel('Einschalten über', { exact: true })
 const vorlaufFeld = (page: Page) => page.getByLabel('Vorlauf unter der Plan-Obergrenze', { exact: true })
 
-/** Brus Anlage mit den neuen Feldern: Arbeitsbereich fest, Vorlauf 4 — so liefert sie das Backend nach forkai.212. */
+/** Nutzer-Anlage mit den neuen Feldern: Arbeitsbereich fest, Vorlauf 4 — so liefert sie das Backend nach forkai.212. */
 const bruMitBereich = (page: Page, haupt: Json = {}, hauptLive: Json = {}): Promise<Stand> =>
   backendVorgeben(page, BRU_ZUSATZ_LIVE, { ...BRU_HAUPT_LIVE, ...hauptLive }, {
     haupt: { ...BRU_HAUPT_EINSTELLUNGEN, arbeitsbereichQuelle: 'fest', vorlaufProzent: 4, ...haupt },
@@ -519,7 +519,7 @@ test('Arbeitsbereich „Aus dem Plan": Obergrenze 54 und Vorlauf 4 ergeben 50/46
   await expect(einFeld(page)).toHaveValue('50')
   await expect(speichern(page)).toHaveCount(0)
 
-  // Durchgang 1: Aus dem Plan — Brus Werte ergeben dieselben Schwellen, das Feld „Einschalten über" weicht dem Vorlauf.
+  // Durchgang 1: Aus dem Plan — Nutzer-Werte ergeben dieselben Schwellen, das Feld „Einschalten über" weicht dem Vorlauf.
   await bereich(page, 'Aus dem Plan').click()
   await expect(bereich(page, 'Aus dem Plan')).toHaveAttribute('aria-checked', 'true')
   await expect(einFeld(page)).toHaveCount(0)

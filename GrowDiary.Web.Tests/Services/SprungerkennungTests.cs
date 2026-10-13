@@ -4,7 +4,7 @@ using GrowDiary.Web.Services.Tagebuch;
 namespace GrowDiary.Web.Tests.Services;
 
 /// <summary>
-/// Die Sprungerkennung des Grow-Tagebuchs (A-006) — an Brus echten Rohwerten.
+/// Die Sprungerkennung des Grow-Tagebuchs (A-006) — an echten Nutzer-Rohwerten.
 /// </summary>
 /// <remarks>
 /// Die Reihen unten sind aus der laufenden Anlage gelesen (Fork AI, Zelt 1,
@@ -79,7 +79,7 @@ public sealed class SprungerkennungTests
     {
         // Ein ganzer Tag im 5-Minuten-Takt (Leitplanke 15: Zeitabhängiges über
         // den ganzen Tag): EC 1,70 mit ±0,02 Zittern, Tagesgang ±0,015 und
-        // +0,03 Aufnahme über den Tag — so sieht Brus Becken in Ruhe aus.
+        // +0,03 Aufnahme über den Tag — so sieht Nutzer-Becken in Ruhe aus.
         var zufall = new Random(4711);
         var start = new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc);
         var werte = Enumerable.Range(0, 288)

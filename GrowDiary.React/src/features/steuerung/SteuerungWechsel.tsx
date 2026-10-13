@@ -3,7 +3,7 @@ import './steuerung.css'
 
 /**
  * Fork AI (A-015): Die Auswahl der Steuerungen — steht ganz oben auf jeder
- * Steuerungsseite, noch über der Überschrift (Bru, 08.10.2026), damit man von
+ * Steuerungsseite, noch über der Überschrift (08.10.2026), damit man von
  * jeder Seite zur nächsten springt, ohne erst am Titel vorbeizuscrollen.
  */
 export function SteuerungWechsel({ module, aktiv, onWechsel }: {

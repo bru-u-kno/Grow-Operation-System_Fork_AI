@@ -4,7 +4,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 /**
  * Tipp auf eine Messwert-Kachel: der Verlauf erscheint direkt unter ihrer Zeile.
  *
- * **Der Anlass (05.10.2026).** Bru: „beim Klick auf eine Live-Kachel nicht wie
+ * **Der Anlass (05.10.2026).** Der Nutzer: „beim Klick auf eine Live-Kachel nicht wie
  * aktuell ein separates Fenster … sondern dafür deine Verlaufsgrafik", und am
  * Telefon löse ein Tipp auf den Wert „irgendeine Aktion" aus. Nachgemessen:
  * der alte Verlauf (ein kleines Liniendiagramm) stand unter dem GANZEN Bereich

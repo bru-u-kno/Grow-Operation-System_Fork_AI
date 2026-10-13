@@ -10,7 +10,7 @@ import type { Marke } from './tagebuch-modell'
  * „▸ Sensorkurven" eines Tages.
  *
  * Eingeklappt steht nur der Titel — und, wenn es welche gibt, die Zahl der
- * Auffälligkeiten in Warnfarbe. Keine Zahlenzeile: Bru wollte im zugeklappten
+ * Auffälligkeiten in Warnfarbe. Keine Zahlenzeile: der Nutzer wollte im zugeklappten
  * Tag keine „Zahlenwüste" (Mockup Runde 3). Geladen wird erst beim ersten
  * Aufklappen und dann behalten — ein zweites Aufklappen fragt nicht neu.
  */

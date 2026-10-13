@@ -146,7 +146,7 @@ public sealed class ZuluftEinstellungenTests : IDisposable
     [Fact]
     public void GleicheStufenSindErlaubt()
     {
-        // Das ist die feste Stufe — Bru faehrt sie so.
+        // Das ist die feste Stufe — der Nutzer faehrt sie so.
         Assert.Empty(ZuluftSteuerungService.Pruefen(new ZuluftEinstellungen { StufeMin = 6, StufeMax = 6 }));
     }
 

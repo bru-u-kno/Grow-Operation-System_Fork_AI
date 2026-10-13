@@ -74,7 +74,7 @@ public sealed class KenntnisstandRechnerTests
     [Fact]
     public void Zielabgleich_VpdBandDerBreiteNull_HatToleranzUndHaeltNichtNullProzent()
     {
-        // Brus Plan am 07.10.2026: VPD-Ziel Nacht 1,4 bis 1,4. Ohne Toleranz wäre jeder Wert „außerhalb".
+        // Nutzer-Plan am 07.10.2026: VPD-Ziel Nacht 1,4 bis 1,4. Ohne Toleranz wäre jeder Wert „außerhalb".
         var serie = Reihe(false, 100, _ => 50, vpd: i => i < 80 ? 1.35 : 1.0);
 
         var vpd = KenntnisstandRechner.Zielabgleich(serie, Ziele).Single(z => z.Groesse == "VPD").Nacht;

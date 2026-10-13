@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// Push-Meldungen öffnen das Ingress-Panel ohne HA-Kopfleiste, wenn es eins gibt.
 /// </summary>
 /// <remarks>
-/// Anlass (05.10.2026): Bru öffnet Grow OS am Handy über ein Panel der
+/// Anlass (05.10.2026): der Nutzer öffnet Grow OS am Handy über ein Panel der
 /// HACS-Integration „Ingress" ohne die weiße HA-Kopfleiste. Der Tipp auf eine
 /// Meldung öffnete aber <c>/app/&lt;slug&gt;/…</c> — mit Leiste. Die Antworten von
 /// <c>get_panels</c> hier sind der Form nachgebaut, die <c>panel_custom</c> und
@@ -72,7 +72,7 @@ public sealed class IngressPanelServiceTests
     [Fact]
     public void Ein_Panel_fuer_ein_anderes_Addon_ist_nicht_gemeint()
     {
-        // Das Original-Grow-OS läuft bei Bru daneben.
+        // Das Original-Grow-OS läuft beim Nutzer daneben.
         Assert.Null(IngressPanelService.PanelFuer(Panels(IngressPanel("growos", addon: "9a313175_grow_os")), Slug));
     }
 

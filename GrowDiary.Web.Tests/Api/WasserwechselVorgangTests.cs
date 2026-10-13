@@ -15,7 +15,7 @@ namespace GrowDiary.Web.Tests.Api;
 /// löschen mit allem, Altdaten.
 /// </summary>
 /// <remarks>
-/// <para><b>Der Anlass.</b> Bru musste einen Wechsel an vier Stellen getrennt
+/// <para><b>Der Anlass.</b> Der Nutzer musste einen Wechsel an vier Stellen getrennt
 /// erfassen, und beim Löschen der Messung blieben die Buchungen stehen. Die
 /// Fälle hier halten fest, dass ein Speichern alles anlegt und verknüpft, und
 /// dass Löschen am Vorgang wirklich alles mitnimmt — auch über den alten Weg

@@ -117,7 +117,7 @@ public sealed class EinrichtungBausteineTests
     [Fact]
     public void OhneCo2HelferGiltKeinFeuchteDeckel()
     {
-        // Brus Fassung fiel ohne die CO₂-Helfer auf 65 − 3 = 62 % zurück — für jeden, der keine
+        // Nutzer-Fassung fiel ohne die CO₂-Helfer auf 65 − 3 = 62 % zurück — für jeden, der keine
         // CO₂-Begasung hat, wäre das eine fremde, unsichtbare Obergrenze gewesen.
         foreach (var e in new[] { "sensor.trotec_feuchte_ein_aktiv", "sensor.trotec_feuchte_aus_aktiv" })
         {

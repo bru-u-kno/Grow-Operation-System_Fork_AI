@@ -165,7 +165,7 @@ public static class Demoverlauf
 
     /// <summary>
     /// Ein Nachfüllen, zu dem nichts eingetragen ist — der Fall, den das
-    /// Grow-Tagebuch als „Auffällig" zeigen soll (Brus 03.10.2026, EC 1,74 → 1,61).
+    /// Grow-Tagebuch als „Auffällig" zeigen soll (des Nutzers 03.10.2026, EC 1,74 → 1,61).
     /// </summary>
     /// <remarks>
     /// <para>Immer um 16:55 Ortszeit am jüngsten zurückliegenden Tag (1 bis 6

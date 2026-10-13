@@ -79,7 +79,7 @@ public sealed class EntfeuchterEinstellungenTests : IDisposable
     [Fact]
     public void OhneGespeichertenStandGeltenDieVorhandenenHelfer()
     {
-        // Brus Stand vom 21.09.2026.
+        // Nutzer-Stand vom 21.09.2026.
         var e = EntfeuchterSteuerungService.AusHomeAssistant(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
             [EntfeuchterSteuerungService.Entitaeten.VpdRegelung] = "on",

@@ -90,7 +90,7 @@ function alsFelder(werte: { ec: number | null; ph: number | null; wt: number | n
 }
 
 /**
- * Ein Vorgang als Ablauf in vier Schritten (A-006, freigegeben von Bru am 05.10.2026).
+ * Ein Vorgang als Ablauf in vier Schritten (A-006, freigegeben vom Nutzer am 05.10.2026).
  *
  * Vorher · Wasser und Zugaben · Nachher · Speichern. Ein Speichern legt alles
  * an — Wechsel, Messung vorher und nachher, Verbrauch und Tagebuchzeile
@@ -100,7 +100,7 @@ function alsFelder(werte: { ec: number | null; ph: number | null; wt: number | n
  * sieht das Feld gelb und „↺ Vorschlag …"; der eigene Wert bleibt gemerkt und
  * kommt mit „↶ deins …" zurück. Gemerkt wird nur **innerhalb dieses Vorgangs**:
  * jeder Wechsel rechnet neu, ein „wie letztes Mal" gibt
- * es nicht (Bru).
+ * es nicht (der Nutzer).
  *
  * Die Vorschläge rechnet das Backend (`GET …/mixing-plan/vorschlag` auf die
  * Literzahl) — hier wird nichts davon nachgerechnet.
@@ -153,7 +153,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
   const [buchenAus, setBuchenAus] = useState<Set<string>>(() => new Set())
   const [wasserBuchen, setWasserBuchen] = useState(true)
   const [artikel, setArtikel] = useState<Artikel[]>([])
-  // Das Wasser-Artikel-Rückfragen: ein Artikel entsteht nur nach „Ja, anlegen" (Bru, 10.10.2026) — nie beim Speichern.
+  // Das Wasser-Artikel-Rückfragen: ein Artikel entsteht nur nach „Ja, anlegen" (10.10.2026) — nie beim Speichern.
   const [frage, setFrage] = useState<Frage | null>(null)
   const [frageFehler, setFrageFehler] = useState<string | null>(null)
   const [anker, setAnker] = useState<GrowDetail['phasenanker'] | null>(null)
@@ -652,7 +652,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
           ))}
 
           <div className="wa-knoepfe">
-            {/* Die Auswahl legt die Zeile sofort an — kein zweiter Knopf (Bru, 11.10.2026). */}
+            {/* Die Auswahl legt die Zeile sofort an — kein zweiter Knopf (11.10.2026). */}
             <select value="" onChange={(e) => hinzufuegen(e.target.value)} aria-label="Produkt hinzufügen" className="wa-produkt-wahl" data-audit={`${t.audit}-produkt`}>
               <option value="">+ Produkt hinzufügen …</option>
               {artikel.filter((a) => !zeilen.some((z) => z.artikelId === a.id) && !['leitungswasser', 'osmosewasser'].includes(a.name.trim().toLowerCase()))

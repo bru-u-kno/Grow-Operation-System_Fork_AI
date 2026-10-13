@@ -258,7 +258,7 @@ Beide sind nachgewiesen: Fehler eingebaut, Hook wurde rot. **Sie ersetzen die
 fünf Prüfungen nicht** — sie fangen Tippfehler und rotes CI, nicht ein
 doppeltes Formular oder eine Seite, die niemand liest.
 
-**Startet die Sitzung im Ordner über dem Repo** (VM `ClaudeCode`: seit
+**Startet die Sitzung im Ordner über dem Repo** (Entwickler-VM: seit
 04.10.2026 `~/projekte/homeassistant/`, das Repo liegt in `fork-ai/quellcode/`),
 liest Claude Code diese Hooks NICHT — dort bindet
 `~/projekte/homeassistant/.claude/settings.json` sie ein. Eine neue
@@ -350,7 +350,7 @@ Wo eine Zahl gebraucht wird, die es schon gibt: **verweisen, nicht abtippen.**
   keine KI auf. Gewollt ist dagegen, den **eigenen Assistenten des Bedieners**
   anzubinden (Einrichtung → KI-Assistent, `docs/ki-zugriff.md`): er kommt über
   sein Konto bei Claude oder ChatGPT und einen Schlüssel aus Grow OS. Die meisten
-  Bediener haben den kostenlosen Plan oder ein Abo, keinen API-Schlüssel (Bru,
+  Bediener haben den kostenlosen Plan oder ein Abo, keinen API-Schlüssel (der Nutzer,
   04.10.2026) — ein Weg, der einen API-Schlüssel verlangt, ist nie der Hauptweg.
 - **Faustregeln nur mit Etikett**, Empfehlungen nur mit Quelle. Eine Zahl, die
   niemand nachprüfen kann, ist schlechter als „zu wenig Daten".
@@ -430,8 +430,8 @@ nächsten Release einer anderen Sitzung nicht mehr.
   `release.yml` weist das ohnehin ab — nur später und nach dem Image-Bau.
 - **Anmelden, wer woran arbeitet.** Die Abstimmung liegt privat beim Nutzer
   (nicht im Repo, nicht in Draft-PRs — das Repo ist öffentlich). Sitzungen mit
-  seinem Nextcloud-Connector sehen dort vor dem Arbeiten nach, wer gerade woran
-  sitzt, und tragen sich ein; der Ort steht in seinem Gedächtnis-Vault unter
+  einem Cloud-Speicher-Zugang sehen dort vor dem Arbeiten nach, wer gerade woran
+  sitzt, und tragen sich ein; der Ort steht in seinem privaten Gedächtnis unter
   „Parallele Sitzungen". Überschneidet sich etwas, der anderen Sitzung schreiben
   statt beide Stände später zusammenzuflicken.
 

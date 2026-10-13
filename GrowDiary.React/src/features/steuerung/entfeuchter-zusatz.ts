@@ -104,7 +104,7 @@ export function hilfeText(hilfe: ZusatzHilfe, fuehrungName: string): string {
 
 // ------------------------------------------------------------ Empfehlung
 
-/** Empfohlener Aufschlag zur Plan-Luft (K), aus dem freigegebenen Mockup (Bru, 06.10.2026): 6,5 tagsüber, 9 nachts. */
+/** Empfohlener Aufschlag zur Plan-Luft (K), aus dem freigegebenen Mockup (06.10.2026): 6,5 tagsüber, 9 nachts. */
 export const EMPFOHLEN_ABSTAND_K = { tag: 6.5, nacht: 9 } as const
 
 /** Empfohlene Hilfsstärke. */

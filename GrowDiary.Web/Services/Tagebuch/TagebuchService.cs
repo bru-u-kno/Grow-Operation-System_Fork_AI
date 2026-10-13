@@ -35,7 +35,7 @@ public sealed class TagebuchService
 
     /// <summary>Ein Eintrag bis so lange NACH dem Sprung erklärt ihn.</summary>
     /// <remarks>
-    /// Eingetragen wird nach der Arbeit, nicht währenddessen: Brus Wasserwechsel am
+    /// Eingetragen wird nach der Arbeit, nicht währenddessen: Nutzer-Wasserwechsel am
     /// 04.10.2026 zeigt der Sensor um 16:44, eingetragen ist er für 17:30. Drei
     /// Stunden fassen „erst fertig machen, dann aufschreiben", ohne den Abend danach
     /// mitzunehmen (Faustregel Grow OS).

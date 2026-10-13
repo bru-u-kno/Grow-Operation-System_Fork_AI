@@ -9,7 +9,7 @@ import './ki-assistent.css'
 /**
  * Reiter „Verbinden" der Seite KI-Assistent (Fork AI, 04.10.2026).
  *
- * Bru: „Die meisten Endanwender haben keinen API-Schlüssel, sondern den
+ * Der Nutzer: „Die meisten Endanwender haben keinen API-Schlüssel, sondern den
  * kostenlosen Plan oder ein Abo." Deshalb führt jeder Weg hier über das
  * EIGENE Konto des Bedieners bei Claude oder ChatGPT — Grow OS bekommt keine
  * Zugangsdaten und ruft selbst keine KI auf. Umgekehrt bekommt der Assistent

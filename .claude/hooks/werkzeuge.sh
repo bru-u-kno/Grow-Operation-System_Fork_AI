@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gemeinsames fuer beide Hooks: Werkzeuge finden, Eingabe lesen, Zustaendigkeit.
 #
-# WOZU (03.10.2026, offene Punkte F1). Auf der VM `ClaudeCode` lief der
+# WOZU (03.10.2026, offene Punkte F1). Auf der Entwickler-VM lief der
 # Commit-Hook wochenlang ins Leere: er rief `python` und `dotnet`, dort gibt es
 # nur `python3`, und `dotnet` liegt in ~/.dotnet. Ohne Python blieb der gelesene
 # Befehl leer, die Pruefung „ist das ein git commit?" sagte nein — und der Hook

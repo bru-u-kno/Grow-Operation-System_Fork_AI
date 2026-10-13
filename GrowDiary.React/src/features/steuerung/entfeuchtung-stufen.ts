@@ -4,11 +4,11 @@ import type { EntfeuchterEinstellungen, EntfeuchterZusatzEinstellungen } from '.
 /**
  * Fork AI (A-021): Die Stufe „Wie reagieren die Entfeuchter?" — Rechenteil ohne React.
  *
- * <b>Anlass (Bru, 13.10.2026).</b> Die Seite „Entfeuchtung" hatte rund 36 Einzelwerte. Eine Wahl
+ * <b>Anlass (13.10.2026).</b> Die Seite „Entfeuchtung" hatte rund 36 Einzelwerte. Eine Wahl
  * „Ruhig · Normal · Schnell" setzt die Werte, die zusammen bestimmen, wie oft und wie schnell die
  * Geräte schalten, auf einmal; die Einzelwerte bleiben unter „Erweitert" änderbar.
  *
- * <b>Normal sind Brus Werte vom 12.10.2026</b> (Abstand 4 %, Einschalten nach 2 min, Mindestlaufzeit
+ * <b>Normal sind Nutzer-Werte vom 12.10.2026</b> (Abstand 4 %, Einschalten nach 2 min, Mindestlaufzeit
  * 20/15 min): Wer sie schon hat, sieht „Normal" und nichts ändert sich. Ruhig und Schnell sind ein
  * Vorschlag — der Abstand folgt den früheren Stufen knapp/normal/ruhig (2/4/6 %), die Zeiten sind
  * nicht gegen den Betrieb geprüft.

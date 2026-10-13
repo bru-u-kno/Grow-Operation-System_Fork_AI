@@ -21,7 +21,7 @@ public sealed class HeimnetzadresseTests
 {
     [Theory]
     [InlineData("192.168.1.50")]
-    [InlineData("192.168.178.23")]
+    [InlineData("192.168.1.23")]
     [InlineData("10.0.0.5")]
     [InlineData("172.16.4.9")]
     [InlineData("172.31.255.254")]
@@ -39,7 +39,7 @@ public sealed class HeimnetzadresseTests
     }
 
     [Theory]
-    [InlineData("smarthome.k9d.world")]          // der gemeldete Fall
+    [InlineData("smarthome.example.org")]          // der gemeldete Fall
     [InlineData("meinhaus.duckdns.org")]
     [InlineData("abc123.ui.nabu.casa")]          // Nabu Casa
     [InlineData("8.8.8.8")]

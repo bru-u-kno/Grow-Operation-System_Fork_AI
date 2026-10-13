@@ -70,7 +70,7 @@ public sealed record MischplanVorschlag(
 /// Die Rechnung hinter dem Mischplan-Vorschlag — an genau einer Stelle (A-006).
 /// </summary>
 /// <remarks>
-/// <para><b>Entschieden von Bru (05.10.2026):</b> der Wasser-EC folgt der
+/// <para><b>Entschieden vom Nutzer (05.10.2026):</b> der Wasser-EC folgt der
 /// Wasserart (Leitung = Wasserprofil, Osmose = 0, Mischung anteilig), das
 /// EC-Ziel am Tank ist Plan + Wasser, und CalMag folgt dem Calcium — mit
 /// Leitungswasser keins, mit Osmose nach Plan, bei der Mischung anteilig.</para>
@@ -142,7 +142,7 @@ public static partial class MischplanVorschlagRechnung
     /// Wie viel des Plan-CalMags gebraucht wird (0 … 1) — und warum.
     /// </summary>
     /// <remarks>
-    /// Leitungswasser bringt sein Calcium mit (Bru: „CalMag folgt dem Calcium").
+    /// Leitungswasser bringt sein Calcium mit (Anwender: „CalMag folgt dem Calcium").
     /// Das gilt nur, wenn das Profil einen Calcium-Wert nennt und das Wasser
     /// nicht weich ist — die Grenze „weich" ist dieselbe wie in der Wasser-Ampel
     /// (<see cref="WasserAmpelService.WeichBisDh"/>, WRMG § 9). Ohne Calcium-Wert

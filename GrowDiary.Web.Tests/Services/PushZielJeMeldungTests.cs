@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </summary>
 /// <remarks>
 /// forkai.168 schickte Grenzwert- und Risiko-Meldungen auf „Aufgaben". Dort
-/// steht weder eine Grenzwert-Überschreitung noch ein Trend-Befund; Bru bekam
+/// steht weder eine Grenzwert-Überschreitung noch ein Trend-Befund; der Nutzer bekam
 /// fast nur Grenzwert-Meldungen und landete „eigentlich immer bei den Aufgaben"
 /// (04.10.2026). Geprüft wird hier der ganze Weg: Alarm → Push an HA →
 /// <c>clickAction</c>.
@@ -86,7 +86,7 @@ public sealed class PushZielJeMeldungTests : IDisposable
     [Fact]
     public async Task Mit_Ingress_Panel_fuehrt_der_Tipp_dorthin_ohne_HA_Kopfleiste()
     {
-        // Bru öffnet Grow OS am Handy über dieses Panel (05.10.2026); /app/<slug>
+        // Der Nutzer öffnet Grow OS am Handy über dieses Panel (05.10.2026); /app/<slug>
         // zeigt die weiße HA-Leiste darüber.
         var handler = Handler();
         var alarme = new AlertEvaluationService(_rules, Benachrichtigung(handler, IngressPanel(vorhanden: true)), NullLogger<AlertEvaluationService>.Instance);

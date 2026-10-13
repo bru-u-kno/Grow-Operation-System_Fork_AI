@@ -10,12 +10,12 @@ import {
   zielText,
 } from './entfeuchtung-ziel'
 
-/** Brus Grenzwerte vom 12.10.2026 (GET /api/zielwerte). */
+/** Nutzer-Grenzwerte vom 12.10.2026 (GET /api/zielwerte). */
 const FEUCHTE_REGEL = { min: 45, max: 54, nachtMax: 60, toleranz: 0 }
 const TEMP_REGEL = { min: 14, max: 22, nachtMin: 12, nachtMax: 20, toleranz: 4 }
 
 describe('Zielband der Luftfeuchte — zwei Seiten', () => {
-  it('Obergrenze aus dem Plan, Untergrenze aus dem Grenzwert (Bru, 13.10.2026: auch zu trocken ist kritisch)', () => {
+  it('Obergrenze aus dem Plan, Untergrenze aus dem Grenzwert (13.10.2026: auch zu trocken ist kritisch)', () => {
     expect(feuchteBand(54, FEUCHTE_REGEL, false)).toEqual({ unten: 45, oben: 54 })
   })
 
@@ -75,7 +75,7 @@ describe('Zielband der Temperatur', () => {
     expect(temperaturBand(16, { min: null, max: null, toleranz: 0 }, false)).toEqual({ unten: null, oben: null })
   })
 
-  it('Brus Zelt: 21 °C nachts liegt über dem Plan-Band (12–20) — knapp daneben, solange die Höchsttemperatur (23) nicht erreicht ist', () => {
+  it('Nutzer-Zelt: 21 °C nachts liegt über dem Plan-Band (12–20) — knapp daneben, solange die Höchsttemperatur (23) nicht erreicht ist', () => {
     const band = temperaturBand(16, TEMP_REGEL, false)
     expect(temperaturZoneImBand(21, band, 23, 2)).toBe('knapp')
     expect(temperaturZoneImBand(20, band, 23, 2)).toBe('ziel')

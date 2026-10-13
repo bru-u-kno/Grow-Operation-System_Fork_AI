@@ -1,13 +1,13 @@
 /* Fork AI (F-048): Reiterleiste nach dem Wechsel ins Bild rollen.
  *
- * Bru tippt am Handy weit unten auf einen Reiter und sah den neuen Inhalt
+ * Der Nutzer tippt am Handy weit unten auf einen Reiter und sah den neuen Inhalt
  * nicht, weil er unter der Bildkante lag. Nach dem Wechsel rollt die Seite
  * deshalb so, dass die Reiterleiste direkt unter der festen Kopfflaeche steht
  * (`.scroll-ziel` liefert den Abstand) und der Inhalt darunter sichtbar ist.
  *
  * Kurze Reiter: ist die Seite nicht lang genug, um so weit zu rollen, bekommt
  * der Seitenrahmen unten einen Auslauf (`--reiter-auslauf`). So steht die
- * Leiste nach jedem Wechsel an derselben Stelle (Mockup, von Bru am
+ * Leiste nach jedem Wechsel an derselben Stelle (Mockup, vom Nutzer am
  * 23.09.2026 freigegeben).
  */
 
@@ -53,7 +53,7 @@ export function kopfUnterkante(): number {
  * Rollt `ziel` unter die feste Kopfflaeche — mit eigener Rechnung statt
  * `scrollIntoView`.
  *
- * F-049 (23.09.2026): In Brus HA-App landete ein per `scrollIntoView`
+ * F-049 (23.09.2026): In Nutzer-HA-App landete ein per `scrollIntoView`
  * angesprungenes Kosten-Formular um etwa die Kopfhoehe zu tief (Titel und erstes
  * Feld unter der Leiste), im Desktop-Chromium dagegen richtig. Die Reiter aus
  * F-048 rechnen selbst und landeten auch bei ihm richtig. Deshalb lesen beide

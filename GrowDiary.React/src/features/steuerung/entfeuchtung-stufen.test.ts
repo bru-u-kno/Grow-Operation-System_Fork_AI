@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { STUFEN, stufeErkennen, stufeFuerHaupt, stufeFuerZusatz } from './entfeuchtung-stufen'
 import type { StufenName } from './entfeuchtung-stufen'
 
-/** Brus Werte vom 12.10.2026 — die Stufe „Normal" muss genau sie sein, sonst ändert die Umstellung etwas. */
+/** Nutzer-Werte vom 12.10.2026 — die Stufe „Normal" muss genau sie sein, sonst ändert die Umstellung etwas. */
 const BRU = { hystereseProzent: 4, einschaltverzoegerungMin: 2, mindestlaufzeitMin: 20 }
 const BRU_ZUSATZ = { mindestlaufzeitMin: 15 }
 
 describe('Stufe „Wie reagieren die Entfeuchter?"', () => {
-  it('Brus heutige Werte sind „Normal" — nach der Umstellung ändert sich nichts', () => {
+  it('des Nutzers heutige Werte sind „Normal" — nach der Umstellung ändert sich nichts', () => {
     expect(stufeErkennen(BRU, BRU_ZUSATZ)).toBe('normal')
   })
 

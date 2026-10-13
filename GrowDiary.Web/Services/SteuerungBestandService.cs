@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Services;
 /// <remarks>
 /// <para><b>Der Anlass.</b> Die Steuerungsseite zeigte bei einer fremden
 /// Installation lauter „nicht verfügbar", ohne zu sagen, woran es liegt. Die
-/// Helfer und Automationen dahinter sind bei Bru über Tage von Hand entstanden;
+/// Helfer und Automationen dahinter sind beim Nutzer über Tage von Hand entstanden;
 /// bei jedem anderen entstehen sie gar nicht.</para>
 /// <para><b>Was dieser Dienst tut und was nicht.</b> Er stellt fest und erklärt.
 /// Er legt nichts an — das ist die nächste Etappe und braucht eine bewusste

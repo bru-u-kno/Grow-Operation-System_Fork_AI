@@ -13,7 +13,7 @@ import type { AddbackLogDto, AddbackVorgangDto, WasserwechselStandDto } from '..
 import { formatDateTime } from '../utils'
 
 /**
- * Addback — das Nachfüllen auf einer Seite (A-006, Etappe 3, freigegeben von Bru am 10.10.2026).
+ * Addback — das Nachfüllen auf einer Seite (A-006, Etappe 3, freigegeben vom Nutzer am 10.10.2026).
  *
  * <b>Vorher</b> gab es hier zwei Seiten: eine Übersicht (`/addback`) und einen
  * Assistenten je Grow (`/grows/:id/addback`) mit Stamm-EC, Komponentenliste in
@@ -48,7 +48,7 @@ export default function AddbackPage() {
   const [listeFehler, setListeFehler] = useState<string | null>(null)
   const [stand, setStand] = useState<WasserwechselStandDto | null>(null)
   const [neuGeladen, setNeuGeladen] = useState(0)
-  // Nach dem Speichern beginnt ein frischer Vorgang — neu gerechnet, nichts gemerkt (Bru).
+  // Nach dem Speichern beginnt ein frischer Vorgang — neu gerechnet, nichts gemerkt (der Nutzer).
   const [ablaufNummer, setAblaufNummer] = useState(0)
   const [gespeichert, setGespeichert] = useState<{ text: string; hinweis: string | null } | null>(null)
 

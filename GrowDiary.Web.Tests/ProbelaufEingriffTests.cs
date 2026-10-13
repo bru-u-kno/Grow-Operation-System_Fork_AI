@@ -77,7 +77,7 @@ public sealed class ProbelaufEingriffTests
         var (ha, _, eingriff) = Anlage();
         var ausgang = await eingriff.AusgangszustandLesenAsync("entfeuchter", default);
         var (_, geaendert) = await eingriff.EingreifenAsync("entfeuchter", ausgang, default);
-        ha.Geraete["port_schalter"] = "select.ein_anderes_geraet"; // Bru tauscht das Gerät mitten im Lauf
+        ha.Geraete["port_schalter"] = "select.ein_anderes_geraet"; // der Nutzer tauscht das Gerät mitten im Lauf
         ha.Protokoll.Clear();
 
         await eingriff.ZurueckstellenAsync("entfeuchter", geaendert, default);

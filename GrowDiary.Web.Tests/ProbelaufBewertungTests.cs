@@ -72,7 +72,7 @@ public sealed class ProbelaufBewertungTests
     [Fact]
     public void GrenzenAusZielen_LegtSpielraumUeberDasPflanzenziel()
     {
-        // Die Werte aus Brus Anlage am 07.10.2026 (Nacht, Blütewoche 7): Ziel 51 %, 24 °C, VPD-Band 1,4 bis 1,4.
+        // Die Werte aus Nutzer-Anlage am 07.10.2026 (Nacht, Blütewoche 7): Ziel 51 %, 24 °C, VPD-Band 1,4 bis 1,4.
         var g = ProbelaufBewertung.GrenzenAusZielen(51, 24, 1.4, 1.4);
 
         Assert.Equal(55, g.FeuchteMax);

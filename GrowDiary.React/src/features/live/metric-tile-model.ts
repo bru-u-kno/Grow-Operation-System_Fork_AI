@@ -280,7 +280,7 @@ export type BandGeometrie = {
 /**
  * Das Band wie auf der Grenzwerte-Seite (forkai.143): 18 % Rand um alles, was
  * gezeigt wird. Fallen Ziel und Grenze zusammen (RLF 45–55), bleiben die gelben
- * Striche stehen — Bru will auch dann sehen, wo gemeldet wird (23.09.2026).
+ * Striche stehen — der Nutzer will auch dann sehen, wo gemeldet wird (23.09.2026).
  */
 export function bandGeometrie(
   wert: number | null,

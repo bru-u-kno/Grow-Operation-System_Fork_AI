@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// <remarks>
 /// <para>Die Nutzlast unten ist gekürzt, aber im Aufbau echt — so antwortet
 /// <c>config/entity_registry/list</c> und <c>config/device_registry/list</c> in
-/// Brus Anlage. Geprüft wird das, was danach still falsch wäre: dass der vom
+/// Nutzer-Anlage. Geprüft wird das, was danach still falsch wäre: dass der vom
 /// Nutzer vergebene Gerätename gewinnt, dass eine Entität ohne Gerät nicht
 /// verloren geht, und dass fehlende Register nichts zum Absturz bringen.</para>
 /// </remarks>
@@ -98,7 +98,7 @@ public sealed class HomeAssistantRegistryTests
 
     [Theory]
     [InlineData("http://supervisor/core", "ws://supervisor/core/api/websocket")]
-    [InlineData("https://smarthome.k9d.world/", "wss://smarthome.k9d.world/api/websocket")]
+    [InlineData("https://smarthome.example.org/", "wss://smarthome.example.org/api/websocket")]
     [InlineData("http://homeassistant.local:8123", "ws://homeassistant.local:8123/api/websocket")]
     public void DieSocketAdresseFolgtDemSchemaDerBasis(string basis, string erwartet)
         => Assert.Equal(erwartet, HomeAssistantRegistryService.SocketAdresse(basis).ToString());

@@ -156,7 +156,7 @@ public sealed class TagebuchServiceTests : IDisposable
         BrusRohwerteEinspielen();
         Assert.Single(Seite().Auffaellig);
 
-        // Bru trägt nach: 16:45 Ortszeit nachgefüllt.
+        // Der Nutzer trägt nach: 16:45 Ortszeit nachgefüllt.
         _addback.CreateAddbackLog(new AddbackLogEntry { GrowId = _grow, Kind = AddbackLogKind.TopOff, PerformedAtUtc = new DateTime(2026, 10, 3, 14, 45, 0, DateTimeKind.Utc), LitersAdded = 12 });
 
         var seite = Seite();
@@ -211,7 +211,7 @@ public sealed class TagebuchServiceTests : IDisposable
         var duenger = dosierung.InsertPump(new DosingPump { TentId = _zelt, Name = "Dünger A", Purpose = DosingPurpose.Nutrient, HaEntityId = "switch.a", MlPerMinute = 45 });
         dosierung.InsertEvent(new DoseEvent { PumpId = duenger, TentId = _zelt, GrowId = _grow, OccurredAtUtc = new DateTime(2026, 10, 3, 14, 20, 0, DateTimeKind.Utc), Trigger = DoseTrigger.Manual, Outcome = DoseOutcome.Done, RequestedMl = 20, DosedMl = 20 });
 
-        // Brus Fall FÄLLT: Dünger hebt den EC — er erklärt kein Nachfüllen mit Wasser.
+        // Nutzer-Fall FÄLLT: Dünger hebt den EC — er erklärt kein Nachfüllen mit Wasser.
         BrusRohwerteEinspielen();
         Assert.Single(Seite().Auffaellig);
 
@@ -324,7 +324,7 @@ public sealed class TagebuchServiceTests : IDisposable
     [Fact]
     public void Wasserwechsel_MessungUndJournal_SindEinVorgang()
     {
-        // Brus Wechsel am 04.10.: Changeout, Messung mit Haken und Journal — alle 17:30.
+        // Nutzer-Wechsel am 04.10.: Changeout, Messung mit Haken und Journal — alle 17:30.
         var um = new DateTime(2026, 10, 4, 15, 30, 0, DateTimeKind.Utc);
         _addback.CreateChangeout(new ChangeoutEntry { GrowId = _grow, PerformedAtUtc = um, Kind = ChangeoutKind.Full, VolumeChangedLiters = 160, EcBefore = 1.62, PhBefore = 6.15, EcAfter = 1.15, PhAfter = 6.15, WaterUsed = WaterSource.Tap });
         var messung = _messungen.CreateMeasurement(new Measurement { GrowId = _grow, TakenAt = new DateTime(2026, 10, 4, 17, 30, 0), Source = ValueOrigin.Manual, SolutionChange = true, ReservoirEc = 1.15, ReservoirPh = 6.15, ReservoirWaterTempC = 18.1, OrpMv = 450 });

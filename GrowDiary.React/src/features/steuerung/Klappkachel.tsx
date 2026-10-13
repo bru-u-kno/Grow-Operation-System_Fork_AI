@@ -5,7 +5,7 @@ import './steuerung.css'
 /**
  * Fork AI (A-014): eine Kachel, die sich ein- und ausklappen lässt.
  *
- * <b>Regel (Bru, 07.10.2026).</b> Jede Kachel ist einklappbar, damit nur
+ * <b>Regel (07.10.2026).</b> Jede Kachel ist einklappbar, damit nur
  * aufgeklappt ist, was gerade gebraucht wird. Zugeklappt zeigt die Kachel in
  * der Kopfzeile ihren aktuellen Wert (`zusammenfassung`).
  *

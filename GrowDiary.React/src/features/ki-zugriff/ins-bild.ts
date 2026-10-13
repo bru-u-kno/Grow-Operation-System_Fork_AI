@@ -4,7 +4,7 @@ import { kopfUnterkante, spaeterInsBild } from '../../components/reiter-ins-bild
  * Fork AI (A-003, 04.10.2026): Etwas, das nur einmal zu sehen ist, in den
  * Blick holen.
  *
- * Bru legte am Handy einen Schlüssel an, die Ansicht blieb unten bei der
+ * Der Nutzer legte am Handy einen Schlüssel an, die Ansicht blieb unten bei der
  * Schlüsselliste stehen, und der Kasten mit dem Klartext lag oberhalb der
  * Bildkante. Er hielt den Schlüssel für verloren und legte ihn neu an. Der
  * Klartext wird nur einmal gezeigt — wer den Kasten verpasst, verliert ihn.
@@ -14,7 +14,7 @@ import { kopfUnterkante, spaeterInsBild } from '../../components/reiter-ins-bild
  * eingestellt hat, bekommt keinen sanften Lauf, sondern den direkten Sprung.
  *
  * Am Handy wird mit `spaeterInsBild` gerollt und NICHT mit `scrollIntoView`:
- * forkai.166 nahm `scrollIntoView` — in Brus HA-App lag der Kasten danach
+ * forkai.166 nahm `scrollIntoView` — in Nutzer-HA-App lag der Kasten danach
  * wieder ein Stück unter der Kopfleiste, im Chromium hier richtig. Dieselbe
  * Wirkung wie F-049; vermutlich beachtet die App `scroll-margin-top` dabei
  * nicht (belegt ist nur die Wirkung). `insBildRollen` misst die echte

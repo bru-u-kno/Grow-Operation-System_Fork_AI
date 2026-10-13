@@ -103,7 +103,7 @@ export function AppEinrichten() {
                   <input
                     value={host}
                     onChange={(event) => { setHost(event.target.value); setError(null) }}
-                    placeholder="http://192.168.178.68:8123"
+                    placeholder="http://192.168.1.60:8123"
                     inputMode="url"
                     aria-label="Adresse von Home Assistant" />
                 </V1Field>

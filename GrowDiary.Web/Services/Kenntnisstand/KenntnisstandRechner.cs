@@ -8,7 +8,7 @@ namespace GrowDiary.Web.Services;
 /// </summary>
 /// <remarks>
 /// <para><b>Was „im Ziel" heißt.</b> Luftfeuchte und Temperatur liegen im Ziel, wenn sie das Maximum nicht übersteigen. Das VPD liegt
-/// im Ziel, wenn es im Band des Plans liegt — mit <see cref="VpdToleranz"/> nach beiden Seiten: Brus Plan führt Unten = Oben (1,4 bis 1,4),
+/// im Ziel, wenn es im Band des Plans liegt — mit <see cref="VpdToleranz"/> nach beiden Seiten: Nutzer-Plan führt Unten = Oben (1,4 bis 1,4),
 /// und ein Band der Breite null hielte nie jemand ein. „Annähernd" ist das Ziel des Nutzers, nicht „exakt".</para>
 /// <para><b>Urteil.</b> Ab <see cref="ErreichbarAb"/> Prozent der Zeit im Ziel „erreichbar", ab <see cref="KnappAb"/> „knapp", darunter „Lücke";
 /// unter <see cref="MindestMinuten"/> Messminuten in der Lichtphase „unbekannt" — wer fast nichts gemessen hat, urteilt nicht.</para>

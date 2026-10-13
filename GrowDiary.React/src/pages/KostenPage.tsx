@@ -82,7 +82,7 @@ function KostenPage() {
    * das Formular auf seinem Reiter und rollt es ins Bild — auch wenn es schon
    * offen ist. Geschlossen wird nur über ▴ im Formularkopf oder „Abbrechen“.
    * F-049: vorher schloss ein Tipp auf den Knopf ein offenes Formular, das weiter
-   * unten außer Sicht lag — Bru musste zweimal tippen.
+   * unten außer Sicht lag — der Nutzer musste zweimal tippen.
    */
   function formularOeffnen(f: Formular, artikelId?: number) {
     const ziel = FORMULAR_REITER[f]
@@ -213,7 +213,7 @@ function FormularHuelle({ titel, sprung, onClose, children }: { titel: string; s
   const huelle = useRef<HTMLDivElement>(null)
   // Nicht sofort: wenn der Klick gleichzeitig den Reiter wechselt, rendert der
   // Router den neuen Reiter erst im nächsten Zug — ein sofortiger Sprung landet
-  // dann im Leeren (Bru, 09.09.: „erst der zweite Klick springt"). Zwei Frames
+  // dann im Leeren (09.09.: „erst der zweite Klick springt"). Zwei Frames
   // später steht die Seite. Gerollt wird mit eigener Rechnung (F-049).
   useEffect(() => spaeterInsBild(() => huelle.current), [sprung])
   return (

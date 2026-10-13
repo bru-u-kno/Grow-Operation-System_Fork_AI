@@ -21,11 +21,11 @@
 Vorher lag das an drei Orten: die Mappe unter Wissen, der Zugriff für
 KI-Assistenten unten in den Einstellungen, die Einrichtung des Grow MCP in der
 Seitenleiste von Home Assistant — und wie man einen Assistenten überhaupt
-verbindet, stand nirgends in Grow OS (Bru: „irreführend").
+verbindet, stand nirgends in Grow OS (Anwender: „irreführend").
 
 **Verbinden** beschreibt vier Wege, alle über das **eigene Konto** des
 Bedieners — die meisten haben den kostenlosen Plan oder ein Abo, keinen
-API-Schlüssel (Bru, 04.10.2026):
+API-Schlüssel (04.10.2026):
 
 | Weg | Plan | Wie |
 |---|---|---|

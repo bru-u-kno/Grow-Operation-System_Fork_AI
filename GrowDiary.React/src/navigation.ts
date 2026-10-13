@@ -127,7 +127,7 @@ export const navGroups: NavGroup[] = [
       // Fork AI (A-006): Das Grow-Tagebuch löst „Messungen" und „Journal &
       // Fotos" als Hauptweg ab — Messwerte, Wasserwechsel, Nachfüllen, Notizen
       // und Fotos stehen dort nach Tagen. Das Wort „Verlauf" als Menüpunkt ist
-      // damit weg (Bru, 05.10.2026).
+      // damit weg (05.10.2026).
       { to: '/tagebuch', label: 'Tagebuch', end: true, icon: '✎', short: 'Tagebuch', keywords: 'tagebuch grow-tagebuch verlauf historie protokoll messungen messwerte sensorwerte handmessung journal notizen fotos bilder wasserwechsel nachfüllen nachgefüllt addback auffällig sprung sensorkurven kurven' },
       // Beide bleiben als eigene Seiten — dort wohnen Tabelle und Vergleich
       // bzw. „+ Eintrag" —, im Menü aber nicht mehr. Erreichbar über die

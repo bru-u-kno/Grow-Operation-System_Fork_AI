@@ -5,7 +5,7 @@ namespace GrowDiary.Web.Tests.Services;
 
 /// <summary>
 /// Fork AI (A-021, forkai.212): „Arbeitsbereich aus dem Plan" — EIN = Plan-Obergrenze der Luftfeuchte minus Vorlauf,
-/// AUS = EIN minus Abstand. Brus Zelt (12.10.2026): Obergrenze 54 %, Vorlauf 4 %, Abstand 4 % ergibt 50/46 — genau seine
+/// AUS = EIN minus Abstand. Nutzer-Zelt (12.10.2026): Obergrenze 54 %, Vorlauf 4 %, Abstand 4 % ergibt 50/46 — genau seine
 /// festen Werte, deshalb ändert sich bei ihm nichts, wenn er umstellt.
 /// </summary>
 public sealed class ArbeitsbereichAusPlanTests

@@ -20,8 +20,8 @@ import type { Json } from './entfeuchtung-vorgaben'
  * zweites Speichern darf sie nicht auf einen alten Wert zurücksetzen. Und: zweimal speichern muss gehen.
  *
  * <b>Stand A-021 (13.10.2026).</b> Die Seite hat die Reiter Überblick · Einstellungen · Einrichtung („Regel" und
- * „Schutz" sind in „Einstellungen" aufgegangen). Die Antworten und Brus Anlage stehen in
- * `entfeuchtung-vorgaben.ts`; was die Stufen, die Schwellen und den Überblick mit Brus Werten angeht, steht es in
+ * „Schutz" sind in „Einstellungen" aufgegangen). Die Antworten und Nutzer-Anlage stehen in
+ * `entfeuchtung-vorgaben.ts`; was die Stufen, die Schwellen und den Überblick mit Nutzer-Werten angeht, steht es in
  * `entfeuchtung-einstellungen.spec.ts`. Diese Datei hält die älteren Zusagen: nur geänderte Felder beim Zusatz,
  * Höchsttemperatur ohne Rücksetzen, leere Felder sperren, Warnungen, Handy, Kontrast, Namen.
  */
@@ -38,7 +38,7 @@ test('die Seite lädt: ein Eintrag über der Überschrift, der Überblick ist nu
   await backendVorgeben(page)
   await seiteOeffnen(page)
 
-  // EIN Eintrag „Entfeuchtung" statt zwei Chips, und die Auswahl steht über der Überschrift (Bru, 08.10.2026).
+  // EIN Eintrag „Entfeuchtung" statt zwei Chips, und die Auswahl steht über der Überschrift (08.10.2026).
   const chip = page.getByRole('tab', { name: 'Entfeuchtung' })
   await expect(chip).toHaveAttribute('aria-current', 'true')
   await expect(page.getByRole('tab', { name: 'RDWC Dehumi' })).toHaveCount(0)
@@ -177,7 +177,7 @@ test('Einrichtung: der Nutzer sagt, wie viele Entfeuchter er hat — die Seite u
 test('Übersicht der Steuerungen: „Entfeuchtung" ist EINE Zeile, und ihre zwei Spalten überdecken sich am Handy nicht', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 })
   const stand = await backendVorgeben(page)
-  // Echte Namen aus Brus Anlage — lang genug, um die Zeile zu sprengen (08.10.2026, Screenshot).
+  // Echte Namen aus Nutzer-Anlage — lang genug, um die Zeile zu sprengen (08.10.2026, Screenshot).
   await page.unroute(/\/api\/steuerung$/)
   await page.route(/\/api\/steuerung$/, (route) => route.fulfill({ json: { ...MODULE, module: [
     MODULE.module[0],

@@ -31,7 +31,7 @@ steht nur der Hauptentfeuchter da; in der Übersicht der Steuerungen ist es weit
   „über dem Plan" und über der Höchsttemperatur „zu warm — alle aus". Die Zone steht nie nur als Farbe da.
 - **ZIEL-Zeile und Band** wie bei den Live-Kacheln: das grüne Ziel in der Mitte, gelbe Striche für die Grenzen, die Nadel für den
   Messwert; unter dem Band stehen nur die Grenzen. **Zu trocken und zu kühl zählen genauso als Abweichung** wie zu feucht und zu warm
-  (Bru, 13.10.2026) — das Band hat zwei Seiten.
+  (13.10.2026) — das Band hat zwei Seiten.
 - **Woher kommt das?** Eine Zeile zum Aufklappen unter jedem Band; aufgeklappt eine Zeile je Quelle (Wert links, Herkunft rechts) und
   die Wege zum Ändern (Plan, Grenzwerte, „Ein-/Ausschalten einstellen", „Höchsttemperatur einstellen" — die beiden letzten springen in
   „Einstellungen" zur Kachel).
@@ -74,7 +74,7 @@ Fehlt der Grenzwert, bleibt die Untergrenze leer, und das Band ist so einseitig 
 | Einschalten nach (Haupt) | 10 min | 2 min | 1 min |
 | Mindestlaufzeit (Haupt / Zusatz) | 30 / 25 min | 20 / 15 min | 10 / 10 min |
 
-**Normal** sind die Werte, mit denen die Regelung bei Bru am 12.10.2026 lief (eine frische Installation hat „Einschalten nach" 10 min und steht deshalb auf „Eigene Werte", bis eine Stufe gewählt wird); **Ruhig** und **Schnell** sind ein Vorschlag und nicht gegen
+**Normal** sind die Werte, mit denen die Regelung beim Nutzer am 12.10.2026 lief (eine frische Installation hat „Einschalten nach" 10 min und steht deshalb auf „Eigene Werte", bis eine Stufe gewählt wird); **Ruhig** und **Schnell** sind ein Vorschlag und nicht gegen
 den Betrieb geprüft (der Abstand folgt den früheren Stufen knapp 2 · normal 4 · ruhig 6). Die Stufe verschiebt die Ausschalt-Schwellen mit
 (AUS = EIN − Abstand, nie unter 30 %) und hebt die Wartezeit bei trockener Außenluft an, wenn sie sonst kürzer als „Einschalten nach" wäre
 (das verlangt das Backend). Sie rührt „Zuschalten nach" und „Mindestpause" des Zusatzes nicht an — die gehören seiner Hilfsstärke.
@@ -85,7 +85,7 @@ In der Kachel „Ziel · Luftfeuchte" wählst du den **Arbeitsbereich**:
 
 - **Fest** (Voreinstellung — nichts ändert sich): die Einschalt-Schwelle steht, wie du sie eingestellt hast.
 - **Aus dem Plan:** Einschalten über = **Plan-Obergrenze minus Vorlauf** (Vorlauf 0–20 %, Standard 4 %), Ausschalten unter = Einschalten minus Abstand.
-  Wechselt die Woche und der Plan nennt eine andere Obergrenze, wandern beide Schwellen mit. Beispiel Brus Zelt: Obergrenze 54 %, Vorlauf 4 %, Abstand 4 %
+  Wechselt die Woche und der Plan nennt eine andere Obergrenze, wandern beide Schwellen mit. Beispiel Nutzer-Zelt: Obergrenze 54 %, Vorlauf 4 %, Abstand 4 %
   ergibt **50/46** — genau seine festen Werte; die Woche mit Obergrenze 50 % ergäbe 46/42.
 
 Wie es gerechnet und geschrieben wird: Das Backend (`EntfeuchterSteuerungService.ArbeitsbereichAusPlan`) rechnet EIN in der Spanne 31 + ⌈Abstand⌉ bis 90 %, auf

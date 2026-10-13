@@ -1,6 +1,6 @@
 /**
  * Fork AI (forkai.130): Tag- und Nachtzeilen im Alarm-Blatt — der Rechenteil
- * ohne React. Mockup Stand 4/6b, freigegeben von Bru am 21.09.2026.
+ * ohne React. Mockup Stand 4/6b, freigegeben vom Nutzer am 21.09.2026.
  */
 import { zahlOderNull } from '../../zahlenfeld'
 import type { BlattUebergabe } from './WertBlatt'
@@ -56,7 +56,7 @@ export function planWaereText(stand: ZeilenStand): string | null {
 
 /**
  * Nur, wenn etwas offensichtlich nicht passen kann: ein Band von höchstens 1
- * (bei 1 °C Spielraum meldet der Fork im Takt der Pause — Bru, 21.09.2026).
+ * (bei 1 °C Spielraum meldet der Fork im Takt der Pause — 21.09.2026).
  */
 export function engesBand(zeile: string, von: string, bis: string, einheit: string | null): string | null {
   const a = zahl(von)
@@ -145,7 +145,7 @@ type AbweichungsZeilen = { min: string; max: string; nachtMin?: string; nachtMax
 /**
  * Fork AI (forkai.154): Eine neue „Erlaubte Abweichung" rechnet die Zeilen, die
  * dem Plan folgen, SOFORT mit. Vorher standen bis zum Speichern die alten Grenzen
- * in Tag und Nacht, und die Änderung sah wirkungslos aus (Bru, 30.09.2026:
+ * in Tag und Nacht, und die Änderung sah wirkungslos aus (30.09.2026:
  * Blütewoche 6 auf ± 4 K gestellt, Tag blieb 20–26, Nacht 16–22).
  *
  * „Folgt dem Plan" wird gegen die Abweichung geprüft, die bis eben im Feld stand.

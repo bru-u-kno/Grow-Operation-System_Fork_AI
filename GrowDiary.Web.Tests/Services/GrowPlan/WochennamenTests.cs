@@ -6,7 +6,7 @@ namespace GrowDiary.Web.Tests.Services.GrowPlan;
 
 /// <summary>
 /// Fork AI (forkai.132): einheitliche Wochennamen im Plan des Grows — die
-/// Herstellertabelle behält ihre Begriffe (Bru, 21.09.2026).
+/// Herstellertabelle behält ihre Begriffe (21.09.2026).
 /// </summary>
 /// <remarks>
 /// Seit 02.10.2026 heißt die Anzucht nach dem Startmaterial (Entscheidung des

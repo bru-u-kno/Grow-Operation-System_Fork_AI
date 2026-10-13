@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Services;
 /// brauchen einen mehrstufigen Einrichtungsdialog und Automationen einen ganz
 /// anderen Weg — beides kommt getrennt, weil es getrennt schiefgehen kann.</para>
 /// <para><b>Drei Regeln, die nicht verhandelbar sind.</b> Es wird nur angelegt,
-/// was fehlt. Vorhandenes wird nie überschrieben — in Brus Anlage stecken Werte,
+/// was fehlt. Vorhandenes wird nie überschrieben — in Nutzer-Anlage stecken Werte,
 /// die über Tage entstanden sind, und ein Helfer mit dem richtigen Namen aber
 /// zurückgesetztem Inhalt wäre schlimmer als gar keiner. Und was an einer nicht
 /// belegten Rolle hängt, entsteht gar nicht erst: Wer keinen Abluft-Regler hat,

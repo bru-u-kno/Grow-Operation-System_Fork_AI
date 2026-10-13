@@ -39,7 +39,7 @@ export function RulesCollectionPage() {
  * Fork AI (forkai.133): „Ziele & Meldungen" ist in drei Menüpunkte zerlegt —
  * Plan (Pflanzen), Grenzwerte (Betrieb), Handy (Einrichtung). Eine Seite mit drei
  * Reitern brauchte einen Oberbegriff, und keiner passte; „Alarm" und „Meldung"
- * waren obendrein verwechselbar (Bru, 22.09.2026). Die drei Seiten sind über die
+ * waren obendrein verwechselbar (22.09.2026). Die drei Seiten sind über die
  * Kette „1 · Plan › 2 · Grenzwerte › 3 · Handy" und Sprünge an Ort und Stelle
  * verbunden.
  */

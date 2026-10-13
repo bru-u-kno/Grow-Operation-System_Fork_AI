@@ -4,7 +4,7 @@ namespace GrowDiary.Web.Models;
 /// Ein Wasserwechsel als <b>ein Vorgang</b> (A-006, 05.10.2026).
 /// </summary>
 /// <remarks>
-/// <para><b>Der Anlass.</b> Bis hierhin musste Bru einen Wechsel an vier Stellen
+/// <para><b>Der Anlass.</b> Bis hierhin musste der Nutzer einen Wechsel an vier Stellen
 /// getrennt erfassen: Messung mit Haken „Lösungswechsel", Eintrag unter
 /// Wasserwechsel, Verbrauch unter Kosten, Zeile im Journal. Vier Eingaben für
 /// eine Handlung — und beim Löschen blieb von den vier immer etwas stehen.</para>

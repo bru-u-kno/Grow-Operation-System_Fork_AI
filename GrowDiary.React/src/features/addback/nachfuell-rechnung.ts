@@ -131,7 +131,7 @@ export function wirksameWerte(eigen: Werte, abgewaehlt: ReadonlySet<string>): We
 /**
  * Tag und Woche für den Kasten „Dein Plan heute" — aus dem Phasenanker des Grows.
  *
- * Die Woche steht nur hier und nirgends sonst im Kasten (Bru, 10.10.2026: „die Woche wird doppelt
+ * Die Woche steht nur hier und nirgends sonst im Kasten (10.10.2026: „die Woche wird doppelt
  * erwähnt"); das Label der Plan-Spalte bleibt deshalb weg. `null`, wenn der Anker keine Tageszahl hat.
  */
 export function planChips(anker: { phase: Ankerphase; tagInPhase: number; wocheInPhase: number } | null | undefined): { tag: string; woche: string } | null {
