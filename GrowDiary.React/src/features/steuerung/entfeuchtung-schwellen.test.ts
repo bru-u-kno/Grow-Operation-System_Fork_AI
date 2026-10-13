@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   SCHWELLE_MIN,
   abstandAnwenden,
+  arbeitsbereichAusPlan,
   aussenluftNachEinschalten,
   ausAusEin,
   ausWirksam,
   einMinimum,
   einSchwelleSetzen,
   schwellenGetrennt,
+  schwellenNachAbstand,
 } from './entfeuchtung-schwellen'
 
 const BRU = { feuchteEinTag: 50, feuchteAusTag: 46, feuchteEinNacht: 50, feuchteAusNacht: 46 }
@@ -82,5 +84,33 @@ describe('Einschalt-Schwelle der Luftfeuchte', () => {
     expect(ausWirksam(50, 46, 4)).toBe(46)
     // Ein weiter entferntes gespeichertes AUS gilt.
     expect(ausWirksam(62, 55, 4)).toBe(55)
+  })
+})
+
+describe('Arbeitsbereich aus dem Plan (forkai.212) — dieselben Beispiele wie das Backend', () => {
+  it('Brus Zelt: Obergrenze 54, Vorlauf 4, Abstand 4 ergibt 50/46', () => {
+    expect(arbeitsbereichAusPlan(54, 4, 4)).toEqual({ ein: 50, aus: 46 })
+  })
+
+  it('der Abstand verschiebt nur AUS, der Vorlauf nur EIN, der Wochenwechsel beide', () => {
+    expect(arbeitsbereichAusPlan(54, 4, 6)).toEqual({ ein: 50, aus: 44 })
+    expect(arbeitsbereichAusPlan(54, 2, 4)).toEqual({ ein: 52, aus: 48 })
+    expect(arbeitsbereichAusPlan(50, 4, 4)).toEqual({ ein: 46, aus: 42 })
+  })
+
+  it('EIN bleibt in der Spanne des Backends (31 + Abstand bis 90) und rundet auf eine Nachkommastelle', () => {
+    expect(arbeitsbereichAusPlan(40, 10, 4)).toEqual({ ein: 35, aus: 31 })
+    expect(arbeitsbereichAusPlan(95, 0, 4).ein).toBe(90)
+    expect(arbeitsbereichAusPlan(54.34, 4, 4)).toEqual({ ein: 50.3, aus: 46.3 })
+  })
+
+  it('ein neuer Abstand rechnet bei „plan" EIN mit neu, bei „fest" nur AUS', () => {
+    const bestand = { feuchteEinTag: 50, feuchteAusTag: 46, feuchteEinNacht: 50, feuchteAusNacht: 46, vorlaufProzent: 4 }
+    // Plan: Obergrenze 54, Abstand 10 → EIN muss mindestens 31 + 10 = 41; 54 − 4 = 50 bleibt, AUS 40 (über der Untergrenze 30).
+    expect(schwellenNachAbstand({ ...bestand, arbeitsbereichQuelle: 'plan' }, 10, 54)).toEqual({ feuchteEinTag: 50, feuchteAusTag: 40, feuchteEinNacht: 50, feuchteAusNacht: 40 })
+    // Fest: EIN bleibt auch dann, wenn der Plan etwas anderes sagen würde.
+    expect(schwellenNachAbstand({ ...bestand, feuchteEinTag: 58, feuchteEinNacht: 58, arbeitsbereichQuelle: 'fest' }, 6, 54).feuchteEinTag).toBe(58)
+    // Ohne Plan-Wert fällt „plan" auf das Verhalten von „fest" zurück.
+    expect(schwellenNachAbstand({ ...bestand, arbeitsbereichQuelle: 'plan' }, 6, null).feuchteEinTag).toBe(50)
   })
 })

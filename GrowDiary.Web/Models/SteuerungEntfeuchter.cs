@@ -57,6 +57,24 @@ public sealed class EntfeuchterEinstellungen
     public double FeuchteAusTag { get; set; } = 57;
     public double FeuchteEinNacht { get; set; } = 62;
     public double FeuchteAusNacht { get; set; } = 60;
+
+    // --- Arbeitsbereich (A-021, forkai.212) -----------------------------------
+
+    /// <summary>
+    /// <c>fest</c> = die Einschalt-Schwellen oben (Standard, nichts ändert sich), <c>plan</c> = EIN ist die Plan-Obergrenze
+    /// der Luftfeuchte minus <see cref="VorlaufProzent"/> und wandert mit dem Wochenwechsel; AUS ist EIN minus Abstand.
+    /// </summary>
+    public string ArbeitsbereichQuelle { get; set; } = ArbeitsbereichQuellen.Fest;
+
+    /// <summary>Wie weit EIN unter der Plan-Obergrenze liegt (nur bei <c>plan</c>).</summary>
+    public double VorlaufProzent { get; set; } = 4;
+}
+
+/// <summary>Woher EIN und AUS der Luftfeuchte kommen.</summary>
+public static class ArbeitsbereichQuellen
+{
+    public const string Plan = "plan";
+    public const string Fest = "fest";
 }
 
 /// <summary>Die beiden Arten, Temperatur max. zu bilden.</summary>

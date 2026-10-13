@@ -81,3 +81,32 @@ export function aussenluftNachEinschalten(aussenluftMin: number, einschaltMin: n
   if (!Number.isFinite(einschaltMin)) return aussenluftMin
   return Math.max(aussenluftMin, einschaltMin)
 }
+
+/**
+ * Die Schwellen bei „Arbeitsbereich aus dem Plan": EIN = Plan-Obergrenze minus Vorlauf, AUS = EIN minus Abstand.
+ *
+ * <b>Spiegel zum Backend</b> (`EntfeuchterSteuerungService.ArbeitsbereichAusPlan`): dort wird gerechnet und geschrieben, hier nur
+ * die Vorschau vor dem Speichern. Gleiche Regeln — EIN in der Spanne 31 + ⌈Abstand⌉ bis 90, auf eine Nachkommastelle gerundet;
+ * beide Seiten haben dieselben Beispiele in ihren Tests.
+ */
+export function arbeitsbereichAusPlan(planObergrenze: number, vorlaufProzent: number, abstandProzent: number): { ein: number; aus: number } {
+  const kleinstes = 31 + Math.ceil(abstandProzent)
+  const ein = rund(Math.min(SCHWELLE_MAX, Math.max(kleinstes, planObergrenze - vorlaufProzent)))
+  return { ein, aus: Math.max(SCHWELLE_MIN, rund(ein - abstandProzent)) }
+}
+
+/**
+ * Die Felder nach einer Änderung am Abstand: bei „Arbeitsbereich aus dem Plan" rechnet EIN mit neu (die Spanne hängt vom
+ * Abstand ab), sonst bleibt EIN und nur AUS verschiebt sich.
+ */
+export function schwellenNachAbstand(
+  aktuell: Schwellen & { arbeitsbereichQuelle?: 'fest' | 'plan'; vorlaufProzent?: number },
+  abstandProzent: number,
+  planObergrenze: number | null,
+): Schwellen {
+  if (aktuell.arbeitsbereichQuelle === 'plan' && planObergrenze != null && Number.isFinite(abstandProzent)) {
+    const { ein } = arbeitsbereichAusPlan(planObergrenze, aktuell.vorlaufProzent ?? 4, abstandProzent)
+    return einSchwelleSetzen(aktuell, abstandProzent, { wert: ein, tageszeit: 'beide' })
+  }
+  return abstandAnwenden(aktuell, abstandProzent)
+}

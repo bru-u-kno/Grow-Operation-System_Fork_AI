@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.212
+
+**Fork AI.** Entfeuchtung: Der Arbeitsbereich der Luftfeuchte kann dem Plan folgen — „Aus dem Plan" statt fester Einschalt-Schwelle.
+
+- **Neue Wahl „Arbeitsbereich" in der Kachel „Ziel · Luftfeuchte":** „Fest" (Voreinstellung, nichts ändert sich) oder „Aus dem Plan". Aus dem Plan heißt: Einschalten über = Plan-Obergrenze minus Vorlauf, Ausschalten unter = Einschalten minus Abstand. Bei deinem Zelt (Obergrenze 54 %, Vorlauf 4 %, Abstand 4 %) ergibt das 50 % und 46 % — genau deine heutigen Werte. Das Feld „Einschalten über" weicht dem Vorlauf (0 bis 20 %, Standard 4 %).
+- **Es wandert mit dem Wochenwechsel:** Nennt der Plan in der nächsten Woche eine andere Obergrenze (zum Beispiel 50 %), ziehen beide Schwellen mit (46 % und 42 %). Der Fork schreibt die vier Helfer (Einschalten und Ausschalten, Tag und Nacht) beim Speichern und täglich um 06:00 nach der Übergabe des Wochenplans — und nur, wenn ein Wert abweicht. Der gespeicherte Stand folgt, damit die Seite zeigt, was in Home Assistant liegt.
+- **Vorsicht eingebaut:** EIN bleibt in der Spanne, die das Backend prüft (mindestens 31 % plus Abstand, höchstens 90 %) und auf eine Nachkommastelle gerundet. Nennt der Plan keine Obergrenze, bleibt es bei den gespeicherten festen Werten, und „Aus dem Plan" ist gesperrt — die Seite erfindet keine. Bei VPD-Regelung gilt die Wahl nicht.
+- **Stufe und Abstand rechnen mit:** Wählst du eine Stufe oder änderst den Abstand, verschiebt sich AUS mit, und bei „Aus dem Plan" rechnet auch EIN neu. Der Überblick nennt bei „Aus dem Plan" in „Woher kommt das?" die Quelle mit Obergrenze und Vorlauf.
+- **Geprüft:** Die Rechnung hat im Backend und in der Seite dieselben Beispiele (50/46, Wochenwechsel 46/42, Grenzen, Rundung); eine Schleife über Obergrenzen, Vorläufe und Abstände belegt, dass jede berechnete Schwelle die Prüfung des Backends besteht. Ein Prüfstand mit Home Assistant aus Papier belegt, was beim Speichern und beim Wochenwechsel wirklich geschrieben wird (und dass bei „Fest" nichts nachgezogen wird). Ohne die jeweilige Änderung werden die Tests rot. Vier neue E2E-Fälle für die Wahl, die Stufe und den Überblick.
+
 ## 2.0.0-forkai.211
 
 **Fork AI.** Die Seite „Entfeuchtung" ist umgebaut: statt rund 36 Einzelwerten gibt es wenige Antworten, die für beide Entfeuchter gelten. Alle Werte bleiben einstellbar — die Ausschalt-Schwellen ergeben sich aus Einschalten minus Abstand. Der Überblick zeigt das Ziel mit einem Band, das auch „zu trocken" und „zu kühl" kennt, und sagt, woher es kommt.

@@ -59,7 +59,7 @@ Fehlt der Grenzwert, bleibt die Untergrenze leer, und das Band ist so einseitig 
 | Kachel | Was sie ändert |
 |---|---|
 | **Betrieb** | **Automatik** für beide Geräte mit einem Schalter; **Wann darf entfeuchtet werden?** („Tag und Nacht" / „Nur nachts") für beide. Stehen die zwei Geräte verschieden, steht „Gerade ist nur ein Gerät an" bzw. „unterschiedlich" — eine Wahl setzt beide. |
-| **Ziel · Luftfeuchte** | Plan-Obergrenze (nur Ansicht), **Einschalten über** (ein Wert für Tag und Nacht; getrennt per Schalter unter „Erweitert"), **Ausschalten unter** = Einschalten minus Abstand (nur Ansicht; angezeigt wird das AUS, bei dem Home Assistant wirklich ausschaltet — nie näher als der Abstand unter EIN), dazu ein kleines Band. Bei VPD-Regelung gelten die festen Werte nur als Rückfallebene. |
+| **Ziel · Luftfeuchte** | Plan-Obergrenze (nur Ansicht), **Arbeitsbereich** „Aus dem Plan" oder „Fest" (siehe unten), **Einschalten über** (bei „Fest": ein Wert für Tag und Nacht; getrennt per Schalter unter „Erweitert"), **Ausschalten unter** = Einschalten minus Abstand (nur Ansicht; angezeigt wird das AUS, bei dem Home Assistant wirklich ausschaltet — nie näher als der Abstand unter EIN), dazu ein kleines Band. Bei VPD-Regelung gelten die festen Werte nur als Rückfallebene. |
 | **Höchsttemperatur** | Tag und Nacht getrennt, je „Plan +" oder „Fest". Darüber gehen alle Entfeuchter aus. |
 | **Wie reagieren die Entfeuchter?** | Ruhig · Normal · Schnell — setzt Abstand EIN→AUS, „Einschalten nach" und die Mindestlaufzeit auf einmal; die Tabelle zeigt, was jede Stufe setzt. „Eigene Werte", wenn die Einzelwerte zu keiner Stufe passen. |
 | **Zusatz-Entfeuchter · Hilfsstärke** | aus · sparsam · normal · kräftig — setzt auch „Zuschalten nach", Mindestpause, „früher aus" und „wieder an" des Zusatzes. |
@@ -78,6 +78,21 @@ Fehlt der Grenzwert, bleibt die Untergrenze leer, und das Band ist so einseitig 
 den Betrieb geprüft (der Abstand folgt den früheren Stufen knapp 2 · normal 4 · ruhig 6). Die Stufe verschiebt die Ausschalt-Schwellen mit
 (AUS = EIN − Abstand, nie unter 30 %) und hebt die Wartezeit bei trockener Außenluft an, wenn sie sonst kürzer als „Einschalten nach" wäre
 (das verlangt das Backend). Sie rührt „Zuschalten nach" und „Mindestpause" des Zusatzes nicht an — die gehören seiner Hilfsstärke.
+
+## Arbeitsbereich aus dem Plan (forkai.212)
+
+In der Kachel „Ziel · Luftfeuchte" wählst du den **Arbeitsbereich**:
+
+- **Fest** (Voreinstellung — nichts ändert sich): die Einschalt-Schwelle steht, wie du sie eingestellt hast.
+- **Aus dem Plan:** Einschalten über = **Plan-Obergrenze minus Vorlauf** (Vorlauf 0–20 %, Standard 4 %), Ausschalten unter = Einschalten minus Abstand.
+  Wechselt die Woche und der Plan nennt eine andere Obergrenze, wandern beide Schwellen mit. Beispiel Brus Zelt: Obergrenze 54 %, Vorlauf 4 %, Abstand 4 %
+  ergibt **50/46** — genau seine festen Werte; die Woche mit Obergrenze 50 % ergäbe 46/42.
+
+Wie es gerechnet und geschrieben wird: Das Backend (`EntfeuchterSteuerungService.ArbeitsbereichAusPlan`) rechnet EIN in der Spanne 31 + ⌈Abstand⌉ bis 90 %, auf
+eine Nachkommastelle gerundet, und schreibt die vier Helfer (EIN/AUS, Tag und Nacht). Das geschieht beim Speichern und täglich um 06:00 nach der Übergabe des Wochenplans
+(`PlanNachziehenAsync`, schreibt nur, was abweicht); der gespeicherte Stand folgt, damit die Seite zeigt, was in Home Assistant liegt. Nennt der Plan keine Obergrenze,
+bleibt es bei den gespeicherten festen Werten, und „Aus dem Plan" ist gesperrt. Die Seite rechnet vor dem Speichern dieselbe Vorschau (`arbeitsbereichAusPlan` in
+`entfeuchtung-schwellen.ts`); beide Seiten haben dieselben Beispiele in ihren Tests. Bei VPD-Regelung gilt die Wahl nicht (die Schwellen kommen aus dem VPD-Band).
 
 ## Regelgröße: Luftfeuchte oder VPD — für alle Entfeuchter gleich
 
@@ -99,7 +114,6 @@ prüfung ist noch nicht gebaut.
 - Es schaltet nichts selbst — geschaltet wird in Home Assistant.
 - „Getrennt" (jeder Entfeuchter regelt sich selbst) und mehr als zwei Entfeuchter gibt es noch nicht (A-015, Stufen 2 und 3).
 - Es gibt noch keine Vorrang-Einstellung „Feuchte vor Temperatur" (A-013) und keinen Verlauf der letzten Stunden im Überblick.
-- Der Arbeitsbereich folgt noch nicht dem Plan („Einschalten = Plan-Obergrenze − Vorlauf"): geplant für die nächste Fassung.
 - Die Mindestpause gibt es weiter nur beim Zusatz; für den Hauptentfeuchter bräuchte sie eine Änderung an der Regelung in Home Assistant.
 
 ## Im Code

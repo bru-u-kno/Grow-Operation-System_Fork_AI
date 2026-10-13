@@ -388,6 +388,10 @@ export type EntfeuchterEinstellungen = {
   feuchteAusTag: number
   feuchteEinNacht: number
   feuchteAusNacht: number
+  /** A-021 (forkai.212): `plan` = EIN ist die Plan-Obergrenze minus Vorlauf und wandert mit dem Wochenwechsel. */
+  arbeitsbereichQuelle: 'fest' | 'plan'
+  /** Wie weit EIN unter der Plan-Obergrenze liegt (nur bei `plan`). */
+  vorlaufProzent: number
 }
 
 export type EntfeuchterLive = {

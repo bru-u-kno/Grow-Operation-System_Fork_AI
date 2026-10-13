@@ -496,3 +496,85 @@ test('„Einschalten nach": das Feld leeren und neu eintippen lässt sich speich
   expect(stand.hauptPuts).toHaveLength(1)
   expect(stand.hauptPuts[0]).toMatchObject({ einschaltverzoegerungMin: 3, wartezeitAussenluftMin: 5 })
 })
+
+// ------------------------------------------------------------------ forkai.212: Arbeitsbereich aus dem Plan
+
+const bereichWahl = (page: Page) => page.getByRole('radiogroup', { name: 'Arbeitsbereich' })
+const bereich = (page: Page, name: 'Aus dem Plan' | 'Fest') => bereichWahl(page).getByRole('radio', { name, exact: true })
+const einFeld = (page: Page) => page.getByLabel('Einschalten über', { exact: true })
+const vorlaufFeld = (page: Page) => page.getByLabel('Vorlauf unter der Plan-Obergrenze', { exact: true })
+
+/** Brus Anlage mit den neuen Feldern: Arbeitsbereich fest, Vorlauf 4 — so liefert sie das Backend nach forkai.212. */
+const bruMitBereich = (page: Page, haupt: Json = {}, hauptLive: Json = {}): Promise<Stand> =>
+  backendVorgeben(page, BRU_ZUSATZ_LIVE, { ...BRU_HAUPT_LIVE, ...hauptLive }, {
+    haupt: { ...BRU_HAUPT_EINSTELLUNGEN, arbeitsbereichQuelle: 'fest', vorlaufProzent: 4, ...haupt },
+    zusatz: BRU_ZUSATZ_EINSTELLUNGEN, zielwerte: BRU_ZIELWERTE,
+  })
+
+test('Arbeitsbereich „Aus dem Plan": Obergrenze 54 und Vorlauf 4 ergeben 50/46 — der Haupt-PUT trägt Quelle, Vorlauf und die gerechneten Schwellen, der Zusatz nichts — zweimal', async ({ page }) => {
+  const stand = await bruMitBereich(page)
+  await seiteOeffnen(page)
+  await reiterWahl(page, 'Einstellungen')
+  await expect(bereich(page, 'Fest')).toHaveAttribute('aria-checked', 'true')
+  await expect(einFeld(page)).toHaveValue('50')
+  await expect(speichern(page)).toHaveCount(0)
+
+  // Durchgang 1: Aus dem Plan — Brus Werte ergeben dieselben Schwellen, das Feld „Einschalten über" weicht dem Vorlauf.
+  await bereich(page, 'Aus dem Plan').click()
+  await expect(bereich(page, 'Aus dem Plan')).toHaveAttribute('aria-checked', 'true')
+  await expect(einFeld(page)).toHaveCount(0)
+  await expect(vorlaufFeld(page)).toHaveValue('4')
+  await expect(page.getByText('= Plan-Obergrenze 54 % minus Vorlauf 4 %')).toBeVisible()
+  await speichern(page).click()
+  await gespeichert(page)
+  expect(stand.hauptPuts).toHaveLength(1)
+  expect(stand.hauptPuts[0]).toMatchObject({
+    arbeitsbereichQuelle: 'plan', vorlaufProzent: 4,
+    feuchteEinTag: 50, feuchteAusTag: 46, feuchteEinNacht: 50, feuchteAusNacht: 46,
+  })
+  expect(stand.puts).toHaveLength(0)
+
+  // Durchgang 2: Vorlauf 6 → EIN 48, AUS 44; wieder speichern (zweites Speichern, Seite nicht neu geladen).
+  await vorlaufFeld(page).fill('6')
+  await expect(page.getByText('= Plan-Obergrenze 54 % minus Vorlauf 6 %')).toBeVisible()
+  await speichern(page).click()
+  await gespeichert(page)
+  expect(stand.hauptPuts).toHaveLength(2)
+  expect(stand.hauptPuts[1]).toMatchObject({ arbeitsbereichQuelle: 'plan', vorlaufProzent: 6, feuchteEinTag: 48, feuchteAusTag: 44, feuchteEinNacht: 48, feuchteAusNacht: 44 })
+})
+
+test('Arbeitsbereich „Aus dem Plan": die Stufe verschiebt AUS mit, EIN bleibt Obergrenze minus Vorlauf — und zurück auf „Fest" erscheint das Feld wieder', async ({ page }) => {
+  const stand = await bruMitBereich(page, { arbeitsbereichQuelle: 'plan' })
+  await seiteOeffnen(page)
+  await reiterWahl(page, 'Einstellungen')
+  await expect(bereich(page, 'Aus dem Plan')).toHaveAttribute('aria-checked', 'true')
+
+  await stufe(page, 'Ruhig').click() // Abstand 6 → AUS 44
+  await speichern(page).click()
+  await gespeichert(page)
+  expect(stand.hauptPuts[0]).toMatchObject({ arbeitsbereichQuelle: 'plan', hystereseProzent: 6, feuchteEinTag: 50, feuchteAusTag: 44 })
+
+  await bereich(page, 'Fest').click()
+  await expect(einFeld(page)).toHaveValue('50')
+  await expect(vorlaufFeld(page)).toHaveCount(0)
+})
+
+test('Arbeitsbereich: nennt der Plan keine Obergrenze, ist „Aus dem Plan" gesperrt — die Seite erfindet keine', async ({ page }) => {
+  await bruMitBereich(page, {}, { rhObergrenzeProzent: null, deckelProzent: null })
+  await seiteOeffnen(page)
+  await reiterWahl(page, 'Einstellungen')
+  await expect(bereich(page, 'Aus dem Plan')).toBeDisabled()
+  await expect(bereich(page, 'Fest')).toHaveAttribute('aria-checked', 'true')
+  await expect(einFeld(page)).toHaveValue('50')
+})
+
+test('Überblick: bei „Aus dem Plan" nennt „Woher kommt das?" die Quelle der Schwellen mit Obergrenze und Vorlauf', async ({ page }) => {
+  await bruMitBereich(page, { arbeitsbereichQuelle: 'plan', vorlaufProzent: 4 })
+  await seiteOeffnen(page)
+  const kopf = page.locator('.ef-hk-kopf', { hasText: 'Woher kommt das?' }).first()
+  await kopf.click()
+  await expect(page.getByText('aus dem Plan (Obergrenze 54 % minus Vorlauf 4 %)')).toBeVisible()
+  await kopf.click()
+  await kopf.click()
+  await expect(page.getByText('aus dem Plan (Obergrenze 54 % minus Vorlauf 4 %)')).toBeVisible()
+})

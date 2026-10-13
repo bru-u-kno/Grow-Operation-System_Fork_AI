@@ -185,9 +185,29 @@ public sealed class EntfeuchterSteuerungService
         PruefeTempMax(f, nameof(e.TempMaxTagModus), e.TempMaxTagModus, nameof(e.TempMaxTagAbstandK), e.TempMaxTagAbstandK, nameof(e.TempMaxTagFestC), e.TempMaxTagFestC);
         PruefeTempMax(f, nameof(e.TempMaxNachtModus), e.TempMaxNachtModus, nameof(e.TempMaxNachtAbstandK), e.TempMaxNachtAbstandK, nameof(e.TempMaxNachtFestC), e.TempMaxNachtFestC);
 
+        if (e.ArbeitsbereichQuelle is not (ArbeitsbereichQuellen.Plan or ArbeitsbereichQuellen.Fest)) f[nameof(e.ArbeitsbereichQuelle)] = "Arbeitsbereich: „plan“ oder „fest“.";
+        if (e.VorlaufProzent is < 0 or > 20) f[nameof(e.VorlaufProzent)] = "Vorlauf unter der Plan-Obergrenze: 0 bis 20 %.";
+
         PruefeSchwellen(f, nameof(e.FeuchteEinTag), e.FeuchteEinTag, nameof(e.FeuchteAusTag), e.FeuchteAusTag);
         PruefeSchwellen(f, nameof(e.FeuchteEinNacht), e.FeuchteEinNacht, nameof(e.FeuchteAusNacht), e.FeuchteAusNacht);
         return f;
+    }
+
+    /// <summary>
+    /// Die Schwellen, die bei <c>ArbeitsbereichQuelle = plan</c> gelten: EIN = Plan-Obergrenze minus Vorlauf, AUS = EIN minus Abstand.
+    /// <c>null</c>, wenn der Modus <c>fest</c> ist oder der Plan keine Obergrenze liefert — dann gelten die gespeicherten Werte.
+    /// </summary>
+    /// <remarks>
+    /// EIN bleibt in der Spanne, die das Backend prüft (30–90 %) und lässt AUS über der Untergrenze: kleinster Wert 31 plus Abstand.
+    /// Auf eine Nachkommastelle gerundet, damit 54 − 4 nie als 49,99999 in Home Assistant landet.
+    /// </remarks>
+    public static (double Ein, double Aus)? ArbeitsbereichAusPlan(EntfeuchterEinstellungen e, double? rhObergrenze)
+    {
+        if (e.ArbeitsbereichQuelle != ArbeitsbereichQuellen.Plan || rhObergrenze is not { } rh || !double.IsFinite(rh)) return null;
+        var kleinstes = 31 + Math.Ceiling(e.HystereseProzent);
+        var ein = Math.Round(Math.Clamp(rh - e.VorlaufProzent, kleinstes, 90), 1);
+        var aus = Math.Round(Math.Max(30, ein - e.HystereseProzent), 1);
+        return (ein, aus);
     }
 
     private static void PruefeTempMax(Dictionary<string, string> f, string modusFeld, string? modus, string abstandFeld, double abstand, string festFeld, double fest)
@@ -231,9 +251,26 @@ public sealed class EntfeuchterSteuerungService
         var fehler = Pruefen(e);
         if (fehler.Count > 0) return (null, fehler, false);
 
+        // Bei „Arbeitsbereich aus dem Plan" stehen im gespeicherten Stand die gerechneten Schwellen, nicht die alten festen —
+        // sonst zeigte die Seite nach dem Speichern etwas anderes, als in Home Assistant liegt.
+        if (ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct)) is { } plan)
+        {
+            e.FeuchteEinTag = e.FeuchteEinNacht = plan.Ein;
+            e.FeuchteAusTag = e.FeuchteAusNacht = plan.Aus;
+        }
+
         _repo.SetEinstellungen(Modul, e);
         var erreicht = await NachHomeAssistantSchreibenAsync(e, ct);
         return (e, fehler, erreicht);
+    }
+
+    /// <summary>Die Plan-Obergrenze der Luftfeuchte aus dem Helfer, in den der Wochenplan sie schreibt; <c>null</c>, wenn Home Assistant stumm ist.</summary>
+    private async Task<double?> RhObergrenzeAsync(CancellationToken ct)
+    {
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return null;
+        var entities = await _ha.GetEntitiesAsync(settings, ct);
+        return Zahlenlesen.Maschine(entities.FirstOrDefault(x => string.Equals(x.EntityId, Entitaeten.RhObergrenze, StringComparison.OrdinalIgnoreCase))?.State);
     }
 
     public async Task<bool> NachHomeAssistantSchreibenAsync(EntfeuchterEinstellungen e, CancellationToken ct)
@@ -242,6 +279,8 @@ public sealed class EntfeuchterSteuerungService
         if (!settings.IsConfigured) return false;
 
         var plan = _wochenplan.PlanLuft();
+        // „Arbeitsbereich aus dem Plan": EIN und AUS kommen aus der Plan-Obergrenze, nicht aus den gespeicherten festen Werten.
+        var bereich = ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct));
         var zahlen = new (string Entity, double Wert)[]
         {
             (Entitaeten.Hysterese, e.HystereseProzent),
@@ -250,10 +289,10 @@ public sealed class EntfeuchterSteuerungService
             (Entitaeten.WartezeitAussenluft, e.WartezeitAussenluftMin),
             (Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC)),
             (Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC)),
-            (Entitaeten.FeuchteEinTag, e.FeuchteEinTag),
-            (Entitaeten.FeuchteAusTag, e.FeuchteAusTag),
-            (Entitaeten.FeuchteEinNacht, e.FeuchteEinNacht),
-            (Entitaeten.FeuchteAusNacht, e.FeuchteAusNacht),
+            (Entitaeten.FeuchteEinTag, bereich?.Ein ?? e.FeuchteEinTag),
+            (Entitaeten.FeuchteAusTag, bereich?.Aus ?? e.FeuchteAusTag),
+            (Entitaeten.FeuchteEinNacht, bereich?.Ein ?? e.FeuchteEinNacht),
+            (Entitaeten.FeuchteAusNacht, bereich?.Aus ?? e.FeuchteAusNacht),
         };
 
         var alles = true;
@@ -279,15 +318,17 @@ public sealed class EntfeuchterSteuerungService
     }
 
     /// <summary>
-    /// Zieht Temperatur max. nach, wenn ein Modus auf „Plan" steht und sich die
-    /// Plan-Woche geändert hat. Schreibt nur, was abweicht. Aufgerufen vom
-    /// Wochenplan-Worker (Wochenwechsel, täglich 06:00).
+    /// Zieht nach, was dem Plan folgt, wenn sich die Plan-Woche geändert hat: Temperatur max. (Modus „Plan +") und
+    /// der Arbeitsbereich der Luftfeuchte (Quelle „plan": EIN = Plan-Obergrenze minus Vorlauf, AUS = EIN minus Abstand).
+    /// Schreibt nur, was abweicht. Aufgerufen vom Wochenplan-Worker (Wochenwechsel, täglich 06:00) — nach der Übergabe der
+    /// Plan-Obergrenze an Home Assistant, damit sie dort schon steht.
     /// </summary>
     public async Task<int> PlanNachziehenAsync(CancellationToken ct)
     {
         if (Gespeichert is not { } e) return 0;
-        if (e.TempMaxTagModus != TempMaxModus.Plan && e.TempMaxNachtModus != TempMaxModus.Plan) return 0;
-        if (_wochenplan.PlanLuft() is not { } plan) return 0;
+        var temperaturPlan = e.TempMaxTagModus == TempMaxModus.Plan || e.TempMaxNachtModus == TempMaxModus.Plan;
+        var bereichPlan = e.ArbeitsbereichQuelle == ArbeitsbereichQuellen.Plan;
+        if (!temperaturPlan && !bereichPlan) return 0;
 
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return 0;
@@ -297,14 +338,10 @@ public sealed class EntfeuchterSteuerungService
         double? Ist(string id) => Zahlenlesen.Maschine(nachId.GetValueOrDefault(id));
 
         var geschrieben = 0;
-        foreach (var (modus, entity, soll) in new[]
-                 {
-                     (e.TempMaxTagModus, Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan.LuftTagC)),
-                     (e.TempMaxNachtModus, Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan.LuftNachtC)),
-                 })
+        async Task SchreibenFallsAbweichendAsync(string entity, double soll)
         {
-            if (modus != TempMaxModus.Plan) continue;
-            if (Ist(entity) is { } ist && Math.Abs(ist - soll) < 0.05) continue;
+            soll = SteuerungBauteile.AufSpanne(entity, soll);
+            if (Ist(entity) is { } ist && Math.Abs(ist - soll) < 0.05) return;
             if (await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
                     new Dictionary<string, object> { ["value"] = soll }))
             {
@@ -312,7 +349,41 @@ public sealed class EntfeuchterSteuerungService
             }
         }
 
-        if (geschrieben > 0) _logger.LogInformation("Entfeuchter: Temperatur max. aus dem Plan nachgezogen ({Anzahl}).", geschrieben);
+        if (temperaturPlan && _wochenplan.PlanLuft() is { } plan)
+        {
+            foreach (var (modus, entity, soll) in new[]
+                     {
+                         (e.TempMaxTagModus, Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan.LuftTagC)),
+                         (e.TempMaxNachtModus, Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan.LuftNachtC)),
+                     })
+            {
+                if (modus != TempMaxModus.Plan) continue;
+                await SchreibenFallsAbweichendAsync(entity, soll);
+            }
+        }
+
+        if (bereichPlan && ArbeitsbereichAusPlan(e, Ist(Entitaeten.RhObergrenze)) is { } bereich)
+        {
+            foreach (var (entity, soll) in new[]
+                     {
+                         (Entitaeten.FeuchteEinTag, bereich.Ein), (Entitaeten.FeuchteAusTag, bereich.Aus),
+                         (Entitaeten.FeuchteEinNacht, bereich.Ein), (Entitaeten.FeuchteAusNacht, bereich.Aus),
+                     })
+            {
+                await SchreibenFallsAbweichendAsync(entity, soll);
+            }
+
+            // Auch der gespeicherte Stand folgt, sonst zeigte die Seite nach dem Wochenwechsel noch die alten Schwellen.
+            if (Math.Abs(e.FeuchteEinTag - bereich.Ein) > 0.05 || Math.Abs(e.FeuchteAusTag - bereich.Aus) > 0.05
+                || Math.Abs(e.FeuchteEinNacht - bereich.Ein) > 0.05 || Math.Abs(e.FeuchteAusNacht - bereich.Aus) > 0.05)
+            {
+                e.FeuchteEinTag = e.FeuchteEinNacht = bereich.Ein;
+                e.FeuchteAusTag = e.FeuchteAusNacht = bereich.Aus;
+                _repo.SetEinstellungen(Modul, e);
+            }
+        }
+
+        if (geschrieben > 0) _logger.LogInformation("Entfeuchter: aus dem Plan nachgezogen ({Anzahl} Helfer).", geschrieben);
         return geschrieben;
     }
 

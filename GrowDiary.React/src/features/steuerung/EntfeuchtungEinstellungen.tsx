@@ -7,12 +7,13 @@ import type { Ctx } from './EntfeuchtungBausteine'
 import { ZielBandAnzeige } from './EntfeuchterUeberblick'
 import {
   SCHWELLE_MAX,
-  abstandAnwenden,
   ausWirksam,
+  arbeitsbereichAusPlan,
   aussenluftNachEinschalten,
   einMinimum,
   einSchwelleSetzen,
   schwellenGetrennt,
+  schwellenNachAbstand,
 } from './entfeuchtung-schwellen'
 import { STUFEN, STUFEN_AUSWAHL, stufeErkennen, stufeFuerHaupt, stufeFuerZusatz } from './entfeuchtung-stufen'
 import type { StufenName } from './entfeuchtung-stufen'
@@ -58,6 +59,18 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
 
   // ------------------------------------------------------------------ Ziel
   const planOben = hl.rhObergrenzeProzent
+  // „Arbeitsbereich aus dem Plan" (forkai.212): EIN = Plan-Obergrenze minus Vorlauf. Ohne Obergrenze im Plan gilt der feste Wert.
+  const planModus = he.arbeitsbereichQuelle === 'plan'
+  const planWirkt = planModus && planOben != null
+  const vorlauf = Number.isFinite(he.vorlaufProzent) ? he.vorlaufProzent : 4
+  const quelleWaehlen = (quelle: 'fest' | 'plan') => {
+    if (quelle === 'plan' && planOben != null) {
+      const { ein } = arbeitsbereichAusPlan(planOben, vorlauf, he.hystereseProzent)
+      h.setzMehrere({ arbeitsbereichQuelle: 'plan', vorlaufProzent: vorlauf, ...einSchwelleSetzen(he, he.hystereseProzent, { wert: ein, tageszeit: 'beide' }) })
+    } else {
+      h.setz('arbeitsbereichQuelle', quelle)
+    }
+  }
   // Das AUS, bei dem Home Assistant wirklich ausschaltet (nie näher als der Abstand unter EIN) — nicht blind das gespeicherte.
   const aus = ausWirksam(he.feuchteEinTag, he.feuchteAusTag, he.hystereseProzent)
   const ausN = ausWirksam(he.feuchteEinNacht, he.feuchteAusNacht, he.hystereseProzent)
@@ -77,7 +90,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
   const stufe = stufeErkennen(he, ze)
   const stufeWaehlen = (name: StufenName) => {
     const haupt2 = stufeFuerHaupt(name, he)
-    h.setzMehrere({ ...haupt2, ...abstandAnwenden(he, haupt2.hystereseProzent) })
+    h.setzMehrere({ ...haupt2, ...schwellenNachAbstand(he, haupt2.hystereseProzent, planOben) })
     z?.setz('mindestlaufzeitMin', stufeFuerZusatz(name).mindestlaufzeitMin)
   }
 
@@ -117,7 +130,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
       {/* ----------------------------------------------------------------- Ziel */}
       <Klappkachel
         titel="Ziel · Luftfeuchte"
-        zusammenfassung={vpd ? 'nach VPD geregelt' : `Ein ${zahl(he.feuchteEinTag, 0)} · Aus ${zahl(aus, 0)} %`}
+        zusammenfassung={vpd ? 'nach VPD geregelt' : `Ein ${zahl(he.feuchteEinTag, 0)} · Aus ${zahl(aus, 0)} %${planWirkt ? ' · aus dem Plan' : ''}`}
         id={KACHEL_ZIEL}
       >
         <V1Card>
@@ -135,7 +148,26 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
               Über {zahl(he.feuchteEinTag, 0)} % gehen die Geräte an, unter {zahl(aus, 0)} % wieder aus, dazwischen bleibt es, wie es ist — so schalten sie nicht dauernd hin und her.
             </p>
           )}
-          {getrennt ? (
+          {!vpd && (
+            <div className="st-feldzeile is-gestapelt">
+              <span className="st-etikett">
+                Arbeitsbereich
+                <small>{planWirkt ? 'Folgt jede Woche dem Plan: Einschalten = Plan-Obergrenze minus Vorlauf.' : planModus ? 'Der Plan nennt gerade keine Obergrenze — es gelten die festen Werte.' : 'Feste Werte von dir.'}</small>
+              </span>
+              <div className="ef-stufen" role="radiogroup" aria-label="Arbeitsbereich">
+                <button type="button" role="radio" className="st-chip" aria-checked={planModus} aria-current={planModus} disabled={planOben == null && !planModus} onClick={() => quelleWaehlen('plan')}>Aus dem Plan</button>
+                <button type="button" role="radio" className="st-chip" aria-checked={!planModus} aria-current={!planModus} onClick={() => quelleWaehlen('fest')}>Fest</button>
+              </div>
+            </div>
+          )}
+          {planWirkt && !vpd ? (
+            <>
+              <Zahl label="Vorlauf unter der Plan-Obergrenze" hinweis="Wie weit unter der Obergrenze die Geräte einschalten. Wandert mit dem Plan: wechselt die Woche, wechseln auch die Schwellen." einheit="%" wert={vorlauf} min={0} max={20} schritt={0.5}
+                onChange={(v) => h.setzMehrere({ vorlaufProzent: v, ...einSchwelleSetzen(he, he.hystereseProzent, { wert: arbeitsbereichAusPlan(planOben!, v, he.hystereseProzent).ein, tageszeit: 'beide' }) })} fehler={h.feldFehler.VorlaufProzent} />
+              <Lesen label="Einschalten über" hinweis={`= Plan-Obergrenze ${zahl(planOben, 0)} % minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)} %`} wert={`${zahl(he.feuchteEinTag, he.feuchteEinTag % 1 ? 1 : 0)} %`} />
+              <Lesen label="Ausschalten unter" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(aus, aus % 1 ? 1 : 0)} %`} />
+            </>
+          ) : getrennt ? (
             <>
               <Zahl ruht={vpd} label="Einschalten über (Tag)" hinweis={einHinweis} einheit="%" wert={he.feuchteEinTag} min={einMinimum(he.hystereseProzent)} max={SCHWELLE_MAX} schritt={1}
                 onChange={(v) => h.setzMehrere(einSchwelleSetzen(he, he.hystereseProzent, { wert: v, tageszeit: 'tag' }))} fehler={h.feldFehler.FeuchteEinTag ?? h.feldFehler.FeuchteAusTag} />
@@ -301,7 +333,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
         <V1Card>
           <p className="st-hinweis">Hier stehen die einzelnen Werte der Stufe. Änderst du einen, wechselt die Stufe oben auf „Eigene Werte“.</p>
           <Zahl label="Abstand EIN → AUS" hinweis="Wie weit die Feuchte unter die Einschalt-Schwelle fallen muss, bevor das Gerät ausgeht. Verschiebt die Ausschalt-Schwelle." einheit="%" wert={he.hystereseProzent} min={1} max={10} schritt={0.5}
-            onChange={(v) => h.setzMehrere({ hystereseProzent: v, ...abstandAnwenden(he, v) })} fehler={h.feldFehler.HystereseProzent} />
+            onChange={(v) => h.setzMehrere({ hystereseProzent: v, ...schwellenNachAbstand(he, v, planOben) })} fehler={h.feldFehler.HystereseProzent} />
           <Zahl label={`Einschalten nach (${haupt})`} hinweis="So lange muss die Feuchte über der Schwelle liegen, bevor er anspringt. Die Wartezeit bei trockener Außenluft wächst bei Bedarf mit." einheit="min" wert={he.einschaltverzoegerungMin} min={0} max={60} schritt={1}
             onChange={(v) => h.setzMehrere({ einschaltverzoegerungMin: Math.round(v), wartezeitAussenluftMin: aussenluftNachEinschalten(he.wartezeitAussenluftMin, Math.round(v)) })} fehler={h.feldFehler.EinschaltverzoegerungMin ?? h.feldFehler.WartezeitAussenluftMin} />
           <Zahl label={`Mindestlaufzeit (${haupt})`} hinweis="Vorher schaltet ihn die erreichte Luftfeuchte nicht ab. Übertemperatur schaltet immer sofort ab." einheit="min" wert={he.mindestlaufzeitMin} min={0} max={60} schritt={1}

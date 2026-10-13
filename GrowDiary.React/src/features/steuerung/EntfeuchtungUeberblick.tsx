@@ -108,7 +108,9 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const eingestelltEin = phase === 'Nacht' ? a.feuchteEinNacht : a.feuchteEinTag
   const einAusQuelle = a.vpdRegelung
     ? 'aus dem VPD-Band des Plans'
-    : hl.deckelProzent != null && eingestelltEin > hl.deckelProzent
+    : a.arbeitsbereichQuelle === 'plan' && hl.rhObergrenzeProzent != null
+      ? `aus dem Plan (Obergrenze ${zahl(hl.rhObergrenzeProzent, 0)} % minus Vorlauf ${zahl(a.vorlaufProzent, a.vorlaufProzent % 1 ? 1 : 0)} %)`
+      : hl.deckelProzent != null && eingestelltEin > hl.deckelProzent
       ? `vom Plan gedeckelt (Obergrenze minus Klima-Abstand = ${zahl(hl.deckelProzent, 0)} %)`
       : 'von dir, unter Einstellungen'
   const feuchteHerkunft = [
