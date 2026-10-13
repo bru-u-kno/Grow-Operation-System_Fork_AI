@@ -16,12 +16,16 @@ import { describe, expect, it } from 'vitest'
  * Was als Beispiel gebraucht wird, nimmt Beispielwerte: `mobile_app_pixel_7`,
  * `smarthome.example.org`, `192.168.1.x`, „der Nutzer".
  */
+// Die Muster sind zusammengesetzt: Sie sollen die verbotenen Wörter finden, nicht
+// selbst in Klartext im Repo stehen (sonst träfe der Test sich selbst).
+const VORNAME = ['B', 'ru'].join('')
+const DOMAIN = ['k9', 'd'].join('') + '\\.world'
 const VERBOTEN: Array<{ muster: string; grund: string }> = [
-  { muster: '\\bBru(s|no)?\\b', grund: 'Vorname — „der Nutzer" schreiben' },
-  { muster: 'mobile_app_bruno', grund: 'Handy-Entität einer Person — mobile_app_pixel_7 nehmen' },
-  { muster: 'k9d\\.world', grund: 'private Domain — example.org nehmen' },
+  { muster: `\\b${VORNAME}(s|no)?\\b`, grund: 'Vorname — „der Nutzer" schreiben' },
+  { muster: `mobile_app_${VORNAME.toLowerCase()}no`, grund: 'Handy-Entität einer Person — mobile_app_pixel_7 nehmen' },
+  { muster: DOMAIN, grund: 'private Domain — example.org nehmen' },
   { muster: '192\\.168\\.178\\.', grund: 'Adresse aus einem Heimnetz — 192.168.1.x nehmen' },
-  { muster: 'ClaudeMemory|/home/claude/', grund: 'Pfade der Entwickler-VM' },
+  { muster: ['Claude', 'Memory'].join('') + '|/home/' + 'claude/', grund: 'Pfade der Entwickler-VM' },
 ]
 
 function suche(muster: string): string[] {

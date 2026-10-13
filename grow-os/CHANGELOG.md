@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.214
+
+**Fork AI.** Der Datenschutz-Test enthält die verbotenen Wörter nicht mehr im Klartext.
+
+- **Der Wächter trifft sich nicht mehr selbst:** In forkai.213 standen Vorname und private Domain als Suchmuster im neuen Test und damit selbst im Repo. Die Muster werden jetzt aus Teilen zusammengesetzt; der Test findet weiterhin jeden Treffer in den übrigen Dateien (belegt: mit einem eingebauten Treffer wird er rot, ohne ihn grün). Sonst keine Änderung.
+
 ## 2.0.0-forkai.213
 
 **Fork AI.** Das öffentliche Repo ist von persönlichen Angaben bereinigt — der Fork soll von weiteren Personen genutzt werden.
