@@ -49,18 +49,6 @@ export function bandBerechnen(werte: { aus: number | null; ein: number | null; d
   }
 }
 
-/** Die drei Stufen für „Wie ruhig soll er schalten?". */
-export const HYSTERESE_STUFEN: ReadonlyArray<{ wert: number; label: string }> = [
-  { wert: 2, label: 'knapp' },
-  { wert: 4, label: 'normal' },
-  { wert: 6, label: 'ruhig' },
-]
-
-/** Welche Stufe ein Wert ist — null heißt „eigener Wert". */
-export function hystereseStufe(wert: number): number | null {
-  return HYSTERESE_STUFEN.some((s) => Math.abs(s.wert - wert) < 1e-9) ? wert : null
-}
-
 /** Temperatur max., wie sie der Server bildet: Plan + Abstand, ohne Plan fest. */
 export function tempMax(modus: 'plan' | 'fest', abstandK: number, festC: number, planLuftC: number | null): number {
   return modus === 'plan' && planLuftC != null ? Math.round((planLuftC + abstandK) * 10) / 10 : festC

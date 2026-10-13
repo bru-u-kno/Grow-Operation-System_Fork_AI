@@ -20,12 +20,12 @@ import type { EntfeuchterNamen, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
 
 /**
- * Fork AI (A-015, Mockup freigegeben von Bru am 08.10.2026): Steuerung › Entfeuchtung.
+ * Fork AI (A-015, A-021; Mockup freigegeben von Bru am 08.10. und 13.10.2026): Steuerung › Entfeuchtung.
  *
  * <b>Ein Eintrag für alle Entfeuchter.</b> Hauptentfeuchter und Zusatz-Entfeuchter
- * stehen auf einer Seite mit den Reitern Überblick · Regel · Schutz · Einrichtung.
- * Der Überblick ist nur zum Lesen; Einstellbares steht in Regel und Schutz, nach
- * Regeln geordnet (je Regel dieselben Felder für jedes Gerät).
+ * stehen auf einer Seite mit den Reitern Überblick · Einstellungen · Einrichtung.
+ * Der Überblick ist nur zum Lesen; Einstellbares steht unter „Einstellungen": je Frage
+ * eine Antwort für beide Geräte, die Einzelwerte unter „Erweitert".
  *
  * <b>Gespeichert wird weiter über die zwei bekannten Wege</b> — der Hauptentfeuchter
  * schreibt alle seine Helfer, der Zusatz nur die geänderten Felder (A-009). Ein Knopf

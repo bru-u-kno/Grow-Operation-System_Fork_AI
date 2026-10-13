@@ -59,12 +59,12 @@ Fehlt der Grenzwert, bleibt die Untergrenze leer, und das Band ist so einseitig 
 | Kachel | Was sie ändert |
 |---|---|
 | **Betrieb** | **Automatik** für beide Geräte mit einem Schalter; **Wann darf entfeuchtet werden?** („Tag und Nacht" / „Nur nachts") für beide. Stehen die zwei Geräte verschieden, steht „Gerade ist nur ein Gerät an" bzw. „unterschiedlich" — eine Wahl setzt beide. |
-| **Ziel · Luftfeuchte** | Plan-Obergrenze (nur Ansicht), **Einschalten über** (ein Wert für Tag und Nacht; getrennt per Schalter unter „Erweitert"), **Ausschalten unter** = Einschalten minus Abstand (nur Ansicht), dazu ein kleines Band. Bei VPD-Regelung gelten die festen Werte nur als Rückfallebene. |
+| **Ziel · Luftfeuchte** | Plan-Obergrenze (nur Ansicht), **Einschalten über** (ein Wert für Tag und Nacht; getrennt per Schalter unter „Erweitert"), **Ausschalten unter** = Einschalten minus Abstand (nur Ansicht; angezeigt wird das AUS, bei dem Home Assistant wirklich ausschaltet — nie näher als der Abstand unter EIN), dazu ein kleines Band. Bei VPD-Regelung gelten die festen Werte nur als Rückfallebene. |
 | **Höchsttemperatur** | Tag und Nacht getrennt, je „Plan +" oder „Fest". Darüber gehen alle Entfeuchter aus. |
 | **Wie reagieren die Entfeuchter?** | Ruhig · Normal · Schnell — setzt Abstand EIN→AUS, „Einschalten nach" und die Mindestlaufzeit auf einmal; die Tabelle zeigt, was jede Stufe setzt. „Eigene Werte", wenn die Einzelwerte zu keiner Stufe passen. |
 | **Zusatz-Entfeuchter · Hilfsstärke** | aus · sparsam · normal · kräftig — setzt auch „Zuschalten nach", Mindestpause, „früher aus" und „wieder an" des Zusatzes. |
 | **Meldungen aufs Handy** | Nur zum Lesen: die Grenzwerte mit ihrer Herkunft und der Schalter „zieht nichts"; Links zu Grenzwerte und Handy. |
-| **Erweitert** | Die Einzelwerte (Abstand, Einschalten nach, Mindestlaufzeit; beim Zusatz Zuschalten nach, Mindestpause, früher aus, wieder an) und die Schalter: Einschalt-Schwelle für Tag und Nacht getrennt, Zusatz läuft nachts durch, Nach VPD regeln, Meldung „zieht nichts". |
+| **Erweitert** | Die Einzelwerte (Abstand, Einschalten nach, Mindestlaufzeit, Wartezeit bei trockener Außenluft; beim Zusatz Mindestlaufzeit, Zuschalten nach, Mindestpause, früher aus, wieder an, bei VPD der VPD-Abstand; die Zahlen der Meldung „zieht nichts") und die Schalter: Einschalt-Schwelle für Tag und Nacht getrennt, Zusatz läuft nachts durch, Nach VPD regeln, Meldung „zieht nichts". Jeder früher einstellbare Wert steht hier. |
 
 ### Die Stufen
 
@@ -74,7 +74,7 @@ Fehlt der Grenzwert, bleibt die Untergrenze leer, und das Band ist so einseitig 
 | Einschalten nach (Haupt) | 10 min | 2 min | 1 min |
 | Mindestlaufzeit (Haupt / Zusatz) | 30 / 25 min | 20 / 15 min | 10 / 10 min |
 
-**Normal** sind die Werte, mit denen die Regelung bei Bru am 12.10.2026 lief; **Ruhig** und **Schnell** sind ein Vorschlag und nicht gegen
+**Normal** sind die Werte, mit denen die Regelung bei Bru am 12.10.2026 lief (eine frische Installation hat „Einschalten nach" 10 min und steht deshalb auf „Eigene Werte", bis eine Stufe gewählt wird); **Ruhig** und **Schnell** sind ein Vorschlag und nicht gegen
 den Betrieb geprüft (der Abstand folgt den früheren Stufen knapp 2 · normal 4 · ruhig 6). Die Stufe verschiebt die Ausschalt-Schwellen mit
 (AUS = EIN − Abstand, nie unter 30 %) und hebt die Wartezeit bei trockener Außenluft an, wenn sie sonst kürzer als „Einschalten nach" wäre
 (das verlangt das Backend). Sie rührt „Zuschalten nach" und „Mindestpause" des Zusatzes nicht an — die gehören seiner Hilfsstärke.
@@ -92,7 +92,7 @@ prüfung ist noch nicht gebaut.
 - **Ziel der Luftfeuchte:** die Plan-Obergrenze (ohne Plan die Einschalt-Schwelle); die Untergrenze aus dem Grenzwert.
 - **Höchsttemperatur:** Plan-Luft + Abstand oder fester Wert (Einstellungen) — dieselbe Zahl für alle Entfeuchter.
 - **EIN/AUS-Schwellen, VPD-Ziel, Plan-Werte:** aus dem Plan und den Helfern in Home Assistant; der Fork zeigt sie und schreibt die festen Werte.
-- **Wartezeit bei trockener Außenluft:** nicht mehr sichtbar (A-021), bleibt aber gespeichert und wächst mit „Einschalten nach".
+- **Wartezeit bei trockener Außenluft:** unter „Erweitert"; sie wächst mit „Einschalten nach" mit, weil das Backend sie nie kürzer zulässt.
 
 ## Was es bewusst NICHT tut
 

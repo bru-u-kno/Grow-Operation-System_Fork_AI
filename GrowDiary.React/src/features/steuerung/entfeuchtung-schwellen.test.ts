@@ -4,6 +4,7 @@ import {
   abstandAnwenden,
   aussenluftNachEinschalten,
   ausAusEin,
+  ausWirksam,
   einMinimum,
   einSchwelleSetzen,
   schwellenGetrennt,
@@ -59,8 +60,27 @@ describe('Einschalt-Schwelle der Luftfeuchte', () => {
     expect(aussenluftNachEinschalten(25, 10)).toBe(25)
   })
 
-  it('ein geleertes Feld (NaN) macht die Wartezeit nicht kaputt — sie hat kein eigenes Feld zum Korrigieren', () => {
+  it('ein geleertes Feld (NaN) macht die Wartezeit nicht kaputt — sonst bliebe sie NaN, auch wenn „Einschalten nach" wieder gefüllt ist', () => {
     expect(aussenluftNachEinschalten(5, Number.NaN)).toBe(5)
     expect(aussenluftNachEinschalten(5, 3)).toBe(5)
+  })
+
+  it('mit „getrennt" bleibt das AUS der anderen Tageszeit stehen, auch wenn es nicht zu EIN minus Abstand passt', () => {
+    // Nacht: EIN 62, AUS 55 (bewusst weiter weg als der Abstand 4) — eine Änderung am Tag darf es nicht anheben.
+    const bestand = { feuchteEinTag: 60, feuchteAusTag: 57, feuchteEinNacht: 62, feuchteAusNacht: 55 }
+    const tag = einSchwelleSetzen(bestand, 4, { wert: 61, tageszeit: 'tag' })
+    expect(tag.feuchteAusNacht).toBe(55)
+    expect(tag.feuchteEinNacht).toBe(62)
+    expect(tag.feuchteAusTag).toBe(57)
+    const nacht = einSchwelleSetzen(bestand, 4, { wert: 63, tageszeit: 'nacht' })
+    expect(nacht.feuchteAusTag).toBe(57)
+    expect(nacht.feuchteAusNacht).toBe(59)
+  })
+
+  it('das wirksame AUS ist nie näher als der Abstand unter EIN — die Vorgaben des Backends (60/57, Abstand 4) schalten bei 56 aus', () => {
+    expect(ausWirksam(60, 57, 4)).toBe(56)
+    expect(ausWirksam(50, 46, 4)).toBe(46)
+    // Ein weiter entferntes gespeichertes AUS gilt.
+    expect(ausWirksam(62, 55, 4)).toBe(55)
   })
 })

@@ -8,6 +8,7 @@ import { ZielBandAnzeige } from './EntfeuchterUeberblick'
 import {
   SCHWELLE_MAX,
   abstandAnwenden,
+  ausWirksam,
   aussenluftNachEinschalten,
   einMinimum,
   einSchwelleSetzen,
@@ -57,8 +58,9 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
 
   // ------------------------------------------------------------------ Ziel
   const planOben = hl.rhObergrenzeProzent
-  const aus = he.feuchteAusTag
-  const ausN = he.feuchteAusNacht
+  // Das AUS, bei dem Home Assistant wirklich ausschaltet (nie näher als der Abstand unter EIN) — nicht blind das gespeicherte.
+  const aus = ausWirksam(he.feuchteEinTag, he.feuchteAusTag, he.hystereseProzent)
+  const ausN = ausWirksam(he.feuchteEinNacht, he.feuchteAusNacht, he.hystereseProzent)
   const bandVon = Math.floor(Math.min(aus, ausN, he.feuchteEinTag, planOben ?? 100) - 4)
   const bandBis = Math.ceil(Math.max(he.feuchteEinTag, he.feuchteEinNacht, planOben ?? 0) + 4)
   const einHinweis = hl.deckelProzent == null
@@ -233,7 +235,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
             {stufe === 'eigene'
               ? 'Deine Werte passen zu keiner Stufe. Sie bleiben, wie sie sind, bis du eine Stufe wählst.'
               : 'Die Stufe setzt diese Werte auf einmal.'}
-            {' '}Die Schutzzeiten (Mindestlaufzeit{z ? ', beim Zusatz auch die Mindestpause' : ''}) gelten in jeder Stufe.
+            {' '}Mindestlaufzeit{z ? ' und (beim Zusatz) Mindestpause' : ''} schützen den Kompressor — auch in der Stufe „Schnell“.
           </p>
         </V1Card>
       </Klappkachel>
@@ -242,7 +244,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
       {z && ze && zl && (
         <Klappkachel titel={`Zusatz-Entfeuchter · Hilfsstärke`} zusammenfassung={HILFE_STUFEN.find((s) => s.wert === ze.hilfe)?.label ?? 'eigene Werte'}>
           <V1Card>
-            <p className="st-hinweis">{haupt} führt. {zusatz} springt nur zu, wenn {haupt} allein nicht genügt, und geht früher wieder aus. Die Stärke setzt auch „Zuschalten nach“ und die Mindestpause des Zusatzes.</p>
+            <p className="st-hinweis">{haupt} führt. {zusatz} springt nur zu, wenn {haupt} allein nicht genügt, und geht früher wieder aus. Die Stärke setzt „Zuschalten nach“, Mindestpause, „früher aus“ und „wieder an“ des Zusatzes.</p>
             <div className="ef-stufen" role="radiogroup" aria-label="Hilfsstärke">
               {HILFE_STUFEN.map((s) => (
                 <button
@@ -345,7 +347,9 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
               // Wieder zusammenlegen: die Nacht folgt dem Tag, sonst stünden zwei verschiedene Werte hinter einem Feld.
               if (!an) h.setzMehrere(einSchwelleSetzen(he, he.hystereseProzent, { wert: he.feuchteEinTag, tageszeit: 'beide' }))
             }}
-            hint="Gilt für die feste Einschalt-Schwelle der Luftfeuchte. Aus: ein Wert für Tag und Nacht."
+            hint={getrennt
+              ? `Gilt für die feste Einschalt-Schwelle der Luftfeuchte. Aus: die Nacht übernimmt den Wert vom Tag${he.feuchteEinNacht === he.feuchteEinTag ? '' : ` (jetzt Nacht ${zahl(he.feuchteEinNacht, 0)} % → ${zahl(he.feuchteEinTag, 0)} %)`}.`
+              : 'Gilt für die feste Einschalt-Schwelle der Luftfeuchte. Aus: ein Wert für Tag und Nacht.'}
           />
           {z && ze && (
             <V1Switch

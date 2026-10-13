@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bandBerechnen, hystereseStufe, tempMax } from './entfeuchter-band'
+import { bandBerechnen, tempMax } from './entfeuchter-band'
 
 describe('bandBerechnen', () => {
   it('zeigt nur den Ausschnitt um die Werte (Bru, 21.09.2026: 52/53,2/55 lagen auf 40–70 % zu dicht)', () => {
@@ -28,14 +28,6 @@ describe('bandBerechnen', () => {
     const band = bandBerechnen({ aus: null, ein: 52, deckel: null, ist: 50 })!
     expect(band.marken.map((m) => m.art)).toEqual(['ein'])
     expect(band.zoneAb).toBeNull()
-  })
-})
-
-describe('hystereseStufe', () => {
-  it('erkennt die drei Stufen und sonst „eigener Wert“', () => {
-    expect(hystereseStufe(4)).toBe(4)
-    expect(hystereseStufe(2)).toBe(2)
-    expect(hystereseStufe(3.5)).toBeNull()
   })
 })
 

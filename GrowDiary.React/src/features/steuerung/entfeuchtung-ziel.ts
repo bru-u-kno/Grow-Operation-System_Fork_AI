@@ -49,13 +49,21 @@ export function grenzenFuerPhase(regel: GrenzwertRegel | null | undefined, tagPh
  */
 export function feuchteBand(planOben: number | null, regel: GrenzwertRegel | null | undefined, tagPhase: boolean | null): ZielBand {
   const g = grenzenFuerPhase(regel, tagPhase)
-  return { unten: g.unten, oben: planOben ?? g.oben }
+  return ohneUmgedrehtes({ unten: g.unten, oben: planOben ?? g.oben })
+}
+
+/**
+ * Liegt die Untergrenze über der Obergrenze (etwa ein Grenzwert-Minimum über der Plan-Obergrenze), wäre nichts „im Ziel":
+ * dann gilt nur die Obergrenze, wie ohne Grenzwert.
+ */
+function ohneUmgedrehtes(band: ZielBand): ZielBand {
+  return band.unten != null && band.oben != null && band.unten > band.oben ? { unten: null, oben: band.oben } : band
 }
 
 /** Das Zielband der Temperatur: die Grenzen des Grenzwerts, sonst Plan-Luft ± Toleranz, sonst leer. */
 export function temperaturBand(planLuftC: number | null, regel: GrenzwertRegel | null | undefined, tagPhase: boolean | null): ZielBand {
   const g = grenzenFuerPhase(regel, tagPhase)
-  if (g.unten != null || g.oben != null) return g
+  if (g.unten != null || g.oben != null) return ohneUmgedrehtes(g)
   // Ohne Toleranz wäre das Band einen Punkt breit („16 – 16 °C"): dann gibt es keines, und der Überblick fällt auf die
   // Höchsttemperatur zurück.
   const toleranz = regel?.toleranz ?? 0

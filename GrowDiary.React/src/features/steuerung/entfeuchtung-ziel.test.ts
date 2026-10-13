@@ -40,6 +40,11 @@ describe('Zielband der Luftfeuchte — zwei Seiten', () => {
     expect(feuchteZoneImBand(40.9, band)).toBe('kritisch')
   })
 
+  it('eine Untergrenze über der Obergrenze ergibt kein umgedrehtes Band — dann gilt nur die Obergrenze', () => {
+    expect(feuchteBand(54, { min: 60, max: 70 }, true)).toEqual({ unten: null, oben: 54 })
+    expect(temperaturBand(16, { min: 25, max: 20 }, true)).toEqual({ unten: null, oben: 20 })
+  })
+
   it('ohne Untergrenze zählt „zu niedrig" nicht — der Rechner erfindet keine', () => {
     expect(feuchteZoneImBand(20, { unten: null, oben: 54 })).toBe('ziel')
   })

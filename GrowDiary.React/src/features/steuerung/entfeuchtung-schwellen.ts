@@ -41,12 +41,22 @@ export function einSchwelleSetzen(
 ): Schwellen {
   const tag = neu.tageszeit === 'nacht' ? aktuell.feuchteEinTag : neu.wert
   const nacht = neu.tageszeit === 'tag' ? aktuell.feuchteEinNacht : neu.wert
+  // Nur das AUS der angefassten Tageszeit wird neu gerechnet: ein bewusst anders gesetztes AUS der anderen Seite bleibt
+  // (Prüfer, 13.10.2026: sonst hebt eine Änderung am Tag das wirksame Nacht-AUS still an).
   return {
     feuchteEinTag: tag,
-    feuchteAusTag: ausAusEin(tag, abstandProzent),
+    feuchteAusTag: neu.tageszeit === 'nacht' ? aktuell.feuchteAusTag : ausAusEin(tag, abstandProzent),
     feuchteEinNacht: nacht,
-    feuchteAusNacht: ausAusEin(nacht, abstandProzent),
+    feuchteAusNacht: neu.tageszeit === 'tag' ? aktuell.feuchteAusNacht : ausAusEin(nacht, abstandProzent),
   }
+}
+
+/**
+ * Das AUS, bei dem Home Assistant wirklich ausschaltet: das gespeicherte, aber nie näher als der Abstand unter EIN
+ * (die Vorlage nimmt das Kleinere). Bei den Vorgaben des Backends (EIN 60, AUS 57, Abstand 4) sind das 56, nicht 57.
+ */
+export function ausWirksam(ein: number, aus: number, abstandProzent: number): number {
+  return Math.min(aus, ausAusEin(ein, abstandProzent))
 }
 
 /** Die AUS-Felder nach einer Änderung am Abstand (EIN bleibt). */
@@ -66,8 +76,8 @@ export function einMinimum(abstandProzent: number): number {
 
 /** Das kleinste Maß an Wartezeit auf Außenluft, das zu „Einschalten nach" passt — das Backend verlangt es. */
 export function aussenluftNachEinschalten(aussenluftMin: number, einschaltMin: number): number {
-  // Ein geleertes Feld gibt NaN weiter — Math.max(5, NaN) wäre NaN und bliebe es: die Wartezeit hat kein eigenes Feld,
-  // in dem man es korrigieren könnte, und das Speichern bliebe gesperrt (E2E-Befund 13.10.2026).
+  // Ein geleertes Feld gibt NaN weiter — Math.max(5, NaN) wäre NaN und bliebe es, auch wenn „Einschalten nach" längst wieder
+  // gefüllt ist; das Speichern bliebe gesperrt, und die Markierung säße am falschen Feld (E2E-Befund 13.10.2026).
   if (!Number.isFinite(einschaltMin)) return aussenluftMin
   return Math.max(aussenluftMin, einschaltMin)
 }

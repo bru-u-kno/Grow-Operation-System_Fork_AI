@@ -18,6 +18,7 @@ import {
   temperaturZoneImBand,
   zielText,
 } from './entfeuchtung-ziel'
+import { KACHEL_HOECHST, KACHEL_ZIEL } from './EntfeuchtungEinstellungen'
 import { Klappkachel } from './Klappkachel'
 import type { ZielwerteKurz } from './useZielwerteKurz'
 import './steuerung.css'
@@ -102,10 +103,18 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   // Woher kommt das? — eine Zeile je Quelle, nur was wirklich bekannt ist.
   const planText = ['Plan', zielwerte?.growName && `Grow ${zielwerte.growName}`, zielwerte?.programm, zielwerte?.woche ? `Woche ${zielwerte.woche}` : hl.planWoche ? `Woche ${hl.planWoche}` : null]
     .filter(Boolean).join(' · ')
+  // Die gerade wirksamen Schwellen kommen nicht immer vom Nutzer: bei VPD aus dem VPD-Band des Plans, und liegt der Deckel
+  // (Plan-Obergrenze minus Klima-Abstand) unter der eingestellten Einschalt-Schwelle, begrenzt er sie.
+  const eingestelltEin = phase === 'Nacht' ? a.feuchteEinNacht : a.feuchteEinTag
+  const einAusQuelle = a.vpdRegelung
+    ? 'aus dem VPD-Band des Plans'
+    : hl.deckelProzent != null && eingestelltEin > hl.deckelProzent
+      ? `vom Plan gedeckelt (Obergrenze minus Klima-Abstand = ${zahl(hl.deckelProzent, 0)} %)`
+      : 'von dir, unter Einstellungen'
   const feuchteHerkunft = [
     ...(fBand.oben == null ? [] : [{ wert: `Obergrenze ${kurzeZahl(fBand.oben)} %`, quelle: hl.rhObergrenzeProzent == null ? 'aus der Einschalt-Schwelle (kein Plan-Wert)' : planText }]),
     ...(fBand.unten == null ? [] : [{ wert: `Untergrenze ${kurzeZahl(fBand.unten)} %`, quelle: 'dein Grenzwert' }]),
-    ...(hl.einAktivProzent == null ? [] : [{ wert: `Ein ${zahl(hl.einAktivProzent, 0)} / Aus ${zahl(hl.ausAktivProzent, 0)} %`, quelle: 'von dir, unter Einstellungen' }]),
+    ...(hl.einAktivProzent == null ? [] : [{ wert: `Ein ${zahl(hl.einAktivProzent, 0)} / Aus ${zahl(hl.ausAktivProzent, 0)} %`, quelle: einAusQuelle }]),
   ]
   const toleranz = zielwerte?.temperaturRegel?.toleranz
   const temperaturHerkunft = [
@@ -143,7 +152,7 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
             )}
             <Herkunft
               zeilen={feuchteHerkunft}
-              links={[{ text: 'Plan öffnen', to: '/plan' }, { text: 'Grenzwerte einstellen', to: '/grenzwerte' }, { text: 'Ein-/Ausschalten einstellen', springeZu: 'ziel' }]}
+              links={[{ text: 'Plan öffnen', to: '/plan' }, { text: 'Grenzwerte einstellen', to: '/grenzwerte' }, { text: 'Ein-/Ausschalten einstellen', springeZu: KACHEL_ZIEL }]}
               onSpringen={onSpringen}
             />
           </div>
@@ -165,7 +174,7 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
             />
             <Herkunft
               zeilen={temperaturHerkunft}
-              links={[{ text: 'Plan öffnen', to: '/plan' }, { text: 'Grenzwerte einstellen', to: '/grenzwerte' }, { text: 'Höchsttemperatur einstellen', springeZu: 'hoechst' }]}
+              links={[{ text: 'Plan öffnen', to: '/plan' }, { text: 'Grenzwerte einstellen', to: '/grenzwerte' }, { text: 'Höchsttemperatur einstellen', springeZu: KACHEL_HOECHST }]}
               onSpringen={onSpringen}
             />
           </div>
