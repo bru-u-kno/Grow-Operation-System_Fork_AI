@@ -64,6 +64,8 @@ export type LiveScreenProps = {
   sensorsLive: number
   lastMeasurement: string | null
   stageLine: string | null
+  /** Plan-Woche aus dem Wochenplan („Blütewoche 5 von 8“); fehlt ohne Plan. */
+  weekLine?: string | null
   risks: RiskEventDto[]
   tasks: LiveTask[]
   /** Der geteilte Phasentyp — die Inline-Fassung kannte den Fortschritt nicht. */
@@ -110,7 +112,7 @@ export type DashboardPanel = {
 
 export function LiveScreen({
   tent, grow, score, scoreParts, climate, hydro, alleMetriken, sensorsLive,
-  lastMeasurement, stageLine, risks, tasks, timeline, timelineDates, plantLine,
+  lastMeasurement, stageLine, weekLine, risks, tasks, timeline, timelineDates, plantLine,
   flipIsPlanned, daysToFlip, tents, systemWarning, trends, chiller, dashboard, onTent, onRefresh,
 }: LiveScreenProps) {
   const topRisk = risks[0] ?? null
@@ -183,7 +185,7 @@ export function LiveScreen({
 
         <div className="ls-head-bar">
           <span className="ls-head-meta">
-            {[lastMeasurement && `Letzte Messung ${lastMeasurement}`, stageLine, grow?.name]
+            {[lastMeasurement && `Letzte Messung ${lastMeasurement}`, stageLine, weekLine, grow?.name]
               .filter(Boolean).join(' · ')}
           </span>
 

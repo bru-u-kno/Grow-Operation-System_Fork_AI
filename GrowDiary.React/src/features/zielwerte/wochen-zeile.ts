@@ -77,3 +77,18 @@ export function wochenIndex(spalten: ReadonlyArray<{ id: string }>, wocheId: str
   const i = spalten.findIndex((s) => s.id === wocheId)
   return i < 0 ? null : i
 }
+
+/**
+ * Die laufende Plan-Woche für den Kopf der Live-Seite: „Blütewoche 5 von 8",
+ * „Flush", bei angehängter Woche „Blütewoche 9 (verlängert)". Aus demselben
+ * Eintrag „istJetzt" wie die Wochenzeile — nicht selbst gerechnet.
+ * `null`, wenn der Plan keine laufende Woche kennt.
+ */
+export function jetztWocheText(plan: WochenPlan | null): string | null {
+  const jetzt = plan?.wochen.find((w) => w.istJetzt)
+  if (!plan || !jetzt) return null
+  if (jetzt.verlaengert) return `${jetzt.label} (verlängert)`
+  if (jetzt.woche == null) return jetzt.label
+  const letzte = Math.max(...plan.wochen.filter((w) => w.stage === jetzt.stage && w.woche != null && !w.verlaengert).map((w) => w.woche as number))
+  return `${jetzt.label} von ${letzte}`
+}

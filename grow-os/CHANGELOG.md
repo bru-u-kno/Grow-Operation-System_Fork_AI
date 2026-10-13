@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.210
+
+**Fork AI.** Der Kopf der Live-Seite nennt jetzt auch die Woche des Plans.
+
+- **Plan-Woche im Live-Kopf:** In der Zeile unter dem Grow-Score steht nach „Blüte Tag 52" jetzt die laufende Woche des Wochenplans, zum Beispiel „Blüte Tag 36 · Blütewoche 6 von 8 · Grow-Name". Läuft der Plan in eine Phase ohne Wochennummer, steht deren Name („Flush"); ist die Woche angehängt, weil die Phase länger dauert als das Programm, steht „(verlängert)". Ohne Plan entfällt die Angabe. Die Woche kommt aus demselben Eintrag wie die Wochenzeile auf „Ziele & Meldungen" (`/api/wochenplan`), nicht aus einer eigenen Rechnung.
+- **Geprüft:** Vier neue Tests für die Beschriftung; ohne das „von N" wird einer rot. Am gebauten Stand mit Demobestand gelesen: „Letzte Messung 07:00 · Blüte Tag 36 · Blütewoche 6 von 8 · White Widow (Testdaten)", am PC und bei 390 px Breite ohne Überlauf.
+
 ## 2.0.0-forkai.209
 
 **Fork AI.** Nach einem Wasserwechsel meldet die Diagnose den Sprung von EC und pH nicht mehr als Abweichung.
