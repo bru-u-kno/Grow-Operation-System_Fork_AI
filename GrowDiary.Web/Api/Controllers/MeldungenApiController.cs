@@ -12,7 +12,7 @@ public sealed record HaWaechterDto(string EntityId, string Name, bool Aktiv, str
 /// Meldungen schickt.
 /// </summary>
 /// <remarks>
-/// <para>Die Wächter der Steuerungen (Kühler, CO₂) laufen bewusst in Home
+/// <para>Die Wächter der Steuerungen (Kühler, CO₂, Entfeuchter-Meldung) laufen bewusst in Home
 /// Assistant und senden von dort — sie sollen auch melden, wenn das Add-on
 /// steht. Der Fork schaltet sie nicht und ändert sie nicht; er zeigt sie nur,
 /// damit die Übersicht aller Absender vollständig ist.</para>
@@ -33,6 +33,10 @@ public sealed class MeldungenApiController : ApiControllerBase
             "CO₂-Ventil länger als 90 s offen → wird zwangsweise geschlossen und gemeldet",
         ["automation.co2_wachter"] =
             "CO₂-Ventil länger als erlaubt offen → wird zwangsweise geschlossen und gemeldet",
+        // A-021 (13.10.2026): Die Meldung des Zusatz-Entfeuchters steht nicht „Wächter" im Namen und fehlte deshalb
+        // in der Liste, obwohl sie aufs Handy meldet. Grenze, Dauer und Wiederholung stellt die Seite Entfeuchtung ein.
+        ["automation.zusatz_entfeuchter_zieht_nichts"] =
+            "Zusatz-Entfeuchter an, nimmt aber kaum Strom auf (z. B. Tank voll) → Meldung aufs Handy",
     };
 
     /// <summary>

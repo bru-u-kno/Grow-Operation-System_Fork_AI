@@ -1,5 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 import { KONTRAST_HELFER } from './kontrast-messung'
+import {
+  alleKartenOeffnen, alleOeffnen, aufklappen, backendVorgeben, bandzahlenKollidieren, HAUPT_EINSTELLUNGEN, MODULE,
+  ragtHinaus, reiterWahl, schalter, seiteOeffnen, speichern,
+} from './entfeuchtung-vorgaben'
+import type { Json } from './entfeuchtung-vorgaben'
 
 /**
  * A-009 / A-014 / A-015: Die Seite „Entfeuchtung" — Hauptentfeuchter und Zusatz-Entfeuchter auf einer Seite —
@@ -13,142 +18,18 @@ import { KONTRAST_HELFER } from './kontrast-messung'
  * Felder — am 06.10.2026 hat ein Speichern unbemerkt die Tag-Grenze von 26,5 auf 29 °C zurückgesetzt. Der gelbe
  * Kasten davor nennt dieselben Felder. Die Höchsttemperatur wird über den Hauptentfeuchter gespeichert; ein
  * zweites Speichern darf sie nicht auf einen alten Wert zurücksetzen. Und: zweimal speichern muss gehen.
+ *
+ * <b>Stand A-021 (13.10.2026).</b> Die Seite hat die Reiter Überblick · Einstellungen · Einrichtung („Regel" und
+ * „Schutz" sind in „Einstellungen" aufgegangen). Die Antworten und Brus Anlage stehen in
+ * `entfeuchtung-vorgaben.ts`; was die Stufen, die Schwellen und den Überblick mit Brus Werten angeht, steht es in
+ * `entfeuchtung-einstellungen.spec.ts`. Diese Datei hält die älteren Zusagen: nur geänderte Felder beim Zusatz,
+ * Höchsttemperatur ohne Rücksetzen, leere Felder sperren, Warnungen, Handy, Kontrast, Namen.
  */
 
-type Json = Record<string, unknown>
-
-/** Bru, 06.10.2026: Modus „fest" 26,5 / 25, Hilfsstärke normal. */
-const EINSTELLUNGEN: Json = {
-  hilfe: 'normal',
-  automatikAktiv: true,
-  tagbetriebErlauben: true,
-  nachtDurchlaufen: true,
-  vpdHystereseKpa: 0.15,
-  zuschaltVerzoegerungMin: 10,
-  folgeAbstandK: 1,
-  wiederEinAbstandK: 1,
-  mindestlaufzeitMin: 15,
-  mindestpauseMin: 10,
-  meldung: { aktiv: true, grenzeW: 60, dauerMin: 5, wiederholungH: 2 },
-  ablauf: 'tank',
-  tempMaxTagModus: 'fest', tempMaxTagAbstandK: 6.5, tempMaxTagFestC: 26.5,
-  tempMaxNachtModus: 'fest', tempMaxNachtAbstandK: 9, tempMaxNachtFestC: 25,
-}
-
-/** Das Beispiel aus VERTRAG.md. */
-const LIVE: Json = {
-  haErreichbar: true, fuehrungName: 'RDWC Dehumi', zusatzName: 'Dehumi RDWC Tent',
-  planWoche: 'Blütewoche 7', planLuftTagC: 20, planLuftNachtC: 16,
-  tempMaxTagC: 26.5, tempMaxNachtC: 25,
-  folgeAusTagC: 25.5, folgeAusNachtC: 24, wiederEinTagC: 24.5, wiederEinNachtC: 23,
-  tempC: 25.1, feuchteProzent: 55.2, vpd: 1.31, tagPhase: true,
-  schaltgroesse: 'vpd', vpdZiel: 1.4, vpdEinSchwelle: 1.25, vpdAusSchwelle: 1.55,
-  feuchteEinProzent: 39, feuchteAusProzent: 35,
-  zusatzAn: true, zusatzOnline: true, leistungW: 313, energieHeuteKwh: 2.9,
-  fuehrungAn: true, ziehtNichts: false, planUnvollstaendig: false, automatikAn: true,
-}
-
-/** Der Hauptentfeuchter (Form von `EntfeuchterEinstellungen`). */
-const HAUPT_EINSTELLUNGEN: Json = {
-  vpdRegelung: true, hystereseProzent: 4, mindestlaufzeitMin: 20, einschaltverzoegerungMin: 10, wartezeitAussenluftMin: 25,
-  tagbetriebErlauben: true, automatikAktiv: true,
-  tempMaxTagModus: 'fest', tempMaxTagAbstandK: 6.5, tempMaxTagFestC: 26.5,
-  tempMaxNachtModus: 'fest', tempMaxNachtAbstandK: 9, tempMaxNachtFestC: 25,
-  feuchteEinTag: 60, feuchteAusTag: 57, feuchteEinNacht: 62, feuchteAusNacht: 60,
-}
-const HAUPT_LIVE: Json = {
-  haErreichbar: true, feuchteProzent: 55.2, tempC: 25.1, vpd: 1.31, tagPhase: true,
-  einAktivProzent: 50, ausAktivProzent: 46, tempMaxAktivC: 26.5, rhObergrenzeProzent: 51, deckelProzent: 48,
-  vpdUnten: 1.4, vpdOben: 1.4, blattOffsetC: -1, planWoche: 'Blütewoche 7', planLuftTagC: 20, planLuftNachtC: 16,
-  tempMaxTagC: 26.5, tempMaxNachtC: 25, co2CanopyGrenzeC: 27,
-  portAn: true, portOnline: true, automatikAn: true, zuluftVorrang: false,
-}
-
-const MODULE = {
-  haErreichbar: true,
-  standUtc: '2026-10-06T20:00:00Z',
-  module: [
-    { kennung: 'co2', titel: 'CO₂', status: 'an', kurz: 'Begasung', wert: '800 ppm', unterzeile: 'Ziel 900', hatDetail: true },
-    { kennung: 'entfeuchter', titel: 'RDWC Dehumi', status: 'an', kurz: 'Entfeuchter', wert: '55 %', unterzeile: 'läuft', hatDetail: true },
-    { kennung: 'entfeuchter-zusatz', titel: 'Dehumi RDWC Tent', status: 'an', kurz: 'Zusatz', wert: '313 W', unterzeile: 'läuft', hatDetail: true },
-  ],
-}
-
-type Stand = { einstellungen: Json; puts: Json[]; haupt: Json; hauptPuts: Json[]; einrichtung: { zusatzVorhanden: boolean | null }; einrichtungPuts: Json[] }
-
-/**
- * Die Antworten vorgeben. Der Zusatz-`PUT` übernimmt nur die Felder aus dem Körper (Vertrag), der des
- * Hauptentfeuchters ersetzt alles — und gibt die Höchsttemperatur an den Zusatz weiter, wie das Backend es tut.
- */
-async function backendVorgeben(page: Page, live: Json = {}, hauptLive: Json = {}): Promise<Stand> {
-  const stand: Stand = { einstellungen: structuredClone(EINSTELLUNGEN), puts: [], haupt: structuredClone(HAUPT_EINSTELLUNGEN), hauptPuts: [], einrichtung: { zusatzVorhanden: null }, einrichtungPuts: [] }
-  const zusatzAntwort = () => ({
-    einstellungen: stand.einstellungen,
-    live: { ...LIVE, ...live },
-    geraeteZugeordnet: 8, geraeteGesamt: 8, ausHomeAssistantUebernommen: false, haAngenommen: null,
-  })
-  const hauptAntwort = () => ({
-    einstellungen: stand.haupt,
-    live: { ...HAUPT_LIVE, ...hauptLive },
-    geraeteZugeordnet: 7, geraeteGesamt: 7, ausHomeAssistantUebernommen: false, haAngenommen: null,
-  })
-  await page.route(/\/api\/steuerung$/, (route) => route.fulfill({ json: MODULE }))
-  await page.route(/\/api\/steuerung\/entfeuchtung-einrichtung$/, async (route) => {
-    if (route.request().method() === 'PUT') {
-      const koerper = route.request().postDataJSON() as { zusatzVorhanden: boolean | null }
-      stand.einrichtungPuts.push(koerper)
-      stand.einrichtung = { zusatzVorhanden: koerper.zusatzVorhanden }
-    }
-    await route.fulfill({ json: stand.einrichtung })
-  })
-  await page.route(/\/api\/steuerung\/entfeuchter-namen$/, (route) => route.fulfill({
-    json: { fuehrung: { anzeigename: 'RDWC Dehumi', vorgabe: 'RDWC Dehumi' }, zusatz: { anzeigename: 'Dehumi RDWC Tent', vorgabe: 'Dehumi RDWC Tent' } },
-  }))
-  await page.route(/\/api\/steuerung\/entfeuchter-zusatz$/, async (route) => {
-    if (route.request().method() === 'PUT') {
-      const koerper = route.request().postDataJSON() as Json
-      stand.puts.push(koerper)
-      for (const [feld, wert] of Object.entries(koerper)) {
-        stand.einstellungen[feld] = feld === 'meldung' ? { ...(stand.einstellungen.meldung as Json), ...(wert as Json) } : wert
-      }
-    }
-    await route.fulfill({ json: zusatzAntwort() })
-  })
-  await page.route(/\/api\/steuerung\/entfeuchter$/, async (route) => {
-    if (route.request().method() === 'PUT') {
-      const koerper = route.request().postDataJSON() as Json
-      stand.hauptPuts.push(koerper)
-      stand.haupt = koerper
-      for (const feld of ['tempMaxTagModus', 'tempMaxTagAbstandK', 'tempMaxTagFestC', 'tempMaxNachtModus', 'tempMaxNachtAbstandK', 'tempMaxNachtFestC']) {
-        stand.einstellungen[feld] = koerper[feld]
-      }
-    }
-    await route.fulfill({ json: hauptAntwort() })
-  })
-  return stand
-}
-
-async function seiteOeffnen(page: Page): Promise<void> {
-  await page.goto('/steuerung/entfeuchtung', { waitUntil: 'networkidle' })
-  await expect(page.getByRole('heading', { name: 'Entfeuchtung', level: 1 })).toBeVisible()
-}
-
-/** A-015: Reiter und Klappkacheln. Die Seite öffnet auf „Überblick". */
-const reiterWahl = (page: Page, name: string) => page.locator('.v1-tab', { hasText: new RegExp(`^${name}$`) }).click()
-const aufklappen = async (page: Page, titel: RegExp) => {
-  const kopf = page.locator('.st-kk-kopf[aria-expanded="false"]', { hasText: titel })
-  if (await kopf.count()) await kopf.first().click()
-}
-const alleKartenOeffnen = async (page: Page) => {
-  const zu = page.locator('.st-kk-kopf[aria-expanded="false"]')
-  // Die Liste schrumpft mit jedem Klick — immer die erste nehmen.
-  for (let i = 0; i < 30 && (await zu.count()) > 0; i++) await zu.first().click()
-}
-const TABS = ['Überblick', 'Regel', 'Schutz', 'Einrichtung']
+const TABS = ['Überblick', 'Einstellungen', 'Einrichtung']
 
 const kasten = (page: Page) => page.locator('[data-audit="zusatz-aenderungen"]')
-const speichern = (page: Page) => page.getByRole('button', { name: 'Speichern', exact: true })
-/** Die Höchsttemperatur steht einmal im Reiter „Schutz" (Tag oder Nacht). */
+/** Die Höchsttemperatur steht einmal im Reiter „Einstellungen" (Tag oder Nacht). */
 const block = (page: Page, titel: 'Tag' | 'Nacht') => page.locator('.ef-tempmax')
   .filter({ has: page.getByRole('radiogroup', { name: `Temperatur max. ${titel}` }) })
 const festFeld = (page: Page, titel: 'Tag' | 'Nacht') => block(page, titel).getByLabel('Fester Wert', { exact: true })
@@ -167,13 +48,30 @@ test('die Seite lädt: ein Eintrag über der Überschrift, der Überblick ist nu
   expect(chipOben, 'die Auswahl der Steuerungen steht unter der Überschrift').toBeLessThan(titelOben)
   await expect(page.locator('main .v1-eyebrow').first()).toHaveText('Betrieb')
 
-  // Überblick: Messwerte einmal fürs Zelt, mit Farbzonen.
+  // Überblick: Messwerte einmal fürs Zelt — die große Zahl mit dem Urteil in Worten, die ZIEL-Zeile, das Band mit Nadel.
   const karte = page.locator('.ef-band')
-  await expect(karte).toContainText('55,2')
-  await expect(karte).toContainText('Höchsttemperatur 26,5 °C')
-  await expect(karte.locator('.ef-marken').last()).toContainText('Zusatz')
-  await expect(karte.locator('.ef-marken').last()).toContainText('Haupt')
-  await expect(page.locator('.v1-alert').first()).toContainText('deutlich daneben')
+  await expect(page.locator('.v1-alert').first()).toContainText('Deutlich daneben')
+  const bloecke = karte.locator('.ef-block')
+  await expect(bloecke).toHaveCount(2)
+  await expect(bloecke.nth(0).locator('.ef-gross')).toContainText('55,2')
+  await expect(bloecke.nth(0).locator('.ef-zustand')).toContainText('deutlich über dem Ziel')
+  await expect(bloecke.nth(0).locator('.gos-metric-ziel')).toContainText('ZIEL')
+  await expect(bloecke.nth(0).locator('.gos-metric-ziel')).toContainText('45 – 51')
+  await expect(bloecke.nth(1).locator('.ef-gross')).toContainText('25,1')
+  await expect(bloecke.nth(1).locator('.ef-zustand')).toContainText('im Ziel')
+  await expect(bloecke.nth(1).locator('.ef-zustand')).toContainText('Entfeuchter dürfen bis 26,5 °C')
+  await expect(bloecke.nth(1).locator('.gos-metric-ziel')).toContainText('18 – 26,5')
+  await expect(karte.locator('.gos-metric-band')).toHaveCount(2)
+  await expect(karte.locator('.gos-metric-band .nadel')).toHaveCount(2)
+  await expect(karte.locator('.ef-legende span')).toHaveText(['im Ziel', 'knapp daneben', 'deutlich daneben'])
+  // Die alten Skalen mit den Marken „Zusatz" und „Haupt" gibt es im Überblick nicht mehr.
+  await expect(page.locator('.ef-skala, .ef-marken')).toHaveCount(0)
+  // Wo die Geräte abschalten, steht zugeklappt unter „So liest du das Band" — Höchsttemperatur und früheres Aus des Zusatzes.
+  const lesen = karte.locator('.ef-herkunft-box').filter({ hasText: 'So liest du das Band' })
+  await expect(lesen.locator('.ef-hk-koerper')).toBeHidden()
+  await lesen.locator('.ef-hk-kopf').click()
+  await expect(lesen.locator('.ef-hk-koerper')).toBeVisible()
+  await expect(lesen.locator('.ef-hk-koerper')).toContainText('bei 26,5 °C gehen alle Entfeuchter aus, der Zusatz schon bei 25,5 °C')
 
   // Geräte: nur der Status, nie eine Leistung.
   const geraete = page.locator('.st-kk', { hasText: 'Geräte' }).filter({ has: page.getByText('Zusatz-Entfeuchter · hilft') })
@@ -189,31 +87,29 @@ test('die Seite lädt: ein Eintrag über der Überschrift, der Überblick ist nu
   await expect(kasten(page)).toHaveCount(0)
   await expect(speichern(page)).toHaveCount(0)
 
-  // Schutz: die Höchsttemperatur steht einmal, für alle.
-  await reiterWahl(page, 'Schutz')
+  // Einstellungen: die Höchsttemperatur steht einmal, für alle.
+  await reiterWahl(page, 'Einstellungen')
   await expect(festFeld(page, 'Tag')).toHaveValue('26.5')
   await expect(festFeld(page, 'Nacht')).toHaveValue('25')
-  await expect(page.getByText('Die Höchsttemperatur gilt für alle Entfeuchter.')).toBeVisible()
+  await expect(page.getByText('Die Höchsttemperatur gilt für alle Entfeuchter')).toBeVisible()
 
-  // Regel: dieselben Felder für beide Geräte, danach „Nur für …".
-  await reiterWahl(page, 'Regel')
-  const ruhig = page.locator('.st-kk', { hasText: 'Wie ruhig schaltet er?' })
-  await expect(ruhig.getByRole('radiogroup')).toHaveCount(2)
-  await expect(page.getByRole('radio', { name: 'normal · 4 %' })).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByRole('radio', { name: 'normal · 0,15' })).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByText('Nur für Dehumi RDWC Tent')).toBeVisible()
+  // Stufe: eine Wahl für beide Geräte (Haupt-Abstand und -Einschalten, Mindestlauf beider); die Anlage ergibt „Normal".
+  // Die Hilfsstärke des Zusatzes bleibt eine eigene Wahl.
+  const stufe = page.getByRole('radiogroup', { name: 'Wie reagieren die Entfeuchter?' })
+  await expect(stufe.getByRole('radio')).toHaveText(['Ruhig', 'Normal', 'Schnell'])
+  await expect(stufe.getByRole('radio', { name: 'Normal', exact: true })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('radiogroup', { name: 'Hilfsstärke' }).getByRole('radio', { name: 'normal', exact: true })).toHaveAttribute('aria-checked', 'true')
 
-  // Die Reiter heißen so, und „Betrieb" gibt es nicht mehr.
+  // Die Reiter heißen so; „Regel" und „Schutz" gibt es nicht mehr.
   await expect(page.locator('.v1-tab')).toHaveText(TABS)
 
   // Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät läuft — als Satz mit dem Namen.
-  await reiterWahl(page, 'Schutz')
   await expect(page.locator('[data-audit="zusatz-fuehrung-regel"]'))
     .toHaveText('Der Zusatz geht wegen VPD oder Feuchte nur aus, wenn das Hauptgerät RDWC Dehumi läuft.')
-  await aufklappen(page, /Meldung/)
-  await expect(page.getByText('Als Meldung in Home Assistant und als Push an die in den Meldungs-Einstellungen gewählte Adresse.')).toBeVisible()
+  await aufklappen(page, /Erweitert/)
+  await expect(page.getByText('Die Meldung läuft in Home Assistant und steht zusätzlich unter Ziele & Meldungen.')).toBeVisible()
   await expect(page.getByText(/Push aufs Handy|Meldungsliste/)).toHaveCount(0)
+  await alleKartenOeffnen(page)
   const text = await page.locator('main.v1-page').innerText()
   expect(text).not.toMatch(/Port\s*7|Aufstellung|Kreislauf|Normalbetrieb|Mindestens ein Gerät läuft|So läuft immer eins/i)
 })
@@ -223,9 +119,18 @@ test('ohne Zusatz-Entfeuchter steht nur der Hauptentfeuchter da — ohne Hilfsst
   await seiteOeffnen(page)
   await expect(page.getByText('Dehumi RDWC Tent')).toHaveCount(0)
   await expect(page.locator('.st-kk', { hasText: 'Geräte' }).locator('.st-nurlesen')).toHaveText(['läuft'])
-  await reiterWahl(page, 'Regel')
+  await reiterWahl(page, 'Einstellungen')
   await expect(page.getByRole('radiogroup', { name: 'Hilfsstärke' })).toHaveCount(0)
-  await expect(page.getByRole('radiogroup').filter({ hasText: 'kPa' })).toHaveCount(0)
+  await expect(page.locator('.st-kk', { hasText: 'Zusatz-Entfeuchter · Hilfsstärke' })).toHaveCount(0)
+  // Die Stufe gilt dann nur für den Hauptentfeuchter: die Tabelle nennt einen Mindestlauf, nicht „Haupt / Zusatz".
+  await expect(page.getByRole('radiogroup', { name: 'Wie reagieren die Entfeuchter?' }).getByRole('radio')).toHaveCount(3)
+  await expect(page.locator('.ef-stufentabelle').getByRole('rowheader', { name: 'Mindestlauf', exact: true })).toBeVisible()
+  await expect(page.locator('.ef-stufentabelle')).not.toContainText('Zusatz')
+  // Unter „Erweitert" fehlen die Werte des Zusatzes.
+  await aufklappen(page, /Erweitert/)
+  await expect(page.getByLabel('Zuschalten nach', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Mindestpause', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Mindestlaufzeit (RDWC Dehumi)', { exact: true })).toBeVisible()
   await reiterWahl(page, 'Einrichtung')
   const wahl = page.locator('.st-kk', { hasText: 'Welche Entfeuchter hast du?' }).locator('.v1-switch input')
   await expect(wahl).toHaveCount(2)
@@ -250,7 +155,7 @@ test('Einrichtung: der Nutzer sagt, wie viele Entfeuchter er hat — die Seite u
   await expect(page.getByText('Der Zusatz-Entfeuchter läuft in Home Assistant weiter')).toBeVisible()
   expect(stand.einrichtungPuts).toEqual([{ zusatzVorhanden: false }])
   await expect(page.getByText('Haupt- und Zusatz-Entfeuchter arbeiten zusammen')).toHaveCount(0)
-  await reiterWahl(page, 'Regel')
+  await reiterWahl(page, 'Einstellungen')
   await expect(page.getByRole('radiogroup', { name: 'Hilfsstärke' })).toHaveCount(0)
   await reiterWahl(page, 'Überblick')
   await expect(page.locator('.st-kk', { hasText: 'Geräte' }).locator('.st-nurlesen')).toHaveText(['läuft'])
@@ -303,8 +208,10 @@ test('Luftfeuchte-Zone: das Ziel ist die Plan-Obergrenze — auf der ganzen Seit
   await backendVorgeben(page, { ...werte, feuchteEinProzent: 45.8, feuchteAusProzent: 43.8, rhObergrenzeProzent: 51 }, { ...werte, einAktivProzent: 45.8, ausAktivProzent: 43.8, rhObergrenzeProzent: 51 })
   await seiteOeffnen(page)
   await expect(page.locator('.v1-alert').first()).toContainText('Im Ziel')
-  const punkte = page.locator('.ef-band .ef-ist')
-  for (let i = 0; i < await punkte.count(); i++) await expect(punkte.nth(i)).not.toHaveClass(/\bis-(knapp|kritisch)\b/)
+  const nadeln = page.locator('.ef-band .gos-metric-band .nadel')
+  await expect(nadeln).toHaveCount(2)
+  for (let i = 0; i < await nadeln.count(); i++) await expect(nadeln.nth(i)).toHaveClass(/\bist-ok\b/)
+  await expect(page.locator('.ef-band .ef-block').first().locator('.ef-zustand')).toContainText('im Ziel')
 
   // Zweiter Durchgang, ohne Plan-Obergrenze: dann gilt die EIN-Schwelle — und 48,1 % sind „knapp daneben".
   await page.unroute(/\/api\/steuerung\/entfeuchter$/)
@@ -312,6 +219,10 @@ test('Luftfeuchte-Zone: das Ziel ist die Plan-Obergrenze — auf der ganzen Seit
   await backendVorgeben(page, { ...werte, feuchteEinProzent: 45.8 }, { ...werte, einAktivProzent: 45.8, ausAktivProzent: 43.8, rhObergrenzeProzent: null })
   await page.reload({ waitUntil: 'networkidle' })
   await expect(page.locator('.v1-alert').first()).toContainText('Knapp daneben')
+  await expect(page.locator('.ef-band .gos-metric-band .nadel').first()).toHaveClass(/\bist-warn\b/)
+  await expect(page.locator('.ef-band .ef-block').first().locator('.ef-zustand')).toContainText('knapp über dem Ziel')
+  // Das Ziel ist jetzt die EIN-Schwelle (45,8 → „45,8"), nicht mehr die Plan-Obergrenze.
+  await expect(page.locator('.ef-band .ef-block').first().locator('.gos-metric-ziel')).toContainText('45 – 45,8')
 })
 
 test('ohne Verbindung zu Home Assistant steht nur der HA-Hinweis, nie zusätzlich „Plan unvollständig"', async ({ page }) => {
@@ -331,10 +242,10 @@ test('„zieht nichts" erscheint nur, wenn der Server es meldet — auch bei kle
 test('einen Wert des Zusatzes ändern: der gelbe Kasten nennt nur dieses Feld, Speichern schickt nur dieses Feld — zweimal', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
-  await reiterWahl(page, 'Schutz')
+  await reiterWahl(page, 'Einstellungen')
 
-  // Durchgang 1: Mindestpause 10 → 12. Die Hilfsstärke wird dabei zu „eigene Werte".
-  await aufklappen(page, /Mindestpause/)
+  // Durchgang 1: Mindestpause 10 → 12 (unter „Erweitert"). Die Hilfsstärke wird dabei zu „eigene Werte".
+  await aufklappen(page, /Erweitert/)
   await page.getByLabel('Mindestpause', { exact: true }).fill('12')
   await expect(kasten(page)).toBeVisible()
   await expect(kasten(page).getByText('Wird gespeichert — nur das:')).toBeVisible()
@@ -349,8 +260,7 @@ test('einen Wert des Zusatzes ändern: der gelbe Kasten nennt nur dieses Feld, S
   await expect(page.getByLabel('Mindestpause', { exact: true })).toHaveValue('12')
 
   // Durchgang 2, ohne Neuladen: ein anderes Feld. Der Körper darf die Mindestpause nicht mehr enthalten.
-  await aufklappen(page, /Früher aus, später wieder an/)
-  await page.getByLabel('Zusatz geht früher aus', { exact: true }).fill('2')
+  await page.getByLabel('Geht früher aus um', { exact: true }).fill('2')
   await speichern(page).click()
   await expect(page.getByText('Gespeichert.')).toBeVisible()
   expect(stand.puts.at(-1)).toEqual({ folgeAbstandK: 2 })
@@ -359,7 +269,7 @@ test('einen Wert des Zusatzes ändern: der gelbe Kasten nennt nur dieses Feld, S
 test('die Höchsttemperatur geht über den Hauptentfeuchter — und das zweite Speichern setzt die erste nicht zurück', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
-  await reiterWahl(page, 'Schutz')
+  await reiterWahl(page, 'Einstellungen')
 
   // Durchgang 1: Tag-Grenze 26,5 → 27.
   await festFeld(page, 'Tag').fill('27')
@@ -367,6 +277,8 @@ test('die Höchsttemperatur geht über den Hauptentfeuchter — und das zweite S
   await expect(page.getByText('Gespeichert.')).toBeVisible()
   expect(stand.hauptPuts).toHaveLength(1)
   expect(stand.hauptPuts[0]).toMatchObject({ tempMaxTagFestC: 27, tempMaxNachtFestC: 25, hystereseProzent: 4 })
+  // Der Hauptentfeuchter schickt ALLE Felder, nicht nur das eine (sein Vertrag: er ersetzt alles).
+  expect(Object.keys(stand.hauptPuts[0]).sort()).toEqual(Object.keys(HAUPT_EINSTELLUNGEN).sort())
   expect(stand.puts, 'der Zusatz schreibt die Höchsttemperatur nicht mit').toEqual([])
   await expect(festFeld(page, 'Tag')).toHaveValue('27')
 
@@ -382,7 +294,7 @@ test('die Höchsttemperatur geht über den Hauptentfeuchter — und das zweite S
 test('Hilfsstärke „sparsam": der Kasten nennt sie samt den Einzelwerten, der Körper schickt sie — und „aus" nur sich selbst', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
-  await reiterWahl(page, 'Regel')
+  await reiterWahl(page, 'Einstellungen')
   const hilfe = page.getByRole('radiogroup', { name: 'Hilfsstärke' })
 
   await hilfe.getByRole('radio', { name: 'sparsam', exact: true }).click()
@@ -400,21 +312,51 @@ test('Hilfsstärke „sparsam": der Kasten nennt sie samt den Einzelwerten, der 
   expect(stand.puts[1]).toEqual({ hilfe: 'aus' })
 })
 
-test('ein geleertes Feld sperrt das Speichern und wird markiert, auch in einer zugeklappten Kachel', async ({ page }) => {
+test('ein geleertes Feld sperrt das Speichern und wird markiert, auch in einer zugeklappten Kachel — zweimal', async ({ page }) => {
   const stand = await backendVorgeben(page)
   await seiteOeffnen(page)
-  await reiterWahl(page, 'Schutz')
-  await aufklappen(page, /Meldung/)
-  await page.getByLabel('Meldung unter', { exact: true }).fill('')
-  await page.locator('.st-kk-kopf', { hasText: /Meldung/ }).click()
-  await expect(page.getByLabel('Meldung unter', { exact: true })).toBeHidden()
+  await reiterWahl(page, 'Einstellungen')
+
+  // Durchgang 1: ein Feld des Zusatzes unter „Erweitert" leeren, die Kachel zuklappen, auf einen anderen Reiter.
+  const pause = page.getByLabel('Mindestpause', { exact: true })
+  await aufklappen(page, /Erweitert/)
+  await pause.fill('')
+  await page.locator('.st-kk-kopf', { hasText: /Erweitert/ }).click()
+  await expect(pause).toBeHidden()
   await reiterWahl(page, 'Einrichtung')
   await speichern(page).click()
   await expect(page.getByText('Bitte die markierten Felder prüfen.')).toBeVisible()
-  // Der Reiter „Schutz" ist wieder offen, die Kachel hat sich geöffnet, das Feld trägt die Markierung.
-  await expect(page.getByLabel('Meldung unter', { exact: true })).toBeVisible()
+  // Der Reiter „Einstellungen" ist wieder offen, die Kachel hat sich geöffnet, das Feld trägt die Markierung.
+  await expect(page.locator('.v1-tab.active')).toHaveText('Einstellungen')
+  await expect(pause).toBeVisible()
   await expect(page.locator('.st-fehler')).toHaveText('Bitte eine Zahl eintragen.')
   expect(stand.puts).toEqual([])
+  expect(stand.hauptPuts).toEqual([])
+
+  // Wieder füllen: die Markierung verschwindet, Speichern geht.
+  await pause.fill('12')
+  await speichern(page).click()
+  await expect(page.getByText('Gespeichert.')).toBeVisible()
+  await expect(page.locator('.st-fehler')).toHaveCount(0)
+  expect(stand.puts).toEqual([{ mindestpauseMin: 12 }])
+
+  // Durchgang 2, ohne Neuladen: ein Feld des Hauptentfeuchters („Einschalten über" in der Kachel „Ziel · Luftfeuchte"),
+  // diesmal in zugeklappter Kachel auf einem anderen Reiter. Bei VPD-Regelung ist es gesperrt — erst auf Luftfeuchte stellen.
+  await reiterWahl(page, 'Einstellungen')
+  await aufklappen(page, /Erweitert/)
+  await schalter(page, 'Nach VPD regeln statt nach Luftfeuchte').uncheck()
+  const einNacht = page.getByLabel('Einschalten über (Nacht)', { exact: true })
+  await einNacht.fill('')
+  await page.locator('.st-kk-kopf', { hasText: /Ziel · Luftfeuchte/ }).click()
+  await expect(einNacht).toBeHidden()
+  await reiterWahl(page, 'Überblick')
+  await expect(page.locator('main.v1-page')).not.toContainText('NaN')
+  await speichern(page).click()
+  await expect(page.getByText('Bitte die markierten Felder prüfen.')).toBeVisible()
+  await expect(page.locator('.v1-tab.active')).toHaveText('Einstellungen')
+  await expect(einNacht).toBeVisible()
+  await expect(einNacht.locator('xpath=ancestor::*[contains(@class,"st-feldzeile")][1]').locator('.st-fehler')).toHaveText('Bitte eine Zahl eintragen.')
+  expect(stand.hauptPuts).toEqual([])
 })
 
 test('Warnungen: „zieht nichts" mit Namen und Leistung, „Plan unvollständig", Zelt zu warm', async ({ page }) => {
@@ -434,66 +376,39 @@ test('fehlende Werte stehen als „–", nie als erfundene Null', async ({ page 
   await seiteOeffnen(page)
   const karte = page.locator('.ef-band')
   await expect(karte.locator('.ef-gross').first()).toContainText('–')
-  await expect(karte).toContainText('keine Aussage')
-  // Kein Istwert-Punkt ohne Messwert, keine „Verbrauch heute"-Kachel ohne Werte, Geräte „unbekannt".
-  await expect(karte.locator('.ef-ist')).toHaveCount(0)
+  await expect(karte.locator('.ef-gross').nth(1)).toContainText('–')
+  await expect(karte.locator('.ef-zustand')).toHaveText([/keine Aussage/, /keine Aussage/])
+  // Keine Nadel ohne Messwert, keine „Verbrauch heute"-Kachel ohne Werte, Geräte „unbekannt".
+  await expect(karte.locator('.gos-metric-band .nadel')).toHaveCount(0)
+  await expect(page.locator('main.v1-page')).not.toContainText(/NaN|undefined/)
   await expect(page.getByText(/Verbrauch heute/)).toHaveCount(0)
   await expect(page.locator('.st-kk', { hasText: 'Geräte' }).locator('.st-nurlesen').first()).toHaveText('unbekannt')
 })
 
 for (const breite of [320, 390]) {
-  test(`Handy ${breite} px: nichts ragt über den Rand — auf allen vier Reitern, mit offenen Kacheln, Kasten und Warnungen`, async ({ page }) => {
+  test(`Handy ${breite} px: nichts ragt über den Rand — auf allen drei Reitern, mit offenen Kacheln, offenem „Woher kommt das?", Kasten und Warnungen`, async ({ page }) => {
     await page.setViewportSize({ width: breite, height: 800 })
     await backendVorgeben(page, { ziehtNichts: true, leistungW: 3, zusatzAn: false, tempC: 27.6 })
     await seiteOeffnen(page)
-    await reiterWahl(page, 'Schutz')
+    await reiterWahl(page, 'Einstellungen')
     await festFeld(page, 'Tag').fill('27')
-    await reiterWahl(page, 'Regel')
     await page.getByRole('radiogroup', { name: 'Hilfsstärke' }).getByRole('radio', { name: 'sparsam', exact: true }).click()
 
     for (const reiter of TABS) {
       await reiterWahl(page, reiter)
-      await alleKartenOeffnen(page)
+      await alleOeffnen(page)
+      // Nichts bleibt zugeklappt, sonst misst die Prüfung nur, was ohnehin im Bild steht.
+      await expect(page.locator('.st-kk-kopf[aria-expanded="false"], .ef-hk-kopf[aria-expanded="false"]')).toHaveCount(0)
 
-      const ueberstand = await page.evaluate(() => {
-        const w = document.documentElement.clientWidth
-        const imWischbereich = (el: HTMLElement): boolean => {
-          for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
-            const ox = getComputedStyle(n).overflowX
-            if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true
-          }
-          return false
-        }
-        return [...document.querySelectorAll<HTMLElement>('main *')]
-          .filter((el) => {
-            const r = el.getBoundingClientRect()
-            return r.width > 0 && r.height > 0 && r.right > w + 1 && !imWischbereich(el)
-          })
-          .slice(0, 8)
-          .map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}@${Math.round(el.getBoundingClientRect().right)}`)
-      })
+      const ueberstand = await ragtHinaus(page)
       expect(ueberstand, `${reiter}: ragt bei ${breite} px rechts hinaus`).toEqual([])
       expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
         `${reiter}: die Seite scrollt bei ${breite} px seitwärts`).toBe(false)
 
-      // Die Beschriftungen der Bänder liegen nicht übereinander (Text, nicht Kasten messen).
-      const kollisionen = await page.evaluate(() => {
-        const funde: string[] = []
-        for (const reihe of document.querySelectorAll('.ef-marken')) {
-          const boxen = [...reihe.querySelectorAll('span')].map((s) => {
-            const r = document.createRange(); r.selectNodeContents(s)
-            const b = r.getBoundingClientRect()
-            return { t: s.textContent ?? '', l: b.left, r: b.right, o: b.top, u: b.bottom }
-          })
-          // Zwei Marken stören sich nur, wenn sich ihre Textkästen waagerecht UND senkrecht überdecken (gestaffelte Marken liegen in zwei Zeilen).
-          for (let i = 0; i < boxen.length; i++) for (let j = i + 1; j < boxen.length; j++) {
-            const a = boxen[i], c = boxen[j]
-            if (a.l < c.r - 0.5 && c.l < a.r - 0.5 && a.o < c.u - 0.5 && c.o < a.u - 0.5) funde.push(`${a.t} / ${c.t}`)
-          }
-        }
-        return funde
-      })
+      // Die Zahlen unter den Bändern (die Grenzen) liegen nicht übereinander (Text, nicht Kasten messen).
+      const kollisionen = await bandzahlenKollidieren(page)
       expect(kollisionen, `${reiter}: Bandbeschriftungen überlappen bei ${breite} px`).toEqual([])
+      if (reiter === 'Überblick') expect(await page.locator('.gos-metric-band .skala span').count(), 'der Überblick zeigt keine Grenzzahlen unter dem Band').toBeGreaterThan(0)
     }
   })
 }
@@ -504,18 +419,24 @@ for (const schema of ['light', 'dark'] as const) {
     await page.addInitScript((s) => localStorage.setItem('growos.theme', s), schema)
     await backendVorgeben(page, { ziehtNichts: true, leistungW: 3, zusatzAn: false, tempC: 27.6 })
     await seiteOeffnen(page)
-    await reiterWahl(page, 'Regel')
+    await reiterWahl(page, 'Einstellungen')
+    // Zustände, die sonst keiner ansieht: geänderte Stufe und Hilfsstärke, der gelbe Kasten, die Warnung bei zu hoher
+    // Höchsttemperatur, ein markiertes Feld samt roter Meldung.
+    await page.getByRole('radiogroup', { name: 'Wie reagieren die Entfeuchter?' }).getByRole('radio', { name: 'Schnell', exact: true }).click()
     await page.getByRole('radiogroup', { name: 'Hilfsstärke' }).getByRole('radio', { name: 'sparsam', exact: true }).click()
-    await reiterWahl(page, 'Schutz')
     await block(page, 'Tag').getByRole('radio', { name: 'Fest' }).click()
     await festFeld(page, 'Tag').fill('28')
     await expect(page.locator('.ez-aender')).toBeVisible()
-    await reiterWahl(page, 'Regel')
-    await expect(page.locator('.ez-empf.is-abweichend').first()).toBeVisible()
+    await expect(page.locator('.ef-stufentabelle .is-gewaehlt').first()).toBeVisible()
+    await aufklappen(page, /Erweitert/)
+    await page.getByLabel('Mindestpause', { exact: true }).fill('')
+    await speichern(page).click()
+    await expect(page.locator('.st-fehler')).toHaveText('Bitte eine Zahl eintragen.')
+    await expect(page.getByText('Bitte die markierten Felder prüfen.')).toBeVisible()
 
     for (const reiter of TABS) {
       await reiterWahl(page, reiter)
-      await alleKartenOeffnen(page)
+      await alleOeffnen(page)
       const funde = await page.evaluate(`(() => {
         ${KONTRAST_HELFER}
         const funde = []
@@ -525,10 +446,7 @@ for (const schema of ['light', 'dark'] as const) {
           const s = getComputedStyle(el)
           if (s.visibility === 'hidden' || s.display === 'none') continue
           if (el.closest('[disabled], [aria-disabled="true"], .is-disabled, [hidden], .is-ruht')) continue
-          // Die Zahl über dem Istwert-Punkt (.ef-ist em) liegt über dem Punkt, nicht auf ihm:
-          // gemessen wird gegen die Fläche des Bandes, nicht gegen die Punktfarbe.
-          const punkt = el.closest('.ef-ist')
-          const grund = flaeche(punkt ? punkt.parentElement : el)
+          const grund = flaeche(el)
           const vorne = alsRgb(s.color, grund)
           const l1 = lum(vorne), l2 = lum(grund)
           const k = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)

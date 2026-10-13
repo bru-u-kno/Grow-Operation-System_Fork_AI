@@ -14,6 +14,7 @@ public sealed class HaWaechterTests
         ("sensor.wachter_temperatur", "Wächter Temperatur", "21"),
         ("automation.water_chiller_regelung", "Water Chiller Regelung", "on"),
         ("automation.grow_uv_c_verbindungs_wachter", "Grow UV-C – Verbindungs-Wächter", "on"),
+        ("automation.zusatz_entfeuchter_zieht_nichts", "Zusatz-Entfeuchter zieht nichts", "on"),
     ];
 
     [Fact]
@@ -21,7 +22,7 @@ public sealed class HaWaechterTests
     {
         var liste = MeldungenApiController.Auswahl(Beispiel);
         Assert.Equal(
-            ["automation.co2_wachter_rdwc_port_5", "automation.water_chiller_wachter", "automation.dosier_waechter"],
+            ["automation.co2_wachter_rdwc_port_5", "automation.water_chiller_wachter", "automation.zusatz_entfeuchter_zieht_nichts", "automation.dosier_waechter"],
             liste.Select(w => w.EntityId));
     }
 
@@ -35,5 +36,17 @@ public sealed class HaWaechterTests
         Assert.Contains("24 °C", chiller.Zweck);
         Assert.False(liste.Single(w => w.EntityId == "automation.co2_wachter_rdwc_port_5").Aktiv);
         Assert.Null(liste.Single(w => w.EntityId == "automation.dosier_waechter").Zweck);
+    }
+
+    /// <summary>
+    /// A-021: Die Meldung „Zusatz-Entfeuchter zieht nichts" meldet aufs Handy, hat aber „Wächter" nicht im Namen —
+    /// sie stand deshalb nie in der Liste der Absender. Sie ist jetzt bekannt, mit einem Satz dazu.
+    /// </summary>
+    [Fact]
+    public void DieMeldungDesZusatzEntfeuchtersStehtInDerListe()
+    {
+        var eintrag = MeldungenApiController.Auswahl(Beispiel).Single(w => w.EntityId == "automation.zusatz_entfeuchter_zieht_nichts");
+        Assert.True(eintrag.Bekannt);
+        Assert.Contains("Tank voll", eintrag.Zweck);
     }
 }

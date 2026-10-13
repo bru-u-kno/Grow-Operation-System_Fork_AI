@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
-import { hystereseStufe } from './entfeuchter-band'
 import { feldFehlerAus, leereZahlenfelder, ohneLuecken } from './feld-fehler'
 import type { EntfeuchterEinstellungen, EntfeuchterSeite } from './steuerung-typen'
 
@@ -16,7 +15,6 @@ import type { EntfeuchterEinstellungen, EntfeuchterSeite } from './steuerung-typ
 export function useEntfeuchterHaupt() {
   const [seite, setSeite] = useState<EntfeuchterSeite | null>(null)
   const [entwurf, setEntwurf] = useState<EntfeuchterEinstellungen | null>(null)
-  const [eigeneHysterese, setEigeneHysterese] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
   const [meldung, setMeldung] = useState<string | null>(null)
@@ -57,7 +55,6 @@ export function useEntfeuchterHaupt() {
           geladenRef.current = geladen.einstellungen
           setSeite(geladen)
           setEntwurf(geladen.einstellungen)
-          setEigeneHysterese(hystereseStufe(geladen.einstellungen.hystereseProzent) == null)
           setFehler(null)
         }
       } catch (caught) {
@@ -109,11 +106,16 @@ export function useEntfeuchterHaupt() {
     setEntwurf((alt) => (alt ? { ...alt, [feld]: wert } : alt))
   }
 
+  /** Mehrere Felder in einem Zug (eine Stufe, eine Schwelle mit ihrem Abstand) — ein Render, ein Stand. */
+  const setzMehrere = (patch: Partial<EntfeuchterEinstellungen>) => {
+    setEntwurf((alt) => (alt ? { ...alt, ...patch } : alt))
+  }
+
   const anzeige = seite && entwurf ? ohneLuecken(entwurf, seite.einstellungen) : null
 
   return {
     seite, entwurf, anzeige, laedt, fehler, feldFehler, meldung, arbeitet, geaendert,
-    eigeneHysterese, setEigeneHysterese, setz, speichern, auffrischen,
+    setz, setzMehrere, speichern, auffrischen,
   }
 }
 

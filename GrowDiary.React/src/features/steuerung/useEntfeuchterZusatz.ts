@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import {
-  VPD_STUFEN,
   aenderungBilden,
   entwurfNachfuehren,
-  gleich,
   hilfeNachEinzelwert,
   istGeaendert,
   leereFelder,
@@ -26,7 +24,6 @@ type Einstellungen = EntfeuchterZusatzEinstellungen
 export function useEntfeuchterZusatz(aktiv = true) {
   const [seite, setSeite] = useState<EntfeuchterZusatzSeite | null>(null)
   const [entwurf, setEntwurf] = useState<Einstellungen | null>(null)
-  const [eigeneHysterese, setEigeneHysterese] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
   const [meldung, setMeldung] = useState<string | null>(null)
@@ -61,7 +58,6 @@ export function useEntfeuchterZusatz(aktiv = true) {
           geladenRef.current = geladen.einstellungen
           setSeite(geladen)
           setEntwurf(geladen.einstellungen)
-          setEigeneHysterese(!VPD_STUFEN.some((s) => gleich(s.wert, geladen.einstellungen.vpdHystereseKpa)))
           setFehler(null)
         }
       } catch (caught) {
@@ -96,7 +92,6 @@ export function useEntfeuchterZusatz(aktiv = true) {
       const zurueck = await apiFetch<EntfeuchterZusatzSeite>('/api/steuerung/entfeuchter-zusatz', { method: 'PUT', body: JSON.stringify(koerper) })
       geladenRef.current = zurueck.einstellungen
       setSeite(zurueck); setEntwurf(zurueck.einstellungen); setFehler(null)
-      setEigeneHysterese(!VPD_STUFEN.some((s) => gleich(s.wert, zurueck.einstellungen.vpdHystereseKpa)))
       setMeldung(zurueck.haAngenommen === false
         ? 'Gespeichert — aber nicht alle Helfer haben den Wert angenommen.'
         : 'Gespeichert.')
@@ -131,7 +126,7 @@ export function useEntfeuchterZusatz(aktiv = true) {
 
   return {
     seite, entwurf, geladen, anzeige, laedt, fehler, feldFehler, meldung, arbeitet, geaendert,
-    eigeneHysterese, setEigeneHysterese, setEntwurf, setz, setzMeldung, setzEinzel, speichern, auffrischen,
+    setEntwurf, setz, setzMeldung, setzEinzel, speichern, auffrischen,
   }
 }
 

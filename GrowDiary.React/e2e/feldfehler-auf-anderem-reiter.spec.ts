@@ -66,8 +66,10 @@ async function speichernUndPruefen(page: Page, erwarteterReiter: string, feldNam
     .toHaveClass(/\bactive\b/)
   const feld = page.getByLabel(feldName, { exact: true })
   await expect(feld).toBeVisible()
-  await expect(feld.locator('xpath=ancestor::*[contains(@class,"st-feldzeile")][1]').locator('.st-fehler'))
-    .toHaveText('Bitte eine Zahl eintragen.')
+  const markierung = feld.locator('xpath=ancestor::*[contains(@class,"st-feldzeile")][1]').locator('.st-fehler')
+  await expect(markierung).toHaveText('Bitte eine Zahl eintragen.')
+  // …und sie ist zu SEHEN: `toHaveText` liest auch verborgenen Text (Bissnachweis 13.10.2026: mit `display: none` blieb es grün).
+  await expect(markierung).toBeVisible()
   // Gerollt wird weich — warten, bis das Feld angekommen ist.
   await expect.poll(() => imBild(feld), { timeout: 5_000, message: `„${feldName}" liegt nicht im Bild` })
     .toBe('im Bild')
@@ -101,25 +103,48 @@ test('Zuluft: das leere Feld auf einem anderen Reiter wird gezeigt — zweimal',
   await speichernUndPruefen(page, 'Lüfter', 'Mindestpause')
 })
 
-test('Entfeuchter: ein leeres Feld in den zugeklappten festen Schwellen wird gezeigt', async ({ page }) => {
-  await seiteLaden(page, '/steuerung/entfeuchtung', 'Regel')
+test('Entfeuchtung: ein leeres Feld in der zugeklappten Kachel „Ziel · Luftfeuchte" wird gezeigt — zweimal', async ({ page }) => {
+  await seiteLaden(page, '/steuerung/entfeuchtung', 'Einstellungen')
 
-  await reiter(page, 'Regel').click()
-  // A-014: bei Regelgröße VPD sind die festen Schwellen gesperrt — erst auf Luftfeuchte stellen, dann bearbeiten.
-  await page.getByRole('radio', { name: 'Luftfeuchte', exact: true }).click()
-  const kopf = page.locator('.st-kk-kopf', { hasText: 'Feste Schwellen' })
+  await reiter(page, 'Einstellungen').click()
+  // Bei Regelgröße VPD sind die festen Schwellen gesperrt — erst auf Luftfeuchte stellen (Schalter unter „Erweitert"), dann bearbeiten.
+  const erweitert = page.locator('.st-kk-kopf', { hasText: 'Erweitert' })
+  const aufklappenWennZu = async (kopf: Locator) => { if ((await kopf.getAttribute('aria-expanded')) === 'false') await kopf.click() }
+  await aufklappenWennZu(erweitert)
+  await page.locator('label.v1-switch').filter({ has: page.locator('strong', { hasText: 'Nach VPD regeln statt nach Luftfeuchte' }) }).locator('input').uncheck()
+  const kopf = page.locator('.st-kk-kopf', { hasText: 'Ziel · Luftfeuchte' })
   if ((await kopf.getAttribute('aria-expanded')) === 'false') await kopf.click()
   await expect(kopf).toHaveAttribute('aria-expanded', 'true')
-  const feld = page.getByLabel('Nacht · AUS unter', { exact: true })
+  // Der Demobestand hat Tag 60 und Nacht 62: die Kachel zeigt beide Felder.
+  const feld = page.getByLabel('Einschalten über (Nacht)', { exact: true })
   await feld.fill('')
   // Zuklappen und auf einen anderen Reiter — das Feld steckt jetzt doppelt versteckt.
   await kopf.click()
   await expect(feld).toBeHidden()
   await reiter(page, 'Einrichtung').click()
 
-  await speichernUndPruefen(page, 'Regel', 'Nacht · AUS unter')
+  await speichernUndPruefen(page, 'Einstellungen', 'Einschalten über (Nacht)')
   // Die Kachel hat sich von selbst geöffnet (CSS), das Feld ist zu sehen.
   await expect(feld).toBeVisible()
+
+  // Durchgang 2, ohne Neuladen der Seite: ein Feld des Zusatzes unter „Erweitert", die Kachel zugeklappt, ans Seitenende
+  // gerollt, diesmal vom Überblick aus. Dazwischen zur CO₂-Seite und zurück: sonst bliebe die Markierung vom Nacht-Feld
+  // stehen (sie geht erst mit dem nächsten Speichern weg), hielte „Ziel · Luftfeuchte" offen und stünde im DOM vor dem
+  // neuen Feld. Gespeichert wird auch hier nichts: der Hauptentfeuchter ist wieder unverändert, der Zusatz sperrt.
+  await page.getByRole('tab', { name: 'CO₂' }).click()
+  await page.getByRole('tab', { name: 'Entfeuchtung' }).click()
+  await reiter(page, 'Einstellungen').click()
+  const pause = page.getByLabel('Mindestpause', { exact: true })
+  await expect(page.locator('.st-fehler')).toHaveCount(0)
+  await aufklappenWennZu(erweitert)
+  expect(await pause.inputValue(), 'Mindestpause ist schon leer.').not.toBe('')
+  await pause.fill('')
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await erweitert.click()
+  await expect(pause).toBeHidden()
+  await reiter(page, 'Überblick').click()
+  await speichernUndPruefen(page, 'Einstellungen', 'Mindestpause')
+  await expect(pause).toBeVisible()
 })
 
 /**
@@ -143,14 +168,14 @@ async function ausgeblendetPruefen(page: Page, zeile: Locator, erwarteterReiter:
 }
 
 test('Entfeuchter: das leere Feld im ausgeblendeten Modus wird mit Feld und Modus genannt — zweimal', async ({ page }) => {
-  await seiteLaden(page, '/steuerung/entfeuchtung', 'Schutz')
+  await seiteLaden(page, '/steuerung/entfeuchtung', 'Einstellungen')
   const block = (titel: string) => page.locator('.ef-tempmax')
     .filter({ has: page.getByRole('radiogroup', { name: `Temperatur max. ${titel}` }) })
   const chip = (titel: string, modus: string) =>
     block(titel).getByRole('radio', { name: modus, exact: true })
 
   // Durchgang 1: Tag — den festen Wert leeren, dann „Plan +" wählen.
-  await reiter(page, 'Schutz').click()
+  await reiter(page, 'Einstellungen').click()
   await chip('Tag', 'Fest').click()
   const festTag = block('Tag').getByLabel('Fester Wert', { exact: true })
   const festTagAlt = await festTag.inputValue()
@@ -159,7 +184,7 @@ test('Entfeuchter: das leere Feld im ausgeblendeten Modus wird mit Feld und Modu
   await chip('Tag', 'Plan +').click()
   await expect(festTag).toHaveCount(0)
   await reiter(page, 'Einrichtung').click()
-  await ausgeblendetPruefen(page, block('Tag').locator('.st-feldzeile').first(), 'Schutz',
+  await ausgeblendetPruefen(page, block('Tag').locator('.st-feldzeile').first(), 'Einstellungen',
     'Fester Wert: Bitte eine Zahl eintragen — steht unter „Fest" und ist ausgeblendet, solange „Plan +" gewählt ist.')
   // Der Modus bleibt, wie der Nutzer ihn gewählt hat.
   await expect(chip('Tag', 'Plan +')).toHaveAttribute('aria-checked', 'true')
@@ -176,8 +201,8 @@ test('Entfeuchter: das leere Feld im ausgeblendeten Modus wird mit Feld und Modu
   await abstand.fill('')
   await chip('Nacht', 'Fest').click()
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-  await reiter(page, 'Regel').click()
-  await ausgeblendetPruefen(page, block('Nacht').locator('.st-feldzeile').first(), 'Schutz',
+  await reiter(page, 'Überblick').click()
+  await ausgeblendetPruefen(page, block('Nacht').locator('.st-feldzeile').first(), 'Einstellungen',
     'Abstand zum Plan: Bitte eine Zahl eintragen — steht unter „Plan +" und ist ausgeblendet, solange „Fest" gewählt ist.')
   // Die Tag-Zeile ist wieder gefüllt und trägt keine Markierung mehr.
   await expect(block('Tag').locator('.st-fehler')).toHaveCount(0)

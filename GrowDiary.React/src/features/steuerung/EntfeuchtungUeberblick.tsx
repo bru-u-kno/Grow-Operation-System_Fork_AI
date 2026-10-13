@@ -4,20 +4,42 @@ import { tempGrenzen } from './entfeuchter-zusatz'
 import { hauptStatus, zusatzStatus } from './entfeuchtung-modell'
 import { Lesen } from './EntfeuchtungBausteine'
 import type { Ctx } from './EntfeuchtungBausteine'
-import { Lage, MessKopf, Warum, ZonenLegende, ZonenSkala, Zusammenspiel } from './EntfeuchterUeberblick'
+import { Herkunft, Kontext, Lage, MessKopf, Warum, ZielBandAnzeige, ZielZeile, Zusammenspiel } from './EntfeuchterUeberblick'
 import type { WarumZeile } from './EntfeuchterUeberblick'
-import { RF_KNAPP_PUNKTE, ZONEN_WORT, feuchteZone, schlechtereZone, temperaturZone } from './entfeuchter-zonen'
+import { RF_KNAPP_PUNKTE, ZONEN_WORT, schlechtereZone } from './entfeuchter-zonen'
+import type { Zone } from './entfeuchter-zonen'
+import {
+  abweichungsWort,
+  feuchteBand,
+  feuchteZoneImBand,
+  kontextPlaketten,
+  kurzeZahl,
+  temperaturBand,
+  temperaturZoneImBand,
+  zielText,
+} from './entfeuchtung-ziel'
 import { Klappkachel } from './Klappkachel'
+import type { ZielwerteKurz } from './useZielwerteKurz'
 import './steuerung.css'
 
+/** So viele Kelvin unter der Untergrenze der Temperatur gelten noch als „knapp daneben". */
+const TEMP_RAND_UNTEN_K = 2
+
+const urteil = (zone: Zone | null): 'ok' | 'warn' | 'crit' | null => (zone == null ? null : zone === 'ziel' ? 'ok' : zone === 'knapp' ? 'warn' : 'crit')
+
 /**
- * Fork AI (A-015): Reiter „Überblick" — nur zum Lesen, nichts zum Eingeben.
+ * Fork AI (A-015, A-021): Reiter „Überblick" — nur zum Lesen, nichts zum Eingeben.
  *
- * Aufbau (Bru, 08.10.2026): Lagemeldung · Messwerte und Zonen EINMAL für das
- * Zelt (sie sind für alle Geräte dieselben) · Geräte mit nur ihrem Status, ohne
- * Leistung · „Warum läuft welches Gerät?" · die Erklärung der Zusammenarbeit.
+ * Aufbau (Bru, 08.10. und 13.10.2026): Lagemeldung · Messwerte und Zonen EINMAL für das Zelt, mit den
+ * Plaketten für Licht und Woche oben (sie gelten für beides), je Messwert die große Zahl mit dem Urteil in
+ * Worten, die ZIEL-Zeile, das Band mit zwei Seiten (zu feucht UND zu trocken, zu warm UND zu kühl) und
+ * darunter eine Zeile „Woher kommt das?" · Geräte mit nur ihrem Status · „Warum läuft welches Gerät?" ·
+ * die Erklärung der Zusammenarbeit.
  */
-export function UeberblickTab({ h, z, haupt, zusatz }: Ctx) {
+export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ctx & {
+  zielwerte: ZielwerteKurz | null
+  onSpringen: (kachel: string) => void
+}) {
   const hl = h.seite!.live
   const a = h.anzeige!
   const zl = z?.seite?.live ?? null
@@ -28,24 +50,35 @@ export function UeberblickTab({ h, z, haupt, zusatz }: Ctx) {
   const phase = hl.tagPhase === true ? 'Tag' : hl.tagPhase === false ? 'Nacht' : null
   const aktivMax = phase === 'Nacht' ? nachtMax : tagMax
   const grenzen = za ? tempGrenzen(za, aktivMax) : null
+  const planLuft = phase === 'Nacht' ? hl.planLuftNachtC : hl.planLuftTagC
 
-  // Zonen: Ziel der Luftfeuchte ist die Plan-Obergrenze (ohne Plan die EIN-Schwelle); die Temperatur ist im Ziel
-  // bis zum früheren Abschalten des Zusatzes (ohne Zusatz: eine Stufe unter der Höchsttemperatur).
-  const feuchteZiel = hl.rhObergrenzeProzent ?? hl.einAktivProzent
-  const fZone = feuchteZone(hl.feuchteProzent, feuchteZiel)
-  const tZielBis = grenzen ? grenzen.folgeAus : aktivMax - 1
-  const tZone = temperaturZone(hl.tempC, aktivMax, tZielBis)
+  // Luftfeuchte: Obergrenze aus dem Plan (ohne Plan die EIN-Schwelle), Untergrenze aus dem Grenzwert.
+  const feuchteOben = hl.rhObergrenzeProzent ?? hl.einAktivProzent
+  const fBand = feuchteBand(feuchteOben, zielwerte?.feuchteRegel, hl.tagPhase)
+  const fZone = feuchteZoneImBand(hl.feuchteProzent, fBand)
+
+  // Temperatur: Grenzen des Grenzwerts (folgt dem Plan); ohne ihn die alte Regel — im Ziel bis zum früheren
+  // Abschalten des Zusatzes, ohne Zusatz eine Stufe unter der Höchsttemperatur. Nie über der Höchsttemperatur.
+  const tRoh = temperaturBand(planLuft, zielwerte?.temperaturRegel, hl.tagPhase)
+  const tBand = tRoh.unten == null && tRoh.oben == null
+    ? { unten: null, oben: grenzen ? grenzen.folgeAus : aktivMax - 1 }
+    : { unten: tRoh.unten, oben: Math.min(tRoh.oben ?? aktivMax, aktivMax) }
+  const tZone = temperaturZoneImBand(hl.tempC, tBand, aktivMax, TEMP_RAND_UNTEN_K)
   const lage = schlechtereZone(fZone, tZone)
+
+  const fWort = abweichungsWort('feuchte', hl.feuchteProzent, fBand, fZone)
+  const tWort = abweichungsWort('temperatur', hl.tempC, tBand, tZone)
   const lageText = [
-    fZone && `Luftfeuchte ${zahl(hl.feuchteProzent)} % (${ZONEN_WORT[fZone]}${feuchteZiel == null ? '' : `, Ziel ${zahl(feuchteZiel, 0)} %`})`,
-    tZone && `Temperatur ${zahl(hl.tempC)} °C (${ZONEN_WORT[tZone]}, Höchsttemperatur ${zahl(aktivMax)} °C)`,
+    fZone && `Luftfeuchte ${zahl(hl.feuchteProzent)} % — ${fWort}${zielText(fBand) ? ` (Ziel ${zielText(fBand)} %)` : ''}`,
+    tZone && `Temperatur ${zahl(hl.tempC)} °C — ${tWort}${zielText(tBand) ? ` (Ziel ${zielText(tBand)} °C)` : ''}, die Entfeuchter dürfen bis ${zahl(aktivMax)} °C laufen`,
   ].filter(Boolean).join(' · ')
 
-  const feuchteWerte = [hl.feuchteProzent, feuchteZiel, hl.einAktivProzent, hl.ausAktivProzent].filter((w): w is number => w != null && Number.isFinite(w))
+  const feuchteWerte = [hl.feuchteProzent, fBand.unten, fBand.oben, fBand.oben == null ? null : fBand.oben + RF_KNAPP_PUNKTE].filter((w): w is number => w != null && Number.isFinite(w))
   const fVon = feuchteWerte.length ? Math.floor(Math.min(...feuchteWerte) - 3) : 40
-  const fBis = feuchteWerte.length ? Math.ceil(Math.max(...feuchteWerte, (feuchteZiel ?? 0) + RF_KNAPP_PUNKTE) + 3) : 70
-  const tVon = Math.floor(Math.min(hl.tempC ?? aktivMax, grenzen?.wiederEin ?? aktivMax, aktivMax) - 3)
-  const tBis = Math.ceil(Math.max(hl.tempC ?? aktivMax, aktivMax) + 2)
+  const fBis = feuchteWerte.length ? Math.ceil(Math.max(...feuchteWerte) + 3) : 70
+  const tWerte = [hl.tempC, tBand.unten, tBand.oben, aktivMax].filter((w): w is number => w != null && Number.isFinite(w))
+  const tVon = Math.floor(Math.min(...tWerte) - 2)
+  const tBis = Math.ceil(Math.max(...tWerte) + 2)
 
   const wartet = Boolean(zl && grenzen && zl.tempC != null && zl.tempC > grenzen.folgeAus && zl.zusatzAn !== true && z?.geladen?.hilfe !== 'aus')
   const geraete: Array<{ name: string; rolle: string; status: string }> = [
@@ -60,10 +93,27 @@ export function UeberblickTab({ h, z, haupt, zusatz }: Ctx) {
     ...(zl && grenzen && z?.geladen
       ? [
           { frage: `${zusatz}: ${haupt} läuft`, antwort: zl.fuehrungAn == null ? 'unbekannt' : zl.fuehrungAn ? 'ja — der Zusatz darf mithelfen' : 'nein — der Zusatz startet sofort, wenn nötig', ok: zl.fuehrungAn },
-          { frage: `${zusatz}: Zelt nicht zu warm (geht ab ${zahl(grenzen.folgeAus)} °C aus)`, antwort: `${zahl(zl.tempC)} °C · wieder an unter ${zahl(grenzen.wiederEin)} °C`, ok: zl.tempC == null ? null : zl.tempC <= grenzen.folgeAus },
+          { frage: `${zusatz}: Zelt nicht zu warm (geht ab ${zahl(grenzen.folgeAus)} °C aus)`, antwort: `${zahl(zl.tempC)} °C · wieder an unter ${zahl(grenzen.wiederEin)} °C`, ok: zl.tempC == null ? null : zl.tempC < grenzen.folgeAus },
           { frage: `${zusatz}: Hilfe und Automatik an`, antwort: z.geladen.hilfe === 'aus' ? 'Hilfe steht auf „aus".' : z.geladen.automatikAktiv ? 'ja' : 'Automatik ist aus.', ok: z.geladen.hilfe !== 'aus' && z.geladen.automatikAktiv },
         ]
       : []),
+  ]
+
+  // Woher kommt das? — eine Zeile je Quelle, nur was wirklich bekannt ist.
+  const planText = ['Plan', zielwerte?.growName && `Grow ${zielwerte.growName}`, zielwerte?.programm, zielwerte?.woche ? `Woche ${zielwerte.woche}` : hl.planWoche ? `Woche ${hl.planWoche}` : null]
+    .filter(Boolean).join(' · ')
+  const feuchteHerkunft = [
+    ...(fBand.oben == null ? [] : [{ wert: `Obergrenze ${kurzeZahl(fBand.oben)} %`, quelle: hl.rhObergrenzeProzent == null ? 'aus der Einschalt-Schwelle (kein Plan-Wert)' : planText }]),
+    ...(fBand.unten == null ? [] : [{ wert: `Untergrenze ${kurzeZahl(fBand.unten)} %`, quelle: 'dein Grenzwert' }]),
+    ...(hl.einAktivProzent == null ? [] : [{ wert: `Ein ${zahl(hl.einAktivProzent, 0)} / Aus ${zahl(hl.ausAktivProzent, 0)} %`, quelle: 'von dir, unter Einstellungen' }]),
+  ]
+  const toleranz = zielwerte?.temperaturRegel?.toleranz
+  const temperaturHerkunft = [
+    ...(planLuft == null ? [] : [{ wert: `Ziel ${kurzeZahl(planLuft)} °C`, quelle: `${planText} · Plan-Luft${phase === 'Nacht' ? ' Nacht' : ''}` }]),
+    ...(tBand.unten != null && zielwerte?.temperaturRegel
+      ? [{ wert: `Spielraum${toleranz ? ` ± ${kurzeZahl(toleranz)} K` : ''} (${zielText(tBand)} °C)`, quelle: `dein Grenzwert${zielwerte.temperaturQuelle ? ` · ${zielwerte.temperaturQuelle}` : ''}` }]
+      : []),
+    { wert: `Höchsttemperatur ${zahl(aktivMax)} °C`, quelle: (phase === 'Nacht' ? a.tempMaxNachtModus : a.tempMaxTagModus) === 'plan' ? 'aus dem Plan (Plan-Luft + Abstand)' : 'von dir eingestellt (fest)' },
   ]
 
   return (
@@ -72,55 +122,67 @@ export function UeberblickTab({ h, z, haupt, zusatz }: Ctx) {
 
       <Klappkachel titel="Messwerte & Zonen (Zelt)" zusammenfassung={`${zahl(hl.feuchteProzent)} % rF · ${zahl(hl.tempC)} °C${phase ? ` · ${phase}` : ''}`}>
         <V1Card className="ef-band">
+          <Kontext plaketten={kontextPlaketten(hl.tagPhase, zielwerte?.woche ?? hl.planWoche)} />
+
           <div className="ef-block">
             <MessKopf
               wert={zahl(hl.feuchteProzent)}
               einheit="% rF"
               zone={fZone}
-              zustand={fZone ? ZONEN_WORT[fZone] : 'keine Aussage'}
+              zustand={fWort}
               ton={fZone === 'kritisch' ? 'kritisch' : fZone === 'knapp' ? 'warn' : undefined}
-              beiwerk={`${a.vpdRegelung ? `VPD ${zahl(hl.vpd, 2)} kPa` : ''}${a.vpdRegelung && phase ? ' · ' : ''}${phase ?? ''}`}
+              beiwerk=""
             />
-            {feuchteZiel != null && (
-              <ZonenSkala
-                von={fVon} bis={fBis} zielBis={feuchteZiel} knappBis={feuchteZiel + RF_KNAPP_PUNKTE}
-                marken={[
-                  ...(hl.ausAktivProzent == null ? [] : [{ wert: hl.ausAktivProzent, label: 'AUS' }]),
-                  ...(hl.einAktivProzent == null ? [] : [{ wert: hl.einAktivProzent, label: 'EIN' }]),
-                  { wert: feuchteZiel, label: 'Ziel' },
-                ]}
-                ist={hl.feuchteProzent} zone={fZone} einheit="%"
+            {zielText(fBand) && <ZielZeile text={zielText(fBand)!} einheit="%" />}
+            {fBand.oben != null && (
+              <ZielBandAnzeige
+                von={fVon} bis={fBis} zielVon={fBand.unten} zielBis={fBand.oben}
+                grenzen={[...(fBand.unten == null ? [] : [fBand.unten]), fBand.oben + RF_KNAPP_PUNKTE]}
+                ist={hl.feuchteProzent} urteil={urteil(fZone)}
               />
             )}
+            <Herkunft
+              zeilen={feuchteHerkunft}
+              links={[{ text: 'Plan öffnen', to: '/plan' }, { text: 'Grenzwerte einstellen', to: '/grenzwerte' }, { text: 'Ein-/Ausschalten einstellen', springeZu: 'ziel' }]}
+              onSpringen={onSpringen}
+            />
           </div>
+
           <div className="ef-block">
             <MessKopf
               wert={zahl(hl.tempC)}
               einheit="°C"
               zone={tZone}
-              zustand={tZone === 'kritisch' ? 'zu warm — alle aus' : tZone ? ZONEN_WORT[tZone] : 'keine Aussage'}
+              zustand={tWort}
               ton={tZone === 'kritisch' ? 'kritisch' : tZone === 'knapp' ? 'warn' : undefined}
-              beiwerk={`Höchsttemperatur ${zahl(aktivMax)} °C${phase ? ` · ${phase}` : ''}`}
+              beiwerk={`Entfeuchter dürfen bis ${zahl(aktivMax)} °C`}
             />
-            <ZonenSkala
-              von={tVon} bis={tBis} zielBis={tZielBis} knappBis={aktivMax}
-              marken={grenzen
-                ? [{ wert: grenzen.wiederEin, label: 'an' }, { wert: grenzen.folgeAus, label: 'Zusatz' }, { wert: grenzen.max, label: 'Haupt' }]
-                : [{ wert: tZielBis, label: 'Ziel bis' }, { wert: aktivMax, label: 'Höchst' }]}
-              ist={hl.tempC} zone={tZone} einheit="°C"
+            {zielText(tBand) && <ZielZeile text={zielText(tBand)!} einheit="°C" />}
+            <ZielBandAnzeige
+              von={tVon} bis={tBis} zielVon={tBand.unten} zielBis={tBand.oben}
+              grenzen={[...(tBand.unten == null ? [] : [tBand.unten]), aktivMax]}
+              ist={hl.tempC} urteil={urteil(tZone)}
+            />
+            <Herkunft
+              zeilen={temperaturHerkunft}
+              links={[{ text: 'Plan öffnen', to: '/plan' }, { text: 'Grenzwerte einstellen', to: '/grenzwerte' }, { text: 'Höchsttemperatur einstellen', springeZu: 'hoechst' }]}
+              onSpringen={onSpringen}
             />
           </div>
-          <ZonenLegende />
-          <p className="st-hinweis">
-            {hl.portAn === true
-              ? `${haupt} läuft, bis die Feuchte unter ${zahl(hl.ausAktivProzent)} % fällt — frühestens nach ${a.mindestlaufzeitMin} min Laufzeit.`
-              : `${haupt} springt an, wenn die Feuchte über ${zahl(hl.einAktivProzent)} % steigt.`}
-            {a.vpdRegelung && hl.vpdUnten != null && hl.vpdOben != null
-              ? ` Schwellen aus dem VPD-Band ${zahl(hl.vpdUnten, 2)}–${zahl(hl.vpdOben, 2)}, EIN gedeckelt von der Plan-Feuchte.`
-              : a.vpdRegelung
-                ? ' Feste Schwellen (Rückfallebene).'
-                : ' Regelgröße Luftfeuchte: EIN gedeckelt von der Plan-Feuchte.'}
-          </p>
+
+          <Herkunft
+            titel="So liest du das Band"
+            zeilen={[
+              { wert: 'Grün', quelle: 'Ziel — hier gibt es keine Abweichung' },
+              { wert: 'Gelbe Striche', quelle: `Grenzen; bei ${zahl(aktivMax)} °C gehen alle Entfeuchter aus${grenzen ? `, der Zusatz schon bei ${zahl(grenzen.folgeAus)} °C` : ''}` },
+              { wert: 'Zu trocken oder zu kühl', quelle: 'zählt genauso als Abweichung wie zu feucht oder zu warm' },
+            ]}
+          />
+          <div className="ef-legende">
+            <span><i className="is-ziel" />{ZONEN_WORT.ziel}</span>
+            <span><i className="is-knapp" />{ZONEN_WORT.knapp}</span>
+            <span><i className="is-kritisch" />{ZONEN_WORT.kritisch}</span>
+          </div>
         </V1Card>
       </Klappkachel>
 

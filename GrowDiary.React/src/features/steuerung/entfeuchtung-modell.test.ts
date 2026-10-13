@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hauptStatus, mitEntfeuchtung, zusatzStatus, zusatzVorhanden } from './entfeuchtung-modell'
+import { ENTFEUCHTUNG_REITER, hauptStatus, mitEntfeuchtung, zusatzStatus, zusatzVorhanden } from './entfeuchtung-modell'
 import type { EntfeuchterLive, EntfeuchterZusatzLive, SteuerungModul } from './steuerung-typen'
 
 const modul = (kennung: string, titel: string, status: string, unterzeile = 'bereit'): SteuerungModul =>
@@ -68,5 +68,12 @@ describe('Zusatz vorhanden? und Statuswort', () => {
     expect(hauptStatus(h({ portAn: false }))).toBe('aus')
     expect(hauptStatus(h({ portAn: true, portOnline: false }))).toBe('offline')
     expect(hauptStatus(h({}))).toBe('unbekannt')
+  })
+})
+
+describe('Die Reiter der Seite (A-021)', () => {
+  it('Überblick · Einstellungen · Einrichtung — „Regel" und „Schutz" gibt es nicht mehr', () => {
+    expect(ENTFEUCHTUNG_REITER.map((r) => r.label)).toEqual(['Überblick', 'Einstellungen', 'Einrichtung'])
+    expect(ENTFEUCHTUNG_REITER.map((r) => r.value)).toEqual(['ueberblick', 'einstellungen', 'einrichtung'])
   })
 })

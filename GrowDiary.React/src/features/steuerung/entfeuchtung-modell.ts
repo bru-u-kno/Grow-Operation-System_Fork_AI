@@ -9,12 +9,11 @@ import type { EntfeuchterLive, EntfeuchterZusatzLive, SteuerungModul } from './s
  * wird erst in der Oberfläche.
  */
 
-export type EntfeuchtungReiter = 'ueberblick' | 'regel' | 'schutz' | 'einrichtung'
+export type EntfeuchtungReiter = 'ueberblick' | 'einstellungen' | 'einrichtung'
 
 export const ENTFEUCHTUNG_REITER: Array<{ value: EntfeuchtungReiter; label: string }> = [
   { value: 'ueberblick', label: 'Überblick' },
-  { value: 'regel', label: 'Regel' },
-  { value: 'schutz', label: 'Schutz' },
+  { value: 'einstellungen', label: 'Einstellungen' },
   { value: 'einrichtung', label: 'Einrichtung' },
 ]
 

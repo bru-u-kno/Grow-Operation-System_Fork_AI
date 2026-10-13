@@ -14,18 +14,20 @@ import './steuerung.css'
  * muss gefunden werden (`useFehlerZeigen`). Die Kachel klappt dann per CSS
  * von selbst auf (`.st-kk:has(.st-fehler)`).
  */
-export function Klappkachel({ titel, zusammenfassung, offen = true, children }: {
+export function Klappkachel({ titel, zusammenfassung, offen = true, id, children }: {
   titel: string
   /** Was die zugeklappte Kachel in der Kopfzeile zeigt. */
   zusammenfassung?: ReactNode
   /** Zustand beim ersten Anzeigen. */
   offen?: boolean
+  /** Kennung für Sprungziele (`ef-k-<id>`), etwa „Höchsttemperatur einstellen“ im Überblick. */
+  id?: string
   children: ReactNode
 }) {
   const [auf, setAuf] = useState(offen)
   const koerper = useId()
   return (
-    <section className="v1-section st-kk">
+    <section className="v1-section st-kk" id={id ? `ef-k-${id}` : undefined}>
       <header className="v1-section-head">
         <h2>
           <button type="button" className="st-kk-kopf" aria-expanded={auf} aria-controls={koerper} onClick={() => setAuf(!auf)}>

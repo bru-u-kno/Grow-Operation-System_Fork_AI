@@ -6,8 +6,7 @@ import { aenderungsListe, planHinweisZeigen, tempGrenzen } from './entfeuchter-z
 import { ENTFEUCHTUNG_REITER, zusatzVorhanden } from './entfeuchtung-modell'
 import type { EntfeuchtungReiter } from './entfeuchtung-modell'
 import { EinrichtungTab } from './EntfeuchtungEinrichtung'
-import { RegelTab } from './EntfeuchtungRegel'
-import { SchutzTab } from './EntfeuchtungSchutz'
+import { EinstellungenTab } from './EntfeuchtungEinstellungen'
 import { UeberblickTab } from './EntfeuchtungUeberblick'
 import { tempMax } from './entfeuchter-band'
 import { useFehlerZeigen } from './fehler-reiter'
@@ -15,6 +14,8 @@ import { SteuerungWechsel } from './SteuerungWechsel'
 import { useEntfeuchterHaupt } from './useEntfeuchterHaupt'
 import { useEntfeuchterZusatz } from './useEntfeuchterZusatz'
 import { useEntfeuchtungEinrichtung } from './useEntfeuchtungEinrichtung'
+import { useZielwerteKurz } from './useZielwerteKurz'
+import { insBildRollen } from '../../components/reiter-ins-bild'
 import type { EntfeuchterNamen, SteuerungModul } from './steuerung-typen'
 import './steuerung.css'
 
@@ -41,6 +42,22 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
   const z = useEntfeuchterZusatz()
   const einr = useEntfeuchtungEinrichtung()
   const [namen, setNamen] = useState<EntfeuchterNamen | null>(null)
+  const zielwerte = useZielwerteKurz()
+  // Sprungziel aus dem Überblick („Höchsttemperatur einstellen“): erst den Reiter wechseln, dann zur Kachel rollen.
+  const [sprung, setSprung] = useState<string | null>(null)
+  const springen = (kachel: string) => { setReiter('einstellungen'); setSprung(kachel) }
+  useEffect(() => {
+    if (!sprung || reiter !== 'einstellungen') return undefined
+    const bild = requestAnimationFrame(() => {
+      const kachel = document.getElementById(`ef-k-${sprung}`)
+      if (kachel) {
+        kachel.querySelector<HTMLButtonElement>('.st-kk-kopf[aria-expanded="false"]')?.click()
+        insBildRollen(kachel)
+      }
+      setSprung(null)
+    })
+    return () => cancelAnimationFrame(bild)
+  }, [sprung, reiter])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -143,9 +160,8 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
 
       <V1Tabs items={ENTFEUCHTUNG_REITER} active={reiter} onChange={setReiter} label="Bereich" insBild />
 
-      {reiter === 'ueberblick' && <UeberblickTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
-      {reiter === 'regel' && <RegelTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
-      {reiter === 'schutz' && <SchutzTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} />}
+      {reiter === 'ueberblick' && <UeberblickTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} zielwerte={zielwerte} onSpringen={springen} />}
+      {reiter === 'einstellungen' && <EinstellungenTab h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz} zielwerte={zielwerte} />}
       {reiter === 'einrichtung' && (
         <EinrichtungTab
           h={h} z={zusatzModell} haupt={haupt} zusatz={zusatz}
