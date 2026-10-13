@@ -5,7 +5,7 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
-## 2.0.0-forkai.210
+## 2.0.0-forkai.211
 
 **Fork AI.** Die Seite „Entfeuchtung" ist umgebaut: statt rund 36 Einzelwerten gibt es wenige Antworten, die für beide Entfeuchter gelten. Jeder Wert bleibt änderbar. Der Überblick zeigt das Ziel mit einem Band, das auch „zu trocken" und „zu kühl" kennt, und sagt, woher es kommt.
 
@@ -19,6 +19,13 @@
 - **Meldungen aufs Handy:** Eine Kachel zeigt die Grenzwerte für Luftfeuchte und Lufttemperatur mit ihrer Herkunft (folgt dem Plan oder von dir gesetzt) und führt zu den Seiten Grenzwerte und Handy. Die Meldung „Zusatz-Entfeuchter zieht nichts" stand bisher nicht in der Liste der Absender unter „Ziele & Meldungen", obwohl sie aufs Handy meldet; sie steht jetzt dort.
 - **Geprüft:** Rechenteile mit Tests (Stufen, Schwellen, Zielband, Urteil); ohne die jeweilige Änderung werden sie rot. Die Seite am gebauten Stand mit Brus echten Werten vom 12.10.2026 (55,7 % rF, 21 °C nachts, Plan-Luft 16 °C, Grenzwert 12–20 °C) bei 390 px gelesen. E2E-Spezifikationen an die neuen Reiter angepasst und um die neuen Wege erweitert.
 - **Nicht in dieser Fassung:** „Arbeitsbereich aus dem Plan" (Einschalten = Plan-Obergrenze minus Vorlauf, folgt dem Wochenwechsel) kommt als eigene Fassung, ebenso eine Mindestpause für den Hauptentfeuchter. VPD bleibt ein Schalter unter „Erweitert".
+
+## 2.0.0-forkai.210
+
+**Fork AI.** Der Kopf der Live-Seite nennt jetzt auch die Woche des Plans.
+
+- **Plan-Woche im Live-Kopf:** In der Zeile unter dem Grow-Score steht nach „Blüte Tag 52" jetzt die laufende Woche des Wochenplans, zum Beispiel „Blüte Tag 36 · Blütewoche 6 von 8 · Grow-Name". Läuft der Plan in eine Phase ohne Wochennummer, steht deren Name („Flush"); ist die Woche angehängt, weil die Phase länger dauert als das Programm, steht „(verlängert)". Ohne Plan entfällt die Angabe. Die Woche kommt aus demselben Eintrag wie die Wochenzeile auf „Ziele & Meldungen" (`/api/wochenplan`), nicht aus einer eigenen Rechnung.
+- **Geprüft:** Vier neue Tests für die Beschriftung; ohne das „von N" wird einer rot. Am gebauten Stand mit Demobestand gelesen: „Letzte Messung 07:00 · Blüte Tag 36 · Blütewoche 6 von 8 · White Widow (Testdaten)", am PC und bei 390 px Breite ohne Überlauf.
 
 ## 2.0.0-forkai.209
 

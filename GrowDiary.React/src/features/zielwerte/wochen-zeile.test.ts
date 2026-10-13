@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anker, laufendVerlaengert, waehlePlan, wochenIndex, wochenKurz, type PlanWoche, type WochenPlan } from './wochen-zeile'
+import { anker, jetztWocheText, laufendVerlaengert, waehlePlan, wochenIndex, wochenKurz, type PlanWoche, type WochenPlan } from './wochen-zeile'
 
 const woche = (teil: Partial<PlanWoche>): PlanWoche => ({
   id: 'flower-w4', label: 'Flores · Woche 4', stage: 'Flower', istJetzt: true, wirdGehalten: false,
@@ -44,5 +44,30 @@ describe('Wochenzeile', () => {
     expect(laufendVerlaengert(plan({ wochen: [woche({ istJetzt: true, verlaengert: true })] }))).toBe(true)
     expect(laufendVerlaengert(plan({ wochen: [woche({ istJetzt: false, verlaengert: true }), woche({ istJetzt: true })] }))).toBe(false)
     expect(laufendVerlaengert(plan({ wochen: [] }))).toBe(false)
+  })
+})
+
+describe('Plan-Woche im Live-Kopf', () => {
+  const programm = [
+    woche({ id: 'clone-w2', label: 'Bewurzelung 2', stage: 'Clone', woche: 2, istJetzt: false }),
+    woche({ id: 'flower-w1', label: 'Blütewoche 1', stage: 'Flower', woche: 1, istJetzt: false }),
+    woche({ id: 'flower-w2', label: 'Blütewoche 2', stage: 'Flower', woche: 2, istJetzt: true }),
+    woche({ id: 'flower-w3', label: 'Blütewoche 3', stage: 'Flower', woche: 3, istJetzt: false }),
+    woche({ id: 'flush', label: 'Flush', stage: 'Finish', woche: null, istJetzt: false }),
+  ]
+  it('nennt Woche und Länge der Phase', () => {
+    expect(jetztWocheText(plan({ wochen: programm }))).toBe('Blütewoche 2 von 3')
+  })
+  it('nennt eine Phase ohne Wochennummer beim Namen', () => {
+    const flush = programm.map((w) => ({ ...w, istJetzt: w.id === 'flush' }))
+    expect(jetztWocheText(plan({ wochen: flush }))).toBe('Flush')
+  })
+  it('kennzeichnet eine angehängte Woche und zählt sie nicht zur Länge', () => {
+    const lang = [...programm.map((w) => ({ ...w, istJetzt: false })), woche({ id: 'flower-w4', label: 'Blütewoche 4', stage: 'Flower', woche: 4, istJetzt: true, verlaengert: true })]
+    expect(jetztWocheText(plan({ wochen: lang }))).toBe('Blütewoche 4 (verlängert)')
+  })
+  it('lässt die Angabe weg, wenn nichts läuft', () => {
+    expect(jetztWocheText(null)).toBeNull()
+    expect(jetztWocheText(plan({ wochen: programm.map((w) => ({ ...w, istJetzt: false })) }))).toBeNull()
   })
 })

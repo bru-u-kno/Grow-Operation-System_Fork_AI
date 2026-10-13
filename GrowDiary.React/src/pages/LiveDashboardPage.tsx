@@ -8,6 +8,7 @@ import { useTentDashboard } from '../features/live/useTentDashboard'
 import { useTentSparklines } from '../features/live/useTentSparklines'
 import { layoutIsEmpty, seedLayout, type DashboardLayout } from '../features/live/dashboard-layout'
 import { buildPhaseTimeline, currentPhaseLabel } from '../features/grows/phase-timeline'
+import { jetztWocheText, waehlePlan, type WochenPlan } from '../features/zielwerte/wochen-zeile'
 import { urteilFuerMetrik } from '../features/live/metric-tile-model'
 import { messZeitpunkt } from '../features/live/mess-zeitpunkt'
 import '../features/live/live-screen.css'
@@ -151,6 +152,17 @@ function LiveDashboardPage() {
     return () => window.clearInterval(id)
   }, [])
 
+  // Die Plan-Woche für den Kopf: derselbe Wochenplan wie die Wochenzeile. Die
+  // Zeile ist eine Zugabe — scheitert das Laden, fehlt sie, die Seite bleibt.
+  const [wochenplaene, setWochenplaene] = useState<WochenPlan[]>([])
+  useEffect(() => {
+    let aktiv = true
+    apiFetch<WochenPlan[]>('/api/wochenplan')
+      .then((plaene) => { if (aktiv) setWochenplaene(plaene) })
+      .catch(() => {})
+    return () => { aktiv = false }
+  }, [refresh])
+
   // Ein Zelt, das es nicht (mehr) gibt — etwa gelöscht, während die Meldung
   // unterwegs war —, fällt auf dieselbe Wahl zurück wie ohne Link.
   const selectedTent = state.tents.find((tent) => tent.id === selectedTentId)
@@ -160,6 +172,7 @@ function LiveDashboardPage() {
   const activeGrows = state.grows.filter((grow) => grow.status === 'Running' || grow.status === 'Planning')
   const growsForTent = selectedTent ? activeGrows.filter((grow) => grow.tentId === selectedTent.id) : []
   const primaryGrow = growsForTent[0] ?? null
+  const weekLine = primaryGrow ? jetztWocheText(waehlePlan(wochenplaene.filter((plan) => plan.growId === primaryGrow.id), primaryGrow.id)) : null
   const score = buildScore(live?.metrics ?? [], selectedTent)
   const climateMetrics = mapMetrics(live?.metrics ?? [], climateMetricKeys)
   // The cm water-level slot only renders when its sensor actually reports — most
@@ -440,6 +453,7 @@ function LiveDashboardPage() {
       sensorsLive={sensorsLive}
       lastMeasurement={lastMeasurement}
       stageLine={stageLine}
+      weekLine={weekLine}
       risks={risksForContext}
       tasks={tasks}
       timeline={timeline.phases}
