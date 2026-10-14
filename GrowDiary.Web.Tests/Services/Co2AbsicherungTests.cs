@@ -17,12 +17,12 @@ namespace GrowDiary.Web.Tests.Services;
 /// </remarks>
 public sealed class Co2AbsicherungTests
 {
-    private const string Fuehler = "sensor.big_co2_light_sensor_co2";
+    private const string Fuehler = "sensor.co2_sonde_co2";
     private const string Dosierung = "automation.co2_dosierung_rdwc_port_5";
 
     private static readonly HashSet<string> Ports = new(StringComparer.Ordinal)
     {
-        "select.rdwc_venti_aktiver_modus_2", "binary_sensor.big_port_5_zustand",
+        "select.luefter_aktiver_modus_2", "binary_sensor.ac_port_5_zustand",
     };
 
     private static readonly Co2Absicherung.Rahmen Rahmen =
@@ -127,7 +127,7 @@ public sealed class Co2AbsicherungTests
 
         var vorschrift = ablauf[sperre]!["value_template"]!.ToString();
         Assert.Equal(
-            "{{ states('sensor.big_co2_light_sensor_co2') | float(-1) > 0 }}",
+            "{{ states('sensor.co2_sonde_co2') | float(-1) > 0 }}",
             vorschrift);
     }
 
@@ -141,7 +141,7 @@ public sealed class Co2AbsicherungTests
         Assert.Single(bis);
         var oder = bis[0]!["conditions"]!.AsArray();
         var abbruch = Assert.Single(oder, b => b?["alias"]?.GetValue<string>() == Co2Absicherung.AbbruchAlias);
-        Assert.Equal("{{ states('sensor.big_co2_light_sensor_co2') | float(-1) <= 0 }}", abbruch!["value_template"]!.ToString());
+        Assert.Equal("{{ states('sensor.co2_sonde_co2') | float(-1) <= 0 }}", abbruch!["value_template"]!.ToString());
     }
 
     [Fact]
@@ -236,8 +236,8 @@ public sealed class Co2AbsicherungTests
         Assert.Contains("\"modus_lang\"", text);
 
         // Beide beobachteten Entitäten, mit ihrem eigenen Zustand und ihrer eigenen Wartezeit.
-        Assert.Contains("\"entity_id\":\"binary_sensor.big_port_5_zustand\",\"state\":\"on\",\"for\":\"00:01:30\"", text);
-        Assert.Contains("\"entity_id\":\"select.rdwc_venti_aktiver_modus_2\",\"state\":\"On\",\"for\":\"00:01:30\"", text);
+        Assert.Contains("\"entity_id\":\"binary_sensor.ac_port_5_zustand\",\"state\":\"on\",\"for\":\"00:01:30\"", text);
+        Assert.Contains("\"entity_id\":\"select.luefter_aktiver_modus_2\",\"state\":\"On\",\"for\":\"00:01:30\"", text);
 
         // Die Push-Meldung und der Zähler-Zweig bleiben.
         Assert.True(JsonNode.DeepEquals(alt["actions"]![0]!["choose"]![0]!["sequence"], zweig["sequence"]));
@@ -265,8 +265,8 @@ public sealed class Co2AbsicherungTests
     {
         // Die ganze Automation ist der Wächter: Port lange an → zu.
         var config = (JsonObject)JsonNode.Parse("""
-            {"alias":"Wächter schlicht","triggers":[{"trigger":"state","entity_id":"binary_sensor.big_port_5_zustand","to":"on","for":"00:01:30"}],
-             "actions":[{"action":"select.select_option","data":{"option":"Off"},"target":{"entity_id":"select.rdwc_venti_aktiver_modus_2"}}],"mode":"single"}
+            {"alias":"Wächter schlicht","triggers":[{"trigger":"state","entity_id":"binary_sensor.ac_port_5_zustand","to":"on","for":"00:01:30"}],
+             "actions":[{"action":"select.select_option","data":{"option":"Off"},"target":{"entity_id":"select.luefter_aktiver_modus_2"}}],"mode":"single"}
             """)!;
         Assert.Equal([Art.WaechterUebersiehtNeustart], Arten(config));
 
@@ -398,9 +398,9 @@ public sealed class Co2AbsicherungTests
     {
         ["co2_sensor"] = Fuehler,
         ["licht"] = "binary_sensor.beispiel_abluft_zustand",
-        ["port_zustand"] = "binary_sensor.big_port_5_zustand",
-        ["port_schalter"] = "select.rdwc_venti_aktiver_modus_2",
-        ["abluft_stufe"] = "number.rdwc_venti_einschaltleistung",
+        ["port_zustand"] = "binary_sensor.ac_port_5_zustand",
+        ["port_schalter"] = "select.luefter_aktiver_modus_2",
+        ["abluft_stufe"] = "number.luefter_einschaltleistung",
         ["canopy"] = "sensor.zeltsonde_sonden_temperatur",
         ["rh"] = "sensor.zeltsonde_sonden_luftfeuchtigkeit",
     };

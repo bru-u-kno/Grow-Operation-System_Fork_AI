@@ -15,16 +15,21 @@ namespace GrowDiary.Web.Tests.Services;
 /// nichts schreiben, solange dosiert wird. Home Assistant ist hier ein Nachbau,
 /// der die echten Automationen der Anlage ausliefert und Geschriebenes behält.
 /// </summary>
-public sealed class SteuerungAbsicherungServiceTests
+[Collection(BestandRaumSammlung.Name)]
+public sealed class SteuerungAbsicherungServiceTests : IDisposable
 {
+    private readonly BestandRaumFuerTests _raum = new();
+
+    public void Dispose() => _raum.Dispose();
+
     private const string Dosierung = "automation.co2_dosierung_rdwc_port_5";
     private const string Waechter = "automation.co2_wachter_rdwc_port_5";
-    private const string PortZustand = "binary_sensor.big_port_5_zustand";
+    private const string PortZustand = "binary_sensor.ac_port_5_zustand";
     private const string LichtAus = "automation.co2_dosierung_licht_aus_sicherung_rdwc_port_5";
 
     private static readonly Dictionary<string, string> Rollen = new()
     {
-        ["co2_sensor"] = "sensor.big_co2_light_sensor_co2",
+        ["co2_sensor"] = "sensor.co2_sonde_co2",
         ["port_zustand"] = PortZustand,
     };
 

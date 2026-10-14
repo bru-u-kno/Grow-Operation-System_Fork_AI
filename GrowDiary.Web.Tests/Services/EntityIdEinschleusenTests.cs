@@ -46,7 +46,7 @@ public class EntityIdEinschleusenTests
 
     [Theory]
     [InlineData("sensor.zelt_co2", true)]
-    [InlineData("binary_sensor.big_port_5_zustand", true)]
+    [InlineData("binary_sensor.ac_port_5_zustand", true)]
     [InlineData("climate.x\"}}", false)]
     [InlineData("sensor.a') }}{{ states('x", false)]
     [InlineData("sensor.a\\u002eb", false)]

@@ -209,15 +209,15 @@ public sealed class GeraeteUebersichtTests
         // Controller zweimal. Seine Ports kennen ihn per via_device.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["sensor.big_controller_temperatur"] = new("sensor.big_controller_temperatur", "372e54", "RDWC",
+            ["sensor.ac_controller_temperatur"] = new("sensor.ac_controller_temperatur", "372e54", "RDWC",
                 "ac_infinity_34CDB02C4C16_sensor_7_controllerTemperature"),
-            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "RDWC CO2",
+            ["binary_sensor.ac_port_5_zustand"] = new("binary_sensor.ac_port_5_zustand", "e3a70d", "RDWC CO2",
                 "ac_infinity_34CDB02C4C16_port_5_loadState", "372e54", "RDWC"),
         };
 
         var geraete = Bauen(
-            Verwendungen(("sensor.big_controller_temperatur", "Steuerung ZULUFT · Kellerfühler"),
-                         ("binary_sensor.big_port_5_zustand", "CO₂-Ventil")),
+            Verwendungen(("sensor.ac_controller_temperatur", "Steuerung ZULUFT · Kellerfühler"),
+                         ("binary_sensor.ac_port_5_zustand", "CO₂-Ventil")),
             herkunft: herkunft);
 
         Assert.DoesNotContain(geraete, g => g.Schluessel.StartsWith("mac:", StringComparison.Ordinal));
@@ -238,18 +238,18 @@ public sealed class GeraeteUebersichtTests
     {
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["sensor.big_controller_temperatur"] = new("sensor.big_controller_temperatur", "372e54", "RDWC",
+            ["sensor.ac_controller_temperatur"] = new("sensor.ac_controller_temperatur", "372e54", "RDWC",
                 "ac_infinity_34CDB02C4C16_sensor_7_controllerTemperature"),
-            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "RDWC CO2",
+            ["binary_sensor.ac_port_5_zustand"] = new("binary_sensor.ac_port_5_zustand", "e3a70d", "RDWC CO2",
                 "ac_infinity_34CDB02C4C16_port_5_loadState", "372e54", "RDWC"),
-            ["number.rdwc_venti_einschaltleistung"] = new("number.rdwc_venti_einschaltleistung", "ffcb63", "RDWC Venti",
+            ["number.luefter_einschaltleistung"] = new("number.luefter_einschaltleistung", "ffcb63", "RDWC Venti",
                 "ac_infinity_34CDB02C4C16_port_1_onSelfSpead"),
         };
 
         var geraete = Bauen(
-            Verwendungen(("sensor.big_controller_temperatur", "Steuerung ZULUFT · Kellerfühler"),
-                         ("binary_sensor.big_port_5_zustand", "CO₂-Ventil"),
-                         ("number.rdwc_venti_einschaltleistung", "Abluft Stufe")),
+            Verwendungen(("sensor.ac_controller_temperatur", "Steuerung ZULUFT · Kellerfühler"),
+                         ("binary_sensor.ac_port_5_zustand", "CO₂-Ventil"),
+                         ("number.luefter_einschaltleistung", "Abluft Stufe")),
             herkunft: herkunft);
 
         Assert.DoesNotContain(geraete, g => g.Schluessel.StartsWith("mac:", StringComparison.Ordinal));
@@ -295,7 +295,7 @@ public sealed class GeraeteUebersichtTests
         // erbte das Geraet den Controller sofort wieder.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["camera.rdwc_overview"] = new("camera.rdwc_overview", "cam1", "RDWC Overview", "reolink_cam1", "fritz", "FRITZ!Box"),
+            ["camera.zelt_uebersicht"] = new("camera.zelt_uebersicht", "cam1", "RDWC Overview", "reolink_cam1", "fritz", "FRITZ!Box"),
         };
         var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
         {
@@ -307,8 +307,8 @@ public sealed class GeraeteUebersichtTests
             },
         };
 
-        var ohne = Bauen(Verwendungen(("camera.rdwc_overview", "Kamera")), herkunft: herkunft);
-        var mit = Bauen(Verwendungen(("camera.rdwc_overview", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
+        var ohne = Bauen(Verwendungen(("camera.zelt_uebersicht", "Kamera")), herkunft: herkunft);
+        var mit = Bauen(Verwendungen(("camera.zelt_uebersicht", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
 
         Assert.NotNull(Assert.Single(ohne, g => !g.IstController).ElternSchluessel);
         Assert.Null(Assert.Single(mit, g => !g.IstController).ElternSchluessel);
@@ -321,11 +321,11 @@ public sealed class GeraeteUebersichtTests
         // nicht "Controller 4C16" aus der MAC bauen.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "RDWC CO2",
+            ["binary_sensor.ac_port_5_zustand"] = new("binary_sensor.ac_port_5_zustand", "e3a70d", "RDWC CO2",
                 "ac_infinity_34CDB02C4C16_port_5_loadState", "372e54", "RDWC"),
         };
 
-        var geraete = Bauen(Verwendungen(("binary_sensor.big_port_5_zustand", "CO₂-Ventil")), herkunft: herkunft);
+        var geraete = Bauen(Verwendungen(("binary_sensor.ac_port_5_zustand", "CO₂-Ventil")), herkunft: herkunft);
 
         var ventil = Assert.Single(geraete, g => !g.IstController);
         var controller = Assert.Single(geraete, g => g.IstController);
@@ -343,25 +343,25 @@ public sealed class GeraeteUebersichtTests
         // unique_id klammert sie zum Controller; der Port wird zur Steckstelle.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["binary_sensor.big_port_5_zustand"] = new("binary_sensor.big_port_5_zustand", "e3a70d", "Port 5",
+            ["binary_sensor.ac_port_5_zustand"] = new("binary_sensor.ac_port_5_zustand", "e3a70d", "Port 5",
                 "ac_infinity_34CDB02C4C16_port_5_loadState"),
-            ["number.rdwc_venti_einschaltleistung"] = new("number.rdwc_venti_einschaltleistung", "ffcb63", "RDWC Venti",
+            ["number.luefter_einschaltleistung"] = new("number.luefter_einschaltleistung", "ffcb63", "RDWC Venti",
                 "ac_infinity_34CDB02C4C16_port_1_onSelfSpead"),
             ["binary_sensor.beispiel_abluft_zustand"] = new("binary_sensor.beispiel_abluft_zustand", "1abfe0", "Klein Abluft",
                 "ac_infinity_4827E289FA8E_port_1_loadState"),
         };
 
         var geraete = Bauen(
-            Verwendungen(("binary_sensor.big_port_5_zustand", "CO₂-Ventil"),
-                         ("number.rdwc_venti_einschaltleistung", "Abluft Stufe"),
+            Verwendungen(("binary_sensor.ac_port_5_zustand", "CO₂-Ventil"),
+                         ("number.luefter_einschaltleistung", "Abluft Stufe"),
                          ("binary_sensor.beispiel_abluft_zustand", "Licht-Status")),
             herkunft: herkunft);
 
         var controller = geraete.Where(g => g.IstController).ToList();
         Assert.Equal(2, controller.Count);
 
-        var ventil = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.big_port_5_zustand"));
-        var abluft = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "number.rdwc_venti_einschaltleistung"));
+        var ventil = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.ac_port_5_zustand"));
+        var abluft = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "number.luefter_einschaltleistung"));
         var licht = Assert.Single(geraete, g => g.Entitaeten.Any(e => e.EntityId == "binary_sensor.beispiel_abluft_zustand"));
 
         // Gleicher Controller, verschiedene Ports.
@@ -431,14 +431,14 @@ public sealed class GeraeteUebersichtTests
         // Name als Korrektur, kaeme ein spaeteres Umbenennen in Home Assistant nie an.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["camera.rdwc_overview"] = new("camera.rdwc_overview", "cam1", "RDWC Overview", "reolink_1", "fritz", "FRITZ!Box"),
+            ["camera.zelt_uebersicht"] = new("camera.zelt_uebersicht", "cam1", "RDWC Overview", "reolink_1", "fritz", "FRITZ!Box"),
         };
         var gespeichert = new Dictionary<string, GespeichertesGeraet>(StringComparer.OrdinalIgnoreCase)
         {
             ["ha:cam1"] = new() { Schluessel = "ha:cam1", Name = string.Empty, ElternSchluessel = string.Empty },
         };
 
-        var geraete = Bauen(Verwendungen(("camera.rdwc_overview", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
+        var geraete = Bauen(Verwendungen(("camera.zelt_uebersicht", "Kamera")), gespeichert: gespeichert, herkunft: herkunft);
 
         var kamera = Assert.Single(geraete, g => g.Schluessel == "ha:cam1");
         Assert.Equal("RDWC Overview", kamera.Name);
@@ -496,22 +496,22 @@ public sealed class GeraeteUebersichtTests
         // zugewanderten Entitaet; gefunden hat er sie so nicht wieder.
         var herkunft = new Dictionary<string, HerkunftEintrag>(StringComparer.OrdinalIgnoreCase)
         {
-            ["camera.rdwc_neu"] = new("camera.rdwc_neu", "cam2", "RDWC neu", "reolink_2"),
-            ["sensor.big_co2_light_sensor_co2"] = new("sensor.big_co2_light_sensor_co2", "c17ef", "RDWC CO2 + Light Sensor", "ac_infinity_34CDB02C4C16_sensor_1_co2Sensor"),
+            ["camera.zelt_neu"] = new("camera.zelt_neu", "cam2", "RDWC neu", "reolink_2"),
+            ["sensor.co2_sonde_co2"] = new("sensor.co2_sonde_co2", "c17ef", "RDWC CO2 + Light Sensor", "ac_infinity_34CDB02C4C16_sensor_1_co2Sensor"),
         };
         var zuordnungen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["sensor.big_co2_light_sensor_co2"] = "ha:cam2",
+            ["sensor.co2_sonde_co2"] = "ha:cam2",
         };
 
         var geraete = Bauen(
-            Verwendungen(("camera.rdwc_neu", "Kamera"), ("sensor.big_co2_light_sensor_co2", "Messgröße Co2")),
+            Verwendungen(("camera.zelt_neu", "Kamera"), ("sensor.co2_sonde_co2", "Messgröße Co2")),
             herkunft: herkunft, zuordnungen: zuordnungen);
 
         var kamera = Assert.Single(geraete, g => g.Schluessel == "ha:cam2");
         Assert.Equal("RDWC neu", kamera.Name);
 
-        var zugewandert = Assert.Single(kamera.Entitaeten, e => e.EntityId == "sensor.big_co2_light_sensor_co2");
+        var zugewandert = Assert.Single(kamera.Entitaeten, e => e.EntityId == "sensor.co2_sonde_co2");
         Assert.True(zugewandert.Verschoben);
         Assert.Equal("RDWC CO2 + Light Sensor", zugewandert.HerkunftName);
     }

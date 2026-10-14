@@ -372,7 +372,7 @@ function EigeneGeraete({
             titel="Entität wählen"
             unterzeile={name || undefined}
             wert={entityId}
-            platzhalter="fan.big_zuluft"
+            platzhalter="fan.zuluft_luefter"
             onWahl={setEntityId}
             optionen={entities.map((entity): V1Option => ({
               wert: entity.entityId,

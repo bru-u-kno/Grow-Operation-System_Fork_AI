@@ -68,7 +68,7 @@ public sealed class ZusatzPruefstand : IDisposable
                      ("entfeuchter", "zelt_temp", "sensor.zeltsonde_sonden_temperatur"),
                      ("entfeuchter", "zelt_vpd", "sensor.zeltsonde_sonden_vpd"),
                      ("entfeuchter", "port_schalter", "select.zusatz_entfeuchter_aktiver_modus"),
-                     ("entfeuchter", "port_zustand", "binary_sensor.big_port_7_zustand"),
+                     ("entfeuchter", "port_zustand", "binary_sensor.ac_port_7_zustand"),
                      ("entfeuchter", "licht_zustand", "binary_sensor.beispiel_abluft_zustand"),
                      (EntfeuchterZusatzSteuerungService.Modul, "zusatz_schalter", "switch.zusatz_entfeuchter"),
                      (EntfeuchterZusatzSteuerungService.Modul, "zusatz_leistung", "sensor.zusatz_entfeuchter_leistung"),

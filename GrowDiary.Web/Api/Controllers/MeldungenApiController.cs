@@ -1,4 +1,5 @@
 using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Models;
 using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,7 +30,7 @@ public sealed class MeldungenApiController : ApiControllerBase
     {
         [ChillerSteuerungService.Entitaeten.Waechter] =
             "Wasserfühler 5 min stumm → Kühler aus · Wasser über 24 °C für 15 min → Meldung",
-        ["automation.co2_wachter_rdwc_port_5"] =
+        [Kennungen.Id("automation.co2_wachter", KennungsRaum.Bestand)] =
             "CO₂-Ventil länger als 90 s offen → wird zwangsweise geschlossen und gemeldet",
         ["automation.co2_wachter"] =
             "CO₂-Ventil länger als erlaubt offen → wird zwangsweise geschlossen und gemeldet",

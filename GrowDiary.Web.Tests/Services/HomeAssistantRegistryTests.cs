@@ -19,7 +19,7 @@ public sealed class HomeAssistantRegistryTests
 
     private const string Entitaeten = """
         [
-          { "entity_id": "binary_sensor.big_port_5_zustand", "device_id": "e3a70d", "original_name": "Zustand",
+          { "entity_id": "binary_sensor.ac_port_5_zustand", "device_id": "e3a70d", "original_name": "Zustand",
             "unique_id": "ac_infinity_34CDB02C4C16_port_5_loadState", "platform": "ac_infinity" },
           { "entity_id": "sensor.bluelab_guardian_ph", "device_id": "8efd96", "original_name": "Ph",
             "unique_id": "6bf89330-2cb9-11f0-b22b-63543a698b74_ph", "platform": "bluelab_guardian" },
@@ -41,7 +41,7 @@ public sealed class HomeAssistantRegistryTests
     {
         var herkunft = HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete));
 
-        Assert.Equal("CO2-Ventil", herkunft["binary_sensor.big_port_5_zustand"].DeviceName);
+        Assert.Equal("CO2-Ventil", herkunft["binary_sensor.ac_port_5_zustand"].DeviceName);
         Assert.Equal("Bluelab Guardian", herkunft["sensor.bluelab_guardian_ph"].DeviceName);
     }
 
@@ -50,7 +50,7 @@ public sealed class HomeAssistantRegistryTests
     {
         // Home Assistant modelliert die Kette selbst: jedes Port-Geraet zeigt auf
         // seinen Controller. Das ist die Wahrheit, nicht die MAC-Vermutung.
-        var eintrag = HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete))["binary_sensor.big_port_5_zustand"];
+        var eintrag = HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete))["binary_sensor.ac_port_5_zustand"];
 
         Assert.Equal("372e54", eintrag.ViaDeviceId);
         Assert.Equal("RDWC", eintrag.ViaDeviceName);
@@ -63,7 +63,7 @@ public sealed class HomeAssistantRegistryTests
     [Fact]
     public void DeviceIdUndUniqueIdKommenMit()
     {
-        var eintrag = HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete))["binary_sensor.big_port_5_zustand"];
+        var eintrag = HomeAssistantRegistryService.Zusammenfuehren(Json(Entitaeten), Json(Geraete))["binary_sensor.ac_port_5_zustand"];
 
         Assert.Equal("e3a70d", eintrag.DeviceId);
         Assert.Equal("ac_infinity_34CDB02C4C16_port_5_loadState", eintrag.UniqueId);

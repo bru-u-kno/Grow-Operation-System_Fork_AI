@@ -18,7 +18,7 @@ public sealed class KennungsRaumStand
 /// in Home Assistant heißen.
 /// </summary>
 /// <remarks>
-/// <para><b>Die Regel.</b> Hat der Fork für die Entfeuchter-Steuerungen schon etwas gespeichert — Einstellungen oder
+/// <para><b>Die Regel.</b> Hat der Fork für die Entfeuchter- oder die CO₂-Steuerung schon etwas gespeichert — Einstellungen oder
 /// zugeordnete Geräte —, lief diese Installation mit den alten Kennungen: <see cref="KennungsRaum.Bestand"/>. Sonst
 /// <see cref="KennungsRaum.Neu"/>. Entschieden wird <b>genau einmal</b> und dann im Fork gespeichert: Wer neu beginnt und
 /// später Einstellungen speichert, soll beim nächsten Start nicht in den Bestand rutschen.</para>
@@ -31,7 +31,7 @@ public static class KennungsRaumWahl
     /// <summary>Unter diesem Namen liegt der Entscheid in den Steuerungs-Einstellungen.</summary>
     public const string Modul = "kennungsraum";
 
-    private static readonly string[] Module = [EntfeuchterSteuerungService.Modul, EntfeuchterZusatzSteuerungService.Modul];
+    private static readonly string[] Module = [EntfeuchterSteuerungService.Modul, EntfeuchterZusatzSteuerungService.Modul, Co2SteuerungService.Modul];
 
     /// <summary>Die reine Entscheidung — ohne Datenbank, damit sie sich einzeln prüfen lässt.</summary>
     /// <param name="gespeichert">Ein früherer Entscheid, falls vorhanden — er gilt immer.</param>

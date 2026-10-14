@@ -18,7 +18,7 @@ namespace GrowDiary.Web.Tests.Services;
 public sealed class AcModiTests
 {
     /// <summary>
-    /// Die <c>options</c> von <c>select.rdwc_fan3_aktiver_modus</c> in der
+    /// Die <c>options</c> von <c>select.luefter3_aktiver_modus</c> in der
     /// Anlage des Nutzers (02.10.2026) — die Liste von außen, gegen die die
     /// Tabelle gehalten wird. Nicht aus dem Kopf und nicht aus AcModi
     /// abgeschrieben: würde sie aus AcModi gelesen, belegte sich die Tabelle

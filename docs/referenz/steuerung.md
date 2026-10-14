@@ -35,8 +35,8 @@ in die HA-Helfer.
 
 ## Die Arbeitsteilung
 
-Geregelt wird in Home Assistant: `automation.co2_dosierung_rdwc_port_5` samt
-Wächter (`automation.co2_wachter_rdwc_port_5`), Licht-aus-Sicherung und
+Geregelt wird in Home Assistant: `automation.co2_dosierung` samt
+Wächter (`automation.co2_wachter`), Licht-aus-Sicherung und
 Abluft-Drosselung. Ein Ventil an einer Gasflasche darf nicht davon abhängen,
 ob ein Web-Add-on gerade neu startet — fällt der Fork aus, dosiert HA mit den
 zuletzt geschriebenen Werten weiter.
@@ -142,10 +142,12 @@ Minuten anschaulicher sind als Gramm.
   `GET /api/steuerung`, `GET /api/steuerung/co2`, `PUT /api/steuerung/co2`.
 - Oberfläche: `GrowDiary.React/src/pages/SteuerungPage.tsx`, Typen und Stil in
   `GrowDiary.React/src/features/steuerung/`.
-- In Home Assistant: `automation.co2_dosierung_rdwc_port_5`,
-  `automation.co2_wachter_rdwc_port_5`,
-  `automation.co2_abluft_drosselung_t6_rdwc_port_1`,
-  `automation.co2_dosierung_licht_aus_sicherung_rdwc_port_5`.
+- In Home Assistant: `automation.co2_dosierung`, `automation.co2_wachter`,
+  `automation.co2_abluft_drosselung`, `automation.co2_licht_aus_sicherung`
+  (Namen, die Home Assistant aus dem Alias der Vorlagen ableitet). Eine
+  Installation, die vor forkai.218 schon CO₂-Einstellungen hatte, behält ihre
+  handgebauten Kennungen (`…_rdwc_port_N`) — siehe „Wie die Objekte in Home
+  Assistant heißen" in `entfeuchtung.md` und `Kennungen.cs`.
 
 ## Grenzen
 

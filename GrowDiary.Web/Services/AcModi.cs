@@ -7,7 +7,7 @@ namespace GrowDiary.Web.Services;
 /// </summary>
 /// <remarks>
 /// <para><b>Die Liste ist nicht aus dem Kopf.</b> Sie ist die
-/// <c>options</c>-Liste von <c>select.rdwc_fan3_aktiver_modus</c> in der Anlage
+/// <c>options</c>-Liste von <c>select.&lt;luefter&gt;_aktiver_modus</c> in der Anlage
 /// des Nutzers (02.10.2026).</para>
 ///
 /// <para><b>Warum hier und nicht in der Oberfläche (02.10.2026).</b> Die Modi

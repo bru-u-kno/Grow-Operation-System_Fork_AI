@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.218
+
+**Fork AI.** CO₂: Die Regelungen heißen für neue Installationen so, wie Home Assistant sie aus dem Namen der Vorlage ableitet — ohne die Port-Namen der Anlage des Entwicklers.
+
+- **Neue Kennungen:** `automation.co2_dosierung`, `automation.co2_wachter`, `automation.co2_abluft_drosselung`, `automation.co2_licht_aus_sicherung`. Vorher standen im Katalog die handgebauten Kennungen mit `…_rdwc_port_N`.
+- **Bestand bleibt unberührt:** Wer schon CO₂-Einstellungen oder -Geräte gespeichert hat, behält die handgebauten Kennungen; der Fork findet sie weiter, legt keine zweite Dosierung daneben an und schreibt nichts um. Dieselbe Regel wie beim Entfeuchter (ein Entscheid beim ersten Start, danach fest); ein Test hält die vier alten Kennungen fest und wurde mit einem eingebauten Fehler rot.
+- **Chiller und Zuluft unverändert:** Ihre Automations-Kennungen sind schon die, die Home Assistant aus dem Namen ableitet; „Keller" in der Zuluft ist die Funktion (Kellerluft gegen Außenluft), kein Gerät.
+- **Tests und Platzhalter:** Weitere Gerätenamen der Anlage in Tests und Testdaten (Ports, Lüfter, Kameras, CO₂-Sonde) sind durch Beispielnamen ersetzt; der Platzhalter im Feld für den Zuluft-Lüfter heißt `fan.zuluft_luefter`.
+
 ## 2.0.0-forkai.217
 
 **Fork AI.** Die Helfer und Regelungen der Entfeuchter tragen neutrale Namen mit Fork-Präfix — wer den Fork neu installiert, bekommt keine Kennungen mit fremder Marke mehr, und die Anlage kollidiert nicht mit eigenen Helfern.

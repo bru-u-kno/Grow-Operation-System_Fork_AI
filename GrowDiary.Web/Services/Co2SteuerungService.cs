@@ -11,7 +11,7 @@ namespace GrowDiary.Web.Services;
 /// </summary>
 /// <remarks>
 /// <para><b>Arbeitsteilung.</b> Die Regelung läuft in Home Assistant
-/// (<c>automation.co2_dosierung_rdwc_port_5</c> samt Wächter und Licht-aus-
+/// (<c>automation.co2_dosierung</c> (im Bestand <c>…_rdwc_port_5</c>) samt Wächter und Licht-aus-
 /// Sicherung). Dieser Dienst besitzt die Sollwerte, schreibt sie in die
 /// HA-Helfer, liest das Livebild zurück und schließt jeden Abend den Tag ab —
 /// Journal und Kosten-Artikel. Fällt das Add-on aus, dosiert HA mit den
@@ -76,7 +76,7 @@ public sealed class Co2SteuerungService
         /// angelegte heißt anders — geschaltet und gelesen wird deshalb über
         /// <see cref="AutomatikKennungen"/>, nicht direkt über diese Konstante.
         /// </summary>
-        public const string Automatik = "automation.co2_dosierung_rdwc_port_5";
+        public static string Automatik => Kennungen.Id("automation.co2_dosierung");
 
         public const string ZielEffektiv = "sensor.co2_ziel_effektiv";
         public const string Bedarf = "binary_sensor.co2_bedarf";
