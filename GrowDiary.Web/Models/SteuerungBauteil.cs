@@ -109,10 +109,11 @@ public enum BauteilArt
 /// <c>Vorlagen/&lt;modul&gt;/</c> ohne Endung, aus der der Fork sie anlegt — oder
 /// null, wenn es keine gibt.
 /// <para>
-/// Fork AI (01.10.2026): <see cref="EntityId"/> ist bei Automationen die Kennung
-/// der <b>handgebauten</b> Fassung in Nutzer-Anlage. Eine vom Fork angelegte heißt
-/// anders, weil Home Assistant die Entity-ID aus dem Alias der Vorlage ableitet
-/// („CO2 Dosierung" → <c>automation.co2_dosierung</c>). Wiedergefunden wird sie
+/// Fork AI (01.10.2026): <see cref="EntityId"/> ist bei Automationen die Kennung,
+/// die Home Assistant aus dem Alias der Vorlage ableitet („CO2 Dosierung" →
+/// <c>automation.co2_dosierung</c>); im <see cref="KennungsRaum.Bestand"/> ist es die
+/// Kennung der <b>handgebauten</b> Fassung. Eine vom Fork angelegte kann auch anders
+/// heißen (der Nutzer benennt sie um). Wiedergefunden wird sie
 /// über ihre Konfigurations-Kennung (<see cref="KonfigKennung"/>), siehe
 /// <see cref="SteuerungBauteile.AutomationFinden"/>.
 /// </para>
@@ -350,19 +351,19 @@ public static class SteuerungBauteile
             Vorlage: "{% set ziel = states('sensor.co2_ziel_effektiv') | float(0) %}{% set ist = states('[[co2_sensor]]') | float(-1) %}{% if ist <= 0 or ziel <= 0 %}0{% else %}{% set gps = states('input_number.co2_gramm_pro_sekunde') | float(0.26) %}{% set vol = states('input_number.co2_zeltvolumen') | float(5.76) %}{% set mn = states('input_number.co2_impulsdauer') | float(5) %}{% set mx = states('input_number.co2_impulsdauer_max') | float(20) %}{% set gramm = ([ziel - ist, 0] | max) * vol / 557 %}{{ ([ [gramm / gps, mn] | max, mx ] | min) | round(0) | int }}{% endif %}"),
 
         // --- Automationen -------------------------------------------------
-        new(Co2, "automation.co2_dosierung_rdwc_port_5", "CO2 Dosierung", BauteilArt.Automation,
+        new(Co2, "automation.co2_dosierung", "CO2 Dosierung", BauteilArt.Automation,
             "Die eigentliche Regelung: Impuls, Prüfen, Warten.", VorlagenDatei: "dosierung",
             Probelauf: ProbelaufRolle.Pausieren),
-        new(Co2, "automation.co2_wachter_rdwc_port_5", "CO2 Wächter", BauteilArt.Automation,
+        new(Co2, "automation.co2_wachter", "CO2 Wächter", BauteilArt.Automation,
             "Schließt das Ventil zwangsweise, wenn es zu lange offen steht. Wird immer angelegt.", VorlagenDatei: "waechter",
             Probelauf: ProbelaufRolle.Laufenlassen),
-        new(Co2, "automation.co2_abluft_drosselung_t6_rdwc_port_1", "CO2 Abluft-Drosselung", BauteilArt.Automation,
+        new(Co2, "automation.co2_abluft_drosselung", "CO2 Abluft-Drosselung", BauteilArt.Automation,
             "Senkt die Abluft während des Dosierens.", Pflicht: false, HaengtAn: BrauchtAbluft,
             OhneDas: "Ohne Abluft-Regler entfällt die Drosselung.", VorlagenDatei: "abluft",
             Probelauf: ProbelaufRolle.Laufenlassen),
         // Fork AI (A-016): Bisher nur in der Anlage, in der sie zuerst lief. Schließt das Ventil in
         // dem Moment, in dem das Licht ausgeht — ohne auf das Ende des laufenden Zyklus zu warten.
-        new(Co2, "automation.co2_dosierung_licht_aus_sicherung_rdwc_port_5", "CO2 Licht-aus Sicherung", BauteilArt.Automation,
+        new(Co2, "automation.co2_licht_aus_sicherung", "CO2 Licht-aus Sicherung", BauteilArt.Automation,
             "Schließt das Ventil sofort, wenn das Licht ausgeht — Nachts wird nie begast.",
             VorlagenDatei: "licht_aus_sicherung", Probelauf: ProbelaufRolle.Laufenlassen),
 

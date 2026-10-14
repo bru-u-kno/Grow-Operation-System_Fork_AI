@@ -14,7 +14,7 @@ public sealed class Co2RechenwerteTests
     private const string Bedarf = "binary_sensor.co2_bedarf";
     private const string Impuls = "sensor.co2_impuls_bedarf";
 
-    private static readonly Dictionary<string, string> Rollen = new() { ["co2_sensor"] = "sensor.big_co2_light_sensor_co2" };
+    private static readonly Dictionary<string, string> Rollen = new() { ["co2_sensor"] = "sensor.co2_sonde_co2" };
 
     private static JsonObject Echt()
         => (JsonObject)JsonNode.Parse(File.ReadAllText(
@@ -70,7 +70,7 @@ public sealed class Co2RechenwerteTests
     {
         var andere = new Dictionary<string, string> { ["co2_sensor"] = "sensor.anderer_fuehler" };
         Assert.Equal(Stand.AndererFuehler, Co2Rechenwerte.Beurteilen(Bedarf, EchteFormel(Bedarf), andere).Stand);
-        Assert.Equal("sensor.big_co2_light_sensor_co2", Co2Rechenwerte.FuehlerInFormel(Bedarf, EchteFormel(Bedarf)));
+        Assert.Equal("sensor.co2_sonde_co2", Co2Rechenwerte.FuehlerInFormel(Bedarf, EchteFormel(Bedarf)));
 
         // Auch die aktuelle Fassung mit anderem Fühler, und beim Impuls-Bedarf.
         Assert.Equal(Stand.AndererFuehler,

@@ -14,7 +14,7 @@ describe('Eintraege unter einem Geraet', () => {
   })
 
   it('nimmt die Domaene aus der Entity-ID', () => {
-    expect(domaeneVon('binary_sensor.big_port_5_zustand')).toBe('binary_sensor')
+    expect(domaeneVon('binary_sensor.ac_port_5_zustand')).toBe('binary_sensor')
     expect(domaeneVon('ohne_punkt')).toBe('')
   })
 

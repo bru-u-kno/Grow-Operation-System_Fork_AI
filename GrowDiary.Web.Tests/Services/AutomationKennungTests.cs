@@ -18,8 +18,13 @@ namespace GrowDiary.Web.Tests.Services;
 /// Vorher stand deshalb jede angelegte Automation für immer unter „fehlt".</para>
 /// <para>Die handgebauten müssen weiter gelten: sie laufen in der echten Anlage.</para>
 /// </remarks>
-public sealed class AutomationKennungTests
+[Collection(BestandRaumSammlung.Name)]
+public sealed class AutomationKennungTests : IDisposable
 {
+    private readonly BestandRaumFuerTests _raum = new();
+
+    public void Dispose() => _raum.Dispose();
+
     private static readonly HomeAssistantSettings Einstellungen = new()
     {
         Enabled = true, BaseUrl = "http://ha.local:8123", AccessToken = "test",

@@ -232,7 +232,7 @@ public sealed class AutomationsVorlagenStimmigTests
     public void EinSelectBehaeltSeinenBefehl()
     {
         var rollen = AlleRollen("co2");
-        rollen["port_schalter"] = "select.rdwc_venti_aktiver_modus_2";
+        rollen["port_schalter"] = "select.luefter_aktiver_modus_2";
         var fertig = SteuerungAutomationService.Fuellen(Laden("co2", "dosierung"), rollen)!;
 
         var befehle = Objekte(fertig).Where(o => o["target"]?["entity_id"]?.ToString() == rollen["port_schalter"]).ToList();

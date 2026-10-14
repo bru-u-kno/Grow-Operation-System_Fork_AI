@@ -55,16 +55,20 @@ public class KennungsRaumTests
         "sensor.trotec_zelt_folge_aus_temperatur",
         "sensor.trotec_zelt_wieder_ein_temperatur",
         "automation.rdwc_trotec_zelt_shelly_plan_regelung",
+        "automation.co2_dosierung_rdwc_port_5",
+        "automation.co2_wachter_rdwc_port_5",
+        "automation.co2_abluft_drosselung_t6_rdwc_port_1",
+        "automation.co2_dosierung_licht_aus_sicherung_rdwc_port_5",
     };
 
-    private static readonly string[] Entfeuchtermodule = { "entfeuchter", SteuerungGeraeteRollen.ZusatzModul };
+    private static readonly string[] Entfeuchtermodule = { "entfeuchter", SteuerungGeraeteRollen.ZusatzModul, "co2" };
 
     [Fact]
     public void ImBestandHeissenDieBauteileSoWieVorDerUmstellung()
     {
         var bestand = SteuerungBauteile.FuerRaum(KennungsRaum.Bestand).Select(b => b.EntityId).ToHashSet();
 
-        Assert.Equal(34, AlterStand.Length);
+        Assert.Equal(38, AlterStand.Length);
         Assert.Empty(AlterStand.Where(id => !bestand.Contains(id)));
     }
 
@@ -121,8 +125,8 @@ public class KennungsRaumTests
     [Fact]
     public void DieVorlagenVerweisenImBestandNurAufAlteKennungen()
     {
-        foreach (var datei in Directory.EnumerateFiles(Path.Combine(SteuerungAutomationService.VorlagenWurzel, "entfeuchter"), "*.json")
-                     .Concat(Directory.EnumerateFiles(Path.Combine(SteuerungAutomationService.VorlagenWurzel, SteuerungGeraeteRollen.ZusatzModul), "*.json")))
+        foreach (var datei in new[] { "entfeuchter", SteuerungGeraeteRollen.ZusatzModul, "co2" }
+                     .SelectMany(m => Directory.EnumerateFiles(Path.Combine(SteuerungAutomationService.VorlagenWurzel, m), "*.json")))
         {
             var neu = File.ReadAllText(datei);
             var bestand = Kennungen.Uebersetzen(neu, KennungsRaum.Bestand);
@@ -194,6 +198,27 @@ public class KennungsRaumTests
     {
         // Wer neu beginnt und später Einstellungen speichert, rutscht beim nächsten Start nicht in den Bestand.
         Assert.Equal(erwartet, KennungsRaumWahl.Bestimmen(new KennungsRaumStand { Raum = gespeichert }, einstellungen, geraete).Raum);
+    }
+
+    [Fact]
+    public void BeiCo2GiltDasselbe_ImBestandDieHandgebaute_ImNeuenRaumNurDieAbgeleitete()
+    {
+        var handgebaut = "automation.co2_dosierung_rdwc_port_5";
+        var angelegt = "automation.co2_dosierung";
+        var vorhanden = new[]
+        {
+            new HomeAssistantEntity { EntityId = handgebaut },
+            new HomeAssistantEntity { EntityId = "automation.eigener_name", KonfigKennung = "fork_ai_co2_dosierung" },
+        };
+
+        var bestand = SteuerungBauteile.AutomationFinden(
+            SteuerungBauteile.FuerRaum(KennungsRaum.Bestand).Single(b => b.Modul == "co2" && b.VorlagenDatei == "dosierung"), vorhanden);
+        var neu = SteuerungBauteile.AutomationFinden(
+            SteuerungBauteile.FuerRaum(KennungsRaum.Neu).Single(b => b.Modul == "co2" && b.VorlagenDatei == "dosierung"),
+            new[] { new HomeAssistantEntity { EntityId = angelegt, KonfigKennung = "fork_ai_co2_dosierung" } });
+
+        Assert.Equal([handgebaut, "automation.eigener_name"], bestand);
+        Assert.Equal([angelegt], neu);
     }
 
     private static SteuerungRepository FrischeDatenbank(out string wurzel)

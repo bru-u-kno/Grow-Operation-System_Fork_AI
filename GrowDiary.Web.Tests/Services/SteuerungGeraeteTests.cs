@@ -44,8 +44,8 @@ public sealed class SteuerungGeraeteTests
     }
 
     [Theory]
-    [InlineData("sensor.big_co2_light_sensor_co2", "sensor")]
-    [InlineData("  number.rdwc_venti_einschaltleistung  ", "number")]
+    [InlineData("sensor.co2_sonde_co2", "sensor")]
+    [InlineData("  number.luefter_einschaltleistung  ", "number")]
     [InlineData("sensor.", null)]
     [InlineData(".co2", null)]
     [InlineData("sensor", null)]

@@ -80,7 +80,11 @@ public static class Kennungen
         new("sensor", "fork_entfeuchter_zusatz_vpd_aus_schwelle", "trotec_zelt_vpd_aus_schwelle", "Fork Entfeuchter Zusatz VPD AUS Schwelle", "Trotec Zelt VPD AUS Schwelle"),
         new("sensor", "fork_entfeuchter_zusatz_folge_aus_temperatur", "trotec_zelt_folge_aus_temperatur", "Fork Entfeuchter Zusatz Folge AUS Temperatur", "Trotec Zelt Folge AUS Temperatur"),
         new("sensor", "fork_entfeuchter_zusatz_wieder_ein_temperatur", "trotec_zelt_wieder_ein_temperatur", "Fork Entfeuchter Zusatz Wieder EIN Temperatur", "Trotec Zelt Wieder EIN Temperatur"),
-        new("automation", "zusatz_entfeuchter_regelung", "rdwc_trotec_zelt_shelly_plan_regelung", "Zusatz-Entfeuchter Regelung", "Zusatz-Entfeuchter Regelung")
+        new("automation", "zusatz_entfeuchter_regelung", "rdwc_trotec_zelt_shelly_plan_regelung", "Zusatz-Entfeuchter Regelung", "Zusatz-Entfeuchter Regelung"),
+        new("automation", "co2_dosierung", "co2_dosierung_rdwc_port_5", "CO2 Dosierung", "CO2 Dosierung"),
+        new("automation", "co2_wachter", "co2_wachter_rdwc_port_5", "CO2 Wächter", "CO2 Wächter"),
+        new("automation", "co2_abluft_drosselung", "co2_abluft_drosselung_t6_rdwc_port_1", "CO2 Abluft-Drosselung", "CO2 Abluft-Drosselung"),
+        new("automation", "co2_licht_aus_sicherung", "co2_dosierung_licht_aus_sicherung_rdwc_port_5", "CO2 Licht-aus Sicherung", "CO2 Licht-aus Sicherung")
     };
 
     private static readonly IReadOnlyDictionary<string, Altkennung> NachNeuerId =

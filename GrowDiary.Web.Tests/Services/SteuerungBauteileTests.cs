@@ -116,7 +116,7 @@ public class SteuerungBauteileTests
 
         // Der Waechter wird immer gebraucht - ohne ihn kann ein verschluckter
         // Abschaltbefehl das Ventil offen lassen.
-        Assert.Contains(ohne, b => b.EntityId == "automation.co2_wachter_rdwc_port_5");
+        Assert.Contains(ohne, b => b.EntityId == "automation.co2_wachter");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class SteuerungBauteileTests
             .ToList();
 
         Assert.DoesNotContain("input_number.co2_t6_stufe_tief", ohneAbluft);
-        Assert.DoesNotContain("automation.co2_abluft_drosselung_t6_rdwc_port_1", ohneAbluft);
+        Assert.DoesNotContain("automation.co2_abluft_drosselung", ohneAbluft);
         Assert.Contains("input_number.co2_hysterese", ohneAbluft);
     }
     // ------------------------------------------- Vorlagen der Rechenwerte
