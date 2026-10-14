@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.222
+
+**Fork AI.** Ein wackelnder Prüffall der Seite Entfeuchtung ist repariert; die App selbst ändert sich nicht.
+
+- **Was wackelte:** Die E2E-Fälle zu Stufen, Automatik und „Wann darf entfeuchtet werden?" prüften die Körper der Speichern-Aufrufe sofort nach der Meldung „Gespeichert.". Der zweite Aufruf (für den Zusatz-Entfeuchter) kommt einen Moment später an. Auf einem ausgelasteten Prüfrechner war er dann noch nicht da, der Fall wurde rot und lief erst beim Wiederholen durch (in zwei Läufen am 14.10.2026 beobachtet).
+- **Jetzt:** Die Prüfungen warten, bis der Aufruf ankommt (elf Stellen). Bei den Fällen „es wurde nichts geschrieben" ändert sich nichts. Lokal dreimal hintereinander ohne Wiederholung grün (60 von 60).
+
 ## 2.0.0-forkai.221
 
 **Fork AI.** Die Entfeuchter halten nachts die Luftfeuchte der Nacht ein, die Seite sagt, was bremst, und ein zu enger Helfer blockiert das Speichern nicht mehr.

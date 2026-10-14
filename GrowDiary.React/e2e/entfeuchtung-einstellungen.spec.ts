@@ -65,7 +65,7 @@ test('Stufe „Schnell": der Haupt-PUT trägt alle Felder samt Abstand, Einschal
   })
   expect(Object.keys(stand.hauptPuts[0]).sort(), 'der Hauptentfeuchter schickt ALLE Felder').toEqual(Object.keys(HAUPT_EINSTELLUNGEN).sort())
   // Der Zusatz schickt nur sein Geändertes: den Mindestlauf. Hilfsstärke, Mindestpause und „Zuschalten nach" gehören ihm.
-  expect(stand.puts).toEqual([{ mindestlaufzeitMin: 10 }])
+  await expect.poll(() => stand.puts).toEqual([{ mindestlaufzeitMin: 10 }])
   await expect(stufe(page, 'Schnell')).toHaveAttribute('aria-checked', 'true')
   await expect(hilfsWahl(page).getByRole('radio', { name: 'normal', exact: true })).toHaveAttribute('aria-checked', 'true')
 
@@ -79,7 +79,7 @@ test('Stufe „Schnell": der Haupt-PUT trägt alle Felder samt Abstand, Einschal
     feuchteEinTag: 60, feuchteAusTag: 54, feuchteEinNacht: 62, feuchteAusNacht: 56,
     wartezeitAussenluftMin: 25,
   })
-  expect(stand.puts).toEqual([{ mindestlaufzeitMin: 10 }, { mindestlaufzeitMin: 25 }])
+  await expect.poll(() => stand.puts).toEqual([{ mindestlaufzeitMin: 10 }, { mindestlaufzeitMin: 25 }])
   await expect(stufe(page, 'Ruhig')).toHaveAttribute('aria-checked', 'true')
 
   // Nach dem Neuladen steht es immer noch da (das Backend hat es gespeichert, die Seite liest es zurück).
@@ -128,7 +128,7 @@ test('echte Nutzer-Werte ergeben „Normal" bei den Reaktionen und „Eigene Wer
     if (durchgang === 1) { await page.reload({ waitUntil: 'networkidle' }) }
   }
   expect(stand.hauptPuts, 'es wurde nichts geschrieben').toEqual([])
-  expect(stand.puts, 'es wurde nichts geschrieben').toEqual([])
+  await expect.poll(() => stand.puts, { message: 'es wurde nichts geschrieben' }).toEqual([])
 })
 
 // ------------------------------------------------------------------ c) „Ruhig" hebt die Wartezeit auf Außenluft an
@@ -145,7 +145,7 @@ test('Stufe „Ruhig" hebt die Wartezeit auf Außenluft auf 10 — das Backend v
     einschaltverzoegerungMin: 10, wartezeitAussenluftMin: 10, hystereseProzent: 6, mindestlaufzeitMin: 30,
     feuchteEinTag: 50, feuchteAusTag: 44, feuchteEinNacht: 50, feuchteAusNacht: 44,
   })
-  expect(stand.puts).toEqual([{ mindestlaufzeitMin: 25 }])
+  await expect.poll(() => stand.puts).toEqual([{ mindestlaufzeitMin: 25 }])
 
   // Zweiter Durchgang, ohne Neuladen: wieder auf „Normal" — die Außenluft-Wartezeit bleibt bei 10 (sie wird nur angehoben,
   // nie von selbst gekürzt), und sie ist nie kürzer als „Einschalten nach".
@@ -153,7 +153,7 @@ test('Stufe „Ruhig" hebt die Wartezeit auf Außenluft auf 10 — das Backend v
   await speichern(page).click()
   await gespeichert(page)
   expect(stand.hauptPuts[1]).toMatchObject({ einschaltverzoegerungMin: 2, wartezeitAussenluftMin: 10, hystereseProzent: 4, feuchteAusTag: 46 })
-  expect(stand.puts.at(-1)).toEqual({ mindestlaufzeitMin: 15 })
+  await expect.poll(() => stand.puts.at(-1)).toEqual({ mindestlaufzeitMin: 15 })
   for (const put of stand.hauptPuts) {
     expect(put.wartezeitAussenluftMin as number, 'Wartezeit auf Außenluft kürzer als „Einschalten nach"').toBeGreaterThanOrEqual(put.einschaltverzoegerungMin as number)
   }
@@ -175,7 +175,7 @@ test('Automatik und „Wann darf entfeuchtet werden?" setzen BEIDE Geräte — z
   await gespeichert(page)
   expect(stand.hauptPuts).toHaveLength(1)
   expect(stand.hauptPuts[0]).toMatchObject({ automatikAktiv: false, tagbetriebErlauben: true })
-  expect(stand.puts).toEqual([{ automatikAktiv: false }])
+  await expect.poll(() => stand.puts).toEqual([{ automatikAktiv: false }])
   await expect(automatik).not.toBeChecked()
 
   // Durchgang 2, ohne Neuladen: „Nur nachts" (die Automatik bleibt aus und darf nicht von selbst zurückspringen).
@@ -183,7 +183,7 @@ test('Automatik und „Wann darf entfeuchtet werden?" setzen BEIDE Geräte — z
   await speichern(page).click()
   await gespeichert(page)
   expect(stand.hauptPuts[1]).toMatchObject({ automatikAktiv: false, tagbetriebErlauben: false })
-  expect(stand.puts).toEqual([{ automatikAktiv: false }, { tagbetriebErlauben: false }])
+  await expect.poll(() => stand.puts).toEqual([{ automatikAktiv: false }, { tagbetriebErlauben: false }])
   await expect(wannWahl(page).getByRole('radio', { name: 'Nur nachts', exact: true })).toHaveAttribute('aria-checked', 'true')
 
   // Durchgang 3: beides zurück, in einem Speichern — beide Geräte folgen.
@@ -192,7 +192,7 @@ test('Automatik und „Wann darf entfeuchtet werden?" setzen BEIDE Geräte — z
   await speichern(page).click()
   await gespeichert(page)
   expect(stand.hauptPuts[2]).toMatchObject({ automatikAktiv: true, tagbetriebErlauben: true })
-  expect(stand.puts.at(-1)).toEqual({ automatikAktiv: true, tagbetriebErlauben: true })
+  await expect.poll(() => stand.puts.at(-1)).toEqual({ automatikAktiv: true, tagbetriebErlauben: true })
 })
 
 test('Automatik: stehen die zwei Geräte verschieden, sagt die Seite es — und ein Klick setzt beide', async ({ page }) => {
@@ -209,7 +209,7 @@ test('Automatik: stehen die zwei Geräte verschieden, sagt die Seite es — und 
   await speichern(page).click()
   await gespeichert(page)
   // Der Hauptentfeuchter war schon an: sein Körper trägt weiter alle Felder, mit „an". Der Zusatz schickt nur sein Geändertes.
-  expect(stand.puts).toEqual([{ automatikAktiv: true }])
+  await expect.poll(() => stand.puts).toEqual([{ automatikAktiv: true }])
   await expect(automatik).toBeChecked()
   await expect(page.locator('label.v1-switch', { hasText: 'Automatik' }).first()).not.toContainText('nur ein Gerät an')
 })
@@ -230,7 +230,7 @@ test('„Einschalten über": ein Wert für Tag und Nacht, AUS = EIN − Abstand 
   await gespeichert(page)
   expect(stand.hauptPuts[0]).toMatchObject({ feuchteEinTag: 52, feuchteEinNacht: 52, feuchteAusTag: 48, feuchteAusNacht: 48, hystereseProzent: 4 })
   expect(stand.hauptPuts[0].feuchteEinTag).toBe(stand.hauptPuts[0].feuchteEinNacht)
-  expect(stand.puts, 'der Zusatz bekommt die Schwellen nicht').toEqual([])
+  await expect.poll(() => stand.puts, { message: 'der Zusatz bekommt die Schwellen nicht' }).toEqual([])
 
   // Durchgang 2, ohne Neuladen: der Abstand (unter „Erweitert") auf 3 → AUS = 49 für beide, EIN bleibt; die Stufe heißt „Eigene Werte".
   await aufklappen(page, /Erweitert/)
@@ -532,7 +532,7 @@ test('Arbeitsbereich „Aus dem Plan": Obergrenze 54 und Vorlauf 4 ergeben 50/46
     arbeitsbereichQuelle: 'plan', vorlaufProzent: 4,
     feuchteEinTag: 50, feuchteAusTag: 46, feuchteEinNacht: 50, feuchteAusNacht: 46,
   })
-  expect(stand.puts).toHaveLength(0)
+  await expect.poll(() => stand.puts).toHaveLength(0)
 
   // Durchgang 2: Vorlauf 6 → EIN 48, AUS 44; wieder speichern (zweites Speichern, Seite nicht neu geladen).
   await vorlaufFeld(page).fill('6')
