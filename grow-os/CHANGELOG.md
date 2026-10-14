@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.219
+
+**Fork AI.** Die Regelung des Zusatz-Entfeuchters wird von Home Assistant nicht mehr abgeschaltet.
+
+- **Was passierte:** Nach einem Neuladen der Automationen in Home Assistant (zum Beispiel nach einem Neustart oder nach dem Speichern der Entfeuchter-Einstellungen) meldete Home Assistant „Cannot use 'for' with a list of states" und schaltete die Regelung des Zusatz-Entfeuchters ab. Sie stand dann still, bis jemand sie neu anlegte — während der Haupt-Entfeuchter allein weiterlief. Auf der Seite sah man davon nichts.
+- **Die Ursache:** Die Bedingung „Haupt-Entfeuchter läuft seit der Zuschalt-Verzögerung" prüfte eine Liste von Zuständen (`On`, `on`) zusammen mit einer Dauer. Das erlaubt Home Assistant nicht. Sie steht jetzt je Zustand in einer ODER-Bedingung, an den drei Stellen (Einschalten am Tag nach VPD, am Tag nach Luftfeuchte, nachts).
+- **Neue Fassung der Vorlage (3):** Wer die Regelung schon angelegt hat, sieht sie unter „Einrichtung" als veraltet und kann sie dort erneuern; die Schwellen und Zeiten bleiben unverändert.
+- **Geprüft:** Ein neuer Test liest alle mitgelieferten Vorlagen und meldet jede Zustandsbedingung, die eine Liste mit einer Dauer verbindet. Mit der alten Vorlage wird er rot (Bissnachweis), mit der neuen grün; die vorhandenen Tests der Zusatz-Vorlage laufen unverändert durch.
+
 ## 2.0.0-forkai.218
 
 **Fork AI.** CO₂: Die Regelungen heißen für neue Installationen so, wie Home Assistant sie aus dem Namen der Vorlage ableitet — ohne die Port-Namen der Anlage des Entwicklers.
