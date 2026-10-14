@@ -1,6 +1,6 @@
 {
   "alias": "Zusatz-Entfeuchter Regelung",
-  "description": "Folgegeraet neben dem Fuehrungsgeraet (Entfeuchter, Rolle fuehrung_zustand). Schaltet den Zusatz-Entfeuchter (Schaltsteckdose) nach den Zielwerten des Plans: TAG (Licht an) VPD-Band um das Plan-Ziel (EIN unter sensor.fork_entfeuchter_zusatz_vpd_ein_schwelle, AUS ueber sensor.fork_entfeuchter_zusatz_vpd_aus_schwelle); nennt der Plan kein VPD-Ziel, gelten die Plan-Feuchte-Schwellen auch am Tag; NACHT Feuchte nach sensor.fork_entfeuchter_feuchte_ein_aktiv / _aus_aktiv, oder - mit Nacht durchlaufen - nur die Temperaturgrenze. ZUSAMMENSPIEL: Beide Geraete duerfen nie gleichzeitig ausgehen. 1) Zuschalten erst, wenn die Fuehrung mindestens input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung Minuten laeuft - ist sie aus, startet der Zusatz sofort. 2) Waerme: Der Zusatz geht schon bei sensor.fork_entfeuchter_zusatz_folge_aus_temperatur (= sensor.fork_entfeuchter_temp_max_aktiv minus input_number.fork_entfeuchter_zusatz_folge_abstand) aus, aber nur, wenn die Fuehrung laeuft; laeuft sie nicht, bleibt er bis zur Grenze an. 3) Wieder an erst unter sensor.fork_entfeuchter_zusatz_wieder_ein_temperatur (= Folge-AUS minus input_number.fork_entfeuchter_zusatz_wieder_ein_abstand), nach input_number.fork_entfeuchter_zusatz_mindestpause. 4) Abschalten wegen VPD/Feuchte nur, wenn die Fuehrung laeuft (mindestens ein Geraet bleibt), und erst nach input_number.fork_entfeuchter_zusatz_mindestlaufzeit. Uebertemperatur ueber der Grenze schaltet immer sofort ab. Voraussetzung: sensor.fork_entfeuchter_temp_max_aktiv und die Plan-Sensoren des Entfeuchters; fehlen sie, schaltet die Regelung nicht ein. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - REGELGROESSE (Fassung 2): input_boolean.fork_entfeuchter_vpd_regelung - derselbe Schalter wie beim Fuehrungsgeraet - steht er ausdruecklich auf AUS, regelt der Zusatz auch am TAG nach der Feuchte (sensor.fork_entfeuchter_feuchte_ein_aktiv / _aus_aktiv, dieselben Schwellen wie das Fuehrungsgeraet) statt nach dem VPD; sonst wie bisher. Herkunft: fork-ai/entfeuchter-zusatz/regelung/2.",
+  "description": "Folgegeraet neben dem Fuehrungsgeraet (Entfeuchter, Rolle fuehrung_zustand). Schaltet den Zusatz-Entfeuchter (Schaltsteckdose) nach den Zielwerten des Plans: TAG (Licht an) VPD-Band um das Plan-Ziel (EIN unter sensor.fork_entfeuchter_zusatz_vpd_ein_schwelle, AUS ueber sensor.fork_entfeuchter_zusatz_vpd_aus_schwelle); nennt der Plan kein VPD-Ziel, gelten die Plan-Feuchte-Schwellen auch am Tag; NACHT Feuchte nach sensor.fork_entfeuchter_feuchte_ein_aktiv / _aus_aktiv, oder - mit Nacht durchlaufen - nur die Temperaturgrenze. ZUSAMMENSPIEL: Beide Geraete duerfen nie gleichzeitig ausgehen. 1) Zuschalten erst, wenn die Fuehrung mindestens input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung Minuten laeuft - ist sie aus, startet der Zusatz sofort. 2) Waerme: Der Zusatz geht schon bei sensor.fork_entfeuchter_zusatz_folge_aus_temperatur (= sensor.fork_entfeuchter_temp_max_aktiv minus input_number.fork_entfeuchter_zusatz_folge_abstand) aus, aber nur, wenn die Fuehrung laeuft; laeuft sie nicht, bleibt er bis zur Grenze an. 3) Wieder an erst unter sensor.fork_entfeuchter_zusatz_wieder_ein_temperatur (= Folge-AUS minus input_number.fork_entfeuchter_zusatz_wieder_ein_abstand), nach input_number.fork_entfeuchter_zusatz_mindestpause. 4) Abschalten wegen VPD/Feuchte nur, wenn die Fuehrung laeuft (mindestens ein Geraet bleibt), und erst nach input_number.fork_entfeuchter_zusatz_mindestlaufzeit. Uebertemperatur ueber der Grenze schaltet immer sofort ab. Voraussetzung: sensor.fork_entfeuchter_temp_max_aktiv und die Plan-Sensoren des Entfeuchters; fehlen sie, schaltet die Regelung nicht ein. Aus-Knopf: Automation ausschalten. Angelegt von Grow OS Fork AI - REGELGROESSE (Fassung 2): input_boolean.fork_entfeuchter_vpd_regelung - derselbe Schalter wie beim Fuehrungsgeraet - steht er ausdruecklich auf AUS, regelt der Zusatz auch am TAG nach der Feuchte (sensor.fork_entfeuchter_feuchte_ein_aktiv / _aus_aktiv, dieselben Schwellen wie das Fuehrungsgeraet) statt nach dem VPD; sonst wie bisher. FASSUNG 3: Die Zuschalt-Verzoegerung der Fuehrung steht je Zustand (On / on) in einer ODER-Bedingung - Home Assistant lehnt eine Zustandsliste zusammen mit \"for\" ab und schaltete die ganze Regelung beim Neuladen ab. Herkunft: fork-ai/entfeuchter-zusatz/regelung/3.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [
@@ -319,13 +319,18 @@
                 {
                   "condition": "state",
                   "entity_id": "[[fuehrung_zustand]]",
-                  "state": [
-                    "On",
-                    "on"
-                  ],
                   "for": {
                     "minutes": "{{ states('input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung') | int(10) }}"
-                  }
+                  },
+                  "state": "On"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "for": {
+                    "minutes": "{{ states('input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung') | int(10) }}"
+                  },
+                  "state": "on"
                 }
               ]
             },
@@ -410,13 +415,18 @@
                 {
                   "condition": "state",
                   "entity_id": "[[fuehrung_zustand]]",
-                  "state": [
-                    "On",
-                    "on"
-                  ],
                   "for": {
                     "minutes": "{{ states('input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung') | int(10) }}"
-                  }
+                  },
+                  "state": "On"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "for": {
+                    "minutes": "{{ states('input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung') | int(10) }}"
+                  },
+                  "state": "on"
                 }
               ]
             }
@@ -480,13 +490,18 @@
                 {
                   "condition": "state",
                   "entity_id": "[[fuehrung_zustand]]",
-                  "state": [
-                    "On",
-                    "on"
-                  ],
                   "for": {
                     "minutes": "{{ states('input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung') | int(10) }}"
-                  }
+                  },
+                  "state": "On"
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "[[fuehrung_zustand]]",
+                  "for": {
+                    "minutes": "{{ states('input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung') | int(10) }}"
+                  },
+                  "state": "on"
                 }
               ]
             }

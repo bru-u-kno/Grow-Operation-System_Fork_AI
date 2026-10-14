@@ -503,6 +503,6 @@ public sealed class EntfeuchterZusatzVorlagenTests
         }
 
         // Die Fassung steht in der Beschreibung — sonst aktualisiert der Fork die Automation in Home Assistant nie.
-        Assert.Equal(2, SteuerungAutomationService.Fassung(regelung["description"]!.ToString()));
+        Assert.Equal(3, SteuerungAutomationService.Fassung(regelung["description"]!.ToString()));
     }
 }

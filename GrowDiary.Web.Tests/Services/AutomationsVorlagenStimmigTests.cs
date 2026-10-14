@@ -301,4 +301,32 @@ public sealed class AutomationsVorlagenStimmigTests
             Assert.Contains((b.Modul, b.VorlagenDatei!), dateien);
         }
     }
+
+    /// <summary>
+    /// Fork AI (14.10.2026): Home Assistant lehnt eine Zustandsbedingung ab, die eine LISTE von Zuständen
+    /// mit <c>for</c> verbindet („Cannot use 'for' with a list of states") — und schaltet beim Neuladen die
+    /// ganze Automation ab. Die Zusatz-Regelung stand deshalb nach einem Neustart still, obwohl sie
+    /// vorher lief (sie war schon geladen). Gilt für Bedingungen; bei Auslösern ist die Liste erlaubt.
+    /// </summary>
+    [Fact]
+    public void Keine_Zustandsbedingung_verbindet_eine_Liste_mit_for()
+    {
+        var dateien = Directory.GetFiles(Wurzel, "*.json", SearchOption.AllDirectories);
+        Assert.True(dateien.Length >= 7);
+
+        var verstoesse = new List<string>();
+        foreach (var datei in dateien)
+        {
+            var wurzel = JsonNode.Parse(File.ReadAllText(datei)) as JsonObject;
+            foreach (var o in Objekte(wurzel))
+            {
+                if (o["condition"]?.GetValue<string>() == "state" && o["state"] is JsonArray && o.ContainsKey("for"))
+                {
+                    verstoesse.Add(Path.GetRelativePath(Wurzel, datei));
+                }
+            }
+        }
+
+        Assert.True(verstoesse.Count == 0, "Zustandsliste mit for: " + string.Join(", ", verstoesse.Distinct()));
+    }
 }
