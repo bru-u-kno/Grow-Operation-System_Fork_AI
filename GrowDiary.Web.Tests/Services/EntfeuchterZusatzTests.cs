@@ -734,7 +734,7 @@ public sealed class EntfeuchterZusatzTests
         // „entfeuchter-zusatz" hat einen Bindestrich; das Muster der Herkunftsmarke liess ihn früher nicht zu —
         // die Fassung der Vorlage wäre null gewesen, und eine Erneuerung nie angeboten worden.
         Assert.Equal(3, SteuerungAutomationService.Fassung("... Herkunft: fork-ai/entfeuchter-zusatz/regelung/3."));
-        Assert.Equal(2, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "regelung"));
+        Assert.Equal(3, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "regelung"));
         Assert.Equal(2, SteuerungAutomationService.VorlagenFassung("entfeuchter-zusatz", "meldung"));
     }
 
