@@ -1,5 +1,6 @@
 import { mkdirSync, openSync, closeSync, unlinkSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { test } from '@playwright/test'
 import { tmpdir } from 'node:os'
 
 /**
@@ -43,7 +44,21 @@ function schlafe(ms: number): Promise<void> {
 export async function nimmSchloss(): Promise<void> {
   mkdirSync(join(tmpdir(), 'grow-os-e2e'), { recursive: true })
 
-  const bis = Date.now() + VERFALL_MS
+  // Die Wartezeit gehört nicht zum Fall. Sie zählt sonst in sein Limit (30 s), und ein Fall, der hinter einem langen
+  // Halter steht — der Addback-Fall „Nachmessung" hält das Schloss gut eine Minute —, bräche im `beforeEach` ab, ohne dass
+  // die App etwas falsch gemacht hätte (CI 14.10.2026, drei von sechs Läufen rot). Das Limit läuft schon WÄHREND des
+  // Wartens ab, deshalb wird es vorher um die längste mögliche Wartezeit erweitert (so lange wartet die Schleife unten
+  // höchstens) und nach dem Erhalt auf „sein eigenes Limit + tatsächlich Gewartetes" zurückgesetzt. Dem Fall bleibt so
+  // sein volles Limit, und ein hängender Halter bremst ihn nicht länger als VERFALL_MS.
+  // Außerhalb eines Falls oder Hooks (kein TestInfo) und bei „kein Limit" (0) gibt es nichts zu verlängern.
+  let info: ReturnType<typeof test.info> | null = null
+  try { info = test.info() } catch { /* kein laufender Fall */ }
+  const eigenesLimit = info?.timeout ?? 0
+  const verlaengern = info != null && eigenesLimit > 0
+  if (verlaengern) info!.setTimeout(eigenesLimit + VERFALL_MS + 5_000)
+
+  const angefangen = Date.now()
+  const bis = angefangen + VERFALL_MS
   let habe = false
   while (!habe) {
     try {
@@ -68,6 +83,7 @@ export async function nimmSchloss(): Promise<void> {
     }
   }
 
+  if (verlaengern) info!.setTimeout(eigenesLimit + (Date.now() - angefangen))
 }
 
 /** Gibt das Schloss zurück. Gehört in `test.afterEach` — auch nach einem

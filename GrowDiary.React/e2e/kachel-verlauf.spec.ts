@@ -149,10 +149,18 @@ test('zweimal öffnen, zweimal „7 Tage" — die Woche wird nur einmal geladen'
   // Befund des Prüfers: der Verlauf hängt sich bei jedem Öffnen neu ein und
   // holte jedes Mal die ganze Woche (gut 20 000 Punkte).
   await live(page, request, 1280, '/live/2')
+  // Jeder Abruf wird mit Runde und Zeitpunkt notiert: Der Fall war in der CI einmal rot (zwei Abrufe statt einem), lokal nicht
+  // nachzustellen — auch nicht mit verzögerter Antwort (800 ms, 4 s). Bei der nächsten Röte zeigt die Meldung, in welcher Runde
+  // und wie schnell der zweite Abruf kam.
   const wochenAbrufe: string[] = []
-  page.on('request', (anfrage) => { if (/\/history\?.*days=7/.test(anfrage.url())) wochenAbrufe.push(anfrage.url()) })
+  let aktuelleRunde = 0
+  const start = Date.now()
+  page.on('request', (anfrage) => {
+    if (/\/history\?.*days=7/.test(anfrage.url())) wochenAbrufe.push(`Runde ${aktuelleRunde + 1}, nach ${Date.now() - start} ms: ${anfrage.url()}`)
+  })
   const kachel = page.locator('.gos-metric.is-clickable').first()
   for (let runde = 0; runde < 2; runde++) {
+    aktuelleRunde = runde
     await kachel.click()
     const verlauf = page.locator('[data-audit="metric-detail"]')
     await verlauf.locator('[data-audit="verlauf-zeitraum-7t"]').click()

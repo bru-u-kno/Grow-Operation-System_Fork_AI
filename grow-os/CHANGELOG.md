@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.223
+
+**Fork AI.** Die Prüfläufe auf GitHub werden nicht mehr rot, nur weil ein Prüffall auf das gemeinsame Schloss wartet; die App selbst ändert sich nicht.
+
+- **Was wiederholt rot wurde:** 16 Prüfdateien nehmen dasselbe Schloss, weil sie denselben Bestand beschreiben. Ein Fall — „Nachmessung" in den Addback-Prüfungen — hält es gut eine Minute, denn er wartet auf den Hintergrundtakt der App. Wer in dieser Zeit anstand, wartete im Vorbereitungsschritt, und die Wartezeit zählte in sein Limit von 30 Sekunden. Er brach mit „Test timeout of 30000ms exceeded while running beforeEach hook" ab, ohne dass die App etwas falsch gemacht hätte. In den Läufen vom 10. und 14.10.2026 war das der Grund für drei von sechs roten Läufen; erst die automatische Wiederholung lief durch, wenn das Schloss inzwischen frei war.
+- **Die Reparatur:** Das Schloss verlängert das Limit des Falls um die Wartezeit — schon vor dem Warten, denn das Limit läuft während des Wartens ab, und nach dem Erhalt wieder auf sein eigenes Limit plus das tatsächlich Gewartete. Jedem Fall bleibt sein volles Limit; ein hängender Halter bremst nicht länger als bisher (90 Sekunden).
+- **Bissnachweis:** Ein neuer Fall (`schloss-wartezeit.spec.ts`) lässt zwei Fälle das Schloss je 3 Sekunden halten, bei 2 Sekunden Limit. Ohne die Reparatur bricht einer im Vorbereitungsschritt ab, mit derselben Meldung wie in der CI; mit ihr laufen beide durch. Eine erste Fassung der Reparatur, die das Limit erst nach dem Warten verlängerte, hätte diesen Fall nicht erwischt und ließ die echten Fälle weiter abbrechen — deshalb ist der Nachbau jetzt so streng. Alle 16 Dateien mit Schloss, vier Worker, ohne Wiederholung: zweimal hintereinander 82 von 82 grün.
+- **Messpunkte statt Raten:** Der Fall „zweimal öffnen, zweimal 7 Tage — die Woche wird nur einmal geladen" war einmal rot (zwei Abrufe statt einem), ließ sich weder lokal noch mit verzögerter Antwort (0,8 s, 4 s) nachstellen. Seine Fehlermeldung nennt jetzt Runde und Zeitpunkt jedes Abrufs, damit der nächste Treffer die Ursache zeigt.
+
 ## 2.0.0-forkai.222
 
 **Fork AI.** Ein wackelnder Prüffall der Seite Entfeuchtung ist repariert; die App selbst ändert sich nicht.
