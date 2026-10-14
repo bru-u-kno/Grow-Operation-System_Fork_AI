@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.221
+
+**Fork AI.** Die Entfeuchter halten nachts die Luftfeuchte der Nacht ein, die Seite sagt, was bremst, und ein zu enger Helfer blockiert das Speichern nicht mehr.
+
+- **Tag und Nacht getrennt aus dem Plan:** Der Plan nennt für die Nacht eine eigene Obergrenze der Luftfeuchte („RH max Nacht"). Die Entfeuchter rechneten bisher für Tag und Nacht mit der Tages-Obergrenze; die Nacht-Obergrenze wirkte nur auf die Meldung aufs Handy. Jetzt gilt bei „Arbeitsbereich aus dem Plan" nachts: Einschalten = Nacht-Obergrenze minus Vorlauf, Ausschalten = Einschalten minus Abstand. Beispiel Woche „Flush": Tag 53 / Nacht 50, Vorlauf 5 %, Abstand 2 % ergibt Tag 48/46 und Nacht 45/43. Nennt der Plan keine Nachtgrenze, gilt nachts die des Tages. In „Einstellungen → Ziel · Luftfeuchte" stehen beide Plan-Obergrenzen und beide Schwellenpaare, der Überblick misst nachts an der Nachtgrenze.
+- **Zu enge Helfer weiten sich:** Ein von Hand angelegter Helfer trug engere Grenzen als der Fork braucht („Feuchte EIN Nacht" stand auf 50 bis 85, gewollt war 48). Home Assistant lehnte den Wert ab, die Seite zeigte nur „nicht alle Helfer übernommen", und nachts blieb EIN bei 50 %. Der Fork liest jetzt vor dem Schreiben den Bereich der Zahl-Helfer und weitet einen zu engen auf den Bereich des Katalogs (30 bis 90 %). Er weitet nur, verengt nie, und Name, Schritt und Einheit bleiben. Steht der Wert nach dem Weiten, ist die gelbe Meldung weg.
+- **Neue Kachel „Was bremst gerade?":** Im Überblick, zwischen Messwerten und Geräten. Sie nennt, warum die Luftfeuchte nicht beim Plan-Wert ist, mit den Zahlen dahinter: Der Entfeuchter läuft seit mindestens einer Stunde und die Feuchte liegt so lange über dem Plan-Wert („schafft es nicht"); zu warm (alle Entfeuchter aus); Wartezeit auf Außenluft („5 statt 1 Minuten"); Tagbetrieb aus; Automatik aus; CO₂-Drosselung. Ohne Befund steht „nichts" in der Kopfzeile. Die Dauer kommt aus dem Verlauf der letzten drei Stunden, nie aus einem einzelnen Messwert.
+- **Nicht gebaut:** Eine Ausnahmeregel in der Regelung selbst („am Plan-Wert ohne Wartezeit einschalten") gibt es noch nicht — sie würde nur Regelungen betreffen, die der Fork angelegt hat, nicht handgebaute. Und keine eigene Handy-Meldung für „schafft es nicht": der Grenzwert „Luftfeuchte" meldet schon, wenn die Feuchte über der Grenze liegt.
+- **Geprüft:** 22 neue Backend-Tests (Tag/Nacht, Bereich weiten, jede Bremse mit ihren Grenzfällen, Dauer aus dem Verlauf), 4 neue Frontend-Tests, 5 neue E2E-Fälle (Kachel mit und ohne Befund, alter Server ohne die neuen Felder, Nachtgrenze im Überblick, Tag/Nacht in den Einstellungen — jeweils zweimal). Bissnachweis: Mit absichtlich eingebauten Fehlern (Nachtwert ignoriert, Kapazität ohne Dauer, Bereich nie geweitet, Bremsen leer, Nachtgrenze fehlt) werden die Tests rot.
+
 ## 2.0.0-forkai.220
 
 **Fork AI.** Bei Installationen mit den alten Namen (zum Beispiel `trotec_*`) schreibt der Fork die Regelungen des Zusatz-Entfeuchters jetzt mit den Namen, die es dort wirklich gibt.
