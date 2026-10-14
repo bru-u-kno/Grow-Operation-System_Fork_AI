@@ -92,8 +92,14 @@ public static class Kennungen
 
     // Längste zuerst: „…_feuchte_ein“ ist Vorspann von „…_feuchte_ein_aktiv“; die Grenzen im Muster
     // (kein Buchstabe, Ziffer oder Unterstrich davor/danach) trennen sie, die Sortierung hält es robust.
+    //
+    // Fork AI (forkai.220): Der Text ist oft schon als JSON geschrieben (`JsonNode.ToJsonString`), und dort steht ein Apostroph als
+    // `\u0027`. Eine Entity-ID in `states('input_number.…')` hat dann „…0027" vor sich — eine Ziffer —, und die Grenze „kein
+    // Buchstabe, Ziffer oder Unterstrich davor" lehnte sie ab. Folge: Im Bestand blieben sechs neue Namen in der Zusatz-Regelung
+    // stehen (Mindestlaufzeit, Mindestpause, Zuschalt-Verzögerung, VPD-Schalter und -Schwellen), die es dort nicht gibt. Ein
+    // JSON-Ausdruck `\u00XX` zählt deshalb nicht als Teil eines Namens.
     private static readonly Regex NeueIds = new(
-        "(?<![a-z0-9_])(" + string.Join("|", Tabelle.OrderByDescending(a => a.NeueId.Length)
+        "(?:(?<![a-z0-9_])|(?<=\\\\u00[0-9A-Fa-f]{2}))(" + string.Join("|", Tabelle.OrderByDescending(a => a.NeueId.Length)
             .Select(a => Regex.Escape(a.NeueId))) + ")(?![a-z0-9_])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
