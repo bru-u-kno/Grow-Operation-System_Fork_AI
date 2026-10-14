@@ -96,6 +96,19 @@ export function arbeitsbereichAusPlan(planObergrenze: number, vorlaufProzent: nu
 }
 
 /**
+ * Die vier Schwellen bei „Arbeitsbereich aus dem Plan", Tag und Nacht einzeln: Der Plan nennt für die Nacht eine eigene Obergrenze
+ * der Luftfeuchte, und die Entfeuchter sollen sie nachts genauso einhalten wie die Tages-Obergrenze am Tag. Ohne Nachtgrenze
+ * gilt nachts die des Tages.
+ *
+ * <b>Spiegel zum Backend</b> (`EntfeuchterSteuerungService.ArbeitsbereichAusPlan(e, rhTag, rhNacht)`).
+ */
+export function schwellenAusPlan(planTag: number, planNacht: number | null, vorlaufProzent: number, abstandProzent: number): Schwellen {
+  const tag = arbeitsbereichAusPlan(planTag, vorlaufProzent, abstandProzent)
+  const nacht = planNacht != null && Number.isFinite(planNacht) ? arbeitsbereichAusPlan(planNacht, vorlaufProzent, abstandProzent) : tag
+  return { feuchteEinTag: tag.ein, feuchteAusTag: tag.aus, feuchteEinNacht: nacht.ein, feuchteAusNacht: nacht.aus }
+}
+
+/**
  * Die Felder nach einer Änderung am Abstand: bei „Arbeitsbereich aus dem Plan" rechnet EIN mit neu (die Spanne hängt vom
  * Abstand ab), sonst bleibt EIN und nur AUS verschiebt sich.
  */
@@ -103,10 +116,10 @@ export function schwellenNachAbstand(
   aktuell: Schwellen & { arbeitsbereichQuelle?: 'fest' | 'plan'; vorlaufProzent?: number },
   abstandProzent: number,
   planObergrenze: number | null,
+  planObergrenzeNacht: number | null = null,
 ): Schwellen {
   if (aktuell.arbeitsbereichQuelle === 'plan' && planObergrenze != null && Number.isFinite(abstandProzent)) {
-    const { ein } = arbeitsbereichAusPlan(planObergrenze, aktuell.vorlaufProzent ?? 4, abstandProzent)
-    return einSchwelleSetzen(aktuell, abstandProzent, { wert: ein, tageszeit: 'beide' })
+    return schwellenAusPlan(planObergrenze, planObergrenzeNacht, aktuell.vorlaufProzent ?? 4, abstandProzent)
   }
   return abstandAnwenden(aktuell, abstandProzent)
 }

@@ -122,4 +122,37 @@ public sealed class ArbeitsbereichAusPlanTests
         Assert.Equal(4, e.VorlaufProzent);
         Assert.Empty(EntfeuchterSteuerungService.Pruefen(e));
     }
+
+    // ---- Tag und Nacht getrennt (A-022) -------------------------------------------------------------------------------
+
+    [Fact]
+    public void NachtNimmtDieNachtGrenzeDesPlans_nichtDieDesTages()
+    {
+        // Beispielwoche „Flush": Plan-Obergrenze Tag 53, Nacht 50, Vorlauf 5, Abstand 2.
+        var b = EntfeuchterSteuerungService.ArbeitsbereichAusPlan(Plan(vorlauf: 5, abstand: 2), 53, 50)!.Value;
+        Assert.Equal((48d, 46d), (b.EinTag, b.AusTag));
+        Assert.Equal((45d, 43d), (b.EinNacht, b.AusNacht));
+    }
+
+    [Fact]
+    public void OhneNachtGrenzeGiltNachtsDieDesTages()
+    {
+        var b = EntfeuchterSteuerungService.ArbeitsbereichAusPlan(Plan(vorlauf: 5, abstand: 2), 53, null)!.Value;
+        Assert.Equal((b.EinTag, b.AusTag), (b.EinNacht, b.AusNacht));
+        Assert.Equal((48d, 46d), (b.EinNacht, b.AusNacht));
+    }
+
+    [Fact]
+    public void TagNacht_FestOderOhneTagesWertGiltNichts()
+    {
+        Assert.Null(EntfeuchterSteuerungService.ArbeitsbereichAusPlan(new EntfeuchterEinstellungen(), 53, 50));
+        Assert.Null(EntfeuchterSteuerungService.ArbeitsbereichAusPlan(Plan(), null, 50));
+    }
+
+    [Fact]
+    public void TagNacht_UnsinnigeNachtGrenzeFaelltAufDenTagZurueck()
+    {
+        var b = EntfeuchterSteuerungService.ArbeitsbereichAusPlan(Plan(vorlauf: 5, abstand: 2), 53, double.NaN)!.Value;
+        Assert.Equal(b.EinTag, b.EinNacht);
+    }
 }

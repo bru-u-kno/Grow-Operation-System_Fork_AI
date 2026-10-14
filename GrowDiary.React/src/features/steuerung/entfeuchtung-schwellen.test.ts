@@ -8,6 +8,7 @@ import {
   ausWirksam,
   einMinimum,
   einSchwelleSetzen,
+  schwellenAusPlan,
   schwellenGetrennt,
   schwellenNachAbstand,
 } from './entfeuchtung-schwellen'
@@ -118,5 +119,27 @@ describe('Arbeitsbereich aus dem Plan (forkai.212) — dieselben Beispiele wie d
 describe('arbeitsbereichAusPlan: halbe Zehntel', () => {
   it('rundet wie das Backend (AwayFromZero)', () => {
     expect(arbeitsbereichAusPlan(54.25, 4, 4)).toEqual({ ein: 50.3, aus: 46.3 })
+  })
+})
+
+describe('Arbeitsbereich aus dem Plan, Tag und Nacht getrennt (A-022)', () => {
+  // Spiegel zu ArbeitsbereichAusPlanTests im Backend — dieselben Zahlen.
+  it('die Nacht nimmt die Nacht-Obergrenze des Plans: Tag 53 / Nacht 50, Vorlauf 5, Abstand 2', () => {
+    expect(schwellenAusPlan(53, 50, 5, 2)).toEqual({ feuchteEinTag: 48, feuchteAusTag: 46, feuchteEinNacht: 45, feuchteAusNacht: 43 })
+  })
+
+  it('ohne Nacht-Obergrenze gilt nachts die des Tages', () => {
+    expect(schwellenAusPlan(53, null, 5, 2)).toEqual({ feuchteEinTag: 48, feuchteAusTag: 46, feuchteEinNacht: 48, feuchteAusNacht: 46 })
+    expect(schwellenAusPlan(53, Number.NaN, 5, 2)).toEqual({ feuchteEinTag: 48, feuchteAusTag: 46, feuchteEinNacht: 48, feuchteAusNacht: 46 })
+  })
+
+  it('eine Änderung am Abstand rechnet im Plan-Modus beide Tageszeiten mit der jeweiligen Grenze neu', () => {
+    const aktuell = { feuchteEinTag: 48, feuchteAusTag: 46, feuchteEinNacht: 45, feuchteAusNacht: 43, arbeitsbereichQuelle: 'plan' as const, vorlaufProzent: 5 }
+    expect(schwellenNachAbstand(aktuell, 4, 53, 50)).toEqual({ feuchteEinTag: 48, feuchteAusTag: 44, feuchteEinNacht: 45, feuchteAusNacht: 41 })
+  })
+
+  it('fest bleibt fest: nur AUS wandert mit dem Abstand, die Nacht-Grenze des Plans wirkt nicht', () => {
+    const aktuell = { feuchteEinTag: 50, feuchteAusTag: 48, feuchteEinNacht: 52, feuchteAusNacht: 50, arbeitsbereichQuelle: 'fest' as const }
+    expect(schwellenNachAbstand(aktuell, 4, 53, 50)).toEqual({ feuchteEinTag: 50, feuchteAusTag: 46, feuchteEinNacht: 52, feuchteAusNacht: 48 })
   })
 })

@@ -420,6 +420,24 @@ export type EntfeuchterLive = {
   automatikAn: boolean | null
   /** Läuft die Zuluft UND trocknet die Außenluft? Dann gilt die lange Wartezeit. */
   zuluftVorrang: boolean | null
+  /** Plan-Obergrenze der Luftfeuchte für die Nacht; ohne Plan gilt nachts die des Tages. */
+  rhObergrenzeNachtProzent: number | null
+  /** Die Plan-Obergrenze, die jetzt gilt (Tag oder Nacht, je nach Licht). */
+  grenzeAktivProzent: number | null
+  /** Was gerade bremst (Außenluft, Übertemperatur, Kapazität …); leer, wenn nichts bremst. */
+  bremsen: EntfeuchterBremse[] | null
+  /** Minuten, seit die Feuchte ohne Unterbrechung über der aktiven Grenze liegt. */
+  ueberGrenzeSeitMin: number | null
+  /** Minuten, seit der Hauptentfeuchter ohne Unterbrechung läuft. */
+  laeuftSeitMin: number | null
+}
+
+/** Ein Grund, warum die Luftfeuchte nicht dort ist, wo der Plan sie will. */
+export type EntfeuchterBremse = {
+  art: 'kapazitaet' | 'uebertemperatur' | 'aussenluft' | 'tagbetrieb' | 'drosselung' | 'automatik'
+  stufe: 'kritisch' | 'warnung' | 'info'
+  titel: string
+  text: string
 }
 
 export type EntfeuchterSeite = {

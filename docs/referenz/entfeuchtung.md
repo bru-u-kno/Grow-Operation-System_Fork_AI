@@ -79,6 +79,26 @@ den Betrieb geprüft (der Abstand folgt den früheren Stufen knapp 2 · normal 4
 (AUS = EIN − Abstand, nie unter 30 %) und hebt die Wartezeit bei trockener Außenluft an, wenn sie sonst kürzer als „Einschalten nach" wäre
 (das verlangt das Backend). Sie rührt „Zuschalten nach" und „Mindestpause" des Zusatzes nicht an — die gehören seiner Hilfsstärke.
 
+## Was bremst gerade? (A-022, forkai.220)
+
+Im Überblick steht zwischen den Messwerten und den Geräten die Kachel **„Was bremst gerade?"**. Sie nennt, warum die Luftfeuchte nicht dort ist, wo der Plan
+sie will — mit den Zahlen dahinter. Ohne Befund steht „nichts" in der Kopfzeile und die Kachel ist zugeklappt; mit Befund ist sie offen, eine Meldung je Grund:
+
+| Grund | Wann | Stufe |
+|---|---|---|
+| **Der Entfeuchter schafft es nicht** | Feuchte seit mindestens 60 Min. über dem Plan-Wert **und** der Entfeuchter läuft seit mindestens 60 Min. | kritisch |
+| **Zu warm** | Zelttemperatur über der Höchsttemperatur — alle Entfeuchter sind aus | Warnung (Hinweis, wenn die Feuchte im Ziel ist) |
+| **Wartet auf Außenluft** | Zuluft läuft, Außenluft trockener, Entfeuchter noch aus, Feuchte über EIN, und die Wartezeit auf Außenluft ist länger als „Einschalten nach" | Warnung |
+| **Tagsüber ausgeschaltet** | Licht an, „Nur nachts" gewählt, Feuchte über dem Plan-Wert | Warnung |
+| **Automatik aus** | Die Regelung ist ausgeschaltet | Warnung |
+| **CO₂-Drosselung ist an** | `input_boolean.co2_abluft_drosseln` an, Feuchte über dem Plan-Wert | Hinweis |
+
+Die Dauer kommt aus dem Verlauf der letzten drei Stunden (`HomeAssistantService.GetVerlaufAsync` für den Feuchte-Fühler und den Schalter des Hauptentfeuchters),
+nie aus einem einzelnen Messwert; sie wird nur geholt, wenn die Feuchte gerade über dem Plan-Wert liegt. Rechenteil: `EntfeuchterBremsen` (Backend), geliefert als
+`live.bremsen`, `live.ueberGrenzeSeitMin`, `live.laeuftSeitMin`. Die Grenze, an der gemessen wird, ist die **aktive** Plan-Obergrenze (`live.grenzeAktivProzent`: nachts die der Nacht).
+
+**Nicht gebaut (bewusst):** Eine eigene Meldung aufs Handy für „schafft es nicht" gibt es nicht — der Grenzwert „Luftfeuchte" meldet schon, wenn die Feuchte über der Grenze liegt.
+
 ## Arbeitsbereich aus dem Plan (forkai.212)
 
 In der Kachel „Ziel · Luftfeuchte" wählst du den **Arbeitsbereich**:
@@ -87,6 +107,16 @@ In der Kachel „Ziel · Luftfeuchte" wählst du den **Arbeitsbereich**:
 - **Aus dem Plan:** Einschalten über = **Plan-Obergrenze minus Vorlauf** (Vorlauf 0–20 %, Standard 4 %), Ausschalten unter = Einschalten minus Abstand.
   Wechselt die Woche und der Plan nennt eine andere Obergrenze, wandern beide Schwellen mit. Beispiel Nutzer-Zelt: Obergrenze 54 %, Vorlauf 4 %, Abstand 4 %
   ergibt **50/46** — genau seine festen Werte; die Woche mit Obergrenze 50 % ergäbe 46/42.
+
+**Tag und Nacht getrennt (forkai.220).** Der Plan nennt für die Nacht eine eigene Obergrenze der Luftfeuchte („RH max Nacht"). Seit forkai.220 rechnen die Entfeuchter
+nachts mit ihr: EIN/AUS Nacht = Nacht-Obergrenze minus Vorlauf, bzw. minus Abstand; ohne Nacht-Wert im Plan gilt nachts die des Tages. Vorher nahm der Fork für beide
+Tageszeiten die Tages-Obergrenze, und die Nacht-Obergrenze wirkte nur auf die Meldung aufs Handy. Beispiel Woche „Flush": Tag 53 / Nacht 50, Vorlauf 5, Abstand 2 ergibt
+Tag **48/46**, Nacht **45/43**. Rechenteil: `EntfeuchterSteuerungService.ArbeitsbereichAusPlan(e, rhTag, rhNacht)` (Backend), `schwellenAusPlan` (Frontend); die Nacht-Obergrenze liefert
+`WochenplanSyncService.PlanFeuchte()`.
+
+**Helfer weiten ihren Bereich (forkai.220).** Ein von Hand angelegter Zahl-Helfer trägt eigene Grenzen (bei einem Nutzer stand „Feuchte EIN Nacht" auf 50 bis 85, gewollt war 48);
+Home Assistant lehnte den Wert ab, die Seite meldete nur „nicht alle Helfer übernommen". Vor dem Schreiben liest der Fork die Bereiche (`input_number/list`) und weitet einen zu engen
+Helfer auf den Bereich des Katalogs (30 bis 90 %) — nur weiten, nie verengen; Name, Schritt, Modus und Einheit bleiben (`HelferBereichService`).
 
 Wie es gerechnet und geschrieben wird: Das Backend (`EntfeuchterSteuerungService.ArbeitsbereichAusPlan`) rechnet EIN in der Spanne 31 + ⌈Abstand⌉ bis 90 %, auf
 eine Nachkommastelle gerundet, und schreibt die vier Helfer (EIN/AUS, Tag und Nacht). Das geschieht beim Speichern und täglich um 06:00 nach der Übergabe des Wochenplans

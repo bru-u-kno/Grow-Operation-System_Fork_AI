@@ -4,7 +4,7 @@ import { tempGrenzen } from './entfeuchter-zusatz'
 import { hauptStatus, zusatzStatus } from './entfeuchtung-modell'
 import { Lesen } from './EntfeuchtungBausteine'
 import type { Ctx } from './EntfeuchtungBausteine'
-import { Herkunft, Kontext, Lage, MessKopf, Warum, ZielBandAnzeige, ZielZeile, Zusammenspiel } from './EntfeuchterUeberblick'
+import { Bremsen, Herkunft, Kontext, Lage, MessKopf, Warum, ZielBandAnzeige, ZielZeile, Zusammenspiel } from './EntfeuchterUeberblick'
 import type { WarumZeile } from './EntfeuchterUeberblick'
 import { RF_KNAPP_PUNKTE, ZONEN_WORT, schlechtereZone } from './entfeuchter-zonen'
 import type { Zone } from './entfeuchter-zonen'
@@ -54,7 +54,7 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const planLuft = phase === 'Nacht' ? hl.planLuftNachtC : hl.planLuftTagC
 
   // Luftfeuchte: Obergrenze aus dem Plan (ohne Plan die EIN-Schwelle), Untergrenze aus dem Grenzwert.
-  const feuchteOben = hl.rhObergrenzeProzent ?? hl.einAktivProzent
+  const feuchteOben = hl.grenzeAktivProzent ?? hl.rhObergrenzeProzent ?? hl.einAktivProzent
   const fBand = feuchteBand(feuchteOben, zielwerte?.feuchteRegel, hl.tagPhase)
   const fZone = feuchteZoneImBand(hl.feuchteProzent, fBand)
 
@@ -87,6 +87,8 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
     ...(z && zl ? [{ name: zusatz, rolle: 'Zusatz-Entfeuchter · hilft', status: zusatzStatus(zl, wartet) }] : []),
   ]
 
+  const bremsen = hl.bremsen ?? []
+
   const warum: WarumZeile[] = [
     { frage: `${haupt}: Feuchte über der EIN-Schwelle`, antwort: `${zahl(hl.feuchteProzent)} % · EIN ab ${zahl(hl.einAktivProzent)} %`, ok: hl.feuchteProzent == null || hl.einAktivProzent == null ? null : hl.feuchteProzent > hl.einAktivProzent },
     { frage: `${haupt}: Zelt unter der Höchsttemperatur (${zahl(aktivMax)} °C)`, antwort: `${zahl(hl.tempC)} °C`, ok: hl.tempC == null ? null : hl.tempC < aktivMax },
@@ -109,12 +111,12 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const einAusQuelle = a.vpdRegelung
     ? 'aus dem VPD-Band des Plans'
     : a.arbeitsbereichQuelle === 'plan' && hl.rhObergrenzeProzent != null
-      ? `aus dem Plan (Obergrenze ${zahl(hl.rhObergrenzeProzent, 0)} % minus Vorlauf ${zahl(a.vorlaufProzent, a.vorlaufProzent % 1 ? 1 : 0)} %)`
+      ? `aus dem Plan (Obergrenze ${zahl(hl.grenzeAktivProzent ?? hl.rhObergrenzeProzent, 0)} % minus Vorlauf ${zahl(a.vorlaufProzent, a.vorlaufProzent % 1 ? 1 : 0)} %)`
       : hl.deckelProzent != null && eingestelltEin > hl.deckelProzent
       ? `vom Plan gedeckelt (Obergrenze minus Klima-Abstand = ${zahl(hl.deckelProzent, 0)} %)`
       : 'von dir, unter Einstellungen'
   const feuchteHerkunft = [
-    ...(fBand.oben == null ? [] : [{ wert: `Obergrenze ${kurzeZahl(fBand.oben)} %`, quelle: hl.rhObergrenzeProzent == null ? 'aus der Einschalt-Schwelle (kein Plan-Wert)' : planText }]),
+    ...(fBand.oben == null ? [] : [{ wert: `Obergrenze ${kurzeZahl(fBand.oben)} %${hl.rhObergrenzeNachtProzent != null && hl.rhObergrenzeProzent != null && hl.rhObergrenzeNachtProzent !== hl.rhObergrenzeProzent ? ` (${phase === 'Nacht' ? 'Nacht' : 'Tag'})` : ''}`, quelle: hl.rhObergrenzeProzent == null ? 'aus der Einschalt-Schwelle (kein Plan-Wert)' : planText }]),
     ...(fBand.unten == null ? [] : [{ wert: `Untergrenze ${kurzeZahl(fBand.unten)} %`, quelle: 'dein Grenzwert' }]),
     ...(hl.einAktivProzent == null ? [] : [{ wert: `Ein ${zahl(hl.einAktivProzent, 0)} / Aus ${zahl(hl.ausAktivProzent, 0)} %`, quelle: einAusQuelle }]),
   ]
@@ -195,6 +197,14 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
             <span><i className="is-kritisch" />{ZONEN_WORT.kritisch}</span>
           </div>
         </V1Card>
+      </Klappkachel>
+
+      <Klappkachel
+        titel="Was bremst gerade?"
+        zusammenfassung={bremsen.length === 0 ? 'nichts' : bremsen.length === 1 ? '1 Hinweis' : `${bremsen.length} Hinweise`}
+        offen={bremsen.length > 0}
+      >
+        <Bremsen bremsen={bremsen} />
       </Klappkachel>
 
       <Klappkachel titel="Geräte" zusammenfassung={geraete.map((g) => `${g.name} ${g.status}`).join(' · ')}>

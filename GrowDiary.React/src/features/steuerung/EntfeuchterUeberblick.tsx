@@ -7,6 +7,7 @@ import { zahl } from './entfeuchter-band'
 import { kurzeZahl } from './entfeuchtung-ziel'
 import { ZONEN_WORT, zonenKlasse, zonenTon } from './entfeuchter-zonen'
 import type { Zone } from './entfeuchter-zonen'
+import type { EntfeuchterBremse } from './steuerung-typen'
 import { Klappkachel } from './Klappkachel'
 import './steuerung.css'
 
@@ -18,6 +19,29 @@ import './steuerung.css'
 /** Lagemeldung oben: Farbe, Wort und ein Satz — die Zone steht nie nur als Farbe da. */
 export function Lage({ zone, titel, text }: { zone: Zone; titel: string; text: string }) {
   return <V1Alert tone={zonenTon(zone)} title={`${ZONEN_WORT[zone][0].toUpperCase()}${ZONEN_WORT[zone].slice(1)} · ${titel}`} message={text} />
+}
+
+/**
+ * Fork AI (A-022): Kachel „Was bremst gerade?" — warum die Luftfeuchte nicht dort ist, wo der Plan sie will. Ohne Befund steht ein
+ * ruhiger Satz da, mit Befund eine Meldung je Grund (Kapazität, Übertemperatur, Außenluft …) mit den Zahlen dahinter.
+ */
+export function Bremsen({ bremsen }: { bremsen: EntfeuchterBremse[] }) {
+  if (bremsen.length === 0) {
+    return (
+      <V1Card>
+        <p className="st-hinweis">
+          Nichts bremst: keine Sperre, keine Wartezeit. Hier erscheint etwas, wenn ein Entfeuchter wegen Außenluft, Übertemperatur,
+          CO₂-Drosselung oder fehlender Tagfreigabe nicht schaltet — oder wenn er läuft und die Feuchte trotzdem über dem Plan-Wert bleibt.
+        </p>
+      </V1Card>
+    )
+  }
+  const ton = { kritisch: 'critical', warnung: 'warn', info: 'neutral' } as const
+  return (
+    <>
+      {bremsen.map((b) => <V1Alert key={b.art} tone={ton[b.stufe]} title={b.titel} message={b.text} />)}
+    </>
+  )
 }
 
 /** Kopf eines Messblocks: die große Zahl links, rechts Zustand und Beiwerk. */

@@ -105,7 +105,7 @@ public sealed class ZusatzPruefstand : IDisposable
 
     public EntfeuchterSteuerungService Entfeuchter()
         => new(Repo, Ha(), new HomeAssistantSettingsRepository(_pfade), new SteuerungGeraeteService(Repo), Wochenplan(),
-            NullLogger<EntfeuchterSteuerungService>.Instance);
+            new HelferBereichService(NullLogger<HelferBereichService>.Instance), NullLogger<EntfeuchterSteuerungService>.Instance);
 
     public EntfeuchterZusatzSteuerungService Zusatz()
         => new(Repo, Ha(), new HomeAssistantSettingsRepository(_pfade), new SteuerungGeraeteService(Repo), Wochenplan(),

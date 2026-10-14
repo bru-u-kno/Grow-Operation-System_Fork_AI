@@ -8,10 +8,10 @@ import { ZielBandAnzeige } from './EntfeuchterUeberblick'
 import {
   SCHWELLE_MAX,
   ausWirksam,
-  arbeitsbereichAusPlan,
   aussenluftNachEinschalten,
   einMinimum,
   einSchwelleSetzen,
+  schwellenAusPlan,
   schwellenGetrennt,
   schwellenNachAbstand,
 } from './entfeuchtung-schwellen'
@@ -59,14 +59,15 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
 
   // ------------------------------------------------------------------ Ziel
   const planOben = hl.rhObergrenzeProzent
+  // Der Plan nennt für die Nacht eine eigene Obergrenze; ohne sie gilt nachts die des Tages.
+  const planObenNacht = hl.rhObergrenzeNachtProzent ?? planOben
   // „Arbeitsbereich aus dem Plan" (forkai.212): EIN = Plan-Obergrenze minus Vorlauf. Ohne Obergrenze im Plan gilt der feste Wert.
   const planModus = he.arbeitsbereichQuelle === 'plan'
   const planWirkt = planModus && planOben != null
   const vorlauf = Number.isFinite(he.vorlaufProzent) ? he.vorlaufProzent : 4
   const quelleWaehlen = (quelle: 'fest' | 'plan') => {
     if (quelle === 'plan' && planOben != null) {
-      const { ein } = arbeitsbereichAusPlan(planOben, vorlauf, he.hystereseProzent)
-      h.setzMehrere({ arbeitsbereichQuelle: 'plan', vorlaufProzent: vorlauf, ...einSchwelleSetzen(he, he.hystereseProzent, { wert: ein, tageszeit: 'beide' }) })
+      h.setzMehrere({ arbeitsbereichQuelle: 'plan', vorlaufProzent: vorlauf, ...schwellenAusPlan(planOben, planObenNacht, vorlauf, he.hystereseProzent) })
     } else {
       h.setz('arbeitsbereichQuelle', quelle)
     }
@@ -76,6 +77,10 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
   const ausN = ausWirksam(he.feuchteEinNacht, he.feuchteAusNacht, he.hystereseProzent)
   const bandVon = Math.floor(Math.min(aus, ausN, he.feuchteEinTag, planOben ?? 100) - 4)
   const bandBis = Math.ceil(Math.max(he.feuchteEinTag, he.feuchteEinNacht, planOben ?? 0) + 4)
+  // Stehen Tag und Nacht verschieden (Plan mit eigener Nachtgrenze, oder von Hand), zeigt die Kachel ein zweites Band für die Nacht.
+  const nachtAnders = he.feuchteEinNacht !== he.feuchteEinTag || ausN !== aus
+  const bandVonN = Math.floor(Math.min(ausN, he.feuchteEinNacht, planObenNacht ?? 100) - 4)
+  const bandBisN = Math.ceil(Math.max(he.feuchteEinNacht, planObenNacht ?? 0) + 4)
   const einHinweis = hl.deckelProzent == null
     ? 'Ab dieser Luftfeuchte schalten die Entfeuchter ein.'
     : `Ab dieser Luftfeuchte schalten die Entfeuchter ein — höchstens ${zahl(hl.deckelProzent, 0)} % (Plan-Obergrenze minus Klima-Abstand), darüber begrenzt der Plan.`
@@ -90,7 +95,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
   const stufe = stufeErkennen(he, ze)
   const stufeWaehlen = (name: StufenName) => {
     const haupt2 = stufeFuerHaupt(name, he)
-    h.setzMehrere({ ...haupt2, ...schwellenNachAbstand(he, haupt2.hystereseProzent, planOben) })
+    h.setzMehrere({ ...haupt2, ...schwellenNachAbstand(he, haupt2.hystereseProzent, planOben, planObenNacht) })
     z?.setz('mindestlaufzeitMin', stufeFuerZusatz(name).mindestlaufzeitMin)
   }
 
@@ -139,14 +144,23 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
               ? 'Gerade wird nach VPD geregelt (unter „Erweitert“). Die Schwellen folgen dem VPD-Band aus dem Plan; die festen Werte hier gelten als Rückfallebene.'
               : 'Geregelt wird nach der Luftfeuchte. Der Plan setzt die Obergrenze, die Schwelle darunter stellst du ein.'}
           </p>
-          <Lesen label="Plan-Obergrenze" hinweis={hl.planWoche ? `aus dem Plan · Woche ${hl.planWoche}` : 'aus dem Plan'} wert={planOben == null ? '–' : `≤ ${zahl(planOben, 0)} %`} />
+          <Lesen label="Plan-Obergrenze Tag" hinweis={hl.planWoche ? `aus dem Plan · Woche ${hl.planWoche}` : 'aus dem Plan'} wert={planOben == null ? '–' : `≤ ${zahl(planOben, 0)} %`} />
+          <Lesen label="Plan-Obergrenze Nacht" hinweis={hl.rhObergrenzeNachtProzent == null ? 'Der Plan nennt keine eigene — es gilt die des Tages.' : 'aus dem Plan · gleiche Woche'} wert={planObenNacht == null ? '–' : `≤ ${zahl(planObenNacht, 0)} %`} />
           {!vpd && (
             <ZielBandAnzeige von={bandVon} bis={bandBis} zielVon={aus} zielBis={he.feuchteEinTag} grenzen={[aus, he.feuchteEinTag]} ist={null} urteil={null} />
           )}
           {!vpd && (
             <p className="st-hinweis">
-              Über {zahl(he.feuchteEinTag, 0)} % gehen die Geräte an, unter {zahl(aus, 0)} % wieder aus, dazwischen bleibt es, wie es ist — so schalten sie nicht dauernd hin und her.
+              {nachtAnders ? 'Tag: über' : 'Über'} {zahl(he.feuchteEinTag, 0)} % gehen die Geräte an, unter {zahl(aus, 0)} % wieder aus, dazwischen bleibt es, wie es ist — so schalten sie nicht dauernd hin und her.
             </p>
+          )}
+          {!vpd && nachtAnders && (
+            <>
+              <ZielBandAnzeige von={bandVonN} bis={bandBisN} zielVon={ausN} zielBis={he.feuchteEinNacht} grenzen={[ausN, he.feuchteEinNacht]} ist={null} urteil={null} />
+              <p className="st-hinweis">
+                Nacht: über {zahl(he.feuchteEinNacht, 0)} % gehen die Geräte an, unter {zahl(ausN, 0)} % wieder aus.
+              </p>
+            </>
           )}
           {!vpd && (
             <div className="st-feldzeile is-gestapelt">
@@ -163,9 +177,11 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
           {planWirkt && !vpd ? (
             <>
               <Zahl label="Vorlauf unter der Plan-Obergrenze" hinweis="Wie weit unter der Obergrenze die Geräte einschalten. Wandert mit dem Plan: wechselt die Woche, wechseln auch die Schwellen." einheit="%" wert={vorlauf} min={0} max={20} schritt={0.5}
-                onChange={(v) => h.setzMehrere({ vorlaufProzent: v, ...einSchwelleSetzen(he, he.hystereseProzent, { wert: arbeitsbereichAusPlan(planOben!, v, he.hystereseProzent).ein, tageszeit: 'beide' }) })} fehler={h.feldFehler.VorlaufProzent} />
-              <Lesen label="Einschalten über" hinweis={`= Plan-Obergrenze ${zahl(planOben, 0)} % minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)} %`} wert={`${zahl(he.feuchteEinTag, he.feuchteEinTag % 1 ? 1 : 0)} %`} />
-              <Lesen label="Ausschalten unter" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(aus, aus % 1 ? 1 : 0)} %`} />
+                onChange={(v) => h.setzMehrere({ vorlaufProzent: v, ...schwellenAusPlan(planOben!, planObenNacht, v, he.hystereseProzent) })} fehler={h.feldFehler.VorlaufProzent} />
+              <Lesen label="Einschalten über · Tag" hinweis={`= Plan-Obergrenze ${zahl(planOben, 0)} % minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)} %`} wert={`${zahl(he.feuchteEinTag, he.feuchteEinTag % 1 ? 1 : 0)} %`} />
+              <Lesen label="Ausschalten unter · Tag" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(aus, aus % 1 ? 1 : 0)} %`} />
+              <Lesen label="Einschalten über · Nacht" hinweis={`= Plan-Obergrenze Nacht ${zahl(planObenNacht, 0)} % minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)} %`} wert={`${zahl(he.feuchteEinNacht, he.feuchteEinNacht % 1 ? 1 : 0)} %`} />
+              <Lesen label="Ausschalten unter · Nacht" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(ausN, ausN % 1 ? 1 : 0)} %`} />
             </>
           ) : getrennt ? (
             <>

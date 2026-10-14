@@ -624,6 +624,21 @@ public sealed class WochenplanSyncService
         return (woche, tag, nacht);
     }
 
+    /// <summary>
+    /// Die Obergrenze der Luftfeuchte der laufenden Plan-Woche, Tag und Nacht getrennt — für die Entfeuchter, deren
+    /// Schwellen für beide Tageszeiten aus dem Plan kommen (Arbeitsbereich „Aus dem Plan").
+    /// </summary>
+    /// <remarks>
+    /// Die Nacht nennt der Plan nur mit Grow-Plan (<see cref="GrowPlan.NachtWerte"/>); sonst und bei „Nacht wie Tag" gilt der
+    /// Tageswert. <c>null</c>, solange kein einzelner Durchgang mit Wochen-Zielen läuft oder die Woche keine Obergrenze nennt.
+    /// </remarks>
+    public (double RhTag, double RhNacht)? PlanFeuchte()
+    {
+        if (Spalte() is not { } jetzt || jetzt.Spalte.RhMax is not { } tag) return null;
+        var nacht = GrowPlanRegister.Inhalt(jetzt.Grow.Id)?.NachtWerte(jetzt.Spalte).RhMax ?? tag;
+        return (tag, nacht);
+    }
+
     /// <summary>Hat die Woche gewechselt, seit zuletzt übergeben wurde?</summary>
     public bool Wochenwechsel()
         => Spalte() is { } jetzt && !string.Equals(jetzt.Spalte.Id, Stand.LetzteSpalte, StringComparison.OrdinalIgnoreCase);

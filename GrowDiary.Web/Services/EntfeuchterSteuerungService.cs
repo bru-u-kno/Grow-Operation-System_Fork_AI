@@ -66,6 +66,7 @@ public sealed class EntfeuchterSteuerungService
         public const string KlimaHysterese = "input_number.co2_klima_hysterese";
         public const string CanopyObergrenze = "input_number.co2_canopy_obergrenze";
         public const string ZuluftBedarf = "binary_sensor.zuluft_bedarf";
+        public const string Co2Drosseln = "input_boolean.co2_abluft_drosseln";
     }
 
     private readonly SteuerungRepository _repo;
@@ -73,6 +74,7 @@ public sealed class EntfeuchterSteuerungService
     private readonly HomeAssistantSettingsRepository _haSettings;
     private readonly SteuerungGeraeteService _geraete;
     private readonly WochenplanSyncService _wochenplan;
+    private readonly HelferBereichService _bereiche;
     private readonly ILogger<EntfeuchterSteuerungService> _logger;
 
     public EntfeuchterSteuerungService(
@@ -81,6 +83,7 @@ public sealed class EntfeuchterSteuerungService
         HomeAssistantSettingsRepository haSettings,
         SteuerungGeraeteService geraete,
         WochenplanSyncService wochenplan,
+        HelferBereichService bereiche,
         ILogger<EntfeuchterSteuerungService> logger)
     {
         _repo = repo;
@@ -88,6 +91,7 @@ public sealed class EntfeuchterSteuerungService
         _haSettings = haSettings;
         _geraete = geraete;
         _wochenplan = wochenplan;
+        _bereiche = bereiche;
         _logger = logger;
     }
 
@@ -210,6 +214,18 @@ public sealed class EntfeuchterSteuerungService
         return (ein, aus);
     }
 
+    /// <summary>
+    /// Wie <see cref="ArbeitsbereichAusPlan(EntfeuchterEinstellungen, double?)"/>, aber für Tag und Nacht einzeln: Der Plan nennt
+    /// für die Nacht eine eigene Obergrenze der Luftfeuchte, und die Entfeuchter sollen sie nachts genauso einhalten wie die
+    /// Tages-Obergrenze am Tag. Nennt der Plan keine Nachtgrenze, gilt nachts die des Tages.
+    /// </summary>
+    public static EntfeuchterBereich? ArbeitsbereichAusPlan(EntfeuchterEinstellungen e, double? rhTag, double? rhNacht)
+    {
+        if (ArbeitsbereichAusPlan(e, rhTag) is not { } tag) return null;
+        var nacht = ArbeitsbereichAusPlan(e, rhNacht) ?? tag;
+        return new EntfeuchterBereich(tag.Ein, tag.Aus, nacht.Ein, nacht.Aus);
+    }
+
     private static void PruefeTempMax(Dictionary<string, string> f, string modusFeld, string? modus, string abstandFeld, double abstand, string festFeld, double fest)
     {
         if (modus is not (TempMaxModus.Plan or TempMaxModus.Fest)) f[modusFeld] = "Modus muss „plan“ oder „fest“ sein.";
@@ -253,10 +269,12 @@ public sealed class EntfeuchterSteuerungService
 
         // Bei „Arbeitsbereich aus dem Plan" stehen im gespeicherten Stand die gerechneten Schwellen, nicht die alten festen —
         // sonst zeigte die Seite nach dem Speichern etwas anderes, als in Home Assistant liegt.
-        if (ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct)) is { } plan)
+        if (ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct), _wochenplan.PlanFeuchte()?.RhNacht) is { } plan)
         {
-            e.FeuchteEinTag = e.FeuchteEinNacht = plan.Ein;
-            e.FeuchteAusTag = e.FeuchteAusNacht = plan.Aus;
+            e.FeuchteEinTag = plan.EinTag;
+            e.FeuchteAusTag = plan.AusTag;
+            e.FeuchteEinNacht = plan.EinNacht;
+            e.FeuchteAusNacht = plan.AusNacht;
         }
 
         _repo.SetEinstellungen(Modul, e);
@@ -280,7 +298,7 @@ public sealed class EntfeuchterSteuerungService
 
         var plan = _wochenplan.PlanLuft();
         // „Arbeitsbereich aus dem Plan": EIN und AUS kommen aus der Plan-Obergrenze, nicht aus den gespeicherten festen Werten.
-        var bereich = ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct));
+        var bereich = ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct), _wochenplan.PlanFeuchte()?.RhNacht);
         var zahlen = new (string Entity, double Wert)[]
         {
             (Entitaeten.Hysterese, e.HystereseProzent),
@@ -289,11 +307,15 @@ public sealed class EntfeuchterSteuerungService
             (Entitaeten.WartezeitAussenluft, e.WartezeitAussenluftMin),
             (Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC)),
             (Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC)),
-            (Entitaeten.FeuchteEinTag, bereich?.Ein ?? e.FeuchteEinTag),
-            (Entitaeten.FeuchteAusTag, bereich?.Aus ?? e.FeuchteAusTag),
-            (Entitaeten.FeuchteEinNacht, bereich?.Ein ?? e.FeuchteEinNacht),
-            (Entitaeten.FeuchteAusNacht, bereich?.Aus ?? e.FeuchteAusNacht),
+            (Entitaeten.FeuchteEinTag, bereich?.EinTag ?? e.FeuchteEinTag),
+            (Entitaeten.FeuchteAusTag, bereich?.AusTag ?? e.FeuchteAusTag),
+            (Entitaeten.FeuchteEinNacht, bereich?.EinNacht ?? e.FeuchteEinNacht),
+            (Entitaeten.FeuchteAusNacht, bereich?.AusNacht ?? e.FeuchteAusNacht),
         };
+
+        // Ein von Hand angelegter Helfer kann engere Grenzen tragen als der Katalog (Nacht-EIN stand auf 50–85, gewollt war 48): Home
+        // Assistant lehnt den Wert dann ab. Vorher auf den Bereich des Katalogs weiten, sonst bleibt der alte Wert stehen.
+        await _bereiche.SichernAsync(settings, zahlen.Select(z => (z.Entity, SteuerungBauteile.AufSpanne(z.Entity, z.Wert))).ToList(), ct);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -342,11 +364,14 @@ public sealed class EntfeuchterSteuerungService
         {
             soll = SteuerungBauteile.AufSpanne(entity, soll);
             if (Ist(entity) is { } ist && Math.Abs(ist - soll) < 0.05) return;
-            if (await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
-                    new Dictionary<string, object> { ["value"] = soll }))
+            var werte = new Dictionary<string, object> { ["value"] = soll };
+            var angenommen = await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct, werte);
+            if (!angenommen && (await _bereiche.SichernAsync(settings, new[] { (entity, soll) }, ct)).Count > 0)
             {
-                geschrieben++;
+                angenommen = await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct, werte);
             }
+
+            if (angenommen) geschrieben++;
         }
 
         if (temperaturPlan && _wochenplan.PlanLuft() is { } plan)
@@ -362,23 +387,25 @@ public sealed class EntfeuchterSteuerungService
             }
         }
 
-        if (bereichPlan && ArbeitsbereichAusPlan(e, Ist(Entitaeten.RhObergrenze)) is { } bereich)
+        if (bereichPlan && ArbeitsbereichAusPlan(e, Ist(Entitaeten.RhObergrenze), _wochenplan.PlanFeuchte()?.RhNacht) is { } bereich)
         {
             foreach (var (entity, soll) in new[]
                      {
-                         (Entitaeten.FeuchteEinTag, bereich.Ein), (Entitaeten.FeuchteAusTag, bereich.Aus),
-                         (Entitaeten.FeuchteEinNacht, bereich.Ein), (Entitaeten.FeuchteAusNacht, bereich.Aus),
+                         (Entitaeten.FeuchteEinTag, bereich.EinTag), (Entitaeten.FeuchteAusTag, bereich.AusTag),
+                         (Entitaeten.FeuchteEinNacht, bereich.EinNacht), (Entitaeten.FeuchteAusNacht, bereich.AusNacht),
                      })
             {
                 await SchreibenFallsAbweichendAsync(entity, soll);
             }
 
             // Auch der gespeicherte Stand folgt, sonst zeigte die Seite nach dem Wochenwechsel noch die alten Schwellen.
-            if (Math.Abs(e.FeuchteEinTag - bereich.Ein) > 0.05 || Math.Abs(e.FeuchteAusTag - bereich.Aus) > 0.05
-                || Math.Abs(e.FeuchteEinNacht - bereich.Ein) > 0.05 || Math.Abs(e.FeuchteAusNacht - bereich.Aus) > 0.05)
+            if (Math.Abs(e.FeuchteEinTag - bereich.EinTag) > 0.05 || Math.Abs(e.FeuchteAusTag - bereich.AusTag) > 0.05
+                || Math.Abs(e.FeuchteEinNacht - bereich.EinNacht) > 0.05 || Math.Abs(e.FeuchteAusNacht - bereich.AusNacht) > 0.05)
             {
-                e.FeuchteEinTag = e.FeuchteEinNacht = bereich.Ein;
-                e.FeuchteAusTag = e.FeuchteAusNacht = bereich.Aus;
+                e.FeuchteEinTag = bereich.EinTag;
+                e.FeuchteAusTag = bereich.AusTag;
+                e.FeuchteEinNacht = bereich.EinNacht;
+                e.FeuchteAusNacht = bereich.AusNacht;
                 _repo.SetEinstellungen(Modul, e);
             }
         }
@@ -422,6 +449,42 @@ public sealed class EntfeuchterSteuerungService
             ? bedarf && (ZuluftLaeuft(nachId) ?? false)
             : null;
 
+        // Welche Plan-Obergrenze gerade gilt: nachts die eigene des Plans, sonst die des Tages.
+        var rhNacht = _wochenplan.PlanFeuchte()?.RhNacht ?? rhMax;
+        var tagPhase = AnRolle(Rollen.LichtZustand);
+        var grenze = tagPhase == false ? rhNacht : rhMax;
+        var feuchte = ZahlRolle(Rollen.ZeltFeuchte);
+
+        // Dauer nur dann aus dem Verlauf holen, wenn die Feuchte jetzt über der Grenze liegt — sonst gibt es nichts zu melden.
+        int? ueberSeit = null, laeuftSeit = null;
+        if (feuchte is { } fj && grenze is { } gj && fj > gj && Rolle(Rollen.ZeltFeuchte) is { } feuchteId)
+        {
+            var jetzt = DateTime.UtcNow;
+            var von = jetzt - EntfeuchterBremsen.VerlaufFenster;
+            ueberSeit = EntfeuchterBremsen.UeberGrenzeSeitMin(await _ha.GetVerlaufAsync(settings, feuchteId, von, jetzt, ct), gj, jetzt);
+            if (Rolle(Rollen.PortZustand) is { } portId)
+            {
+                laeuftSeit = EntfeuchterBremsen.LaeuftSeitMin(await _ha.GetVerlaufAsync(settings, portId, von, jetzt, ct), jetzt);
+            }
+        }
+
+        var bremsen = EntfeuchterBremsen.Pruefen(new BremsEingabe(
+            FeuchteProzent: feuchte,
+            GrenzeProzent: grenze,
+            EinProzent: Zahl(Entitaeten.EinAktiv),
+            TempC: ZahlRolle(Rollen.ZeltTemp),
+            TempMaxC: Zahl(Entitaeten.TempMaxAktiv),
+            TagPhase: tagPhase,
+            TagbetriebErlaubt: e.TagbetriebErlauben,
+            AutomatikAn: automatiken.Select(An).OfType<bool>().ToList() is { Count: > 0 } aktiv ? aktiv.Any(x => x) : null,
+            PortAn: portAn,
+            ZuluftVorrang: vorrang,
+            Co2Drosselung: An(Entitaeten.Co2Drosseln),
+            EinschaltverzoegerungMin: e.EinschaltverzoegerungMin,
+            WartezeitAussenluftMin: e.WartezeitAussenluftMin,
+            UeberGrenzeSeitMin: ueberSeit,
+            LaeuftSeitMin: laeuftSeit));
+
         return new EntfeuchterLive(
             HaErreichbar: entities.Count > 0,
             FeuchteProzent: ZahlRolle(Rollen.ZeltFeuchte),
@@ -445,7 +508,12 @@ public sealed class EntfeuchterSteuerungService
             PortAn: portAn,
             PortOnline: AnRolle(Rollen.PortStatus),
             AutomatikAn: automatiken.Select(An).OfType<bool>().ToList() is { Count: > 0 } laeuft ? laeuft.Any(x => x) : null,
-            ZuluftVorrang: vorrang);
+            ZuluftVorrang: vorrang,
+            RhObergrenzeNachtProzent: rhNacht,
+            GrenzeAktivProzent: grenze,
+            Bremsen: bremsen,
+            UeberGrenzeSeitMin: ueberSeit,
+            LaeuftSeitMin: laeuftSeit);
     }
 
     /// <summary>Läuft der Zuluft-Lüfter? Gelesen über die Rolle der Zuluft-Steuerung.</summary>

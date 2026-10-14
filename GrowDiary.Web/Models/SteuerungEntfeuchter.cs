@@ -1,3 +1,5 @@
+using GrowDiary.Web.Services;
+
 namespace GrowDiary.Web.Models;
 
 /// <summary>
@@ -84,12 +86,20 @@ public static class TempMaxModus
     public const string Fest = "fest";
 }
 
+/// <summary>Die vier Schwellen, die „Arbeitsbereich aus dem Plan" ergibt: EIN und AUS, je für Tag und Nacht.</summary>
+public readonly record struct EntfeuchterBereich(double EinTag, double AusTag, double EinNacht, double AusNacht);
+
 /// <summary>Was die Entfeuchter-Seite an Livewerten zeigt.</summary>
 /// <param name="DeckelProzent">Höchste mögliche EIN-Schwelle: Plan-Feuchte max. − Klima-Hysterese.</param>
 /// <param name="PlanLuftTagC">Lufttemperatur der laufenden Plan-Woche (Tag); null ohne Plan.</param>
 /// <param name="PlanLuftNachtC">Nacht: Plan-Nachtwert oder Tag − 4 K; null ohne Plan.</param>
 /// <param name="TempMaxTagC">Was gerade als Temperatur max. Tag gilt (aus Modus berechnet).</param>
 /// <param name="ZuluftVorrang">Läuft die Zuluft UND trocknet die Außenluft? Dann gilt die lange Wartezeit.</param>
+/// <param name="RhObergrenzeNachtProzent">Plan-Obergrenze der Luftfeuchte für die Nacht; null ohne Plan (dann gilt nachts die des Tages).</param>
+/// <param name="GrenzeAktivProzent">Die Plan-Obergrenze, die jetzt gilt (Tag oder Nacht, je nach Licht).</param>
+/// <param name="Bremsen">Was gerade bremst (Außenluft, Übertemperatur, Kapazität …); leer, wenn nichts bremst.</param>
+/// <param name="UeberGrenzeSeitMin">Minuten, seit die Feuchte ohne Unterbrechung über der aktiven Grenze liegt; null, wenn nicht darüber.</param>
+/// <param name="LaeuftSeitMin">Minuten, seit der Hauptentfeuchter ohne Unterbrechung läuft; null, wenn er nicht läuft.</param>
 public sealed record EntfeuchterLive(
     bool HaErreichbar,
     double? FeuchteProzent,
@@ -113,4 +123,9 @@ public sealed record EntfeuchterLive(
     bool? PortAn,
     bool? PortOnline,
     bool? AutomatikAn,
-    bool? ZuluftVorrang);
+    bool? ZuluftVorrang,
+    double? RhObergrenzeNachtProzent = null,
+    double? GrenzeAktivProzent = null,
+    IReadOnlyList<EntfeuchterBremse>? Bremsen = null,
+    int? UeberGrenzeSeitMin = null,
+    int? LaeuftSeitMin = null);
