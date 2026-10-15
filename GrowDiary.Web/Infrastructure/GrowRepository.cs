@@ -121,6 +121,25 @@ public sealed class GrowRepository
         return zelt;
     }
 
+    /// <summary>
+    /// Der Blattversatz des Zelts, damit VPD als Blatt-VPD beurteilt wird. Ohne
+    /// Zelt der dokumentierte RDWC-Wert.
+    /// </summary>
+    /// <remarks>
+    /// Eine Stelle fuer alle, die Abweichungen rechnen. Der Risiko-Abgleich und
+    /// die Alarmkarten riefen die Diagnose ohne diese Angabe auf und rechneten
+    /// damit mit dem Standardversatz: dieselbe Messung ergab auf der Aufgabenkarte
+    /// VPD 1,01 kPa, in der Diagnose daneben 1,16 kPa (15.10.2026).
+    /// </remarks>
+    public double LeafOffsetFor(GrowRun grow)
+        => grow.TentId is { } tentId && GetTent(tentId) is { } tent
+            ? tent.LeafTempOffsetC
+            : Tent.DefaultLeafTempOffsetC;
+
+    /// <summary>Das Sollwert-Profil des Hydro-Systems, an dem der Grow haengt.</summary>
+    public string? SystemProfileIdFor(GrowRun grow)
+        => grow.SystemId is { } systemId ? GetSystem(systemId)?.SetpointProfileId : null;
+
     public void UpdateTent(Tent tent)
         => _tentRepository.UpdateTent(tent);
 

@@ -8,14 +8,15 @@ import type { CalibrationEventDto, GrowSummary, GrowTaskDto, HardwareItemDto, Ma
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
 import { classNames } from '../utils'
 import { RiskActionCard } from '../features/risks/RiskActionCard'
+import { istOffen, istWiederOkay } from '../features/risks/risiko-zeit'
 import { TASKS_CHANGED_EVENT } from '../useNavCounts'
 
 type FaelligeRoutine = { sopId: string; name: string; severity: string; tageSeit: number; intervallTage: number; meldung: string }
 type PumpBefund = { schluessel: string; name: string; stufe: string; meldung: string; herkunft: string }
 type PumpZeltLage = { tentId: number; tentName: string; befunde: PumpBefund[] }
 type WartungsPunkt = { bereich: string; titel: string; stufe: string; meldung: string; herkunft: string }
-type ActionState = { grows: GrowSummary[]; risks: RiskEventDto[]; tasks: GrowTaskDto[]; maintenance: MaintenanceEventDto[]; calibration: CalibrationEventDto[]; sops: SopInstanceDto[]; hardware: HardwareItemDto[]; dueByGrow: Array<{ grow: GrowSummary; items: FaelligeRoutine[] }>; pumpen: PumpZeltLage[]; wartung: WartungsPunkt[]; glaeser: CuringJar[]; issues: string[] }
-const initial: ActionState = { grows: [], risks: [], tasks: [], maintenance: [], calibration: [], sops: [], hardware: [], dueByGrow: [], pumpen: [], wartung: [], glaeser: [], issues: [] }
+type ActionState = { grows: GrowSummary[]; risks: RiskEventDto[]; tasks: GrowTaskDto[]; maintenance: MaintenanceEventDto[]; calibration: CalibrationEventDto[]; sops: SopInstanceDto[]; hardware: HardwareItemDto[]; dueByGrow: Array<{ grow: GrowSummary; items: FaelligeRoutine[] }>; pumpen: PumpZeltLage[]; wartung: WartungsPunkt[]; glaeser: CuringJar[]; issues: string[]; geladenUm: number }
+const initial: ActionState = { grows: [], risks: [], tasks: [], maintenance: [], calibration: [], sops: [], hardware: [], dueByGrow: [], pumpen: [], wartung: [], glaeser: [], issues: [], geladenUm: 0 }
 const riskRank: Record<string, number> = { Critical: 0, Warning: 1, Info: 2 }
 
 function MobileActionPage() {
@@ -36,7 +37,7 @@ function MobileActionPage() {
       }
       const [grows, risks, maintenance, calibration, hardware] = await Promise.all([
         safe<GrowSummary[]>('Grows', '/api/grows?archived=false', []),
-        safe<RiskEventDto[]>('Risiken', '/api/risk-events?openOnly=true', []),
+        safe<RiskEventDto[]>('Risiken', '/api/risk-events', []),
         safe<MaintenanceEventDto[]>('Wartung', `/api/maintenance-events?dueBeforeUtc=${encodeURIComponent(dueBeforeUtc)}`, []),
         safe<CalibrationEventDto[]>('Kalibrierung', `/api/calibration-events?dueBeforeUtc=${encodeURIComponent(dueBeforeUtc)}`, []),
         safe<HardwareItemDto[]>('Hardware', '/api/hardware-items', []),
@@ -61,14 +62,27 @@ function MobileActionPage() {
         .map((grow, index) => ({ grow, items: dueLists[index] ?? [] }))
         .filter((entry) => entry.items.length > 0)
       if (controller.signal.aborted) return
-      setState({ grows, risks: risks.filter((risk) => risk.status === 'Open' || risk.status === 'Acknowledged'), maintenance: maintenance.filter((item) => item.status === 'Planned'), calibration: calibration.filter((item) => item.status === 'Planned'), tasks: taskLists.flat().filter((task) => task.status === 'Open'), sops: sopLists.flat().filter((sop) => sop.status === 'Active'), hardware, dueByGrow, pumpen, wartung, glaeser, issues })
+      setState({ grows, risks, maintenance: maintenance.filter((item) => item.status === 'Planned'), calibration: calibration.filter((item) => item.status === 'Planned'), tasks: taskLists.flat().filter((task) => task.status === 'Open'), sops: sopLists.flat().filter((sop) => sop.status === 'Active'), hardware, dueByGrow, pumpen, wartung, glaeser, issues, geladenUm: Date.now() })
       setLoading(false)
     }
     void load()
     return () => controller.abort()
   }, [refresh])
 
-  const risks = useMemo(() => [...state.risks].sort((a, b) => (riskRank[a.severity] ?? 9) - (riskRank[b.severity] ?? 9)), [state.risks])
+  // `state.risks` enthaelt ALLE Risiken: die offenen werden Karten, die vor
+  // kurzem vom Abgleich geschlossenen zeigen „wieder okay", und alle zusammen
+  // liefern die Zahl der Wiederholungen. Eine Uhr fuer alle Karten.
+  const jetzt = state.geladenUm
+  const risks = useMemo(() => state.risks.filter(istOffen).sort((a, b) => (riskRank[a.severity] ?? 9) - (riskRank[b.severity] ?? 9)), [state.risks])
+  const wiederOkay = useMemo(
+    () => state.risks.filter((risk) => istWiederOkay(risk, jetzt)).sort((a, b) => (b.resolvedAtUtc ?? '').localeCompare(a.resolvedAtUtc ?? '')),
+    [state.risks, jetzt],
+  )
+  const rissKontext = (risk: RiskEventDto) =>
+    risk.growId
+      // Der Grow-Name sagt nur etwas, wenn es mehr als einen gibt.
+      ? (state.grows.length > 1 ? getGrowName(state.grows, risk.growId) : undefined)
+      : risk.hardwareItemId ? getHardwareName(state.hardware, risk.hardwareItemId) : risk.tentId ? `Zelt #${risk.tentId}` : 'System'
   /**
    * Eine Aufgabe abhaken.
    *
@@ -217,11 +231,30 @@ function MobileActionPage() {
                   <RiskActionCard
                     key={risk.id}
                     risk={risk}
-                    context={risk.growId ? getGrowName(state.grows, risk.growId) : risk.hardwareItemId ? getHardwareName(state.hardware, risk.hardwareItemId) : risk.tentId ? `Zelt #${risk.tentId}` : 'System'}
+                    context={rissKontext(risk)}
+                    history={state.risks}
+                    jetzt={jetzt}
                     onChanged={handleRiskChanged}
                   />
                 ))}
               </div>
+            )}
+            {wiederOkay.length > 0 && (
+              <details className="af-wieder-okay" data-audit="risk-wieder-okay">
+                <summary>Wieder okay · {wiederOkay.length}</summary>
+                <div className="af-risks">
+                  {wiederOkay.map((risk) => (
+                    <RiskActionCard
+                      key={risk.id}
+                      risk={risk}
+                      context={rissKontext(risk)}
+                      history={state.risks}
+                      jetzt={jetzt}
+                      onChanged={handleRiskChanged}
+                    />
+                  ))}
+                </div>
+              </details>
             )}
           </section>
 

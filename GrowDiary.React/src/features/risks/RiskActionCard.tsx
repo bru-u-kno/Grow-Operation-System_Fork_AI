@@ -9,15 +9,20 @@ import type {
   StartRiskEventSopRequest,
 } from '../../types'
 import { V1Button, V1Card } from '../../components/v1'
-import { formatSeverityLabel } from '../../utils'
+import { formatDate, formatDateTime, formatNumber, formatSeverityLabel } from '../../utils'
+import { dauerText, istWiederOkay, leseRohwert, seitText, vorText, wiederholungen, zielText } from './risiko-zeit'
 
 type Props = {
   risk: RiskEventDto
   context?: string
+  /** Alle Risiken des Bestands (auch geschlossene) — daraus folgt „16× aufgetreten". Ohne sie entfällt die Zeile. */
+  history?: readonly RiskEventDto[]
+  /** „Jetzt" in Millisekunden; die Seite reicht es durch, damit alle Karten dieselbe Uhr lesen. */
+  jetzt?: number
   onChanged: (notice: string) => void
 }
 
-export function RiskActionCard({ risk, context, onChanged }: Props) {
+export function RiskActionCard({ risk, context, history, jetzt: jetztEin, onChanged }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [recommendations, setRecommendations] = useState<RiskEventSopRecommendationDto[] | null>(null)
@@ -64,36 +69,85 @@ export function RiskActionCard({ risk, context, onChanged }: Props) {
   const isAcknowledged = risk.status === 'Acknowledged'
   const tone = risk.severity === 'Critical' ? 'critical' : 'warn'
 
+  // Wann und wie aktuell: „Besteht noch" gilt nur für offene Karten; eine vom
+  // Abgleich geschlossene Karte sagt „wieder okay" und hat nichts mehr zu tun.
+  const [eigeneUhr] = useState(() => Date.now())
+  const jetzt = jetztEin ?? eigeneUhr
+  const wiederOkay = istWiederOkay(risk, jetzt)
+  const wert = leseRohwert(risk.rawValue)
+  const ziel = wert ? zielText(wert) : null
+  const wiederholung = history ? wiederholungen(risk, history) : null
+  const gesehen = risk.lastSeenAtUtc ?? risk.startedAtUtc
+
   return (
-    <V1Card className="rc-risk-action-card" tone={tone}>
+    <V1Card className={`rc-risk-action-card${wiederOkay ? ' is-wieder-okay' : ''}`} tone={wiederOkay ? undefined : tone}>
       <div className="rc-risk-action-head">
         <div>
           <strong>{risk.title}</strong>
-          {(context || isAcknowledged) && (
-            <span>{[context, isAcknowledged ? 'bestätigt' : null].filter(Boolean).join(' · ')}</span>
-          )}
+          {context && <span>{context}</span>}
         </div>
         <em>{formatSeverityLabel(risk.severity)}</em>
       </div>
-      {risk.description && <p className="rc-risk-action-desc">{risk.description}</p>}
-      <div className="rc-risk-action-buttons">
-        {!isAcknowledged && (
-          <V1Button variant="secondary" disabled={busy !== null} onClick={() => void acknowledge()} audit="risk-acknowledge">
-            {busy === 'ack' ? 'Speichert…' : 'Bestätigen'}
-          </V1Button>
+      <div className="rc-risk-state-row">
+        <span className={`rc-risk-state ${wiederOkay ? 'is-off' : 'is-on'}`} data-audit="risk-state">
+          <i aria-hidden="true" />
+          {wiederOkay ? 'Wieder okay' : 'Besteht noch'}
+        </span>
+        {isAcknowledged && <span className="rc-risk-ack">bestätigt</span>}
+      </div>
+      {wert && (
+        <p className="rc-risk-value" data-audit="risk-value">
+          <strong>{formatNumber(wert.istwert, 2)}</strong>
+          <span>{[wert.einheit, ziel].filter(Boolean).join(' · ')}</span>
+        </p>
+      )}
+      <div className="rc-risk-when" data-audit="risk-when">
+        {wiederOkay && risk.resolvedAtUtc ? (
+          <>
+            <p><b>Seit {dauerText(jetzt - new Date(risk.resolvedAtUtc).getTime())} im Bereich</b></p>
+            <p>
+              Aufgetreten: {formatDateTime(risk.startedAtUtc)} · Dauer{' '}
+              {dauerText(new Date(risk.resolvedAtUtc).getTime() - new Date(risk.startedAtUtc).getTime())}
+            </p>
+          </>
+        ) : (
+          <>
+            <p><b>{seitText(risk.startedAtUtc, jetzt)}</b> ({formatDateTime(risk.startedAtUtc)})</p>
+            <p>Zuletzt gesehen {vorText(gesehen, jetzt)}</p>
+          </>
         )}
-        <V1Button variant="primary" disabled={busy !== null} onClick={() => void resolve()} audit="risk-resolve">
-          {busy === 'resolve' ? 'Speichert…' : 'Erledigt'}
-        </V1Button>
-        {/* Lose Pruefung mit Absicht: das Backend laesst null-Felder im JSON
-            weg, ein Risiko ohne Grow kommt also als undefined an — und
-            `!== null` haette den SOP-Knopf trotzdem gezeigt. */}
-        {risk.growId != null && recommendations === null && (
-          <V1Button variant="ghost" disabled={busy !== null} onClick={() => void loadRecommendations()} audit="risk-sop-recommend">
-            {busy === 'recommend' ? 'Lädt…' : 'SOP vorschlagen'}
-          </V1Button>
+        {wiederholung && (
+          <p className="rc-risk-repeat">
+            ↻ {wiederholung.anzahl}× seit {formatDate(wiederholung.seitIso)} aufgetreten
+          </p>
         )}
       </div>
+      {risk.description && (
+        <details className="rc-risk-details">
+          <summary>Details &amp; Handlung</summary>
+          <p className="rc-risk-action-desc">{risk.description}</p>
+        </details>
+      )}
+      {!wiederOkay && (
+        <div className="rc-risk-action-buttons">
+          {!isAcknowledged && (
+            <V1Button variant="secondary" disabled={busy !== null} onClick={() => void acknowledge()} audit="risk-acknowledge">
+              {busy === 'ack' ? 'Speichert…' : 'Bestätigen'}
+            </V1Button>
+          )}
+          <V1Button variant="primary" disabled={busy !== null} onClick={() => void resolve()} audit="risk-resolve">
+            {busy === 'resolve' ? 'Speichert…' : 'Erledigt'}
+          </V1Button>
+          {/* Lose Pruefung mit Absicht: das Backend laesst null-Felder im JSON
+              weg, ein Risiko ohne Grow kommt also als undefined an — und
+              `!== null` haette den SOP-Knopf trotzdem gezeigt. */}
+          {risk.growId != null && recommendations === null && (
+            <V1Button variant="ghost" disabled={busy !== null} onClick={() => void loadRecommendations()} audit="risk-sop-recommend">
+              {busy === 'recommend' ? 'Lädt…' : 'SOP vorschlagen'}
+            </V1Button>
+          )}
+        </div>
+      )}
       {recommendations !== null && (
         <div className="rc-risk-sop-list">
           {recommendations.length === 0 ? (

@@ -9,6 +9,13 @@ public sealed class DeviationRiskEventSyncService
 {
     private const string DedupePrefix = "deviation:grow:";
 
+    /// <summary>
+    /// Vermerk an einem Risiko, das der Abgleich selbst geschlossen hat, weil die
+    /// Abweichung nicht mehr besteht — im Gegensatz zu „Erledigt" von Hand. Die
+    /// Oberflaeche zeigt solche Karten als „wieder okay".
+    /// </summary>
+    public const string AutoResolvedNote = "Deviation aktuell nicht mehr erkannt.";
+
     private readonly GrowRepository _repository;
     private readonly DeviationAnalyzerService _deviationAnalyzer;
     private readonly TreatmentRecommender _treatmentRecommender;
@@ -38,7 +45,7 @@ public sealed class DeviationRiskEventSyncService
     {
         var measurements = _repository.GetMeasurementsForGrow(grow.Id);
         var deviations = _deviationAnalyzer
-            .Analyze(grow, measurements, wechsel: _repository.GetChangeoutsForGrow(grow.Id).ToList())
+            .Analyze(grow, measurements, _repository.LeafOffsetFor(grow), _repository.SystemProfileIdFor(grow), _repository.GetChangeoutsForGrow(grow.Id).ToList())
             .Where(IsActionable)
             .GroupBy(deviation => deviation.StableKey, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(deviation => deviation.Severity).First())
@@ -104,7 +111,7 @@ public sealed class DeviationRiskEventSyncService
 
         foreach (var risk in stale)
         {
-            _repository.ResolveRiskEvent(risk.Id, DateTime.UtcNow, "Deviation aktuell nicht mehr erkannt.");
+            _repository.ResolveRiskEvent(risk.Id, DateTime.UtcNow, AutoResolvedNote);
         }
 
         return stale.Count;

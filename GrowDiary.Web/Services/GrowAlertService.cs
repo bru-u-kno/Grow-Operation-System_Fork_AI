@@ -40,7 +40,7 @@ public sealed class GrowAlertService
            Sie lasen sich wie eine Wahl und waren keine. */
         if (latest is not null)
         {
-            var deviations = _deviationAnalyzer.Analyze(grow, measurements, wechsel: _repository.GetChangeoutsForGrow(grow.Id).ToList());
+            var deviations = _deviationAnalyzer.Analyze(grow, measurements, _repository.LeafOffsetFor(grow), _repository.SystemProfileIdFor(grow), _repository.GetChangeoutsForGrow(grow.Id).ToList());
             var treatmentRecommendations = _treatmentRecommender.Recommend(grow, deviations).Recommendations;
             var diagnosticAlerts = _recommendationEngine.BuildCardsFromDiagnostics(deviations, treatmentRecommendations);
             var mergedAlerts = MergeDiagnosticAndLegacyAlerts(diagnosticAlerts, legacyAlerts);

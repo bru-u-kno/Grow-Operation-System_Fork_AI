@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.224
+
+**Fork AI.** Die Karten unter „Aufgaben → Risiken" sagen jetzt, ob eine Abweichung noch besteht und seit wann, und sie nennen denselben Wert wie die Diagnose.
+
+- **Seit wann und wie aktuell:** Jede Karte zeigt „Besteht noch", den aktuellen Wert mit Zielband („6,22 pH · Ziel 5,6 – 6,2"), „Seit 2 Tagen (Datum, Uhrzeit)" und „Zuletzt gesehen vor 32 Min.". Der Name des Grows steht nur noch dort, wo es mehrere Grows gibt; vorher stand er bei einem einzigen Grow allein unter dem Titel und las sich wie ein Datum.
+- **Wiederkehrende Abweichungen:** Trat dieselbe Abweichung schon früher auf, steht auf der Karte „4× seit 15.09.2026 aufgetreten". Gezählt werden die Karten mit demselben Entdopplungs-Schlüssel, auch die geschlossenen.
+- **„Wieder okay":** Schließt der Abgleich ein Risiko, weil die Abweichung nicht mehr besteht, bleibt es 24 Stunden unter „Wieder okay" (eingeklappt) sichtbar, mit „Seit 3 Std. im Bereich" und der Dauer der Abweichung. Von Hand erledigte Karten verschwinden wie bisher. Dafür liefert `GET /api/risk-events` das neue Feld `resolvedAutomatically`; die Seite lädt dazu alle Risiken statt nur der offenen.
+- **Text einklappbar:** Die lange Erklärung steht hinter „Details & Handlung"; auf der Karte bleiben Zustand, Wert und Zeit.
+- **Fehler behoben, der zwei Zahlen für dieselbe Messung lieferte:** Der Risiko-Abgleich und die Alarmkarten riefen die Diagnose ohne Blattversatz des Zelts und ohne Sollwert-Profil des Systems auf. Dieselbe Messung ergab auf der Karte VPD 1,01 kPa, in der Diagnose daneben 1,16 kPa. Jetzt rechnen alle mit denselben Werten, die an einer Stelle (`GrowRepository.LeafOffsetFor`, `SystemProfileIdFor`) gelesen werden. Bestehende offene Karten ziehen beim nächsten Abgleich nach.
+- **Geprüft:** Zwei neue Backend-Tests (Blattversatz, „automatisch geschlossen"; der Blattversatz-Test wird ohne die Reparatur rot) und 14 neue Frontend-Tests für Zeit, Zielband, Wiederholungen und „wieder okay". Die Seite wurde mit Handy-Zuschnitt gerendert und gelesen; Bestätigen und Erledigen an zwei verschiedenen Karten nacheinander ausgeführt.
+- **Nicht enthalten:** Der Zustand „nicht mehr geprüft" bei ausbleibenden Messwerten und ein Abgleich im Minutentakt ohne Seitenaufruf folgen später.
+
 ## 2.0.0-forkai.223
 
 **Fork AI.** Die Prüfläufe auf GitHub werden nicht mehr rot, nur weil ein Prüffall auf das gemeinsame Schloss wartet; die App selbst ändert sich nicht.

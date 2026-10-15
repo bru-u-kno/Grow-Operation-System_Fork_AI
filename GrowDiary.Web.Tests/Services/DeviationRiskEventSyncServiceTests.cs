@@ -145,6 +145,63 @@ public sealed class DeviationRiskEventSyncServiceTests : IDisposable
         Assert.NotEmpty(wiederOffen);
     }
 
+    /// <summary>
+    /// Die Aufgabenkarte muss denselben Wert nennen wie die Diagnose.
+    /// </summary>
+    /// <remarks>
+    /// 15.10.2026: Die VPD-Karte sagte 1,01 kPa, die Diagnose derselben Messung
+    /// 1,16. Der Abgleich rief die Diagnose ohne den Blattversatz des Zelts auf
+    /// und rechnete mit dem Standardwert (-2 °C).
+    /// </remarks>
+    [Fact]
+    public void SyncActiveGrowDeviations_UsesTheTentLeafOffsetLikeTheDiagnosis()
+    {
+        var growId = CreateHydroGrow("Blattversatz Hydro");
+        var tent = _repository.GetTents().Single();
+        tent.LeafTempOffsetC = 0;
+        _repository.UpdateTent(tent);
+        _repository.CreateMeasurement(new Measurement
+        {
+            GrowId = growId,
+            TakenAt = Utc(2026, 5, 20),
+            Stage = GrowStage.Veg,
+            Source = ValueOrigin.Manual,
+            AirTemperatureC = 26,
+            HumidityPercent = 50
+        });
+
+        _service.SyncActiveGrowDeviations();
+
+        var vpd = _repository.GetRiskEventsByGrow(growId)
+            .Single(risk => risk.DedupeKey == $"deviation:grow:{growId}:hydro.vpd");
+        var mitZeltwert = VpdCalculator.Calculate(26, 50, 0)!.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        var mitStandard = VpdCalculator.Calculate(26, 50, Tent.DefaultLeafTempOffsetC)!.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.NotEqual(mitStandard, mitZeltwert);
+        Assert.StartsWith($"actual={mitZeltwert};", vpd.RawValue);
+    }
+
+    [Fact]
+    public void ResolvedAutomatically_IsSetOnlyWhenTheSyncClosedTheRisk()
+    {
+        var growId = CreateHydroGrow("Auto oder Hand");
+        AddMeasurement(growId, Utc(2026, 5, 20), ec: 3.2, orp: 700, waterTemp: 25);
+        _service.SyncActiveGrowDeviations();
+        var ec = _repository.GetRiskEventsByGrow(growId).Single(risk => risk.DedupeKey!.EndsWith("hydro.ec"));
+        var orp = _repository.GetRiskEventsByGrow(growId).Single(risk => risk.DedupeKey!.EndsWith("hydro.orp"));
+
+        // ORP vom Betreiber erledigt, EC erholt sich von selbst.
+        _repository.ResolveRiskEvent(orp.Id, DateTime.UtcNow, "vom Betreiber erledigt");
+        AddMeasurement(growId, Utc(2026, 5, 21), ec: 0.7, orp: 700, waterTemp: 25);
+        AddMeasurement(growId, Utc(2026, 5, 22), ec: 0.7, orp: 700, waterTemp: 25);
+        _service.SyncActiveGrowDeviations();
+
+        var ecDto = global::GrowDiary.Web.Api.Mapping.RiskEventMapping.ToDto(_repository.GetRiskEvent(ec.Id)!);
+        var orpDto = global::GrowDiary.Web.Api.Mapping.RiskEventMapping.ToDto(_repository.GetRiskEvent(orp.Id)!);
+        Assert.Equal(RiskEventStatus.Resolved, ecDto.Status);
+        Assert.True(ecDto.ResolvedAutomatically);
+        Assert.False(orpDto.ResolvedAutomatically);
+    }
+
     private int CreateHydroGrow(string name)
     {
         var tent = _repository.GetTents().Single();

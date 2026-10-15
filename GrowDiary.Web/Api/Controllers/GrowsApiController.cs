@@ -639,12 +639,10 @@ public sealed class GrowsApiController : ApiControllerBase
     /// Grow.
     /// </remarks>
     private string? SystemProfilFuer(GrowRun grow)
-        => grow.SystemId is { } systemId ? _repository.GetSystem(systemId)?.SetpointProfileId : null;
+        => _repository.SystemProfileIdFor(grow);
 
-    private double LeafOffsetFor(GrowRun grow) =>
-        grow.TentId is { } tentId && _repository.GetTent(tentId) is { } tent
-            ? tent.LeafTempOffsetC
-            : Tent.DefaultLeafTempOffsetC;
+    private double LeafOffsetFor(GrowRun grow)
+        => _repository.LeafOffsetFor(grow);
 
     private static string FormatLiters(double value)
         => value.ToString("0.##", CultureInfo.InvariantCulture);

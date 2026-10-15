@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Models;
+using GrowDiary.Web.Services;
 
 namespace GrowDiary.Web.Api.Mapping;
 
@@ -28,7 +29,10 @@ public static class RiskEventMapping
         RawValue: item.RawValue,
         Notes: item.Notes,
         CreatedAtUtc: item.CreatedAtUtc,
-        UpdatedAtUtc: item.UpdatedAtUtc
+        UpdatedAtUtc: item.UpdatedAtUtc,
+        ResolvedAutomatically: item.Status == RiskEventStatus.Resolved
+            && item.Source == RiskEventSource.Deviation
+            && item.Notes?.Contains(DeviationRiskEventSyncService.AutoResolvedNote, StringComparison.Ordinal) == true
     );
 
     public static RiskEvent ToModel(this CreateRiskEventRequest request) => new()

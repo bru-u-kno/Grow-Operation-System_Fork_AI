@@ -71,10 +71,8 @@ public sealed class MeasurementsApiController : ApiControllerBase
         }
 
         var messungen = _repository.GetMeasurementsForGrow(growId);
-        var systemProfil = grow.SystemId is { } systemId ? _repository.GetSystem(systemId)?.SetpointProfileId : null;
-        var blattversatz = grow.TentId is { } tentId && _repository.GetTent(tentId) is { } zelt
-            ? zelt.LeafTempOffsetC
-            : Tent.DefaultLeafTempOffsetC;
+        var systemProfil = _repository.SystemProfileIdFor(grow);
+        var blattversatz = _repository.LeafOffsetFor(grow);
 
         return Ok(_assessmentService.Assess(grow, messungen, systemProfil, blattversatz));
     }

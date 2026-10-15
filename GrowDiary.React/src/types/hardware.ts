@@ -179,6 +179,8 @@ export interface RiskEventDto {
   notes: string | null
   createdAtUtc: string
   updatedAtUtc: string
+  /** Vom Abgleich geschlossen, weil die Abweichung nicht mehr besteht (nicht von Hand erledigt). */
+  resolvedAutomatically?: boolean
 }
 
 export interface CreateRiskEventRequest {

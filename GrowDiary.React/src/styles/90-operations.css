@@ -107,6 +107,88 @@
      die alte Regel richtig und bleibt es. */
   .rc-risk-action-buttons .v1-button { flex: 1 1 120px; }
 }
+/* Aktualitaet einer Risiko-Karte: Zustand, Wert, seit wann, wie oft. */
+.rc-risk-state-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rc-risk-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 99px;
+  font: 600 var(--fs-etikett)/1.2 var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.rc-risk-state i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.rc-risk-state.is-on { color: var(--warn-text); }
+.rc-risk-state.is-off { color: var(--accent-text); }
+.rc-risk-ack {
+  color: var(--v1-muted);
+  font-size: var(--fs-klein);
+}
+.rc-risk-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+}
+.rc-risk-value strong {
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.rc-risk-value span {
+  color: var(--v1-muted);
+  font-size: var(--fs-text);
+}
+.rc-risk-when p {
+  margin: 2px 0;
+  color: var(--v1-muted);
+  font-size: var(--fs-text);
+}
+.rc-risk-when b {
+  color: var(--v1-soft);
+  font-weight: 700;
+}
+.rc-risk-when .rc-risk-repeat {
+  color: var(--warn-text);
+}
+.rc-risk-details summary {
+  cursor: pointer;
+  color: var(--v1-soft);
+  font-size: var(--fs-text);
+}
+.rc-risk-details .rc-risk-action-desc {
+  margin-top: 8px;
+}
+.af-wieder-okay {
+  margin-top: 12px;
+}
+.af-wieder-okay summary {
+  cursor: pointer;
+  padding: 8px 2px;
+  color: var(--v1-muted);
+  font: 600 var(--fs-etikett)/1.2 var(--font-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.af-wieder-okay .af-risks {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
 .rc-risk-sop-list {
   display: grid;
   gap: 8px;

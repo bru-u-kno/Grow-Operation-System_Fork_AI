@@ -26,7 +26,10 @@ public sealed record RiskEventDto(
     string? RawValue,
     string? Notes,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc
+    DateTime UpdatedAtUtc,
+    // Wahr, wenn der Abgleich das Risiko selbst geschlossen hat, weil die
+    // Abweichung nicht mehr besteht (nicht: von Hand erledigt).
+    bool ResolvedAutomatically = false
 );
 
 public sealed record RiskEventSopRecommendationDto(

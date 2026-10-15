@@ -33,9 +33,16 @@ Abweichung der Stufe *Warnung* oder *Kritisch* ein `RiskEvent` mit dem
 Entdopplungs-Schlüssel `deviation:grow:<id>:<stableKey>`; verschwindet die
 Abweichung, schließt sich das Ereignis von selbst. Es gibt dafür **keinen
 Hintergrund-Worker** — der Abgleich läuft, wenn jemand `GET /api/risk-events`
-abruft (`RiskEventsApiController.List`). `RiskActionCard` bietet *Bestätigen*,
+abruft (`RiskEventsApiController.List`). Der Abgleich rechnet mit demselben
+Blattversatz des Zelts und demselben Sollwert-Profil wie die Diagnose
+(`GrowRepository.LeafOffsetFor`, `SystemProfileIdFor`) — sonst nennt die Karte
+einen anderen Wert als die Diagnose. `RiskActionCard` bietet *Bestätigen*,
 *Erledigt* und *SOP vorschlagen*; die vorgeschlagenen Abläufe startet man
-einzeln.
+einzeln. Sie zeigt außerdem den Zustand („Besteht noch" / „Wieder okay"), den
+Wert mit Zielband, „Seit …", „Zuletzt gesehen vor …" und, wenn dieselbe
+Abweichung schon früher eine Karte hatte, „N× seit …" (`risiko-zeit.ts`). Ein vom
+Abgleich geschlossenes Risiko (`resolvedAutomatically`) bleibt 24 Stunden als
+„Wieder okay" sichtbar; von Hand erledigte verschwinden sofort.
 
 **Von der Pflanze her.** `BeobachtungsWegweiser` fragt Blatt, Wurzel oder Lösung ab
 und zeigt je Beobachtung mögliche Ursachen, was man selbst prüfen kann, und die
@@ -123,7 +130,7 @@ EC, Sauerstoff und ORP „Pflanze frisst" oder „Biofilm".
 | Anlagenstörung als Risiko | `GrowDiary.Web/Services/AnlagenWatchService.cs`, `AnlagenRisikoService.cs` |
 | Karten und Ampel der Live-Seite | `GrowDiary.Web/Services/GrowAlertService.cs`, `RecommendationEngine.cs` |
 | Oberfläche Diagnose | `GrowDiary.React/src/features/grow-detail/GrowDetailDiagnosisSection.tsx`, `ObservationGuide.tsx` |
-| Oberfläche Risiko und Trend | `GrowDiary.React/src/features/risks/RiskActionCard.tsx`, `features/live/TrendWatchPanel.tsx` |
+| Oberfläche Risiko und Trend | `GrowDiary.React/src/features/risks/RiskActionCard.tsx`, `features/risks/risiko-zeit.ts`, `features/live/TrendWatchPanel.tsx` |
 
 ## Fallen
 
