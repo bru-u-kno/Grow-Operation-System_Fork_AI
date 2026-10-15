@@ -313,6 +313,8 @@ export const LICHT_REITER: Array<{ value: LichtReiter; label: string }> = [
 
 export type ZuluftEinstellungen = {
   mindestDifferenzGm3: number
+  /** Fork AI (forkai.225): Wie weit die Differenz unter die Mindest-Differenz fallen muss, bevor der Lüfter aufhört. */
+  abschaltAbstandGm3: number
   aussentemperaturMinC: number
   stufeMin: number
   stufeMax: number
@@ -345,6 +347,8 @@ export type ZuluftLive = {
   zeltTempC: number | null
   /** True, wenn die Außenluft trocknen würde, das Zelt aber zu kalt ist. */
   pauseZeltKalt: boolean | null
+  /** Fork AI (forkai.225): Die Differenz, nach der die Regelung entscheidet (geglättet, sonst roh). */
+  differenzRegelGm3: number | null
 }
 
 export type ZuluftSeite = {

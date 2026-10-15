@@ -694,6 +694,12 @@ public sealed class SteuerungApiController : ApiControllerBase
             .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
 
         var bilanz = await _rechenwerte.AnlegenAsync(modul, zuordnung, settings, ct);
+        // Fork AI (forkai.225): Vorhandene Rechenwerte bekommen feste Änderungen nach.
+        if (bilanz.Erreichbar)
+        {
+            bilanz = bilanz with { Nachgezogen = await _rechenwerte.NachziehenAsync(modul, settings, ct) };
+        }
+
         if (!bilanz.Erreichbar)
         {
             return ConflictError(

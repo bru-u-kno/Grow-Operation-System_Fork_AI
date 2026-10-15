@@ -42,13 +42,51 @@ public sealed class SteuerungRechenwertService
 
     public sealed record Ergebnis(string EntityId, string Name, bool Angelegt, string? Fehler);
 
+    /// <summary>
+    /// Fork AI (forkai.225): Eine feste Änderung an einem Rechenwert, die auch bei einer
+    /// vorhandenen Anlage ankommen soll — als Austausch genau eines Textstücks.
+    /// </summary>
+    /// <param name="EntityId">Der Rechenwert, der das Textstück enthält.</param>
+    /// <param name="Name">Sein Titel in Home Assistant (so heißt der Eintrag bei Neuanlage durch den Fork).</param>
+    /// <param name="Alt">Das Textstück, wie es in der älteren Vorlage steht.</param>
+    /// <param name="Neu">Das Textstück, das an seine Stelle tritt.</param>
+    public sealed record Nachzug(string EntityId, string Name, string Alt, string Neu);
+
+    /// <summary>
+    /// Die Änderungen, die vorhandene Rechenwerte nachgezogen bekommen.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Warum das keine Ausnahme von „Vorhandenes wird nie überschrieben" ist.</b>
+    /// Getauscht wird ein einzelnes Textstück, nicht die Vorlage: alles andere im
+    /// Rechenwert — auch Abweichungen des Nutzers wie die geglättete Differenz — bleibt
+    /// stehen. Ist das alte Stück nicht genau so da, passiert nichts. Und das neue Stück
+    /// rechnet mit der Vorgabe 0,5 weiter, wenn der Helfer fehlt, verändert das Verhalten
+    /// also nicht.</para>
+    /// </remarks>
+    public static readonly IReadOnlyList<Nachzug> Nachzuege = new[]
+    {
+        new Nachzug(
+            "binary_sensor.zuluft_bedarf",
+            "Zuluft Bedarf",
+            "d < s - 0.5 or",
+            "d < s - (states('input_number.zuluft_abschalt_abstand') | float(0.5)) or"),
+    };
+
+    /// <summary>Wie es einem Nachzug ergangen ist.</summary>
+    /// <param name="Stand">
+    /// <c>angepasst</c>, <c>aktuell</c> (schon neu), <c>nicht_gefunden</c> (Eintrag fehlt oder anders benannt),
+    /// <c>abweichend</c> (altes Textstück steht nicht darin) oder <c>fehler</c>.
+    /// </param>
+    public sealed record NachzugErgebnis(string EntityId, string Stand, string? Hinweis);
+
     public sealed record Bilanz(
         bool Erreichbar,
         int Angelegt,
         int Uebersprungen,
         int Fehlgeschlagen,
         IReadOnlyList<string> OhneGeraet,
-        IReadOnlyList<Ergebnis> Einzeln);
+        IReadOnlyList<Ergebnis> Einzeln,
+        IReadOnlyList<NachzugErgebnis>? Nachgezogen = null);
 
     /// <summary>Die fehlenden Rechenwerte anlegen.</summary>
     /// <param name="zuordnung">Rollen-Schlüssel auf Entitäts-Id.</param>
@@ -129,6 +167,152 @@ public sealed class SteuerungRechenwertService
             einzeln);
     }
 
+    /// <summary>
+    /// Fork AI (forkai.225): Zieht vorhandene Rechenwerte nach, siehe <see cref="Nachzuege"/>.
+    /// </summary>
+    /// <remarks>
+    /// Ändert den Eintrag über denselben Optionsdialog wie „Konfigurieren" in der
+    /// Oberfläche. Zuerst wird der Dialog geöffnet und aus ihm gelesen, was gerade
+    /// eingestellt ist; zurückgeschickt wird alles davon, nur das Textstück ist ersetzt.
+    /// So gehen Geräteklasse, Verfügbarkeit und Verzögerungen nicht verloren.
+    /// </remarks>
+    public async Task<IReadOnlyList<NachzugErgebnis>> NachziehenAsync(
+        string modul, HomeAssistantSettings settings, CancellationToken ct = default)
+    {
+        var ergebnisse = new List<NachzugErgebnis>();
+        var gehoert = SteuerungBauteile.FuerModul(modul).Select(b => b.EntityId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var offen = Nachzuege.Where(n => gehoert.Contains(n.EntityId)).ToList();
+        if (offen.Count == 0) return ergebnisse;
+
+        using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
+        JsonElement eintraege;
+        try
+        {
+            using var antwort = await client.GetAsync("api/config/config_entries/entry?domain=template", ct);
+            if (!antwort.IsSuccessStatusCode)
+            {
+                return offen.Select(n => new NachzugErgebnis(n.EntityId, "fehler", $"Eintragsliste nicht lesbar ({(int)antwort.StatusCode}).")).ToList();
+            }
+
+            eintraege = await antwort.Content.ReadFromJsonAsync<JsonElement>(ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return offen.Select(n => new NachzugErgebnis(n.EntityId, "fehler", ex.Message)).ToList();
+        }
+
+        foreach (var n in offen)
+        {
+            var eintrag = eintraege.ValueKind == JsonValueKind.Array
+                ? eintraege.EnumerateArray().FirstOrDefault(e => Text(e, "title") == n.Name)
+                : default;
+            var kennung = eintrag.ValueKind == JsonValueKind.Object ? Text(eintrag, "entry_id") : null;
+            if (kennung is null)
+            {
+                ergebnisse.Add(new NachzugErgebnis(n.EntityId, "nicht_gefunden", $"Kein Eintrag mit dem Titel '{n.Name}'."));
+                continue;
+            }
+
+            ergebnisse.Add(await NachziehenAsync(client, n, kennung, ct));
+        }
+
+        return ergebnisse;
+    }
+
+    private async Task<NachzugErgebnis> NachziehenAsync(HttpClient client, Nachzug n, string eintrag, CancellationToken ct)
+    {
+        string? dialog = null;
+        try
+        {
+            var start = await client.PostAsJsonAsync("api/config/config_entries/options/flow", new { handler = eintrag }, ct);
+            if (!start.IsSuccessStatusCode)
+            {
+                return new NachzugErgebnis(n.EntityId, "fehler", $"Optionsdialog liess sich nicht oeffnen ({(int)start.StatusCode}).");
+            }
+
+            var formular = await start.Content.ReadFromJsonAsync<JsonElement>(ct);
+            dialog = Text(formular, "flow_id");
+            var felder = NachzugFelder(formular, n, out var stand);
+            if (felder is null)
+            {
+                await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
+                return new NachzugErgebnis(n.EntityId, stand, stand == "aktuell" ? null : "Das alte Textstück steht nicht in der Vorlage.");
+            }
+
+            var abgeschickt = await client.PostAsJsonAsync($"api/config/config_entries/options/flow/{dialog}", felder, ct);
+            var antwort = await abgeschickt.Content.ReadFromJsonAsync<JsonElement>(ct);
+            if (!abgeschickt.IsSuccessStatusCode || Text(antwort, "type") != "create_entry")
+            {
+                await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
+                var grund = antwort.ValueKind == JsonValueKind.Object && antwort.TryGetProperty("errors", out var f) ? f.ToString() : Text(antwort, "type");
+                return new NachzugErgebnis(n.EntityId, "fehler", $"Abgelehnt: {grund}");
+            }
+
+            _log.LogInformation("Rechenwert nachgezogen: {EntityId}", n.EntityId);
+            return new NachzugErgebnis(n.EntityId, "angepasst", null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            if (dialog is not null) await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
+            return new NachzugErgebnis(n.EntityId, "fehler", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Die Felder, die an den Optionsdialog zurückgehen: alles, was im Formular steht,
+    /// mit dem getauschten Textstück in <c>state</c>. null heißt: nichts zu tun
+    /// (<paramref name="stand"/> sagt warum).
+    /// </summary>
+    public static Dictionary<string, object?>? NachzugFelder(JsonElement formular, Nachzug n, out string stand)
+    {
+        stand = "abweichend";
+        if (formular.ValueKind != JsonValueKind.Object
+            || !formular.TryGetProperty("data_schema", out var schema)
+            || schema.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var felder = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var zusatz = new Dictionary<string, object?>(StringComparer.Ordinal);
+        string? state = null;
+
+        void Lesen(JsonElement feld, Dictionary<string, object?> ziel)
+        {
+            var name = Text(feld, "name");
+            if (name is null || !feld.TryGetProperty("description", out var d)
+                || !d.TryGetProperty("suggested_value", out var wert)) return;
+            ziel[name] = wert.Clone();
+        }
+
+        foreach (var feld in schema.EnumerateArray())
+        {
+            if (Text(feld, "type") == "expandable" && feld.TryGetProperty("schema", out var inner) && inner.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var f in inner.EnumerateArray()) Lesen(f, zusatz);
+                continue;
+            }
+
+            Lesen(feld, felder);
+        }
+
+        if (felder.TryGetValue("state", out var s) && s is JsonElement { ValueKind: JsonValueKind.String } je) state = je.GetString();
+        if (state is null) return null;
+
+        if (state.Contains(n.Neu, StringComparison.Ordinal))
+        {
+            stand = "aktuell";
+            return null;
+        }
+
+        if (!state.Contains(n.Alt, StringComparison.Ordinal)) return null;
+
+        felder["state"] = state.Replace(n.Alt, n.Neu, StringComparison.Ordinal);
+        if (zusatz.Count > 0) felder["additional_options"] = zusatz;
+        stand = "angepasst";
+        return felder;
+    }
+
     /// <summary>Den dreistufigen Dialog für ein Bauteil durchspielen.</summary>
     private async Task<(bool Erfolg, string? Fehler)> AnlegenAsync(
         HttpClient client, Bauteil b, string vorschrift, string? verfuegbarkeit, CancellationToken ct)
@@ -194,11 +378,15 @@ public sealed class SteuerungRechenwertService
     }
 
     /// <summary>Einen offenen Dialog abbrechen — ein halber bliebe bis zum Neustart stehen.</summary>
-    private static async Task SchliessenAsync(HttpClient client, string dialog, CancellationToken ct)
+    private static Task SchliessenAsync(HttpClient client, string dialog, CancellationToken ct)
+        => SchliessenAsync(client, DialogPfad, dialog, ct);
+
+    private static async Task SchliessenAsync(HttpClient client, string pfad, string? dialog, CancellationToken ct)
     {
+        if (dialog is null) return;
         try
         {
-            using var _ = await client.DeleteAsync($"{DialogPfad}/{dialog}", ct);
+            using var _ = await client.DeleteAsync($"{pfad}/{dialog}", ct);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {

@@ -9,6 +9,8 @@ import './steuerung.css'
 import { rollenPfad } from '../geraete/rollenPfad'
 import { feldFehlerAus, leereZahlenfelder, ohneLuecken, zahlAusFeld } from './feld-fehler'
 import { useFehlerZeigen } from './fehler-reiter'
+import { bandStellen, haeltGerade, haltebereich } from './zuluft-haltebereich'
+import type { Haltebereich } from './zuluft-haltebereich'
 
 /**
  * Fork AI (forkai.76): Steuerung › Zuluft — die Kellerzuluft, die bisher als
@@ -115,7 +117,14 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
   const anzeige = ohneLuecken(entwurf, seite.einstellungen)
   const setz = <K extends keyof ZuluftEinstellungen>(feld: K, wert: ZuluftEinstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
 
-  const zustand = live.portAn === true ? 'saugt' : live.bedarf === true ? 'wartet' : live.pauseZeltKalt === true ? 'pausiert' : 'bereit'
+  // Die Regelung entscheidet nach der geglätteten Differenz und nach den GESPEICHERTEN Werten —
+  // nicht nach dem, was gerade im Feld getippt wird. Das Band im Reiter Regel zeigt dagegen den Entwurf.
+  const regelDiff = live.differenzRegelGm3 ?? live.differenzGm3
+  const hbLive = haltebereich(seite.einstellungen.mindestDifferenzGm3, seite.einstellungen.abschaltAbstandGm3)
+  const hbEntwurf = haltebereich(anzeige.mindestDifferenzGm3, anzeige.abschaltAbstandGm3)
+  const haelt = live.portAn === true && haeltGerade(live.bedarf, regelDiff, hbLive)
+
+  const zustand = live.portAn === true ? (haelt ? 'saugt · hält' : 'saugt') : live.bedarf === true ? 'wartet' : live.pauseZeltKalt === true ? 'pausiert' : 'bereit'
 
   return (
     <V1Page
@@ -149,7 +158,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
         <button type="button" className="zl-kachel" onClick={() => setRechenweg(true)}>
           <V1Stat
             label="Differenz"
-            value={Zeig(live.differenzGm3, '', 2)}
+            value={Zeig(regelDiff, '', 2)}
             unit=" g/m³"
             hint="Rechenweg ansehen ›"
             tone={live.bedarf === true ? 'ok' : 'neutral'}
@@ -160,7 +169,13 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           value={live.istStufe ?? '–'}
           hint={live.zielstufe == null ? null : `Ziel ${live.zielstufe}`}
         />
-        <V1Stat label="Zustand" value={zustand} wortwert tone={live.portAn === true ? 'ok' : 'neutral'} />
+        <V1Stat
+          label="Zustand"
+          value={zustand}
+          wortwert
+          tone={live.portAn === true ? 'ok' : 'neutral'}
+          hint={haelt ? `Aus erst unter ${Zeig(hbLive.ausUnter, '', 1)} g/m³` : null}
+        />
         <V1Stat
           label="Schaltsperre"
           value={live.sperreRestMin == null ? '–' : live.sperreRestMin === 0 ? 'frei' : live.sperreRestMin}
@@ -187,6 +202,18 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
               fehler={feldFehler.MindestDifferenzGm3}
             />
             <Zahl
+              label="Abschalt-Abstand"
+              hinweis="Wie weit die Differenz unter die Mindest-Differenz fallen muss, bevor er aufhört (bei 0: an und aus an derselben Grenze)."
+              einheit="g/m³"
+              wert={entwurf.abschaltAbstandGm3}
+              min={0}
+              max={3}
+              schritt={0.1}
+              onChange={(v) => setz('abschaltAbstandGm3', v)}
+              fehler={feldFehler.AbschaltAbstandGm3}
+            />
+            <HaltBand hb={hbEntwurf} differenz={regelDiff} />
+            <Zahl
               label="Zelttemperatur min."
               hinweis="Fällt das Zelt darunter, pausiert die Zuluft — sie läuft wieder ab diesem Wert + 1 °C. Schützt vor Auskühlen in kalten Nächten."
               einheit="°C"
@@ -209,8 +236,8 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
               fehler={feldFehler.AussentemperaturMinC}
             />
             <p className="st-hinweis">
-              Abgeschaltet wird erst 0,5 g/m³ unter der Schwelle. Diese Hysterese steckt im Rechenwert
-              und hält den Lüfter davon ab, an der Schwelle zu flattern.
+              Zwischen „aus unter" und „an ab" bleibt der Lüfter, wie er ist. Das hält ihn davon ab, an
+              der Grenze zu flattern; Mindestlaufzeit und -pause sichern zusätzlich.
             </p>
           </V1Card>
         </V1Section>
@@ -314,7 +341,12 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           <p className="zl-pfeil" aria-hidden="true">↓</p>
           <Glied
             marke="Differenz"
-            wert={`${Zeig(live.differenzGm3, ' g/m³', 2)} · Schwelle ${anzeige.mindestDifferenzGm3.toLocaleString('de-DE')}`}
+            wert={`${Zeig(regelDiff, ' g/m³', 2)}${live.differenzRegelGm3 != null && live.differenzRegelGm3 !== live.differenzGm3 ? ` · roh ${Zeig(live.differenzGm3, '', 2)}` : ''}`}
+          />
+          <p className="zl-pfeil" aria-hidden="true">↓</p>
+          <Glied
+            marke="Schwellen"
+            wert={`an ab ${Zeig(hbLive.anAb, '', 1)} · aus unter ${Zeig(hbLive.ausUnter, '', 1)}${haelt ? ' · hält' : ''}`}
           />
           <p className="zl-pfeil" aria-hidden="true">↓</p>
           <Glied
@@ -336,6 +368,44 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
 /** Ein Messwert, wie er im Rechenweg steht — mit „–" statt einer erfundenen Null. */
 function Zeig(wert: number | null, einheit: string, stellen: number) {
   return wert == null || !Number.isFinite(wert) ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen }) + einheit
+}
+
+/**
+ * Fork AI (forkai.225): Die Hysterese als Band — wo der Lüfter angeht, wo er aufhört und was dazwischen
+ * gilt. Der Punkt ist die Differenz, nach der die Regelung entscheidet. Farbe allein trägt nichts: die
+ * Zonen haben Namen, und das Ganze liest sich auch als Satz (aria-label).
+ */
+function HaltBand({ hb, differenz }: { hb: Haltebereich; differenz: number | null }) {
+  const s = bandStellen(hb, differenz)
+  const gleich = hb.ausUnter === hb.anAb
+  const satz = gleich
+    ? `An und aus bei ${Zeig(hb.anAb, '', 1)} g/m³`
+    : `Aus unter ${Zeig(hb.ausUnter, '', 1)}, an ab ${Zeig(hb.anAb, '', 1)} g/m³, dazwischen bleibt er, wie er ist`
+  return (
+    <div className="zl-band" role="img" aria-label={`${satz}${differenz == null ? '' : `; jetzt ${Zeig(differenz, '', 2)}`}`}>
+      <div className="ef-skala">
+        <div className="ef-bahn" />
+        {!gleich && <div className="zl-halt" style={{ left: `${s.ausPos}%`, width: `${s.anPos - s.ausPos}%` }} />}
+        <div className="zl-an" style={{ left: `${s.anPos}%` }} />
+        {!gleich && <span className="ef-strich" style={{ left: `${s.ausPos}%` }} />}
+        <span className="ef-strich" style={{ left: `${s.anPos}%` }} />
+        {s.istPos != null && <span className="ef-ist" style={{ left: `${s.istPos}%` }}><em>{Zeig(differenz, '', 2)}</em></span>}
+      </div>
+      <div className="ef-marken">
+        {gleich ? (
+          <span style={{ left: `${s.anPos}%` }}>{Zeig(hb.anAb, '', 1)}<b>an und aus</b></span>
+        ) : (
+          <>
+            <span style={{ left: `${s.ausPos}%`, transform: 'translateX(-85%)' }}>{Zeig(hb.ausUnter, '', 1)}<b>aus unter</b></span>
+            <span style={{ left: `${s.anPos}%`, transform: 'translateX(-15%)' }}>{Zeig(hb.anAb, '', 1)}<b>an ab</b></span>
+          </>
+        )}
+      </div>
+      <p className="zl-legende">
+        {gleich ? 'Ohne Haltebereich.' : <><span className="zl-punkt halt" aria-hidden="true" />hält, wie er ist <span className="zl-punkt an" aria-hidden="true" />saugt</>}
+      </p>
+    </div>
+  )
 }
 
 function Glied({ marke, wert, ziel }: { marke: string; wert: string; ziel?: boolean }) {

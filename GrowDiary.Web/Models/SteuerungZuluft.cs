@@ -24,6 +24,17 @@ public sealed class ZuluftEinstellungen
     public double MindestDifferenzGm3 { get; set; } = 1.0;
 
     /// <summary>
+    /// Fork AI (forkai.225): Wie weit die Differenz unter die Mindest-Differenz fallen
+    /// muss, bevor der Lüfter aufhört. Dazwischen hält er seinen Zustand — das ist die
+    /// Hysterese, die vorher fest mit 0,5 im Rechenwert stand.
+    /// </summary>
+    /// <remarks>
+    /// Ein Stand von vor forkai.225 hat das Feld nicht und liest sich als 0,5 — also
+    /// genau das bisherige Verhalten; kein Altstand muss deshalb verworfen werden.
+    /// </remarks>
+    public double AbschaltAbstandGm3 { get; set; } = Services.ZuluftSteuerungService.AbschaltAbstandVorgabe;
+
+    /// <summary>
     /// Frostschutz: darunter bleibt der Lüfter aus, egal wie trocken es draußen ist.
     /// </summary>
     /// <remarks>
@@ -67,6 +78,11 @@ public sealed class ZuluftEinstellungen
 /// Fork AI (forkai.128): true, wenn die Außenluft trocknen würde, die Zuluft aber
 /// pausiert, weil das Zelt zu kalt ist.
 /// </param>
+/// <param name="DifferenzRegelGm3">
+/// Fork AI (forkai.225): Die Differenz, nach der die Regelung entscheidet — die geglättete,
+/// wenn es sie gibt, sonst die rohe. Die rohe springt um bis zu 1 g/m³ in einer Minute; wer
+/// sie neben „An ab" und „Aus unter" stellt, sieht Zustände, die es für die Regelung nie gab.
+/// </param>
 /// <param name="SperreRestMin">
 /// Wie lange die Schaltsperre noch läuft. 0 heißt frei; null, wenn noch nie
 /// geschaltet wurde oder der Zeitstempel fehlt.
@@ -89,4 +105,5 @@ public sealed record ZuluftLive(
     int? SperreRestMin,
     DateTime? LetzterWechsel,
     double? ZeltTempC = null,
-    bool? PauseZeltKalt = null);
+    bool? PauseZeltKalt = null,
+    double? DifferenzRegelGm3 = null);

@@ -199,6 +199,14 @@
   .zl-glied .r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-text); }
   .zl-glied.ziel { border-color: var(--accent-dim); background: var(--accent-wash); }
   .zl-glied.ziel .r { color: var(--accent-text); font-weight: 700; }
+  /* Fork AI (forkai.225): Hysterese-Band der Zuluft. Bahn, Strich und Punkt sind die ef-*-Klassen. */
+  .zl-band { margin: var(--s-3) 0 var(--s-2); }
+  .zl-halt { position: absolute; top: var(--s-4); height: var(--s-2); background: var(--warn-wash); border-top: 1px solid var(--warn); border-bottom: 1px solid var(--warn); }
+  .zl-an { position: absolute; right: 0; top: var(--s-4); height: var(--s-2); background: var(--accent-wash); border-top: 1px solid var(--accent-dim); border-bottom: 1px solid var(--accent-dim); }
+  .zl-legende { margin: var(--s-2) 0 0; font-size: var(--fs-klein); color: var(--faint); }
+  .zl-punkt { display: inline-block; width: var(--s-2); height: var(--s-2); border-radius: 2px; margin: 0 var(--s-1) 0 0; vertical-align: baseline; }
+  .zl-punkt.halt { background: var(--warn); }
+  .zl-punkt.an { background: var(--accent-dim); margin-left: var(--s-2); }
   .zl-pfeil { margin: calc(-1 * var(--s-1)) 0; text-align: center; color: var(--hint); font-size: 11px; line-height: 1; }
 }
 

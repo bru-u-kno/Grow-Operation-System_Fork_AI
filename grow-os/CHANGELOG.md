@@ -5,6 +5,29 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.225
+
+**Fork AI.** Zuluft: Der Abschalt-Abstand ist einstellbar, und die Seite sagt, wann der Lüfter nur noch hält.
+
+- **Der Anlass:** Die Seite zeigte „Mindest-Differenz 1", „Differenz 0,73" und „saugt" — das wirkte wie ein Fehler. Es ist die Hysterese: Der Lüfter geht an ab 1,0 und hört erst unter 0,5 auf; dazwischen bleibt er, wie er ist. Die 0,5 stand fest im Rechenwert in Home Assistant, war auf der Seite nur als Satz am Ende der Karte zu lesen und nicht einzustellen.
+- **Neu — Feld „Abschalt-Abstand"** im Reiter Regel (Vorgabe 0,5 g/m³, Bereich 0 bis 3, nie größer als die Mindest-Differenz). Bei 0 gibt es keinen Haltebereich: an und aus an derselben Grenze; Mindestlaufzeit und -pause sichern weiter gegen Flattern. Ein Altstand ohne das Feld liest sich als 0,5 — das bisherige Verhalten.
+- **Neu — Band unter dem Feld:** zeigt „aus unter", „an ab", die Zone dazwischen („hält, wie er ist") und die aktuelle Differenz als Punkt. Es folgt dem Feld schon beim Tippen, bevor gespeichert ist. Der Absatz am Kartenende entfällt.
+- **Neu — Zustand „saugt · hält":** Läuft der Lüfter, weil der Bedarf an ist, die Differenz aber unter der Einschaltgrenze liegt, steht dort „saugt · hält" mit „Aus erst unter 0,5 g/m³". Im Rechenweg kommt die Zeile „Schwellen" hinzu.
+- **Geändert — die Seite zeigt die Differenz, nach der die Regelung entscheidet:** die geglättete, wenn es sie gibt (sonst die rohe). Die rohe sprang am 15.10. zwischen 0,56 und 1,52 g/m³ innerhalb weniger Minuten, die geglättete lag um 16:39 bei 0,78. Wer die rohe neben „an ab" und „aus unter" stellt, sieht Zustände, die es für die Regelung nie gab. Im Rechenweg steht die rohe Differenz weiter daneben.
+
+### Technik
+- Neues Bauteil `input_number.zuluft_abschalt_abstand`; die Vorlage „Zuluft Bedarf" rechnet mit `s − (Helfer | float(0.5))` statt mit festen 0,5. Fehlt der Helfer oder ist er nicht lesbar, gilt 0,5. Neue Installationen bekommen beides beim Einrichten.
+- **Vorhandene Anlagen:** Der Fork überschreibt Vorhandenes nie — für diesen einen Fall tauscht `POST /api/steuerung/zuluft/rechenwerte` ein einzelnes Textstück (`d < s - 0.5 or` → Aufruf des Helfers) im vorhandenen Rechenwert „Zuluft Bedarf", über denselben Optionsdialog wie „Konfigurieren" in Home Assistant. Alles andere im Rechenwert bleibt stehen (auch Abweichungen wie die geglättete Differenz, Geräteklasse, Verfügbarkeit). Steht das alte Textstück nicht genau so darin, passiert nichts; die Antwort nennt je Rechenwert `angepasst`, `aktuell`, `abweichend`, `nicht_gefunden` oder `fehler`.
+- Schreiben nach Home Assistant: `ZuluftSteuerungService.NachHomeAssistantSchreibenAsync` schreibt den Abstand in den Helfer; `Pruefen` lehnt Werte außerhalb 0 bis 3 und über der Mindest-Differenz ab.
+- `ZuluftLive.DifferenzRegelGm3` (neu, optional), `ZuluftEinstellungen.AbschaltAbstandGm3`.
+- **Bekannt:** Ein neuer Helfer startet in Home Assistant auf seiner Untergrenze 0 und nimmt den Wert der Seite erst beim nächsten Speichern an; bis dahin hält die Regelung nicht, schaltet aber weiter nur im Rahmen von Mindestlaufzeit und -pause. Das Katalog-Template nutzt die rohe Differenz; wer die geglättete möchte, ändert den Rechenwert selbst (das Nachziehen lässt solche Abweichungen unberührt).
+
+### Geprüft
+- Backend 3463 Tests grün, darunter neue für Grenzen und Altstand, das Nachziehen gegen das echte Formular eines von Hand angepassten Rechenwerts (Geräteklasse und Verfügbarkeit bleiben, geglättete Differenz bleibt, Doppelanwendung und fremde Hysterese bleiben unberührt) und ein Gleichlauf-Test zwischen Katalog und Nachziehen (wird rot, wenn beide auseinanderlaufen).
+- 1110 Frontend-Tests grün, 12 davon neu (Grenzen, Rundung, Skala, „hält" mit den echten Werten vom 15.10.).
+- E2E gegen die gebaute App: Feld, Band, Speichern mit Neuladen, Ablehnung am Feld, „saugt · hält" mit Livestand; ohne die Anzeige-Logik wird der Fall rot („Zustandsaugt" statt „saugt · hält").
+- Die Seite wurde auf Handy-Breite gerendert und gelesen: im Haltebereich (0,78), über der Grenze (1,34) und bei ausgeschaltetem Lüfter.
+
 ## 2.0.0-forkai.224
 
 **Fork AI.** Die Karten unter „Aufgaben → Risiken" sagen jetzt, ob eine Abweichung noch besteht und seit wann, und sie nennen denselben Wert wie die Diagnose.

@@ -27,6 +27,15 @@ public sealed class ZuluftSteuerungService
     /// <summary>Fork AI (forkai.128): Vorgabe für die Kälte-Pause, wenn der Helfer fehlt.</summary>
     public const double ZeltTemperaturMinVorgabe = 21;
 
+    /// <summary>
+    /// Fork AI (forkai.225): Vorgabe für den Abschalt-Abstand — der Wert, der bis dahin
+    /// fest im Rechenwert stand. Er gilt auch, wenn der Helfer fehlt.
+    /// </summary>
+    public const double AbschaltAbstandVorgabe = 0.5;
+
+    /// <summary>Obergrenze des Abschalt-Abstands in g/m³.</summary>
+    public const double AbschaltAbstandMax = 3;
+
     /// <summary>Die Rollen dieses Moduls — aufgelöst über die Geräteseite.</summary>
     public static class Rollen
     {
@@ -46,6 +55,7 @@ public sealed class ZuluftSteuerungService
     public static class Entitaeten
     {
         public const string MindestDifferenz = "input_number.zuluft_mindest_differenz";
+        public const string AbschaltAbstand = "input_number.zuluft_abschalt_abstand";
         public const string AussentemperaturMin = "input_number.zuluft_aussentemperatur_min";
         public const string StufeMin = "input_number.zuluft_stufe_min";
         public const string StufeMax = "input_number.zuluft_stufe_max";
@@ -139,6 +149,7 @@ public sealed class ZuluftSteuerungService
             ? Zahlenlesen.Maschine(s) : null;
 
         if (Zahl(Entitaeten.MindestDifferenz) is { } md) e.MindestDifferenzGm3 = md;
+        if (Zahl(Entitaeten.AbschaltAbstand) is { } aa) e.AbschaltAbstandGm3 = aa;
         if (Zahl(Entitaeten.AussentemperaturMin) is { } at) e.AussentemperaturMinC = at;
         if (Zahl(Entitaeten.StufeMin) is { } smin) e.StufeMin = (int)Math.Round(smin);
         if (Zahl(Entitaeten.StufeMax) is { } smax) e.StufeMax = (int)Math.Round(smax);
@@ -160,6 +171,16 @@ public sealed class ZuluftSteuerungService
         if (e.MindestDifferenzGm3 is < 0.2 or > 10)
         {
             f[nameof(e.MindestDifferenzGm3)] = "Mindest-Differenz muss zwischen 0,2 und 10 g/m³ liegen.";
+        }
+
+        if (e.AbschaltAbstandGm3 is < 0 or > AbschaltAbstandMax)
+        {
+            f[nameof(e.AbschaltAbstandGm3)] = "Abschalt-Abstand muss zwischen 0 und 3 g/m³ liegen.";
+        }
+        else if (e.AbschaltAbstandGm3 > e.MindestDifferenzGm3)
+        {
+            // Darüber läge die Aus-Grenze unter 0: der Lüfter ginge nie mehr aus.
+            f[nameof(e.AbschaltAbstandGm3)] = "Abschalt-Abstand darf nicht größer sein als die Mindest-Differenz.";
         }
 
         if (e.AussentemperaturMinC is < -10 or > 25)
@@ -205,6 +226,7 @@ public sealed class ZuluftSteuerungService
         var zahlen = new List<(string Entity, double Wert)>
         {
             (Entitaeten.MindestDifferenz, e.MindestDifferenzGm3),
+            (Entitaeten.AbschaltAbstand, e.AbschaltAbstandGm3),
             (Entitaeten.AussentemperaturMin, e.AussentemperaturMinC),
             (Entitaeten.StufeMin, e.StufeMin),
             (Entitaeten.StufeMax, e.StufeMax),
@@ -278,7 +300,8 @@ public sealed class ZuluftSteuerungService
             SperreRestMin: rest,
             LetzterWechsel: gewechselt,
             ZeltTempC: zeltTemp,
-            PauseZeltKalt: pause);
+            PauseZeltKalt: pause,
+            DifferenzRegelGm3: Zahl(Entitaeten.DifferenzGeglaettet) ?? Zahl(Entitaeten.Differenz));
     }
 
     /// <summary>

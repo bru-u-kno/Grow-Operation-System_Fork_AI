@@ -50,6 +50,7 @@ public sealed class ZuluftEinstellungenTests : IDisposable
             MindestpauseMin = 20,
             AutomatikAktiv = false,
             ZeltTemperaturMinC = 19.5,
+            AbschaltAbstandGm3 = 0.8,
         };
 
         _repo.SetEinstellungen(ZuluftSteuerungService.Modul, gesendet);
@@ -64,6 +65,51 @@ public sealed class ZuluftEinstellungenTests : IDisposable
         Assert.Equal(20, gelesen.MindestpauseMin);
         Assert.False(gelesen.AutomatikAktiv);
         Assert.Equal(19.5, gelesen.ZeltTemperaturMinC);
+        Assert.Equal(0.8, gelesen.AbschaltAbstandGm3);
+    }
+
+    // ------------------------------------------------ Fork AI (forkai.225)
+
+    [Fact]
+    public void EinStandOhneAbschaltAbstandLiestSichAlsBisherigeHalbeinheit()
+    {
+        // Gespeichert vor forkai.225: das Feld fehlt im JSON. Es muss 0,5 ergeben - das
+        // war bis dahin fest im Rechenwert, und der Altstand soll nicht verworfen werden.
+        var json = "{\"MindestDifferenzGm3\":1.5,\"ZeltTemperaturMinC\":21}";
+        var gelesen = System.Text.Json.JsonSerializer.Deserialize<ZuluftEinstellungen>(json);
+        Assert.Equal(0.5, gelesen!.AbschaltAbstandGm3);
+        Assert.Equal(ZuluftSteuerungService.AbschaltAbstandVorgabe, new ZuluftEinstellungen().AbschaltAbstandGm3);
+    }
+
+    [Fact]
+    public void DerAbschaltAbstandKommtAusDemHelferSonstVorgabe()
+    {
+        var mit = ZuluftSteuerungService.AusHomeAssistant(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ZuluftSteuerungService.Entitaeten.AbschaltAbstand] = "0.3",
+        });
+        Assert.Equal(0.3, mit.AbschaltAbstandGm3);
+
+        var ohne = ZuluftSteuerungService.AusHomeAssistant(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase));
+        Assert.Equal(0.5, ohne.AbschaltAbstandGm3);
+    }
+
+    [Theory]
+    [InlineData(-0.1, 1.0, true)]
+    [InlineData(0, 1.0, false)]     // 0 = kein Haltebereich
+    [InlineData(1.0, 1.0, false)]   // Aus-Grenze genau 0: noch erlaubt
+    [InlineData(1.1, 1.0, true)]    // Aus-Grenze unter 0: ginge nie mehr aus
+    [InlineData(3.0, 3.0, false)]
+    [InlineData(3.1, 5.0, true)]    // Obergrenze des Helfers
+    public void DerAbschaltAbstandHatGrenzenUndBleibtUnterDerMindestDifferenz(double abstand, double mindest, bool abgelehnt)
+    {
+        var fehler = ZuluftSteuerungService.Pruefen(new ZuluftEinstellungen
+        {
+            MindestDifferenzGm3 = mindest,
+            AbschaltAbstandGm3 = abstand,
+            ZeltTemperaturMinC = 21,
+        });
+        Assert.Equal(abgelehnt, fehler.ContainsKey(nameof(ZuluftEinstellungen.AbschaltAbstandGm3)));
     }
 
     // ------------------------------------------------ Fork AI (forkai.128)
