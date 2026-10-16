@@ -36,7 +36,9 @@ export function WochenZeile() {
           apiFetch<WochenPlan[]>('/api/wochenplan'),
           apiFetch<{ growId: number | null }>(wunschGrow ? `/api/zielwerte?growId=${encodeURIComponent(wunschGrow)}` : '/api/zielwerte').catch(() => ({ growId: null })),
         ])
-        if (aktiv) setPlan(waehlePlan(plaene, ziel.growId))
+        // Mit ?grow=… und unbekanntem Grow zeigt die Zeile nichts — der Plan darunter sagt dann selbst, warum;
+        // sie nähme sonst still den ersten Plan, einen anderen Grow als der Reiter.
+        if (aktiv) setPlan(wunschGrow && ziel.growId == null ? null : waehlePlan(plaene, ziel.growId))
       } catch {
         // Die Zeile ist eine Zugabe — ohne sie funktionieren alle Reiter weiter.
       }

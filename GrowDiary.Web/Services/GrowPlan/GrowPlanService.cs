@@ -703,6 +703,20 @@ public sealed class GrowPlanService
                 }
             }
 
+            // Eine angehängte Blütewoche, die der Nutzer schon geprüft hat, bleibt geprüft — wenn seine
+            // Änderungen mitgehen. Sonst stünde nach dem Wechsel dieselbe Woche wieder in den Aufgaben.
+            // Werden die Änderungen verworfen, sind die Werte neu kopiert und wieder zu prüfen.
+            if (aenderungenBehalten)
+            {
+                foreach (var (spalte, _) in angehaengt)
+                {
+                    if (arbeit.Inhalt.IstVerlaengert(spalte.Id) && !arbeit.Inhalt.IstUngeprueft(spalte.Id))
+                    {
+                        neu.Ungeprueft.Remove(spalte.Id);
+                    }
+                }
+            }
+
             var eintrag = new GrowPlanEintrag(0, grow.Id, zeit, GrowPlanArten.Programmwechsel, null, null,
                 arbeit.Inhalt.ProgrammName, programm.Name, "grow",
                 aenderungenBehalten

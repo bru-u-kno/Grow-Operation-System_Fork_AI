@@ -8,13 +8,15 @@ import {
  * Finish beginnt — und, wenn der Düngeplan weniger Blütewochen führt, als Sorte
  * und Flush verlangen, ein Hinweis mit dem, was beim Speichern passiert.
  */
-export function FlushFeld({ flushTage, onChange, maxWochen, flipDatum, planName, blueteImPlan, spanne }: {
+export function FlushFeld({ flushTage, onChange, maxWochen, flipDatum, flipBekannt, planName, blueteImPlan, spanne }: {
   flushTage: number | null | undefined
   onChange: (tage: number) => void
   /** Züchterwochen der Sorte, Maximum — wie der Server rechnet. */
   maxWochen: number | null
   /** Flipdatum (Datum), falls schon bekannt. */
   flipDatum: string | null
+  /** Kennt der Fork den Blütebeginn (Flipdatum oder geplante Vegi-Dauer)? Sonst entstehen Wochen erst später. */
+  flipBekannt: boolean
   planName: string | null
   /** Nummerierte Blütewochen des Plans oder Programms; null = unbekannt. */
   blueteImPlan: number | null
@@ -46,7 +48,7 @@ export function FlushFeld({ flushTage, onChange, maxWochen, flipDatum, planName,
       </small>
       {hinweis && (
         <small role="status" data-audit={hinweis.art === 'fehlt' ? 'flush-plan-fehlt' : 'flush-plan-mehr'}>
-          {planHinweisText(hinweis, planName, spanne, aktuell)}
+          {planHinweisText(hinweis, planName, spanne, aktuell, flipBekannt)}
         </small>
       )}
     </div>

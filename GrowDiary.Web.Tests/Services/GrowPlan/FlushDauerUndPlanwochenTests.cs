@@ -50,7 +50,7 @@ public sealed class FlushDauerUndPlanwochenTests : IDisposable
     }
 
     /// <summary>Flip am 23.08.2026, Sorte 9–10 Wochen — wie der Mimosa-Fall.</summary>
-    private GrowRun Mimosa(int nummer, int flushTage, int? maxWochen = 10, DateTime? heute = null)
+    private GrowRun Mimosa(int nummer, int flushTage, int? maxWochen = 10, string programm = "skx-canna-aqua")
     {
         _benutzt.Add(Basis + nummer);
         var flip = new DateTime(2026, 8, 23);
@@ -59,7 +59,7 @@ public sealed class FlushDauerUndPlanwochenTests : IDisposable
         {
             Id = Basis + nummer,
             Name = $"Mimosa {nummer}",
-            FeedProgramId = "skx-canna-aqua",
+            FeedProgramId = programm,
             HydroStyle = HydroStyle.RDWC,
             Status = GrowStatus.Running,
             StartMaterial = StartMaterial.Seed,
@@ -213,6 +213,46 @@ public sealed class FlushDauerUndPlanwochenTests : IDisposable
         var arbeit = Arbeit(grow.Id);
         Assert.Contains(arbeit.Chart.Columns, c => c.Stage == "Veg" && c.Week > 4);
         Assert.Empty(arbeit.Ungeprueft);
+    }
+
+    [Fact]
+    public void EinTippfehlerBeiDenZuechterwochen_LegtKeinenRiesenplanAn()
+    {
+        // 90 statt 9 Wochen: gedeckelt bei zwanzig, denn angelegte Wochen werden nie entfernt.
+        var grow = Mimosa(12, 14, maxWochen: 90);
+        _dienst.Anlegen(grow);
+
+        Assert.Equal(Planwochen.MaxGeplanteBluetewochen, Planwochen.GeplanteBluetewochen(Phasenanker.Fuer(grow, Heute)));
+        _dienst.WochenNachziehen(grow, Heute);
+        Assert.Equal(20, Arbeit(grow.Id).Chart.Columns.Where(c => c.Stage == "Flower" && c.Week is not null).Max(c => c.Week!.Value));
+    }
+
+    [Fact]
+    public void Programmwechsel_BehaeltGeprueftWennDieAenderungenMitgehen_SonstWiederZuPruefen()
+    {
+        // Athena führt neun Blütewochen; Sorte 11–12 Wochen, zwei Wochen Flush → zehn → Woche 10 wird angehängt.
+        var grow = Mimosa(13, 14, maxWochen: 12, programm: "athena");
+        _dienst.Anlegen(grow);
+        _dienst.WochenNachziehen(grow, Heute);
+        Assert.True(Arbeit(grow.Id).IstUngeprueft("flower-w10"));
+        Assert.True(_dienst.WocheGeprueft(grow.Id, "flower-w10"));
+
+        // Wechsel auf SKX (acht Blütewochen) MIT Änderungen: Woche 10 war geprüft und bleibt es;
+        // Woche 9 kam im alten Plan aus dem Programm und ist jetzt neu angehängt → zu prüfen.
+        _dienst.ProgrammWechseln(grow, "skx-canna-aqua", aenderungenBehalten: true, heute: Heute);
+        var behalten = Arbeit(grow.Id);
+        Assert.True(behalten.IstUngeprueft("flower-w9"));
+        Assert.False(behalten.IstUngeprueft("flower-w10"));
+
+        // Zurück auf Athena (mit Änderungen): Woche 10 war geprüft und bleibt es.
+        _dienst.ProgrammWechseln(grow, "athena", aenderungenBehalten: true, heute: Heute);
+        Assert.False(Arbeit(grow.Id).IstUngeprueft("flower-w10"));
+
+        // Dann OHNE Änderungen auf SKX: die Werte sind neu kopiert und wieder zu prüfen.
+        _dienst.ProgrammWechseln(grow, "skx-canna-aqua", aenderungenBehalten: false, heute: Heute);
+        var verworfen = Arbeit(grow.Id);
+        Assert.True(verworfen.IstUngeprueft("flower-w9"));
+        Assert.True(verworfen.IstUngeprueft("flower-w10"));
     }
 
     // ---- Planwochen rein ------------------------------------------------------------------

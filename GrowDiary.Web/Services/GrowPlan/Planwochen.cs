@@ -92,8 +92,16 @@ public static class Planwochen
     /// </summary>
     public static int GeplanteBluetewochen(Phasenstand stand)
         => stand.BlueteAb is { } bluete && stand.FinishAb is { } finish && finish > bluete
-            ? (int)Math.Ceiling((finish.Date - bluete.Date).Days / 7.0)
+            ? Math.Min(MaxGeplanteBluetewochen, (int)Math.Ceiling((finish.Date - bluete.Date).Days / 7.0))
             : 0;
+
+    /// <summary>
+    /// Mehr als zwanzig Blütewochen im Voraus legt der Fork nicht an — ein Tippfehler bei den
+    /// Züchterwochen (90 statt 9) soll keinen Plan mit achtzig „ungeprüften" Wochen hinterlassen,
+    /// die laut Regel nie wieder entfernt werden. Läuft die Blüte wirklich länger, hängt der
+    /// Fork die Wochen an, sobald sie erreicht sind.
+    /// </summary>
+    public const int MaxGeplanteBluetewochen = 20;
 
     /// <summary>Fehlt dem Plan eine Woche, die eine Phase schon erreicht hat?</summary>
     public static bool FehltEineWoche(GrowPlanInhalt inhalt, Phasenstand stand)

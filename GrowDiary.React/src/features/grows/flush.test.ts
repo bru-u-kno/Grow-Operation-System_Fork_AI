@@ -27,7 +27,7 @@ describe('Flush-Dauer', () => {
     expect(bluetewochenBisFlush(10, 7)).toBe(9)
     expect(bluetewochenBisFlush(12, 14)).toBe(10)
     expect(bluetewochenBisFlush(null, 14)).toBeNull()
-    expect(bluetewochenBisFlush(1, 14)).toBe(1) // nie unter eine Woche
+    expect(bluetewochenBisFlush(1, 14)).toBe(2) // nie unter dem Übergang von 10 Tagen (= 2 Wochen), wie der Server
   })
 
   it('zählt nur nummerierte Blütewochen eines Plans', () => {
@@ -64,5 +64,23 @@ describe('Hinweis: Plan gegen Sorte und Flush', () => {
     expect(planHinweis(8, 8)).toBeNull()
     expect(planHinweis(null, 8)).toBeNull()
     expect(planHinweis(8, null)).toBeNull()
+  })
+})
+
+describe('Randfälle der Wochenzahl (wie der Server)', () => {
+  it('hält das Finish mindestens zehn Tage nach dem Flip', () => {
+    // Maximum 3 Wochen, zwei Wochen Flush: 21 − 14 = 7 Tage < 10 → der Server rechnet mit 10 Tagen = 2 Wochen.
+    expect(bluetewochenBisFlush(3, 14)).toBe(2)
+    expect(finishBeginn('2026-08-23', 3, 14)?.toDateString()).toBe(new Date('2026-09-02T00:00:00').toDateString())
+    expect(bluetewochenBisFlush(4, 14)).toBe(2) // 28 − 14 = 14 Tage: darüber greift die Klemme nicht mehr
+  })
+  it('legt nie mehr als zwanzig Blütewochen im Voraus an', () => {
+    expect(bluetewochenBisFlush(90, 14)).toBe(20)
+    expect(bluetewochenBisFlush(22, 7)).toBe(20)
+  })
+  it('sagt ohne Flip, dass die Wochen erst mit dem Flip entstehen', () => {
+    const h = planHinweis(9, 8)!
+    expect(planHinweisText(h, 'Plan', '9–10', 7, true)).toContain('Beim Speichern kommt Blütewoche 9')
+    expect(planHinweisText(h, 'Plan', '9–10', 7, false)).toContain('Sobald der Flip feststeht, kommt Blütewoche 9')
   })
 })

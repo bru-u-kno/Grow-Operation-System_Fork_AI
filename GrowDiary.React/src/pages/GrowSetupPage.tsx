@@ -631,6 +631,7 @@ function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanz
             onChange={(tage) => patch({ flushTage: tage })}
             maxWochen={form.breederFlowerWeeksMax ?? form.breederFlowerWeeksMin ?? null}
             flipDatum={form.flipDate ?? null}
+            flipBekannt={Boolean(form.flipDate) || (form.plannedVegDays ?? 0) > 0}
             planName={planName}
             blueteImPlan={blueteImPlan}
             spanne={wochenText({ min: form.breederFlowerWeeksMin, max: form.breederFlowerWeeksMax })}
@@ -777,7 +778,7 @@ function ProgramStep({ programs, selected, custom, setCustom, selectProgram, pat
       bluetewochenBisFlush(form.breederFlowerWeeksMax ?? form.breederFlowerWeeksMin ?? null, form.flushTage),
       planBluete ?? blueteSpaltenZahl(gewaehlt?.feedChart?.columns),
     )
-    return hinweis ? planHinweisTextFuer(hinweis, planName ?? gewaehlt?.name ?? null, wochenText({ min: form.breederFlowerWeeksMin, max: form.breederFlowerWeeksMax }), flushTageGueltig(form.flushTage)) : null
+    return hinweis ? planHinweisTextFuer(hinweis, planName ?? gewaehlt?.name ?? null, wochenText({ min: form.breederFlowerWeeksMin, max: form.breederFlowerWeeksMax }), flushTageGueltig(form.flushTage), Boolean(form.flipDate) || (form.plannedVegDays ?? 0) > 0) : null
   })()
   const mitgeliefert = programs.filter((p) => !istEigenesProgramm(p.key))
   const eigene = programs.filter((p) => istEigenesProgramm(p.key))
