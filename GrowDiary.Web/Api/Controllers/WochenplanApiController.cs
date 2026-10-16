@@ -28,7 +28,9 @@ public sealed record WochenplanWocheDto(
     string? Ppfd,
     string? Dosierung,
     /// <summary>Fork AI (02.10.2026): angehängte Woche — die Phase läuft länger als das Programm.</summary>
-    bool Verlaengert = false);
+    bool Verlaengert = false,
+    /// <summary>Fork AI: angehängte Blütewoche, deren übernommene Werte noch niemand geprüft hat.</summary>
+    bool Ungeprueft = false);
 
 /// <summary>Ein Wert, den der Sync betreut — für den Block „Übergabe an HA".</summary>
 public sealed record WochenplanUebergabeDto(string Rolle, string Name, string EntityId, string Wert, string Zustand);
@@ -49,7 +51,14 @@ public sealed record WochenplanDto(
     List<WochenplanUebergabeDto> Uebergabe,
     string? LetzteUebergabe,
     /// <summary>Offene Phasen-Erinnerung des Grows („Anzucht seit 16 Tagen — Vegi-Beginn bestätigen?").</summary>
-    PhasenerinnerungDto? Erinnerung = null);
+    PhasenerinnerungDto? Erinnerung = null,
+    /// <summary>Züchterwochen der Sorte (wirksam, wie gerechnet wird) — „Blütewoche 8 von 9–10".</summary>
+    int? BlueteWochenMin = null,
+    int? BlueteWochenMax = null,
+    /// <summary>In welcher Blütewoche der Flush beginnt (Blütewochen bis zum Finish + 1); leer, wenn nichts zu rechnen ist.</summary>
+    int? FlushAbWoche = null,
+    /// <summary>Wie viele Wochen der Flush dauert: 1 oder 2.</summary>
+    int FlushWochen = 2);
 
 /// <summary>Ein bearbeitbares Feld einer Woche (F-004).</summary>
 public sealed record WochenwertFeldDto(
@@ -366,7 +375,7 @@ public sealed class WochenplanApiController : ApiControllerBase
 
             var inhalt = GrowPlanRegister.Inhalt(grow.Id);
             var wochen = chart.Columns
-                .Select(spalte => Zeile(spalte, istJetzt: spalte.Id == aktiveId, grow, inhalt?.IstVerlaengert(spalte.Id) ?? false))
+                .Select(spalte => Zeile(spalte, istJetzt: spalte.Id == aktiveId, grow, inhalt?.IstVerlaengert(spalte.Id) ?? false, inhalt?.IstUngeprueft(spalte.Id) ?? false))
                 .ToList();
 
             liste.Add(new WochenplanDto(
@@ -393,13 +402,17 @@ public sealed class WochenplanApiController : ApiControllerBase
                         u.Zustand))
                     .ToList(),
                 _sync.Stand.LetzterLauf,
-                PhasenankerDto.Aus(anker).Erinnerung));
+                PhasenankerDto.Aus(anker).Erinnerung,
+                grow.BreederFlowerWeeksMin,
+                grow.BreederFlowerWeeksMax,
+                Planwochen.GeplanteBluetewochen(anker) is var geplant and > 0 ? geplant + 1 : null,
+                GrowRun.FlushTageGueltig(grow.FlushTage) / 7));
         }
 
         return Ok(liste);
     }
 
-    private static WochenplanWocheDto Zeile(FeedChartColumn spalte, bool istJetzt, GrowRun grow, bool verlaengert)
+    private static WochenplanWocheDto Zeile(FeedChartColumn spalte, bool istJetzt, GrowRun grow, bool verlaengert, bool ungeprueft)
         => new(
             spalte.Id,
             spalte.Label,
@@ -416,7 +429,8 @@ public sealed class WochenplanApiController : ApiControllerBase
             Spanne(spalte.Co2Min, spalte.Co2Max),
             Spanne(spalte.PpfdMin, spalte.PpfdMax),
             Dosierung(spalte),
-            verlaengert);
+            verlaengert,
+            ungeprueft);
 
     /// <summary>Die zwei, drei Komponenten, die beim Anmischen wirklich zählen.</summary>
     /// <remarks>

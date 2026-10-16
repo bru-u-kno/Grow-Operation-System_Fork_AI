@@ -31,6 +31,9 @@ public sealed class GrowUpsertRequest
     /// </summary>
     public bool? BreederWeeksEigen { get; set; }
 
+    /// <summary>Flush vor der Ernte in Tagen: 7 (eine Woche) oder 14 (zwei Wochen). Leer = unverändert (beim Anlegen 14).</summary>
+    public int? FlushTage { get; set; }
+
     /// <summary>Geplante Veg-Dauer in Tagen ab Startdatum; leer = kein Plan.</summary>
     public int? PlannedVegDays { get; set; }
 

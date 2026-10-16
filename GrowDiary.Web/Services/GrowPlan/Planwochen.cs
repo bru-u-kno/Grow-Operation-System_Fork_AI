@@ -73,8 +73,27 @@ public static class Planwochen
     {
         yield return ("Clone", stand.WocheIn("Clone"));
         if (stand.VegAb is { } vegi && vegi <= stand.Stichtag) yield return ("Veg", stand.WocheIn("Veg"));
-        if (stand.BlueteAb is { } bluete && bluete <= stand.Stichtag) yield return ("Flower", stand.WocheIn("Flower"));
+        // Die Blüte braucht so viele Wochen, wie sie bisher dauert — und, schon vor
+        // dem Tag, so viele, wie bis zum Finish geplant sind (Ernte laut Sorte
+        // minus Flush). Dann kann der Nutzer die Werte der neuen Woche prüfen,
+        // bevor sie gilt.
+        if (stand.BlueteAb is { } bluete)
+        {
+            var bisher = bluete <= stand.Stichtag ? stand.WocheIn("Flower") : 0;
+            var bedarf = Math.Max(bisher, GeplanteBluetewochen(stand));
+            if (bedarf > 0) yield return ("Flower", bedarf);
+        }
     }
+
+    /// <summary>
+    /// Wie viele volle Blütewochen vor dem Finish liegen: vom Blütebeginn bis zum
+    /// (bestätigten oder aus Sorte und Flush gerechneten) Finish-Beginn, aufgerundet.
+    /// 0, wenn einer der beiden Termine fehlt.
+    /// </summary>
+    public static int GeplanteBluetewochen(Phasenstand stand)
+        => stand.BlueteAb is { } bluete && stand.FinishAb is { } finish && finish > bluete
+            ? (int)Math.Ceiling((finish.Date - bluete.Date).Days / 7.0)
+            : 0;
 
     /// <summary>Fehlt dem Plan eine Woche, die eine Phase schon erreicht hat?</summary>
     public static bool FehltEineWoche(GrowPlanInhalt inhalt, Phasenstand stand)
@@ -131,6 +150,9 @@ public static class Planwochen
                     inhalt.NachtWieTagJeWoche[spalte.Id] = nacht;
                 }
                 inhalt.Verlaengert[spalte.Id] = vorlage.Id;
+                // Die Werte sind nur kopiert: bei Blütewochen erinnert der Fork daran,
+                // sie zu prüfen (Plan-Seite, Formular, Aufgaben).
+                if (string.Equals(phase, "Flower", StringComparison.OrdinalIgnoreCase)) inhalt.Ungeprueft.Add(spalte.Id);
 
                 neu.Add((spalte, vorlage));
                 vorlage = spalte;

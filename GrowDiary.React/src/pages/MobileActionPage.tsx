@@ -123,6 +123,7 @@ function MobileActionPage() {
     }
   }
 
+  const planPruefen = state.grows.filter((grow) => (grow.planUngeprueft ?? []).length > 0)
   const termine = buildTermine(state)
   /**
    * Acht Termine auf einen Blick, der Rest einen Klick weit.
@@ -209,6 +210,34 @@ function MobileActionPage() {
                         </div>
                       )
                     })}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+          {/* Angehängte Blütewochen, deren Werte nur von der Vorwoche kopiert sind:
+              der Plan führt weniger Wochen, als Sorte und Flush verlangen. Die Karte
+              steht, bis die Woche im Plan als geprüft markiert ist — berechnet, nicht
+              gespeichert, also nichts, das liegen bleibt. */}
+          {planPruefen.length > 0 && (
+            <section className="ls-panel af-col" data-audit="plan-pruefen-section">
+              <div className="ls-panel-head">
+                <span className="ls-label">Plan prüfen</span>
+              </div>
+              <div className="af-due-list">
+                {planPruefen.map((grow) => (
+                  <div key={grow.id} className="af-due-grow">
+                    <div className="co-row-title">{grow.name}</div>
+                    {grow.planUngeprueft.map((woche) => (
+                      <div key={woche.id} className="co-row">
+                        <span className="co-row-text">
+                          {woche.label} prüfen — die Werte sind aus der Vorwoche übernommen. Stimmen sie für diese Woche?
+                        </span>
+                        <div className="co-row-end">
+                          <Link className="ls-btn is-small" to={`/plan?grow=${grow.id}&woche=${encodeURIComponent(woche.id)}`}>Zum Plan</Link>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

@@ -24,6 +24,7 @@ public static class RequestMapping
         BreederFlowerWeeksMin = request.BreederFlowerWeeksMin,
         BreederFlowerWeeksMax = request.BreederFlowerWeeksMax,
         BreederWochenEigen = request.BreederWeeksEigen,
+        FlushTage = request.FlushTage,
         PlannedVegDays = request.PlannedVegDays,
         SetpointProfileId = string.IsNullOrWhiteSpace(request.SetpointProfileId) ? null : request.SetpointProfileId,
         StrainId = request.StrainId,

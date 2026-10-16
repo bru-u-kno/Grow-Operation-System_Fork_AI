@@ -30,6 +30,8 @@ public sealed class GrowFormViewModel
     public int? BreederFlowerWeeksMax { get; set; }
     /// <summary>Leer = vom Aufrufer abzuleiten (siehe <see cref="Services.ZuechterwochenRegel"/>).</summary>
     public bool? BreederWochenEigen { get; set; }
+    /// <summary>Leer = unverändert (Aufrufer setzt das Bisherige oder die Vorgabe).</summary>
+    public int? FlushTage { get; set; }
 
     /// <summary>
     /// Geplante Veg-Dauer in Tagen ab Start. Autoflower kennt keinen Flip und
@@ -128,6 +130,7 @@ public sealed class GrowFormViewModel
             BreederFlowerWeeksMin = grow.BreederFlowerWeeksMin,
             BreederFlowerWeeksMax = grow.BreederFlowerWeeksMax,
             BreederWochenEigen = grow.BreederWochenEigen,
+            FlushTage = grow.FlushTage,
             PlannedVegDays = grow.PlannedVegDays,
             SetpointProfileId = grow.SetpointProfileId,
             StrainId = grow.StrainId,
@@ -178,6 +181,7 @@ public sealed class GrowFormViewModel
             BreederFlowerWeeksMin = IsAutoflower ? null : BreederFlowerWeeksMin,
             BreederFlowerWeeksMax = IsAutoflower ? null : BreederFlowerWeeksMax,
             BreederWochenEigen = BreederWochenEigen ?? false,
+            FlushTage = GrowRun.FlushTageGueltig(FlushTage),
             PlannedVegDays = IsAutoflower ? null : PlannedVegDays,
             SetpointProfileId = string.IsNullOrWhiteSpace(SetpointProfileId) ? null : SetpointProfileId,
             StrainId = StrainId,

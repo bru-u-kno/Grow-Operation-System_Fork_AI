@@ -101,6 +101,10 @@ export interface GrowSummary {
   /** Wochen laut Sorte; null ohne Sorte oder ohne Angabe. */
   strainFlowerWeeksMin: number | null
   strainFlowerWeeksMax: number | null
+  /** Flush vor der Ernte in Tagen: 7 (eine Woche) oder 14 (zwei Wochen). */
+  flushTage: number
+  /** Angehängte Blütewochen im Plan, deren Werte noch niemand geprüft hat. */
+  planUngeprueft: Array<{ id: string; label: string }>
   germinatedAt: string | null
   rootedAt: string | null
   vegStartedAt: string | null
@@ -295,6 +299,8 @@ export interface GrowDetail {
   /** Wochen laut Sorte; null ohne Sorte oder ohne Angabe. */
   strainFlowerWeeksMin: number | null
   strainFlowerWeeksMax: number | null
+  /** Flush vor der Ernte in Tagen: 7 (eine Woche) oder 14 (zwei Wochen). */
+  flushTage: number
   plannedVegDays: number | null
   setpointProfileId?: string | null
   strainId: number | null
@@ -354,6 +360,8 @@ export interface GrowUpsertPayload {
   breederFlowerWeeksMax: number | null
   /** true = Wochen bewusst gesetzt; false = folgt der Sorte; leer = der Server leitet es ab. */
   breederWeeksEigen?: boolean | null
+  /** Flush vor der Ernte in Tagen: 7 oder 14; leer = unverändert (beim Anlegen 14). */
+  flushTage?: number | null
   plannedVegDays: number | null
   setpointProfileId?: string | null
   strainId: number | null

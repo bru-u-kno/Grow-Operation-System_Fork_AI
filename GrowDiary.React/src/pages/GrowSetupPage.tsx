@@ -1,5 +1,7 @@
+import { FlushFeld } from '../features/grows/FlushFeld'
+import { blueteSpaltenZahl, bluetewochenBisFlush, flushTageGueltig, planHinweis, planHinweisText as planHinweisTextFuer } from '../features/grows/flush'
 import { ZuechterWochenFeld } from '../features/grows/ZuechterWochenFeld'
-import type { Wochen } from '../features/grows/zuechterwochen'
+import { wochenText, type Wochen } from '../features/grows/zuechterwochen'
 import { useEffect, useMemo, useState } from 'react'
 import { nurDatum } from '../features/grows/nur-datum'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -24,7 +26,7 @@ const startMaterials: StartMaterial[] = ['Seed', 'Clone']
 function emptyForm(): GrowUpsertPayload {
   return {
     templateId: null, name: '', tentId: null, systemId: null, setupId: null, strain: null, breeder: null, seedType: 'Feminized', startMaterial: 'Seed', germinationMethod: 'PaperTowel',
-    cloneSource: null, cloneIsRooted: false, phenoNumber: null, breederFlowerWeeksMin: null, breederFlowerWeeksMax: null, plannedVegDays: null, strainId: null, setpointProfileId: null, hydroStyle: 'RDWC', plantCount: null, reservoirSize: null,
+    cloneSource: null, cloneIsRooted: false, phenoNumber: null, breederFlowerWeeksMin: null, breederFlowerWeeksMax: null, flushTage: 14, plannedVegDays: null, strainId: null, setpointProfileId: null, hydroStyle: 'RDWC', plantCount: null, reservoirSize: null,
     containerSize: null, propagationMedium: 'Rockwool', light: null, hasChiller: false, waterSource: 'RO', nutrients: null, startDate: new Date().toISOString().slice(0, 10),
     entryPoint: 'Germination', daysAlreadyInPhase: null, autoflowerDaysSinceGermination: null, flipDate: null, notes: null, status: 'Planning', environment: 'Indoor',
   }
@@ -55,6 +57,8 @@ function GrowSetupPage() {
      wuerde genau das schicken; es steht deshalb gesperrt da, statt etwas
      anzubieten, das nie ankommt. */
   const [planProgramm, setPlanProgramm] = useState<{ id: string; name: string } | null>(null)
+  // Nummerierte Blütewochen des Plans dieses Grows (beim Bearbeiten); sonst die des gewählten Programms.
+  const [planBluete, setPlanBluete] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -118,6 +122,7 @@ function GrowSetupPage() {
           setFeedProgramId(programm)
           setProgrammVorher(programm)
           setPlanProgramm(plan ? { id: plan.programmId, name: plan.programmName || plan.programmId } : null)
+          setPlanBluete(blueteSpaltenZahl(plan?.chart.columns))
           // Ein Programm, das keiner Karte entspricht, ist ein eigenes — es
           // gehoert beim Bearbeiten sichtbar ins Freitextfeld, nicht ins Leere.
           const kartenTreffer = (knowledge.programs ?? []).some((program) => program.name === grow.nutrients || program.key === grow.nutrients)
@@ -125,7 +130,7 @@ function GrowSetupPage() {
         }
         setErfasstePflanzen(pflanzen.length)
         setPflanzenListe(pflanzen)
-        if (grow) setForm({ ...emptyForm(), name: grow.name, tentId: grow.tentId, systemId: grow.systemId, setupId: grow.setupId, strain: grow.strain, breeder: grow.breeder, seedType: grow.seedType, startMaterial: grow.startMaterial, hydroStyle: grow.hydroStyle, plantCount: grow.plantCount, reservoirSize: grow.reservoirSize, containerSize: grow.containerSize, light: grow.light, hasChiller: grow.hasChiller, waterSource: grow.waterSource, nutrients: grow.nutrients, startDate: nurDatum(grow.startDate) ?? emptyForm().startDate, entryPoint: grow.entryPoint, daysAlreadyInPhase: grow.daysAlreadyInPhase, autoflowerDaysSinceGermination: grow.autoflowerDaysSinceGermination, flipDate: nurDatum(grow.flipDate), notes: grow.notes, status: grow.status, environment: grow.environment, germinationMethod: grow.germinationMethod, propagationMedium: grow.propagationMedium, cloneSource: grow.cloneSource, cloneIsRooted: grow.cloneIsRooted, phenoNumber: grow.phenoNumber, breederFlowerWeeksMin: grow.breederFlowerWeeksMin, breederFlowerWeeksMax: grow.breederFlowerWeeksMax, breederWeeksEigen: grow.breederWeeksEigen, plannedVegDays: grow.plannedVegDays, strainId: grow.strainId, setpointProfileId: grow.setpointProfileId ?? null,
+        if (grow) setForm({ ...emptyForm(), name: grow.name, tentId: grow.tentId, systemId: grow.systemId, setupId: grow.setupId, strain: grow.strain, breeder: grow.breeder, seedType: grow.seedType, startMaterial: grow.startMaterial, hydroStyle: grow.hydroStyle, plantCount: grow.plantCount, reservoirSize: grow.reservoirSize, containerSize: grow.containerSize, light: grow.light, hasChiller: grow.hasChiller, waterSource: grow.waterSource, nutrients: grow.nutrients, startDate: nurDatum(grow.startDate) ?? emptyForm().startDate, entryPoint: grow.entryPoint, daysAlreadyInPhase: grow.daysAlreadyInPhase, autoflowerDaysSinceGermination: grow.autoflowerDaysSinceGermination, flipDate: nurDatum(grow.flipDate), notes: grow.notes, status: grow.status, environment: grow.environment, germinationMethod: grow.germinationMethod, propagationMedium: grow.propagationMedium, cloneSource: grow.cloneSource, cloneIsRooted: grow.cloneIsRooted, phenoNumber: grow.phenoNumber, breederFlowerWeeksMin: grow.breederFlowerWeeksMin, breederFlowerWeeksMax: grow.breederFlowerWeeksMax, breederWeeksEigen: grow.breederWeeksEigen, flushTage: grow.flushTage, plannedVegDays: grow.plannedVegDays, strainId: grow.strainId, setpointProfileId: grow.setpointProfileId ?? null,
           /* Die Belegung kommt aus den PFLANZEN — im selben setForm wie alles
              andere, damit sie niemand ueberschreibt. */
           toepfe: pflanzen
@@ -299,7 +304,7 @@ function GrowSetupPage() {
           ist, merkte man vorher erst am Ende — oder gar nicht. */}
       <div className="grow-wizard-shell">
         <div className="grow-wizard-main">
-          <RunStep form={form} patch={patch} strains={strains} erfasstePflanzen={erfasstePflanzen} belegteToepfe={belegteToepfe} pflanzenzahl={pflanzenzahl} />
+          <RunStep form={form} patch={patch} strains={strains} erfasstePflanzen={erfasstePflanzen} belegteToepfe={belegteToepfe} pflanzenzahl={pflanzenzahl} planName={planProgramm?.name ?? selectedProgram?.name ?? null} blueteImPlan={planBluete ?? blueteSpaltenZahl(selectedProgram?.feedChart?.columns)} />
           <TentStep tents={tents} selectedId={form.tentId} onSelect={selectTent} />
           <HydroStep setups={availableHydro} exactCount={exactHydro.length} selectedId={form.systemId ?? null} onSelect={selectHydro} tent={selectedTent} />
           <ToepfeStep
@@ -315,7 +320,7 @@ function GrowSetupPage() {
             onFehler={setError}
           />
           <TimeStep form={form} patch={patch} />
-          <ProgramStep programs={programs} selected={selectedProgram?.key ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} planName={planProgramm?.name ?? null} />
+          <ProgramStep programs={programs} selected={selectedProgram?.key ?? ''} custom={customProgram} setCustom={setCustomProgram} selectProgram={setFeedProgramId} patch={patch} planName={planProgramm?.name ?? null} form={form} planBluete={planBluete} />
         </div>
 
         <aside className="grow-wizard-context">
@@ -543,7 +548,7 @@ function ToepfeStep({ form, patch, strains, hydro, pflanzen, onPflanzeEntfernt, 
  * Zuechter und Bluetewochen; „frei eintragen" bleibt fuer alles, was (noch)
  * nicht in der Bibliothek steht.
  */
-function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanzenzahl }: { form: GrowUpsertPayload; patch: (value: Partial<GrowUpsertPayload>) => void; strains: StrainDto[]; erfasstePflanzen: number; belegteToepfe: number; pflanzenzahl: number | null }) {
+function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanzenzahl, planName, blueteImPlan }: { form: GrowUpsertPayload; patch: (value: Partial<GrowUpsertPayload>) => void; strains: StrainDto[]; erfasstePflanzen: number; belegteToepfe: number; pflanzenzahl: number | null; planName: string | null; blueteImPlan: number | null }) {
   const sorten = [...strains].sort((a, b) => a.name.localeCompare(b.name, 'de'))
   // Die Bluetewochen gehoeren der Sorte, solange das Grow keinen eigenen Wert
   // hat. Frueher wurden sie hier ins Formular KOPIERT und blieben danach
@@ -617,6 +622,18 @@ function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanz
             sorte={sortenWochen}
             sorteName={gewaehlteSorte?.name ?? null}
             onChange={(aenderung) => patch(aenderung)}
+          />
+        )}
+
+        {form.seedType !== 'Autoflower' && (
+          <FlushFeld
+            flushTage={form.flushTage}
+            onChange={(tage) => patch({ flushTage: tage })}
+            maxWochen={form.breederFlowerWeeksMax ?? form.breederFlowerWeeksMin ?? null}
+            flipDatum={form.flipDate ?? null}
+            planName={planName}
+            blueteImPlan={blueteImPlan}
+            spanne={wochenText({ min: form.breederFlowerWeeksMin, max: form.breederFlowerWeeksMax })}
           />
         )}
 
@@ -733,7 +750,7 @@ function vegHinweis(form: GrowUpsertPayload): string {
   return `Flip am ${datum}, wenn ab Start gerechnet wird \u2014 mit Bewurzelungsdatum entsprechend spaeter.`
 }
 
-function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch, planName }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void; planName: string | null }) {
+function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch, planName, form, planBluete }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void; planName: string | null; form: GrowUpsertPayload; planBluete: number | null }) {
   // Fork AI (Grow-Plan): Karten sagen, wie viel das Programm mitbringt;
   // eigene Programme stehen für sich.
   /* `selected` ist die Programm-ID, nicht der Name (offene Punkte 03.10.2026,
@@ -751,6 +768,17 @@ function ProgramStep({ programs, selected, custom, setCustom, selectProgram, pat
       </button>
     )
   }
+  // Führt das gewählte Programm weniger Blütewochen, als Sorte und Flush verlangen? Dann sagt es
+  // der Fork jetzt — beim Anlegen kommen die fehlenden Wochen mit Werten aus der letzten Woche.
+  const gewaehlt = programs.find((p) => p.key === selected)
+  const planHinweisText = (() => {
+    if (form.seedType === 'Autoflower') return null
+    const hinweis = planHinweis(
+      bluetewochenBisFlush(form.breederFlowerWeeksMax ?? form.breederFlowerWeeksMin ?? null, form.flushTage),
+      planBluete ?? blueteSpaltenZahl(gewaehlt?.feedChart?.columns),
+    )
+    return hinweis ? planHinweisTextFuer(hinweis, planName ?? gewaehlt?.name ?? null, wochenText({ min: form.breederFlowerWeeksMin, max: form.breederFlowerWeeksMax }), flushTageGueltig(form.flushTage)) : null
+  })()
   const mitgeliefert = programs.filter((p) => !istEigenesProgramm(p.key))
   const eigene = programs.filter((p) => istEigenesProgramm(p.key))
   return (
@@ -763,6 +791,9 @@ function ProgramStep({ programs, selected, custom, setCustom, selectProgram, pat
       <p className="program-hinweis">
         Der Grow bekommt eine eigene Kopie des Programms als Plan — spätere Änderungen am Programm ändern diesen Grow nicht.
       </p>
+      {planHinweisText != null && (
+        <p className="program-hinweis" role="status" data-audit="programm-plan-wochen">{planHinweisText}</p>
+      )}
       <div className="grow-custom-program"><V1Field label="Anderes Programm (nur Name, ohne Werte)"><input value={custom} disabled={planName != null} onChange={(event) => { setCustom(event.target.value); selectProgram(null); patch({ nutrients: event.target.value || null }) }} placeholder="Eigene Mischung" /></V1Field></div>
       {planName != null && (
         <p className="program-hinweis" data-audit="programm-plan-sperre">

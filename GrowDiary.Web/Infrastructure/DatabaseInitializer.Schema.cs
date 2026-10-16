@@ -111,6 +111,8 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "Grows", "PlannedVegDays",                 "INTEGER NULL");
         EnsureColumn(connection, "Grows", "StrainId",                       "INTEGER NULL");
         EnsureBreederWochenEigen(connection);
+        // Flush vor der Ernte in Tagen (7 oder 14); bestehende Grows behalten die bisherigen 14.
+        EnsureColumn(connection, "Grows", "FlushTage", "INTEGER NOT NULL DEFAULT 14");
         EnsureColumn(connection, "Grows", "PlantCount",                     "INTEGER NULL");
         EnsureColumn(connection, "Grows", "PhenoNumber",                    "INTEGER NULL");
         EnsureColumn(connection, "Grows", "PropagationMedium",              "TEXT NULL");

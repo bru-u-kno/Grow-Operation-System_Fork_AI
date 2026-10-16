@@ -32,6 +32,8 @@ public static class GrowMapping
         BreederWeeksEigen: grow.BreederWochenEigen,
         StrainFlowerWeeksMin: grow.SortenWochenMin,
         StrainFlowerWeeksMax: grow.SortenWochenMax,
+        FlushTage: grow.FlushTage,
+        PlanUngeprueft: UngepruefteWochen(grow),
         GerminatedAt: grow.GerminatedAt,
         RootedAt: grow.RootedAt,
         VegStartedAt: grow.VegStartedAt,
@@ -48,6 +50,23 @@ public static class GrowMapping
         NurHauptsorte: grow.NurHauptsorte,
         Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today), grow.FinishStartedAt is not null || grow.EntryPoint == GrowEntryPoint.Flush)
     );
+
+    /// <summary>
+    /// Angehängte Blütewochen des Plans, deren übernommene Werte noch niemand
+    /// geprüft hat — für die Aufgabenseite. Leer ohne Plan und bei beendeten Grows.
+    /// </summary>
+    private static IReadOnlyList<PlanWocheKurzDto> UngepruefteWochen(GrowRun grow)
+    {
+        if (grow.IsArchived || Services.GrowPlan.GrowPlanRegister.Inhalt(grow.Id) is not { } inhalt || inhalt.Ungeprueft.Count == 0)
+        {
+            return [];
+        }
+
+        return inhalt.Chart.Columns
+            .Where(spalte => inhalt.Ungeprueft.Contains(spalte.Id))
+            .Select(spalte => new PlanWocheKurzDto(spalte.Id, spalte.Label))
+            .ToList();
+    }
 
     public static GrowDetailDto ToDetailDto(this GrowRun grow) => new(
         Id: grow.Id,
@@ -82,6 +101,7 @@ public static class GrowMapping
         BreederWeeksEigen: grow.BreederWochenEigen,
         StrainFlowerWeeksMin: grow.SortenWochenMin,
         StrainFlowerWeeksMax: grow.SortenWochenMax,
+        FlushTage: grow.FlushTage,
         PlannedVegDays: grow.PlannedVegDays,
         grow.SetpointProfileId,
         StrainId: grow.StrainId,

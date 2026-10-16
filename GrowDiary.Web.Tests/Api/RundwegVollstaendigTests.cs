@@ -117,6 +117,13 @@ public sealed class RundwegVollstaendigTests
             + "Demobestand faehrt aus Samen; das Formular bietet den Schalter nicht "
             + "an, er kommt aus dem Klon-Weg einer Mutterpflanze.",
 
+        ["Grow.FlushTage"] =
+            "Der Flush dauert genau 7 oder 14 Tage (eine oder zwei Wochen). Der Rundweg faehrt jedes "
+            + "Zahlenfeld mit dem Wert +1 (15) — den lehnt das PUT mit 400 ab, und das ist Absicht: eine "
+            + "still zur Vorgabe gemachte Zahl waere eine Antwort, der man nicht ansieht, dass sie "
+            + "nicht stimmt. Dass 7 und 14 ankommen, ohne Angabe das Bisherige bleibt und alles andere "
+            + "abgelehnt wird, faehrt FlushDauerApiTests; den Weg im Browser "
+            + "e2e/flush-dauer-und-planwochen.spec.ts.",
         ["Grow.BreederFlowerWeeksMin"] =
             "Gilt nur, wenn das Grow einen eigenen Wert traegt (breederWeeksEigen = true). "
             + "Sonst folgt es der Sorte, und ausdruecklich „folgt\" ignoriert die Zahlen "

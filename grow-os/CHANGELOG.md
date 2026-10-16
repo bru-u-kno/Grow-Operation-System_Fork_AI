@@ -5,6 +5,29 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.227
+
+**Fork AI.** Den Flush wählst du selbst (eine oder zwei Wochen), und der Düngeplan führt die Blütewochen, die Sorte und Flush verlangen — die neuen Wochen entstehen sofort, und der Fork erinnert dich, ihre Werte zu prüfen.
+
+- **Der Anlass:** Auf der Live-Seite stand „Blütewoche 8 von 8" bei einer Sorte mit 9–10 Wochen. Das Programm bringt acht Blütewochen und einen Flush mit; der Flush war fest auf 14 Tage vor der Ernte gerechnet, und weitere Wochen entstanden erst an dem Tag, an dem die Blüte sie erreichte — ohne Hinweis, dass ihre Werte nur von der Vorwoche kopiert sind.
+- **Neu — „Flush vor der Ernte" im Grow-Formular:** Eine Woche oder zwei Wochen (Vorgabe zwei, wie bisher). Darunter steht, wann das Finish beginnt („Ernte laut Sorte minus 7 Tage"). Der Finish-Beginn ist Flip + Maximum der Züchterwochen × 7 − Flush-Tage; ein bestätigtes Finish geht weiter vor. Bestehende Grows behalten zwei Wochen — an ihrem Finish-Datum ändert sich nichts.
+- **Neu — der Plan führt die Blütewochen bis zum Flush, schon vor dem Tag:** Braucht die Blüte mehr Wochen, als der Plan hat (Sorte 9–10 Wochen, eine Woche Flush → neun Blütewochen, das Programm hat acht), legt der Fork die fehlenden sofort an — als Kopie der letzten Woche, als „verlängert" gekennzeichnet und als **ungeprüft** vermerkt. Das Formular sagt es vor dem Speichern: „Dein Düngeplan hat 8 Blütewochen. Die Sorte braucht 9–10 Wochen … Beim Speichern kommt Blütewoche 9 in den Plan (Werte aus Blütewoche 8) — bitte danach prüfen." Die Wochen werden nie gelöscht, auch wenn du den Flush später wieder auf zwei Wochen stellst; dann steht dort nur der Hinweis, dass der Plan mehr Wochen führt.
+- **Neu — Werte prüfen und bestätigen:** Auf der Plan-Seite trägt die Woche „ungeprüft" und einen Hinweis mit dem Knopf „Als geprüft markieren"; ihre Werte änderst du dort wie die jeder anderen Woche. Im Wochen-Blatt steht dieselbe Marke. In den **Aufgaben** erscheint die Karte „Plan prüfen" („Blütewoche 9 prüfen"), bis die Woche bestätigt ist; sie wird berechnet, nicht gespeichert, und bleibt also nirgends liegen. Nur Blütewochen lösen das aus, angehängte Vegiwochen nicht. Pläne, die früher schon Wochen angehängt bekamen, lösen nichts aus.
+- **Geändert — die Live-Zeile nennt die ganze Blüte:** „Blütewoche 8 von 9–10 · Flush ab Woche 10" statt „von 8". Die Spanne kommt aus den Züchterwochen der Sorte, der Flush zählt mit; ohne Züchterwochen bleibt es bei den Plan-Wochen.
+- **Geändert — der Link „Zum Plan" führt zum richtigen Grow:** Die Plan-Seite und ihre Kopfzeile nehmen `?grow=…` entgegen. Bisher zeigten sie immer den ersten laufenden Grow, die Karte hätte bei mehreren Grows auf den falschen Plan geführt.
+- **Wer den Fork schon nutzt:** Hat eine Sorte mehr Blütewochen, als ihr Plan führt (zwei Wochen Flush), werden die fehlenden Wochen beim ersten Start angehängt und erscheinen in den Aufgaben zum Prüfen. Am Finish-Datum ändert das nichts.
+
+### Technik
+- Neue Spalte `Grows.FlushTage` (7 oder 14, Vorgabe 14); `GrowRun.FlushTageGueltig` macht aus jedem anderen Wert die Vorgabe. Über die API wird alles außer 7 und 14 mit 400 abgelehnt; ohne Angabe bleibt beim Ändern das Bisherige, beim Anlegen gilt 14. Export und Import tragen das Feld mit; alte Exporte gelten als zwei Wochen.
+- `Planwochen.Bedarf` rechnet die Blütewochen aus dem Phasenanker: so viele wie bisher gelaufen, mindestens so viele wie bis zum Finish geplant (`GeplanteBluetewochen`). `GrowPlanInhalt.Ungeprueft` ist die Liste der ungeprüften Spalten (bewusst die ungeprüften, nicht die geprüften: ältere Pläne haben sie nicht und lösen keine Aufgabe aus). Neuer Endpunkt `POST /api/grows/{id}/plan/woche/{spalteId}/geprueft` (idempotent, eingefrorene Pläne bleiben unberührt).
+- API: `flushTage` an Grow-Liste und -Detail, `planUngeprueft` an der Grow-Liste, `ungeprueft` am Plan und an jeder Woche des Wochenplans, `blueteWochenMin/Max`, `flushAbWoche` und `flushWochen` am Wochenplan; `GET /api/zielwerte?growId=`.
+- Nach dem Speichern eines Grows legt `WochenNachziehen` die fehlenden Wochen sofort an; beim Anlegen ebenfalls.
+
+### Geprüft
+- Backend 3507 Tests grün, darunter neue für den Finish-Beginn bei 1 und 2 Wochen (auch ungültige Werte und bestätigtes Finish), das sofortige Anlegen der Blütewoche (eine Woche Flush; längere Sorte mit mehreren fehlenden Wochen), „zweiter Lauf und Rückwechsel löschen nichts", „geprüft" (einmalig und nur diese Woche), alte Pläne ohne Vermerk und Vegiwochen ohne Vermerk, sowie die API (speichern, ohne Angabe bewahren, ablehnen). Ohne die Änderungen werden sechs davon rot.
+- Frontend: 1133 Tests grün, darunter neue für Flush-Rechnung, Plan-Hinweis und die Live-Zeile.
+- E2E gegen die gebaute App mit eigener Sorte und eigenem Grow: Formular → „1 Woche" → Hinweis und Finish-Datum → Speichern → Finish eine Woche später und Blütewoche 9 im Plan, ungeprüft → neu laden und nochmal speichern (die Woche entsteht nicht doppelt) → Aufgabenkarte → Plan-Seite des richtigen Grows → „Als geprüft markieren" → Karte weg → zurück auf zwei Wochen, die Woche bleibt. Dazu die volle Chromium-Mappe (1112 Fälle) und die Seiten auf Handy-Breite in beiden Themen angesehen. Ein bestehender Test (`sorten-je-topf`) wählte „den ersten Knopf" als Zelt und traf nach dem Umbau einen neuen Knopf; er wählt jetzt die Zelt-Karte.
+
 ## 2.0.0-forkai.226
 
 **Fork AI.** Die Blütedauer laut Züchter folgt der Sorte und bleibt nicht mehr als alte Kopie im Grow stehen.

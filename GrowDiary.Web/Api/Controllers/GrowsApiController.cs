@@ -110,6 +110,13 @@ public sealed class GrowsApiController : ApiControllerBase
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<GrowDetailDto> Create([FromBody] GrowUpsertRequest request)
     {
+        // Der Flush dauert eine oder zwei Wochen — alles andere wird abgelehnt statt still zur
+        // Vorgabe gemacht (ein Client, der 10 schickt, soll es erfahren).
+        if (request.FlushTage is { } flush && flush is not (GrowRun.FlushTageKurz or GrowRun.FlushTageStandard))
+        {
+            ModelState.AddModelError(nameof(request.FlushTage), "Der Flush dauert 7 oder 14 Tage (eine oder zwei Wochen).");
+        }
+
         if (!ModelState.IsValid)
         {
             return ValidationError();
@@ -119,6 +126,7 @@ public sealed class GrowsApiController : ApiControllerBase
         try
         {
             grow = request.ToFormModel().ToGrow();
+            grow.FlushTage = GrowRun.FlushTageGueltig(request.FlushTage);
             grow.BreederWochenEigen = ZuechterwochenRegel.Eigen(
                 request.BreederWeeksEigen, grow, grow.StrainId is int sorteId ? _repository.GetStrain(sorteId) : null);
         }
@@ -158,6 +166,7 @@ public sealed class GrowsApiController : ApiControllerBase
 
         // Fork AI (Grow-Plan): das gewählte Programm wird als eigener Plan mit dem Grow gespeichert.
         _plaene?.Anlegen(savedGrow);
+        _plaene?.WochenNachziehen(savedGrow, DateTime.Today); // Fork AI: Blütewochen bis zum Flush gleich anlegen
 
         /* Die Pflanzen gleich mit — eine je Topf, mit der Sorte des Grows.
            Gemeldet am 28.08.2026: „der User kann unter grow nur eine Sorte
@@ -188,6 +197,13 @@ public sealed class GrowsApiController : ApiControllerBase
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public ActionResult<GrowDetailDto> Update(int id, [FromBody] GrowUpsertRequest request)
     {
+        // Der Flush dauert eine oder zwei Wochen — alles andere wird abgelehnt statt still zur
+        // Vorgabe gemacht (ein Client, der 10 schickt, soll es erfahren).
+        if (request.FlushTage is { } flush && flush is not (GrowRun.FlushTageKurz or GrowRun.FlushTageStandard))
+        {
+            ModelState.AddModelError(nameof(request.FlushTage), "Der Flush dauert 7 oder 14 Tage (eine oder zwei Wochen).");
+        }
+
         if (!ModelState.IsValid)
         {
             return ValidationError();
@@ -203,6 +219,7 @@ public sealed class GrowsApiController : ApiControllerBase
         try
         {
             grow = request.ToFormModel().ToGrow();
+            grow.FlushTage = GrowRun.FlushTageGueltig(request.FlushTage ?? existing.FlushTage);
             grow.BreederWochenEigen = ZuechterwochenRegel.Eigen(
                 request.BreederWeeksEigen, grow, grow.StrainId is int sorteId ? _repository.GetStrain(sorteId) : null, existing);
         }
@@ -359,6 +376,9 @@ public sealed class GrowsApiController : ApiControllerBase
                 _plaene.FehlendeFelderNachtragen([gespeichert]);
             }
             _plaene.Abgleichen(gespeichert);
+            // Fork AI: Sorte oder Flush können mehr Blütewochen verlangen, als der Plan führt —
+            // die fehlenden entstehen gleich, nicht erst beim nächsten Takt.
+            _plaene.WochenNachziehen(gespeichert, DateTime.Today);
         }
 
         _auditRepository.Add(new AuditEntry

@@ -52,9 +52,12 @@ export function PlanReiter() {
   const wischStart = useRef<{ x: number; y: number } | null>(null)
   const [params, setParams] = useSearchParams()
   const gewuenschteWoche = params.get('woche')
+  const wunschGrow = params.get('grow')
 
   const neuLaden = useCallback(async (ersterAufruf: boolean) => {
-    const ziel = await apiFetch<{ growId: number | null; growName: string | null; eigenerPlan?: boolean }>('/api/zielwerte')
+    // Mit ?grow=… der Plan dieses Grows (Link aus den Aufgaben), sonst der erste laufende.
+    const ziel = await apiFetch<{ growId: number | null; growName: string | null; eigenerPlan?: boolean }>(
+      wunschGrow ? `/api/zielwerte?growId=${encodeURIComponent(wunschGrow)}` : '/api/zielwerte')
     if (ziel.growId == null) {
       setOhnePlan('Kein laufender Grow — ein Plan gehört zu einem Grow.')
       return
@@ -73,7 +76,7 @@ export function PlanReiter() {
     ])
     setDaten({ growId: id, growName: ziel.growName ?? `Grow ${id}`, werte, arbeit, start, buch, volumen: misch?.volumenLiter ?? null })
     if (ersterAufruf) setIndex(startIndex(werte))
-  }, [])
+  }, [wunschGrow])
 
   useEffect(() => {
     async function laden() {
@@ -129,6 +132,21 @@ export function PlanReiter() {
   const feldName = (feld: string) =>
     daten.werte.spalten[0]?.felder.find((f) => f.feld === feld)?.bezeichnung ?? feld
   const wochenName = (id: string | null) => daten.werte.spalten.find((s) => s.id === id)?.label ?? id ?? ''
+  const ungeprueft = (daten.arbeit.ungeprueft ?? []).some((id) => id.toLowerCase() === woche.id.toLowerCase())
+
+  /** Die übernommenen Werte der angehängten Woche sind angesehen: Erinnerung weg. */
+  async function alsGeprueft(spalteId: string) {
+    setSpeichert(true)
+    try {
+      await apiFetch(`/api/grows/${daten!.growId}/plan/woche/${encodeURIComponent(spalteId)}/geprueft`, { method: 'POST' })
+      await neuLaden(false)
+      setMeldung({ text: `${wochenName(spalteId)} ist als geprüft markiert.`, ton: 'ok' })
+    } catch (caught) {
+      setMeldung({ text: formatApiError(caught, 'Konnte nicht gespeichert werden.'), ton: 'critical' })
+    } finally {
+      setSpeichert(false)
+    }
+  }
   const eigenesName = daten.arbeit.eigenesProgrammName
 
   const blaettern = (richtung: -1 | 1) => setIndex((i) => Math.min(letzte, Math.max(0, i + richtung)))
@@ -239,6 +257,7 @@ export function PlanReiter() {
             <b>{woche.label}</b>
             {woche.istJetzt && <V1Badge tone="accent">läuft</V1Badge>}
             {woche.verlaengert && <V1Badge tone="neutral">verlängert</V1Badge>}
+            {ungeprueft && <V1Badge tone="warn">ungeprüft</V1Badge>}
           </div>
           <button type="button" className="wp-pfeil" aria-label="Nächste Woche" disabled={index === letzte} onClick={() => blaettern(1)}>›</button>
         </div>
@@ -247,6 +266,16 @@ export function PlanReiter() {
           <p className="wp-leise pr-verlaengert" data-audit="plan-verlaengert">
             Angehängt: die Phase läuft länger als das Programm. „Start“ ist der Wert von {wochenName(startId)}.
           </p>
+        )}
+
+        {ungeprueft && (
+          <div className="pr-ungeprueft" role="status" data-audit="plan-ungeprueft">
+            <p>
+              Aus {wochenName(startId)} übernommen, <b>noch nicht von dir geprüft</b>. Die Sorte braucht mehr Blütewochen,
+              als das Programm führt — trage unten die Werte ein, die für diese Woche gelten sollen, und bestätige sie dann.
+            </p>
+            <V1Button variant="secondary" onClick={() => void alsGeprueft(woche.id)} disabled={speichert}>Als geprüft markieren</V1Button>
+          </div>
         )}
 
         {/* Fork AI (forkai.131): die Knöpfe sagen, was nachts gilt — darunter, ob die

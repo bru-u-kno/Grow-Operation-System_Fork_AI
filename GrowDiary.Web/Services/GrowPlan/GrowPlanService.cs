@@ -248,6 +248,25 @@ public sealed class GrowPlanService
         }
     }
 
+    /// <summary>
+    /// Fork AI: eine angehängte Blütewoche als geprüft markieren — der Nutzer hat
+    /// die übernommenen Werte angesehen (und, wenn nötig, geändert).
+    /// </summary>
+    /// <returns><c>false</c>, wenn die Woche nicht (mehr) als ungeprüft vermerkt war oder der Plan eingefroren ist.</returns>
+    public bool WocheGeprueft(int growId, string spalteId, DateTime? jetztUtc = null)
+    {
+        lock (_lock)
+        {
+            if (_repo.Laden(growId, GrowPlanStaende.Ende) is not null) return false;
+            if (_repo.Laden(growId, GrowPlanStaende.Arbeit) is not { } arbeit) return false;
+            if (!arbeit.Inhalt.Ungeprueft.Remove(spalteId)) return false;
+
+            _repo.Speichern([arbeit with { GeaendertUtc = jetztUtc ?? DateTime.UtcNow }], []);
+            GrowPlanRegister.Setzen(growId, arbeit.Inhalt);
+            return true;
+        }
+    }
+
     /// <summary>Alle laufenden Grows nachziehen — Takt und Start.</summary>
     public int AlleNachziehen(IEnumerable<GrowRun> laufendeGrows, DateTime heute)
         => laufendeGrows.Sum(grow => WochenNachziehen(grow, heute));

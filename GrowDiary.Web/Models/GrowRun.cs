@@ -126,6 +126,22 @@ public sealed class GrowRun
     /// ist er es immer. Sonst folgt das Grow der Sorte, auch wenn sie sich ändert.
     /// </summary>
     public bool BreederWochenEigen { get; set; }
+
+    /// <summary>Vorgabe und Obergrenze des Flush: zwei Wochen vor der Ernte.</summary>
+    public const int FlushTageStandard = 14;
+
+    /// <summary>Kürzester wählbarer Flush: eine Woche.</summary>
+    public const int FlushTageKurz = 7;
+
+    /// <summary>
+    /// Wie lange das Grow vor der Ernte flusht, in Tagen: 7 (eine Woche) oder 14
+    /// (zwei Wochen, die Vorgabe). Der Finish-Beginn ist Ernte laut Züchter
+    /// (Maximum) minus diese Tage, solange er nicht bestätigt ist.
+    /// </summary>
+    public int FlushTage { get; set; } = FlushTageStandard;
+
+    /// <summary>Jeder andere Wert als 7 gilt als die Vorgabe 14 — nie eine erfundene Dauer.</summary>
+    public static int FlushTageGueltig(int? tage) => tage == FlushTageKurz ? FlushTageKurz : FlushTageStandard;
     /// <summary>Wochen laut Sorte (nur Anzeige; leer ohne Sorte oder ohne Angabe).</summary>
     public int? SortenWochenMin { get; set; }
     public int? SortenWochenMax { get; set; }

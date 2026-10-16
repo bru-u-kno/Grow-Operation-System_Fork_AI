@@ -155,9 +155,6 @@ public static class Phasenanker
     /// <summary>Die ersten Tage nach dem Blütebeginn sind Übergang, noch nicht volle Blüte.</summary>
     public const int UebergangTage = 10;
 
-    /// <summary>Ohne bestätigtes Finish: die letzten zwei Wochen vor der Ernte laut Breeder-Wochen.</summary>
-    public const int FinishTageVorErnte = 14;
-
     /// <summary>Phase, Beginne, Woche und Erinnerung eines Laufs an einem Stichtag.</summary>
     public static Phasenstand Fuer(GrowRun grow, DateTime stichtag)
     {
@@ -242,7 +239,7 @@ public static class Phasenanker
         {
             // Wie bisher: die letzten zwei Wochen vor der Breeder-Ernte, aber nie
             // im Übergang.
-            var geschaetzt = flip.AddDays(wochen * 7 - FinishTageVorErnte);
+            var geschaetzt = flip.AddDays(wochen * 7 - GrowRun.FlushTageGueltig(grow.FlushTage));
             var fruehestens = flip.AddDays(UebergangTage);
             finish = geschaetzt < fruehestens ? fruehestens : geschaetzt;
         }

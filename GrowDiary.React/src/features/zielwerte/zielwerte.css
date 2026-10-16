@@ -200,6 +200,8 @@
   .pr-pills { display: flex; gap: var(--s-1); flex-wrap: wrap; }
   /* Fork AI (02.10.2026): angehängte Woche — der Satz unter dem Wochentitel. */
   .pr-verlaengert { margin: var(--s-2) 0 0; font-size: var(--fs-klein); text-align: center; }
+  .pr-ungeprueft { margin: var(--s-3) 0 0; padding: var(--s-3); border: 1px solid var(--warn, #f0b43a); border-radius: var(--r-2, 10px); display: grid; gap: var(--s-2); font-size: var(--fs-klein); }
+  .pr-ungeprueft p { margin: 0; }
 }
 
 /* Fork AI (Grow-Plan, Schritt 6b): Auswertung auf der Grow-Seite. Nur Tokens. */

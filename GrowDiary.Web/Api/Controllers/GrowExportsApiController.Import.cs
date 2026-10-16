@@ -200,6 +200,7 @@ public sealed partial class GrowExportsApiController
             CloneIsRooted = source.CloneIsRooted,
             BreederFlowerWeeksMin = source.BreederFlowerWeeksMin,
             BreederFlowerWeeksMax = source.BreederFlowerWeeksMax,
+            FlushTage = GrowRun.FlushTageGueltig(source.FlushTage),
             PlannedVegDays = source.PlannedVegDays,
             // StrainId absichtlich NICHT: die Ziel-Installation hat andere
             // Sorten-IDs — ein fremder Verweis zeigte auf irgendetwas.

@@ -22,6 +22,8 @@ export function WochenZeile() {
   const [params, setParams] = useSearchParams()
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  // Mit ?grow=… (Link aus den Aufgaben) gehört die Zeile zu diesem Grow — dasselbe, das der Plan darunter zeigt.
+  const wunschGrow = params.get('grow')
 
   // Nach einer Bestätigung aus der Erinnerung neu laden — die Woche hat sich verschoben.
   const [stand, setStand] = useState(0)
@@ -32,7 +34,7 @@ export function WochenZeile() {
       try {
         const [plaene, ziel] = await Promise.all([
           apiFetch<WochenPlan[]>('/api/wochenplan'),
-          apiFetch<{ growId: number | null }>('/api/zielwerte').catch(() => ({ growId: null })),
+          apiFetch<{ growId: number | null }>(wunschGrow ? `/api/zielwerte?growId=${encodeURIComponent(wunschGrow)}` : '/api/zielwerte').catch(() => ({ growId: null })),
         ])
         if (aktiv) setPlan(waehlePlan(plaene, ziel.growId))
       } catch {
@@ -41,7 +43,7 @@ export function WochenZeile() {
     }
     void laden()
     return () => { aktiv = false }
-  }, [stand])
+  }, [stand, wunschGrow])
 
   if (!plan) return null
 
@@ -104,6 +106,7 @@ export function WochenZeile() {
                 {w.label}
                 {w.wirdGehalten && <span className="wp-leise"> · gehalten</span>}
                 {w.verlaengert && <span className="wp-leise zw-marke" data-audit="wochen-blatt-verlaengert">verlängert</span>}
+                {w.ungeprueft && <span className="wp-leise zw-marke" data-audit="wochen-blatt-ungeprueft">ungeprüft</span>}
               </span>
               <span className="wp-zeile-w">{wochenKurz(w)}</span>
             </button>

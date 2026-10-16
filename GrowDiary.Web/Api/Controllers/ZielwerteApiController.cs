@@ -189,9 +189,13 @@ public sealed class ZielwerteApiController : ApiControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(ZielwerteDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ZielwerteDto>> Get(CancellationToken cancellationToken)
+    public async Task<ActionResult<ZielwerteDto>> Get([FromQuery] int? growId = null, CancellationToken cancellationToken = default)
     {
-        var grow = _grows.GetActiveGrows().FirstOrDefault();
+        // Ohne Angabe der erste laufende Grow, wie bisher. Mit `growId` der gewünschte — damit ein Link
+        // (Aufgabe „Blütewoche 9 prüfen") zum Plan des richtigen Grows führt, nicht zu dem des ersten.
+        var grow = growId is int gewuenscht
+            ? _grows.GetGrow(gewuenscht) is { IsArchived: false } offen ? offen : null
+            : _grows.GetActiveGrows().FirstOrDefault();
         if (grow?.TentId is not { } zeltId || _grows.GetTent(zeltId) is not { } zelt)
         {
             return Ok(Leer());

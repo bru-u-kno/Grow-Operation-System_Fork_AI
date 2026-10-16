@@ -41,6 +41,8 @@ public sealed record GrowDetailDto(
     /// <summary>Wochen laut Sorte (Anzeige der Abweichung); leer ohne Sorte.</summary>
     int? StrainFlowerWeeksMin,
     int? StrainFlowerWeeksMax,
+    /// <summary>Flush vor der Ernte in Tagen: 7 oder 14.</summary>
+    int FlushTage,
     int? PlannedVegDays,
     string? SetpointProfileId,
     int? StrainId,

@@ -29,6 +29,8 @@ export type PlanStand = {
   herkunft?: Record<string, Record<string, string>>
   /** Fork AI (02.10.2026): angehängte Wochen → Woche, deren Werte sie übernommen haben. */
   verlaengert?: Record<string, string> | null
+  /** Angehängte Blütewochen, deren übernommene Werte noch niemand geprüft hat (Spalten-Ids). */
+  ungeprueft?: string[] | null
 }
 
 /**

@@ -36,6 +36,10 @@ public sealed record GrowSummaryDto(
     /// <summary>Wochen laut Sorte (Anzeige der Abweichung); leer ohne Sorte.</summary>
     int? StrainFlowerWeeksMin,
     int? StrainFlowerWeeksMax,
+    /// <summary>Flush vor der Ernte in Tagen: 7 oder 14.</summary>
+    int FlushTage,
+    /// <summary>Angehängte Blütewochen im Plan, deren Werte noch niemand geprüft hat — für die Aufgaben.</summary>
+    IReadOnlyList<PlanWocheKurzDto> PlanUngeprueft,
     DateTime? GerminatedAt,
     DateTime? RootedAt,
     DateTime? VegStartedAt,
@@ -76,3 +80,6 @@ public sealed record GrowSummaryDto(
     /// <summary>Phase, Beginne, Woche und offene Erinnerung — aus dem Phasenanker.</summary>
     PhasenankerDto Phasenanker
 );
+
+/// <summary>Eine Plan-Woche in Kurzform: Spalten-Id und Name.</summary>
+public sealed record PlanWocheKurzDto(string Id, string Label);

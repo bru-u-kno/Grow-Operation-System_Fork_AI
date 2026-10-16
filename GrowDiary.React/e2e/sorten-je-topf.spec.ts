@@ -64,7 +64,9 @@ test('eine Sorte je Topf: eingetragen, gespeichert, nach dem Neuladen wieder da'
     await page.getByPlaceholder('Purple Lemonade RDWC').fill('E2E Sorten je Topf')
 
     // Zelt und System wählen — erst danach kennt das Formular die Töpfe.
-    await page.locator(`[data-audit="grow-wizard"] button`).first().click()
+    // Die Zelt-Karte, nicht „der erste Knopf": davor stehen seit forkai.227 Knöpfe des Run-Abschnitts
+    // („Eigene Werte eintragen", „1 Woche"/„2 Wochen") — der erste Knopf wählte kein Zelt mehr.
+    await page.locator('[data-audit="grow-wizard"] button.grow-select-card').first().click()
     const hydroKarte = page.locator('button').filter({ hasText: /Sites/ }).first()
     await hydroKarte.click()
 

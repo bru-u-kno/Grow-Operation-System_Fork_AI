@@ -25,7 +25,9 @@ public sealed record GrowPlanStandDto(
     bool NachtWieTag = false,
     IReadOnlyDictionary<string, bool>? NachtWieTagJeWoche = null,
     /// <summary>Fork AI (02.10.2026): angehängte Wochen → Woche, deren Werte sie übernommen haben.</summary>
-    IReadOnlyDictionary<string, string>? Verlaengert = null);
+    IReadOnlyDictionary<string, string>? Verlaengert = null,
+    /// <summary>Angehängte Blütewochen, deren übernommene Werte noch niemand geprüft hat (Spalten-Ids).</summary>
+    IReadOnlyCollection<string>? Ungeprueft = null);
 
 /// <summary>
 /// Fork AI (forkai.130): „Nachts gelten die Tageswerte" setzen — Standard und/oder
@@ -197,7 +199,27 @@ public sealed class GrowPlanApiController : ApiControllerBase
         stand.Stand == GrowPlanStaende.Arbeit ? _plaene.EigeneAenderungen(stand.GrowId) : 0,
         stand.Inhalt.NachtWieTag,
         stand.Inhalt.NachtWieTagJeWoche,
-        stand.Inhalt.Verlaengert);
+        stand.Inhalt.Verlaengert,
+        stand.Inhalt.Ungeprueft);
+
+    /// <summary>
+    /// Eine angehängte Blütewoche als geprüft markieren: die übernommenen Werte
+    /// sind angesehen, die Erinnerung (Plan-Seite, Aufgaben) verschwindet.
+    /// </summary>
+    [HttpPost("woche/{spalteId}/geprueft")]
+    [ProducesResponseType(typeof(GrowPlanStandDto), StatusCodes.Status200OK)]
+    public ActionResult<GrowPlanStandDto> WocheGeprueft(int growId, string spalteId)
+    {
+        if (_grows.GetGrow(growId) is null) return NotFoundError("grow_nicht_gefunden", "Diesen Grow gibt es nicht.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Ende) is not null)
+            return ValidationError("Der Grow ist abgeschlossen — sein Plan ist eingefroren.");
+        if (_plaene.Stand(growId, GrowPlanStaende.Arbeit) is null)
+            return NotFoundError("plan_nicht_gefunden", "Dieser Grow hat keinen Plan.");
+
+        // Idempotent: schon geprüft oder keine solche Woche — der Stand ist trotzdem der gewünschte.
+        _plaene.WocheGeprueft(growId, spalteId);
+        return Ok(Dto(_plaene.Stand(growId, GrowPlanStaende.Arbeit)!));
+    }
 
     /// <summary>
     /// Fork AI (forkai.130): Nachts wie tags — Standard für alle Wochen oder eine

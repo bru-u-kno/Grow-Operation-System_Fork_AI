@@ -145,6 +145,22 @@ public sealed class GrowPlanInhalt
     public bool IstVerlaengert(string spalteId) => Verlaengert.ContainsKey(spalteId);
 
     /// <summary>
+    /// Angehängte Blütewochen, deren übernommene Werte noch niemand geprüft hat —
+    /// Spalten-Id. Die Oberfläche erinnert daran, bis „Als geprüft markieren"
+    /// gedrückt wurde.
+    /// </summary>
+    /// <remarks>
+    /// Bewusst die Liste der UNGEPRÜFTEN und nicht der geprüften: Pläne, die vor
+    /// dieser Einführung Wochen angehängt bekamen, haben sie nicht in der Liste
+    /// und lösen keine Erinnerung aus — sonst stünde nach dem Update für jede
+    /// alte angehängte Woche eine Aufgabe da.
+    /// </remarks>
+    public HashSet<string> Ungeprueft { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Ist diese angehängte Woche noch nicht von dir geprüft?</summary>
+    public bool IstUngeprueft(string spalteId) => Ungeprueft.Contains(spalteId);
+
+    /// <summary>
     /// Die Programmwoche, für die diese Woche steht: sie selbst, oder bei einer
     /// angehängten Woche die letzte Woche der Phase, die aus dem Programm kam.
     /// </summary>

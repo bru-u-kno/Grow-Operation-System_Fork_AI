@@ -175,7 +175,7 @@ public sealed class GrowCoreRepository : RepositoryBase
                 TentId, SystemId, SetupId, Name, StrainId, Strain, Breeder, Status, MediumType, FeedingStyle, HydroStyle, MediumDetail,
                 Environment, Light, ContainerSize, ReservoirSize, IrrigationStyle, IrrigationType, WaterSource, FeedProgramId, UseFeedChartTargets, NightRampEnabled, NightRampFloorC,
                 SeedType, StartMaterial, GerminationMethod, CloneSource, CloneIsRooted,
-                BreederFlowerWeeksMin, BreederFlowerWeeksMax, BreederWochenEigen, PlannedVegDays, SetpointProfileId, PlantCount, PhenoNumber,
+                BreederFlowerWeeksMin, BreederFlowerWeeksMax, BreederWochenEigen, FlushTage, PlannedVegDays, SetpointProfileId, PlantCount, PhenoNumber,
                 PropagationMedium, HasChiller, EntryPoint, DaysAlreadyInPhase,
                 AutoflowerDaysSinceGermination, FlipDate, GerminatedAt, RootedAt, VegStartedAt, FinishStartedAt,
                 Nutrients, Notes, StartDate, EndDate, CreatedAtUtc, UpdatedAtUtc,
@@ -186,7 +186,7 @@ public sealed class GrowCoreRepository : RepositoryBase
                 $tentId, $systemId, $setupId, $name, $strainId, $strain, $breeder, $status, $mediumType, $feedingStyle, $hydroStyle, $mediumDetail,
                 $environment, $light, $containerSize, $reservoirSize, $irrigationStyle, $irrigationType, $waterSource, $feedProgramId, $useFeedChartTargets, $nightRampEnabled, $nightRampFloorC,
                 $seedType, $startMaterial, $germinationMethod, $cloneSource, $cloneIsRooted,
-                $breederFlowerWeeksMin, $breederFlowerWeeksMax, $breederWochenEigen, $plannedVegDays, $setpointProfileId, $plantCount, $phenoNumber,
+                $breederFlowerWeeksMin, $breederFlowerWeeksMax, $breederWochenEigen, $flushTage, $plannedVegDays, $setpointProfileId, $plantCount, $phenoNumber,
                 $propagationMedium, $hasChiller, $entryPoint, $daysAlreadyInPhase,
                 $autoflowerDaysSinceGermination, $flipDate, $germinatedAt, $rootedAt, $vegStartedAt, $finishStartedAt,
                 $nutrients, $notes, $startDate, $endDate, $createdAtUtc, $updatedAtUtc,
@@ -238,6 +238,7 @@ public sealed class GrowCoreRepository : RepositoryBase
                 BreederFlowerWeeksMin = $breederFlowerWeeksMin,
                 BreederFlowerWeeksMax = $breederFlowerWeeksMax,
                 BreederWochenEigen = $breederWochenEigen,
+                FlushTage = $flushTage,
                 PlannedVegDays = $plannedVegDays,
                 SetpointProfileId = $setpointProfileId,
                 StrainId = $strainId,
@@ -702,6 +703,9 @@ public sealed class GrowCoreRepository : RepositoryBase
             BreederFlowerWeeksMax = reader["BreederFlowerWeeksMax"] is DBNull or null ? null : Convert.ToInt32(reader["BreederFlowerWeeksMax"], CultureInfo.InvariantCulture),
             BreederWochenEigen = HasColumn(reader, "BreederWochenEigen") && reader["BreederWochenEigen"] is not (DBNull or null)
                 && Convert.ToInt32(reader["BreederWochenEigen"], CultureInfo.InvariantCulture) == 1,
+            FlushTage = HasColumn(reader, "FlushTage") && reader["FlushTage"] is not (DBNull or null)
+                ? GrowRun.FlushTageGueltig(Convert.ToInt32(reader["FlushTage"], CultureInfo.InvariantCulture))
+                : GrowRun.FlushTageStandard,
             SortenWochenMin = HasColumn(reader, "SortenWochenMin") && reader["SortenWochenMin"] is not (DBNull or null) ? Convert.ToInt32(reader["SortenWochenMin"], CultureInfo.InvariantCulture) : null,
             SortenWochenMax = HasColumn(reader, "SortenWochenMax") && reader["SortenWochenMax"] is not (DBNull or null) ? Convert.ToInt32(reader["SortenWochenMax"], CultureInfo.InvariantCulture) : null,
             StrainId = HasColumn(reader, "StrainId") && reader["StrainId"] is not (DBNull or null) ? Convert.ToInt32(reader["StrainId"], CultureInfo.InvariantCulture) : null,
@@ -870,6 +874,7 @@ public sealed class GrowCoreRepository : RepositoryBase
         command.Parameters.AddWithValue("$breederFlowerWeeksMin", eigeneWochen ? (object?)grow.BreederFlowerWeeksMin ?? DBNull.Value : DBNull.Value);
         command.Parameters.AddWithValue("$breederFlowerWeeksMax", eigeneWochen ? (object?)grow.BreederFlowerWeeksMax ?? DBNull.Value : DBNull.Value);
         command.Parameters.AddWithValue("$breederWochenEigen", eigeneWochen ? 1 : 0);
+        command.Parameters.AddWithValue("$flushTage", GrowRun.FlushTageGueltig(grow.FlushTage));
         command.Parameters.AddWithValue("$plannedVegDays", (object?)grow.PlannedVegDays ?? DBNull.Value);
         command.Parameters.AddWithValue("$setpointProfileId", (object?)grow.SetpointProfileId ?? DBNull.Value);
         command.Parameters.AddWithValue("$strainId", (object?)grow.StrainId ?? DBNull.Value);

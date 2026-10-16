@@ -66,6 +66,21 @@ describe('Plan-Woche im Live-Kopf', () => {
     const lang = [...programm.map((w) => ({ ...w, istJetzt: false })), woche({ id: 'flower-w4', label: 'Blütewoche 4', stage: 'Flower', woche: 4, istJetzt: true, verlaengert: true })]
     expect(jetztWocheText(plan({ wochen: lang }))).toBe('Blütewoche 4 (verlängert)')
   })
+  it('nennt mit Züchterwochen die ganze Blüte und den Flush („8 von 8" sagte das nicht)', () => {
+    // 16.10.2026: Plan mit acht Blütewochen, Sorte 9–10 Wochen, eine Woche Flush.
+    const w8 = programm.map((w) => ({ ...w, istJetzt: w.id === 'flower-w2' }))
+    expect(jetztWocheText(plan({ wochen: w8, blueteWochenMin: 9, blueteWochenMax: 10, flushAbWoche: 10, flushWochen: 1 })))
+      .toBe('Blütewoche 2 von 9–10 · Flush ab Woche 10')
+    expect(jetztWocheText(plan({ wochen: w8, blueteWochenMin: 9, blueteWochenMax: 10, flushAbWoche: 9, flushWochen: 2 })))
+      .toBe('Blütewoche 2 von 9–10 · Flush ab Woche 9')
+  })
+  it('zeigt bei gleichen Züchterwochen nur eine Zahl und ohne Flush-Angabe keinen Zusatz', () => {
+    const w2 = programm.map((w) => ({ ...w, istJetzt: w.id === 'flower-w2' }))
+    expect(jetztWocheText(plan({ wochen: w2, blueteWochenMin: 9, blueteWochenMax: 9 }))).toBe('Blütewoche 2 von 9')
+  })
+  it('fällt ohne Züchterwochen auf die Plan-Wochen zurück', () => {
+    expect(jetztWocheText(plan({ wochen: programm, blueteWochenMin: null, blueteWochenMax: null }))).toBe('Blütewoche 2 von 3')
+  })
   it('lässt die Angabe weg, wenn nichts läuft', () => {
     expect(jetztWocheText(null)).toBeNull()
     expect(jetztWocheText(plan({ wochen: programm.map((w) => ({ ...w, istJetzt: false })) }))).toBeNull()

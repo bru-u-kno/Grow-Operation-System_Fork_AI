@@ -22,6 +22,8 @@ export type PlanWoche = {
   dosierung: string | null
   /** Fork AI (02.10.2026): angehängt, weil die Phase länger läuft als das Programm. */
   verlaengert?: boolean
+  /** Angehängte Blütewoche, deren übernommene Werte noch niemand geprüft hat. */
+  ungeprueft?: boolean
 }
 
 import type { PhasenerinnerungDto } from '../../types'
@@ -40,6 +42,13 @@ export type WochenPlan = {
   wochen: PlanWoche[]
   /** Offene Phasen-Erinnerung des Grows (Phasenanker) — fehlt, wenn keine offen ist. */
   erinnerung?: PhasenerinnerungDto | null
+  /** Züchterwochen der Sorte, wie gerechnet wird — „Blütewoche 8 von 9–10". */
+  blueteWochenMin?: number | null
+  blueteWochenMax?: number | null
+  /** In welcher Blütewoche der Flush beginnt (Blütewochen bis zum Finish + 1). */
+  flushAbWoche?: number | null
+  /** Wie viele Wochen der Flush dauert: 1 oder 2. */
+  flushWochen?: number
 }
 
 /** Der Plan des Grows, den auch die Reiter zeigen — sonst der erste. */
@@ -78,17 +87,36 @@ export function wochenIndex(spalten: ReadonlyArray<{ id: string }>, wocheId: str
   return i < 0 ? null : i
 }
 
+/** „9–10", „9" oder null, wenn die Sorte keine Angabe hat. */
+export function blueteSpanne(plan: Pick<WochenPlan, 'blueteWochenMin' | 'blueteWochenMax'>): string | null {
+  const min = plan.blueteWochenMin ?? null
+  const max = plan.blueteWochenMax ?? null
+  if (min == null && max == null) return null
+  if (min == null || max == null || min === max) return String(max ?? min)
+  return `${min}–${max}`
+}
+
 /**
- * Die laufende Plan-Woche für den Kopf der Live-Seite: „Blütewoche 5 von 8",
- * „Flush", bei angehängter Woche „Blütewoche 9 (verlängert)". Aus demselben
- * Eintrag „istJetzt" wie die Wochenzeile — nicht selbst gerechnet.
+ * Die laufende Plan-Woche für den Kopf der Live-Seite: „Blütewoche 5 von 9–10 ·
+ * Flush ab Woche 10", „Flush", bei angehängter Woche „Blütewoche 9 (verlängert)".
+ * Aus demselben Eintrag „istJetzt" wie die Wochenzeile — nicht selbst gerechnet.
  * `null`, wenn der Plan keine laufende Woche kennt.
+ *
+ * Die Gesamtzahl kommt aus den Züchterwochen der Sorte und zählt den Flush mit;
+ * die Plan-Spalten allein (früher „von 8") sagten nicht, dass danach noch Flush
+ * kommt. Ohne Angabe der Sorte bleibt es bei den Plan-Wochen.
  */
 export function jetztWocheText(plan: WochenPlan | null): string | null {
   const jetzt = plan?.wochen.find((w) => w.istJetzt)
   if (!plan || !jetzt) return null
   if (jetzt.verlaengert) return `${jetzt.label} (verlängert)`
   if (jetzt.woche == null) return jetzt.label
+  const spanne = blueteSpanne(plan)
+  if (spanne != null && jetzt.stage === 'Flower') {
+    return plan.flushAbWoche != null
+      ? `${jetzt.label} von ${spanne} · Flush ab Woche ${plan.flushAbWoche}`
+      : `${jetzt.label} von ${spanne}`
+  }
   const letzte = Math.max(...plan.wochen.filter((w) => w.stage === jetzt.stage && w.woche != null && !w.verlaengert).map((w) => w.woche as number))
   return `${jetzt.label} von ${letzte}`
 }
