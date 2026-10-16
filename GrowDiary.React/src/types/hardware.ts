@@ -181,6 +181,14 @@ export interface RiskEventDto {
   updatedAtUtc: string
   /** Vom Abgleich geschlossen, weil die Abweichung nicht mehr besteht (nicht von Hand erledigt). */
   resolvedAutomatically?: boolean
+  /** Zeit der neuesten Messung des Grows — nur an offenen Abweichungs-Karten. */
+  latestMeasurementAtUtc?: string | null
+  /** Üblicher Abstand zwischen automatischen Messungen in Minuten; fehlt, wenn es zu wenige gibt. */
+  measurementIntervalMinutes?: number | null
+  /** Die neueste Messung ist älter als das 1,5-Fache des üblichen Abstands. */
+  measurementStale?: boolean
+  /** Wann die nächste automatische Messung zu erwarten ist; fehlt, wenn unbekannt oder schon fällig. */
+  nextMeasurementExpectedAtUtc?: string | null
 }
 
 export interface CreateRiskEventRequest {

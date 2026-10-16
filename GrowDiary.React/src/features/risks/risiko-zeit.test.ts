@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RiskEventDto } from '../../types'
-import { dauerText, istOffen, istWiederOkay, leseRohwert, seitText, vorText, wiederholungen, zielText } from './risiko-zeit'
+import { abstandText, dauerText, istOffen, istWiederOkay, leseRohwert, pruefStand, seitText, tagUhrText, vorText, wiederholungen, zielText } from './risiko-zeit'
 
 const JETZT = Date.parse('2026-10-15T04:05:00Z')
 
@@ -92,5 +92,68 @@ describe('Zustand', () => {
     expect(istWiederOkay(risiko({ ...zu, resolvedAtUtc: '2026-10-14T04:04:00Z' }), JETZT)).toBe(false)
     expect(istWiederOkay(risiko({ status: 'Resolved', resolvedAutomatically: false, resolvedAtUtc: '2026-10-15T01:00:00Z' }), JETZT)).toBe(false)
     expect(istWiederOkay(risiko({ status: 'Resolved', resolvedAtUtc: '2026-10-15T01:00:00Z' }), JETZT)).toBe(false)
+  })
+})
+
+// Orts-Daten, damit die Tests in jeder Zeitzone gleich laufen (kein „Z" im Text).
+const lokal = (tag: number, stunde: number, minute: number) => new Date(2026, 9, tag, stunde, minute).toISOString()
+const LOKAL_JETZT = new Date(2026, 9, 16, 17, 50).getTime()
+
+describe('Tag und Uhrzeit', () => {
+  it('sagt heute, gestern und morgen', () => {
+    expect(tagUhrText(lokal(16, 17, 32), LOKAL_JETZT)).toBe('heute 17:32')
+    expect(tagUhrText(lokal(15, 5, 33), LOKAL_JETZT)).toBe('gestern 05:33')
+    expect(tagUhrText(lokal(17, 5, 30), LOKAL_JETZT)).toBe('morgen 05:30')
+  })
+  it('nennt sonst Wochentag und Datum', () => {
+    expect(tagUhrText(lokal(14, 17, 32), LOKAL_JETZT)).toMatch(/^Mi\.? 14\.10\., 17:32$/)
+  })
+})
+
+describe('Stand der Prüfung', () => {
+  const karte = (teil: Partial<RiskEventDto>) => risiko({ latestMeasurementAtUtc: lokal(16, 17, 32), measurementIntervalMinutes: 720, nextMeasurementExpectedAtUtc: lokal(17, 5, 32), ...teil })
+
+  it('zeigt Messung, Alter und die nächste erwartete Messung', () => {
+    expect(pruefStand(karte({}), LOKAL_JETZT)).toEqual({
+      zeile: 'Messung heute 17:32 (vor 18 Min.)',
+      zusatz: 'Nächste Messung ca. morgen 05:32',
+      veraltet: false,
+    })
+  })
+  it('sagt bei überfälliger Prüfung „Nicht mehr geprüft" und nennt den üblichen Abstand', () => {
+    const stand = pruefStand(karte({ measurementStale: true, latestMeasurementAtUtc: lokal(14, 17, 32) }), LOKAL_JETZT)!
+    expect(stand.veraltet).toBe(true)
+    expect(stand.zeile).toMatch(/^Letzte Messung vor 2 Tagen \(Mi\.? 14\.10\., 17:32\)$/)
+    expect(stand.zusatz).toBe('Üblich wären 12 Std. Ob es noch besteht, ist unklar.')
+  })
+  it('rechnet die nächste Messung nicht selbst, sondern nimmt die des Servers', () => {
+    // Neueste Messung 17:32 (von Hand), erwartet laut Server aber erst morgen 05:32 — nicht 17:32 + 12 Std. = morgen 05:32 zufällig gleich;
+    // darum ein Wert, der sich nicht aus „neueste + Takt" ergibt: heute 19:00.
+    expect(pruefStand(karte({ nextMeasurementExpectedAtUtc: lokal(16, 19, 0) }), LOKAL_JETZT)!.zusatz).toBe('Nächste Messung ca. heute 19:00')
+  })
+  it('behauptet ohne Takt nichts über die nächste Messung', () => {
+    const stand = pruefStand(karte({ measurementIntervalMinutes: null, nextMeasurementExpectedAtUtc: null }), LOKAL_JETZT)!
+    expect(stand.zusatz).toBeNull()
+    expect(pruefStand(karte({ measurementIntervalMinutes: null, measurementStale: true }), LOKAL_JETZT)!.zusatz).toBe('Ob es noch besteht, ist unklar.')
+  })
+  it('nennt keine nächste Messung, die schon vorbei sein müsste', () => {
+    expect(pruefStand(karte({ latestMeasurementAtUtc: lokal(15, 17, 32), nextMeasurementExpectedAtUtc: lokal(16, 5, 32) }), LOKAL_JETZT)!.zusatz).toBeNull()
+  })
+  it('liefert nichts für Karten ohne Messzeitpunkt', () => {
+    expect(pruefStand(risiko({}), LOKAL_JETZT)).toBeNull()
+  })
+})
+
+describe('Üblicher Abstand', () => {
+  it('rundet statt abzuschneiden und wählt eine passende Einheit', () => {
+    expect(abstandText(90)).toBe('90 Min.')
+    expect(abstandText(720)).toBe('12 Std.')
+    expect(abstandText(2160)).toBe('36 Std.')
+    expect(abstandText(1440 * 3)).toBe('3 Tagen')
+    expect(abstandText(1440 * 4 - 30)).toBe('4 Tagen')
+  })
+  it('steht auf der überfälligen Karte als 36 Std., nicht als 1 Tag', () => {
+    const stand = pruefStand(risiko({ latestMeasurementAtUtc: lokal(13, 17, 32), measurementIntervalMinutes: 2160, measurementStale: true }), LOKAL_JETZT)!
+    expect(stand.zusatz).toBe('Üblich wären 36 Std. Ob es noch besteht, ist unklar.')
   })
 })

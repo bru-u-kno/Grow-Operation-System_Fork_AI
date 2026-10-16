@@ -72,6 +72,7 @@ builder.Services.AddSingleton<DeviationAnalyzerService>();
 builder.Services.AddSingleton<MeasurementAssessmentService>();
 builder.Services.AddSingleton<TreatmentRecommender>();
 builder.Services.AddSingleton<DeviationRiskEventSyncService>();
+builder.Services.AddSingleton<RisikoAbgleichRunner>();
 builder.Services.AddSingleton<RiskEventSopRecommender>();
 builder.Services.AddSingleton<HomeAssistantService>();
 builder.Services.AddSingleton<SupervisorInfoService>();

@@ -133,6 +133,30 @@
 }
 .rc-risk-state.is-on { color: var(--warn-text); }
 .rc-risk-state.is-off { color: var(--accent-text); }
+.rc-risk-state.is-old { color: var(--warn-text); border-style: dashed; }
+.rc-risk-stand {
+  padding: 8px 10px;
+  border: 1px solid var(--v1-line);
+  border-radius: 10px;
+}
+.rc-risk-stand.is-old { border-style: dashed; border-color: var(--warn-text); }
+.rc-risk-stand-label {
+  display: block;
+  color: var(--v1-muted);
+  font: 600 var(--fs-etikett)/1.2 var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.rc-risk-stand p {
+  margin: 2px 0 0;
+  color: var(--v1-muted);
+  font-size: var(--fs-text);
+}
+.rc-risk-stand b {
+  color: var(--v1-soft);
+  font-weight: 700;
+}
+.rc-risk-action-card.is-veraltet { border-style: dashed; }
 .rc-risk-ack {
   color: var(--v1-muted);
   font-size: var(--fs-klein);

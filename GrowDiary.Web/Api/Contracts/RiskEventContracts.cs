@@ -29,7 +29,16 @@ public sealed record RiskEventDto(
     DateTime UpdatedAtUtc,
     // Wahr, wenn der Abgleich das Risiko selbst geschlossen hat, weil die
     // Abweichung nicht mehr besteht (nicht: von Hand erledigt).
-    bool ResolvedAutomatically = false
+    bool ResolvedAutomatically = false,
+    // Stand der Pruefung hinter einer offenen Abweichungs-Karte (nur dort gesetzt):
+    // Zeit der neuesten Messung des Grows, ueblicher Abstand zwischen automatischen
+    // Messungen in Minuten (null: zu wenige fuer einen Takt) und ob die Pruefung
+    // ueberfaellig ist (aelter als das 1,5-fache dieses Abstands).
+    DateTime? LatestMeasurementAtUtc = null,
+    int? MeasurementIntervalMinutes = null,
+    bool MeasurementStale = false,
+    // Wann die naechste AUTOMATISCHE Messung zu erwarten ist (null: unbekannt oder schon faellig).
+    DateTime? NextMeasurementExpectedAtUtc = null
 );
 
 public sealed record RiskEventSopRecommendationDto(

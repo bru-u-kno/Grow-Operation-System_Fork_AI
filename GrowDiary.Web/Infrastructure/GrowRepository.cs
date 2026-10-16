@@ -585,6 +585,9 @@ public sealed class GrowRepository
     public List<Measurement> GetMeasurementsForGrow(int growId)
         => _measurementRepository.GetMeasurementsForGrow(growId);
 
+    public string GetMeasurementFingerprint(int growId)
+        => _measurementRepository.GetMeasurementFingerprint(growId);
+
     public List<Measurement> GetMeasurementsForTent(int tentId, int limit = 200)
         => _measurementRepository.GetMeasurementsForTent(tentId, limit);
 

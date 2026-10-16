@@ -32,6 +32,30 @@ public sealed class MeasurementRepository : RepositoryBase
         return items;
     }
 
+    /// <summary>
+    /// Ein kleiner Fingerabdruck der Messungen eines Grows (Anzahl, neueste Nummer,
+    /// neueste Zeit, letzte Änderung) — eine einzige Abfrage ohne Zeilen. Die letzte
+    /// Änderung gehört dazu, damit auch ein nachträglich korrigierter Wert einer
+    /// bestehenden Messung den Abgleich anstößt. Der Risiko-Abgleich im
+    /// Minutentakt fragt damit, ob es etwas Neues zu beurteilen gibt, statt jede
+    /// Minute alle Messungen zu laden.
+    /// </summary>
+    public string GetMeasurementFingerprint(int growId)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT COUNT(*), COALESCE(MAX(Id), 0), COALESCE(MAX(TakenAt), ''), COALESCE(MAX(UpdatedAtUtc), '')
+            FROM Measurements
+            WHERE GrowId = $growId;
+        """;
+        command.Parameters.AddWithValue("$growId", growId);
+        using var reader = command.ExecuteReader();
+        return reader.Read()
+            ? string.Create(CultureInfo.InvariantCulture, $"{reader.GetInt64(0)}|{reader.GetInt64(1)}|{reader.GetString(2)}|{reader.GetString(3)}")
+            : string.Empty;
+    }
+
     public List<Measurement> GetMeasurementsForTent(int tentId, int limit = 200)
     {
         using var connection = OpenConnection();

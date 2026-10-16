@@ -77,7 +77,29 @@ public sealed class RiskEventsApiController : ApiControllerBase
             items = items.Where(item => item.Status == status.Value).ToList();
         }
 
-        return Ok(items.Select(item => item.ToDto()).ToList());
+        // Der Stand der Pruefung gehoert nur an offene Abweichungs-Karten: nur sie
+        // behaupten „besteht noch" aufgrund einer Messung. Je Grow einmal berechnet.
+        var jetzt = DateTime.UtcNow;
+        var staende = new Dictionary<int, MessStand?>();
+        MessStand? StandFuer(RiskEvent item)
+        {
+            if (item.Source != RiskEventSource.Deviation
+                || item.GrowId is not { } id
+                || item.Status is not (RiskEventStatus.Open or RiskEventStatus.Acknowledged))
+            {
+                return null;
+            }
+
+            if (!staende.TryGetValue(id, out var stand))
+            {
+                stand = MessTakt.Bestimmen(_repository.GetMeasurementsForGrow(id), jetzt);
+                staende[id] = stand;
+            }
+
+            return stand;
+        }
+
+        return Ok(items.Select(item => item.ToDto(StandFuer(item))).ToList());
     }
 
     [HttpGet("{id:int}")]

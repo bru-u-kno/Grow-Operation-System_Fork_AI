@@ -32,6 +32,11 @@ public sealed class AlertWatchWorker : BackgroundService
         {
             try
             {
+                // Zuerst, und mit eigenem Fang: der Abgleich arbeitet nur in der lokalen
+                // Datenbank und darf weder auf Home-Assistant-Aufrufe warten noch von
+                // einem Fehler im Wächter ausgebremst werden, der weiter unten den
+                // ganzen Durchlauf abbricht.
+                RunRisikoAbgleich();
                 await EvaluateAllTentsAsync(stoppingToken);
                 await RunWatchdogAsync(stoppingToken);
             }
@@ -46,6 +51,23 @@ public sealed class AlertWatchWorker : BackgroundService
 
             try { await Task.Delay(Interval, stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
+        }
+    }
+
+    /// <summary>
+    /// Die Abweichungs-Karten reiten ebenfalls mit: gleicht ab, sobald es eine neue
+    /// Messung gibt. Läuft vor den übrigen Schritten und fängt eigene Fehler, damit
+    /// weder ein Fehler hier die Alarme aufhält noch ein Fehler dort den Abgleich.
+    /// </summary>
+    private void RunRisikoAbgleich()
+    {
+        try
+        {
+            _serviceProvider.GetRequiredService<RisikoAbgleichRunner>().Einmal();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Risiko-Abgleich im Wächter fehlgeschlagen.");
         }
     }
 

@@ -41,7 +41,20 @@ public sealed class DeviationRiskEventSyncService
         return changed;
     }
 
-    private int SyncGrow(GrowRun grow)
+    // Der Abgleich laeuft aus dem Wachter im Minutentakt UND aus Seitenaufrufen. Das
+    // Anlegen einer Karte ist „suchen, dann einfuegen": zwei gleichzeitige Laeufe
+    // koennten fuer dieselbe Abweichung zwei offene Karten anlegen.
+    private readonly object _sperre = new();
+
+    public int SyncGrow(GrowRun grow)
+    {
+        lock (_sperre)
+        {
+            return SyncGrowOhneSperre(grow);
+        }
+    }
+
+    private int SyncGrowOhneSperre(GrowRun grow)
     {
         var measurements = _repository.GetMeasurementsForGrow(grow.Id);
         var deviations = _deviationAnalyzer

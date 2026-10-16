@@ -10,7 +10,7 @@ import type {
 } from '../../types'
 import { V1Button, V1Card } from '../../components/v1'
 import { formatDate, formatDateTime, formatNumber, formatSeverityLabel } from '../../utils'
-import { dauerText, istWiederOkay, leseRohwert, seitText, vorText, wiederholungen, zielText } from './risiko-zeit'
+import { dauerText, istWiederOkay, leseRohwert, pruefStand, seitText, vorText, wiederholungen, zielText } from './risiko-zeit'
 
 type Props = {
   risk: RiskEventDto
@@ -78,9 +78,12 @@ export function RiskActionCard({ risk, context, history, jetzt: jetztEin, onChan
   const ziel = wert ? zielText(wert) : null
   const wiederholung = history ? wiederholungen(risk, history) : null
   const gesehen = risk.lastSeenAtUtc ?? risk.startedAtUtc
+  // Wie frisch die Prüfung ist (nur offene Abweichungs-Karten mit Grow tragen die Angabe).
+  const stand = wiederOkay ? null : pruefStand(risk, jetzt)
+  const veraltet = stand?.veraltet === true
 
   return (
-    <V1Card className={`rc-risk-action-card${wiederOkay ? ' is-wieder-okay' : ''}`} tone={wiederOkay ? undefined : tone}>
+    <V1Card className={`rc-risk-action-card${wiederOkay ? ' is-wieder-okay' : ''}${veraltet ? ' is-veraltet' : ''}`} tone={wiederOkay ? undefined : tone}>
       <div className="rc-risk-action-head">
         <div>
           <strong>{risk.title}</strong>
@@ -89,9 +92,9 @@ export function RiskActionCard({ risk, context, history, jetzt: jetztEin, onChan
         <em>{formatSeverityLabel(risk.severity)}</em>
       </div>
       <div className="rc-risk-state-row">
-        <span className={`rc-risk-state ${wiederOkay ? 'is-off' : 'is-on'}`} data-audit="risk-state">
+        <span className={`rc-risk-state ${wiederOkay ? 'is-off' : veraltet ? 'is-old' : 'is-on'}`} data-audit="risk-state">
           <i aria-hidden="true" />
-          {wiederOkay ? 'Wieder okay' : 'Besteht noch'}
+          {wiederOkay ? 'Wieder okay' : veraltet ? 'Nicht mehr geprüft' : 'Besteht noch'}
         </span>
         {isAcknowledged && <span className="rc-risk-ack">bestätigt</span>}
       </div>
@@ -113,7 +116,7 @@ export function RiskActionCard({ risk, context, history, jetzt: jetztEin, onChan
         ) : (
           <>
             <p><b>{seitText(risk.startedAtUtc, jetzt)}</b> ({formatDateTime(risk.startedAtUtc)})</p>
-            <p>Zuletzt gesehen {vorText(gesehen, jetzt)}</p>
+            {!stand && <p>Zuletzt gesehen {vorText(gesehen, jetzt)}</p>}
           </>
         )}
         {wiederholung && (
@@ -122,6 +125,13 @@ export function RiskActionCard({ risk, context, history, jetzt: jetztEin, onChan
           </p>
         )}
       </div>
+      {stand && (
+        <div className={`rc-risk-stand${veraltet ? ' is-old' : ''}`} data-audit="risk-stand">
+          <span className="rc-risk-stand-label">Stand der Prüfung</span>
+          <p><b>{stand.zeile}</b></p>
+          {stand.zusatz && <p>{stand.zusatz}</p>}
+        </div>
+      )}
       {risk.description && (
         <details className="rc-risk-details">
           <summary>Details &amp; Handlung</summary>

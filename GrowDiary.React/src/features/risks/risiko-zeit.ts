@@ -124,3 +124,80 @@ export function istWiederOkay(risiko: RiskEventDto, jetzt: number): boolean {
   const her = jetzt - new Date(risiko.resolvedAtUtc).getTime()
   return her >= 0 && her <= WIEDER_OKAY_SICHTBAR_MS
 }
+
+const WOCHENTAG = new Intl.DateTimeFormat('de-DE', { weekday: 'short' })
+const UHR = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' })
+const TAG_MONAT = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' })
+
+/** „heute 17:32", „gestern 05:33", „morgen 05:30", sonst „Mi. 14.10., 17:32" — in der Ortszeit des Geräts. */
+export function tagUhrText(iso: string, jetzt: number): string {
+  const zeit = new Date(iso)
+  const uhr = UHR.format(zeit)
+  const unterschied = Math.round((new Date(zeit.getFullYear(), zeit.getMonth(), zeit.getDate()).getTime()
+    - new Date(new Date(jetzt).getFullYear(), new Date(jetzt).getMonth(), new Date(jetzt).getDate()).getTime()) / TAG)
+  if (unterschied === 0) return `heute ${uhr}`
+  if (unterschied === -1) return `gestern ${uhr}`
+  if (unterschied === 1) return `morgen ${uhr}`
+  return `${WOCHENTAG.format(zeit)} ${TAG_MONAT.format(zeit)}, ${uhr}`
+}
+
+/**
+ * Ein Messabstand für „Üblich wären …": in Minuten bis zwei Stunden, in Stunden bis
+ * drei Tage, darüber in Tagen — und gerundet statt abgeschnitten. `dauerText` schneidet
+ * ab; aus 36 Stunden wurde damit „1 Tag", aus 90 Minuten „1 Std.".
+ */
+export function abstandText(minuten: number): string {
+  if (minuten <= 120) return `${Math.round(minuten)} Min.`
+  const stunden = minuten / 60
+  if (stunden < 72) return `${Math.round(stunden)} Std.`
+  const tage = Math.round(stunden / 24)
+  return tage === 1 ? '1 Tag' : `${tage} Tagen`
+}
+
+/** Hängt einen Punkt an, wenn der Text nicht schon mit einem endet („12 Std." bleibt „12 Std."). */
+function satzEnde(text: string): string {
+  return text.endsWith('.') ? text : `${text}.`
+}
+
+export type PruefStand = {
+  /** Erste Zeile des Blocks „Stand der Prüfung". */
+  zeile: string
+  /** Zweite Zeile, falls es etwas zu sagen gibt (nächste Messung bzw. „üblich wären …"). */
+  zusatz: string | null
+  /** Überfällig: die Karte sagt „Nicht mehr geprüft" statt „Besteht noch". */
+  veraltet: boolean
+}
+
+/**
+ * Wie frisch die Prüfung hinter einer offenen Karte ist. `null`, wenn die
+ * Antwort keinen Messzeitpunkt trägt (Karten ohne Grow, von Hand angelegte,
+ * geschlossene) — dann zeigt die Karte nichts davon.
+ */
+export function pruefStand(risiko: RiskEventDto, jetzt: number): PruefStand | null {
+  if (!risiko.latestMeasurementAtUtc) return null
+  const letzte = risiko.latestMeasurementAtUtc
+  const abstand = risiko.measurementIntervalMinutes ?? null
+  const wann = tagUhrText(letzte, jetzt)
+
+  if (risiko.measurementStale) {
+    return {
+      zeile: `Letzte Messung ${vorText(letzte, jetzt)} (${wann})`,
+      zusatz: abstand
+        ? `Üblich wären ${satzEnde(abstandText(abstand))} Ob es noch besteht, ist unklar.`
+        : 'Ob es noch besteht, ist unklar.',
+      veraltet: true,
+    }
+  }
+
+  // Die erwartete nächste Messung kommt vom Server: sie folgt dem Rhythmus der
+  // AUTOMATISCHEN Messungen. Ab der neuesten Messung zu rechnen (die auch von Hand
+  // sein kann) ergab am 16.10.2026 „morgen 02:36" statt „17:00".
+  const naechste = risiko.nextMeasurementExpectedAtUtc
+  return {
+    zeile: `Messung ${wann} (${vorText(letzte, jetzt)})`,
+    zusatz: naechste && new Date(naechste).getTime() > jetzt
+      ? `Nächste Messung ca. ${tagUhrText(naechste, jetzt)}`
+      : null,
+    veraltet: false,
+  }
+}

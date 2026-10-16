@@ -6,7 +6,7 @@ namespace GrowDiary.Web.Api.Mapping;
 
 public static class RiskEventMapping
 {
-    public static RiskEventDto ToDto(this RiskEvent item) => new(
+    public static RiskEventDto ToDto(this RiskEvent item, MessStand? stand = null) => new(
         Id: item.Id,
         EventType: item.EventType,
         Severity: item.Severity,
@@ -32,7 +32,11 @@ public static class RiskEventMapping
         UpdatedAtUtc: item.UpdatedAtUtc,
         ResolvedAutomatically: item.Status == RiskEventStatus.Resolved
             && item.Source == RiskEventSource.Deviation
-            && item.Notes?.Contains(DeviationRiskEventSyncService.AutoResolvedNote, StringComparison.Ordinal) == true
+            && item.Notes?.Contains(DeviationRiskEventSyncService.AutoResolvedNote, StringComparison.Ordinal) == true,
+        LatestMeasurementAtUtc: stand?.NeuesteMessungUtc,
+        MeasurementIntervalMinutes: stand?.UeblicherAbstand is { } abstand ? (int)Math.Round(abstand.TotalMinutes) : null,
+        MeasurementStale: stand?.Veraltet ?? false,
+        NextMeasurementExpectedAtUtc: stand?.NaechsteErwartetUtc
     );
 
     public static RiskEvent ToModel(this CreateRiskEventRequest request) => new()

@@ -202,6 +202,27 @@ public sealed class DeviationRiskEventSyncServiceTests : IDisposable
         Assert.False(orpDto.ResolvedAutomatically);
     }
 
+    /// <summary>
+    /// Der Abgleich läuft aus dem Wächter im Minutentakt und aus Seitenaufrufen. Gleichzeitige
+    /// Läufe dürfen für dieselbe Abweichung keine zwei offenen Karten anlegen.
+    /// </summary>
+    [Fact]
+    public void GleichzeitigeAbgleicheLegenKeineDoppeltenKartenAn()
+    {
+        var growId = CreateHydroGrow("Gleichzeitig Hydro");
+        AddMeasurement(growId, Utc(2026, 5, 20), ec: 3.2, orp: 700, waterTemp: 25);
+        var grow = _repository.GetGrow(growId)!;
+
+        Parallel.For(0, 24, new ParallelOptions { MaxDegreeOfParallelism = 8 }, _ => _service.SyncGrow(grow));
+
+        var offene = _repository.GetRiskEventsByGrow(growId)
+            .Where(risk => risk.Source == RiskEventSource.Deviation && risk.Status == RiskEventStatus.Open)
+            .GroupBy(risk => risk.DedupeKey)
+            .ToList();
+        Assert.NotEmpty(offene);
+        Assert.All(offene, gruppe => Assert.Single(gruppe));
+    }
+
     private int CreateHydroGrow(string name)
     {
         var tent = _repository.GetTents().Single();

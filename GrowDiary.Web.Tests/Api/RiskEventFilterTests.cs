@@ -73,6 +73,53 @@ public sealed class RiskEventFilterTests : IDisposable
     private IReadOnlyList<RiskEventDto> Hole(int? growId = null, bool openOnly = false)
         => (IReadOnlyList<RiskEventDto>)((OkObjectResult)_controller.List(openOnly: openOnly, growId: growId).Result!).Value!;
 
+    /// <summary>
+    /// Der Stand der Pruefung gehoert nur an OFFENE ABWEICHUNGS-Karten mit Grow:
+    /// nur sie behaupten „besteht noch" aufgrund einer Messung (16.10.2026).
+    /// </summary>
+    [Fact]
+    public void DerStandDerPruefungHaengtNurAnOffenenAbweichungsKarten()
+    {
+        var jetzt = DateTime.UtcNow;
+        for (var i = 0; i < 5; i++)
+        {
+            _repository.CreateMeasurement(new Measurement
+            {
+                GrowId = _growA,
+                TakenAt = jetzt.AddHours(-40 - 12 * i),
+                Stage = GrowStage.Veg,
+                Source = ValueOrigin.HomeAssistant,
+            });
+        }
+
+        var abweichung = _repository.CreateRiskEvent(new RiskEvent
+        {
+            GrowId = _growA, Title = "EC", Source = RiskEventSource.Deviation, Status = RiskEventStatus.Open,
+            DedupeKey = "deviation:grow:test:hydro.ec",
+        });
+        var erledigt = _repository.CreateRiskEvent(new RiskEvent
+        {
+            GrowId = _growA, Title = "pH", Source = RiskEventSource.Deviation, Status = RiskEventStatus.Resolved,
+            DedupeKey = "deviation:grow:test:hydro.ph",
+        });
+
+        var alle = Hole(growId: _growA);
+
+        var offene = alle.Single(r => r.Id == abweichung.Id);
+        Assert.NotNull(offene.LatestMeasurementAtUtc);
+        Assert.Equal(720, offene.MeasurementIntervalMinutes);
+        Assert.True(offene.MeasurementStale);   // 40 h > 18 h
+        Assert.Null(offene.NextMeasurementExpectedAtUtc);   // überfällig: keine „nächste Messung"
+
+        // Von Hand angelegt, erledigt oder ohne Grow: kein Stand.
+        Assert.All(alle.Where(r => r.Id != abweichung.Id), r =>
+        {
+            Assert.Null(r.LatestMeasurementAtUtc);
+            Assert.False(r.MeasurementStale);
+        });
+        Assert.Null(alle.Single(r => r.Id == erledigt.Id).LatestMeasurementAtUtc);
+    }
+
     [Fact]
     public void GrowFilterAndOpenOnlyWorkTogether()
     {

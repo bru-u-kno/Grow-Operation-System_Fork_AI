@@ -31,9 +31,14 @@ entsteht eine ehrliche Rückfallkarte statt eines erfundenen Rats.
 **Vom Befund zur Aufgabe.** `DeviationRiskEventSyncService` macht aus jeder
 Abweichung der Stufe *Warnung* oder *Kritisch* ein `RiskEvent` mit dem
 Entdopplungs-Schlüssel `deviation:grow:<id>:<stableKey>`; verschwindet die
-Abweichung, schließt sich das Ereignis von selbst. Es gibt dafür **keinen
-Hintergrund-Worker** — der Abgleich läuft, wenn jemand `GET /api/risk-events`
-abruft (`RiskEventsApiController.List`). Der Abgleich rechnet mit demselben
+Abweichung, schließt sich das Ereignis von selbst. Der Abgleich läuft auf zwei
+Wegen: wenn jemand `GET /api/risk-events` abruft (`RiskEventsApiController.List`),
+und im Minutentakt des `AlertWatchWorker` (`RisikoAbgleichRunner`) — dort aber nur,
+wenn es für einen Grow eine neue Messung gibt (Fingerabdruck der Messungen,
+`GrowRepository.GetMeasurementFingerprint`). Offene Abweichungs-Karten tragen
+außerdem den **Stand der Prüfung** (`MessTakt`): Zeit der neuesten Messung, üblicher
+Abstand der automatischen Messungen, erwartete nächste Messung und „überfällig" ab
+dem 1,5-Fachen dieses Abstands (Pille „Nicht mehr geprüft"). Der Abgleich rechnet mit demselben
 Blattversatz des Zelts und demselben Sollwert-Profil wie die Diagnose
 (`GrowRepository.LeafOffsetFor`, `SystemProfileIdFor`) — sonst nennt die Karte
 einen anderen Wert als die Diagnose. `RiskActionCard` bietet *Bestätigen*,
@@ -130,7 +135,7 @@ EC, Sauerstoff und ORP „Pflanze frisst" oder „Biofilm".
 | Anlagenstörung als Risiko | `GrowDiary.Web/Services/AnlagenWatchService.cs`, `AnlagenRisikoService.cs` |
 | Karten und Ampel der Live-Seite | `GrowDiary.Web/Services/GrowAlertService.cs`, `RecommendationEngine.cs` |
 | Oberfläche Diagnose | `GrowDiary.React/src/features/grow-detail/GrowDetailDiagnosisSection.tsx`, `ObservationGuide.tsx` |
-| Oberfläche Risiko und Trend | `GrowDiary.React/src/features/risks/RiskActionCard.tsx`, `features/risks/risiko-zeit.ts`, `features/live/TrendWatchPanel.tsx` |
+| Oberfläche Risiko und Trend | `GrowDiary.React/src/features/risks/RiskActionCard.tsx`, `features/risks/risiko-zeit.ts`, `Services/MessTakt.cs`, `Services/RisikoAbgleichRunner.cs`, `features/live/TrendWatchPanel.tsx` |
 
 ## Fallen
 
