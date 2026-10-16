@@ -29,6 +29,9 @@ public static class GrowMapping
         grow.SetpointProfileId,
         BreederFlowerWeeksMin: grow.BreederFlowerWeeksMin,
         BreederFlowerWeeksMax: grow.BreederFlowerWeeksMax,
+        BreederWeeksEigen: grow.BreederWochenEigen,
+        StrainFlowerWeeksMin: grow.SortenWochenMin,
+        StrainFlowerWeeksMax: grow.SortenWochenMax,
         GerminatedAt: grow.GerminatedAt,
         RootedAt: grow.RootedAt,
         VegStartedAt: grow.VegStartedAt,
@@ -43,7 +46,7 @@ public static class GrowMapping
         LatestMeasurementAt: grow.LatestMeasurement?.TakenAt,
         PflanzenSorten: grow.PflanzenSorten,
         NurHauptsorte: grow.NurHauptsorte,
-        Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today))
+        Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today), grow.FinishStartedAt is not null || grow.EntryPoint == GrowEntryPoint.Flush)
     );
 
     public static GrowDetailDto ToDetailDto(this GrowRun grow) => new(
@@ -76,6 +79,9 @@ public static class GrowMapping
         CloneIsRooted: grow.CloneIsRooted,
         BreederFlowerWeeksMin: grow.BreederFlowerWeeksMin,
         BreederFlowerWeeksMax: grow.BreederFlowerWeeksMax,
+        BreederWeeksEigen: grow.BreederWochenEigen,
+        StrainFlowerWeeksMin: grow.SortenWochenMin,
+        StrainFlowerWeeksMax: grow.SortenWochenMax,
         PlannedVegDays: grow.PlannedVegDays,
         grow.SetpointProfileId,
         StrainId: grow.StrainId,
@@ -104,6 +110,6 @@ public static class GrowMapping
         UpdatedAtUtc: grow.UpdatedAtUtc,
         PflanzenSorten: grow.PflanzenSorten,
         NurHauptsorte: grow.NurHauptsorte,
-        Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today))
+        Phasenanker: PhasenankerDto.Aus(Services.Phasenanker.Fuer(grow, DateTime.Today), grow.FinishStartedAt is not null || grow.EntryPoint == GrowEntryPoint.Flush)
     );
 }

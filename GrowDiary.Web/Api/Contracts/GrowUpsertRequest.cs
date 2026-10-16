@@ -24,6 +24,13 @@ public sealed class GrowUpsertRequest
     public int? BreederFlowerWeeksMin { get; set; }
     public int? BreederFlowerWeeksMax { get; set; }
 
+    /// <summary>
+    /// true = die Wochen oben sind bewusst gesetzt und gehen der Sorte vor;
+    /// false = das Grow folgt der Sorte (die Wochen oben werden ignoriert);
+    /// leer (älterer Client) = abgeleitet: Wochen, die von der Sorte abweichen, gelten als bewusst.
+    /// </summary>
+    public bool? BreederWeeksEigen { get; set; }
+
     /// <summary>Geplante Veg-Dauer in Tagen ab Startdatum; leer = kein Plan.</summary>
     public int? PlannedVegDays { get; set; }
 

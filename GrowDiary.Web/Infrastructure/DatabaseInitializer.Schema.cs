@@ -110,6 +110,7 @@ public sealed partial class DatabaseInitializer
         EnsureColumn(connection, "Grows", "BreederFlowerWeeksMax",          "INTEGER NULL");
         EnsureColumn(connection, "Grows", "PlannedVegDays",                 "INTEGER NULL");
         EnsureColumn(connection, "Grows", "StrainId",                       "INTEGER NULL");
+        EnsureBreederWochenEigen(connection);
         EnsureColumn(connection, "Grows", "PlantCount",                     "INTEGER NULL");
         EnsureColumn(connection, "Grows", "PhenoNumber",                    "INTEGER NULL");
         EnsureColumn(connection, "Grows", "PropagationMedium",              "TEXT NULL");
@@ -417,6 +418,77 @@ public sealed partial class DatabaseInitializer
         command.ExecuteNonQuery();
     }
 
+
+    /// <summary>
+    /// Spalte <c>Grows.BreederWochenEigen</c> anlegen und die vorhandenen Grows
+    /// einmal einordnen — nur beim Anlegen der Spalte, am Schema erkannt (wie
+    /// <see cref="GrowsHabenNochKeineZeltSpalte"/>), nie wieder danach.
+    /// </summary>
+    /// <remarks>
+    /// Bis dahin kopierte das Grow die Züchterwochen der Sorte beim Anlegen und
+    /// zog sie nie nach (Mimosa EVO, 16.10.2026: Sorte 9–10, Grow 8–9). Jetzt
+    /// folgt es der Sorte, solange es keinen eigenen Wert hat.
+    /// <list type="bullet">
+    /// <item>Wert gleich dem der Sorte → folgt der Sorte, der Wert im Grow wird geleert.</item>
+    /// <item>Wert weicht ab → bleibt als eigener Wert stehen. Der Fork kann nicht
+    /// wissen, ob die Abweichung Absicht ist; die Oberfläche zeigt sie an.</item>
+    /// <item>ohne Sorte → eigener Wert, wie bisher.</item>
+    /// </list>
+    /// </remarks>
+    private static void EnsureBreederWochenEigen(SqliteConnection connection)
+    {
+        using var pruefen = connection.CreateCommand();
+        pruefen.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Grows') WHERE name = 'BreederWochenEigen';";
+        if (Convert.ToInt32(pruefen.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture) > 0)
+        {
+            return;
+        }
+
+        // EINE Transaktion: Spalte anlegen und einordnen gehoeren zusammen. Bricht der
+        // Start dazwischen ab (Add-on-Stopp, Neustart), bliebe sonst die Spalte mit
+        // dem Standardwert 0 stehen — der Spaltencheck oben sagt dann „schon
+        // erledigt", und jedes Grow wuerde der Sorte folgen, auch das mit bewusst
+        // abweichendem Wert. SQLite rollt eine unterbrochene Transaktion beim
+        // naechsten Oeffnen von selbst zurueck.
+        using var umstellen = connection.CreateCommand();
+        umstellen.CommandText = """
+            BEGIN;
+            ALTER TABLE Grows ADD COLUMN BreederWochenEigen INTEGER NOT NULL DEFAULT 0;
+            UPDATE Grows
+            SET BreederWochenEigen = CASE
+                    WHEN StrainId IS NULL OR SeedType = 'Autoflower'
+                         OR NOT EXISTS (SELECT 1 FROM Strains s WHERE s.Id = Grows.StrainId)
+                        THEN 1
+                    WHEN (SELECT s.FlowerWeeksMin IS Grows.BreederFlowerWeeksMin
+                                 AND s.FlowerWeeksMax IS Grows.BreederFlowerWeeksMax
+                          FROM Strains s WHERE s.Id = Grows.StrainId)
+                        THEN 0
+                    ELSE 1
+                END;
+            UPDATE Grows
+            SET BreederFlowerWeeksMin = NULL, BreederFlowerWeeksMax = NULL
+            WHERE BreederWochenEigen = 0;
+            COMMIT;
+        """;
+        try
+        {
+            umstellen.ExecuteNonQuery();
+        }
+        catch
+        {
+            try
+            {
+                using var zurueck = connection.CreateCommand();
+                zurueck.CommandText = "ROLLBACK;";
+                zurueck.ExecuteNonQuery();
+            }
+            catch
+            {
+                // Es gab keine offene Transaktion mehr; der urspruengliche Fehler zaehlt.
+            }
+            throw;
+        }
+    }
 
     private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
     {

@@ -5,6 +5,28 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.226
+
+**Fork AI.** Die Blütedauer laut Züchter folgt der Sorte und bleibt nicht mehr als alte Kopie im Grow stehen.
+
+- **Der Anlass:** Eine Sorte stand in der Bibliothek auf 9–10 Wochen, im laufenden Grow auf 8–9. Das Grow hatte die Wochen beim Anlegen kopiert und danach nie mehr nachgezogen — im Formular gab es dafür nicht einmal ein sichtbares Feld. Der Finish-Beginn (Flip + Maximum × 7 − 14 Tage) lag dadurch eine Woche zu früh, und mit ihm die Plan-Woche, die Werte für Chiller und Entfeuchtung und die Erntevorhersage.
+- **Geändert — die Sorte führt:** Ein Grow mit Sorte rechnet mit den Wochen der Sorte, bis jemand einen eigenen Wert setzt. Ändert sich die Sorte, ziehen alle folgenden Grows sofort nach — ohne dass man sie öffnen muss. Gespeichert wird nur noch ein bewusst gesetzter eigener Wert; ein Grow, das der Sorte folgt, trägt selbst nichts.
+- **Neu — Feld „Blütedauer laut Züchter" im Grow-Formular:** Es zeigt, woher der Wert kommt („Aus der Sorte … — wird mitgeführt"). „Eigene Werte eintragen" öffnet zwei Zahlenfelder; weicht der eigene Wert ab, steht dort „Weicht von der Sorte ab (Sorte: 9–10). Finish beginnt dadurch 7 Tage früher." und ein Knopf „Wie Sorte (9–10)" führt zurück. Bei Autoflowern und Grows ohne Sorte gelten wie bisher eigene Werte.
+- **Neu — Hinweis auf der Sorten-Seite, vor dem Speichern:** Ändert man die Wochen einer Sorte, steht unter den Feldern, welche laufenden Grows folgen und wohin sich ihr Finish-Beginn verschiebt („vom 30.10. auf den 06.11."), welche bei ihrem eigenen Wert bleiben und welche ein bereits bestätigtes Finish haben, das sich nicht mehr bewegt.
+- **Vorhandene Grows:** Beim ersten Start nach dem Update ordnet der Fork jedes Grow einmal ein. Stimmen seine Wochen mit der Sorte überein, folgt es ihr künftig. Weichen sie ab, bleiben sie als eigener Wert stehen und das Formular zeigt die Abweichung — der Fork kann nicht wissen, ob sie Absicht war, und überschreibt deshalb nichts still. Wer die Sorte übernehmen will, drückt „Wie Sorte".
+
+### Technik
+- Neue Spalte `Grows.BreederWochenEigen`; die Einmal-Umstellung erkennt sich am fehlenden Spaltennamen (wie die Zelt-Zuordnung), nicht an einem Merker, und läuft nie ein zweites Mal.
+- Die wirksamen Wochen werden an genau einer Stelle eingesetzt (`GrowCoreRepository.WirksameZuechterwochen`, über einen `LEFT JOIN` auf die Sorte); Finish-Beginn, Plan-Woche, Kostenseite und Oberfläche lesen denselben Wert. `BreederWeeksEigen`, `StrainFlowerWeeksMin/Max` und `phasenanker.finishBestaetigt` sind neu in der API.
+- Speichern über die API: `breederWeeksEigen` ist optional. `true` = eigener Wert, `false` = folgt der Sorte (die Zahlen daneben zählen dann nicht — so kann ein Formular, das vor einer Sortenänderung geladen wurde, keine alte Kopie als „eigen" festschreiben). Ohne Angabe (ältere Clients) gilt, was von der Sorte abweicht, als bewusst gesetzt (`ZuechterwochenRegel`).
+- Die Einmal-Umstellung (Spalte anlegen und Grows einordnen) läuft in einer Transaktion: Bricht ein Start dazwischen ab, bleibt alles wie vorher und die Umstellung läuft beim nächsten Start vollständig.
+- `phasenanker.finishBestaetigt` ist auch bei Einstieg „Flush" wahr, denn dort kommt der Finish-Beginn nicht aus den Züchterwochen.
+
+### Geprüft
+- Backend: neue Tests für das Nachziehen (einzeln und in der Liste), den eigenen Wert, das Nicht-Zurückkopieren beim Speichern eines anderen Feldes, Grows ohne Sorte und Autoflower, die Einmal-Umstellung auf einer Datenbank im Stand vor dem Update (Spalte entfernt, neu gestartet, zweiter Start ändert nichts) und die Regel für ältere Clients. Ohne das Einsetzen der Sortenwerte werden zwei davon rot. Der Rundweg-Test und eine unabhängige Durchsicht fanden zwei echte Fehler der ersten Fassung: ein veraltetes Formular hätte die alte Kopie als „eigen" festgeschrieben, und die Einmal-Umstellung lief ohne Transaktion. Beides ist behoben und durch Tests belegt, die Transaktion selbst nur durch Lesen des Ablaufs, nicht durch einen nachgestellten Abbruch.
+- Frontend: neue Vitest-Fälle für Text, Verschiebung in Tagen und die Wirkung auf Grows.
+- E2E gegen die gebaute App mit eigener Sorte und eigenem Grow: Sorte ändern → Grow zieht nach; Formular zeigt es; eigene Werte speichern, neu laden, nochmal speichern; Sorte ändern → eigener Wert bleibt; „Wie Sorte" → folgt dem neuen Stand; Hinweis auf der Sorten-Seite. Dazu die Querschnitte und Formular-Rundwege (644 Fälle) und die Seite in beiden Themen auf Handy-Breite angesehen.
+
 ## 2.0.0-forkai.225
 
 **Fork AI.** Zuluft: Der Abschalt-Abstand ist einstellbar, und die Seite sagt, wann der Lüfter nur noch hält.

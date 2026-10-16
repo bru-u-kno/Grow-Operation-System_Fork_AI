@@ -23,6 +23,7 @@ public static class RequestMapping
         PhenoNumber = request.PhenoNumber,
         BreederFlowerWeeksMin = request.BreederFlowerWeeksMin,
         BreederFlowerWeeksMax = request.BreederFlowerWeeksMax,
+        BreederWochenEigen = request.BreederWeeksEigen,
         PlannedVegDays = request.PlannedVegDays,
         SetpointProfileId = string.IsNullOrWhiteSpace(request.SetpointProfileId) ? null : request.SetpointProfileId,
         StrainId = request.StrainId,

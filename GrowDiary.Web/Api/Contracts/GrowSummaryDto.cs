@@ -31,6 +31,11 @@ public sealed record GrowSummaryDto(
     string? SetpointProfileId,
     int? BreederFlowerWeeksMin,
     int? BreederFlowerWeeksMax,
+    /// <summary>true = Wochen im Grow bewusst gesetzt; false = folgt der Sorte.</summary>
+    bool BreederWeeksEigen,
+    /// <summary>Wochen laut Sorte (Anzeige der Abweichung); leer ohne Sorte.</summary>
+    int? StrainFlowerWeeksMin,
+    int? StrainFlowerWeeksMax,
     DateTime? GerminatedAt,
     DateTime? RootedAt,
     DateTime? VegStartedAt,

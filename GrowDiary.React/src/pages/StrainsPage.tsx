@@ -1,3 +1,4 @@
+import { wirkungAufGrows, wochenText, wochenZahl, type WirkungFolgt } from '../features/grows/zuechterwochen'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiFetch, ApiRequestError } from '../api'
 import type { CreateStrainRequest, GrowSummary, HarvestDto, PlantInstanceDto, SeedKind, StrainDominance, StrainDto } from '../types'
@@ -151,6 +152,21 @@ type HuntState = { grow: GrowSummary; hunt: PhenoHuntDto }
  * Tabelle mit Läufen, Ø-Ertrag und Pheno-Keeper, darunter je aktivem Grow der
  * Kandidaten-Streifen. Bewerten öffnet den Bogen direkt unter dem Streifen.
  */
+function kurzDatum(datum: Date): string {
+  return datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+}
+
+function wirkungText(eintrag: WirkungFolgt): string {
+  if (eintrag.bestaetigt) return `${eintrag.name}: Finish ist schon bestätigt, bleibt`
+  if (eintrag.von && eintrag.nach && eintrag.tage) {
+    return `${eintrag.name}: Finish verschiebt sich vom ${kurzDatum(eintrag.von)}. auf den ${kurzDatum(eintrag.nach)}.`
+  }
+  if (eintrag.tage) {
+    return `${eintrag.name}: Finish verschiebt sich um ${Math.abs(eintrag.tage)} Tage ${eintrag.tage > 0 ? 'nach hinten' : 'nach vorn'}`
+  }
+  return `${eintrag.name}: folgt der Sorte`
+}
+
 function StrainsPage() {
   const [strains, setStrains] = useState<StrainDto[]>([])
   const [grows, setGrows] = useState<GrowSummary[]>([])
@@ -370,6 +386,19 @@ function StrainsPage() {
     setHinScrollen((n) => n + 1)
   }
 
+  // Was die geaenderten Wochen bei den laufenden Grows bewirken — vor dem Speichern.
+  const wirkung = useMemo(() => {
+    if (editingId == null) return null
+    const alt = strains.find((item) => item.id === editingId)
+    if (!alt) return null
+    return wirkungAufGrows(
+      grows,
+      editingId,
+      { min: alt.flowerWeeksMin ?? null, max: alt.flowerWeeksMax ?? null },
+      { min: wochenZahl(draft.flowerWeeksMin), max: wochenZahl(draft.flowerWeeksMax) },
+    )
+  }, [grows, strains, editingId, draft.flowerWeeksMin, draft.flowerWeeksMax])
+
   async function save() {
     if (draft.name.trim() === '') {
       setError('Bitte einen Sortennamen eingeben.')
@@ -483,6 +512,21 @@ function StrainsPage() {
             <V1Field label="Blüte von (Wochen)"><input inputMode="numeric" value={draft.flowerWeeksMin} onChange={(event) => setDraft((d) => ({ ...d, flowerWeeksMin: event.target.value }))} placeholder="8" /></V1Field>
             <V1Field label="Blüte bis (Wochen)"><input inputMode="numeric" value={draft.flowerWeeksMax} onChange={(event) => setDraft((d) => ({ ...d, flowerWeeksMax: event.target.value }))} placeholder="10" /></V1Field>
           </div>
+          {wirkung && (wirkung.folgt.length > 0 || wirkung.bleibt.length > 0) && (
+            <div className="gc-facts" role="status" data-audit="sorte-wirkt-auf-grows" style={{ margin: '10px 0 0' }}>
+              {wirkung.folgt.length > 0 && (
+                <p style={{ margin: 0 }}>
+                  Wirkt auf {wirkung.folgt.length === 1 ? '1 laufendes Grow' : `${wirkung.folgt.length} laufende Grows`}:{' '}
+                  {wirkung.folgt.map((eintrag) => wirkungText(eintrag)).join(' · ')}
+                </p>
+              )}
+              {wirkung.bleibt.length > 0 && (
+                <p style={{ margin: '4px 0 0' }}>
+                  Bleibt bei eigenem Wert: {wirkung.bleibt.map((eintrag) => `${eintrag.name} (${wochenText(eintrag.wochen)} Wochen)`).join(' · ')}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Die Zuechter-Angaben von der Samenpackung — Feedback des Testers,
               der sie bisher in einer eigenen Excel pflegte. Alles optional, und

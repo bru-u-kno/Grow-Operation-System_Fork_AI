@@ -50,6 +50,8 @@ export interface PhasenankerDto {
   tagInPhase: number
   wocheInPhase: number
   erinnerung?: PhasenerinnerungDto | null
+  /** Finish ist beobachtet, nicht aus den Züchterwochen gerechnet. */
+  finishBestaetigt?: boolean
 }
 
 export interface GrowSummary {
@@ -94,6 +96,11 @@ export interface GrowSummary {
   strainId: number | null
   breederFlowerWeeksMin: number | null
   breederFlowerWeeksMax: number | null
+  /** true = Wochen im Grow bewusst gesetzt; false = folgt der Sorte. */
+  breederWeeksEigen: boolean
+  /** Wochen laut Sorte; null ohne Sorte oder ohne Angabe. */
+  strainFlowerWeeksMin: number | null
+  strainFlowerWeeksMax: number | null
   germinatedAt: string | null
   rootedAt: string | null
   vegStartedAt: string | null
@@ -283,6 +290,11 @@ export interface GrowDetail {
   cloneIsRooted: boolean
   breederFlowerWeeksMin: number | null
   breederFlowerWeeksMax: number | null
+  /** true = Wochen im Grow bewusst gesetzt; false = folgt der Sorte. */
+  breederWeeksEigen: boolean
+  /** Wochen laut Sorte; null ohne Sorte oder ohne Angabe. */
+  strainFlowerWeeksMin: number | null
+  strainFlowerWeeksMax: number | null
   plannedVegDays: number | null
   setpointProfileId?: string | null
   strainId: number | null
@@ -340,6 +352,8 @@ export interface GrowUpsertPayload {
   phenoNumber: number | null
   breederFlowerWeeksMin: number | null
   breederFlowerWeeksMax: number | null
+  /** true = Wochen bewusst gesetzt; false = folgt der Sorte; leer = der Server leitet es ab. */
+  breederWeeksEigen?: boolean | null
   plannedVegDays: number | null
   setpointProfileId?: string | null
   strainId: number | null

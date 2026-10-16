@@ -89,6 +89,7 @@ public sealed class GrowCoreRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT g.*, t.Name AS TentName, hs.Name AS HydroSetupName,
+                   sw.FlowerWeeksMin AS SortenWochenMin, sw.FlowerWeeksMax AS SortenWochenMax,
                    (SELECT COUNT(*) FROM Measurements m WHERE m.GrowId = g.Id) AS MeasurementCount,
                    (SELECT RelativePath FROM Photos p WHERE p.GrowId = g.Id ORDER BY p.TakenAtUtc DESC LIMIT 1) AS LatestPhotoPath,
                    -- Die Sorten, die WIRKLICH in diesem Grow stehen: aus den
@@ -117,6 +118,7 @@ public sealed class GrowCoreRepository : RepositoryBase
             FROM Grows g
             LEFT JOIN Tents t ON t.Id = g.TentId
             LEFT JOIN GrowSystems hs ON hs.Id = g.SystemId
+            LEFT JOIN Strains sw ON sw.Id = g.StrainId
             WHERE g.Id = $id
             LIMIT 1;
         """;
@@ -173,7 +175,7 @@ public sealed class GrowCoreRepository : RepositoryBase
                 TentId, SystemId, SetupId, Name, StrainId, Strain, Breeder, Status, MediumType, FeedingStyle, HydroStyle, MediumDetail,
                 Environment, Light, ContainerSize, ReservoirSize, IrrigationStyle, IrrigationType, WaterSource, FeedProgramId, UseFeedChartTargets, NightRampEnabled, NightRampFloorC,
                 SeedType, StartMaterial, GerminationMethod, CloneSource, CloneIsRooted,
-                BreederFlowerWeeksMin, BreederFlowerWeeksMax, PlannedVegDays, SetpointProfileId, PlantCount, PhenoNumber,
+                BreederFlowerWeeksMin, BreederFlowerWeeksMax, BreederWochenEigen, PlannedVegDays, SetpointProfileId, PlantCount, PhenoNumber,
                 PropagationMedium, HasChiller, EntryPoint, DaysAlreadyInPhase,
                 AutoflowerDaysSinceGermination, FlipDate, GerminatedAt, RootedAt, VegStartedAt, FinishStartedAt,
                 Nutrients, Notes, StartDate, EndDate, CreatedAtUtc, UpdatedAtUtc,
@@ -184,7 +186,7 @@ public sealed class GrowCoreRepository : RepositoryBase
                 $tentId, $systemId, $setupId, $name, $strainId, $strain, $breeder, $status, $mediumType, $feedingStyle, $hydroStyle, $mediumDetail,
                 $environment, $light, $containerSize, $reservoirSize, $irrigationStyle, $irrigationType, $waterSource, $feedProgramId, $useFeedChartTargets, $nightRampEnabled, $nightRampFloorC,
                 $seedType, $startMaterial, $germinationMethod, $cloneSource, $cloneIsRooted,
-                $breederFlowerWeeksMin, $breederFlowerWeeksMax, $plannedVegDays, $setpointProfileId, $plantCount, $phenoNumber,
+                $breederFlowerWeeksMin, $breederFlowerWeeksMax, $breederWochenEigen, $plannedVegDays, $setpointProfileId, $plantCount, $phenoNumber,
                 $propagationMedium, $hasChiller, $entryPoint, $daysAlreadyInPhase,
                 $autoflowerDaysSinceGermination, $flipDate, $germinatedAt, $rootedAt, $vegStartedAt, $finishStartedAt,
                 $nutrients, $notes, $startDate, $endDate, $createdAtUtc, $updatedAtUtc,
@@ -235,6 +237,7 @@ public sealed class GrowCoreRepository : RepositoryBase
                 CloneIsRooted = $cloneIsRooted,
                 BreederFlowerWeeksMin = $breederFlowerWeeksMin,
                 BreederFlowerWeeksMax = $breederFlowerWeeksMax,
+                BreederWochenEigen = $breederWochenEigen,
                 PlannedVegDays = $plannedVegDays,
                 SetpointProfileId = $setpointProfileId,
                 StrainId = $strainId,
@@ -339,6 +342,7 @@ public sealed class GrowCoreRepository : RepositoryBase
         using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT g.*, t.Name AS TentName, hs.Name AS HydroSetupName,
+                   sw.FlowerWeeksMin AS SortenWochenMin, sw.FlowerWeeksMax AS SortenWochenMax,
                    (SELECT COUNT(*) FROM Measurements m WHERE m.GrowId = g.Id) AS MeasurementCount,
                    (SELECT RelativePath FROM Photos p WHERE p.GrowId = g.Id ORDER BY p.TakenAtUtc DESC LIMIT 1) AS LatestPhotoPath,
                    -- Die Sorten, die WIRKLICH in diesem Grow stehen: aus den
@@ -367,6 +371,7 @@ public sealed class GrowCoreRepository : RepositoryBase
             FROM Grows g
             LEFT JOIN Tents t ON t.Id = g.TentId
             LEFT JOIN GrowSystems hs ON hs.Id = g.SystemId
+            LEFT JOIN Strains sw ON sw.Id = g.StrainId
             {whereClause}
             ORDER BY g.StartDate DESC, g.Id DESC;
         """;
@@ -655,7 +660,7 @@ public sealed class GrowCoreRepository : RepositoryBase
 
     private static GrowRun MapGrow(SqliteDataReader reader)
     {
-        return new GrowRun
+        var grow = new GrowRun
         {
             Id = Convert.ToInt32((long)reader["Id"]),
             TentId = reader["TentId"] is DBNull ? null : Convert.ToInt32((long)reader["TentId"]),
@@ -695,6 +700,10 @@ public sealed class GrowCoreRepository : RepositoryBase
             CloneIsRooted = reader["CloneIsRooted"] is long cr && cr == 1,
             BreederFlowerWeeksMin = reader["BreederFlowerWeeksMin"] is DBNull or null ? null : Convert.ToInt32(reader["BreederFlowerWeeksMin"], CultureInfo.InvariantCulture),
             BreederFlowerWeeksMax = reader["BreederFlowerWeeksMax"] is DBNull or null ? null : Convert.ToInt32(reader["BreederFlowerWeeksMax"], CultureInfo.InvariantCulture),
+            BreederWochenEigen = HasColumn(reader, "BreederWochenEigen") && reader["BreederWochenEigen"] is not (DBNull or null)
+                && Convert.ToInt32(reader["BreederWochenEigen"], CultureInfo.InvariantCulture) == 1,
+            SortenWochenMin = HasColumn(reader, "SortenWochenMin") && reader["SortenWochenMin"] is not (DBNull or null) ? Convert.ToInt32(reader["SortenWochenMin"], CultureInfo.InvariantCulture) : null,
+            SortenWochenMax = HasColumn(reader, "SortenWochenMax") && reader["SortenWochenMax"] is not (DBNull or null) ? Convert.ToInt32(reader["SortenWochenMax"], CultureInfo.InvariantCulture) : null,
             StrainId = HasColumn(reader, "StrainId") && reader["StrainId"] is not (DBNull or null) ? Convert.ToInt32(reader["StrainId"], CultureInfo.InvariantCulture) : null,
             PlannedVegDays = HasColumn(reader, "PlannedVegDays") && reader["PlannedVegDays"] is not (DBNull or null) ? Convert.ToInt32(reader["PlannedVegDays"], CultureInfo.InvariantCulture) : null,
             SetpointProfileId = HasColumn(reader, "SetpointProfileId") ? NullString(reader["SetpointProfileId"]) : null,
@@ -726,6 +735,25 @@ public sealed class GrowCoreRepository : RepositoryBase
             MeasurementCount = reader["MeasurementCount"] is DBNull ? 0 : Convert.ToInt32(reader["MeasurementCount"], CultureInfo.InvariantCulture),
             LatestPhotoPath = NullString(reader["LatestPhotoPath"])
         };
+        return WirksameZuechterwochen(grow);
+    }
+
+    /// <summary>
+    /// Die Zuechterwochen, mit denen gerechnet wird: der eigene Wert des Grows,
+    /// sonst der der Sorte. Hier und nur hier eingesetzt, damit Finish-Beginn,
+    /// Plan-Woche, Kosten und Oberflaeche nie auseinanderlaufen.
+    /// </summary>
+    internal static GrowRun WirksameZuechterwochen(GrowRun grow)
+    {
+        // Ohne Sorte kann es nichts zu folgen geben.
+        grow.BreederWochenEigen |= grow.StrainId is null || grow.SeedType == SeedType.Autoflower;
+        var sorteHatAngabe = grow.SortenWochenMin is not null || grow.SortenWochenMax is not null;
+        if (!grow.BreederWochenEigen && sorteHatAngabe)
+        {
+            grow.BreederFlowerWeeksMin = grow.SortenWochenMin;
+            grow.BreederFlowerWeeksMax = grow.SortenWochenMax;
+        }
+        return grow;
     }
 
     private static Tent MapTent(SqliteDataReader reader)
@@ -835,8 +863,13 @@ public sealed class GrowCoreRepository : RepositoryBase
         command.Parameters.AddWithValue("$germinationMethod", (object?)grow.GerminationMethod?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$cloneSource", (object?)grow.CloneSource ?? DBNull.Value);
         command.Parameters.AddWithValue("$cloneIsRooted", grow.CloneIsRooted ? 1 : 0);
-        command.Parameters.AddWithValue("$breederFlowerWeeksMin", (object?)grow.BreederFlowerWeeksMin ?? DBNull.Value);
-        command.Parameters.AddWithValue("$breederFlowerWeeksMax", (object?)grow.BreederFlowerWeeksMax ?? DBNull.Value);
+        // Folgt das Grow der Sorte, steht im Grow nichts: gespeichert wird nur,
+        // was bewusst gesetzt ist. Sonst wuerde jedes Speichern (auch eines
+        // anderen Feldes) die Wochen der Sorte wieder ins Grow kopieren.
+        var eigeneWochen = grow.BreederWochenEigen || grow.StrainId is null;
+        command.Parameters.AddWithValue("$breederFlowerWeeksMin", eigeneWochen ? (object?)grow.BreederFlowerWeeksMin ?? DBNull.Value : DBNull.Value);
+        command.Parameters.AddWithValue("$breederFlowerWeeksMax", eigeneWochen ? (object?)grow.BreederFlowerWeeksMax ?? DBNull.Value : DBNull.Value);
+        command.Parameters.AddWithValue("$breederWochenEigen", eigeneWochen ? 1 : 0);
         command.Parameters.AddWithValue("$plannedVegDays", (object?)grow.PlannedVegDays ?? DBNull.Value);
         command.Parameters.AddWithValue("$setpointProfileId", (object?)grow.SetpointProfileId ?? DBNull.Value);
         command.Parameters.AddWithValue("$strainId", (object?)grow.StrainId ?? DBNull.Value);

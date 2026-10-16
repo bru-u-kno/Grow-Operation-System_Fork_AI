@@ -119,6 +119,8 @@ public sealed class GrowsApiController : ApiControllerBase
         try
         {
             grow = request.ToFormModel().ToGrow();
+            grow.BreederWochenEigen = ZuechterwochenRegel.Eigen(
+                request.BreederWeeksEigen, grow, grow.StrainId is int sorteId ? _repository.GetStrain(sorteId) : null);
         }
         catch
         {
@@ -201,6 +203,8 @@ public sealed class GrowsApiController : ApiControllerBase
         try
         {
             grow = request.ToFormModel().ToGrow();
+            grow.BreederWochenEigen = ZuechterwochenRegel.Eigen(
+                request.BreederWeeksEigen, grow, grow.StrainId is int sorteId ? _repository.GetStrain(sorteId) : null, existing);
         }
         catch
         {

@@ -31,6 +31,13 @@ GROW-2 · Grow Wizard final
   align-items: start;
 }
 
+/* Blüte von / bis nebeneinander — auch auf dem Handy, es sind zwei kurze Zahlen. */
+.grow-form-wochen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .grow-select-grid,
 .program-grid {
   display: grid;

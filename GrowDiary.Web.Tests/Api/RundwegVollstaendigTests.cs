@@ -117,6 +117,20 @@ public sealed class RundwegVollstaendigTests
             + "Demobestand faehrt aus Samen; das Formular bietet den Schalter nicht "
             + "an, er kommt aus dem Klon-Weg einer Mutterpflanze.",
 
+        ["Grow.BreederFlowerWeeksMin"] =
+            "Gilt nur, wenn das Grow einen eigenen Wert traegt (breederWeeksEigen = true). "
+            + "Sonst folgt es der Sorte, und ausdruecklich „folgt\" ignoriert die Zahlen "
+            + "daneben — das ist Absicht: ein veraltetes Formular darf keine alte Kopie "
+            + "festschreiben. Dass der Wert ankommt, wenn er bewusst gesetzt wird, und dass "
+            + "er der Sorte folgt, wenn nicht, faehrt ZuechterwochenFolgenDerSorteTests; "
+            + "den Weg im Browser e2e/zuechterwochen-folgen-sorte.spec.ts.",
+        ["Grow.BreederFlowerWeeksMax"] =
+            "Gilt nur, wenn das Grow einen eigenen Wert traegt (breederWeeksEigen = true); "
+            + "folgt es der Sorte, kommt der Wert der Sorte zurueck und die geschickte Zahl "
+            + "wird bewusst ignoriert, damit ein veraltetes Formular keine alte Kopie "
+            + "festschreibt. Geprueft von ZuechterwochenFolgenDerSorteTests und "
+            + "e2e/zuechterwochen-folgen-sorte.spec.ts.",
+
         // --- Werte, die die App selbst ausrechnet ----------------------------
         ["Grow.ContainerSize"] =
             "Rechnet der Server aus dem Hydro-System aus (FormatPotSize, "

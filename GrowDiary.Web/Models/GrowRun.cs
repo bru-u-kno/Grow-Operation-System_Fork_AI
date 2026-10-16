@@ -113,8 +113,22 @@ public sealed class GrowRun
     /// Flip-Termin, solange <see cref="FlipDate"/> noch leer ist.
     /// </summary>
     public int? PlannedVegDays { get; set; }
+    /// <summary>
+    /// Wirksame Züchterwochen. Gehört das Grow einer Sorte und hat keinen
+    /// eigenen Wert (<see cref="BreederWochenEigen"/>), stehen hier die Wochen
+    /// der Sorte — beim Lesen aus der Datenbank eingesetzt, nie kopiert.
+    /// Alle Rechner (Finish-Beginn, Plan-Woche, Kosten) lesen diesen Wert.
+    /// </summary>
     public int? BreederFlowerWeeksMin { get; set; }
     public int? BreederFlowerWeeksMax { get; set; }
+    /// <summary>
+    /// Der Wert im Grow ist bewusst gesetzt und geht der Sorte vor. Ohne Sorte
+    /// ist er es immer. Sonst folgt das Grow der Sorte, auch wenn sie sich ändert.
+    /// </summary>
+    public bool BreederWochenEigen { get; set; }
+    /// <summary>Wochen laut Sorte (nur Anzeige; leer ohne Sorte oder ohne Angabe).</summary>
+    public int? SortenWochenMin { get; set; }
+    public int? SortenWochenMax { get; set; }
     public int? PlantCount { get; set; }
     public int? PhenoNumber { get; set; }
     public PropagationMedium? PropagationMedium { get; set; }

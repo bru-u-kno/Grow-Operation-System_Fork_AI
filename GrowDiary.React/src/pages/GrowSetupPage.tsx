@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { ZuechterWochenFeld } from '../features/grows/ZuechterWochenFeld'
+import type { Wochen } from '../features/grows/zuechterwochen'
+import { useEffect, useMemo, useState } from 'react'
 import { nurDatum } from '../features/grows/nur-datum'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
@@ -123,7 +125,7 @@ function GrowSetupPage() {
         }
         setErfasstePflanzen(pflanzen.length)
         setPflanzenListe(pflanzen)
-        if (grow) setForm({ ...emptyForm(), name: grow.name, tentId: grow.tentId, systemId: grow.systemId, setupId: grow.setupId, strain: grow.strain, breeder: grow.breeder, seedType: grow.seedType, startMaterial: grow.startMaterial, hydroStyle: grow.hydroStyle, plantCount: grow.plantCount, reservoirSize: grow.reservoirSize, containerSize: grow.containerSize, light: grow.light, hasChiller: grow.hasChiller, waterSource: grow.waterSource, nutrients: grow.nutrients, startDate: nurDatum(grow.startDate) ?? emptyForm().startDate, entryPoint: grow.entryPoint, daysAlreadyInPhase: grow.daysAlreadyInPhase, autoflowerDaysSinceGermination: grow.autoflowerDaysSinceGermination, flipDate: nurDatum(grow.flipDate), notes: grow.notes, status: grow.status, environment: grow.environment, germinationMethod: grow.germinationMethod, propagationMedium: grow.propagationMedium, cloneSource: grow.cloneSource, cloneIsRooted: grow.cloneIsRooted, phenoNumber: grow.phenoNumber, breederFlowerWeeksMin: grow.breederFlowerWeeksMin, breederFlowerWeeksMax: grow.breederFlowerWeeksMax, plannedVegDays: grow.plannedVegDays, strainId: grow.strainId, setpointProfileId: grow.setpointProfileId ?? null,
+        if (grow) setForm({ ...emptyForm(), name: grow.name, tentId: grow.tentId, systemId: grow.systemId, setupId: grow.setupId, strain: grow.strain, breeder: grow.breeder, seedType: grow.seedType, startMaterial: grow.startMaterial, hydroStyle: grow.hydroStyle, plantCount: grow.plantCount, reservoirSize: grow.reservoirSize, containerSize: grow.containerSize, light: grow.light, hasChiller: grow.hasChiller, waterSource: grow.waterSource, nutrients: grow.nutrients, startDate: nurDatum(grow.startDate) ?? emptyForm().startDate, entryPoint: grow.entryPoint, daysAlreadyInPhase: grow.daysAlreadyInPhase, autoflowerDaysSinceGermination: grow.autoflowerDaysSinceGermination, flipDate: nurDatum(grow.flipDate), notes: grow.notes, status: grow.status, environment: grow.environment, germinationMethod: grow.germinationMethod, propagationMedium: grow.propagationMedium, cloneSource: grow.cloneSource, cloneIsRooted: grow.cloneIsRooted, phenoNumber: grow.phenoNumber, breederFlowerWeeksMin: grow.breederFlowerWeeksMin, breederFlowerWeeksMax: grow.breederFlowerWeeksMax, breederWeeksEigen: grow.breederWeeksEigen, plannedVegDays: grow.plannedVegDays, strainId: grow.strainId, setpointProfileId: grow.setpointProfileId ?? null,
           /* Die Belegung kommt aus den PFLANZEN — im selben setForm wie alles
              andere, damit sie niemand ueberschreibt. */
           toepfe: pflanzen
@@ -543,35 +545,35 @@ function ToepfeStep({ form, patch, strains, hydro, pflanzen, onPflanzeEntfernt, 
  */
 function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanzenzahl }: { form: GrowUpsertPayload; patch: (value: Partial<GrowUpsertPayload>) => void; strains: StrainDto[]; erfasstePflanzen: number; belegteToepfe: number; pflanzenzahl: number | null }) {
   const sorten = [...strains].sort((a, b) => a.name.localeCompare(b.name, 'de'))
-  // Was der letzte Bibliotheks-Klick bei den Bluetewochen eingetragen hat.
-  // Beim Wechsel auf eine andere Sorte wird nur genau das ersetzt \u2014 sonst
-  // stuenden unter Sorte B noch die Wochen von Sorte A, als waeren sie eigene.
-  const autofill = useRef<{ min: number | null; max: number | null } | null>(null)
+  // Die Bluetewochen gehoeren der Sorte, solange das Grow keinen eigenen Wert
+  // hat. Frueher wurden sie hier ins Formular KOPIERT und blieben danach
+  // stehen, auch wenn die Sorte korrigiert wurde (Mimosa EVO, 16.10.2026:
+  // Sorte 9-10, Grow 8-9, Finish eine Woche zu frueh). Jetzt folgt das Grow der
+  // Sorte; die Zahlen im Formular sind nur Anzeige, bis jemand „Eigene Werte
+  // eintragen" waehlt (siehe ZuechterWochenFeld).
+  const gewaehlteSorte = form.strainId != null ? sorten.find((item) => item.id === form.strainId) ?? null : null
+  const sortenWochen: Wochen | null = gewaehlteSorte
+    ? { min: gewaehlteSorte.flowerWeeksMin ?? null, max: gewaehlteSorte.flowerWeeksMax ?? null }
+    : null
 
   function waehleSorte(wert: string) {
     if (wert === '') {
-      // Freie Eingabe: die Verknuepfung faellt weg, der Text bleibt stehen.
-      patch({ strainId: null })
+      // Freie Eingabe: die Verknuepfung faellt weg, Text und Wochen bleiben
+      // stehen und gehoeren jetzt dem Grow.
+      patch({ strainId: null, breederWeeksEigen: true })
       return
     }
     const sorte = sorten.find((item) => String(item.id) === wert)
     if (!sorte) return
-    // Die Bluetewochen treiben den Zeitstrahl \u2014 aus der Bibliothek sind sie
-    // verlaesslicher als aus dem Gedaechtnis. Eigene Angaben bleiben stehen;
-    // nur leere Felder und der Autofill der vorigen Sorte werden gefuellt.
-    const min = form.breederFlowerWeeksMin == null || form.breederFlowerWeeksMin === autofill.current?.min
-      ? sorte.flowerWeeksMin
-      : form.breederFlowerWeeksMin
-    const max = form.breederFlowerWeeksMax == null || form.breederFlowerWeeksMax === autofill.current?.max
-      ? sorte.flowerWeeksMax
-      : form.breederFlowerWeeksMax
-    autofill.current = { min: sorte.flowerWeeksMin ?? null, max: sorte.flowerWeeksMax ?? null }
+    // Eine neu gewaehlte Sorte wird wieder gefolgt; ein frueher gesetzter
+    // eigener Wert gehoerte der vorigen Sorte und faellt mit ihr weg.
     patch({
       strainId: sorte.id,
       strain: sorte.name,
       breeder: sorte.breeder ?? form.breeder,
-      breederFlowerWeeksMin: min,
-      breederFlowerWeeksMax: max,
+      breederWeeksEigen: false,
+      breederFlowerWeeksMin: sorte.flowerWeeksMin ?? null,
+      breederFlowerWeeksMax: sorte.flowerWeeksMax ?? null,
     })
   }
 
@@ -607,6 +609,17 @@ function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanz
           <input value={form.breeder ?? ''} onChange={(event) => patch({ breeder: event.target.value })} />
         </V1Field>
 
+        {form.seedType !== 'Autoflower' && (
+          <ZuechterWochenFeld
+            strainId={form.strainId}
+            eigenGesetzt={form.breederWeeksEigen}
+            wochen={{ min: form.breederFlowerWeeksMin, max: form.breederFlowerWeeksMax }}
+            sorte={sortenWochen}
+            sorteName={gewaehlteSorte?.name ?? null}
+            onChange={(aenderung) => patch(aenderung)}
+          />
+        )}
+
         {/* Sind Pflanzen EINZELN erfasst, sind sie die Wahrheit ueber die Zahl
             — der Server zieht plantCount seit dem 25.08.2026 nach. Ein
             beschreibbares Feld daneben behauptete etwas anderes: eingetragen,
@@ -635,7 +648,18 @@ function RunStep({ form, patch, strains, erfasstePflanzen, belegteToepfe, pflanz
         </V1Field>
 
         <V1Field label="Samen-Typ">
-          <select value={form.seedType} onChange={(event) => patch({ seedType: event.target.value as SeedType })}>
+          <select value={form.seedType} onChange={(event) => {
+            const neu = event.target.value as SeedType
+            // Eine Autoflower rechnet nicht mit Zuechterwochen und kommt als „eigen,
+            // leer" vom Server. Wird sie photoperiodisch, folgt das Grow wieder der
+            // Sorte — sonst stuende dort ein leeres eigenes Feld, und das Grow
+            // folgte ihr nie.
+            if (form.seedType === 'Autoflower' && neu !== 'Autoflower' && sortenWochen) {
+              patch({ seedType: neu, breederWeeksEigen: false, breederFlowerWeeksMin: sortenWochen.min, breederFlowerWeeksMax: sortenWochen.max })
+            } else {
+              patch({ seedType: neu })
+            }
+          }}>
             {seedTypes.map((value) => <option key={value} value={value}>{samenName(value)}</option>)}
           </select>
         </V1Field>

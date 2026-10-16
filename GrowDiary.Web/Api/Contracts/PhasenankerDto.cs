@@ -30,9 +30,16 @@ public sealed record PhasenankerDto(
     DateTime? EndeAm,
     int TagInPhase,
     int WocheInPhase,
-    PhasenerinnerungDto? Erinnerung)
+    PhasenerinnerungDto? Erinnerung,
+    bool FinishBestaetigt = false)
 {
-    public static PhasenankerDto Aus(Phasenstand stand) => new(
+    /// <param name="finishBestaetigt">
+    /// Das Finish ist beobachtet (<c>Grows.FinishStartedAt</c>) oder kommt aus dem
+    /// Einstieg „Flush“ — jedenfalls nicht aus den Züchterwochen gerechnet. Die Oberfläche braucht das, um bei einer
+    /// Sortenänderung zu sagen, ob sich der Finish-Beginn überhaupt verschiebt —
+    /// ohne selbst an das Rohfeld zu gehen.
+    /// </param>
+    public static PhasenankerDto Aus(Phasenstand stand, bool finishBestaetigt = false) => new(
         stand.Phase.ToString(),
         stand.Anzucht?.ToString(),
         stand.Stufe.ToString(),
@@ -43,7 +50,8 @@ public sealed record PhasenankerDto(
         Tag(stand.EndeAm),
         stand.TagInPhase,
         stand.WocheInPhase,
-        stand.Erinnerung is { } e ? new PhasenerinnerungDto(e.Art, e.Aktion, e.Knopf, e.Text, Tag(e.Ab), e.Tage) : null);
+        stand.Erinnerung is { } e ? new PhasenerinnerungDto(e.Art, e.Aktion, e.Knopf, e.Text, Tag(e.Ab), e.Tage) : null,
+        finishBestaetigt);
 
     /// <summary>
     /// Ein Kalendertag ohne Zeitzone. Die Anker stammen aus zwei Speicherwegen
