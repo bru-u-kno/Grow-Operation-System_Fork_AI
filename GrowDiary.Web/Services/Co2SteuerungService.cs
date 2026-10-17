@@ -21,7 +21,7 @@ namespace GrowDiary.Web.Services;
 /// <see cref="Zielband"/> — derselben Stelle, aus der Kachel und Alarm ihr
 /// CO₂-Band nehmen. Hier wird es nur je Canopy-Bereich skaliert.</para>
 /// </remarks>
-public sealed class Co2SteuerungService
+public sealed class Co2SteuerungService : IStartwertDienst
 {
     public const string Modul = "co2";
 
@@ -478,15 +478,20 @@ public sealed class Co2SteuerungService
     /// Auch die Automation an- oder ausschalten. Nur beim Speichern — der
     /// Stundenlauf geht über <see cref="StuendlichAbgleichenAsync"/>.
     /// </param>
-    public async Task<bool> NachHomeAssistantSchreibenAsync(Co2Einstellungen e, CancellationToken ct, bool mitAutomatik)
+    /// <param name="nur">
+    /// Neuling-Test 17.10.2026: Mit einer Menge schreibt der Aufruf <b>nur diese Helfer</b> (frisch angelegte) und lässt die
+    /// Automation in Ruhe (<paramref name="mitAutomatik"/> wird dann ignoriert). <c>null</c>: alles.
+    /// </param>
+    public async Task<bool> NachHomeAssistantSchreibenAsync(Co2Einstellungen e, CancellationToken ct, bool mitAutomatik, IReadOnlySet<string>? nur = null)
     {
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return false;
+        if (nur is not null) mitAutomatik = false;
 
         var (warm, mittel, kuehl) = WirksameZiele(e, PlanZielPpm());
         var gefuehrt = _wochenplan.GefuehrteHelfer();
         var rhWirksam = gefuehrt.TryGetValue(Entitaeten.RhObergrenze, out var rhPlan) ? rhPlan : e.RhObergrenzeProzent;
-        var zahlen = Schreibliste(e, warm, mittel, kuehl, gefuehrt.Keys, rhWirksam, _wochenplan.PlanLuft()?.LuftTagC);
+        var zahlen = Startwerte.Nur(Schreibliste(e, warm, mittel, kuehl, gefuehrt.Keys, rhWirksam, _wochenplan.PlanLuft()?.LuftTagC), nur);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -510,7 +515,7 @@ public sealed class Co2SteuerungService
                 alles = false;
             }
         }
-        foreach (var (domain, dienst, entity) in Schalterliste(e, mitAutomatik, automatiken))
+        foreach (var (domain, dienst, entity) in Schalterliste(e, mitAutomatik, automatiken).Where(s => nur is null || nur.Contains(s.Entity)))
         {
             alles &= await _ha.CallEntityServiceAsync(settings, domain, dienst, entity, ct);
         }
@@ -565,6 +570,26 @@ public sealed class Co2SteuerungService
             .Where(z => !gefuehrt.Contains(z.Entity))
             .Select(z => (z.Entity, SteuerungBauteile.AufSpanne(z.Entity, z.Wert)))
             .ToList();
+    }
+
+    string IStartwertDienst.StartModul => Modul;
+
+    // CO₂ übernimmt beim ersten Lesen nichts aus Home Assistant: gespeichert oder Standardwerte.
+    Task<object> IStartwertDienst.StandFesthaltenAsync(CancellationToken ct) => Task.FromResult<object>(Einstellungen);
+
+    async Task<(int Geschrieben, bool Alles)> IStartwertDienst.StartwerteSchreibenAsync(object stand, IReadOnlySet<string> neuAngelegt, CancellationToken ct)
+    {
+        var e = (Co2Einstellungen)stand;
+        var (warm, mittel, kuehl) = WirksameZiele(e, PlanZielPpm());
+        var gefuehrt = _wochenplan.GefuehrteHelfer();
+        var rhWirksam = gefuehrt.TryGetValue(Entitaeten.RhObergrenze, out var rhPlan) ? rhPlan : e.RhObergrenzeProzent;
+        var zahlen = Startwerte.Nur(Schreibliste(e, warm, mittel, kuehl, gefuehrt.Keys, rhWirksam, _wochenplan.PlanLuft()?.LuftTagC), neuAngelegt).Count;
+        var schalter = Schalterliste(e, mitAutomatik: false).Count(s => neuAngelegt.Contains(s.Entity));
+        var anzahl = zahlen + schalter;
+        if (anzahl == 0) return (0, true);
+
+        var alles = await NachHomeAssistantSchreibenAsync(e, ct, mitAutomatik: false, neuAngelegt);
+        return (alles ? anzahl : 0, alles);
     }
 
     // --------------------------------------------------------------- Livebild

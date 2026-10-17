@@ -20,7 +20,7 @@ namespace GrowDiary.Web.Services;
 /// wie beim Wochenplan — die Zuluft hat keine Plan-Quelle, die sich von allein
 /// ändert. Damit kann der Fork auch nichts hinter dem Rücken überschreiben.</para>
 /// </remarks>
-public sealed class ZuluftSteuerungService
+public sealed class ZuluftSteuerungService : IStartwertDienst
 {
     public const string Modul = "zuluft";
 
@@ -218,11 +218,9 @@ public sealed class ZuluftSteuerungService
         return (e, fehler, erreicht);
     }
 
-    public async Task<bool> NachHomeAssistantSchreibenAsync(ZuluftEinstellungen e, CancellationToken ct)
+    /// <summary>Die Zahlen, die in den Helfern stehen sollen — eine Liste für das Schreiben und für das Zählen der Startwerte.</summary>
+    public static IReadOnlyList<(string Entity, double Wert)> Schreibliste(ZuluftEinstellungen e)
     {
-        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        if (!settings.IsConfigured) return false;
-
         var zahlen = new List<(string Entity, double Wert)>
         {
             (Entitaeten.MindestDifferenz, e.MindestDifferenzGm3),
@@ -234,6 +232,33 @@ public sealed class ZuluftSteuerungService
             (Entitaeten.Mindestpause, e.MindestpauseMin),
         };
         if (e.ZeltTemperaturMinC is { } zelt) zahlen.Add((Entitaeten.ZeltTemperaturMin, zelt));
+        return zahlen;
+    }
+
+    string IStartwertDienst.StartModul => Modul;
+
+    async Task<object> IStartwertDienst.StandFesthaltenAsync(CancellationToken ct) => await EinstellungenAsync(ct);
+
+    async Task<(int Geschrieben, bool Alles)> IStartwertDienst.StartwerteSchreibenAsync(object stand, IReadOnlySet<string> neuAngelegt, CancellationToken ct)
+    {
+        var e = (ZuluftEinstellungen)stand;
+        var anzahl = Startwerte.Nur(Schreibliste(e), neuAngelegt).Count;
+        if (anzahl == 0) return (0, true);
+
+        var alles = await NachHomeAssistantSchreibenAsync(e, ct, neuAngelegt);
+        return (alles ? anzahl : 0, alles);
+    }
+
+    /// <param name="nur">
+    /// Neuling-Test 17.10.2026: Mit einer Menge schreibt der Aufruf <b>nur diese Helfer</b> (frisch angelegte) und lässt die
+    /// Regelung in Ruhe. <c>null</c>: alles, wie beim Speichern der Einstellungen.
+    /// </param>
+    public async Task<bool> NachHomeAssistantSchreibenAsync(ZuluftEinstellungen e, CancellationToken ct, IReadOnlySet<string>? nur = null)
+    {
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return false;
+
+        var zahlen = Startwerte.Nur(Schreibliste(e), nur);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -242,8 +267,12 @@ public sealed class ZuluftSteuerungService
                 new Dictionary<string, object> { ["value"] = wert });
         }
 
-        alles &= await _ha.CallEntityServiceAsync(
-            settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik, ct);
+        // Beim Schreiben einzelner Helfer (nur) bleibt die Regelung unberührt.
+        if (nur is null)
+        {
+            alles &= await _ha.CallEntityServiceAsync(
+                settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", Entitaeten.Automatik, ct);
+        }
 
         if (!alles) _logger.LogWarning("Zuluft-Sollwerte: nicht alle Helfer in Home Assistant angenommen.");
         return alles;

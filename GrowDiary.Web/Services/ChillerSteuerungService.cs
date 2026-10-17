@@ -21,7 +21,7 @@ namespace GrowDiary.Web.Services;
 /// keine der beiden Quellen führt — sonst bliebe der Fork mit sich selbst im
 /// Streit, und der nächste Sync-Lauf setzte den Wert ohnehin zurück.</para>
 /// </remarks>
-public sealed class ChillerSteuerungService
+public sealed class ChillerSteuerungService : IStartwertDienst
 {
     public const string Modul = "chiller";
 
@@ -293,12 +293,17 @@ public sealed class ChillerSteuerungService
         return (e, fehler, erreicht);
     }
 
-    public async Task<bool> NachHomeAssistantSchreibenAsync(ChillerEinstellungen e, CancellationToken ct)
+    /// <param name="nur">
+    /// Neuling-Test 17.10.2026: Mit einer Menge schreibt der Aufruf <b>nur diese Helfer</b> (frisch angelegte) und lässt die
+    /// Regelung in Ruhe. Ein frischer Zieltemperatur-Helfer steht sonst auf 4 °C, dem Minimum von Home Assistant.
+    /// <c>null</c>: alles, wie beim Speichern der Einstellungen.
+    /// </param>
+    public async Task<bool> NachHomeAssistantSchreibenAsync(ChillerEinstellungen e, CancellationToken ct, IReadOnlySet<string>? nur = null)
     {
         var settings = _haSettings.GetEffectiveHomeAssistantSettings();
         if (!settings.IsConfigured) return false;
 
-        var zahlen = Schreibliste(e, _wochenplan.GefuehrteHelfer().Keys);
+        var zahlen = Startwerte.Nur(Schreibliste(e, _wochenplan.GefuehrteHelfer().Keys), nur);
 
         var alles = true;
         foreach (var (entity, wert) in zahlen)
@@ -307,20 +312,38 @@ public sealed class ChillerSteuerungService
                 new Dictionary<string, object> { ["value"] = wert });
         }
 
-        var ansteuerung = AnsteuerungJetzt();
-        alles &= await _ha.CallEntityServiceAsync(
-            settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", AutomatikFuer(ansteuerung), ct);
-
-        // Regelt das Gerät selbst, darf die Steckdosen-Regelung nicht mehr
-        // schalten — sonst greifen zwei Stellen nach demselben Kühler. Fehlt sie
-        // (neue Anlage mit Sollwert-Gerät), ist das kein Fehler.
-        if (ansteuerung is ChillerAnsteuerung.Regelbar or ChillerAnsteuerung.Beides)
+        // Beim Schreiben einzelner Helfer (nur) bleibt die Regelung unberührt.
+        if (nur is null)
         {
-            await _ha.CallEntityServiceAsync(settings, "automation", "turn_off", Entitaeten.Automatik, ct);
+            var ansteuerung = AnsteuerungJetzt();
+            alles &= await _ha.CallEntityServiceAsync(
+                settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", AutomatikFuer(ansteuerung), ct);
+
+            // Regelt das Gerät selbst, darf die Steckdosen-Regelung nicht mehr
+            // schalten — sonst greifen zwei Stellen nach demselben Kühler. Fehlt sie
+            // (neue Anlage mit Sollwert-Gerät), ist das kein Fehler.
+            if (ansteuerung is ChillerAnsteuerung.Regelbar or ChillerAnsteuerung.Beides)
+            {
+                await _ha.CallEntityServiceAsync(settings, "automation", "turn_off", Entitaeten.Automatik, ct);
+            }
         }
 
         if (!alles) _logger.LogWarning("Kühler-Sollwerte: nicht alle Helfer in Home Assistant angenommen.");
         return alles;
+    }
+
+    string IStartwertDienst.StartModul => Modul;
+
+    async Task<object> IStartwertDienst.StandFesthaltenAsync(CancellationToken ct) => await EinstellungenAsync(ct);
+
+    async Task<(int Geschrieben, bool Alles)> IStartwertDienst.StartwerteSchreibenAsync(object stand, IReadOnlySet<string> neuAngelegt, CancellationToken ct)
+    {
+        var e = (ChillerEinstellungen)stand;
+        var anzahl = Startwerte.Nur(Schreibliste(e, _wochenplan.GefuehrteHelfer().Keys), neuAngelegt).Count;
+        if (anzahl == 0) return (0, true);
+
+        var alles = await NachHomeAssistantSchreibenAsync(e, ct, neuAngelegt);
+        return (alles ? anzahl : 0, alles);
     }
 
     // --------------------------------------------------------------- Livebild

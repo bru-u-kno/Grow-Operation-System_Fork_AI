@@ -21,19 +21,24 @@ namespace GrowDiary.Web.Services;
 public sealed class SteuerungStartwerteService
 {
     private readonly SteuerungHelferService _helfer;
-    private readonly EntfeuchterSteuerungService _entfeuchter;
+    private readonly IReadOnlyDictionary<string, IStartwertDienst> _dienste;
     private readonly ILogger<SteuerungStartwerteService> _log;
 
-    public SteuerungStartwerteService(SteuerungHelferService helfer, EntfeuchterSteuerungService entfeuchter, ILogger<SteuerungStartwerteService> log)
+    public SteuerungStartwerteService(SteuerungHelferService helfer, IEnumerable<IStartwertDienst> dienste, ILogger<SteuerungStartwerteService> log)
     {
         _helfer = helfer;
-        _entfeuchter = entfeuchter;
+        _dienste = dienste.ToDictionary(d => d.StartModul, StringComparer.OrdinalIgnoreCase);
         _log = log;
     }
 
-    /// <summary>Welche Steuerungen ihre Startwerte nach dem Anlegen schreiben.</summary>
-    public static bool Kann(string modul)
-        => string.Equals(modul, EntfeuchterSteuerungService.Modul, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Die Steuerungen, die ihre Startwerte nach dem Anlegen schreiben.</summary>
+    public static IReadOnlyList<string> Module { get; } =
+    [
+        EntfeuchterSteuerungService.Modul, ChillerSteuerungService.Modul, ZuluftSteuerungService.Modul, Co2SteuerungService.Modul,
+    ];
+
+    /// <summary>Hat diese Steuerung einen Weg für Startwerte? (Der Zusatz-Entfeuchter noch nicht.)</summary>
+    public static bool Kann(string modul) => Module.Contains(modul, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Die fehlenden Helfer anlegen und den neuen ihren Startwert geben; die Bilanz sagt, wie viele es waren.</summary>
     public Task<SteuerungHelferService.Bilanz> AnlegenAsync(
@@ -42,15 +47,30 @@ public sealed class SteuerungStartwerteService
         HomeAssistantSettings settings,
         CancellationToken ct)
     {
-        if (!Kann(modul) || !settings.IsConfigured) return _helfer.AnlegenAsync(modul, belegteRollen, settings, ct);
+        var dienst = Waehlen(modul, _dienste);
+        if (dienst is null || !settings.IsConfigured) return _helfer.AnlegenAsync(modul, belegteRollen, settings, ct);
 
         return AblaufAsync(
-            // Zuerst festhalten: Gespeichert ist null, solange nie gespeichert wurde, und EinstellungenAsync übernimmt dann
-            // den Stand aus Home Assistant — nach dem Anlegen wären das die Mindestwerte.
-            festhalten: () => _entfeuchter.EinstellungenAsync(ct),
+            // Zuerst festhalten: Der Dienst übernimmt beim ersten Lesen seinen Stand aus Home Assistant — nach dem Anlegen
+            // wären das die Mindestwerte der frischen Helfer.
+            festhalten: () => dienst.StandFesthaltenAsync(ct),
             anlegen: () => _helfer.AnlegenAsync(modul, belegteRollen, settings, ct),
-            schreiben: (stand, ids) => _entfeuchter.NachHomeAssistantSchreibenAsync(stand, ct, ids),
+            schreiben: (stand, ids) => dienst.StartwerteSchreibenAsync(stand, ids, ct),
             _log);
+    }
+
+    /// <summary>
+    /// Der Dienst für eine Steuerung — <c>null</c>, wenn sie keinen Weg für Startwerte hat (<see cref="Kann"/>). Verspricht die
+    /// Liste <see cref="Module"/> einen Weg, den es im Container nicht gibt (Registrierung in <c>Program.cs</c> vergessen), wirft
+    /// die Methode: still auf das Anlegen ohne Startwerte zurückzufallen wäre genau der alte Fehler — ein Kühler-Ziel von 4 °C
+    /// ohne jede Meldung.
+    /// </summary>
+    public static IStartwertDienst? Waehlen(string modul, IReadOnlyDictionary<string, IStartwertDienst> dienste)
+    {
+        if (!Kann(modul)) return null;
+        return dienste.TryGetValue(modul, out var dienst)
+            ? dienst
+            : throw new InvalidOperationException($"Für die Steuerung „{modul}“ ist ein Startwert-Weg vorgesehen, aber kein Dienst registriert (Program.cs).");
     }
 
     /// <summary>
@@ -62,20 +82,20 @@ public sealed class SteuerungStartwerteService
     public static async Task<SteuerungHelferService.Bilanz> AblaufAsync<T>(
         Func<Task<T>> festhalten,
         Func<Task<SteuerungHelferService.Bilanz>> anlegen,
-        Func<T, IReadOnlySet<string>, Task<bool>> schreiben,
+        Func<T, IReadOnlySet<string>, Task<(int Geschrieben, bool Alles)>> schreiben,
         ILogger? log = null)
     {
         var stand = await festhalten();
         var bilanz = await anlegen();
         if (!bilanz.Erreichbar) return bilanz;
 
-        var gewollt = ZuSchreiben(bilanz.Einzeln);
-        if (gewollt.Count == 0) return bilanz;
+        var neu = ZuSchreiben(bilanz.Einzeln);
+        if (neu.Count == 0) return bilanz;
 
         try
         {
-            var alles = await schreiben(stand, gewollt);
-            return bilanz with { Startwerte = alles ? gewollt.Count : 0, StartwerteVollstaendig = alles };
+            var (geschrieben, alles) = await schreiben(stand, neu);
+            return bilanz with { Startwerte = alles ? geschrieben : 0, StartwerteVollstaendig = alles };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -85,9 +105,10 @@ public sealed class SteuerungStartwerteService
     }
 
     /// <summary>
-    /// Welche Helfer den Startwert bekommen: die in diesem Durchgang <b>neu angelegten</b>, soweit der Fork sie schreibt
-    /// (<see cref="EntfeuchterSteuerungService.Entitaeten.Startwerte"/>). Ein übersprungener (schon vorhandener) Helfer
-    /// ist nie dabei. Die Kennungen in beiden Räumen — der Katalog führt die neuen, ein Bestand kann die alten tragen.
+    /// Die Helfer, die in diesem Durchgang <b>neu angelegt</b> wurden — nur sie bekommen einen Startwert. Ein übersprungener
+    /// (schon vorhandener) Helfer ist nie dabei. Welche davon der Dienst wirklich schreibt, entscheidet er selbst
+    /// (Plan-geführte und nie gespeicherte bleiben aus). Die Kennungen in beiden Räumen — der Katalog führt die neuen,
+    /// ein Bestand kann die alten tragen.
     /// </summary>
     public static IReadOnlySet<string> ZuSchreiben(IEnumerable<SteuerungHelferService.Ergebnis> einzeln)
     {
@@ -98,8 +119,6 @@ public sealed class SteuerungStartwerteService
             neu.Add(Kennungen.Id(e.EntityId));
         }
 
-        return EntfeuchterSteuerungService.Entitaeten.Startwerte
-            .Where(neu.Contains)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return neu;
     }
 }

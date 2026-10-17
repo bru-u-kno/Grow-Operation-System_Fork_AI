@@ -22,7 +22,7 @@ namespace GrowDiary.Web.Services;
 /// <see cref="TempMaxModus.Plan"/>, rechnet der Fork Plan-Luft + Abstand und
 /// schreibt das Ergebnis in den Helfer; ohne laufenden Plan gilt der feste Wert.</para>
 /// </remarks>
-public sealed class EntfeuchterSteuerungService
+public sealed class EntfeuchterSteuerungService : IStartwertDienst
 {
     public const string Modul = "entfeuchter";
 
@@ -384,6 +384,21 @@ public sealed class EntfeuchterSteuerungService
         }
 
         return liste;
+    }
+
+    string IStartwertDienst.StartModul => Modul;
+
+    async Task<object> IStartwertDienst.StandFesthaltenAsync(CancellationToken ct) => await EinstellungenAsync(ct);
+
+    async Task<(int Geschrieben, bool Alles)> IStartwertDienst.StartwerteSchreibenAsync(object stand, IReadOnlySet<string> neuAngelegt, CancellationToken ct)
+    {
+        var e = (EntfeuchterEinstellungen)stand;
+        var umfang = Schreibumfang(await SollZahlenAsync(e, ct), neuAngelegt);
+        var anzahl = umfang.Zahlen.Count + (umfang.VpdRegelung ? 1 : 0) + (umfang.Tagbetrieb ? 1 : 0);
+        if (anzahl == 0) return (0, true);
+
+        var alles = await NachHomeAssistantSchreibenAsync(e, ct, neuAngelegt);
+        return (alles ? anzahl : 0, alles);
     }
 
     /// <summary>Was ein Schreibvorgang anfasst — Ergebnis von <see cref="Schreibumfang"/>.</summary>
