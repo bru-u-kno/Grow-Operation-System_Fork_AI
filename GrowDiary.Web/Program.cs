@@ -159,6 +159,7 @@ builder.Services.AddScoped<SteuerungHelferService>();
 builder.Services.AddScoped<SteuerungStartwerteService>();
 // Die Steuerungen, die ihren frisch angelegten Helfern einen Startwert geben (IStartwertDienst) — je eine Zeile je Dienst.
 builder.Services.AddScoped<IStartwertDienst>(sp => sp.GetRequiredService<EntfeuchterSteuerungService>());
+builder.Services.AddScoped<IStartwertDienst>(sp => sp.GetRequiredService<EntfeuchterZusatzSteuerungService>());
 builder.Services.AddScoped<IStartwertDienst>(sp => sp.GetRequiredService<ChillerSteuerungService>());
 builder.Services.AddScoped<IStartwertDienst>(sp => sp.GetRequiredService<ZuluftSteuerungService>());
 builder.Services.AddScoped<IStartwertDienst>(sp => sp.GetRequiredService<Co2SteuerungService>());

@@ -15,8 +15,8 @@ namespace GrowDiary.Web.Services;
 /// beim ersten Lesen die eben angelegten Mindestwerte als seine eigenen), legt die fehlenden Helfer an und schreibt danach
 /// <b>nur die neu angelegten</b>. Ein Helfer, den es schon gab, behält seinen Wert — auch ein von Hand geänderter.
 /// Der Ablauf steht in <see cref="AblaufAsync{T}"/> ohne Home Assistant, damit er prüfbar ist.</para>
-/// <para><b>Wo es greift.</b> Bisher nur beim Entfeuchter (der getestete Weg). Die anderen Steuerungen haben
-/// dieselbe Lücke möglicherweise; <see cref="Kann"/> sagt, wer einen Weg hat.</para>
+/// <para><b>Wo es greift.</b> Bei Entfeuchter, Zusatz-Entfeuchter, Wasserkühler, Zuluft und CO₂; <see cref="Kann"/> sagt,
+/// wer einen Weg hat.</para>
 /// </remarks>
 public sealed class SteuerungStartwerteService
 {
@@ -34,10 +34,10 @@ public sealed class SteuerungStartwerteService
     /// <summary>Die Steuerungen, die ihre Startwerte nach dem Anlegen schreiben.</summary>
     public static IReadOnlyList<string> Module { get; } =
     [
-        EntfeuchterSteuerungService.Modul, ChillerSteuerungService.Modul, ZuluftSteuerungService.Modul, Co2SteuerungService.Modul,
+        EntfeuchterSteuerungService.Modul, EntfeuchterZusatzSteuerungService.Modul, ChillerSteuerungService.Modul, ZuluftSteuerungService.Modul, Co2SteuerungService.Modul,
     ];
 
-    /// <summary>Hat diese Steuerung einen Weg für Startwerte? (Der Zusatz-Entfeuchter noch nicht.)</summary>
+    /// <summary>Hat diese Steuerung einen Weg für Startwerte? (Alle mit Zahl-Helfern; die Lampe hat keine.)</summary>
     public static bool Kann(string modul) => Module.Contains(modul, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Die fehlenden Helfer anlegen und den neuen ihren Startwert geben; die Bilanz sagt, wie viele es waren.</summary>
@@ -76,8 +76,8 @@ public sealed class SteuerungStartwerteService
     /// <summary>
     /// Der Ablauf ohne Home Assistant: Stand festhalten, anlegen, danach nur die neu angelegten Helfer schreiben.
     /// Antwortet Home Assistant beim Anlegen nicht, wird nichts geschrieben. Wirft das Schreiben, bleibt die Bilanz erhalten
-    /// (die Helfer sind ja angelegt) und meldet die Startwerte als unvollständig — sie lassen sich über die Abweichungs-Anzeige
-    /// der Entfeuchtungs-Seite nachholen.
+    /// (die Helfer sind ja angelegt) und meldet die Startwerte als unvollständig — beim Entfeuchter lassen sie sich über die Abweichungs-Anzeige
+    /// der Entfeuchtungs-Seite nachholen, bei den übrigen durch erneutes Speichern der Einstellungen.
     /// </summary>
     public static async Task<SteuerungHelferService.Bilanz> AblaufAsync<T>(
         Func<Task<T>> festhalten,

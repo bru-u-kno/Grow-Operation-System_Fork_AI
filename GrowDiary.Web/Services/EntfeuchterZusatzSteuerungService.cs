@@ -32,7 +32,7 @@ namespace GrowDiary.Web.Services;
 /// <para><b>Nichts erfinden.</b> Was Home Assistant nicht liefert, ist im
 /// Livebild <c>null</c> — nie 0, nie „aus".</para>
 /// </remarks>
-public sealed class EntfeuchterZusatzSteuerungService
+public sealed class EntfeuchterZusatzSteuerungService : IStartwertDienst
 {
     public const string Modul = SteuerungGeraeteRollen.ZusatzModul;
 
@@ -454,6 +454,49 @@ public sealed class EntfeuchterZusatzSteuerungService
         Zahl(Entitaeten.MeldeDauer, alt.Meldung.DauerMin, neu.Meldung.DauerMin, a?.Meldung?.DauerMin is not null);
         Zahl(Entitaeten.MeldeWiederholung, alt.Meldung.WiederholungH, neu.Meldung.WiederholungH, a?.Meldung?.WiederholungH is not null);
         return liste;
+    }
+
+    // ------------------------------------------------------------- Startwerte
+
+    /// <summary>
+    /// Neuling-Test 17.10.2026: Alle Zahl- und Schalter-Helfer des Zusatz-Entfeuchters mit dem Wert dieses Stands — die Liste,
+    /// aus der frisch angelegte Helfer ihren Startwert bekommen. Dieselbe Entscheidung wie beim Speichern
+    /// (<see cref="Schreibliste"/>), nur mit allen Feldern „genannt": ein Helfer entsteht ohne Startwert, Home Assistant nimmt
+    /// dann sein Minimum (Mindestlaufzeit und Mindestpause 1 Minute, Zuschalt-Verzögerung 0, beide Schalter aus).
+    /// </summary>
+    /// <param name="nur">
+    /// <c>null</c>: alle. Sonst nur die genannten (frisch angelegte) — ein Helfer, den es schon gab, behält seinen Wert.
+    /// </param>
+    public static IReadOnlyList<(string Domaene, string Dienst, string Entitaet, double? Wert)> Startwerteliste(
+        EntfeuchterZusatzEinstellungen e, IReadOnlySet<string>? nur = null)
+        => Schreibliste(e, e, AlsAenderung(e)).Where(z => nur is null || nur.Contains(z.Entitaet)).ToArray();
+
+    string IStartwertDienst.StartModul => Modul;
+
+    /// <summary>
+    /// Den Stand festhalten, bevor die Helfer entstehen: Hat der Fork noch nichts gespeichert, übernähme er beim ersten Lesen
+    /// (<see cref="UebernehmenAsync"/>) die Mindestwerte der frischen Helfer als seine eigenen Einstellungen.
+    /// </summary>
+    async Task<object> IStartwertDienst.StandFesthaltenAsync(CancellationToken ct) => await EinstellungenAsync(ct);
+
+    async Task<(int Geschrieben, bool Alles)> IStartwertDienst.StartwerteSchreibenAsync(object stand, IReadOnlySet<string> neuAngelegt, CancellationToken ct)
+    {
+        var liste = Startwerteliste((EntfeuchterZusatzEinstellungen)stand, neuAngelegt);
+        if (liste.Count == 0) return (0, true);
+
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return (0, false);
+
+        // Nur diese Helfer: weder die Regel-Automation noch das Gerät werden angefasst.
+        var alles = true;
+        foreach (var (domaene, dienst, entitaet, wert) in liste)
+        {
+            alles &= await _ha.CallEntityServiceAsync(settings, domaene, dienst, entitaet, ct,
+                wert is { } w ? new Dictionary<string, object> { ["value"] = w } : null);
+        }
+
+        if (!alles) _logger.LogWarning("Zusatz-Entfeuchter-Startwerte: nicht alle Helfer in Home Assistant angenommen.");
+        return (alles ? liste.Count : 0, alles);
     }
 
     /// <summary>Läuft die Regel-Automation, wenn dieser Stand gilt? „aus" hält sie an.</summary>

@@ -57,7 +57,7 @@ public sealed class SteuerungStartwerteTests
     [InlineData("chiller", true)]
     [InlineData("zuluft", true)]
     [InlineData("co2", true)]
-    [InlineData("entfeuchter-zusatz", false)] // schreibt nur geänderte Felder gegen einen alten Stand — noch kein Weg
+    [InlineData("entfeuchter-zusatz", true)]
     [InlineData("licht", false)]              // hat keine Zahl-Helfer
     public void WelcheSteuerungenEinenStartwertWegHaben(string modul, bool kann)
         => Assert.Equal(kann, SteuerungStartwerteService.Kann(modul));
@@ -70,7 +70,7 @@ public sealed class SteuerungStartwerteTests
         var dienste = typeof(IStartwertDienst).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IStartwertDienst).IsAssignableFrom(t))
             .ToList();
-        Assert.True(dienste.Count >= 4, $"Gefunden: {dienste.Count} Dienste.");
+        Assert.True(dienste.Count >= 5, $"Gefunden: {dienste.Count} Dienste.");
 
         var module = dienste
             .Select(t => (string)t.GetField("Modul")!.GetRawConstantValue()!)
@@ -93,7 +93,7 @@ public sealed class SteuerungStartwerteTests
     {
         // Eine vergessene Registrierung hieße: Anlegen ohne Startwerte, ohne jede Meldung — der alte 4-°C-Fehler.
         var alle = SteuerungStartwerteService.Module.ToDictionary(m => m, m => (IStartwertDienst)new DienstAttrappe(m), StringComparer.OrdinalIgnoreCase);
-        Assert.True(alle.Count >= 4);
+        Assert.True(alle.Count >= 5);
 
         foreach (var modul in SteuerungStartwerteService.Module)
         {
@@ -106,7 +106,6 @@ public sealed class SteuerungStartwerteTests
 
     [Theory]
     [InlineData("licht")]
-    [InlineData("entfeuchter-zusatz")]
     [InlineData("gibt-es-nicht")]
     public void EineSteuerungOhneWegBekommtKeinenDienstUndKeinenFehler(string modul)
         => Assert.Null(SteuerungStartwerteService.Waehlen(modul, new Dictionary<string, IStartwertDienst>()));
@@ -185,6 +184,101 @@ public sealed class SteuerungStartwerteTests
             "input_number.co2_rh_notbremse",         // wahlfrei (Pflicht: false); nur bei gesetztem Wert oder Plan-Modus
         };
         Assert.Equal(anderer.Order(StringComparer.Ordinal), OhneSchreiber("co2", geschrieben));
+    }
+
+    // ------------------------------------------------------------------ Zusatz-Entfeuchter
+
+    [Fact]
+    public void ZusatzJederHelferBekommtEinenStartwert()
+    {
+        // Grundmenge: 9 Zahl- und 3 Schalter-Helfer. Keiner wird vom Plan oder von einem anderen Dienst geschrieben
+        // (die Plan-Schwellen und die Höchsttemperatur gehören dem Entfeuchter und stehen nicht im Katalog des Zusatzes).
+        var helfer = KatalogHelfer(EntfeuchterZusatzSteuerungService.Modul);
+        Assert.True(helfer.Count >= 12, $"Der Katalog kennt {helfer.Count} Zahl-/Schalter-Helfer des Zusatzes.");
+
+        var liste = EntfeuchterZusatzSteuerungService.Startwerteliste(new EntfeuchterZusatzEinstellungen());
+        Assert.True(liste.Count >= 12, "Die Schreibliste ist leer — die Prüfung sähe nichts.");
+        Assert.Empty(OhneSchreiber(EntfeuchterZusatzSteuerungService.Modul, liste.Select(z => z.Entitaet)));
+        Assert.Equal(liste.Count, liste.Select(z => z.Entitaet).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public void ZusatzStartwerteSindDieWerteDerEinstellungen()
+    {
+        var e = new EntfeuchterZusatzEinstellungen
+        {
+            VpdHystereseKpa = 0.25, ZuschaltVerzoegerungMin = 20, FolgeAbstandK = 1.5, WiederEinAbstandK = 2,
+            MindestlaufzeitMin = 17, MindestpauseMin = 13, TagbetriebErlauben = false, NachtDurchlaufen = true,
+            Meldung = new EntfeuchterZusatzMeldung { Aktiv = false, GrenzeW = 80, DauerMin = 7, WiederholungH = 3 },
+        };
+        var liste = EntfeuchterZusatzSteuerungService.Startwerteliste(e).ToDictionary(z => z.Entitaet, StringComparer.OrdinalIgnoreCase);
+
+        Assert.Equal(17, liste[EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit].Wert);
+        Assert.Equal(13, liste[EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause].Wert);
+        Assert.Equal(0.25, liste[EntfeuchterZusatzSteuerungService.Entitaeten.VpdHysterese].Wert);
+        Assert.Equal(1.5, liste[EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand].Wert);
+        Assert.Equal(2, liste[EntfeuchterZusatzSteuerungService.Entitaeten.WiederEinAbstand].Wert);
+        Assert.Equal(20, liste[EntfeuchterZusatzSteuerungService.Entitaeten.ZuschaltVerzoegerung].Wert);
+        Assert.Equal(80, liste[EntfeuchterZusatzSteuerungService.Entitaeten.MeldeGrenze].Wert);
+        Assert.Equal(7, liste[EntfeuchterZusatzSteuerungService.Entitaeten.MeldeDauer].Wert);
+        Assert.Equal(3, liste[EntfeuchterZusatzSteuerungService.Entitaeten.MeldeWiederholung].Wert);
+        // Schalter: Ein/Aus nach dem Fork-Wert, ohne Zahl.
+        var tagbetrieb = liste[EntfeuchterZusatzSteuerungService.Entitaeten.Tagbetrieb];
+        Assert.Equal("input_boolean", tagbetrieb.Domaene);
+        Assert.Equal("turn_off", tagbetrieb.Dienst);
+        Assert.Null(tagbetrieb.Wert);
+        Assert.Equal("turn_on", liste[EntfeuchterZusatzSteuerungService.Entitaeten.NachtDurchlaufen].Dienst);
+        Assert.Equal("turn_off", liste[EntfeuchterZusatzSteuerungService.Entitaeten.Melden].Dienst);
+    }
+
+    [Fact]
+    public void ZusatzNurNeuAngelegteHelferWerdenGeschrieben()
+    {
+        // Ein bestehender Helfer behält seinen Wert — auch ein von Hand geänderter. Und die Menge kommt so an, wie der
+        // Ablauf sie baut (ZuSchreiben: neue und alte Kennung).
+        var pause = EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause;
+        var laufzeit = EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit;
+        var nacht = EntfeuchterZusatzSteuerungService.Entitaeten.NachtDurchlaufen;
+        var neu = SteuerungStartwerteService.ZuSchreiben([Neu(pause), Bestehend(laufzeit), Neu(nacht)]);
+
+        var liste = EntfeuchterZusatzSteuerungService.Startwerteliste(new EntfeuchterZusatzEinstellungen(), neu);
+        Assert.Equal(new[] { pause, nacht }.Order(StringComparer.OrdinalIgnoreCase), liste.Select(z => z.Entitaet).Order(StringComparer.OrdinalIgnoreCase));
+
+        Assert.Empty(EntfeuchterZusatzSteuerungService.Startwerteliste(new EntfeuchterZusatzEinstellungen(), new HashSet<string>()));
+        Assert.Empty(EntfeuchterZusatzSteuerungService.Startwerteliste(new EntfeuchterZusatzEinstellungen(), SteuerungStartwerteService.ZuSchreiben([Bestehend(pause)])));
+    }
+
+    [Fact]
+    public void ZusatzStartwerteLiegenImBereichDerHelferUndSindNichtDasMinimum()
+    {
+        // Der Fehler vom 17.10.2026: ein neuer Zahl-Helfer steht auf dem Minimum des Katalogs (Mindestlaufzeit und
+        // -pause 1 Minute, Zuschalt-Verzögerung 0, Folge-Abstände 0,5 K). Die Standard-Einstellungen — roh, vor dem
+        // Zurechtstutzen auf die Spanne — müssen im Bereich liegen und, wo es um den Schutz des Kompressors geht, deutlich darüber.
+        var e = new EntfeuchterZusatzEinstellungen();
+        var roh = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            [EntfeuchterZusatzSteuerungService.Entitaeten.VpdHysterese] = e.VpdHystereseKpa,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit] = e.MindestlaufzeitMin,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause] = e.MindestpauseMin,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.FolgeAbstand] = e.FolgeAbstandK,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.WiederEinAbstand] = e.WiederEinAbstandK,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.ZuschaltVerzoegerung] = e.ZuschaltVerzoegerungMin,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.MeldeGrenze] = e.Meldung.GrenzeW,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.MeldeDauer] = e.Meldung.DauerMin,
+            [EntfeuchterZusatzSteuerungService.Entitaeten.MeldeWiederholung] = e.Meldung.WiederholungH,
+        };
+        Assert.Equal(9, roh.Count);
+
+        foreach (var (id, wert) in roh)
+        {
+            var b = SteuerungBauteile.Alle.Single(x => string.Equals(Kennungen.Id(x.EntityId), id, StringComparison.OrdinalIgnoreCase));
+            Assert.True(b.Min is { } mn && b.Max is { } mx && wert >= mn && wert <= mx, $"{id}: Standard {wert} liegt nicht in {b.Min}–{b.Max}.");
+            // Und nicht das Minimum selbst: genau das wäre ein Helfer ohne Startwert (HA nimmt dann sein Minimum).
+            Assert.True(wert > b.Min, $"{id}: Standard {wert} ist das Minimum des Helfers ({b.Min}).");
+        }
+
+        Assert.True(roh[EntfeuchterZusatzSteuerungService.Entitaeten.Mindestpause] >= 10, "Kompressorschutz: mindestens 10 Minuten Pause.");
+        Assert.True(roh[EntfeuchterZusatzSteuerungService.Entitaeten.Mindestlaufzeit] >= 10, "Mindestlaufzeit mindestens 10 Minuten.");
     }
 
     // ------------------------------------------------------------------ CO₂-Durchfluss
