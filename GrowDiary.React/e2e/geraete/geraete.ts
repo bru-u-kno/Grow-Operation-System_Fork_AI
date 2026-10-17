@@ -4,7 +4,7 @@ import { devices, type PlaywrightTestConfig } from '@playwright/test'
  * Die Gerätematrix — welche Endgeräte die Oberflächenprüfung nachstellt.
  *
  * <b>Der Anlass (05.10.2026).</b> Bis dahin sah jede Prüfung die App nur in
- * Desktop-Chromium, ab und zu auf 390 px verkleinert. Bru öffnet sie aber in
+ * Desktop-Chromium, ab und zu auf 390 px verkleinert. Der Nutzer öffnet sie aber in
  * der HA-App am Handy, und andere Benutzer mit iPhone (WKWebView, also
  * WebKit), Tablet oder Firefox sahen gar nichts davon. F-049 (Sprung unter die
  * Kopfleiste landet in der HA-App zu tief) war in Chromium unsichtbar.
