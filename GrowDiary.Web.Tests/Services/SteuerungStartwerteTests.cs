@@ -166,19 +166,67 @@ public sealed class SteuerungStartwerteTests
         var e = new Co2Einstellungen { KlimaToleranzMinuten = 5, T6StufeKlima = 4 };
         var zahlen = Co2SteuerungService.Schreibliste(e, 1000, 900, 800, []).Select(z => z.Entity);
         var schalter = Co2SteuerungService.Schalterliste(e, mitAutomatik: false).Select(s => s.Entity);
-        var geschrieben = zahlen.Concat(schalter).ToList();
+        // Der Durchfluss bekommt beim NEU Anlegen einen sicheren Startwert (ZusatzStartwerte), er ist keine Einstellung.
+        var alleNeu = KatalogHelfer("co2").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var zusatz = Co2SteuerungService.ZusatzStartwerte(alleNeu).Select(z => z.Entity);
+        var geschrieben = zahlen.Concat(schalter).Concat(zusatz).ToList();
 
         Assert.True(geschrieben.Count >= 18, "Die Schreibliste ist leer — die Prüfung sähe nichts.");
 
-        // Diese vier schreibt der Fork nicht — und ein Startwert wäre geraten (Neuling-Test 17.10.2026):
+        // Diese drei schreibt der Fork nicht — und ein Startwert wäre geraten (Neuling-Test 17.10.2026):
         var anderer = new[]
         {
             "input_number.co2_flasche_rest",         // Rechenstand der Flasche, springt beim Wechsel
             "input_number.co2_g_s_letzte_messung",   // Rohwert der letzten Durchfluss-Messung (Autokalibrierung)
-            "input_number.co2_gramm_pro_sekunde",    // Durchfluss DES Ventils, führt die Autokalibrierung nach
             "input_number.co2_rh_notbremse",         // wahlfrei (Pflicht: false); nur bei gesetztem Wert oder Plan-Modus
         };
         Assert.Equal(anderer.Order(StringComparer.Ordinal), OhneSchreiber("co2", geschrieben));
+    }
+
+    // ------------------------------------------------------------------ CO₂-Durchfluss
+
+    private const string Durchfluss = "input_number.co2_gramm_pro_sekunde";
+
+    [Fact]
+    public void DerDurchflussBekommtNurBeimNeuAnlegenSeinenStartwert()
+    {
+        var neu = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Durchfluss, "input_number.co2_hysterese" };
+        Assert.Equal([(Durchfluss, Co2SteuerungService.Entitaeten.GrammProSekundeStart)], Co2SteuerungService.ZusatzStartwerte(neu).ToList());
+
+        // Ein bestehender Durchfluss ist kalibriert und bleibt: er steht dann nicht unter den neu angelegten.
+        Assert.Empty(Co2SteuerungService.ZusatzStartwerte(new HashSet<string> { "input_number.co2_hysterese" }));
+        Assert.Empty(Co2SteuerungService.ZusatzStartwerte(new HashSet<string>()));
+    }
+
+    [Fact]
+    public void DerStartwertDesDurchflussesLiegtImBereichDesHelfersUndIstVorsichtig()
+    {
+        var (min, max) = SteuerungBauteile.Spanne(Durchfluss);
+        var start = Co2SteuerungService.Entitaeten.GrammProSekundeStart;
+
+        Assert.InRange(start, min, max);
+        // Vorsichtig heißt: nicht kleiner als ein übliches Ventil. Ein zu kleiner Durchfluss überdosiert (jeder Impuls läuft bis zur
+        // Höchstdauer), ein zu großer unterdosiert nur. Das HA-Minimum (0,005) war genau der falsche Rand.
+        Assert.True(start >= 0.1, $"Startwert {start} g/s ist kleiner als ein übliches Ventil.");
+        Assert.True(start > min * 10);
+    }
+
+    [Fact]
+    public void AlleVorlagenRechnenMitDemselbenRueckfallWieDerStartwert()
+    {
+        // EINE Wahrheit je Zahl: Die Vorlagen nutzen den Wert als Rückfall (float(0.26)), der Fork schreibt ihn als Startwert.
+        // Laufen sie auseinander, rechnet die Automation mit einem anderen Durchfluss als der, den der Helfer beim Anlegen bekam.
+        // Gesucht wird in den Vorlagen, die in Home Assistant ankommen: Katalog (Rechenwerte) und die Dosier-Automation.
+        var muster = new System.Text.RegularExpressions.Regex(@"co2_gramm_pro_sekunde'\)\s*\|\s*float\(([0-9.,]+)\)");
+        var texte = SteuerungBauteile.FuerModul("co2").Select(b => b.Vorlage).Where(t => t is not null).Select(t => t!).ToList();
+        texte.Add(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Vorlagen", "co2", "dosierung.json")));
+
+        var treffer = texte.SelectMany(t => muster.Matches(t).Select(m => m.Groups[1].Value)).ToList();
+
+        // Mengenwächter: Katalog (Bedarf) und Dosier-Automation (Flaschenrest, Kalibrierung) nutzen den Rückfall.
+        Assert.True(treffer.Count >= 3, $"Gefunden: {treffer.Count} Stellen — die Suche sähe nichts.");
+        Assert.All(treffer, wert => Assert.Equal(Co2SteuerungService.Entitaeten.GrammProSekundeStart,
+            double.Parse(wert, System.Globalization.CultureInfo.InvariantCulture)));
     }
 
     // ------------------------------------------------------------------ Ablauf (ohne Home Assistant)

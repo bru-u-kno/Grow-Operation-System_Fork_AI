@@ -83,6 +83,15 @@ public sealed class Co2SteuerungService : IStartwertDienst
         public const string KlimaOk = "binary_sensor.co2_klima_ok";
         public const string Impulse = "counter.co2_impulse_heute";
         public const string GrammProSekunde = "input_number.co2_gramm_pro_sekunde";
+
+        /// <summary>
+        /// Startwert des Durchflusses, wenn der Helfer NEU angelegt wird (Neuling-Test 17.10.2026). Ohne ihn nimmt Home Assistant
+        /// das Minimum (0,005 g/s), und die Dosierung rechnet jeden ersten Impuls bis zur Höchstdauer — rund +330 ppm über Ziel,
+        /// bis die Autokalibrierung nachführt. Gewählt ist der Wert, den die Vorlagen ohnehin als Rückfall nutzen
+        /// (<c>float(0.26)</c> in Dosier-Automation und Rechenwerten): ein zu großer Durchfluss unterdosiert nur, ein zu kleiner
+        /// überdosiert. Kein gemessener Wert des Ventils — die Autokalibrierung führt ihn nach (0,8ⁿ).
+        /// </summary>
+        public const double GrammProSekundeStart = 0.26;
         public const string LetzteMessung = "input_number.co2_g_s_letzte_messung";
         public const string FlascheRest = "input_number.co2_flasche_rest";
         public const string ImpulsBedarf = "sensor.co2_impuls_bedarf";
@@ -585,11 +594,40 @@ public sealed class Co2SteuerungService : IStartwertDienst
         var rhWirksam = gefuehrt.TryGetValue(Entitaeten.RhObergrenze, out var rhPlan) ? rhPlan : e.RhObergrenzeProzent;
         var zahlen = Startwerte.Nur(Schreibliste(e, warm, mittel, kuehl, gefuehrt.Keys, rhWirksam, _wochenplan.PlanLuft()?.LuftTagC), neuAngelegt).Count;
         var schalter = Schalterliste(e, mitAutomatik: false).Count(s => neuAngelegt.Contains(s.Entity));
-        var anzahl = zahlen + schalter;
+        var zusatz = ZusatzStartwerte(neuAngelegt);
+        var anzahl = zahlen + schalter + zusatz.Count;
         if (anzahl == 0) return (0, true);
 
-        var alles = await NachHomeAssistantSchreibenAsync(e, ct, mitAutomatik: false, neuAngelegt);
+        var alles = true;
+        if (zahlen + schalter > 0) alles = await NachHomeAssistantSchreibenAsync(e, ct, mitAutomatik: false, neuAngelegt);
+        alles &= await ZusatzStartwerteSchreibenAsync(zusatz, ct);
         return (alles ? anzahl : 0, alles);
+    }
+
+    /// <summary>
+    /// Helfer, die keine Einstellung des Fork sind, aber beim Anlegen einen sicheren Startwert brauchen: der Durchfluss des
+    /// Ventils (<see cref="Entitaeten.GrammProSekundeStart"/>). Nur wenn er in diesem Durchgang NEU angelegt wurde — ein bestehender
+    /// Wert ist kalibriert und bleibt. Die übrigen drei Helfer ohne Einstellung (<c>co2_g_s_letzte_messung</c>, <c>co2_flasche_rest</c>,
+    /// <c>co2_rh_notbremse</c>) bekommen bewusst keinen: ein Startwert wäre geraten.
+    /// </summary>
+    public static IReadOnlyList<(string Entity, double Wert)> ZusatzStartwerte(IReadOnlySet<string> neuAngelegt)
+        => neuAngelegt.Contains(Entitaeten.GrammProSekunde)
+            ? [(Entitaeten.GrammProSekunde, Entitaeten.GrammProSekundeStart)]
+            : [];
+
+    private async Task<bool> ZusatzStartwerteSchreibenAsync(IReadOnlyList<(string Entity, double Wert)> liste, CancellationToken ct)
+    {
+        if (liste.Count == 0) return true;
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return false;
+
+        var alles = true;
+        foreach (var (entity, wert) in liste)
+        {
+            alles &= await _ha.CallEntityServiceAsync(settings, "input_number", "set_value", entity, ct,
+                new Dictionary<string, object> { ["value"] = wert });
+        }
+        return alles;
     }
 
     // --------------------------------------------------------------- Livebild
