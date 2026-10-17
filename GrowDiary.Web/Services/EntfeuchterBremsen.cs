@@ -96,6 +96,18 @@ public static class EntfeuchterBremsen
     }
 
     /// <summary>
+    /// Wirkt die CO₂-Drosselung gerade? Nur dann ist der Hinweis wahr: Schalter an, Licht an und die Abluft steht tatsächlich unter ihrer
+    /// normalen Stufe. Nachts (Licht aus) oder bei normaler Stufe drosselt nichts — der Schalter allein sagt das nicht.
+    /// Ist die Stufe nicht lesbar, entscheidet der Schalter mit der Lichtphase. <c>null</c>, wenn der Schalter unbekannt ist.
+    /// </summary>
+    public static bool? DrosselungWirkt(bool? schalterAn, bool? lichtAn, double? abluftStufe, double? normalStufe)
+    {
+        if (schalterAn is null) return null;
+        if (schalterAn == false || lichtAn == false) return false;
+        return abluftStufe is { } ist && normalStufe is { } normal ? ist < normal : true;
+    }
+
+    /// <summary>
     /// Wie lange die Feuchte schon ohne Unterbrechung über der Grenze liegt — aus dem Verlauf, rückwärts vom jetzt.
     /// <c>null</c>, wenn die Feuchte jetzt nicht darüber liegt oder der Verlauf nichts hergibt.
     /// </summary>

@@ -83,6 +83,18 @@ public sealed class EntfeuchterBremsenTests
     }
 
     [Fact]
+    public void DrosselungWirkt_nurBeiLichtUndTatsaechlichGedrosselterStufe()
+    {
+        Assert.True(EntfeuchterBremsen.DrosselungWirkt(true, true, 6, 7));
+        Assert.False(EntfeuchterBremsen.DrosselungWirkt(true, false, 6, 7)); // nachts
+        Assert.False(EntfeuchterBremsen.DrosselungWirkt(true, true, 7, 7)); // Port steht auf normal
+        Assert.False(EntfeuchterBremsen.DrosselungWirkt(false, true, 6, 7));
+        Assert.True(EntfeuchterBremsen.DrosselungWirkt(true, true, null, 7)); // Stufe unlesbar: Schalter + Licht entscheiden
+        Assert.True(EntfeuchterBremsen.DrosselungWirkt(true, null, 5, 7));
+        Assert.Null(EntfeuchterBremsen.DrosselungWirkt(null, true, 6, 7));
+    }
+
+    [Fact]
     public void DieKapazitaetStehtVorDenUebrigenGruenden()
     {
         var arten = EntfeuchterBremsen.Pruefen(Eingabe(ueberSeit: 90, laeuftSeit: 130, drossel: true, temp: 23.4)).Select(b => b.Art).ToList();

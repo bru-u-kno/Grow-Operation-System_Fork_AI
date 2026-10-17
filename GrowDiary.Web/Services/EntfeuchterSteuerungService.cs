@@ -468,6 +468,12 @@ public sealed class EntfeuchterSteuerungService
             }
         }
 
+        // Die Drosselung der CO₂-Steuerung wirkt nur bei Licht und wenn der Abluft-Port wirklich unter seiner normalen Stufe steht.
+        var co2Rollen = _geraete.EntitiesFuerModul(Co2SteuerungService.Modul);
+        var abluftStufe = co2Rollen.TryGetValue("abluft_stufe", out var abluftId) && abluftId is not null ? Zahl(abluftId) : null;
+        var drosselungWirkt = EntfeuchterBremsen.DrosselungWirkt(
+            An(Entitaeten.Co2Drosseln), tagPhase, abluftStufe, Zahl(Co2SteuerungService.Entitaeten.T6Normal));
+
         var bremsen = EntfeuchterBremsen.Pruefen(new BremsEingabe(
             FeuchteProzent: feuchte,
             GrenzeProzent: grenze,
@@ -479,7 +485,7 @@ public sealed class EntfeuchterSteuerungService
             AutomatikAn: automatiken.Select(An).OfType<bool>().ToList() is { Count: > 0 } aktiv ? aktiv.Any(x => x) : null,
             PortAn: portAn,
             ZuluftVorrang: vorrang,
-            Co2Drosselung: An(Entitaeten.Co2Drosseln),
+            Co2Drosselung: drosselungWirkt,
             EinschaltverzoegerungMin: e.EinschaltverzoegerungMin,
             WartezeitAussenluftMin: e.WartezeitAussenluftMin,
             UeberGrenzeSeitMin: ueberSeit,

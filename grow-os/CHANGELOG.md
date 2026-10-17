@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.229
+
+**Fork AI.** Der Hinweis „CO₂-Drosselung ist an" unter „Was bremst gerade?" erscheint nur noch, wenn die Drosselung wirklich wirkt.
+
+- **Was war:** Der Hinweis kam, sobald der Schalter „CO₂ Abluft drosseln" an war und die Feuchte über dem Plan-Wert lag — auch nachts bei Licht aus, wo die Abluft gar nicht gedrosselt wird, und auch dann, wenn der Abluft-Port auf seiner normalen Stufe stand. Wer ihn las, suchte eine Bremse, die es in dem Moment nicht gab.
+- **Jetzt:** Der Hinweis erscheint nur, wenn der Schalter an ist, das Licht an ist und der Abluft-Port tatsächlich unter seiner normalen Stufe steht (Beispiel: Port 6 bei normal 7). Lässt sich die Port-Stufe nicht lesen, entscheiden Schalter und Lichtphase allein. Ist der Schalter unbekannt, kommt kein Hinweis.
+- **Geprüft:** Ein Test mit sieben Fällen (wirkt, nachts, Port auf normal, Schalter aus, Stufe nicht lesbar, Licht unbekannt, Schalter unbekannt); die bisherigen Entfeuchter-Tests (240) bleiben grün.
+
 ## 2.0.0-forkai.228
 
 **Fork AI.** Die Karten unter „Aufgaben → Risiken" sagen jetzt, wie frisch die Prüfung hinter ihnen ist, und gleichen sich im Hintergrund ab, sobald eine neue Messung da ist.
