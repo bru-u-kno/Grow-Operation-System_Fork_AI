@@ -219,7 +219,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         var eintraege = SteuerungAuswahlService.Alle.Select(a =>
         {
             var (zugeordnet, gesamt) = auswahl.Pflichtrollen(a);
-            return new SteuerungAuswahlEintragDto(a.Kennung, a.Titel, a.Beschreibung, gewaehlt.Contains(a.Kennung), zugeordnet, gesamt, SteuerungAuswahlService.Bausteinmodule(a), a.Module);
+            return new SteuerungAuswahlEintragDto(a.Kennung, a.Titel, a.Beschreibung, gewaehlt.Contains(a.Kennung), zugeordnet, gesamt, SteuerungAuswahlService.Bausteinmodule(a), a.Module, auswahl.FehlendePflichtrollen(a));
         }).ToList();
         return new SteuerungAuswahlDto(auswahl.Gespeichert(), eintraege);
     }
@@ -323,8 +323,10 @@ public sealed class SteuerungApiController : ApiControllerBase
     public async Task<ActionResult<EntfeuchterSeiteDto>> Entfeuchter(CancellationToken ct)
     {
         var geraete = _geraete.EntitiesFuerModul(EntfeuchterSteuerungService.Modul);
-        return Ok(new EntfeuchterSeiteDto(await _entfeuchter.EinstellungenAsync(ct), await _entfeuchter.LiveAsync(ct))
+        var einstellungen = await _entfeuchter.EinstellungenAsync(ct);
+        return Ok(new EntfeuchterSeiteDto(einstellungen, await _entfeuchter.LiveAsync(ct))
         {
+            Abweichungen = await _entfeuchter.AbweichungenAsync(einstellungen, ct),
             AusHomeAssistantUebernommen = _entfeuchter.Gespeichert is null,
             GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
             GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(EntfeuchterSteuerungService.Modul).Count,
@@ -712,7 +714,7 @@ public sealed class SteuerungApiController : ApiControllerBase
 
     [HttpPost("{modul}/helfer")]
     public async Task<ActionResult<SteuerungHelferService.Bilanz>> HelferAnlegen(
-        string modul, CancellationToken ct)
+        string modul, [FromServices] SteuerungStartwerteService startwerte, CancellationToken ct)
     {
         if (SteuerungBauteile.FuerModul(modul).Count == 0) return NotFound();
 
@@ -722,7 +724,7 @@ public sealed class SteuerungApiController : ApiControllerBase
             .Select(p => p.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var bilanz = await _helfer.AnlegenAsync(modul, belegt, settings, ct);
+        var bilanz = await startwerte.AnlegenAsync(modul, belegt, settings, ct);
         if (!bilanz.Erreichbar)
         {
             // Der Fork hat ein eigenes Fehlerformat; Problem() waere das von
@@ -859,7 +861,8 @@ public sealed record SteuerungKarteDto(string Kennung, string Titel, string Besc
 public sealed record SteuerungUebersichtDto(bool HaErreichbar, IReadOnlyList<SteuerungModulDto> Module, IReadOnlyList<SteuerungKarteDto> NichtEingerichtet, DateTime StandUtc);
 /// <param name="Module">Die Module, für die Bausteine in Home Assistant angelegt werden, in Anlege-Reihenfolge.</param>
 /// <param name="Rollenmodule">Alle Module der Steuerung, deren Geräte (Rollen) zugeordnet werden — auch die Lampe.</param>
-public sealed record SteuerungAuswahlEintragDto(string Kennung, string Titel, string Beschreibung, bool Gewaehlt, int PflichtZugeordnet, int PflichtGesamt, IReadOnlyList<string> Module, IReadOnlyList<string> Rollenmodule);
+/// <param name="FehlendePflicht">Die Namen der Pflicht-Rollen ohne Gerät — die Meldung „Pflichtgerät fehlt" nennt sie.</param>
+public sealed record SteuerungAuswahlEintragDto(string Kennung, string Titel, string Beschreibung, bool Gewaehlt, int PflichtZugeordnet, int PflichtGesamt, IReadOnlyList<string> Module, IReadOnlyList<string> Rollenmodule, IReadOnlyList<string> FehlendePflicht);
 /// <param name="Gespeichert">False: der Nutzer hat nie gewählt, die Liste ergibt sich aus den zugeordneten Geräten.</param>
 public sealed record SteuerungAuswahlDto(bool Gespeichert, IReadOnlyList<SteuerungAuswahlEintragDto> Eintraege);
 public sealed record SteuerungAuswahlAenderung(IReadOnlyList<string> Gewaehlt);
@@ -909,6 +912,9 @@ public sealed record EntfeuchterSeiteDto(EntfeuchterEinstellungen Einstellungen,
 
     public int GeraeteZugeordnet { get; init; }
     public int GeraeteGesamt { get; init; }
+
+    /// <summary>Helfer in Home Assistant, die von den Einstellungen des Fork abweichen — leer, wenn alles übereinstimmt oder HA nicht antwortet.</summary>
+    public IReadOnlyList<EntfeuchterSteuerungService.Abweichung> Abweichungen { get; init; } = [];
 }
 
 public sealed record ChillerSeiteDto(ChillerEinstellungen Einstellungen, ChillerLive Live)

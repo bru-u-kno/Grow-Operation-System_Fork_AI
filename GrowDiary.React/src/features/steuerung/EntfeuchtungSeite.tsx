@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../../api'
 import { V1Alert, V1Button, V1Page, V1Skeleton, V1Tabs } from '../../components/v1'
 import { zahl } from './entfeuchter-band'
+import { abweichungsText } from './entfeuchter-abweichungen'
 import { aenderungsListe, planHinweisZeigen, tempGrenzen } from './entfeuchter-zusatz'
 import { ENTFEUCHTUNG_REITER, zusatzVorhanden } from './entfeuchtung-modell'
 import type { EntfeuchtungReiter } from './entfeuchtung-modell'
@@ -76,6 +77,7 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
 
   const geaendert = h.geaendert || (hatZusatz && z.geaendert)
   const arbeitet = h.arbeitet || z.arbeitet
+  const abweichungen = h.seite?.abweichungen ?? []
 
   const speichern = async () => {
     let ok = true
@@ -129,6 +131,15 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {meldung && <V1Alert tone={meldung === 'Gespeichert.' ? 'ok' : 'warn'} message={meldung} />}
       {!hl.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand. Die Regelung läuft dort weiter." />}
+      {abweichungen.length > 0 && (
+        <>
+          <V1Alert tone="warn" title="Home Assistant regelt mit anderen Werten" message={`${abweichungsText(abweichungen)}. Geregelt wird nach den Werten in Home Assistant.`} />
+          <div className="st-knopfleiste">
+            <V1Button variant="secondary" onClick={() => void h.speichern()} disabled={arbeitet || h.geaendert}>Jetzt übernehmen</V1Button>
+          </div>
+          {h.geaendert && <p className="st-hinweis">Du hast Änderungen noch nicht gespeichert — erst Speichern, dann übernehmen.</p>}
+        </>
+      )}
       {hl.portOnline === false && <V1Alert tone="warn" title={`${haupt} offline`} message="Der Port meldet sich nicht. Geschaltet wird erst, wenn er wieder da ist." />}
       {hl.automatikAn === false && <V1Alert tone="warn" title={`Automatik aus: ${haupt}`} message={`Die Regelung ist angehalten. ${haupt} bleibt, wie er gerade steht.`} />}
       {zl && zl.zusatzOnline === false && <V1Alert tone="warn" title={`${zusatz} ist offline`} message="Die Steckdose meldet sich nicht. Geschaltet wird erst, wenn sie wieder da ist." />}

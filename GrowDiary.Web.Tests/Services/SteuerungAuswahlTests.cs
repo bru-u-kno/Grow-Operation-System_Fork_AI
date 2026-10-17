@@ -150,6 +150,66 @@ public sealed class SteuerungAuswahlTests : IDisposable
         Assert.Equal((1, gesamt), _auswahl.Pflichtrollen(art));
     }
 
+    private static readonly string[] HauptPflicht =
+        SteuerungGeraeteRollen.FuerModul("entfeuchter").Where(r => r.Pflicht).Select(r => r.Schluessel).ToArray();
+
+    private void HauptGeraetVollstaendigZuordnen()
+    {
+        // Mengenwächter: ohne Pflichtrollen liefe jede Zählung unten null Mal und wäre grün.
+        Assert.True(HauptPflicht.Length >= 5, "Der Entfeuchter hat Pflichtrollen.");
+        foreach (var rolle in HauptPflicht) _steuerung.SetGeraet("entfeuchter", rolle, $"sensor.test_{rolle}");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    public void EinEntfeuchterOhneZusatzIstMitSeinenPflichtrollenVollstaendig(bool? zusatzVorhanden)
+    {
+        // Neuling-Test 17.10.2026: „5 von 7 Pflichtgeräten", obwohl alles Sichtbare zugeordnet war — die
+        // Pflichtrollen des Zusatz-Entfeuchters zählten mit, auch bei „kein Zusatz".
+        _steuerung.SetEinstellungen(EntfeuchterZusatzSteuerungService.EinrichtungModul, new EntfeuchtungEinrichtung { ZusatzVorhanden = zusatzVorhanden });
+        HauptGeraetVollstaendigZuordnen();
+        var art = SteuerungAuswahlService.Finden("entfeuchter")!;
+
+        Assert.False(_auswahl.ZusatzGilt());
+        Assert.Equal((HauptPflicht.Length, HauptPflicht.Length), _auswahl.Pflichtrollen(art));
+        Assert.Empty(_auswahl.FehlendePflichtrollen(art));
+    }
+
+    [Fact]
+    public void MitZweitemEntfeuchterZaehlenDessenPflichtrollenMit()
+    {
+        _steuerung.SetEinstellungen(EntfeuchterZusatzSteuerungService.EinrichtungModul, new EntfeuchtungEinrichtung { ZusatzVorhanden = true });
+        HauptGeraetVollstaendigZuordnen();
+        var art = SteuerungAuswahlService.Finden("entfeuchter")!;
+        var zusatzPflicht = SteuerungGeraeteRollen.FuerModul(EntfeuchterZusatzSteuerungService.Modul).Where(r => r.Pflicht).ToList();
+        Assert.True(zusatzPflicht.Count >= 2, "Der Zusatz hat Pflichtrollen.");
+
+        Assert.True(_auswahl.ZusatzGilt());
+        Assert.Equal((HauptPflicht.Length, HauptPflicht.Length + zusatzPflicht.Count), _auswahl.Pflichtrollen(art));
+        // Die Meldung nennt, was fehlt — mit den Namen, die der Nutzer auf der Seite liest.
+        Assert.Equal(zusatzPflicht.Select(r => r.Label), _auswahl.FehlendePflichtrollen(art));
+
+        foreach (var r in zusatzPflicht) _steuerung.SetGeraet(EntfeuchterZusatzSteuerungService.Modul, r.Schluessel, "switch.zweiter");
+        Assert.Equal((HauptPflicht.Length + zusatzPflicht.Count, HauptPflicht.Length + zusatzPflicht.Count), _auswahl.Pflichtrollen(art));
+        Assert.Empty(_auswahl.FehlendePflichtrollen(art));
+    }
+
+    [Fact]
+    public void FehlendePflichtrollenNennenDieNamenDerLuecken()
+    {
+        var art = SteuerungAuswahlService.Finden("entfeuchter")!;
+        var erste = HauptPflicht[0];
+        _steuerung.SetGeraet("entfeuchter", erste, "sensor.x");
+
+        var fehlt = _auswahl.FehlendePflichtrollen(art);
+        var name = SteuerungGeraeteRollen.Finden("entfeuchter", erste)!.Label;
+
+        Assert.Equal(HauptPflicht.Length - 1, fehlt.Count);
+        Assert.DoesNotContain(name, fehlt);
+        Assert.All(fehlt, f => Assert.False(string.IsNullOrWhiteSpace(f)));
+    }
+
     [Fact]
     public void BausteineGibtEsNurFuerModuleMitKatalogUndInAnlegeReihenfolge()
     {

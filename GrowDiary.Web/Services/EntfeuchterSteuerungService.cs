@@ -55,6 +55,16 @@ public sealed class EntfeuchterSteuerungService
         public static string FeuchteAusNacht => Kennungen.Id("input_number.fork_entfeuchter_feuchte_aus_nacht");
         public static string Automatik => Kennungen.Id("automation.entfeuchter_regelung_tag_nacht");
 
+        /// <summary>
+        /// Die Helfer, in die der Fork seine Einstellungen schreibt: die Zahlen und die zwei Schalter. Nach dem Anlegen
+        /// bekommen die neuen davon ihren Startwert (<see cref="SteuerungStartwerteService"/>).
+        /// </summary>
+        public static IReadOnlyList<string> Startwerte =>
+        [
+            VpdRegelung, Hysterese, Mindestlaufzeit, Einschaltverzoegerung, WartezeitAussenluft, Tagbetrieb,
+            TempMaxTag, TempMaxNacht, FeuchteEinTag, FeuchteAusTag, FeuchteEinNacht, FeuchteAusNacht,
+        ];
+
         // Nur gelesen — gepflegt woanders.
         public static string EinAktiv => Kennungen.Id("sensor.fork_entfeuchter_feuchte_ein_aktiv");
         public static string AusAktiv => Kennungen.Id("sensor.fork_entfeuchter_feuchte_aus_aktiv");
@@ -291,15 +301,16 @@ public sealed class EntfeuchterSteuerungService
         return Zahlenlesen.Maschine(entities.FirstOrDefault(x => string.Equals(x.EntityId, Entitaeten.RhObergrenze, StringComparison.OrdinalIgnoreCase))?.State);
     }
 
-    public async Task<bool> NachHomeAssistantSchreibenAsync(EntfeuchterEinstellungen e, CancellationToken ct)
+    /// <summary>
+    /// Die Zahlen, die in den Helfern stehen sollen: die gespeicherten Einstellungen, bei „Plan" mit den Werten aus dem
+    /// Plan gerechnet. EINE Rechnung für das Schreiben und für den Vergleich mit Home Assistant (<see cref="AbweichungenAsync"/>).
+    /// </summary>
+    private async Task<(string Entity, double Wert)[]> SollZahlenAsync(EntfeuchterEinstellungen e, CancellationToken ct)
     {
-        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
-        if (!settings.IsConfigured) return false;
-
         var plan = _wochenplan.PlanLuft();
         // „Arbeitsbereich aus dem Plan": EIN und AUS kommen aus der Plan-Obergrenze, nicht aus den gespeicherten festen Werten.
         var bereich = ArbeitsbereichAusPlan(e, await RhObergrenzeAsync(ct), _wochenplan.PlanFeuchte()?.RhNacht);
-        var zahlen = new (string Entity, double Wert)[]
+        return new (string Entity, double Wert)[]
         {
             (Entitaeten.Hysterese, e.HystereseProzent),
             (Entitaeten.Mindestlaufzeit, e.MindestlaufzeitMin),
@@ -312,6 +323,102 @@ public sealed class EntfeuchterSteuerungService
             (Entitaeten.FeuchteEinNacht, bereich?.EinNacht ?? e.FeuchteEinNacht),
             (Entitaeten.FeuchteAusNacht, bereich?.AusNacht ?? e.FeuchteAusNacht),
         };
+    }
+
+    /// <summary>Ein Helfer in Home Assistant, dessen Wert vom Wert der Einstellungen im Fork abweicht.</summary>
+    public sealed record Abweichung(string Entity, string Name, double ForkWert, double HaWert, string Einheit);
+
+    /// <summary>
+    /// Anzeigename und Einheit je Helfer. Der Schlüssel ist die Kennung im Katalog (neuer Raum); gesucht wird über
+    /// <see cref="Kennungen.Id(string)"/> zur Laufzeit, denn die Entity-ID hängt vom Kennungsraum ab (Bestand trägt alte Namen).
+    /// </summary>
+    private static readonly (string NeueId, string Name, string Einheit)[] Beschriftung =
+    [
+        ("input_number.fork_entfeuchter_hysterese", "Hysterese", "%"),
+        ("input_number.fork_entfeuchter_mindestlaufzeit", "Mindestlaufzeit", "min"),
+        ("input_number.fork_entfeuchter_einschaltverzoegerung", "Einschaltverzögerung", "min"),
+        ("input_number.fork_entfeuchter_wartezeit_aussenluft", "Wartezeit bei Außenluft", "min"),
+        ("input_number.fork_entfeuchter_temp_max_tag", "Höchsttemperatur Tag", "°C"),
+        ("input_number.fork_entfeuchter_temp_max_nacht", "Höchsttemperatur Nacht", "°C"),
+        ("input_number.fork_entfeuchter_feuchte_ein_tag", "Feuchte EIN · Tag", "%"),
+        ("input_number.fork_entfeuchter_feuchte_aus_tag", "Feuchte AUS · Tag", "%"),
+        ("input_number.fork_entfeuchter_feuchte_ein_nacht", "Feuchte EIN · Nacht", "%"),
+        ("input_number.fork_entfeuchter_feuchte_aus_nacht", "Feuchte AUS · Nacht", "%"),
+    ];
+
+    /// <summary>Anzeigename und Einheit eines Helfers; unbekannt: die Entity-ID selbst, ohne Einheit.</summary>
+    public static (string Name, string Einheit) BeschriftungFuer(string entity)
+    {
+        foreach (var (neueId, name, einheit) in Beschriftung)
+        {
+            if (string.Equals(Kennungen.Id(neueId), entity, StringComparison.OrdinalIgnoreCase)) return (name, einheit);
+        }
+        return (entity, string.Empty);
+    }
+
+    /// <summary>
+    /// Wo die Helfer in Home Assistant von den Einstellungen des Fork abweichen. Neuling-Test 17.10.2026: Die Seite zeigte 60 %,
+    /// Home Assistant regelte mit 30 % — und niemand sah es. Ein Helfer, den es nicht gibt, zählt hier nicht (das meldet der
+    /// Bestand); ohne Antwort von Home Assistant ist die Liste leer, nicht voll.
+    /// </summary>
+    public async Task<IReadOnlyList<Abweichung>> AbweichungenAsync(EntfeuchterEinstellungen e, CancellationToken ct)
+    {
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return [];
+
+        var entities = await _ha.GetEntitiesAsync(settings, ct);
+        if (entities.Count == 0) return [];
+
+        var zustaende = entities.ToDictionary(x => x.EntityId, x => x.State, StringComparer.OrdinalIgnoreCase);
+        var liste = new List<Abweichung>();
+        foreach (var (entity, wert) in await SollZahlenAsync(e, ct))
+        {
+            if (!zustaende.TryGetValue(entity, out var roh) || Zahlenlesen.Maschine(roh) is not { } ha) continue;
+
+            // Verglichen wird, was Home Assistant überhaupt annehmen kann (Spanne des Helfers) — wie beim Schreiben.
+            var soll = SteuerungBauteile.AufSpanne(entity, wert);
+            if (Math.Abs(soll - ha) <= 0.05) continue;
+
+            var (name, einheit) = BeschriftungFuer(entity);
+            liste.Add(new Abweichung(entity, name, soll, ha, einheit));
+        }
+
+        return liste;
+    }
+
+    /// <summary>Was ein Schreibvorgang anfasst — Ergebnis von <see cref="Schreibumfang"/>.</summary>
+    public sealed record Umfang(IReadOnlyList<(string Entity, double Wert)> Zahlen, bool VpdRegelung, bool Tagbetrieb, bool RegelungSchalten);
+
+    /// <summary>
+    /// Welche Helfer geschrieben werden: alle (<paramref name="nur"/> = <c>null</c>, wie beim Speichern der Einstellungen,
+    /// dazu die Regelung schalten) oder nur die genannten (frisch angelegte; die Regelung bleibt unberührt). Eine reine
+    /// Entscheidung ohne Home Assistant — damit prüfbar, dass ein bestehender Helfer nicht überschrieben wird.
+    /// </summary>
+    public static Umfang Schreibumfang(IReadOnlyList<(string Entity, double Wert)> zahlen, IReadOnlySet<string>? nur)
+    {
+        bool Gewollt(string entity) => nur is null || nur.Contains(entity);
+        return new Umfang(
+            zahlen.Where(z => Gewollt(z.Entity)).ToArray(),
+            Gewollt(Entitaeten.VpdRegelung),
+            Gewollt(Entitaeten.Tagbetrieb),
+            nur is null);
+    }
+
+    /// <summary>
+    /// Schreibt die Einstellungen in die Helfer in Home Assistant.
+    /// </summary>
+    /// <param name="nur">
+    /// Neuling-Test 17.10.2026: Mit einer Menge schreibt der Aufruf <b>nur diese Helfer</b> und lässt alles andere
+    /// (auch die Regelung selbst) in Ruhe. So bekommen frisch angelegte Helfer die Werte des Fork, ohne dass ein
+    /// Helfer überschrieben wird, den es schon gab. <c>null</c>: alles, wie beim Speichern der Einstellungen.
+    /// </param>
+    public async Task<bool> NachHomeAssistantSchreibenAsync(EntfeuchterEinstellungen e, CancellationToken ct, IReadOnlySet<string>? nur = null)
+    {
+        var settings = _haSettings.GetEffectiveHomeAssistantSettings();
+        if (!settings.IsConfigured) return false;
+
+        var umfang = Schreibumfang(await SollZahlenAsync(e, ct), nur);
+        var zahlen = umfang.Zahlen;
 
         // Ein von Hand angelegter Helfer kann engere Grenzen tragen als der Katalog (Nacht-EIN stand auf 50–85, gewollt war 48): Home
         // Assistant lehnt den Wert dann ab. Vorher auf den Bereich des Katalogs weiten, sonst bleibt der alte Wert stehen.
@@ -326,13 +433,19 @@ public sealed class EntfeuchterSteuerungService
                 new Dictionary<string, object> { ["value"] = SteuerungBauteile.AufSpanne(entity, wert) });
         }
 
-        alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.VpdRegelung ? "turn_on" : "turn_off", Entitaeten.VpdRegelung, ct);
-        alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.TagbetriebErlauben ? "turn_on" : "turn_off", Entitaeten.Tagbetrieb, ct);
+        if (umfang.VpdRegelung)
+            alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.VpdRegelung ? "turn_on" : "turn_off", Entitaeten.VpdRegelung, ct);
+        if (umfang.Tagbetrieb)
+            alles &= await _ha.CallEntityServiceAsync(settings, "input_boolean", e.TagbetriebErlauben ? "turn_on" : "turn_off", Entitaeten.Tagbetrieb, ct);
         // Die Regelung unter der Kennung schalten, unter der sie wirklich steht. Gibt es keine, bleibt das Speichern
         // der Sollwerte trotzdem ein Erfolg: sie lassen sich auch vor dem Anlegen der Regelung eintragen.
-        foreach (var automatik in AutomatikKennungen(await _ha.GetEntitiesAsync(settings, ct)))
+        // Beim Schreiben einzelner Helfer (nur) bleibt die Regelung unberührt.
+        if (umfang.RegelungSchalten)
         {
-            alles &= await _ha.CallEntityServiceAsync(settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", automatik, ct);
+            foreach (var automatik in AutomatikKennungen(await _ha.GetEntitiesAsync(settings, ct)))
+            {
+                alles &= await _ha.CallEntityServiceAsync(settings, "automation", e.AutomatikAktiv ? "turn_on" : "turn_off", automatik, ct);
+            }
         }
 
         if (!alles) _logger.LogWarning("Entfeuchter-Sollwerte: nicht alle Helfer in Home Assistant angenommen.");

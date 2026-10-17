@@ -120,9 +120,13 @@ export function fehlendText(f: Fehlend): string {
   return teile.filter(Boolean).join(' · ')
 }
 
-export type Phase1 = { modul: string; helfer: number; rechenwerte: number; nicht: number; fehler: string | null }
+/**
+ * `startwerte`: wie vielen neu angelegten Helfern der Fork danach seinen Wert geschrieben hat;
+ * `startwerteOffen`: Home Assistant hat nicht alle angenommen — die Helfer stehen dann noch auf ihrem Minimum.
+ */
+export type Phase1 = { modul: string; helfer: number; rechenwerte: number; nicht: number; fehler: string | null; startwerte: number; startwerteOffen: boolean }
 
-type Bilanz = { angelegt: number; fehlgeschlagen: number }
+type Bilanz = { angelegt: number; fehlgeschlagen: number; startwerte?: number; startwerteVollstaendig?: boolean }
 
 /**
  * Helfer und Rechenwerte aller Module anlegen — in der übergebenen Reihenfolge, je Modul erst Helfer, dann Rechenwerte.
@@ -137,7 +141,7 @@ export async function helferUndRechenwerte(
   const stand = new Map<string, { fehler: string | null; nicht: number }>()
   for (const modul of module) {
     const fehlt = zaehleFehlend(bestaende[modul])
-    const r: Phase1 = { modul, helfer: 0, rechenwerte: 0, nicht: 0, fehler: null }
+    const r: Phase1 = { modul, helfer: 0, rechenwerte: 0, nicht: 0, fehler: null, startwerte: 0, startwerteOffen: false }
     const grund = uebersprungenWegen(modul, stand)
     if (grund) {
       r.fehler = grund
@@ -150,6 +154,8 @@ export async function helferUndRechenwerte(
         const b = await aufruf<Bilanz>(`/api/steuerung/${modul}/helfer`, { method: 'POST' })
         r.helfer = b.angelegt
         r.nicht += b.fehlgeschlagen
+        r.startwerte = b.startwerte ?? 0
+        r.startwerteOffen = b.startwerteVollstaendig === false
       }
       if (fehlt.rechenwerte > 0) {
         const b = await aufruf<Bilanz>(`/api/steuerung/${modul}/rechenwerte`, { method: 'POST' })
@@ -218,4 +224,14 @@ export function reife(
   const stande = eintrag.module.map((m) => bestaende[m])
   if (stande.some((b) => !b || !b.haErreichbar)) return 'ha-stumm'
   return stande.some((b) => (b?.fehlt ?? 0) > 0) ? 'anlegen' : 'bereit'
+}
+
+/**
+ * Der Satz unter „Pflichtgerät fehlt": nennt die fehlenden Rollen beim Namen. Neuling-Test 17.10.2026: „5 von 7
+ * Pflichtgeräten zugeordnet" sagte nicht, welche fehlen — und der Nutzer sah auf der Seite nichts, was er noch tun konnte.
+ */
+export function unvollstaendigText(e: { pflichtZugeordnet: number; pflichtGesamt: number; fehlendePflicht?: string[] }): string {
+  const kopf = `${e.pflichtZugeordnet} von ${e.pflichtGesamt} Pflichtgeräten zugeordnet`
+  const fehlt = e.fehlendePflicht ?? []
+  return fehlt.length > 0 ? `${kopf}. Es fehlt noch: ${fehlt.join(', ')}.` : `${kopf} — erst zuordnen, dann bereitstellen.`
 }

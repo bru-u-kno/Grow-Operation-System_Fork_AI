@@ -40,6 +40,8 @@ export type SteuerungAuswahlEintrag = SteuerungKarte & {
   /** Wie viele Pflicht-Geräte (Rollen) schon zugeordnet sind. */
   pflichtZugeordnet: number
   pflichtGesamt: number
+  /** Die Namen der Pflicht-Rollen ohne Gerät (ein älteres Backend kennt das Feld nicht). */
+  fehlendePflicht?: string[]
   /** Die Module, für die Bausteine in Home Assistant angelegt werden, in Anlege-Reihenfolge (die Lampe hat keine). */
   module: string[]
   /** Alle Module der Steuerung, deren Geräte zugeordnet werden (auch die Lampe). */
@@ -444,6 +446,9 @@ export type EntfeuchterBremse = {
   text: string
 }
 
+/** Ein Helfer in Home Assistant, dessen Wert von der Einstellung im Fork abweicht (Neuling-Test 17.10.2026). */
+export type EntfeuchterAbweichung = { entity: string; name: string; forkWert: number; haWert: number; einheit: string }
+
 export type EntfeuchterSeite = {
   einstellungen: EntfeuchterEinstellungen
   live: EntfeuchterLive
@@ -451,6 +456,8 @@ export type EntfeuchterSeite = {
   ausHomeAssistantUebernommen: boolean
   geraeteZugeordnet: number
   geraeteGesamt: number
+  /** Ein älteres Backend kennt das Feld nicht — dann gibt es nichts anzuzeigen. */
+  abweichungen?: EntfeuchterAbweichung[]
 }
 
 /** A-014: beide Entfeuchter-Seiten haben dieselben vier Reiter. */

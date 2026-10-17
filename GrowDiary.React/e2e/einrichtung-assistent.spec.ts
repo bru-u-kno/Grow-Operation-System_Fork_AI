@@ -22,7 +22,13 @@ test.beforeEach(async ({ request }) => {
   darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend unter GROW_OS_URL — der Assistent braucht die laufende App mit Demobestand.')
   await nimmSchloss()
 })
-test.afterEach(() => { gibSchloss() })
+// Die Auswahl gehört der ganzen App: nach JEDEM Fall zurückstellen, solange das Schloss noch gehalten wird. Erst im afterAll
+// stand sie zwischen den Fällen verändert da, und eine andere Datei (`feldfehler-auf-anderem-reiter`) fand den Reiter „CO₂"
+// nicht (17.10.2026: zwei von vier Läufen mit beiden Dateien rot, mit einem Worker grün).
+test.afterEach(async ({ request }) => {
+  if (await backendAntwortet(request)) await request.put('/api/steuerung/auswahl', { data: { gewaehlt: ALLE } })
+  gibSchloss()
+})
 
 test.afterAll(async ({ browser, baseURL }) => {
   // Auch das Zurückstellen gehört unter das Schloss — sonst reißt es eine Prüfung aus einer anderen Datei mittendrin um.

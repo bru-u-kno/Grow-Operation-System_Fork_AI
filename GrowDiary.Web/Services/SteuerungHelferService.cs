@@ -42,7 +42,14 @@ public sealed class SteuerungHelferService
         int Angelegt,
         int Uebersprungen,
         int Fehlgeschlagen,
-        IReadOnlyList<Ergebnis> Einzeln);
+        IReadOnlyList<Ergebnis> Einzeln)
+    {
+        /// <summary>Wie vielen neu angelegten Helfern danach der Wert des Fork geschrieben wurde (<see cref="SteuerungStartwerteService"/>).</summary>
+        public int Startwerte { get; init; }
+
+        /// <summary>False: Home Assistant hat nicht alle Startwerte angenommen — die Helfer stehen dann noch auf ihrem Minimum.</summary>
+        public bool StartwerteVollstaendig { get; init; } = true;
+    }
 
     /// <summary>Die Arten, die dieser Dienst kann.</summary>
     private static readonly IReadOnlySet<BauteilArt> Machbar = new HashSet<BauteilArt>

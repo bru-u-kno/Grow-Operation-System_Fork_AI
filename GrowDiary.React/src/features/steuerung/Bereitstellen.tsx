@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Badge, V1Button, V1Card, V1Section, V1Skeleton, type Tone } from '../../components/v1'
 import {
-  abhaengigkeiten, automationen, bausteinModule, fehlendText, helferUndRechenwerte, reife, summe, wuerdeSchreiben, zaehleFehlend,
+  abhaengigkeiten, automationen, bausteinModule, fehlendText, helferUndRechenwerte, reife, summe, unvollstaendigText, wuerdeSchreiben, zaehleFehlend,
   type Phase2, type Reife, type RollenStand,
 } from './bereitstellen-ablauf'
 import type { Bestandsaufnahme, GeraeteSeite, SteuerungAuswahl } from './steuerung-typen'
@@ -94,8 +94,11 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
       const r = await helferUndRechenwerte(zuTun, bestaende, apiFetch)
       const angelegt = r.reduce((n, x) => n + x.helfer + x.rechenwerte, 0)
       const nicht = r.reduce((n, x) => n + x.nicht, 0)
+      const startwerte = r.reduce((n, x) => n + x.startwerte, 0)
       const kaputt = r.filter((x) => x.fehler)
       const teile = [`${angelegt} Helfer und Rechenwerte angelegt`]
+      if (startwerte > 0) teile.push(`${startwerte} ${startwerte === 1 ? 'Startwert' : 'Startwerte'} aus deinen Einstellungen geschrieben`)
+      if (r.some((x) => x.startwerteOffen)) teile.push('Home Assistant hat nicht alle Startwerte angenommen — sie stehen noch auf ihrem Minimum, Einzelheiten im Protokoll')
       if (nicht > 0) teile.push(`${nicht} nicht — Einzelheiten stehen im Protokoll`)
       for (const k of kaputt) teile.push(`${k.modul}: ${k.fehler}`)
       setMeldung(`${teile.join('. ')}.`)
@@ -153,7 +156,7 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
                 {e.titel}
                 <small>
                   {r === 'ohne-bausteine' ? 'Nur Zuordnung, nichts anzulegen.'
-                    : r === 'unvollstaendig' ? `${e.pflichtZugeordnet} von ${e.pflichtGesamt} Pflichtgeräten zugeordnet — erst zuordnen, dann bereitstellen.`
+                    : r === 'unvollstaendig' ? unvollstaendigText(e)
                     : r === 'anlegen' ? fehlendText(fehlt)
                     : r === 'bereit' ? 'Alles ist in Home Assistant angelegt.'
                     : 'Ohne Antwort ist nicht zu erkennen, was schon da ist.'}

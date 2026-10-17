@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { darfUeberspringen } from './pflicht'
+import { gibSchloss, nimmSchloss } from './schloss'
 
 /**
  * Ein gesperrtes Speichern zeigt das markierte Feld — auch auf einem anderen Reiter.
@@ -17,6 +18,13 @@ import { darfUeberspringen } from './pflicht'
  *
  * Gespeichert wird dabei nichts: das Speichern bricht schon im Browser ab.
  */
+
+// Die Fälle lesen die Auswahl der Steuerungen (Reiter „CO₂", „Entfeuchtung"). `einrichtung-assistent` und `steuerung-auswahl`
+// stellen sie um, und zwar unter dem Schloss — ohne es sah dieser Fall mitten im Lauf eine andere Auswahl und wartete 30 s auf
+// einen Reiter, der gerade ausgeblendet war (17.10.2026: zusammen mit `einrichtung-assistent` zweimal hintereinander rot, mit
+// einem Worker oder allein grün).
+test.beforeEach(async () => { await nimmSchloss() })
+test.afterEach(() => { gibSchloss() })
 
 // Ein Telefon: dort liegt die feste Kopfleiste über dem Inhalt. Niedrig, damit
 // die Seite weit genug rollt — bei 740 px reichte der Reiter nicht so weit, und

@@ -773,7 +773,7 @@ public sealed class EntfeuchterZusatzSteuerungService
         return name;
     }
 
-    /// <summary>Wie viele Entfeuchter es gibt — was der Nutzer gesagt hat (A-015); <c>null</c> = nach der Zuordnung entscheiden.</summary>
+    /// <summary>Ob es einen zweiten Entfeuchter gibt — was der Nutzer gesagt hat (A-015, Schalter „Zweiter Entfeuchter"); <c>null</c> = nicht gesagt, dann rechnet der Fork ihn nicht mit (Zählung der Pflichtrollen, Assistent, Bereitstellen).</summary>
     public EntfeuchtungEinrichtungDto Einrichtung()
         => new(_repo.GetEinstellungen<EntfeuchtungEinrichtung>(EinrichtungModul)?.ZusatzVorhanden);
 

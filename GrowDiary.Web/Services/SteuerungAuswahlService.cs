@@ -106,15 +106,49 @@ public sealed class SteuerungAuswahlService
     public static IReadOnlyList<string> Bausteinmodule(Art art)
         => art.Module.Where(m => SteuerungBauteile.FuerModul(m).Count > 0).ToList();
 
-    /// <summary>Wie viele Pflicht-Rollen der Steuerung zugeordnet sind (nur gespeicherte Zuordnungen).</summary>
-    public (int Zugeordnet, int Gesamt) Pflichtrollen(Art art)
+    /// <summary>
+    /// Gehört ein zweiter Entfeuchter zur Auswahl „Entfeuchter"? Nur, wenn der Nutzer es gesagt hat
+    /// (Schalter „Zweiter Entfeuchter" in Schritt 1) — wie die Oberfläche es schon immer las. Ohne Antwort
+    /// schließt der Fork ihn aus der Zuordnung aus (<see cref="EntfeuchtungEinrichtung.ZusatzVorhanden"/>).
+    /// </summary>
+    /// <remarks>
+    /// Neuling-Test 17.10.2026: Die Zählung nahm die Pflichtrollen des Zusatzes immer mit. Wer nur einen Entfeuchter hat,
+    /// sah „5 von 7 Pflichtgeräten", obwohl die Oberfläche das Zusatzgerät ausblendete — und kam nie weiter.
+    /// </remarks>
+    public bool ZusatzGilt()
+        => _steuerung.GetEinstellungen<EntfeuchtungEinrichtung>(EntfeuchterZusatzSteuerungService.EinrichtungModul)?.ZusatzVorhanden == true;
+
+    /// <summary>Die Module der Steuerung, deren Rollen zählen — ohne den Zusatz, solange es ihn nicht gibt.</summary>
+    private IEnumerable<string> ZaehlendeModule(Art art)
     {
-        var gespeichert = _steuerung.GetGeraete()
+        var zusatz = ZusatzGilt();
+        return art.Module.Where(m => zusatz || !string.Equals(m, SteuerungGeraeteRollen.ZusatzModul, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IReadOnlyList<GeraeteRolle> Pflichtliste(Art art)
+        => ZaehlendeModule(art).SelectMany(SteuerungGeraeteRollen.FuerModul).Where(r => r.Pflicht).ToList();
+
+    private HashSet<string> ZugeordneteRollen()
+        => _steuerung.GetGeraete()
             .Where(g => !string.IsNullOrWhiteSpace(g.EntityId))
             .Select(g => $"{g.Modul}/{g.Rolle}".ToLowerInvariant())
             .ToHashSet(StringComparer.Ordinal);
-        var pflicht = art.Module.SelectMany(SteuerungGeraeteRollen.FuerModul).Where(r => r.Pflicht).ToList();
-        return (pflicht.Count(r => gespeichert.Contains($"{r.Modul}/{r.Schluessel}".ToLowerInvariant())), pflicht.Count);
+
+    private static string RollenSchluessel(GeraeteRolle r) => $"{r.Modul}/{r.Schluessel}".ToLowerInvariant();
+
+    /// <summary>Wie viele Pflicht-Rollen der Steuerung zugeordnet sind (nur gespeicherte Zuordnungen).</summary>
+    public (int Zugeordnet, int Gesamt) Pflichtrollen(Art art)
+    {
+        var gespeichert = ZugeordneteRollen();
+        var pflicht = Pflichtliste(art);
+        return (pflicht.Count(r => gespeichert.Contains(RollenSchluessel(r))), pflicht.Count);
+    }
+
+    /// <summary>Die Namen der Pflicht-Rollen, denen noch kein Gerät zugeordnet ist — damit die Meldung sagen kann, was fehlt.</summary>
+    public IReadOnlyList<string> FehlendePflichtrollen(Art art)
+    {
+        var gespeichert = ZugeordneteRollen();
+        return Pflichtliste(art).Where(r => !gespeichert.Contains(RollenSchluessel(r))).Select(r => r.Label).ToList();
     }
 
     private HashSet<string>? Gespeicherte()

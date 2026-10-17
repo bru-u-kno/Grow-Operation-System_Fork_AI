@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  abhaengigkeiten, automationen, fehlendText, helferUndRechenwerte, reife, summe, wuerdeSchreiben, zaehleFehlend,
+  abhaengigkeiten, automationen, fehlendText, helferUndRechenwerte, reife, summe, unvollstaendigText, wuerdeSchreiben, zaehleFehlend,
   type Aufruf, type AutoBilanz,
 } from './bereitstellen-ablauf'
 import type { BauteilStand, Bestandsaufnahme } from './steuerung-typen'
@@ -68,9 +68,28 @@ describe('helferUndRechenwerte', () => {
       'POST /api/steuerung/co2/helfer', 'POST /api/steuerung/co2/rechenwerte', 'POST /api/steuerung/entfeuchter/helfer',
     ])
     expect(r).toEqual([
-      { modul: 'co2', helfer: 20, rechenwerte: 5, nicht: 0, fehler: null },
-      { modul: 'entfeuchter', helfer: 15, rechenwerte: 0, nicht: 1, fehler: null },
+      { modul: 'co2', helfer: 20, rechenwerte: 5, nicht: 0, fehler: null, startwerte: 0, startwerteOffen: false },
+      { modul: 'entfeuchter', helfer: 15, rechenwerte: 0, nicht: 1, fehler: null, startwerte: 0, startwerteOffen: false },
     ])
+  })
+
+  it('übernimmt, wie vielen Helfern der Fork nach dem Anlegen seinen Startwert geschrieben hat', async () => {
+    // Neuling-Test 17.10.2026: Frisch angelegte Helfer standen auf dem Minimum von Home Assistant, die Regelung schaltete nie.
+    const { aufruf } = aufzeichnung({
+      '/api/steuerung/entfeuchter/helfer': { angelegt: 15, fehlgeschlagen: 0, startwerte: 12, startwerteVollstaendig: true },
+    })
+    const r = await helferUndRechenwerte(['entfeuchter'], { entfeuchter: bestand(bauteil('Zahl')) }, aufruf)
+
+    expect(r[0]).toMatchObject({ modul: 'entfeuchter', helfer: 15, startwerte: 12, startwerteOffen: false })
+  })
+
+  it('meldet, wenn Home Assistant nicht alle Startwerte angenommen hat', async () => {
+    const { aufruf } = aufzeichnung({
+      '/api/steuerung/entfeuchter/helfer': { angelegt: 15, fehlgeschlagen: 0, startwerte: 0, startwerteVollstaendig: false },
+    })
+    const r = await helferUndRechenwerte(['entfeuchter'], { entfeuchter: bestand(bauteil('Zahl')) }, aufruf)
+
+    expect(r[0]).toMatchObject({ startwerte: 0, startwerteOffen: true })
   })
 
   it('fragt Module nicht an, bei denen nichts fehlt', async () => {
@@ -229,5 +248,17 @@ describe('Voraussetzung: der Zusatz wartet auf den Entfeuchter', () => {
     const v = aufzeichnung({ '/api/steuerung/entfeuchter/automationen?vorschau=true': schlecht })
     await automationen(['entfeuchter', 'entfeuchter-zusatz'], true, v.aufruf)
     expect(v.calls).toHaveLength(2)
+  })
+})
+
+describe('unvollstaendigText', () => {
+  it('nennt die fehlenden Rollen beim Namen', () => {
+    const text = unvollstaendigText({ pflichtZugeordnet: 4, pflichtGesamt: 6, fehlendePflicht: ['Zeltfühler · Feuchte', 'Entfeuchter · schalten'] })
+    expect(text).toBe('4 von 6 Pflichtgeräten zugeordnet. Es fehlt noch: Zeltfühler · Feuchte, Entfeuchter · schalten.')
+  })
+
+  it('bleibt beim alten Satz, wenn das Backend die Namen nicht liefert', () => {
+    expect(unvollstaendigText({ pflichtZugeordnet: 1, pflichtGesamt: 3 })).toBe('1 von 3 Pflichtgeräten zugeordnet — erst zuordnen, dann bereitstellen.')
+    expect(unvollstaendigText({ pflichtZugeordnet: 1, pflichtGesamt: 3, fehlendePflicht: [] })).toBe('1 von 3 Pflichtgeräten zugeordnet — erst zuordnen, dann bereitstellen.')
   })
 })
