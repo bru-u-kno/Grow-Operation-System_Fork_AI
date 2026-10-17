@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { alleKartenOeffnen, aufklappen, backendVorgeben, reiterWahl, seiteOeffnen } from './entfeuchtung-vorgaben'
+import { EINSTELLUNGEN, HAUPT_EINSTELLUNGEN, alleKartenOeffnen, alleOeffnen, aufklappen, backendVorgeben, reiterWahl, seiteOeffnen } from './entfeuchtung-vorgaben'
 import type { Json } from './entfeuchtung-vorgaben'
 
 /**
@@ -25,6 +25,11 @@ const KAPAZITAET = {
 const AUSSENLUFT = {
   art: 'aussenluft', stufe: 'warnung', titel: 'Wartet auf Außenluft',
   text: 'Die Zuluft läuft und die Außenluft ist trockener als der Raum. Der Entfeuchter wartet deshalb 5 statt 1 Minuten, bevor er einschaltet.',
+}
+
+const ZUSATZSPERRE = {
+  art: 'zusatzsperre', stufe: 'warnung', titel: 'Der Zusatz-Entfeuchter wartet auf Abkühlung',
+  text: 'Das Zelt hat 22,4 °C. Der Zusatz schaltet erst unter 22 °C wieder ein, damit er das Zelt nicht weiter aufheizt. Solange läuft nur der Hauptentfeuchter; die Feuchte liegt mit 56,2 % über dem Plan-Wert (53 %).',
 }
 
 const bremseKachel = (page: import('@playwright/test').Page) => page.locator('.st-kk', { has: page.locator('.st-kk-titel', { hasText: 'Was bremst gerade?' }) })
@@ -104,4 +109,43 @@ test('Einstellungen: Tag und Nacht stehen getrennt da, jeweils aus der eigenen P
     await reiterWahl(page, 'Einstellungen')
     await alleKartenOeffnen(page)
   }
+})
+
+test('Überblick: Zusatz steht im Bereich zwischen Abschalt- und Wieder-ein-Temperatur — Hinweis, „wartet" und kein ✔ bei der Temperatur', async ({ page }) => {
+  // Beispiel-Grenzen: Höchsttemperatur 24, Zusatz aus bei 23, wieder an unter 22 — Zelt 22,4 °C, Zusatz aus, Feuchte über dem Plan-Wert.
+  await backendVorgeben(
+    page,
+    { tempC: 22.4, feuchteProzent: 56.2, tagPhase: true, zusatzAn: false, leistungW: 0, fuehrungAn: true, schaltgroesse: 'feuchte', tempMaxTagC: 24, folgeAusTagC: 23, wiederEinTagC: 22 },
+    { ...ANLAGE_TAG, tempC: 22.4, feuchteProzent: 56.2, tempMaxAktivC: 24, tempMaxTagC: 24, bremsen: [ZUSATZSPERRE], ueberGrenzeSeitMin: 40, laeuftSeitMin: 30 },
+    { haupt: { ...HAUPT_EINSTELLUNGEN, tempMaxTagFestC: 24 }, zusatz: { ...EINSTELLUNGEN, tempMaxTagFestC: 24 } },
+  )
+  await seiteOeffnen(page)
+
+  const kachel = bremseKachel(page)
+  await expect(kachel.locator('.v1-alert')).toHaveCount(1)
+  await expect(kachel.locator('.v1-alert').first()).toContainText('wartet auf Abkühlung')
+  await expect(kachel.locator('.v1-alert').first()).toContainText('unter 22 °C')
+
+  // Der obere „pausiert"-Hinweis gilt erst über der Abschalt-Temperatur — hier (22,4 < 23) steht er nicht da, die Kachel sagt es.
+  await expect(page.getByText('pausiert: Zelt zu warm')).toHaveCount(0)
+
+  // „Warum läuft welches Gerät?": die Temperaturzeile des Zusatzes ist NICHT in Ordnung, weil er erst unter 22 °C startet.
+  await alleOeffnen(page)
+  const zeile = page.locator('.st-feldzeile', { hasText: 'Dehumi RDWC Tent: Zelt nicht zu warm' })
+  await expect(zeile).toContainText('wieder an unter 22')
+  await expect(zeile.locator('.st-nurlesen')).toHaveAttribute('aria-label', 'nicht erfüllt')
+
+  // Gerätestatus des Zusatzes: „wartet" statt „aus".
+  await expect(page.locator('.st-feldzeile', { hasText: 'Zusatz-Entfeuchter · hilft' })).toContainText('wartet')
+})
+
+test('Überblick: im selben Temperaturbereich, aber die Feuchte reicht — der Zusatz steht, ohne zu „warten"', async ({ page }) => {
+  await backendVorgeben(
+    page,
+    { tempC: 22.4, feuchteProzent: 47, tagPhase: true, zusatzAn: false, leistungW: 0, fuehrungAn: true, schaltgroesse: 'feuchte', tempMaxTagC: 24, folgeAusTagC: 23, wiederEinTagC: 22 },
+    { ...ANLAGE_TAG, tempC: 22.4, feuchteProzent: 47, tempMaxAktivC: 24, tempMaxTagC: 24, bremsen: [], ueberGrenzeSeitMin: null },
+    { haupt: { ...HAUPT_EINSTELLUNGEN, tempMaxTagFestC: 24 }, zusatz: { ...EINSTELLUNGEN, tempMaxTagFestC: 24 } },
+  )
+  await seiteOeffnen(page)
+  await expect(page.locator('.st-feldzeile', { hasText: 'Zusatz-Entfeuchter · hilft' })).not.toContainText('wartet')
 })

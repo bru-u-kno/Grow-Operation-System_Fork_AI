@@ -380,6 +380,16 @@ export function tempGrenzen(
   return { max: maxC, folgeAus, wiederEin: round1(folgeAus - e.wiederEinAbstandK) }
 }
 
+/**
+ * Ist die Zelttemperatur für den Zusatz in Ordnung? Läuft er, gilt seine Abschalt-Temperatur (`folgeAus`); steht er, darf er erst
+ * unter der Wieder-ein-Temperatur starten — liegt das Zelt dazwischen, bleibt er aus (Nachprüfung 15.10.2026: ca. 17 h ohne
+ * Erklärung). `null` ohne Messwert.
+ */
+export function zusatzTempOk(tempC: number | null, laeuft: boolean, g: Pick<TempGrenzen, 'folgeAus' | 'wiederEin'>): boolean | null {
+  if (tempC == null) return null
+  return laeuft ? tempC < g.folgeAus : tempC < g.wiederEin
+}
+
 const round1 = (w: number) => Math.round(w * 10) / 10
 const round2 = (w: number) => Math.round(w * 100) / 100
 

@@ -602,6 +602,10 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
         var drosselungWirkt = EntfeuchterBremsen.DrosselungWirkt(
             An(Entitaeten.Co2Drosseln), tagPhase, abluftStufe, Zahl(Co2SteuerungService.Entitaeten.T6Normal));
 
+        // Der Zusatz-Schalter: nur lesen, wenn es einen Zusatz gibt (Rolle zugeordnet); sonst bleibt die Sperre stumm.
+        var zusatzSchalter = _geraete.Entity(EntfeuchterZusatzSteuerungService.Modul, EntfeuchterZusatzSteuerungService.Rollen.ZusatzSchalter);
+        var zusatzAn = zusatzSchalter is not null ? An(zusatzSchalter) : null;
+
         var bremsen = EntfeuchterBremsen.Pruefen(new BremsEingabe(
             FeuchteProzent: feuchte,
             GrenzeProzent: grenze,
@@ -617,7 +621,11 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
             EinschaltverzoegerungMin: e.EinschaltverzoegerungMin,
             WartezeitAussenluftMin: e.WartezeitAussenluftMin,
             UeberGrenzeSeitMin: ueberSeit,
-            LaeuftSeitMin: laeuftSeit));
+            LaeuftSeitMin: laeuftSeit,
+            ZusatzAn: zusatzAn,
+            ZusatzWiederEinC: Zahl(EntfeuchterZusatzSteuerungService.Entitaeten.WiederEinTemperatur),
+            ZusatzAutomatikAn: EntfeuchterZusatzSteuerungService.AutomatikAn(entities),
+            ZusatzNachVpd: tagPhase == true && e.VpdRegelung));
 
         return new EntfeuchterLive(
             HaErreichbar: entities.Count > 0,

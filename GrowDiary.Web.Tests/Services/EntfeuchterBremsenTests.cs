@@ -13,8 +13,10 @@ public sealed class EntfeuchterBremsenTests
     private static BremsEingabe Eingabe(
         double? feuchte = 57.9, double? grenze = 53, double? ein = 48, double? temp = 22, double? tempMax = 23, bool? tag = true,
         bool tagbetrieb = true, bool? automatik = true, bool? portAn = true, bool? vorrang = false, bool? drossel = false,
-        int einschalt = 1, int aussenluft = 5, int? ueberSeit = null, int? laeuftSeit = null)
-        => new(feuchte, grenze, ein, temp, tempMax, tag, tagbetrieb, automatik, portAn, vorrang, drossel, einschalt, aussenluft, ueberSeit, laeuftSeit);
+        int einschalt = 1, int aussenluft = 5, int? ueberSeit = null, int? laeuftSeit = null,
+        bool? zusatzAn = null, double? wiederEin = null, bool? zusatzAutomatik = null, bool nachVpd = false)
+        => new(feuchte, grenze, ein, temp, tempMax, tag, tagbetrieb, automatik, portAn, vorrang, drossel, einschalt, aussenluft, ueberSeit, laeuftSeit,
+            zusatzAn, wiederEin, zusatzAutomatik, nachVpd);
 
     [Fact]
     public void NichtsBremst_dieListeIstLeer()
@@ -135,5 +137,79 @@ public sealed class EntfeuchterBremsenTests
         Assert.Equal(75, EntfeuchterBremsen.LaeuftSeitMin(new[] { P(200, "Off"), P(75, "On"), P(20, "On") }, Jetzt));
         Assert.Null(EntfeuchterBremsen.LaeuftSeitMin(new[] { P(200, "On"), P(20, "Off") }, Jetzt));
         Assert.Equal(180, EntfeuchterBremsen.LaeuftSeitMin(new[] { P(180, "on") }, Jetzt));
+    }
+
+    // --- Zusatz-Sperre (Wieder-ein-Temperatur), Nachprüfung 15.10.2026: Zelt 22,1 °C, Wieder-ein 22,0 °C, Zusatz aus, Feuchte 56 %.
+
+    [Fact]
+    public void ZusatzSperre_ZusatzAusZeltUeberWiederEin_nenntTemperaturUndSchwelle()
+    {
+        var b = Assert.Single(EntfeuchterBremsen.Pruefen(Eingabe(feuchte: 56.2, temp: 22.4, tempMax: 24, zusatzAn: false, wiederEin: 22, zusatzAutomatik: true)));
+        Assert.Equal("zusatzsperre", b.Art);
+        Assert.Equal("warnung", b.Stufe);
+        Assert.Equal("Der Zusatz-Entfeuchter wartet auf Abkühlung", b.Titel);
+        Assert.Contains("22,4 °C", b.Text);
+        Assert.Contains("unter 22 °C wieder ein", b.Text);
+        Assert.Contains("Solange läuft nur der Hauptentfeuchter", b.Text);
+        Assert.Contains("56,2 %", b.Text);
+        Assert.Contains("(53 %)", b.Text);
+    }
+
+    [Fact]
+    public void ZusatzSperre_Grenzfall_genauAufWiederEinSperrt_darunterNicht()
+    {
+        Assert.Single(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22, tempMax: 24, zusatzAn: false, wiederEin: 22)));
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(temp: 21.9, tempMax: 24, zusatzAn: false, wiederEin: 22)));
+    }
+
+    [Fact]
+    public void ZusatzSperre_LaeuftDerZusatzOderIstEsUnbekannt_schweigtSie()
+    {
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, zusatzAn: true, wiederEin: 22)));
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, zusatzAn: null, wiederEin: 22)));
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, zusatzAn: false, wiederEin: null)));
+    }
+
+    [Fact]
+    public void ZusatzSperre_ZusatzAutomatikAus_schweigtSie_weilDannNichtDieTemperaturDasWartenErklaert()
+    {
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, zusatzAn: false, wiederEin: 22, zusatzAutomatik: false)));
+    }
+
+    [Fact]
+    public void ZusatzSperre_FeuchteImPlan_schweigtSie()
+    {
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(feuchte: 50, temp: 22.4, tempMax: 24, zusatzAn: false, wiederEin: 22)));
+    }
+
+    [Fact]
+    public void ZusatzSperre_UeberDerHoechsttemperatur_sagtNurZuWarm()
+    {
+        var b = Assert.Single(EntfeuchterBremsen.Pruefen(Eingabe(temp: 24.5, tempMax: 24, zusatzAn: false, wiederEin: 22)));
+        Assert.Equal("uebertemperatur", b.Art);
+    }
+
+    [Fact]
+    public void ZusatzSperre_HauptgeraetAus_lassenDenSatzUeberDasHauptgeraetWeg()
+    {
+        var b = Assert.Single(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, portAn: false, zusatzAn: false, wiederEin: 22)));
+        Assert.DoesNotContain("Hauptentfeuchter", b.Text);
+        Assert.StartsWith("Das Zelt hat", b.Text);
+    }
+
+    [Fact]
+    public void ZusatzSperre_TagsNachVpdGeregelt_schweigtSie_weilDannNichtDieFeuchteDenZusatzSteuert()
+    {
+        Assert.Empty(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, zusatzAn: false, wiederEin: 22, nachVpd: true)));
+    }
+
+    [Fact]
+    public void ZusatzSperre_TagbetriebNichtErlaubt_schweigtSie_unddieBremseTagbetriebSprichtStattdessen()
+    {
+        var liste = EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, tag: true, tagbetrieb: false, zusatzAn: false, wiederEin: 22));
+        Assert.DoesNotContain(liste, b => b.Art == "zusatzsperre");
+        Assert.Contains(liste, b => b.Art == "tagbetrieb");
+        // Nachts gilt der Tagbetrieb nicht: dort sperrt die Temperatur wie sonst.
+        Assert.Contains(EntfeuchterBremsen.Pruefen(Eingabe(temp: 22.4, tempMax: 24, tag: false, tagbetrieb: false, zusatzAn: false, wiederEin: 22)), b => b.Art == "zusatzsperre");
     }
 }

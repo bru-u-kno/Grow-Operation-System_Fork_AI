@@ -59,6 +59,8 @@ public sealed class EntfeuchterZusatzSteuerungService : IStartwertDienst
         public static string Mindestpause => Kennungen.Id("input_number.fork_entfeuchter_zusatz_mindestpause");
         public static string FolgeAbstand => Kennungen.Id("input_number.fork_entfeuchter_zusatz_folge_abstand");
         public static string WiederEinAbstand => Kennungen.Id("input_number.fork_entfeuchter_zusatz_wieder_ein_abstand");
+        /// <summary>Unter dieser Zelttemperatur darf der Zusatz nach einer Wärme-Abschaltung wieder einschalten (Rechenwert in Home Assistant).</summary>
+        public static string WiederEinTemperatur => Kennungen.Id("sensor.fork_entfeuchter_zusatz_wieder_ein_temperatur");
         public static string ZuschaltVerzoegerung => Kennungen.Id("input_number.fork_entfeuchter_zusatz_zuschalt_verzogerung");
         public static string Tagbetrieb => Kennungen.Id("input_boolean.fork_entfeuchter_zusatz_tagbetrieb_erlauben");
         public static string NachtDurchlaufen => Kennungen.Id("input_boolean.fork_entfeuchter_zusatz_nacht_durchlaufen");
@@ -582,7 +584,7 @@ public sealed class EntfeuchterZusatzSteuerungService : IStartwertDienst
         return alle.Count == 0 ? [regelung.EntityId] : SteuerungBauteile.AutomationFinden(regelung, alle);
     }
 
-    private static bool? AutomatikAn(IReadOnlyCollection<HomeAssistantEntity> alle)
+    internal static bool? AutomatikAn(IReadOnlyCollection<HomeAssistantEntity> alle)
     {
         var zustaende = AutomatikKennungen(alle)
             .Select(id => alle.FirstOrDefault(x => string.Equals(x.EntityId, id, StringComparison.OrdinalIgnoreCase))?.State)

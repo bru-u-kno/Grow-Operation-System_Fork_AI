@@ -18,6 +18,7 @@ import {
   planHinweisZeigen,
   statusHinweis,
   tempGrenzen,
+  zusatzTempOk,
   temperaturBand,
   unbekannteFehler,
   vpdBand,
@@ -432,5 +433,21 @@ describe('Namen', () => {
     expect(namenAenderung(namen, { fuehrung: '', zusatz: 'Zelt-Entfeuchter' })).toEqual({})
     expect(wirksamerName('', 'Vorgabe')).toBe('Vorgabe')
     expect(wirksamerName(' Eigen ', 'Vorgabe')).toBe('Eigen')
+  })
+})
+
+describe('zusatzTempOk — läuft er, zählt die Abschalt-Temperatur; steht er, die Wieder-ein-Temperatur', () => {
+  const g = { folgeAus: 23, wiederEin: 22 }
+  it('Zelt zwischen Wieder-ein und Abschalt-Temperatur: laufend in Ordnung, stehend gesperrt', () => {
+    expect(zusatzTempOk(22.4, true, g)).toBe(true)
+    expect(zusatzTempOk(22.4, false, g)).toBe(false)
+  })
+  it('genau auf der Grenze ist es nicht mehr in Ordnung (wie „unter“ in der Regelung)', () => {
+    expect(zusatzTempOk(22, false, g)).toBe(false)
+    expect(zusatzTempOk(21.9, false, g)).toBe(true)
+    expect(zusatzTempOk(23, true, g)).toBe(false)
+  })
+  it('ohne Messwert: unbekannt, nichts geraten', () => {
+    expect(zusatzTempOk(null, false, g)).toBeNull()
   })
 })

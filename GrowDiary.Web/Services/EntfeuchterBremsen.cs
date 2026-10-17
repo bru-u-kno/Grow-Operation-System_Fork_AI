@@ -4,7 +4,7 @@ using GrowDiary.Web.Models;
 namespace GrowDiary.Web.Services;
 
 /// <summary>Ein Grund, warum die Luftfeuchte nicht dort ist, wo der Plan sie will — für die Kachel „Was bremst gerade?“.</summary>
-/// <param name="Art">Maschinenlesbar: <c>kapazitaet</c>, <c>uebertemperatur</c>, <c>aussenluft</c>, <c>tagbetrieb</c>, <c>drosselung</c>, <c>automatik</c>.</param>
+/// <param name="Art">Maschinenlesbar: <c>kapazitaet</c>, <c>uebertemperatur</c>, <c>aussenluft</c>, <c>tagbetrieb</c>, <c>drosselung</c>, <c>automatik</c>, <c>zusatzsperre</c>.</param>
 /// <param name="Stufe"><c>kritisch</c>, <c>warnung</c> oder <c>info</c>.</param>
 public sealed record EntfeuchterBremse(string Art, string Stufe, string Titel, string Text);
 
@@ -24,7 +24,11 @@ public sealed record BremsEingabe(
     int EinschaltverzoegerungMin,
     int WartezeitAussenluftMin,
     int? UeberGrenzeSeitMin,
-    int? LaeuftSeitMin);
+    int? LaeuftSeitMin,
+    bool? ZusatzAn = null,
+    double? ZusatzWiederEinC = null,
+    bool? ZusatzAutomatikAn = null,
+    bool ZusatzNachVpd = false);
 
 /// <summary>
 /// Fork AI (A-022): Warum ein Entfeuchter nicht schaltet oder nicht reicht — in Worten, mit Zahlen.
@@ -63,6 +67,20 @@ public static class EntfeuchterBremsen
         {
             liste.Add(new EntfeuchterBremse("uebertemperatur", ueber ? "warnung" : "info", $"Zu warm ({Zahl(t)} °C über {Zahl(tm)} °C)",
                 $"Alle Entfeuchter sind aus, bis es unter {Zahl(tm)} °C ist. Das schützt Pflanze und Geräte, entfeuchtet aber nicht."));
+        }
+
+        // Zusatz-Sperre (A-022, Nachprüfung 15.10.): Nach einer Wärme-Abschaltung schaltet der Zusatz erst unter der Wieder-ein-Temperatur
+        // wieder ein — auch wenn das Zelt schon unter seiner Abschalt-Temperatur liegt. Diese Lücke dazwischen blieb stundenlang ohne
+        // Erklärung (Tag 14./15.10.: ca. 17 h). Nur bei Feuchte über dem Plan-Wert, sonst wäre das Warten kein Hindernis; über der
+        // Höchsttemperatur sagt „Zu warm“ schon alles. Stumm, wenn der Zusatz aus anderem Grund steht: tagsüber nach VPD geregelt
+        // (dann zählt nicht die Feuchte) oder Tagbetrieb nicht erlaubt (dafür gibt es die eigene Bremse „tagbetrieb“).
+        if (ueber && x is { ZusatzAn: false, ZusatzAutomatikAn: not false, ZusatzNachVpd: false, TempC: { } tz, ZusatzWiederEinC: { } we }
+            && tz >= we && !(x.TempMaxC is { } tmz && tz > tmz) && !(x is { TagPhase: true, TagbetriebErlaubt: false }))
+        {
+            var davor = x.PortAn == true ? "Solange läuft nur der Hauptentfeuchter; die" : "Die";
+            liste.Add(new EntfeuchterBremse("zusatzsperre", "warnung", "Der Zusatz-Entfeuchter wartet auf Abkühlung",
+                $"Das Zelt hat {Zahl(tz)} °C. Der Zusatz schaltet erst unter {Zahl(we)} °C wieder ein, damit er das Zelt nicht weiter aufheizt. "
+                + $"{davor} Feuchte liegt mit {Zahl(x.FeuchteProzent!.Value)} % über dem Plan-Wert ({Zahl(x.GrenzeProzent!.Value)} %)."));
         }
 
         if (x.AutomatikAn == false)

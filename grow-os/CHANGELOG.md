@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.239
+
+**Fork AI.** Die Entfeuchtung sagt jetzt, **warum der Zusatz-Entfeuchter steht, obwohl das Zelt schon unter seiner Abschalt-Temperatur liegt**: Nach einer Wärme-Abschaltung schaltet er erst unter der Wieder-ein-Temperatur wieder ein. Dazwischen stand er stundenlang aus, und die Seite schwieg dazu.
+
+- **Was war:** An einer Anlage lag das Zelt am Tag lange bei 22,1 bis 22,6 °C. Der Zusatz war aus (Abschalt-Temperatur 23 °C), kam aber erst unter 22,0 °C zurück; die Feuchte blieb mit 54 bis 56 % über dem Plan-Wert von 53 %. Die Kachel „Was bremst gerade?" zeigte nichts, der gelbe Hinweis „pausiert: Zelt zu warm" erscheint erst über der Abschalt-Temperatur, und in „Warum läuft welches Gerät?" stand bei „Zelt nicht zu warm" sogar ein ✔.
+- **Jetzt:** In der Kachel „Was bremst gerade?" steht die Zeile **„Der Zusatz-Entfeuchter wartet auf Abkühlung"** mit den Zahlen: Zelttemperatur, Wieder-ein-Temperatur, Feuchte und Plan-Wert. Sie erscheint nur, wenn alles zugleich gilt: die Feuchte liegt über dem Plan-Wert, der Zusatz ist aus, seine Automation ist an, und das Zelt ist mindestens so warm wie die Wieder-ein-Temperatur, aber nicht über der Höchsttemperatur (darüber sagt „Zu warm" schon alles). Sie schweigt, wenn tagsüber nach VPD geregelt wird oder der Tagbetrieb nicht erlaubt ist, denn dann steht der Zusatz aus anderem Grund.
+- **Ehrlichere Anzeige an zwei weiteren Stellen:** In „Warum läuft welches Gerät?" zeigt „Zelt nicht zu warm" für den stehenden Zusatz ✖, solange das Zelt nicht unter der Wieder-ein-Temperatur liegt (läuft er, zählt weiter die Abschalt-Temperatur). Der Gerätestatus des Zusatzes heißt in diesem Bereich „wartet" statt „aus" — aber nur, wenn die Feuchte ihn auch wollen würde.
+- **Nur Anzeige:** Die Regelung in Home Assistant, die Helfer und alle Einstellungen bleiben unverändert; es wird nichts angelegt oder geschrieben.
+- **Geprüft:** 21 Backend-Tests der Bremsen (davon 9 neu: genau auf der Wieder-ein-Temperatur sperrt, darunter nicht; Zusatz läuft oder Zustand unbekannt; Wieder-ein-Temperatur fehlt; Automation aus; Feuchte im Plan; über der Höchsttemperatur nur „Zu warm"; Hauptentfeuchter aus lässt den Satz weg; tagsüber nach VPD; Tagbetrieb nicht erlaubt) und 3 Vitest-Fälle für die Temperaturprüfung des Zusatzes; zwei neue E2E-Fälle gegen die gebaute App (Hinweis, ✖ und „wartet" im Bereich zwischen Abschalt- und Wieder-ein-Temperatur; keine „wartet"-Anzeige, wenn die Feuchte reicht). Bissnachweise: Der Vergleich `>=` zu `>` macht den Grenzfall-Test rot, die alte Temperaturprüfung in der Zeile macht den E2E-Fall rot, die Feuchte-Bedingung des Status entfernt macht den zweiten E2E-Fall rot; alle danach wieder grün. Ein unabhängiger Prüfer fand drei Fälle, in denen die Meldung falsch wäre (VPD, Tagbetrieb, Status ohne Feuchte); alle behoben.
+- **Nicht enthalten:** Der obere Hinweis „pausiert: Zelt zu warm" gilt weiter erst über der Abschalt-Temperatur; der Bereich darunter steht in der Kachel „Was bremst gerade?".
+
 ## 2.0.0-forkai.238
 
 **Fork AI.** Die Kachel der Zuluft in Steuerung › Übersicht sagt jetzt, **warum** der Lüfter gerade nicht läuft — mit den Zahlen, nach denen die Regelung entscheidet. Vorher stand dort bei ausgeschaltetem Lüfter fast immer nur „bereit".

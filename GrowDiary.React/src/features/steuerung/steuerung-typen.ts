@@ -460,7 +460,7 @@ export type EntfeuchterLive = {
 
 /** Ein Grund, warum die Luftfeuchte nicht dort ist, wo der Plan sie will. */
 export type EntfeuchterBremse = {
-  art: 'kapazitaet' | 'uebertemperatur' | 'aussenluft' | 'tagbetrieb' | 'drosselung' | 'automatik'
+  art: 'kapazitaet' | 'uebertemperatur' | 'aussenluft' | 'tagbetrieb' | 'drosselung' | 'automatik' | 'zusatzsperre'
   stufe: 'kritisch' | 'warnung' | 'info'
   titel: string
   text: string

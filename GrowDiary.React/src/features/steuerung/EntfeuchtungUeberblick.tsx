@@ -1,6 +1,6 @@
 import { V1Card } from '../../components/v1'
 import { tempMax, zahl } from './entfeuchter-band'
-import { tempGrenzen } from './entfeuchter-zusatz'
+import { tempGrenzen, zusatzTempOk } from './entfeuchter-zusatz'
 import { hauptStatus, zusatzStatus } from './entfeuchtung-modell'
 import { Lesen } from './EntfeuchtungBausteine'
 import type { Ctx } from './EntfeuchtungBausteine'
@@ -81,7 +81,11 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const tVon = Math.floor(Math.min(...tWerte) - 2)
   const tBis = Math.ceil(Math.max(...tWerte) + 2)
 
-  const wartet = Boolean(zl && grenzen && zl.tempC != null && zl.tempC > grenzen.folgeAus && zl.zusatzAn !== true && z?.geladen?.hilfe !== 'aus')
+  // „wartet": über der Abschalt-Temperatur immer; im Bereich darunter, aber noch nicht unter der Wieder-ein-Temperatur, nur wenn die Feuchte
+  // den Zusatz auch wollen würde (über der Einschalt-Schwelle) und er nicht nach VPD geregelt wird — sonst steht er aus anderem Grund.
+  const feuchteWillZusatz = hl.feuchteProzent != null && hl.einAktivProzent != null && hl.feuchteProzent > hl.einAktivProzent && zl?.schaltgroesse !== 'vpd'
+  const wartet = Boolean(zl && grenzen && zl.zusatzAn !== true && z?.geladen?.hilfe !== 'aus'
+    && ((zl.tempC != null && zl.tempC > grenzen.folgeAus) || (feuchteWillZusatz && zusatzTempOk(zl.tempC, false, grenzen) === false)))
   const geraete: Array<{ name: string; rolle: string; status: string }> = [
     { name: haupt, rolle: z ? 'Haupt-Entfeuchter · führt' : 'Entfeuchter', status: hauptStatus(hl) },
     ...(z && zl ? [{ name: zusatz, rolle: 'Zusatz-Entfeuchter · hilft', status: zusatzStatus(zl, wartet) }] : []),
@@ -96,7 +100,7 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
     ...(zl && grenzen && z?.geladen
       ? [
           { frage: `${zusatz}: ${haupt} läuft`, antwort: zl.fuehrungAn == null ? 'unbekannt' : zl.fuehrungAn ? 'ja — der Zusatz darf mithelfen' : 'nein — der Zusatz startet sofort, wenn nötig', ok: zl.fuehrungAn },
-          { frage: `${zusatz}: Zelt nicht zu warm (geht ab ${zahl(grenzen.folgeAus)} °C aus)`, antwort: `${zahl(zl.tempC)} °C · wieder an unter ${zahl(grenzen.wiederEin)} °C`, ok: zl.tempC == null ? null : zl.tempC < grenzen.folgeAus },
+          { frage: `${zusatz}: Zelt nicht zu warm (geht ab ${zahl(grenzen.folgeAus)} °C aus)`, antwort: `${zahl(zl.tempC)} °C · wieder an unter ${zahl(grenzen.wiederEin)} °C`, ok: zusatzTempOk(zl.tempC, zl.zusatzAn === true, grenzen) },
           { frage: `${zusatz}: Hilfe und Automatik an`, antwort: z.geladen.hilfe === 'aus' ? 'Hilfe steht auf „aus".' : z.geladen.automatikAktiv ? 'ja' : 'Automatik ist aus.', ok: z.geladen.hilfe !== 'aus' && z.geladen.automatikAktiv },
         ]
       : []),
