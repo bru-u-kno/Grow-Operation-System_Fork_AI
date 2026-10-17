@@ -1,4 +1,5 @@
 using GrowDiary.Web.Api.Contracts;
+using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +18,7 @@ public sealed class SettingsController : Controller
 {
     [HttpGet("")]
     public IActionResult Index()
-        => Redirect("/einstellungen");
+        => Redirect(IngressPfad.Weiterleitung(Request, "/einstellungen"));
 
     [HttpPost(nameof(SaveHomeAssistant))]
     [ValidateAntiForgeryToken]

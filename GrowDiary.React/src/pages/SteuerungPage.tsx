@@ -1,4 +1,5 @@
 import { SteuerungWechsel } from '../features/steuerung/SteuerungWechsel'
+import { HaStummHinweis } from '../features/steuerung/HaStummHinweis'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
@@ -159,9 +160,7 @@ export default function SteuerungPage() {
   return (
     <V1Page eyebrow="Betrieb" title="Steuerung" subtitle="Alle Regelungen des RDWC-Zelts · laufen in Home Assistant">
       {fehler && <V1Alert tone="critical" message={fehler} />}
-      {uebersicht && !uebersicht.haErreichbar && (
-        <V1Alert title="Home Assistant antwortet nicht" message="Die Werte unten sind der letzte bekannte Stand. Die Regelung läuft davon unabhängig weiter." />
-      )}
+      {uebersicht && <HaStummHinweis haErreichbar={uebersicht.haErreichbar} eingerichtet={module.length > 0} />}
       {laedt && !uebersicht ? (
         <V1Skeleton rows={5} label="Steuerungen werden geladen" />
       ) : !uebersicht || (module.length === 0 && nichtEingerichtet.length === 0) ? (
@@ -340,21 +339,21 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 
   const live = seite.live
   const ziele = wirksameZiele(entwurf, seite.planPpm)
-  // Fork AI: Warum der T6 gerade tief läuft — die Grenzen kommen aus dem
+  // Fork AI: Warum die Abluft gerade tief läuft — die Grenzen kommen aus dem
   // Livebild, weil der Helfer in HA mit genau diesen Werten rechnet.
   const tempOk = live.canopyC != null && live.tiefBisTempC != null ? live.canopyC <= live.tiefBisTempC : null
   const rhOk = live.rhProzent != null && live.tiefBisRhProzent != null ? live.rhProzent <= live.tiefBisRhProzent : null
   const tiefGrund = !entwurf.abluftDrosseln
-    ? 'Die Drosselung ist ausgeschaltet — der T6 bleibt auf der normalen Stufe.'
+    ? 'Die Drosselung ist ausgeschaltet — die Abluft bleibt auf der normalen Stufe.'
     : live.klimaOk === false
-      ? `Das Klima sperrt gerade — der T6 läuft auf Stufe ${entwurf.t6StufeKlima ?? '–'}, bis die Feuchte im Mittel und die Canopy wieder unter den Grenzen sind.`
+      ? `Das Klima sperrt gerade — die Abluft läuft auf Stufe ${entwurf.t6StufeKlima ?? '–'}, bis die Feuchte im Mittel und die Canopy wieder unter den Grenzen sind.`
       : live.tiefAktiv == null
       ? 'Der Helfer binary_sensor.co2_t6_stufe_tief_sinnvoll meldet sich nicht.'
       : live.tiefAktiv && tempOk === true && rhOk === true
-        ? 'Beide Bedingungen erfüllt — der T6 läuft auf der tiefen Stufe.'
+        ? 'Beide Bedingungen erfüllt — die Abluft läuft auf der tiefen Stufe.'
         : live.tiefAktiv
           ? 'Haltebereich: die tiefe Stufe bleibt vorerst, damit es nicht flattert — zurück geht es erst am oberen Rand.'
-          : 'Zu warm oder zu feucht für die tiefe Stufe — der T6 läuft auf der Dosierstufe, solange das Klima passt.'
+          : 'Zu warm oder zu feucht für die tiefe Stufe — die Abluft läuft auf der Dosierstufe, solange das Klima passt.'
   const setz = <K extends keyof Co2Einstellungen>(feld: K, wert: Co2Einstellungen[K]) => setEntwurf({ ...entwurf, [feld]: wert })
   // Fork AI (forkai.150): Was der Entwurf ergibt — nicht erst nach dem
   // Speichern. Die Basis ist die Obergrenze, die in HA gerade gilt (aus dem
@@ -393,7 +392,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {meldung && <V1Alert tone={meldung.startsWith('Gespeichert und') ? 'ok' : 'warn'} message={meldung} />}
-      {!live.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand." />}
+      <HaStummHinweis haErreichbar={live.haErreichbar} eingerichtet={seite.geraeteZugeordnet > 0} />
 
 
       <BestandHinweis bestand={bestand} />
@@ -410,7 +409,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         </div>
         <div className="st-marken">
           <span className={`st-marke ${live.klimaOk ? 'is-ok' : 'is-warn'}`}>{live.klimaOk ? 'Klima OK' : 'Klima sperrt'}</span>
-          {live.t6Stufe != null && <span className="st-marke">T6 Stufe {live.t6Stufe}</span>}
+          {live.t6Stufe != null && <span className="st-marke">Abluft Stufe {live.t6Stufe}</span>}
           {live.canopyC != null && <span className="st-marke">Canopy {formatNumber(live.canopyC, 1)} °C</span>}
           {live.rhProzent != null && <span className="st-marke">RH {formatNumber(live.rhProzent, 0)} %</span>}
           {live.vpd != null && <span className="st-marke">VPD {formatNumber(live.vpd, 2)}</span>}
@@ -493,7 +492,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         <V1Section title="Klima hat Vorrang">
           <V1Card>
             <div className="st-feldzeile">
-              <span className="st-etikett">Abluft T6 jetzt</span>
+              <span className="st-etikett">Abluft jetzt</span>
               <span className="st-nurlesen">{live.t6Stufe != null ? `Stufe ${live.t6Stufe}` : '–'}</span>
             </div>
             <div className="st-feldzeile">
@@ -593,12 +592,12 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               frei: Mittel ({entwurf.rhMittelMinuten ?? '–'} min) höchstens {fmtProzent(freiAb)}
             </p>
 
-            <h3 className="st-gruppe">Abluft T6</h3>
-            <V1Switch label="Abluft beim Dosieren drosseln" checked={entwurf.abluftDrosseln} onChange={(v) => setz('abluftDrosseln', v)} hint="Ohne Drosselung bläst der T6 das CO₂ hinaus, während dosiert wird." />
-            <Zahl label="T6 normal" wert={entwurf.t6StufeNormal} onChange={(v) => setz('t6StufeNormal', v)} fehler={feldFehler.T6StufeNormal} />
-            <Zahl label="T6 beim Dosieren" wert={entwurf.t6StufeDosierung} onChange={(v) => setz('t6StufeDosierung', v)} fehler={feldFehler.T6StufeDosierung} />
-            <Zahl label="T6 bei Klimasperre" hinweis="Zwischenstufe, solange das Klima sperrt — trocknet, ohne alles CO₂ hinauszublasen." wert={entwurf.t6StufeKlima ?? Number.NaN} onChange={(v) => setz('t6StufeKlima', v)} fehler={feldFehler.T6StufeKlima} />
-            <Zahl label="T6 tief" hinweis="Nur bei kühler und trockener Luft — sonst staut sich Feuchte." wert={entwurf.t6StufeTief} onChange={(v) => setz('t6StufeTief', v)} fehler={feldFehler.T6StufeTief} />
+            <h3 className="st-gruppe">Abluft</h3>
+            <V1Switch label="Abluft beim Dosieren drosseln" checked={entwurf.abluftDrosseln} onChange={(v) => setz('abluftDrosseln', v)} hint="Ohne Drosselung bläst die Abluft das CO₂ hinaus, während dosiert wird." />
+            <Zahl label="Abluft normal" wert={entwurf.t6StufeNormal} onChange={(v) => setz('t6StufeNormal', v)} fehler={feldFehler.T6StufeNormal} />
+            <Zahl label="Abluft beim Dosieren" wert={entwurf.t6StufeDosierung} onChange={(v) => setz('t6StufeDosierung', v)} fehler={feldFehler.T6StufeDosierung} />
+            <Zahl label="Abluft bei Klimasperre" hinweis="Zwischenstufe, solange das Klima sperrt — trocknet, ohne alles CO₂ hinauszublasen." wert={entwurf.t6StufeKlima ?? Number.NaN} onChange={(v) => setz('t6StufeKlima', v)} fehler={feldFehler.T6StufeKlima} />
+            <Zahl label="Abluft tief" hinweis="Nur bei kühler und trockener Luft — sonst staut sich Feuchte." wert={entwurf.t6StufeTief} onChange={(v) => setz('t6StufeTief', v)} fehler={feldFehler.T6StufeTief} />
             <Zahl label="Stufe tief nur bis" einheit="°C" schritt={0.5} wert={entwurf.t6TiefMaxTempC} onChange={(v) => setz('t6TiefMaxTempC', v)} fehler={feldFehler.T6TiefMaxTempC} />
           </V1Card>
         </V1Section>

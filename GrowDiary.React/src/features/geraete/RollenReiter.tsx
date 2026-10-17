@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ApiRequestError, apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Section, V1Skeleton } from '../../components/v1'
 import { V1Select } from '../../components/V1Select'
+import { insBildRollen } from '../../components/reiter-ins-bild'
 import type { V1Option } from '../../components/V1Select'
 import type { HomeAssistantEntity } from '../../types'
 import type { GeraeteSeite, GeraetZeile } from '../steuerung/steuerung-typen'
@@ -56,6 +57,10 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
   // Wechsel der Steuerung Zustand nachzieht.
   const [aenderungen, setAenderungen] = useState<Record<string, Record<string, string>>>({})
   const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
+  // Zählt die abgewiesenen Speichern-Versuche: nach JEDEM (auch dem zweiten mit denselben Fehlern) rollt die Seite zur
+  // ersten markierten Zeile. Neuling-Test A-017, Lücke 9: „Bitte die markierten Zeilen prüfen." stand ganz oben, der
+  // Speichern-Knopf ganz unten, und die Zeilen waren nur durch eine kleine graue Zeile „markiert".
+  const [fehlerZeigen, setFehlerZeigen] = useState(0)
   const [fehler, setFehler] = useState<string | null>(null)
   const [hinweis, setHinweis] = useState<string | null>(null)
   const [speichert, setSpeichert] = useState(false)
@@ -109,6 +114,16 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
   const ungespeichert = Object.values(aenderungen).some((m) => Object.keys(m).length > 0)
   useEffect(() => { onUngespeichert?.(ungespeichert) }, [ungespeichert, onUngespeichert])
 
+  useEffect(() => {
+    if (fehlerZeigen === 0) return undefined
+    // Erst im nächsten Bild: dann stehen die markierten Zeilen sicher im Baum.
+    const bild = requestAnimationFrame(() => {
+      const markiert = document.querySelector<HTMLElement>('.st-rollen .st-fehler')
+      insBildRollen(markiert?.closest<HTMLElement>('.v1-field') ?? markiert)
+    })
+    return () => cancelAnimationFrame(bild)
+  }, [fehlerZeigen])
+
   const offen = modul?.zeilen.filter((zeile) => zeile.pflicht && !zeile.gefunden).length ?? 0
 
   async function speichern() {
@@ -130,6 +145,7 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
       if (felder) {
         setFeldFehler(Object.fromEntries(Object.entries(felder).map(([feld, texte]) => [feld, texte.join(' ')])))
         setFehler('Bitte die markierten Zeilen prüfen.')
+        setFehlerZeigen((n) => n + 1)
       } else {
         setFehler(formatApiError(caught, 'Das Speichern hat nicht geklappt.'))
       }
@@ -257,7 +273,7 @@ function RollenZeile({
   return (
     <V1Field
       label={`${zeile.label}${zeile.einheit ? ` (${zeile.einheit})` : ''}`}
-      hint={fehler ?? zeile.hinweis ?? undefined}
+      hint={zeile.hinweis ?? undefined}
       wide
     >
       <div className="st-geraet">
@@ -293,6 +309,7 @@ function RollenZeile({
           {zeile.gefunden ? (haWert(zeile.livewert, zeile.einheit) ?? 'gefunden') : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}
         </span>
       </div>
+      {fehler && <div className="st-fehler" role="alert">{fehler}</div>}
     </V1Field>
   )
 }

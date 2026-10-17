@@ -36,6 +36,24 @@ public static partial class IngressPfad
         return Muster().IsMatch(wert) ? wert : null;
     }
 
+    /// <summary>
+    /// Der Pfad einer Weiterleitung INNERHALB der App — mit dem Ingress-Präfix, wenn die Anfrage eines hat.
+    /// </summary>
+    /// <remarks>
+    /// <c>Redirect("/zelte")</c> schreibt den Pfad unverändert in <c>Location</c>. Im Add-on liegt die App aber unter
+    /// <c>/api/hassio_ingress/&lt;token&gt;</c>; ein absoluter Pfad ohne dieses Präfix führt dort an der App vorbei
+    /// (Neuling-Test A-017, Lücke 7). Das Präfix steht schon im <c>PathBase</c> der Anfrage (Program.cs setzt es nur für
+    /// einen Wert, der <see cref="Pruefen"/> besteht) — hier wird es nur vorangestellt, nichts Neues geführt.
+    /// Ohne Präfix (Aufruf an der Wurzel, kein Add-on) bleibt der Pfad, wie er ist.
+    /// </remarks>
+    /// <param name="request">Die laufende Anfrage; <c>null</c> (z. B. in einem Test ohne Kontext) heißt: kein Präfix.</param>
+    /// <param name="pfad">Der Pfad ab der Wurzel der App, mit führendem Schrägstrich, ohne Abfrage.</param>
+    public static string Weiterleitung(HttpRequest? request, string pfad)
+    {
+        var basis = request?.PathBase.Value;
+        return string.IsNullOrEmpty(basis) ? pfad : basis.TrimEnd('/') + pfad;
+    }
+
     /// <summary>Das <c>&lt;base&gt;</c>-Element für die Startseite — immer HTML-kodiert.</summary>
     /// <remarks>
     /// Doppelt gesichert: der Pfad hat das Muster schon passiert, kodiert wird

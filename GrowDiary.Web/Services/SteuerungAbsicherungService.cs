@@ -275,7 +275,7 @@ public sealed class SteuerungAbsicherungService
         var laeuft = dosierungen.Any(d => zustaende.TryGetValue(d, out var z) && z.Laeuft) || port != PortLage.Zu;
         if (port == PortLage.Unbekannt)
         {
-            const string unlesbar = "Der Zustand der Dosier-Steckdose ist gerade nicht lesbar — solange wird nichts neu "
+            const string unlesbar = "Der Zustand des CO₂-Ventils ist gerade nicht lesbar — solange wird nichts neu "
                 + "geschrieben, denn ein offenes Ventil bliebe beim Neuschreiben offen.";
             hinweis = hinweis is null ? unlesbar : $"{hinweis} {unlesbar}";
         }

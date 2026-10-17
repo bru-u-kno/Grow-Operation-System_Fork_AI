@@ -635,38 +635,57 @@ test.describe('Verlaufsdiagramm', () => {
  * (Befund des Prüfers, 03.10.2026). Geprüft wird gegen die Messwerte selbst:
  * innerhalb jeder Nacht ist PPFD 0, ausserhalb nicht.
  */
-test.describe('Verlaufsdiagramm in anderer Zeitzone', () => {
-  test.use({ timezoneId: 'Europe/Berlin' })
+/**
+ * Zwei feste Zonen ohne Sommerzeit — der Browser bekommt die, die sich vom Server unterscheidet.
+ * Vorher stand hier fest `Europe/Berlin`: auf einer Maschine in Berlin (die Entwickler-VM) war der Fall
+ * deshalb IMMER rot („derselben Zone — der Fall misst nichts"), in der CI (UTC) grün. Jetzt misst er überall dasselbe.
+ */
+const ANDERE_ZONEN: ReadonlyArray<{ id: string; versatzMin: number }> = [
+  { id: 'Asia/Tokyo', versatzMin: 540 },
+  { id: 'America/Sao_Paulo', versatzMin: -180 },
+]
 
-  test('die Dunkelphase deckt sich mit PPFD 0 aus dem Demobestand', async ({ page, request }) => {
-    const verlauf = await oeffnen(page, request, 1280)
+test.describe('Verlaufsdiagramm in anderer Zeitzone', () => {
+  test('die Dunkelphase deckt sich mit PPFD 0 aus dem Demobestand', async ({ browser, request }) => {
+    darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend — das Verlaufsdiagramm braucht die laufende App mit Demobestand.')
     const live = await (await request.get('/api/live/tents/1')).json() as { metrics: Array<{ key: string; lightUtcOffsetMinutes?: number | null }> }
     const versatz = live.metrics.find((m) => m.key === 'light-cycle')?.lightUtcOffsetMinutes
     expect(versatz, 'Der Server schickt keine Zone zu den Lichtzeiten.').not.toBeNull()
-    const browserVersatz = await page.evaluate(() => -new Date().getTimezoneOffset())
-    // Mengenwaechter: ohne Unterschied der Zonen prüft dieser Fall nichts.
-    expect(browserVersatz, 'Browser und Lichtplan liegen in derselben Zone — der Fall misst nichts.').not.toBe(versatz)
+    const zone = ANDERE_ZONEN.find((z) => z.versatzMin !== versatz)
+    expect(zone, `Keine Zone gefunden, die sich von ${versatz} Minuten unterscheidet.`).toBeDefined()
 
-    const naechte = await verlauf.locator('[data-audit="verlauf-nacht"]').evaluateAll((rects) =>
-      rects.map((r) => ({ von: Number(r.getAttribute('data-von')), bis: Number(r.getAttribute('data-bis')) })))
-    expect(naechte.length).toBeGreaterThanOrEqual(1)
+    const kontext = await browser.newContext({ baseURL: test.info().project.use.baseURL, timezoneId: zone!.id })
+    try {
+      const page = await kontext.newPage()
+      const verlauf = await oeffnen(page, request, 1280)
+      const browserVersatz = await page.evaluate(() => -new Date().getTimezoneOffset())
+      // Mengenwaechter: die gewählte Zone ist wirklich angekommen und unterscheidet sich vom Lichtplan.
+      expect(browserVersatz, `Der Browser steht nicht in ${zone!.id}.`).toBe(zone!.versatzMin)
+      expect(browserVersatz, 'Browser und Lichtplan liegen in derselben Zone — der Fall misst nichts.').not.toBe(versatz)
 
-    const verlaufPpfd = await (await request.get('/api/tents/1/history?metrics=ppfd&days=1&resolution=raw')).json() as { series: Array<{ points: Array<{ t: string; v: number }> }> }
-    const punkte = verlaufPpfd.series[0].points.map((p) => ({ t: new Date(p.t).getTime(), v: p.v }))
-    const von = Math.min(...naechte.map((n) => n.von))
-    const bis = Math.max(...naechte.map((n) => n.bis))
-    const RAND = 20 * 60_000
-    let geprueft = 0
-    const fehler: string[] = []
-    for (const p of punkte) {
-      if (p.t < von - 12 * 3600_000 || p.t > bis + 12 * 3600_000) continue
-      const nacht = naechte.some((n) => p.t > n.von + RAND && p.t < n.bis - RAND)
-      const tag = naechte.every((n) => p.t < n.von - RAND || p.t > n.bis + RAND)
-      if (nacht && p.v !== 0) fehler.push(`${new Date(p.t).toISOString()} im grauen Streifen, PPFD ${p.v}`)
-      if (tag && p.v === 0) fehler.push(`${new Date(p.t).toISOString()} ausserhalb der Nacht, PPFD 0`)
-      if (nacht || tag) geprueft++
+      const naechte = await verlauf.locator('[data-audit="verlauf-nacht"]').evaluateAll((rects) =>
+        rects.map((r) => ({ von: Number(r.getAttribute('data-von')), bis: Number(r.getAttribute('data-bis')) })))
+      expect(naechte.length).toBeGreaterThanOrEqual(1)
+
+      const verlaufPpfd = await (await request.get('/api/tents/1/history?metrics=ppfd&days=1&resolution=raw')).json() as { series: Array<{ points: Array<{ t: string; v: number }> }> }
+      const punkte = verlaufPpfd.series[0].points.map((p) => ({ t: new Date(p.t).getTime(), v: p.v }))
+      const von = Math.min(...naechte.map((n) => n.von))
+      const bis = Math.max(...naechte.map((n) => n.bis))
+      const RAND = 20 * 60_000
+      let geprueft = 0
+      const fehler: string[] = []
+      for (const p of punkte) {
+        if (p.t < von - 12 * 3600_000 || p.t > bis + 12 * 3600_000) continue
+        const nacht = naechte.some((n) => p.t > n.von + RAND && p.t < n.bis - RAND)
+        const tag = naechte.every((n) => p.t < n.von - RAND || p.t > n.bis + RAND)
+        if (nacht && p.v !== 0) fehler.push(`${new Date(p.t).toISOString()} im grauen Streifen, PPFD ${p.v}`)
+        if (tag && p.v === 0) fehler.push(`${new Date(p.t).toISOString()} ausserhalb der Nacht, PPFD 0`)
+        if (nacht || tag) geprueft++
+      }
+      expect(geprueft, 'Zu wenige PPFD-Werte geprüft.').toBeGreaterThanOrEqual(20)
+      expect(fehler, fehler.slice(0, 6).join('\n')).toEqual([])
+    } finally {
+      await kontext.close()
     }
-    expect(geprueft, 'Zu wenige PPFD-Werte geprüft.').toBeGreaterThanOrEqual(20)
-    expect(fehler, fehler.slice(0, 6).join('\n')).toEqual([])
   })
 })

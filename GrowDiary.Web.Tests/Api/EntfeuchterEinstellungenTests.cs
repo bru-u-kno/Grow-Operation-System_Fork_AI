@@ -34,7 +34,7 @@ public sealed class EntfeuchterEinstellungenTests : IDisposable
         // Überall andere Werte als die Vorgaben, sonst fiele ein verlorenes Feld nicht auf.
         var gesendet = new EntfeuchterEinstellungen
         {
-            VpdRegelung = false,
+            VpdRegelung = true, // anders als der Standard (aus) — sonst fiele ein verlorenes Feld nicht auf
             HystereseProzent = 6,
             MindestlaufzeitMin = 15,
             EinschaltverzoegerungMin = 7,
@@ -57,7 +57,7 @@ public sealed class EntfeuchterEinstellungenTests : IDisposable
         _repo.SetEinstellungen(EntfeuchterSteuerungService.Modul, gesendet);
         var g = _repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul)!;
 
-        Assert.False(g.VpdRegelung);
+        Assert.True(g.VpdRegelung);
         Assert.Equal(6, g.HystereseProzent);
         Assert.Equal(15, g.MindestlaufzeitMin);
         Assert.Equal(7, g.EinschaltverzoegerungMin);
@@ -74,6 +74,28 @@ public sealed class EntfeuchterEinstellungenTests : IDisposable
         Assert.Equal(54, g.FeuchteAusTag);
         Assert.Equal(61, g.FeuchteEinNacht);
         Assert.Equal(56, g.FeuchteAusNacht);
+    }
+
+    [Fact]
+    public void EinFrischerStandRegeltNachLuftfeuchteNichtNachVpd()
+    {
+        // A-017, Lücke 11: ohne Plan gibt es keine Zielwerte für die VPD-Regelung.
+        Assert.False(new EntfeuchterEinstellungen().VpdRegelung);
+        // Auch aus Home Assistant ohne Helfer (frische Anlage) bleibt es dabei.
+        Assert.False(EntfeuchterSteuerungService.AusHomeAssistant(new Dictionary<string, string?>()).VpdRegelung);
+        // Der Standard braucht keinen Eintrag im Repo: nie gespeichert heisst „null".
+        Assert.Null(_repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void EinGespeicherterWertBleibtWieGespeichert(bool gespeichert)
+    {
+        // Bestandsanlagen: wer die VPD-Regelung eingeschaltet (oder ausgeschaltet) hat, behält das.
+        _repo.SetEinstellungen(EntfeuchterSteuerungService.Modul, new EntfeuchterEinstellungen { VpdRegelung = gespeichert });
+
+        Assert.Equal(gespeichert, _repo.GetEinstellungen<EntfeuchterEinstellungen>(EntfeuchterSteuerungService.Modul)!.VpdRegelung);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 import { SteuerungWechsel } from './SteuerungWechsel'
+import { HaStummHinweis } from './HaStummHinweis'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
@@ -139,9 +140,9 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
     }
   }
 
-  if (laedt && !seite) return <V1Page eyebrow="Steuerung" title="Licht LED Top"><V1Skeleton rows={5} label="Wird geladen" /></V1Page>
+  if (laedt && !seite) return <V1Page eyebrow="Steuerung" title="Licht"><V1Skeleton rows={5} label="Wird geladen" /></V1Page>
   if (!seite || !entwurf) {
-    return <V1Page eyebrow="Steuerung" title="Licht LED Top">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
+    return <V1Page eyebrow="Steuerung" title="Licht">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
   }
 
   const live = seite.live
@@ -170,8 +171,8 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
   return (
     <V1Page
       eyebrow="Steuerung"
-      title="Licht LED Top"
-      subtitle="AC-Infinity-Controller · Zeitplan läuft im Gerät"
+      title="Licht"
+      subtitle="Zeitplan läuft im Gerät (Controller)"
       action={geaendert ? <V1Button variant="primary" onClick={speichern} disabled={arbeitet}>{arbeitet ? 'Speichert …' : 'Speichern'}</V1Button> : undefined}
       vorKopf={<SteuerungWechsel module={module} aktiv={aktiv} onWechsel={onWechsel} />}
     >
@@ -189,7 +190,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
 
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {meldung && <V1Alert tone={meldung === 'Gespeichert.' ? 'ok' : 'warn'} message={meldung} />}
-      {!live.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand. Der Zeitplan läuft im Controller weiter." />}
+      <HaStummHinweis haErreichbar={live.haErreichbar} eingerichtet={seite.geraeteZugeordnet > 0} weiter="zeitplan" />
       {live.controllerOnline === false && <V1Alert tone="warn" title="Controller offline" message="Der Port meldet sich nicht. Befehle kommen erst an, wenn er wieder da ist." />}
 
       {gescheitert && (
@@ -197,7 +198,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
           <V1Alert
             tone="critical"
             title="Befehl vom Controller nicht bestätigt"
-            message="Die AC-Infinity-Cloud hat den Befehl angenommen, aber nicht ausgeführt — auch nach den Wiederholungen nicht. Unten steht der echte Zustand des Geräts."
+            message="Die Cloud des Controllers hat den Befehl angenommen, aber nicht ausgeführt — auch nach den Wiederholungen nicht. Unten steht der echte Zustand des Geräts."
           />
           <div className="st-geraete-zeile">
             <span>Erneut versuchen oder die Meldung wegräumen.</span>
@@ -318,7 +319,7 @@ export default function LichtDetail({ module, aktiv, onWechsel }: {
           <V1Card>
             <Zahl
               label="Abstand zwischen Befehlen"
-              hinweis="Die AC-Infinity-Cloud verwirft Befehle, die gleichzeitig kommen."
+              hinweis="Manche Controller-Clouds (z. B. AC Infinity) verwerfen Befehle, die gleichzeitig kommen."
               einheit="ms"
               schritt={500}
               wert={entwurf.schreibAbstandMs}

@@ -249,6 +249,18 @@
      dadurch 48 px zwischen „Sulfat (mg/L)" und seinem Eingabefeld. */
   .v1-field { display: grid; gap: 5px; min-width: 0; align-content: start; }
   .v1-field.is-wide, .is-wide { grid-column: 1 / -1; }
+  /* Zwischenueberschrift im Formularraster („Groesse", „Technik im Raum").
+     Bis forkai.234 gab es fuer `.v1-form-divider` GAR KEINE Regel: die
+     Ueberschrift war eine Rasterzelle wie ein Feld und sass zwischen den
+     Eingaben (Zelt-Formular, A-017 Luecke 3). Sie belegt jetzt die ganze Zeile. */
+  .v1-form-divider {
+    grid-column: 1 / -1; padding-top: var(--s-2);
+    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: 0.1em;
+    color: var(--faint); border-bottom: 1px solid var(--hair); padding-bottom: var(--s-2);
+  }
+  /* Ein Schalter bleibt so hoch wie sein Text. Ohne `align-self: start` dehnt
+     ihn der hoechste Nachbar derselben Rasterzeile (CO2-Kaestchen im Zelt-Formular). */
+  .v1-form-grid > .v1-switch { align-self: start; }
   /**
    * KEINE Grossschreibung an Feldbeschriftungen.
    *

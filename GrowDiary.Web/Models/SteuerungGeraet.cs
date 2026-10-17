@@ -86,7 +86,7 @@ public static class SteuerungGeraeteRollen
             new[] { "sensor" }, Einheit: "%"),
         new("co2", "vpd", "VPD", GruppeMessen,
             new[] { "sensor" }, Pflicht: false, Einheit: "kPa"),
-        new("co2", "port_zustand", "Dosier-Steckdose · Zustand", GruppeSchalten,
+        new("co2", "port_zustand", "CO₂-Ventil · Zustand", GruppeSchalten,
             new[] { "binary_sensor", "switch" },
             Hinweis: "Läuft das Ventil wirklich — nicht nur „Port online“."),
         // Fork AI (forkai.70): Zustand und Schalter sind zwei Rollen, weil es bei
@@ -94,17 +94,17 @@ public static class SteuerungGeraeteRollen
         // laeuft, ein select schaltet ihn. Ohne diese Trennung kann der Fork die
         // Dosier-Automation nicht anlegen: er wuesste, woran er den Zustand
         // abliest, aber nicht, was er umlegen soll.
-        new("co2", "port_schalter", "Dosier-Steckdose · schalten", GruppeSchalten,
+        new("co2", "port_schalter", "CO₂-Ventil · schalten", GruppeSchalten,
             new[] { "select", "switch", "input_boolean" },
-            Hinweis: "Was das Ventil wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
+            Hinweis: "Was das Ventil wirklich umlegt — z. B. bei AC Infinity der Modus-Auswahlpunkt."),
         // Fork AI (01.10.2026): Die Dosier-Vorlage prüfte vor dem Öffnen
         // port_zustand auf „on" — vor dem Öffnen ist das Ventil aber zu, die
         // Dosierung startete nie. Gemeint war „Port online", wie in der
         // handgebauten Fassung. Optional: ohne sie entfällt nur diese Prüfung.
-        new("co2", "port_status", "Dosier-Steckdose · Port online", GruppeMessen,
+        new("co2", "port_status", "CO₂-Ventil · Port online", GruppeMessen,
             new[] { "binary_sensor" }, Pflicht: false,
             Hinweis: "Erreichbar oder nicht — nicht, ob das Ventil offen ist. Ohne sie dosiert die Vorlage auch, wenn der Port nicht antwortet."),
-        new("co2", "abluft_stufe", "Abluft T6 · Stufe", GruppeSchalten,
+        new("co2", "abluft_stufe", "Abluft · Stufe", GruppeSchalten,
             new[] { "number" }, Pflicht: false),
         new("co2", "licht", "Licht-Status", GruppeUmfeld,
             new[] { "binary_sensor", "switch", "light" },
@@ -115,7 +115,7 @@ public static class SteuerungGeraeteRollen
         // Stufe, manche keinen eigenen Zeitplan.
         new("licht", "licht_modus", "Betriebsart der Lampe", GruppeSchalten,
             new[] { "select" },
-            Hinweis: "Aus / An / Zeitplan. Beim AC-Infinity-Port heißt das Off, On, Schedule."),
+            Hinweis: "Aus / An / Zeitplan. Bei manchen Controllern heißt das Off, On, Schedule (z. B. AC Infinity)."),
         new("licht", "licht_stufe", "Leistungsstufe", GruppeSchalten,
             new[] { "number" }, Pflicht: false,
             Hinweis: "Ohne sie fehlt der Stufenbalken; Aus, An und Zeitplan bleiben."),
@@ -145,7 +145,7 @@ public static class SteuerungGeraeteRollen
             new[] { "sensor" }, Einheit: "%"),
         new("zuluft", "port_schalter", "Zuluft-Lüfter · schalten", GruppeSchalten,
             new[] { "select", "switch", "input_boolean" },
-            Hinweis: "Was den Lüfter wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
+            Hinweis: "Was den Lüfter wirklich umlegt — z. B. bei AC Infinity der Modus-Auswahlpunkt."),
         new("zuluft", "port_zustand", "Zuluft-Lüfter · Zustand", GruppeMessen,
             new[] { "binary_sensor", "switch" },
             Hinweis: "Läuft der Lüfter wirklich — nicht nur „Port online“."),
@@ -221,7 +221,7 @@ public static class SteuerungGeraeteRollen
             new[] { "sensor" }, Pflicht: false, Einheit: "kPa"),
         new("entfeuchter", "port_schalter", "Entfeuchter · schalten", GruppeSchalten,
             new[] { "select", "switch", "input_boolean" },
-            Hinweis: "Was das Gerät wirklich umlegt — bei AC Infinity der Modus-Auswahlpunkt."),
+            Hinweis: "Was das Gerät wirklich umlegt — z. B. bei AC Infinity der Modus-Auswahlpunkt."),
         new("entfeuchter", "port_zustand", "Entfeuchter · Zustand", GruppeMessen,
             new[] { "binary_sensor", "switch" },
             Hinweis: "Läuft er wirklich — nicht nur „Port online“."),
@@ -256,7 +256,7 @@ public static class SteuerungGeraeteRollen
             Hinweis: "Zählerstand der Steckdose — daraus rechnet die Seite „Energie heute“."),
         new(ZusatzModul, "fuehrung_zustand", "Führungsgerät · Zustand", GruppeMessen,
             new[] { "select", "switch", "input_boolean", "binary_sensor" },
-            Hinweis: "Das Gerät aus „Entfeuchter“ (bei AC Infinity der Modus-Auswahlpunkt On/Off). Der Zusatz schaltet nur zu oder ab, solange es läuft — beide gehen nie gleichzeitig aus."),
+            Hinweis: "Das Gerät aus „Entfeuchter“ (z. B. bei AC Infinity der Modus-Auswahlpunkt On/Off). Der Zusatz schaltet nur zu oder ab, solange es läuft — beide gehen nie gleichzeitig aus."),
     };
 
     /// <summary>Die Kennung des Zusatz-Entfeuchters.</summary>

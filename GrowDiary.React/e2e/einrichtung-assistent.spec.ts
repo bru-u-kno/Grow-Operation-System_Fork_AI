@@ -126,6 +126,19 @@ test('Schritt 2: ungespeicherte Zuordnung sperrt Weiter, bis gespeichert ist', a
   await page.getByRole('button', { name: 'Speichern' }).click()
   await expect(page.getByText('Bitte die markierten Zeilen prüfen.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled()
+  // A-017 (Lücke 9): Die Zeile ist wirklich markiert (rot, `.st-fehler`) und die Seite ist zu ihr gerollt — der Speichern-Knopf
+  // sitzt unten, die Meldung oben; ohne das Rollen sah man weder das eine noch das andere.
+  const markiert = page.locator('.st-rollen .st-fehler')
+  await expect(markiert).toHaveCount(1)
+  await expect(markiert).toHaveText('Diese Rolle braucht ein Gerät.')
+  await expect(markiert).toBeInViewport()
+  // Zweiter Durchgang mit denselben Fehlern, nach dem Wegrollen: es rollt wieder zur Zeile.
+  await page.setViewportSize({ width: 1280, height: 400 })
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await expect(markiert).not.toBeInViewport()
+  versuche = 0
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  await expect(markiert).toBeInViewport()
 
   await page.getByRole('button', { name: 'Lampe · Zustand' }).click()
   await page.getByRole('option').nth(1).click()

@@ -291,8 +291,10 @@ eine Doppelung, die bei zwei Browsern rund 20 Minuten kostet. Seit dem
   wie der Menüpunkt heißen, Kopfzeile die Gruppe nennen; `kontrast`: eine Zahl auf
   dem Messpunkt las sich als Schrift auf Schriftfarbe) — die gezielte Auswahl hatte
   beide Querschnitte nicht dabei. Chromium allein läuft voll in rund 6 Minuten,
-  ein rotes Release kostet mehr. `verlaufsdiagramm` (Zeitzonen-Fall) ist auf der
-  VM wegen deren Zeitzone immer rot und kein Befund.
+  ein rotes Release kostet mehr. `verlaufsdiagramm` (Zeitzonen-Fall) wählt die
+  Browser-Zone seit forkai.235 selbst (eine feste Zone ohne Sommerzeit, die sich
+  vom Versatz des Servers unterscheidet) und misst dadurch auf jeder Maschine
+  dasselbe; ist er rot, ist das ein Befund.
 - **Immer:** vor dem Release-Branch das Tor am Arbeitsbranch grün ansehen. Ein
   rotes Tor ist kein „nur E2E" — es ist der volle Lauf, den man lokal gespart
   hat.

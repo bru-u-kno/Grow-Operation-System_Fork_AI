@@ -52,7 +52,7 @@ test('Übersicht: nur gewählte Steuerungen, der Rest steht als „Nicht eingeri
   await expect(gewaehlt.filter({ hasText: 'Licht' }).first()).toBeVisible()
   // Die Abluft-Zeile gehört zur CO₂-Begasung und bleibt.
   await expect(gewaehlt.filter({ hasText: 'Abluft' })).toHaveCount(1)
-  for (const weg of ['Zuluft', 'Water Chiller', 'Entfeuchtung']) {
+  for (const weg of ['Zuluft', 'Wasserkühler', 'Entfeuchtung']) {
     await expect(gewaehlt.filter({ hasText: weg })).toHaveCount(0)
   }
 

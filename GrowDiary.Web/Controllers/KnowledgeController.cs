@@ -1,3 +1,4 @@
+using GrowDiary.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GrowDiary.Web.Controllers;
@@ -11,5 +12,5 @@ public sealed class KnowledgeController : Controller
 
     [HttpGet("")]
     public IActionResult Index(string? key = null)
-        => Redirect("/wissen");
+        => Redirect(IngressPfad.Weiterleitung(Request, "/wissen"));
 }

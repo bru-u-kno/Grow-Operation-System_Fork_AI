@@ -1,3 +1,4 @@
+using GrowDiary.Web.Infrastructure;
 using GrowDiary.Web.Infrastructure.KiZugriff;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,7 @@ namespace GrowDiary.Web.Controllers;
 public sealed class GrowsController : Controller
 {
     [HttpGet("{id:int}/export")]
-    public IActionResult Export(int id) => Redirect($"/api/exports/grows/{id}");
+    public IActionResult Export(int id) => Redirect(IngressPfad.Weiterleitung(Request, $"/api/exports/grows/{id}"));
 
     [HttpPost("{id:int}/confirm-germination")]
     [ValidateAntiForgeryToken]

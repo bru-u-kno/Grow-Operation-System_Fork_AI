@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  abhaengigkeiten, automationen, fehlendText, helferUndRechenwerte, reife, summe, unvollstaendigText, wuerdeSchreiben, zaehleFehlend,
-  type Aufruf, type AutoBilanz,
+  abhaengigkeiten, automationen, automationenMeldung, fehlendText, helferMeldung, helferUndRechenwerte, reife, summe, unvollstaendigText, wuerdeSchreiben, zaehleFehlend,
+  type Aufruf, type AutoBilanz, type Phase1,
 } from './bereitstellen-ablauf'
 import type { BauteilStand, Bestandsaufnahme } from './steuerung-typen'
 
@@ -278,5 +278,49 @@ describe('unvollstaendigText', () => {
   it('bleibt beim alten Satz, wenn das Backend die Namen nicht liefert', () => {
     expect(unvollstaendigText({ pflichtZugeordnet: 1, pflichtGesamt: 3 })).toBe('1 von 3 Pflichtgeräten zugeordnet — erst zuordnen, dann bereitstellen.')
     expect(unvollstaendigText({ pflichtZugeordnet: 1, pflichtGesamt: 3, fehlendePflicht: [] })).toBe('1 von 3 Pflichtgeräten zugeordnet — erst zuordnen, dann bereitstellen.')
+  })
+})
+
+describe('helferMeldung / automationenMeldung (Neuling-Test A-017, Lücke 6)', () => {
+  const stumm = 'Home Assistant antwortet nicht (home_assistant_stumm). Es wurde nichts angelegt. Prüfe die Verbindung unter Einrichtung.'
+  const phase = (teil: Partial<Phase1>): Phase1 => ({ modul: 'entfeuchter', helfer: 0, rechenwerte: 0, nicht: 0, fehler: null, startwerte: 0, startwerteOffen: false, ...teil })
+
+  it('Home Assistant stumm: kritisch statt grün, genau ein Schlusspunkt', () => {
+    const m = helferMeldung([phase({ fehler: stumm })])
+    expect(m.ton).toBe('critical')
+    expect(m.text).not.toMatch(/\.\./)
+    expect(m.text.endsWith('.')).toBe(true)
+    expect(m.text).not.toContain('0 Helfer und Rechenwerte angelegt')
+    expect(m.text).toBe('entfeuchter: Home Assistant antwortet nicht (home_assistant_stumm). Es wurde nichts angelegt. Prüfe die Verbindung unter Einrichtung.')
+    expect(helferMeldung([phase({ nicht: 3 })])).toEqual({ ton: 'critical', text: 'Es wurde nichts angelegt. 3 nicht — Einzelheiten stehen im Protokoll.' })
+  })
+
+  it('teilweise angelegt: Warnung, die Zahl bleibt stehen', () => {
+    const m = helferMeldung([phase({ helfer: 10, rechenwerte: 3, nicht: 2 }), phase({ modul: 'co2', fehler: 'Gescheitert.' })])
+    expect(m.ton).toBe('warn')
+    expect(m.text).toBe('13 Helfer und Rechenwerte angelegt. 2 nicht — Einzelheiten stehen im Protokoll. co2: Gescheitert.')
+  })
+
+  it('Startwerte nicht angenommen: Warnung, auch wenn angelegt wurde', () => {
+    const m = helferMeldung([phase({ helfer: 4, startwerte: 2, startwerteOffen: true })])
+    expect(m.ton).toBe('warn')
+    expect(m.text).toContain('2 Startwerte aus deinen Einstellungen geschrieben')
+    expect(m.text).toContain('nicht alle Startwerte angenommen')
+  })
+
+  it('alles gut: grün; auch „nichts zu tun" ist grün', () => {
+    expect(helferMeldung([phase({ helfer: 12, rechenwerte: 4, startwerte: 12 })])).toEqual({
+      ton: 'ok', text: '16 Helfer und Rechenwerte angelegt. 12 Startwerte aus deinen Einstellungen geschrieben.',
+    })
+    expect(helferMeldung([phase({})])).toEqual({ ton: 'ok', text: '0 Helfer und Rechenwerte angelegt.' })
+  })
+
+  it('Automationen: Ausnahme ohne Schreiben kritisch, mit Schreiben und Rest Warnung, sonst grün', () => {
+    const gut = { angelegt: 1, fremd: 0, fehlgeschlagen: 0, einzeln: [] }
+    expect(automationenMeldung([{ modul: 'co2', bilanz: gut, fehler: null }])).toEqual({ ton: 'ok', text: '1 Automation geschrieben.' })
+    expect(automationenMeldung([{ modul: 'co2', bilanz: null, fehler: 'Nicht erreichbar.' }])).toEqual({ ton: 'critical', text: '0 Automationen geschrieben, co2: Nicht erreichbar.' })
+    const teil = automationenMeldung([{ modul: 'co2', bilanz: { ...gut, angelegt: 2, fremd: 1, fehlgeschlagen: 1 }, fehler: null }])
+    expect(teil.ton).toBe('warn')
+    expect(teil.text).toBe('2 Automationen geschrieben, 1 von Hand gebaute blieben unangetastet, 1 nicht.')
   })
 })

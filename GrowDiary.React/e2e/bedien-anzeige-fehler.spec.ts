@@ -114,7 +114,7 @@ test.describe('Licht: Leistungsstufe und ungespeicherter Zeitplan', () => {
     await feld.press('ControlOrMeta+a')
     await feld.pressSequentially('3')
     const zweite = page.waitForResponse((r) => /\/licht\/befehl$/.test(r.url()))
-    await page.getByRole('heading', { name: 'Licht LED Top' }).click()
+    await page.getByRole('heading', { name: 'Licht', exact: true }).click()
     await zweite
     expect(befehle.map((r) => r.postDataJSON().stufe)).toEqual([10, 3])
 

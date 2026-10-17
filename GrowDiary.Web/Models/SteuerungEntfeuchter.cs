@@ -20,8 +20,19 @@ namespace GrowDiary.Web.Models;
 /// </remarks>
 public sealed class EntfeuchterEinstellungen
 {
-    /// <summary>An: Schwellen wandern mit Temperatur und VPD-Band. Aus: feste Schwellen.</summary>
-    public bool VpdRegelung { get; set; } = true;
+    /// <summary>
+    /// An: Schwellen wandern mit Temperatur und VPD-Band. Aus: feste Schwellen.
+    /// </summary>
+    /// <remarks>
+    /// <b>Standard: aus (A-017, Neuling-Test, Lücke 11).</b> Die Zielwerte der VPD-Regelung kommen aus einem Plan
+    /// (<c>WochenplanSyncService</c>); ohne Plan stehen im Helfer Platzhalter (0,4/0,4 kPa, Blatt-Offset −5 K). Die
+    /// Schwellen waren dann nur zufällig brauchbar — mit dem üblichen Offset von −2 K wären es 75/71 % statt 60/57 %.
+    /// Bis jemand die Regelung einschaltet, gelten die festen Schwellen des Forks, die der Seite auch als „Standard"
+    /// beschriftet sind. Der Standard wirkt nur bei einem Stand, der NIE gespeichert wurde und für den Home Assistant
+    /// keinen Helfer kennt (<c>EntfeuchterSteuerungService.EinstellungenAsync</c>): ein gespeicherter Wert und ein
+    /// vorhandener Helfer gewinnen immer.
+    /// </remarks>
+    public bool VpdRegelung { get; set; } = false;
 
     /// <summary>Wie weit die Feuchte unter EIN fallen muss, bevor er ausgeht (knapp 2 · normal 4 · ruhig 6).</summary>
     public double HystereseProzent { get; set; } = 4;

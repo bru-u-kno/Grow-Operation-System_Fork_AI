@@ -1,4 +1,5 @@
 import { SteuerungWechsel } from './SteuerungWechsel'
+import { HaStummHinweis } from './HaStummHinweis'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1LinkButton, V1Page, V1Section, V1Skeleton, V1Stat, V1Switch, V1Tabs } from '../../components/v1'
@@ -109,9 +110,9 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
     }
   }
 
-  if (laedt && !seite) return <V1Page eyebrow="Steuerung" title="Water Chiller"><V1Skeleton rows={4} tiles={4} label="Wird geladen" /></V1Page>
+  if (laedt && !seite) return <V1Page eyebrow="Steuerung" title="Wasserkühler"><V1Skeleton rows={4} tiles={4} label="Wird geladen" /></V1Page>
   if (!seite || !entwurf) {
-    return <V1Page eyebrow="Steuerung" title="Water Chiller">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
+    return <V1Page eyebrow="Steuerung" title="Wasserkühler">{fehler && <V1Alert tone="critical" message={fehler} />}</V1Page>
   }
 
   const live = seite.live
@@ -141,7 +142,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
   return (
     <V1Page
       eyebrow="Steuerung"
-      title="Water Chiller"
+      title="Wasserkühler"
       subtitle="Hält das Nährwasser auf dem Ziel der laufenden Woche — geschaltet in Home Assistant"
       action={geaendert ? <V1Button variant="primary" onClick={speichern} disabled={arbeitet}>{arbeitet ? 'Speichert …' : 'Speichern'}</V1Button> : undefined}
       vorKopf={<SteuerungWechsel module={module} aktiv={aktiv} onWechsel={onWechsel} />}
@@ -149,7 +150,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
 
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {meldung && <V1Alert tone={meldung === 'Gespeichert.' ? 'ok' : 'warn'} message={meldung} />}
-      {!live.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand. Die Regelung läuft dort weiter." />}
+      <HaStummHinweis haErreichbar={live.haErreichbar} eingerichtet={seite.geraeteZugeordnet > 0} />
       {live.automatikAn === false && (
         <V1Alert
           tone="warn"

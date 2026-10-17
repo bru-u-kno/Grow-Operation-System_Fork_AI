@@ -173,6 +173,48 @@ export async function helferUndRechenwerte(
   return ergebnis
 }
 
+/** Tonfall einer Meldung — dieselben Werte wie `Tone` der Oberfläche, hier ohne React. */
+export type MeldungTon = 'ok' | 'warn' | 'critical'
+export type Meldung = { ton: MeldungTon; text: string }
+
+/** Ein Satzstück ohne Schlusspunkt und Leerraum: Fehlertexte aus dem Backend enden oft selbst auf „.". */
+function stueck(text: string): string {
+  return text.trim().replace(/[.\s]+$/, '')
+}
+
+/** Satzstücke zu EINEM Satz mit genau einem Schlusspunkt zusammenfügen. */
+function satz(teile: string[], trenner: string): string {
+  return `${teile.map(stueck).filter((t) => t !== '').join(trenner)}.`
+}
+
+/**
+ * Die Meldung nach Phase 1 (Helfer und Rechenwerte). Der Tonfall richtet sich nach dem Ergebnis, nicht nach dem
+ * Weg, auf dem es zustande kam — Neuling-Test 17.10.2026: Antwortet Home Assistant nicht (HTTP 409 `home_assistant_stumm`),
+ * stand „0 Helfer und Rechenwerte angelegt. … Es wurde nichts angelegt …" in einem GRÜNEN Kasten, mit zwei Punkten am Ende.
+ * <ul>
+ * <li>Fehler und nichts angelegt → `critical`</li>
+ * <li>Fehler, aber etwas angelegt (oder Startwerte nicht angenommen) → `warn`</li>
+ * <li>sonst `ok`</li>
+ * </ul>
+ */
+export function helferMeldung(r: Phase1[]): Meldung {
+  const angelegt = r.reduce((n, x) => n + x.helfer + x.rechenwerte, 0)
+  const nicht = r.reduce((n, x) => n + x.nicht, 0)
+  const startwerte = r.reduce((n, x) => n + x.startwerte, 0)
+  const kaputt = r.filter((x) => x.fehler)
+  const offen = r.some((x) => x.startwerteOffen)
+  const problem = kaputt.length > 0 || nicht > 0 || offen
+  // Nennt der Fehlertext selbst schon „nichts angelegt", steht nur er da (kein „0 … angelegt" davor, keine Doppelung).
+  const teile: string[] = []
+  if (!problem || angelegt > 0) teile.push(`${angelegt} Helfer und Rechenwerte angelegt`)
+  else if (kaputt.length === 0) teile.push('Es wurde nichts angelegt')
+  if (startwerte > 0) teile.push(`${startwerte} ${startwerte === 1 ? 'Startwert' : 'Startwerte'} aus deinen Einstellungen geschrieben`)
+  if (offen) teile.push('Home Assistant hat nicht alle Startwerte angenommen — sie stehen noch auf ihrem Minimum, Einzelheiten im Protokoll')
+  if (nicht > 0) teile.push(`${nicht} nicht — Einzelheiten stehen im Protokoll`)
+  for (const k of kaputt) teile.push(`${k.modul}: ${k.fehler}`)
+  return { ton: !problem ? 'ok' : angelegt === 0 ? 'critical' : 'warn', text: satz(teile, '. ') }
+}
+
 export type AutoEintrag = { kennung: string; name: string; titel: string | null; stand: string; hinweis: string | null }
 export type AutoBilanz = { angelegt: number; fremd: number; fehlgeschlagen: number; einzeln: AutoEintrag[] }
 export type Phase2 = { modul: string; bilanz: AutoBilanz | null; fehler: string | null }
@@ -199,6 +241,20 @@ export async function automationen(module: string[], vorschau: boolean, aufruf: 
     }
   }
   return ergebnis
+}
+
+/** Die Meldung nach Phase 2 (Automationen schreiben) — Tonfall wie bei `helferMeldung`. */
+export function automationenMeldung(r: Phase2[]): Meldung {
+  const geschrieben = r.reduce((n, p) => n + (p.bilanz?.angelegt ?? 0), 0)
+  const fremd = r.reduce((n, p) => n + (p.bilanz?.fremd ?? 0), 0)
+  const nicht = r.reduce((n, p) => n + (p.bilanz?.fehlgeschlagen ?? 0), 0)
+  const kaputt = r.filter((p) => p.fehler)
+  const problem = kaputt.length > 0 || nicht > 0
+  const teile = [`${geschrieben} ${geschrieben === 1 ? 'Automation' : 'Automationen'} geschrieben`]
+  if (fremd > 0) teile.push(`${fremd} von Hand gebaute blieben unangetastet`)
+  if (nicht > 0) teile.push(`${nicht} nicht`)
+  for (const k of kaputt) teile.push(`${k.modul}: ${k.fehler}`)
+  return { ton: !problem ? 'ok' : geschrieben === 0 ? 'critical' : 'warn', text: satz(teile, ', ') }
 }
 
 /** Wie viele Automationen die Vorschau tatsächlich schreiben würde (angelegt oder erneuert). */

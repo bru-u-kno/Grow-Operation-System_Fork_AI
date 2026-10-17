@@ -100,7 +100,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                     ? $"Plan {p} ppm · Ziel {live.ZielPpm?.ToString(de) ?? "–"} · {(live.AutomatikAn == true ? "Automatik an" : "Automatik aus")}"
                     : $"Fest · Ziel {live.ZielPpm?.ToString(de) ?? "–"} · {(live.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
                 Wert: F(live.Co2Ppm, " ppm"),
-                Unterzeile: $"Ventil {(live.VentilOffen == true ? "offen" : "zu")} · T6 Stufe {live.T6Stufe?.ToString(de) ?? "–"}",
+                Unterzeile: $"Ventil {(live.VentilOffen == true ? "offen" : "zu")} · Lüfter Stufe {live.T6Stufe?.ToString(de) ?? "–"}",
                 HatDetail: true),
             new(
                 Kennung: "entfeuchter",
@@ -124,7 +124,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                 HatDetail: true),
             new(
                 Kennung: "chiller",
-                Titel: "Water Chiller",
+                Titel: "Wasserkühler",
                 // Der Zustand kommt vom SCHALTER, nicht vom Kuehlbedarf: die
                 // Zeile meldete „kuehlt", waehrend die Steckdose an einer
                 // Schaltsperre haengen blieb — der Bedarf ist der Wunsch, nicht
@@ -147,7 +147,7 @@ public sealed class SteuerungApiController : ApiControllerBase
             // stillgelegt, siehe ForkAiSchalter. Das Ziel führt der Plan.
             new(
                 Kennung: "abluft",
-                Titel: "Abluft T6",
+                Titel: "Abluft",
                 Status: live.KlimaOk == false ? "warn" : "an",
                 Kurz: $"Klima hat Vorrang · Stufen {Zahl(Co2SteuerungService.Entitaeten.T6Normal)?.ToString("0", de) ?? "–"} / {Zahl(Co2SteuerungService.Entitaeten.T6Dosierung)?.ToString("0", de) ?? "–"} / {Zahl(Co2SteuerungService.Entitaeten.T6Tief)?.ToString("0", de) ?? "–"}",
                 Wert: $"Stufe {live.T6Stufe?.ToString(de) ?? "–"}",
@@ -155,7 +155,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                 HatDetail: false),
             new(
                 Kennung: "zuluft",
-                Titel: "Zuluft Keller",
+                Titel: "Zuluft",
                 Status: zuluft.AutomatikAn == false ? "aus" : zuluft.PortAn == true ? "an" : "aus",
                 Kurz: $"Ansaugen ab {F(Zahl(ZuluftSteuerungService.Entitaeten.MindestDifferenz), " g/m³", "0.0")} · {(zuluft.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
                 Wert: F(zuluft.DifferenzGm3, " g/m³", "0.00"),
@@ -166,7 +166,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                 HatDetail: true),
             new(
                 Kennung: "licht",
-                Titel: "Licht LED Top",
+                Titel: "Licht",
                 Status: licht.Fehlgeschlagen.Count > 0 ? "warn" : licht.LichtAn == true ? "an" : "aus",
                 Kurz: LichtKurz(licht),
                 Wert: licht.LichtAn == true ? "an" : "aus",
@@ -849,9 +849,9 @@ public sealed class SteuerungApiController : ApiControllerBase
     internal static string ModulTitel(string modul) => modul switch
     {
         "co2" => "CO₂ · Begasung",
-        "licht" => "Licht · LED Top",
-        "zuluft" => "Zuluft · Keller",
-        "chiller" => "Water Chiller",
+        "licht" => "Licht · Lampe",
+        "zuluft" => "Zuluft · Lüfter",
+        "chiller" => "Wasserkühler",
         "entfeuchter" => "Entfeuchter",
         "entfeuchter-zusatz" => "Zusatz-Entfeuchter",
         "bluelab" => "Bluelab · Gerätealarm",

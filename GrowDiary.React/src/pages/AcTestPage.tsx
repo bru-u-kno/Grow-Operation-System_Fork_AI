@@ -474,10 +474,10 @@ export function AcTestPage() {
 
             {entwurf.map((g, i) => (
               <div key={i} className="v1-form-grid ac-zeile">
-                <V1Field label="Name" hint={'Frei wählbar — „LED Top", „Abluft".'}>
+                <V1Field label="Name" hint={'Frei wählbar — „Lampe", „Abluft".'}>
                   <input
                     value={g.name}
-                    placeholder="LED Top"
+                    placeholder="Lampe"
                     onChange={(e) => setEntwurf(entwurf.map((x, k) => k === i ? { ...x, name: e.target.value } : x))} />
                 </V1Field>
                 <V1Field label="Stufe 0–10 (number)" hint={'Bei AC Infinity: „… Einschaltleistung".'}>

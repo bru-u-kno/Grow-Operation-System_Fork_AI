@@ -81,7 +81,7 @@ public sealed class ProbelaufApiTests
         Assert.Equal(5, module!.Count);
         Assert.Contains(module, m => m.Modul == "entfeuchter" && m.Titel == "Entfeuchter");
         Assert.Contains(module, m => m.Modul == "entfeuchter-zusatz" && m.Titel == "Zusatz-Entfeuchter");
-        Assert.Contains(module, m => m.Modul == "chiller" && m.Titel == "Water Chiller");
+        Assert.Contains(module, m => m.Modul == "chiller" && m.Titel == "Wasserkühler");
         // Nichts ist eigener Text: jeder Titel kommt aus derselben Quelle wie die Steuerungsseiten.
         Assert.All(module, m => Assert.NotEqual(m.Modul, m.Titel));
     }

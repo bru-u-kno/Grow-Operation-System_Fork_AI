@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Badge, V1Button, V1Card, V1Section, V1Skeleton, type Tone } from '../../components/v1'
 import {
-  abhaengigkeiten, automationen, bausteinModule, fehlendText, helferUndRechenwerte, reife, summe, unvollstaendigText, wuerdeSchreiben, zaehleFehlend,
-  type Phase2, type Reife, type RollenStand,
+  abhaengigkeiten, automationen, automationenMeldung, bausteinModule, fehlendText, helferMeldung, helferUndRechenwerte, reife, summe, unvollstaendigText, wuerdeSchreiben, zaehleFehlend,
+  type Meldung, type Phase2, type Reife, type RollenStand,
 } from './bereitstellen-ablauf'
 import type { Bestandsaufnahme, GeraeteSeite, SteuerungAuswahl } from './steuerung-typen'
 
@@ -39,7 +39,7 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
   const [laedt, setLaedt] = useState(true)
   const [arbeitet, setArbeitet] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
-  const [meldung, setMeldung] = useState<string | null>(null)
+  const [meldung, setMeldung] = useState<Meldung | null>(null)
   const [vorschau, setVorschau] = useState<Phase2[] | null>(null)
 
   /** Stand frisch lesen: Auswahl (Pflichtgeräte) und je Modul der Bestand. */
@@ -92,16 +92,7 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
     setVorschau(null)
     try {
       const r = await helferUndRechenwerte(zuTun, bestaende, apiFetch)
-      const angelegt = r.reduce((n, x) => n + x.helfer + x.rechenwerte, 0)
-      const nicht = r.reduce((n, x) => n + x.nicht, 0)
-      const startwerte = r.reduce((n, x) => n + x.startwerte, 0)
-      const kaputt = r.filter((x) => x.fehler)
-      const teile = [`${angelegt} Helfer und Rechenwerte angelegt`]
-      if (startwerte > 0) teile.push(`${startwerte} ${startwerte === 1 ? 'Startwert' : 'Startwerte'} aus deinen Einstellungen geschrieben`)
-      if (r.some((x) => x.startwerteOffen)) teile.push('Home Assistant hat nicht alle Startwerte angenommen — sie stehen noch auf ihrem Minimum, Einzelheiten im Protokoll')
-      if (nicht > 0) teile.push(`${nicht} nicht — Einzelheiten stehen im Protokoll`)
-      for (const k of kaputt) teile.push(`${k.modul}: ${k.fehler}`)
-      setMeldung(`${teile.join('. ')}.`)
+      setMeldung(helferMeldung(r))
       await neuLesen()
       // Die Automationen nur ZEIGEN — geschrieben wird erst nach der zweiten Zustimmung.
       const stand = await lesen()
@@ -120,15 +111,7 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
     setFehler(null)
     try {
       const r = await automationen(vorschau.map((p) => p.modul), false, apiFetch)
-      const geschrieben = r.reduce((n, p) => n + (p.bilanz?.angelegt ?? 0), 0)
-      const fremd = r.reduce((n, p) => n + (p.bilanz?.fremd ?? 0), 0)
-      const nicht = r.reduce((n, p) => n + (p.bilanz?.fehlgeschlagen ?? 0), 0)
-      const kaputt = r.filter((p) => p.fehler)
-      const teile = [`${geschrieben} ${geschrieben === 1 ? 'Automation' : 'Automationen'} geschrieben`]
-      if (fremd > 0) teile.push(`${fremd} von Hand gebaute blieben unangetastet`)
-      if (nicht > 0) teile.push(`${nicht} nicht`)
-      for (const k of kaputt) teile.push(`${k.modul}: ${k.fehler}`)
-      setMeldung(`${teile.join(', ')}.`)
+      setMeldung(automationenMeldung(r))
       setVorschau(null)
       await neuLesen()
     } catch (caught) {
@@ -144,7 +127,7 @@ export function Bereitstellen({ zusatz }: { zusatz: boolean }) {
   return (
     <V1Section title="Bereitstellen">
       {fehler && <V1Alert tone="critical" message={fehler} />}
-      {meldung && <V1Alert tone="ok" message={meldung} />}
+      {meldung && <V1Alert tone={meldung.ton} message={meldung.text} />}
       <V1Card>
         {mitReife.map(({ e, mods, r }) => {
           const fehlt = summe(mods.map((m) => zaehleFehlend(bestaende[m])))

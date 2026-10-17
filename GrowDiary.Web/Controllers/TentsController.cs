@@ -32,11 +32,11 @@ public sealed class TentsController : Controller
 
     [HttpGet("")]
     public IActionResult Index(int? selected, CancellationToken cancellationToken)
-        => Redirect("/zelte");
+        => Redirect(IngressPfad.Weiterleitung(Request, "/zelte"));
 
     [HttpGet("{id:int}")]
     public IActionResult Details(int id, CancellationToken cancellationToken)
-        => Redirect($"/zelte/{id}");
+        => Redirect(IngressPfad.Weiterleitung(Request, $"/zelte/{id}"));
 
     [HttpGet("/api/live/tents/{id:int}")]
     public async Task<IActionResult> Live(int id, CancellationToken cancellationToken)

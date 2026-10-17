@@ -247,18 +247,18 @@ function TentsPage() {
               <V1Field label="Abluft Anzahl"><input type="number" value={draft.exhaustFanCount} onChange={(event) => setDraft((current) => ({ ...current, exhaustFanCount: event.target.value }))} /></V1Field>
               <V1Field label="Abluft m³/h"><input type="number" value={draft.exhaustM3h} onChange={(event) => setDraft((current) => ({ ...current, exhaustM3h: event.target.value }))} /></V1Field>
               <V1Field label="Umluft Anzahl"><input type="number" value={draft.circulationFanCount} onChange={(event) => setDraft((current) => ({ ...current, circulationFanCount: event.target.value }))} /></V1Field>
-              <V1Switch label="CO₂-Sensor vorhanden" checked={draft.co2Available} onChange={(checked) => setDraft((current) => ({ ...current, co2Available: checked }))} />
-              <V1Switch label="CO₂-Anreicherung (Brenner/Flasche)" checked={draft.hasCo2Enrichment} onChange={(checked) => setDraft((current) => ({ ...current, hasCo2Enrichment: checked }))} hint="Nur mit Anreicherung bekommt die CO₂-Kachel ein Ziel — ein Sensor allein misst Umgebungsluft, und die ist bei ~400–500 ppm normal." />
+              <V1Switch className="is-wide" label="CO₂-Sensor vorhanden" checked={draft.co2Available} onChange={(checked) => setDraft((current) => ({ ...current, co2Available: checked }))} />
+              <V1Switch className="is-wide" label="CO₂-Anreicherung (Brenner/Flasche)" checked={draft.hasCo2Enrichment} onChange={(checked) => setDraft((current) => ({ ...current, hasCo2Enrichment: checked }))} hint="Nur mit Anreicherung bekommt die CO₂-Kachel ein Ziel — ein Sensor allein misst Umgebungsluft, und die ist bei ~400–500 ppm normal." />
               <V1Field label="Blatttemperatur − Lufttemperatur (°C)" hint={draft.leafOffsetSyncService.trim()
-                ? 'Für die VPD-Berechnung — und wird beim Speichern an den Controller geschrieben. Gleiche Schreibweise wie am Controller: Blatt kühler als Luft = negativ, z. B. −2. Nur ganze Grad: die AC-Infinity-App zeigt keine halben.'
+                ? 'Für die VPD-Berechnung — und wird beim Speichern an den Controller geschrieben. Gleiche Schreibweise wie am Controller: Blatt kühler als Luft = negativ, z. B. −2. Nur ganze Grad: manche Controller (z. B. AC Infinity) zeigen keine halben.'
                 : 'Für die VPD-Berechnung. Blatt minus Luft, also negativ: Blätter sind durch Verdunstung meist 1–3 °C kühler als die Luft, unter LED ohne Infrarot eher 2–3. 0 = mit Lufttemperatur rechnen.'}>
                 <input type="number" step={draft.leafOffsetSyncService.trim() ? 1 : 0.5} min="-10" max="0" value={draft.leafTempOffsetC} onChange={(event) => setDraft((current) => ({ ...current, leafTempOffsetC: event.target.value }))} />
               </V1Field>
-              <V1Field label="Offset an Controller schreiben" hint="Home-Assistant-Dienst, der den Wert oben an den Klimacontroller weiterreicht, z. B. pyscript.acinfinity_offset_setzen. Leer lassen = nur rechnen, nichts schreiben.">
-                <input value={draft.leafOffsetSyncService} onChange={(event) => setDraft((current) => ({ ...current, leafOffsetSyncService: event.target.value }))} placeholder="pyscript.acinfinity_offset_setzen" />
+              <V1Field label="Offset an Controller schreiben" hint="Home-Assistant-Dienst, der den Wert oben an den Klimacontroller weiterreicht, z. B. pyscript.blatt_offset_setzen. Leer lassen = nur rechnen, nichts schreiben.">
+                <input value={draft.leafOffsetSyncService} onChange={(event) => setDraft((current) => ({ ...current, leafOffsetSyncService: event.target.value }))} placeholder="pyscript.blatt_offset_setzen" />
               </V1Field>
               {draft.leafOffsetSyncService.trim() ? (
-                <V1Field label="Sensor-Port am Controller" hint="Beim AC Infinity AI+ sitzt das Offset pro Sensor. Die Zeltsonde hängt üblicherweise auf Port 2.">
+                <V1Field label="Sensor-Port am Controller" hint="Bei manchen Controllern (z. B. AC Infinity AI+) sitzt das Offset pro Sensor. Die Zeltsonde hängt üblicherweise auf Port 2.">
                   <input type="number" step="1" min="0" max="16" value={draft.leafOffsetSyncPort} onChange={(event) => setDraft((current) => ({ ...current, leafOffsetSyncPort: event.target.value }))} />
                 </V1Field>
               ) : null}

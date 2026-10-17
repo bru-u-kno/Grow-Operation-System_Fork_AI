@@ -3,6 +3,7 @@ import { apiFetch } from '../../api'
 import { V1Alert, V1Button, V1Page, V1Skeleton, V1Tabs } from '../../components/v1'
 import { zahl } from './entfeuchter-band'
 import { abweichungsText } from './entfeuchter-abweichungen'
+import { HaStummHinweis } from './HaStummHinweis'
 import { aenderungsListe, planHinweisZeigen, tempGrenzen } from './entfeuchter-zusatz'
 import { ENTFEUCHTUNG_REITER, zusatzVorhanden } from './entfeuchtung-modell'
 import type { EntfeuchtungReiter } from './entfeuchtung-modell'
@@ -130,7 +131,7 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
     >
       {fehler && <V1Alert tone="critical" message={fehler} />}
       {meldung && <V1Alert tone={meldung === 'Gespeichert.' ? 'ok' : 'warn'} message={meldung} />}
-      {!hl.haErreichbar && <V1Alert title="Home Assistant antwortet nicht" message="Die Werte sind der letzte bekannte Stand. Die Regelung läuft dort weiter." />}
+      <HaStummHinweis haErreichbar={hl.haErreichbar} eingerichtet={h.seite.geraeteZugeordnet > 0} />
       {abweichungen.length > 0 && (
         <>
           <V1Alert tone="warn" title="Home Assistant regelt mit anderen Werten" message={`${abweichungsText(abweichungen)}. Geregelt wird nach den Werten in Home Assistant.`} />
