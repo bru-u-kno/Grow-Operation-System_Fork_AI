@@ -203,16 +203,17 @@ export function helferMeldung(r: Phase1[]): Meldung {
   const startwerte = r.reduce((n, x) => n + x.startwerte, 0)
   const kaputt = r.filter((x) => x.fehler)
   const offen = r.some((x) => x.startwerteOffen)
-  const problem = kaputt.length > 0 || nicht > 0 || offen
+  const hart = kaputt.length > 0 || nicht > 0
+  const problem = hart || offen
   // Nennt der Fehlertext selbst schon „nichts angelegt", steht nur er da (kein „0 … angelegt" davor, keine Doppelung).
   const teile: string[] = []
-  if (!problem || angelegt > 0) teile.push(`${angelegt} Helfer und Rechenwerte angelegt`)
+  if (!hart || angelegt > 0) teile.push(`${angelegt} Helfer und Rechenwerte angelegt`)
   else if (kaputt.length === 0) teile.push('Es wurde nichts angelegt')
   if (startwerte > 0) teile.push(`${startwerte} ${startwerte === 1 ? 'Startwert' : 'Startwerte'} aus deinen Einstellungen geschrieben`)
   if (offen) teile.push('Home Assistant hat nicht alle Startwerte angenommen — sie stehen noch auf ihrem Minimum, Einzelheiten im Protokoll')
   if (nicht > 0) teile.push(`${nicht} nicht — Einzelheiten stehen im Protokoll`)
   for (const k of kaputt) teile.push(`${k.modul}: ${k.fehler}`)
-  return { ton: !problem ? 'ok' : angelegt === 0 ? 'critical' : 'warn', text: satz(teile, '. ') }
+  return { ton: !problem ? 'ok' : hart && angelegt === 0 ? 'critical' : 'warn', text: satz(teile, '. ') }
 }
 
 export type AutoEintrag = { kennung: string; name: string; titel: string | null; stand: string; hinweis: string | null }

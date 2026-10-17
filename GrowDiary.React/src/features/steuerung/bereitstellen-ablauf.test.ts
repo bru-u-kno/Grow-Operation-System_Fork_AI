@@ -308,6 +308,12 @@ describe('helferMeldung / automationenMeldung (Neuling-Test A-017, Lücke 6)', (
     expect(m.text).toContain('nicht alle Startwerte angenommen')
   })
 
+  it('nur „Startwerte nicht angenommen", nichts angelegt: Warnung, nicht „nichts angelegt" in Rot', () => {
+    const m = helferMeldung([phase({ startwerteOffen: true })])
+    expect(m.ton).toBe('warn')
+    expect(m.text.startsWith('0 Helfer und Rechenwerte angelegt.')).toBe(true)
+  })
+
   it('alles gut: grün; auch „nichts zu tun" ist grün', () => {
     expect(helferMeldung([phase({ helfer: 12, rechenwerte: 4, startwerte: 12 })])).toEqual({
       ton: 'ok', text: '16 Helfer und Rechenwerte angelegt. 12 Startwerte aus deinen Einstellungen geschrieben.',
