@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+import { scrolltSeitwaerts, ueberstand } from './oberflaeche-messung'
 
 /**
  * Auf dem Telefon darf nichts über den rechten Rand hinausragen.
@@ -55,43 +56,6 @@ const SEITEN = [
   { pfad: '/kosten?tab=verbrauch', name: 'kosten-verbrauch' },
 ]
 
-/** Was rechts hinausragt, ohne dass man es wegwischen könnte. */
-async function ueberstand(page: Page) {
-  return page.evaluate(() => {
-    const breite = document.documentElement.clientWidth
-
-    // In einem Wischbereich zu liegen ist eine Entscheidung, kein Fehler:
-    // eine breite Tabelle oder ein Reiterband scrollen absichtlich in sich.
-    const imWischbereich = (el: HTMLElement): boolean => {
-      for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
-        const ox = getComputedStyle(n).overflowX
-        if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true
-      }
-      return false
-    }
-
-    // Screenreader-Text steht bewusst ausserhalb des Sichtfelds (clip-path).
-    // Er ist unsichtbar — seine Geometrie zaehlt nicht.
-    const nurFuerScreenreader = (el: HTMLElement): boolean => {
-      for (let n: HTMLElement | null = el; n && n !== document.body; n = n.parentElement) {
-        const cs = getComputedStyle(n)
-        if (cs.clipPath !== 'none' && cs.position === 'absolute') return true
-      }
-      return false
-    }
-
-    return [...document.querySelectorAll<HTMLElement>('main *')]
-      .filter((el) => {
-        const box = el.getBoundingClientRect()
-        if (box.width === 0 || box.height === 0) return false
-        if (box.right <= breite + 1) return false
-        return !imWischbereich(el) && !nurFuerScreenreader(el)
-      })
-      .slice(0, 8)
-      .map((el) => `${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]}@${Math.round(el.getBoundingClientRect().right)}`)
-  })
-}
-
 for (const seite of SEITEN) {
   test(`kein Ueberstand: ${seite.name} @ ${BREITE}px`, async ({ page }) => {
     await page.setViewportSize({ width: BREITE, height: HOEHE })
@@ -101,8 +65,7 @@ for (const seite of SEITEN) {
     expect(await ueberstand(page), `Diese Elemente ragen auf ${seite.pfad} rechts hinaus`).toEqual([])
 
     // Die Seite selbst darf nie seitwaerts scrollen — dann ist der Rahmen kaputt.
-    const seitwaerts = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
+    const seitwaerts = await scrolltSeitwaerts(page)
     expect(seitwaerts, `${seite.pfad} scrollt seitwaerts`).toBe(false)
   })
 }

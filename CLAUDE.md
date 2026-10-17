@@ -245,6 +245,25 @@ sofort aufgefallen, als es ihn gab: eine Karte mit Kontrast 1,05 im hellen
 Thema und vier Bedienelemente unter der Tippgröße — beide auf Seiten, die
 vorher leer standen.
 
+### Die Gerätematrix (`e2e/geraete/`)
+
+Dieselben Seiten auf mehreren Endgeräten, in vier Fassungen: hell, dunkel, doppelte Systemschrift („große Schrift") und im
+HA-Rahmen (iframe wie über Ingress). Geprüft wird: nichts ragt rechts hinaus, die Seite scrollt nicht seitwärts, auf Geräten mit
+Touch sind Bedienelemente mindestens 44 px treffbar, keine Skript- oder Konsolenfehler. Die Messfunktionen stehen an einer Stelle
+(`e2e/oberflaeche-messung.ts`) und werden von `handy-zuschnitt`, `touch-targets`, `kontrast` und `console-clean` mitbenutzt.
+
+```bash
+GROW_OS_URL=http://localhost:5076 GERAETE=1 npx playwright test e2e/geraete/geraetematrix.spec.ts   # Chromium-Geräte
+GERAETE=alle …                                                                                      # + WebKit, Firefox
+```
+
+- Die Projekte `geraet-*` gibt es nur mit `GERAETE`; der gewohnte Lauf und das Tor sehen sie nicht. `GERAETE=alle` braucht installierte
+  WebKit- und Firefox-Browser (`npx playwright install webkit firefox`) — auf der VM nicht ohne sudo, in der CI möglich.
+- **Die Matrix ist rot, solange es Befunde gibt, und das ist gewollt:** Am 17.10.2026 meldete sie auf der Demo-App 110 von 288
+  Fällen (zu kleine Ziele, Überstand bei doppelter Schrift auf 360 px). Sie gehört deshalb noch nicht in das Tor; erst nach
+  einer Basisliste oder den Korrekturen.
+- Nicht nachgestellt: das Scrollverhalten der WebView in der HA-App (F-049) — das zeigt nur ein echtes Gerät.
+
 ### Die Hooks nehmen mir zwei Prüfungen ab
 
 Eingerichtet in `.claude/settings.json`, die Skripte in `.claude/hooks/`:

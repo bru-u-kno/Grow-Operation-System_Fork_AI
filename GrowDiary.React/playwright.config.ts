@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { geraeteFuer } from './e2e/geraete/geraete'
 
 // Smoke-focused Playwright config. Runs the built app via `vite preview` on a fixed
 // port so the tests exercise the real production bundle. The backend/API is not
@@ -28,7 +29,9 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Die Gerätematrix läuft nur in ihren eigenen Projekten (`GERAETE=1`, siehe e2e/geraete/geraete.ts), nicht zusätzlich hier.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /geraetematrix\.spec\.ts/ },
+    ...geraeteFuer(process.env.GERAETE).map((g) => ({ name: `geraet-${g.name}`, use: g.use, testMatch: /geraetematrix\.spec\.ts/ })),
   ],
   // Gegen eine laufende App keinen zweiten Server hochziehen.
   webServer: LAUFENDE_APP ? undefined : {

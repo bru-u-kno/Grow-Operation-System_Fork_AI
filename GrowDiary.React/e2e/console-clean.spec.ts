@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { istAufbauRauschen } from './oberflaeche-messung'
 
 /**
  * Keine Seite darf mit einem Fehler in der Konsole oder einem gescheiterten
@@ -33,13 +34,6 @@ const ROUTEN = [
 // gruen, obwohl er nichts geprueft hat. Genau diese Falle hat in diesem
 // Projekt schon zugeschlagen.
 if (ROUTEN.length < 10) throw new Error(`Diese Pruefung sieht nur ${ROUTEN.length} Seiten — sie wuerde nichts messen.`)
-
-/** Was am Testaufbau liegt, nicht an der App. */
-function istAufbauRauschen(text: string): boolean {
-  return /\/api\/live\/tents\/\d+\/camera/.test(text)
-    || /\/api\/home-assistant\/entities/.test(text)
-    || /favicon/.test(text)
-}
 
 /** Ohne Backend ist jeder API-Aufruf zum Scheitern verurteilt. */
 function istApiOhneBackend(text: string, backendLaeuft: boolean): boolean {

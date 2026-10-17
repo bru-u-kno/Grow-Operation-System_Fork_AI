@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.240
+
+**Fork AI.** Neue Prüfung für Entwickler: die **Gerätematrix**. Sie öffnet dieselben Seiten auf mehreren Endgeräten und prüft, ob etwas über den Rand ragt, ob Bedienelemente groß genug zum Antippen sind und ob die Konsole sauber bleibt. **Für die Anwendung ändert sich nichts:** keine Oberfläche, kein Backend, keine Einstellung.
+
+- **Was war:** Alle Oberflächenprüfungen sahen die App nur in Desktop-Chromium, höchstens auf 360 oder 390 px verkleinert. Wer sie am Android-Handy, am Tablet, mit großer Systemschrift oder in der Home-Assistant-App öffnet, wurde nie nachgestellt.
+- **Jetzt:** Sechs Chromium-Geräte (Android-Handy 360 und 412 px, Android-Tablet hoch und quer, Desktop 1280 und 1920 px), je in vier Fassungen: hell, dunkel, doppelte Systemschrift („große Schrift" der Bedienungshilfen) und im HA-Rahmen (die App in einem iframe unter der HA-Kopfleiste bzw. neben der Seitenleiste). Zwölf Seiten je Fassung, darunter Live, Messung, Addback, Geräte-Rollen, Zahlenfelder der Steuerung, der Wasserwechsel-Ablauf und die Kosten. Gestartet wird sie mit `GERAETE=1` gegen eine laufende App; WebKit (iPhone, iPad) und Firefox kommen als zweiter Schritt (`GERAETE=alle`, braucht dort installierte Browser).
+- **Gemeinsame Messfunktionen:** Überstand, seitwärts scrollen, Trefferflächen und Konsolen-Rauschen stehen jetzt an einer Stelle (`e2e/oberflaeche-messung.ts`); `handy-zuschnitt`, `touch-targets`, `kontrast` und `console-clean` benutzen dieselben Funktionen statt je einer abgetippten Fassung.
+- **Befund beim ersten Lauf** (Demo-App, nur Chromium): 110 von 288 Fällen rot — vor allem Bedienelemente unter 44 px (Chips der Steuerung, Reiter der Planansicht, Eingaben im Wasserwechsel, Seitenleiste auf Tablets) und Überstand bei doppelter Schrift auf dem 360-px-Handy (Live-Seite, Grow-Seite, Wasserwechsel). Das sind echte Befunde der App, keine Fehler der Prüfung; sie stehen als Aufgabe in der Liste und werden einzeln behoben.
+- **Nicht im Tor:** Die Gerätematrix läuft nur mit `GERAETE` und gehört deshalb weder zum Commit-Tor noch zur CI, bis die Befunde behoben oder in einer Basisliste festgehalten sind.
+- **Geprüft:** Die vier auf die gemeinsamen Funktionen umgestellten Prüfungen laufen unverändert grün (186 Fälle); die Matrix zeigt am Probefall grün und an echten Befunden rot, im HA-Rahmen wird im iframe gemessen.
+
 ## 2.0.0-forkai.239
 
 **Fork AI.** Die Entfeuchtung sagt jetzt, **warum der Zusatz-Entfeuchter steht, obwohl das Zelt schon unter seiner Abschalt-Temperatur liegt**: Nach einer Wärme-Abschaltung schaltet er erst unter der Wieder-ein-Temperatur wieder ein. Dazwischen stand er stundenlang aus, und die Seite schwieg dazu.
