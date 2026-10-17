@@ -98,7 +98,7 @@ public sealed class SteuerungAutomationService
         public string? Titel { get; init; }
     }
 
-    public sealed record Bilanz(bool Erreichbar, IReadOnlyList<Ergebnis> Einzeln)
+    public sealed record Bilanz(bool Erreichbar, IReadOnlyList<Ergebnis> Einzeln, IReadOnlyList<SteuerungRechenwertService.NachzugErgebnis>? Nachgezogen = null)
     {
         public int Angelegt => Einzeln.Count(e => e.Stand is Stand.Angelegt or Stand.Erneuert);
         public int Fremd => Einzeln.Count(e => e.Stand == Stand.Fremd);

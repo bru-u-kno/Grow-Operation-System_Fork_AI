@@ -387,6 +387,10 @@ public static class SteuerungBauteile
         new(Zuluft, "input_number.zuluft_zelttemperatur_min", "Zuluft Zelttemperatur min", BauteilArt.Zahl,
             "Fällt das Zelt darunter, pausiert die Zuluft; wieder an ab + 1 °C.",
             Min: 10, Max: 30, Schritt: 0.5, Einheit: "°C"),
+        // Fork AI (forkai.234, A-024): Der letzte Zustand des Bedarfs. Im Haltebereich der Hysterese
+        // rechnet der Bedarf damit statt mit this.state, das nach einem Aussetzer "unavailable" ist.
+        new(Zuluft, "input_boolean.zuluft_bedarf_merker", "Zuluft Bedarf Merker", BauteilArt.Schalter,
+            "Merkt sich, ob der Bedarf zuletzt an oder aus war. Der Bedarf hält damit seinen Zustand auch über einen Fühler-Aussetzer hinweg."),
 
         // --- Lüfter ---------------------------------------------------------
         new(Zuluft, "input_number.zuluft_stufe_min", "Zuluft Stufe min", BauteilArt.Zahl,
@@ -431,13 +435,17 @@ public static class SteuerungBauteile
             Verfuegbarkeit: "{{ has_value('sensor.zuluft_differenz') }}"),
         new(Zuluft, "binary_sensor.zuluft_bedarf", "Zuluft Bedarf", BauteilArt.RechenSchalter,
             "An, solange Ansaugen lohnt und das Zelt warm genug ist. Mit Hysterese, damit er an der Schwelle nicht flattert. Fehlt der Zeltwert kurz, zählt er nicht (float(99)).",
-            Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set t = states('[[aussen_temp]]') | float %}{% set tm = states('input_number.zuluft_aussentemperatur_min') | float %}{% set tz = states('[[zelt_temp]]') | float(99) %}{% set tzm = states('input_number.zuluft_zelttemperatur_min') | float(21) %}{% set prev = (this.state == 'on') if this is defined else false %}{% if d >= s and t >= tm and tz >= tzm + 1 %}on{% elif d < s - (states('input_number.zuluft_abschalt_abstand') | float(0.5)) or t < tm - 1 or tz < tzm %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
+            Vorlage: "{% set d = states('sensor.zuluft_differenz') | float %}{% set s = states('input_number.zuluft_mindest_differenz') | float %}{% set t = states('[[aussen_temp]]') | float %}{% set tm = states('input_number.zuluft_aussentemperatur_min') | float %}{% set tz = states('[[zelt_temp]]') | float(99) %}{% set tzm = states('input_number.zuluft_zelttemperatur_min') | float(21) %}{% set m = states('input_boolean.zuluft_bedarf_merker') %}{% set prev = (m == 'on') if m in ['on','off'] else ((this.state == 'on') if this is defined else false) %}{% if d >= s and t >= tm and tz >= tzm + 1 %}on{% elif d < s - (states('input_number.zuluft_abschalt_abstand') | float(0.5)) or t < tm - 1 or tz < tzm %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
             Verfuegbarkeit: "{{ has_value('sensor.zuluft_differenz') and has_value('[[aussen_temp]]') }}"),
 
         // --- Automation -----------------------------------------------------
         new(Zuluft, "automation.zuluft_keller_regelung", "Zuluft Keller Regelung", BauteilArt.Automation,
             "Schaltet den Lüfter-Port und führt die Stufe nach.", VorlagenDatei: "regelung",
             Probelauf: ProbelaufRolle.Pausieren),
+        // Fork AI (forkai.234, A-024): Spiegelt den Bedarf in den Merker. Reagiert nie auf "unavailable".
+        new(Zuluft, "automation.zuluft_merker_abgleich", "Zuluft Merker Abgleich", BauteilArt.Automation,
+            "Schreibt den Zustand des Bedarfs in den Merker, solange der Bedarf an oder aus ist — bei \"nicht verfügbar\" bleibt der Merker stehen.",
+            VorlagenDatei: "merker", Probelauf: ProbelaufRolle.Laufenlassen),
 
         // ====================================================================
         // Water Chiller — Wassertemperatur auf zwei Zielen halten, Tag und Nacht.

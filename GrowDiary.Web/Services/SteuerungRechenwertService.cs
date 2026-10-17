@@ -50,7 +50,17 @@ public sealed class SteuerungRechenwertService
     /// <param name="Name">Sein Titel in Home Assistant (so heißt der Eintrag bei Neuanlage durch den Fork).</param>
     /// <param name="Alt">Das Textstück, wie es in der älteren Vorlage steht.</param>
     /// <param name="Neu">Das Textstück, das an seine Stelle tritt.</param>
-    public sealed record Nachzug(string EntityId, string Name, string Alt, string Neu);
+    /// <param name="Merker">
+    /// Fork AI (forkai.234): Ein Helfer, den das neue Textstück liest und der vorher stimmen muss.
+    /// Vor dem Tausch wird geprüft, dass er da ist, und er wird auf den jetzigen Zustand des
+    /// Rechenwerts gesetzt — sonst rechnete der Rechenwert gleich nach dem Tausch mit einem leeren
+    /// Merker und schaltete im Haltebereich um.
+    /// </param>
+    /// <param name="Abgleich">
+    /// Die Automation, die den Merker führt. Läuft sie nicht, friert der Merker ein und hielte den
+    /// Rechenwert im Haltebereich falsch — dann wird nicht getauscht.
+    /// </param>
+    public sealed record Nachzug(string EntityId, string Name, string Alt, string Neu, string? Merker = null, string? Abgleich = null);
 
     /// <summary>
     /// Die Änderungen, die vorhandene Rechenwerte nachgezogen bekommen.
@@ -65,6 +75,17 @@ public sealed class SteuerungRechenwertService
     /// </remarks>
     public static readonly IReadOnlyList<Nachzug> Nachzuege = new[]
     {
+        // Fork AI (forkai.234, A-024): Der Haltebereich rechnet mit dem Merker statt mit this.state.
+        // ERST dieser Nachzug, dann der Abschalt-Abstand: Jeder Tausch lädt den Rechenwert neu, und ein
+        // Rechenwert ohne Merker fiele dabei im Haltebereich auf "aus" (this.state ist nach dem Neuladen
+        // "unavailable"). Mit dem Merker zuerst trägt schon der zweite Tausch den Zustand über das Neuladen.
+        new Nachzug(
+            "binary_sensor.zuluft_bedarf",
+            "Zuluft Bedarf",
+            "{% set prev = (this.state == 'on') if this is defined else false %}",
+            "{% set m = states('input_boolean.zuluft_bedarf_merker') %}{% set prev = (m == 'on') if m in ['on','off'] else ((this.state == 'on') if this is defined else false) %}",
+            Merker: ZuluftSteuerungService.Entitaeten.BedarfMerker,
+            Abgleich: ZuluftSteuerungService.Entitaeten.MerkerAbgleich),
         new Nachzug(
             "binary_sensor.zuluft_bedarf",
             "Zuluft Bedarf",
@@ -75,7 +96,7 @@ public sealed class SteuerungRechenwertService
     /// <summary>Wie es einem Nachzug ergangen ist.</summary>
     /// <param name="Stand">
     /// <c>angepasst</c>, <c>aktuell</c> (schon neu), <c>nicht_gefunden</c> (Eintrag fehlt oder anders benannt),
-    /// <c>abweichend</c> (altes Textstück steht nicht darin) oder <c>fehler</c>.
+    /// <c>abweichend</c> (altes Textstück steht nicht darin), <c>wartet</c> (Merker fehlt oder Zustand unklar — später noch einmal) oder <c>fehler</c>.
     /// </param>
     public sealed record NachzugErgebnis(string EntityId, string Stand, string? Hinweis);
 
@@ -213,13 +234,14 @@ public sealed class SteuerungRechenwertService
                 continue;
             }
 
-            ergebnisse.Add(await NachziehenAsync(client, n, kennung, ct));
+            ergebnisse.Add(await NachziehenAsync(client, n, kennung, settings, ct));
         }
 
         return ergebnisse;
     }
 
-    private async Task<NachzugErgebnis> NachziehenAsync(HttpClient client, Nachzug n, string eintrag, CancellationToken ct)
+    private async Task<NachzugErgebnis> NachziehenAsync(
+        HttpClient client, Nachzug n, string eintrag, HomeAssistantSettings settings, CancellationToken ct)
     {
         string? dialog = null;
         try
@@ -239,6 +261,20 @@ public sealed class SteuerungRechenwertService
                 return new NachzugErgebnis(n.EntityId, stand, stand == "aktuell" ? null : "Das alte Textstück steht nicht in der Vorlage.");
             }
 
+            // Fork AI (forkai.234): Liest das neue Textstück einen Merker, muss er da sein und stimmen,
+            // BEVOR der Rechenwert neu geladen wird. Der Dialog wird dafür wieder geschlossen und
+            // beim nächsten Lauf neu geöffnet.
+            if (n.Merker is not null)
+            {
+                var (bereit, hinweis) = await MerkerBereitMachenAsync(settings, n, ct);
+                if (!bereit)
+                {
+                    await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
+                    _log.LogWarning("Rechenwert {EntityId} nicht nachgezogen, weil er wartet: {Hinweis}", n.EntityId, hinweis);
+                    return new NachzugErgebnis(n.EntityId, "wartet", hinweis);
+                }
+            }
+
             var abgeschickt = await client.PostAsJsonAsync($"api/config/config_entries/options/flow/{dialog}", felder, ct);
             var antwort = await abgeschickt.Content.ReadFromJsonAsync<JsonElement>(ct);
             if (!abgeschickt.IsSuccessStatusCode || Text(antwort, "type") != "create_entry")
@@ -256,6 +292,80 @@ public sealed class SteuerungRechenwertService
             if (dialog is not null) await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
             return new NachzugErgebnis(n.EntityId, "fehler", ex.Message);
         }
+    }
+
+    /// <summary>Was vor einem Nachzug mit Merker zu tun ist.</summary>
+    public enum MerkerSchritt
+    {
+        /// <summary>Merker fehlt oder ist nicht lesbar — erst die Helfer anlegen.</summary>
+        MerkerFehlt,
+
+        /// <summary>Der Rechenwert ist gerade nicht an oder aus — es gibt keinen Zustand zu übernehmen.</summary>
+        ZustandUnklar,
+
+        /// <summary>Merker und Rechenwert sagen schon dasselbe.</summary>
+        Passt,
+
+        SetzeAn,
+        SetzeAus,
+    }
+
+    /// <summary>
+    /// Wie der Merker vor dem Tausch zum Rechenwert gebracht wird. Rein, damit es ohne Home Assistant
+    /// prüfbar ist.
+    /// </summary>
+    /// <param name="rechenwert">Zustand des Rechenwerts (<c>on</c>, <c>off</c>, <c>unavailable</c> …) oder null.</param>
+    /// <param name="merker">Zustand des Merkers oder null, wenn es ihn nicht gibt.</param>
+    public static MerkerSchritt MerkerEntscheiden(string? rechenwert, string? merker)
+    {
+        var m = merker?.ToLowerInvariant();
+        if (m is not ("on" or "off")) return MerkerSchritt.MerkerFehlt;
+        var r = rechenwert?.ToLowerInvariant();
+        if (r is not ("on" or "off")) return MerkerSchritt.ZustandUnklar;
+        if (r == m) return MerkerSchritt.Passt;
+        return r == "on" ? MerkerSchritt.SetzeAn : MerkerSchritt.SetzeAus;
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.234): Setzt den Merker auf den jetzigen Zustand des Rechenwerts und liest nach,
+    /// dass er ihn angenommen hat. Erst dann darf das Textstück getauscht werden.
+    /// </summary>
+    private async Task<(bool Bereit, string? Hinweis)> MerkerBereitMachenAsync(
+        HomeAssistantSettings settings, Nachzug n, CancellationToken ct)
+    {
+        var rechenwert = (await _ha.GetEntityStateAsync(settings, n.EntityId, ct))?.State;
+        var merker = (await _ha.GetEntityStateAsync(settings, n.Merker!, ct))?.State;
+        var schritt = MerkerEntscheiden(rechenwert, merker);
+        if (schritt != MerkerSchritt.MerkerFehlt && n.Abgleich is not null)
+        {
+            var abgleich = (await _ha.GetEntityStateAsync(settings, n.Abgleich, ct))?.State;
+            if (!string.Equals(abgleich, "on", StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, $"Die Automation {n.Abgleich} führt den Merker, läuft aber nicht ({abgleich ?? "fehlt"}) — zuerst die Automationen anlegen und einschalten.");
+            }
+        }
+        switch (schritt)
+        {
+            case MerkerSchritt.MerkerFehlt:
+                return (false, $"Der Merker {n.Merker} fehlt oder ist nicht lesbar (Home Assistant antwortet nicht?) — zuerst die Helfer anlegen.");
+            case MerkerSchritt.ZustandUnklar:
+                return (false, $"{n.EntityId} ist gerade weder an noch aus ({rechenwert ?? "unbekannt"}) — es gibt keinen Zustand für den Merker. Später noch einmal.");
+            case MerkerSchritt.Passt:
+                return (true, null);
+        }
+
+        var dienst = schritt == MerkerSchritt.SetzeAn ? "turn_on" : "turn_off";
+        var domaene = n.Merker!.Split('.', 2)[0];
+        if (!await _ha.CallEntityServiceAsync(settings, domaene, dienst, n.Merker!, ct))
+        {
+            return (false, $"Home Assistant hat {domaene}.{dienst} für {n.Merker} nicht angenommen.");
+        }
+
+        var danach = (await _ha.GetEntityStateAsync(settings, n.Merker!, ct))?.State;
+        var soll = schritt == MerkerSchritt.SetzeAn ? "on" : "off";
+        return string.Equals(danach, soll, StringComparison.OrdinalIgnoreCase)
+            ? (true, null)
+            : (false, $"Der Merker {n.Merker} steht nach dem Setzen auf {danach ?? "unbekannt"}, nicht auf {soll}.");
     }
 
     /// <summary>

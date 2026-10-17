@@ -648,7 +648,15 @@ public sealed class SteuerungApiController : ApiControllerBase
             .Where(p => !string.IsNullOrWhiteSpace(p.Value))
             .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
 
-        return Ok(await _automationen.AnlegenAsync(modul, zuordnung, settings, vorschau, ct));
+        var bilanz = await _automationen.AnlegenAsync(modul, zuordnung, settings, vorschau, ct);
+        // Fork AI (forkai.234): Ein Nachzug, der auf eine Automation wartet (der Merker braucht seinen Abgleich),
+        // wird hier nachgeholt — gleich, in welcher Reihenfolge Rechenwerte und Automationen angelegt wurden.
+        if (!vorschau && bilanz.Erreichbar)
+        {
+            bilanz = bilanz with { Nachgezogen = await _rechenwerte.NachziehenAsync(modul, settings, ct) };
+        }
+
+        return Ok(bilanz);
     }
 
     /// <summary>Die vorhandenen CO₂-Automationen auf Schwachstellen prüfen. Ändert nichts.</summary>

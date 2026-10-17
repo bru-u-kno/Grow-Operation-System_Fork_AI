@@ -155,7 +155,11 @@ public sealed class SteuerungStartwerteTests
         var geschrieben = ZuluftSteuerungService.Schreibliste(e).Select(z => z.Entity).ToList();
 
         Assert.True(geschrieben.Count >= 7, "Die Schreibliste ist leer — die Prüfung sähe nichts.");
-        Assert.Empty(OhneSchreiber("zuluft", geschrieben));
+
+        // Forkai.234 (A-024): Der Merker ist kein Einstellwert. Neu angelegt steht er auf "aus" — das ist auch
+        // Home Assistants Vorgabe —, danach führt ihn die Automation "Zuluft Merker Abgleich" aus dem Bedarf.
+        var andererSchreiber = new[] { ZuluftSteuerungService.Entitaeten.BedarfMerker };
+        Assert.Equal(andererSchreiber, OhneSchreiber("zuluft", geschrieben));
     }
 
     [Fact]

@@ -1,0 +1,40 @@
+{
+  "alias": "Zuluft Merker Abgleich",
+  "description": "Haelt den Merker input_boolean.zuluft_bedarf_merker auf dem Zustand von binary_sensor.zuluft_bedarf, solange dieser an oder aus ist. Faellt der Bedarf kurz auf nicht verfuegbar (Fuehler- oder Helferaussetzer, Neuladen des Rechenwerts), reagiert die Automation absichtlich NICHT - so bleibt im Haltebereich der Hysterese der letzte Zustand erhalten, und der Bedarf springt danach nicht auf aus. Der Minutentakt gleicht nach, falls eine Aenderung verpasst wurde. Ausschalten dieser Automation heisst: der Merker friert ein und kann den Bedarf im Haltebereich falsch halten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/zuluft/merker/1.",
+  "mode": "single",
+  "max_exceeded": "silent",
+  "triggers": [
+    { "trigger": "state", "entity_id": "binary_sensor.zuluft_bedarf", "to": ["on", "off"] },
+    { "trigger": "time_pattern", "minutes": "/1" }
+  ],
+  "conditions": [
+    {
+      "condition": "template",
+      "value_template": "{{ states('binary_sensor.zuluft_bedarf') in ['on', 'off'] and states('input_boolean.zuluft_bedarf_merker') in ['on', 'off'] and states('binary_sensor.zuluft_bedarf') != states('input_boolean.zuluft_bedarf_merker') }}"
+    }
+  ],
+  "actions": [
+    {
+      "choose": [
+        {
+          "alias": "Bedarf an",
+          "conditions": [
+            { "condition": "state", "entity_id": "binary_sensor.zuluft_bedarf", "state": "on" }
+          ],
+          "sequence": [
+            { "action": "input_boolean.turn_on", "target": { "entity_id": "input_boolean.zuluft_bedarf_merker" } }
+          ]
+        },
+        {
+          "alias": "Bedarf aus",
+          "conditions": [
+            { "condition": "state", "entity_id": "binary_sensor.zuluft_bedarf", "state": "off" }
+          ],
+          "sequence": [
+            { "action": "input_boolean.turn_off", "target": { "entity_id": "input_boolean.zuluft_bedarf_merker" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

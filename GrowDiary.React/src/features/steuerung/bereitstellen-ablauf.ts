@@ -157,7 +157,9 @@ export async function helferUndRechenwerte(
         r.startwerte = b.startwerte ?? 0
         r.startwerteOffen = b.startwerteVollstaendig === false
       }
-      if (fehlt.rechenwerte > 0) {
+      // Auch wenn nur ein Helfer neu ist: derselbe Aufruf zieht vorhandene Rechenwerte nach (sie lesen den neuen
+      // Helfer, zum Beispiel den Merker des Zuluft-Bedarfs). Ohne diesen Aufruf bliebe der Rechenwert beim alten Stand.
+      if (fehlt.rechenwerte > 0 || (r.helfer > 0 && r.nicht === 0)) {
         const b = await aufruf<Bilanz>(`/api/steuerung/${modul}/rechenwerte`, { method: 'POST' })
         r.rechenwerte = b.angelegt
         r.nicht += b.fehlgeschlagen

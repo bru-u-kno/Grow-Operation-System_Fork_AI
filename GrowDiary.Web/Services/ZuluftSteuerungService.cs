@@ -75,6 +75,12 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
         public const string Zielstufe = "sensor.zuluft_zielstufe";
         public const string Bedarf = "binary_sensor.zuluft_bedarf";
         public const string Automatik = "automation.zuluft_keller_regelung";
+
+        /// <summary>Fork AI (forkai.234, A-024): Der letzte Zustand des Bedarfs, geführt von <see cref="MerkerAbgleich"/>.</summary>
+        public const string BedarfMerker = "input_boolean.zuluft_bedarf_merker";
+
+        /// <summary>Fork AI (forkai.234, A-024): Die Automation, die den Bedarf in den Merker spiegelt.</summary>
+        public const string MerkerAbgleich = "automation.zuluft_merker_abgleich";
     }
 
     private readonly SteuerungRepository _repo;

@@ -57,19 +57,21 @@ describe('helferUndRechenwerte', () => {
     const { calls, aufruf } = aufzeichnung({
       '/api/steuerung/co2/helfer': { angelegt: 20, fehlgeschlagen: 0 },
       '/api/steuerung/co2/rechenwerte': { angelegt: 5, fehlgeschlagen: 0 },
-      '/api/steuerung/entfeuchter/helfer': { angelegt: 15, fehlgeschlagen: 1 },
+      '/api/steuerung/entfeuchter/helfer': { angelegt: 15, fehlgeschlagen: 0 },
     })
     const r = await helferUndRechenwerte(['co2', 'entfeuchter'], {
       co2: bestand(bauteil('Zahl'), bauteil('RechenSensor')),
       entfeuchter: bestand(bauteil('Zahl')),
     }, aufruf)
 
+    // Der Entfeuchter hat nur Helfer neu, ruft danach aber trotzdem die Rechenwerte (A-024: Nachzug).
     expect(calls).toEqual([
-      'POST /api/steuerung/co2/helfer', 'POST /api/steuerung/co2/rechenwerte', 'POST /api/steuerung/entfeuchter/helfer',
+      'POST /api/steuerung/co2/helfer', 'POST /api/steuerung/co2/rechenwerte',
+      'POST /api/steuerung/entfeuchter/helfer', 'POST /api/steuerung/entfeuchter/rechenwerte',
     ])
     expect(r).toEqual([
       { modul: 'co2', helfer: 20, rechenwerte: 5, nicht: 0, fehler: null, startwerte: 0, startwerteOffen: false },
-      { modul: 'entfeuchter', helfer: 15, rechenwerte: 0, nicht: 1, fehler: null, startwerte: 0, startwerteOffen: false },
+      { modul: 'entfeuchter', helfer: 15, rechenwerte: 0, nicht: 0, fehler: null, startwerte: 0, startwerteOffen: false },
     ])
   })
 
@@ -90,6 +92,19 @@ describe('helferUndRechenwerte', () => {
     const r = await helferUndRechenwerte(['entfeuchter'], { entfeuchter: bestand(bauteil('Zahl')) }, aufruf)
 
     expect(r[0]).toMatchObject({ startwerte: 0, startwerteOffen: true })
+  })
+
+  it('ruft nach neu angelegten Helfern auch die Rechenwerte, damit vorhandene nachgezogen werden (A-024)', async () => {
+    // Bestandsnutzer: nur der neue Merker-Helfer fehlt, kein Rechenwert. Ohne den Aufruf bliebe der Bedarf beim alten Template.
+    const { calls, aufruf } = aufzeichnung({ '/api/steuerung/zuluft/helfer': { angelegt: 1, fehlgeschlagen: 0 } })
+    await helferUndRechenwerte(['zuluft'], { zuluft: bestand(bauteil('Schalter'), bauteil('RechenSensor', 'Da')) }, aufruf)
+    expect(calls).toEqual(['POST /api/steuerung/zuluft/helfer', 'POST /api/steuerung/zuluft/rechenwerte'])
+  })
+
+  it('ruft die Rechenwerte nicht, wenn beim Anlegen der Helfer etwas scheiterte', async () => {
+    const { calls, aufruf } = aufzeichnung({ '/api/steuerung/zuluft/helfer': { angelegt: 1, fehlgeschlagen: 1 } })
+    await helferUndRechenwerte(['zuluft'], { zuluft: bestand(bauteil('Schalter'), bauteil('RechenSensor', 'Da')) }, aufruf)
+    expect(calls).toEqual(['POST /api/steuerung/zuluft/helfer'])
   })
 
   it('fragt Module nicht an, bei denen nichts fehlt', async () => {
@@ -233,7 +248,10 @@ describe('Voraussetzung: der Zusatz wartet auf den Entfeuchter', () => {
     const r = await helferUndRechenwerte(['entfeuchter', 'entfeuchter-zusatz'], {
       entfeuchter: bestandMit('Zahl'), 'entfeuchter-zusatz': bestandMit('Zahl'),
     }, aufruf)
-    expect(calls).toEqual(['POST /api/steuerung/entfeuchter/helfer', 'POST /api/steuerung/entfeuchter-zusatz/helfer'])
+    expect(calls).toEqual([
+      'POST /api/steuerung/entfeuchter/helfer', 'POST /api/steuerung/entfeuchter/rechenwerte',
+      'POST /api/steuerung/entfeuchter-zusatz/helfer', 'POST /api/steuerung/entfeuchter-zusatz/rechenwerte',
+    ])
     expect(r.map((x) => x.fehler)).toEqual([null, null])
   })
 

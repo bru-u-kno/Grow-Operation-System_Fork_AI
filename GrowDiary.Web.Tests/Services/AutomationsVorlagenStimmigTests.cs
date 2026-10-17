@@ -277,7 +277,8 @@ public sealed class AutomationsVorlagenStimmigTests
         // ihre Fassung höher ist als die in Home Assistant (SteuerungBestandService).
         Assert.Equal(4, SteuerungAutomationService.VorlagenFassung("co2", "dosierung"));
         Assert.Equal(3, SteuerungAutomationService.VorlagenFassung("co2", "waechter"));
-        Assert.Equal(2, SteuerungAutomationService.VorlagenFassung("zuluft", "regelung"));
+        Assert.Equal(3, SteuerungAutomationService.VorlagenFassung("zuluft", "regelung"));
+        Assert.Equal(1, SteuerungAutomationService.VorlagenFassung("zuluft", "merker"));
     }
 
     // ------------------------------------- Katalog und Vorlagen gehören zusammen
