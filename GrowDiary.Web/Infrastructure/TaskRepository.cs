@@ -43,8 +43,8 @@ public sealed class TaskRepository
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO GrowTasks (GrowId, Title, Notes, DueAtUtc, Priority, Status, CreatedAtUtc, CompletedAtUtc)
-            VALUES ($growId, $title, $notes, $dueAtUtc, $priority, $status, $createdAtUtc, $completedAtUtc);
+            INSERT INTO GrowTasks (GrowId, Title, Notes, DueAtUtc, Priority, Status, CreatedAtUtc, CompletedAtUtc, CreatedByAssistant)
+            VALUES ($growId, $title, $notes, $dueAtUtc, $priority, $status, $createdAtUtc, $completedAtUtc, $createdByAssistant);
             SELECT last_insert_rowid();
         """;
         command.Parameters.AddWithValue("$growId", task.GrowId);
@@ -55,6 +55,7 @@ public sealed class TaskRepository
         command.Parameters.AddWithValue("$status", task.Status.ToString());
         command.Parameters.AddWithValue("$createdAtUtc", task.CreatedAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$completedAtUtc", task.CompletedAtUtc.HasValue ? task.CompletedAtUtc.Value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) : DBNull.Value);
+        command.Parameters.AddWithValue("$createdByAssistant", (object?)task.CreatedByAssistant ?? DBNull.Value);
         return Convert.ToInt32((long)command.ExecuteScalar()!);
     }
 
@@ -142,7 +143,8 @@ public sealed class TaskRepository
             Priority = Enum.TryParse<TaskPriority>(reader["Priority"]?.ToString(), out var priority) ? priority : TaskPriority.Normal,
             Status = Enum.TryParse<GrowTaskStatus>(reader["Status"]?.ToString(), out var status) ? status : GrowTaskStatus.Open,
             CreatedAtUtc = ParseUtcOrDefault(reader["CreatedAtUtc"]),
-            CompletedAtUtc = ParseUtcOrNull(reader["CompletedAtUtc"])
+            CompletedAtUtc = ParseUtcOrNull(reader["CompletedAtUtc"]),
+            CreatedByAssistant = reader["CreatedByAssistant"] is DBNull ? null : reader["CreatedByAssistant"]?.ToString()
         };
 
     private static DateTime ParseUtcOrDefault(object raw)

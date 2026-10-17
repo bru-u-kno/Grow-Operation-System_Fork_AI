@@ -1,5 +1,12 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.4
+
+**Aufgaben anlegen.** Neues Werkzeug `aufgabe_anlegen` (Stufe Dokumentieren): legt eine Aufgabe in der
+Aufgabenliste eines Grows an (Titel, Notiz, Fälligkeit, Priorität). Gibt es schon eine offene Aufgabe mit
+demselben Titel, wird keine zweite angelegt. In Grow OS Fork AI erscheint die Aufgabe mit dem
+Kennzeichen „von KI". Braucht Grow OS Fork AI ab 2.0.0-forkai.230.
+
 ## 0.2.0-forkai.3
 
 **Journal-Einträge ändern.** Neues Werkzeug `journal_aendern` (Stufe Dokumentieren): Text ersetzen

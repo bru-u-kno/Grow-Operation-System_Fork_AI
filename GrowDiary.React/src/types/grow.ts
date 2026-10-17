@@ -411,6 +411,7 @@ export interface GrowTaskDto {
   status: GrowTaskStatus
   createdAtUtc: string
   completedAtUtc: string | null
+  createdByAssistant: string | null
 }
 
 export interface SopInstanceDto {

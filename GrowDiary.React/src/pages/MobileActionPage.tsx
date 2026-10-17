@@ -367,7 +367,7 @@ function MobileActionPage() {
 }
 
 /** `note` traegt die Herkunft: woher ein Termin kommt, gehoert an den Termin. */
-type AfItem = { id: string; when: string; due: boolean; title: string; to: string; action: string; taskId?: number; note?: string }
+type AfItem = { id: string; when: string; due: boolean; title: string; to: string; action: string; taskId?: number; note?: string; vonKi?: string }
 
 function AfRow({ item, busy, onDone, onDelete }: { item: AfItem; busy?: boolean; onDone?: () => void; onDelete?: () => void }) {
   return (
@@ -375,6 +375,7 @@ function AfRow({ item, busy, onDone, onDelete }: { item: AfItem; busy?: boolean;
       <span className={classNames('af-when', item.due && 'is-due')}>{item.when}</span>
       <span className="af-title">
         {item.title}
+        {item.vonKi && <span className="af-ki" title={`Angelegt von ${item.vonKi}`}>von KI</span>}
         {item.note && <em className="af-pump-source">{item.note}</em>}
       </span>
       {/* Eine Hauptaktion je Zeile: eine Aufgabe hakt man ab, einen laufenden
@@ -410,6 +411,7 @@ function buildTermine(state: ActionState): AfItem[] {
       return {
         id: `task-${task.id}`,
         taskId: task.id,
+        vonKi: task.createdByAssistant ?? undefined,
         when: when.label,
         due: when.due || task.priority === 'Critical',
         title: task.title,

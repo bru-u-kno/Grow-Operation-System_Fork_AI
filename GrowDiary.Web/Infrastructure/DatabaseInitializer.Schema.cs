@@ -22,6 +22,7 @@ public sealed partial class DatabaseInitializer
         // gegen 4 UND 7 abgeglichen, oft auch 10. Bestehende Datenbanken
         // bekommen die Spalte hier nachtraeglich.
         EnsureColumn(connection, "CalibrationEvents", "PointsJson", "TEXT NULL");
+        EnsureColumn(connection, "GrowTasks", "CreatedByAssistant", "TEXT NULL");
 
         EnsureColumn(connection, "Setups", "CloneCounterTotal", "INTEGER NULL");
         EnsureColumn(connection, "Setups", "LastCloneCutAt", "TEXT NULL");

@@ -576,6 +576,11 @@
        ueberhaupt erst eine Gestaltung bekommen hatten. */
     flex-wrap: wrap;
   }
+  .af-ki {
+    margin-left: 8px; padding: 1px 8px; border: 1px solid var(--accent); border-radius: 99px;
+    font: 500 var(--fs-etikett)/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); white-space: nowrap;
+  }
   .af-row:last-child { border-bottom: 0; }
   /* Knopfgruppe als ein Stueck — siehe die Anmerkung in MobileActionPage. */
   .af-tasten { display: flex; gap: 6px; align-items: center; flex-shrink: 0; margin-left: auto; }

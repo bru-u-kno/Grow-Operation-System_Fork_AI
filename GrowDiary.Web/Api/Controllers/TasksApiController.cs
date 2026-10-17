@@ -75,6 +75,8 @@ public sealed class TasksApiController : ApiControllerBase
         try
         {
             var model = request.ToModel(growId);
+            // Kam die Anfrage über einen KI-Schlüssel, merkt sich die Aufgabe dessen Namen — die Liste kennzeichnet sie damit als „von KI".
+            model.CreatedByAssistant = KiZugriffKontext.Aus(HttpContext)?.SchluesselName;
             model.Id = _taskRepository.Create(model);
             _auditRepository.LogTaskCreated(growId, model.Id, model.Title);
             return CreatedAtAction(nameof(Detail), new { taskId = model.Id }, model.ToDto());

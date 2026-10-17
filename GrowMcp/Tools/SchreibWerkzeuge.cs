@@ -438,6 +438,76 @@ public sealed class SchreibWerkzeuge(GrowOsReader reader)
             _ => $"Journal-Eintrag {eintragId} geändert. Grow OS hat gespeichert:", cancellationToken);
     }
 
+    [McpServerTool(Name = "aufgabe_anlegen")]
+    [Description($"Legt eine neue Aufgabe in der Aufgabenliste eines Grows an — als Erinnerung für den Betreiber. Sie erscheint dort mit dem Kennzeichen „von KI\". Gibt es schon eine offene Aufgabe mit demselben Titel, wird keine zweite angelegt. {StufeDokumentieren}")]
+    [BrauchtForkSchluessel(Stufen.Dokumentieren)]
+    public async Task<string> AufgabeAnlegenAsync(
+        [Description("Die Id des Grows")] int growId,
+        [Description("Der Titel der Aufgabe")] string titel,
+        [Description("Notiz mit Einzelheiten; weglassen geht")] string? notiz = null,
+        [Description("Fällig am, Ortszeit: 2026-10-18T10:00 oder 18.10.2026 10:00; weglassen = ohne Termin")] string? faellig = null,
+        [Description("Priorität: niedrig, normal (Vorgabe), hoch, kritisch")] string? prioritaet = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!reader.HatForkSchluessel) return ForkFehler.SchluesselNoetig;
+        if (string.IsNullOrWhiteSpace(titel)) return "Nichts angelegt: die Aufgabe hat keinen Titel.";
+
+        var rumpf = new JsonObject { ["title"] = titel.Trim() };
+        if (!string.IsNullOrWhiteSpace(notiz)) rumpf["notes"] = notiz.Trim();
+
+        if (faellig is not null)
+        {
+            if (Messfelder.Ortszeit(faellig) is not { } zeit) return ZeitpunktUnlesbar(faellig).Replace("Nichts ausgeführt", "Nichts angelegt");
+            rumpf["dueAtLocal"] = zeit;
+        }
+
+        if (prioritaet is not null)
+        {
+            var wert = Auswahl(AufgabenPrioritaet, prioritaet);
+            if (wert is null) return $"Nichts angelegt: „{prioritaet}\" ist keine Priorität. Möglich: niedrig, normal, hoch, kritisch.";
+            rumpf["priority"] = wert;
+        }
+
+        // Doppelt anlegen hilft niemandem: Dieselbe Bitte zweimal an den Assistenten soll keine zweite Zeile erzeugen.
+        var vorhanden = await SendenAsync(HttpMethod.Get, $"api/grows/{growId}/tasks", null, cancellationToken);
+        if (vorhanden.Fehler is { } lesefehler) return lesefehler;
+        if (vorhanden.Antwort is { Erfolg: true } liste && GleicheOffeneAufgabe(liste.Text, titel) is { } schonDa)
+        {
+            return $"Nichts angelegt: Es gibt schon eine offene Aufgabe „{titel.Trim()}\" (Id {schonDa}).";
+        }
+
+        return await SchreibenAsync(HttpMethod.Post, $"api/grows/{growId}/tasks", rumpf, "Aufgabe anlegen",
+            json => $"Aufgabe {Zahl(json, "id")} „{Text(json, "title")}\" in der Aufgabenliste von Grow {growId} angelegt:", cancellationToken);
+    }
+
+    /// <summary>Die Id einer offenen Aufgabe mit diesem Titel (Groß-/Kleinschreibung egal) — oder <c>null</c>.</summary>
+    internal static int? GleicheOffeneAufgabe(string? listeJson, string titel)
+    {
+        if (string.IsNullOrWhiteSpace(listeJson)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(listeJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return null;
+            foreach (var a in doc.RootElement.EnumerateArray())
+            {
+                var gleich = string.Equals(a.TryGetProperty("title", out var t) ? t.GetString()?.Trim() : null, titel.Trim(), StringComparison.OrdinalIgnoreCase);
+                var offen = a.TryGetProperty("status", out var s) && string.Equals(s.GetString(), "Open", StringComparison.OrdinalIgnoreCase);
+                if (gleich && offen && a.TryGetProperty("id", out var id) && id.TryGetInt32(out var nummer)) return nummer;
+            }
+        }
+        catch (JsonException) { }
+        return null;
+    }
+
+    /// <summary>Die Prioritäten einer Aufgabe (<c>TaskPriority</c>) — geprüft gegen Grow OS in den Tests.</summary>
+    public static IReadOnlyList<(string Wert, string[] Woerter)> AufgabenPrioritaet { get; } =
+    [
+        ("Low", ["niedrig", "low", "gering"]),
+        ("Normal", ["normal", "mittel"]),
+        ("High", ["hoch", "high", "wichtig"]),
+        ("Critical", ["kritisch", "critical", "dringend"]),
+    ];
+
     [McpServerTool(Name = "aufgabe_erledigen")]
     [Description($"Hakt eine Aufgabe ab (oder setzt sie auf übersprungen bzw. wieder offen). Die Aufgaben-Id liefert das Werkzeug aufgaben. {StufeDokumentieren}")]
     [BrauchtForkSchluessel(Stufen.Dokumentieren)]

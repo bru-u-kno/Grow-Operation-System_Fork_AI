@@ -28,6 +28,10 @@ vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 - **Neue KI-Controller** unter `api/ki-*` brauchen `[NurMitKi]`; `KiHauptschalterAppTests.JederKiControllerTraegtNurMitKi` zählt das.
 - Oberfläche: `ki-aktiv.ts` / `KiAktivProvider.tsx` / `NurMitKi.tsx`; Menüeinträge mit `ki: true` in `navigation.ts`.
 
+## Aufgaben über den Assistenten (forkai.230)
+
+Legt ein Schlüssel eine Aufgabe an (`POST /api/grows/{id}/tasks`, Stufe Dokumentieren), speichert Grow OS seinen Namen in `GrowTasks.CreatedByAssistant`; die Terminliste zeigt dann „von KI". Über den Grow MCP Fork AI geht das mit dem Werkzeug `aufgabe_anlegen`; der Schlüssel liegt dabei in der Verbindungseinstellung des Assistenten, nicht im Gespräch.
+
 ## Stufen (`KiStufe`, Bits)
 
 | Stufe | Wert | Beispiele |

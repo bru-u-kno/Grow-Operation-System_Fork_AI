@@ -306,7 +306,7 @@ public sealed class GrowTools(GrowOsReader reader)
         => SicherAsync(() => reader.LesenAsync($"api/grows/{growId}/journal", cancellationToken));
 
     [McpServerTool(Name = "aufgaben")]
-    [Description("Die Aufgaben eines Grows mit Id, Titel, Fälligkeit und Zustand (offen, erledigt, übersprungen). Die Id braucht aufgabe_erledigen.")]
+    [Description("Die Aufgaben eines Grows mit Id, Titel, Fälligkeit und Zustand (offen, erledigt, übersprungen). Die Id braucht aufgabe_erledigen; neue Aufgaben legt aufgabe_anlegen an.")]
     public Task<string> AufgabenAsync(
         [Description("Die Id des Grows")] int growId,
         CancellationToken cancellationToken = default)

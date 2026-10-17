@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.230
+
+**Fork AI.** Ein KI-Assistent kann Aufgaben für dich in deine Aufgabenliste legen, ohne dass sein Schlüssel im Gespräch steht — und du siehst, welche Aufgaben von ihm kommen.
+
+- **Warum:** Bisher musste der Assistent den KI-Schlüssel als Kopfzeile in jeden Aufruf schreiben, damit er eine Aufgabe anlegen konnte. Der Schlüssel stand dann im Klartext im Sitzungsprotokoll. Über den Grow MCP Fork AI geht der Schlüssel aus der Verbindungseinstellung des Assistenten mit, nicht aus dem Gespräch.
+- **Kennzeichen „von KI":** In der Terminliste unter „Aufgaben" trägt eine Aufgabe, die ein KI-Schlüssel angelegt hat, das Kennzeichen „von KI"; der Name des Schlüssels steht im Hinweistext. Von Hand angelegte Aufgaben bleiben unverändert. Bestehende Aufgaben bekommen kein Kennzeichen.
+- **Neues Feld:** `createdByAssistant` an den Aufgaben (`GET /api/grows/{id}/tasks`): der Name des Schlüssels, oder leer, wenn die Aufgabe von Hand angelegt wurde. Die Datenbank bekommt dafür beim Start eine neue Spalte; ältere Stände öffnen unverändert.
+- **Grow MCP Fork AI 0.2.0-forkai.4:** Das neue Werkzeug `aufgabe_anlegen` (Stufe Dokumentieren) legt eine Aufgabe mit Titel, Notiz, Fälligkeit und Priorität an. Gibt es schon eine offene Aufgabe mit demselben Titel, wird keine zweite angelegt.
+- **Geprüft:** Neun Tests für das Werkzeug (alle Felder, nur der Titel, doppelter Titel offen und erledigt, unbekannte Priorität, unlesbare Zeit, ohne Titel, mit dem MCP-Schlüssel nichts, Prioritäten gleich denen von Grow OS), einer am echten Schlüsselweg (Name an der Aufgabe, von Hand ohne) und ein E2E-Fall für das Kennzeichen. Drei davon werden rot, wenn der Fehler wieder eingebaut wird (Name nicht gespeichert, Doppelprüfung aus, Kennzeichen aus).
+
 ## 2.0.0-forkai.229
 
 **Fork AI.** Der Hinweis „CO₂-Drosselung ist an" unter „Was bremst gerade?" erscheint nur noch, wenn die Drosselung wirklich wirkt.

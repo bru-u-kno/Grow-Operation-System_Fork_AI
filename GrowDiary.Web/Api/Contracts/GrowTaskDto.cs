@@ -12,5 +12,6 @@ public sealed record GrowTaskDto(
     TaskPriority Priority,
     GrowTaskStatus Status,
     DateTime CreatedAtUtc,
-    DateTime? CompletedAtUtc
+    DateTime? CompletedAtUtc,
+    string? CreatedByAssistant
 );

@@ -12,4 +12,7 @@ public sealed class GrowTask
     public GrowTaskStatus Status { get; set; } = GrowTaskStatus.Open;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAtUtc { get; set; }
+
+    /// <summary>Name des KI-Schlüssels, über den die Aufgabe angelegt wurde; <c>null</c> = von Hand in der Oberfläche.</summary>
+    public string? CreatedByAssistant { get; set; }
 }

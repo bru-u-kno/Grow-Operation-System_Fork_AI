@@ -15,6 +15,7 @@ public static class TaskMapping
         Priority: task.Priority,
         Status: task.Status,
         CreatedAtUtc: task.CreatedAtUtc,
-        CompletedAtUtc: task.CompletedAtUtc
+        CompletedAtUtc: task.CompletedAtUtc,
+        CreatedByAssistant: task.CreatedByAssistant
     );
 }
