@@ -10,6 +10,9 @@ import type { GeraeteSeite, GeraetZeile } from '../steuerung/steuerung-typen'
 import { EntfeuchterNamen } from './EntfeuchterNamen'
 import { BluelabAnleitung } from './BluelabAnleitung'
 import { haWert } from '../../utils'
+import { entitaetsOptionen } from './entitaets-optionen'
+import { vorbereiten } from './entitaets-passung'
+import type { Vorbereitet } from './entitaets-passung'
 import '../steuerung/steuerung.css'
 
 /**
@@ -94,6 +97,9 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
     () => (seite?.module ?? []).filter((m) => !nurModule || nurModule.includes(m.modul)),
     [seite, nurModule],
   )
+
+  // Pro Entität einmal Namen und Einheit lesen, nicht je Rolle und Zeile.
+  const vorbereitet = useMemo(() => entities.map(vorbereiten), [entities])
 
   const modul = useMemo(
     () => sichtbareModule.find((m) => m.modul === aktiv) ?? sichtbareModule[0] ?? null,
@@ -208,7 +214,7 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
                 zeile={zeile}
                 wert={entwurf[zeile.rolle] ?? ''}
                 fehler={feldFehler[zeile.rolle]}
-                entities={entities}
+                vorbereitet={vorbereitet}
                 eigene={seite.eigene.map((g) => g.name)}
                 onChange={(wert) => setzeRolle(zeile.rolle, wert)}
               />
@@ -254,21 +260,21 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
 
 /** Eine Rolle: Suchfeld mit Vorschlägen, rechts der Livewert. */
 function RollenZeile({
-  zeile, wert, fehler, entities, eigene, onChange,
+  zeile, wert, fehler, vorbereitet, eigene, onChange,
 }: {
   zeile: GeraetZeile
   wert: string
   fehler?: string
-  entities: HomeAssistantEntity[]
+  vorbereitet: readonly Vorbereitet[]
   eigene: string[]
   onChange: (wert: string) => void
 }) {
-  // Vorgefiltert auf die Domains der Rolle: ein sensor. in einer Schaltrolle
-  // hilft niemandem. Findet der Filter nichts, steht die ganze Liste bereit.
-  const vorschlaege = useMemo(() => {
-    const passend = entities.filter((entity) => zeile.domains.includes(entity.domain))
-    return passend.length > 0 ? passend : entities
-  }, [entities, zeile.domains])
+  // forkai.236 (A-019): Vorsortiert, nie ausgeblendet. "Passt zu dieser Rolle" oben (Domain, Einheit/Geräteklasse,
+  // Name), darunter "Alle anderen". Was die Rangfolge sagt, steht in entitaets-passung.ts.
+  const { optionen: entitaetsEintraege, leerHinweis } = useMemo(
+    () => entitaetsOptionen(vorbereitet, { domains: zeile.domains, einheit: zeile.einheit, label: zeile.label }),
+    [vorbereitet, zeile.domains, zeile.einheit, zeile.label],
+  )
 
   return (
     <V1Field
@@ -297,13 +303,9 @@ function RollenZeile({
             ...eigene.map((name): V1Option => ({
               wert: `@${name}`, text: name, gruppe: 'Eigene Geräte',
             })),
-            ...vorschlaege.map((entity): V1Option => ({
-              wert: entity.entityId,
-              text: entity.friendlyName ?? entity.entityId,
-              hinweis: `${entity.entityId}${entity.state ? ` · ${haWert(entity.state, entity.unitOfMeasurement)}` : ''}`,
-              gruppe: 'Aus Home Assistant',
-            })),
+            ...entitaetsEintraege,
           ]}
+          hinweisOben={leerHinweis}
         />
         <span className={zeile.gefunden ? 'st-geraet-wert is-ok' : 'st-geraet-wert is-faint'}>
           {zeile.gefunden ? (haWert(zeile.livewert, zeile.einheit) ?? 'gefunden') : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}

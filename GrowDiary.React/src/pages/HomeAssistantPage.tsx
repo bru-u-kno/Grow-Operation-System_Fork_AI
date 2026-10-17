@@ -9,7 +9,8 @@ import type { V1Option } from '../components/V1Select'
 import { toNullableString } from '../components/v1-utils'
 import { resolveUrl } from '../base'
 import { haWert } from '../utils'
-import { definitions, entityOptionLabel, groups, suggestionsForMetric } from '../features/home-assistant/messgroessen'
+import { definitions, entityOptionLabel, groups, messgroessenOptionen } from '../features/home-assistant/messgroessen'
+import { vorbereiten } from '../features/geraete/entitaets-passung'
 import type { EntityDefinition } from '../features/home-assistant/messgroessen'
 import '../features/home-assistant/home-assistant.css'
 
@@ -69,6 +70,7 @@ function HomeAssistantPage() {
     return () => controller.abort()
   }, [])
 
+  const vorbereitet = useMemo(() => entities.map(vorbereiten), [entities])
   const selectedTent = useMemo(() => tents.find((tent) => tent.id === selectedTentId) ?? tents[0] ?? null, [selectedTentId, tents])
   const selectedDraft = selectedTent ? drafts[selectedTent.id] : null
   const mappedCount = selectedDraft ? selectedDraft.sensors.filter((sensor) => sensor.haEntityId.trim()).length : 0
@@ -218,6 +220,7 @@ function HomeAssistantPage() {
                 {definitions.filter((definition) => definition.group === activeGroup).map((definition) => {
                   const sensor = selectedDraft.sensors.find((item) => item.metricType === definition.metricType) ?? createSensorDraft(definition)
                   const live = liveValue(sensor.haEntityId)
+                  const auswahl = messgroessenOptionen(vorbereitet, definition)
                   return (
                     <div key={definition.metricType} className="co-row" data-audit="ha-entity-row">
                       <span className="ha-metric">{definition.label}{definition.unit ? <small> {definition.unit}</small> : null}</span>
@@ -232,12 +235,9 @@ function HomeAssistantPage() {
                         onWahl={(wert) => updateSensor(definition.metricType, { haEntityId: wert })}
                         optionen={[
                           { wert: '', text: '— nicht zugeordnet —', betont: true },
-                          ...suggestionsForMetric(entities, definition.metricType).map((entity): V1Option => ({
-                            wert: entity.entityId,
-                            text: entity.friendlyName ?? entity.entityId,
-                            hinweis: entityOptionLabel(entity),
-                          })),
+                          ...auswahl.optionen,
                         ]}
+                        hinweisOben={auswahl.leerHinweis}
                       />
                       {live != null
                         ? <span className="co-row-value is-good">{live}</span>

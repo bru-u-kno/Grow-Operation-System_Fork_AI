@@ -1,5 +1,7 @@
 import type { HomeAssistantEntity, SensorMetricType } from '../../types'
 import { haWert } from '../../utils'
+import { entitaetsOptionen } from '../geraete/entitaets-optionen'
+import type { Kriterium, Vorbereitet } from '../geraete/entitaets-passung'
 
 /**
  * Fork AI (forkai.45): Die Messgrößen-Tabelle und ihre Helfer — aus
@@ -60,44 +62,50 @@ export const definitions: EntityDefinition[] = [
   { metricType: 'UpsStatus', label: 'USV', group: 'hardware', placeholder: 'sensor.usv_status', importance: 'optional' },
 ]
 
-// Per-metric hints for the entity picker: which Home Assistant domains / device
-// classes are plausible for each sensor, so the dropdown suggests the right ones
-// first. Filters are best-effort — if nothing matches, the full list is offered.
-const suggestionFilters: Partial<Record<SensorMetricType, { domains?: string[]; deviceClass?: string }>> = {
-  AirTemperature: { domains: ['sensor'], deviceClass: 'temperature' },
-  Humidity: { domains: ['sensor'], deviceClass: 'humidity' },
-  Co2: { domains: ['sensor'], deviceClass: 'carbon_dioxide' },
-  ReservoirWaterTemp: { domains: ['sensor'], deviceClass: 'temperature' },
-  Vpd: { domains: ['sensor'] },
-  Ppfd: { domains: ['sensor'] },
-  ReservoirPh: { domains: ['sensor'] },
-  ReservoirEc: { domains: ['sensor'] },
-  ReservoirLevel: { domains: ['sensor'] },
-  ReservoirLevelCm: { domains: ['sensor'] },
-  ReservoirOrp: { domains: ['sensor'] },
-  ReservoirDissolvedOxygen: { domains: ['sensor'] },
-  UpsStatus: { domains: ['sensor', 'binary_sensor'] },
-  LightStatus: { domains: ['switch', 'light', 'binary_sensor', 'input_boolean'] },
-  PumpCirculation: { domains: ['switch', 'input_boolean'] },
-  PumpAir: { domains: ['switch', 'input_boolean'] },
-  Chiller: { domains: ['climate', 'switch'] },
-  OutsideTemperature: { domains: ['sensor'], deviceClass: 'temperature' },
-  OutsideHumidity: { domains: ['sensor'], deviceClass: 'humidity' },
-  OutsideVpd: { domains: ['sensor'] },
+// forkai.236 (A-019): Welche Entitäten zu einer Messgröße passen, sortiert die gemeinsame Rangfolge der Rollen-Auswahl
+// (features/geraete/entitaets-passung.ts) — dieselbe Regel, nicht ein zweiter Filter. Hier stehen nur die Domains je
+// Messgröße und die Begriffe, die ihr Name nennt; Einheit und Geräteklasse kommen aus `definition.unit`.
+// Vorher blendete ein Filter alles andere aus: ein Fremder ohne Geräteklassen sah bei "Luftfeuchte" jeden Sensor.
+const suggestionFilters: Partial<Record<SensorMetricType, { domains: string[]; begriffe: string[] }>> = {
+  AirTemperature: { domains: ['sensor'], begriffe: ['temperatur', 'zelt'] },
+  Humidity: { domains: ['sensor'], begriffe: ['feuchte', 'zelt'] },
+  Co2: { domains: ['sensor'], begriffe: ['co2'] },
+  ReservoirWaterTemp: { domains: ['sensor'], begriffe: ['wasser', 'temperatur'] },
+  Vpd: { domains: ['sensor'], begriffe: ['vpd', 'zelt'] },
+  Ppfd: { domains: ['sensor'], begriffe: ['ppfd'] },
+  ReservoirPh: { domains: ['sensor'], begriffe: ['ph'] },
+  ReservoirEc: { domains: ['sensor'], begriffe: ['ec'] },
+  ReservoirLevel: { domains: ['sensor'], begriffe: ['wasser', 'stand'] },
+  ReservoirLevelCm: { domains: ['sensor'], begriffe: ['wasser', 'stand'] },
+  ReservoirOrp: { domains: ['sensor'], begriffe: ['orp'] },
+  ReservoirDissolvedOxygen: { domains: ['sensor'], begriffe: ['sauerstoff'] },
+  UpsStatus: { domains: ['sensor', 'binary_sensor'], begriffe: ['usv'] },
+  LightStatus: { domains: ['switch', 'light', 'binary_sensor', 'input_boolean'], begriffe: ['licht'] },
+  PumpCirculation: { domains: ['switch', 'input_boolean'], begriffe: ['pumpe'] },
+  PumpAir: { domains: ['switch', 'input_boolean'], begriffe: ['pumpe'] },
+  Chiller: { domains: ['climate', 'switch'], begriffe: ['kuehler'] },
+  OutsideTemperature: { domains: ['sensor'], begriffe: ['temperatur', 'aussen'] },
+  OutsideHumidity: { domains: ['sensor'], begriffe: ['feuchte', 'aussen'] },
+  OutsideVpd: { domains: ['sensor'], begriffe: ['vpd', 'aussen'] },
 }
 
-export function suggestionsForMetric(entities: HomeAssistantEntity[], metricType: SensorMetricType): HomeAssistantEntity[] {
-  const filter = suggestionFilters[metricType]
-  if (!filter) return entities
-  if (filter.deviceClass) {
-    const byClass = entities.filter((entity) => entity.deviceClass === filter.deviceClass)
-    if (byClass.length > 0) return byClass
+/** Das Kriterium der Rangfolge für eine Messgröße; ohne Eintrag: keine Domain passt, alles steht unter "Alle anderen". */
+export function kriteriumFuerMessgroesse(definition: EntityDefinition): Kriterium {
+  const filter = suggestionFilters[definition.metricType]
+  return {
+    domains: filter?.domains ?? [],
+    einheit: definition.unit ?? null,
+    label: definition.label,
+    begriffe: filter?.begriffe ?? [],
   }
-  if (filter.domains) {
-    const byDomain = entities.filter((entity) => filter.domains!.includes(entity.domain))
-    if (byDomain.length > 0) return byDomain
-  }
-  return entities
+}
+
+/** Auswahl-Einträge einer Messgröße: gemeinsame Vorsortierung, Anzeige wie bisher ("Name — Wert"). */
+export function messgroessenOptionen(vorbereitet: readonly Vorbereitet[], definition: EntityDefinition) {
+  return entitaetsOptionen(vorbereitet, kriteriumFuerMessgroesse(definition), {
+    passtGruppe: 'Passt zu dieser Messgröße',
+    hinweis: entityOptionLabel,
+  })
 }
 
 export function entityOptionLabel(entity: HomeAssistantEntity): string {

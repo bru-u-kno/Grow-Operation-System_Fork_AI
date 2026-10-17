@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Skeleton, V1Switch } from '../../components/v1'
 import { V1Select } from '../../components/V1Select'
-import type { V1Option } from '../../components/V1Select'
-import { definitions, groups, suggestionsForMetric, entityOptionLabel } from '../home-assistant/messgroessen'
+import { definitions, groups, messgroessenOptionen } from '../home-assistant/messgroessen'
+import { vorbereiten } from './entitaets-passung'
 import type { HomeAssistantEntity } from '../../types'
 import { haWert } from '../../utils'
 
@@ -48,6 +48,7 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
     return () => abbruch.abort()
   }, [])
 
+  const vorbereitet = useMemo(() => entities.map(vorbereiten), [entities])
   const zelt = useMemo(() => zelte?.find((eintrag) => eintrag.id === aktiv) ?? zelte?.[0] ?? null, [zelte, aktiv])
 
   const livewert = (entityId: string) => {
@@ -124,6 +125,7 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
             {zeilen.map(({ definition, sensor }) => {
               const entityId = sensor?.haEntityId ?? ''
               const wert = livewert(entityId)
+              const auswahl = messgroessenOptionen(vorbereitet, definition)
               return (
                 <div key={definition.metricType} className="gr-messgroesse">
                   <div className="gr-messkopf">
@@ -142,12 +144,9 @@ export function MessgroessenReiter({ entities }: { entities: HomeAssistantEntity
                     onWahl={(neu) => void setzen(definition.metricType, neu)}
                     optionen={[
                       { wert: '', text: '— nicht zugeordnet —', betont: true },
-                      ...suggestionsForMetric(entities, definition.metricType as never).map((entity): V1Option => ({
-                        wert: entity.entityId,
-                        text: entity.friendlyName ?? entity.entityId,
-                        hinweis: entityOptionLabel(entity),
-                      })),
+                      ...auswahl.optionen,
                     ]}
+                    hinweisOben={auswahl.leerHinweis}
                   />
                 </div>
               )

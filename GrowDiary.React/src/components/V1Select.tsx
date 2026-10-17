@@ -29,7 +29,7 @@ export type V1Option = {
   betont?: boolean
 }
 
-export function V1Select({ label, ariaLabel, wert, optionen, onWahl, titel, unterzeile, platzhalter, disabled }: {
+export function V1Select({ label, ariaLabel, wert, optionen, onWahl, titel, unterzeile, platzhalter, disabled, hinweisOben }: {
   /** Sichtbare Beschriftung. Leer lassen, wenn sie schon daneben steht. */
   label: string
   ariaLabel?: string
@@ -41,6 +41,8 @@ export function V1Select({ label, ariaLabel, wert, optionen, onWahl, titel, unte
   unterzeile?: string
   platzhalter?: string
   disabled?: boolean
+  /** Ein Satz über der Liste, z. B. wenn die Vorsortierung nichts Passendes fand (forkai.236). */
+  hinweisOben?: string | null
 }) {
   const [offen, setOffen] = useState(false)
   const [suche, setSuche] = useState('')
@@ -100,6 +102,8 @@ export function V1Select({ label, ariaLabel, wert, optionen, onWahl, titel, unte
             aria-label="In der Auswahl suchen"
           />
         )}
+
+        {hinweisOben && suche.trim() === '' && <p className="v1-select-hinweis" role="status">{hinweisOben}</p>}
 
         <div className="v1-select-liste">
           {gruppen.map(({ gruppe, eintraege }) => (

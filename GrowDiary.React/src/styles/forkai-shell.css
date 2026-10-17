@@ -332,6 +332,7 @@
 .v1-select-eintrag > em { font-style: normal; color: var(--accent-text); }
 .v1-select-eintrag.is-gewaehlt { background: var(--accent-wash); color: var(--accent-text); }
 .v1-select-eintrag.is-betont { color: var(--warn-text); }
+.v1-select-hinweis { margin: 0 0 var(--s-2); padding: var(--s-2) var(--s-3); font-size: var(--fs-klein); color: var(--muted); }
 .v1-select-leer { margin: 0; padding: var(--s-3); font-size: var(--fs-klein); color: var(--muted); }
 
 /* F-048: Auslauf unter dem Seiteninhalt, damit auch ein kurzer Reiter seine

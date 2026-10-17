@@ -148,6 +148,53 @@ test('Schritt 2: ungespeicherte Zuordnung sperrt Weiter, bis gespeichert ist', a
   await expect(page.getByText('Du hast Änderungen noch nicht gespeichert')).toHaveCount(0)
 })
 
+// A-019 / Lücke 5 (A-017): Die Auswahl je Rolle ist vorsortiert — vorher stand die passende Entität irgendwo mitten in
+// einer alphabetischen Liste aller Entitäten. Gesehen wird, was die Seite zeigt (Reihenfolge, Gruppen, Zählung), nicht
+// die Rechenfunktion; die ist in `entitaets-passung.test.ts` mit Tabellen geprüft.
+test('Schritt 2: die Auswahl sortiert vor — Passendes oben, "Alle anderen" darunter, nichts fehlt; zweimal, andere Rolle', async ({ page }) => {
+  await auswahlSetzen(page, ['entfeuchter'])
+  const alle = await (await page.request.get('/api/home-assistant/entities')).json() as Array<{ entityId: string }>
+  expect(alle.length).toBeGreaterThan(10)
+  const geraete = await (await page.request.get('/api/steuerung/geraete')).json() as { eigene: unknown[] }
+  await page.goto('/steuerung/einrichtung?schritt=2')
+
+  const eintraege = page.locator('.v1-select-liste [role="option"]')
+  const namen = async () => (await eintraege.locator('xpath=./span').evaluateAll((els) => els.map((el) => (el.firstChild?.textContent ?? '').trim())))
+  // textContent, nicht innerText: die Überschrift wird per CSS in Großbuchstaben gesetzt.
+  const gruppen = () => page.locator('.v1-select-liste .v1-select-gruppe').evaluateAll((els) => els.map((el) => (el.textContent ?? '').trim()))
+
+  // Erster Durchgang: die Feuchte im Zelt. Gewählt wird nicht (ungespeichert wäre auch harmlos), nur das Blatt gelesen.
+  await page.getByRole('button', { name: 'Zeltfühler · Feuchte' }).click()
+  await expect(eintraege.first()).toBeVisible()
+  let liste = await namen()
+  expect(liste[0]).toBe('Demo Luftfeuchte')
+  // Die Außenfeuchte nennt einen anderen Ort als das Zelt: sie steht unter "passt", aber hinter der Zeltfeuchte.
+  expect(liste[1]).toBe('Demo Controller Außen Luftfeuchte')
+  // Das Blatt führt alle Entitäten (zuzüglich eigener Geräte) — vorsortiert, nicht gefiltert.
+  expect(liste.length).toBe(alle.length + geraete.eigene.length)
+  expect(await gruppen()).toEqual(expect.arrayContaining(['Passt zu dieser Rolle', 'Alle anderen']))
+  // Die Suche läuft über beide Gruppen: die Kamera gehört zu keiner Rolle und ist trotzdem zu finden.
+  await page.getByLabel('In der Auswahl suchen').fill('Kamera')
+  await expect(eintraege).toHaveCount(1)
+  await expect(eintraege.first()).toContainText('Demo Kamera')
+  await page.keyboard.press('Escape')
+  await expect(eintraege).toHaveCount(0)
+
+  // Zweiter Durchgang ohne Neuladen, andere Rolle (Schalter: Domain und Name): der Entfeuchter-Modus vor der Kühler-Steckdose.
+  await page.getByRole('button', { name: 'Entfeuchter · schalten' }).click()
+  await expect(eintraege.first()).toBeVisible()
+  liste = await namen()
+  expect(liste[0]).toBe('Demo Entfeuchter · Aktiver Modus')
+  expect(liste.indexOf('Demo Entfeuchter · Aktiver Modus')).toBeLessThan(liste.indexOf('Demo Kühler-Steckdose'))
+  await page.keyboard.press('Escape')
+
+  // Dritter Durchgang: eine Rolle, zu der nichts passt (kein Zuluft-Bedarf in der Anlage) — der Hinweis steht über der Liste.
+  await page.getByRole('button', { name: 'Zuluft · Bedarf' }).click()
+  await expect(page.locator('.v1-select-hinweis')).toHaveText(/Keine passende Entität gefunden/)
+  expect(await gruppen()).not.toContain('Passt zu dieser Rolle')
+  await page.keyboard.press('Escape')
+})
+
 test('Ohne Auswahl springt Schritt 3 zurück auf Schritt 1', async ({ page }) => {
   await auswahlSetzen(page, [])
   await page.goto('/steuerung/einrichtung?schritt=3')
