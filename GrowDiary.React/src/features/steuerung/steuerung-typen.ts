@@ -17,6 +17,24 @@ export type SteuerungModul = {
   wert: string
   unterzeile: string
   hatDetail: boolean
+  /** Fork AI (forkai.238): Nur die Zuluft — Schild und Satz als eigene Zeile unter dem Wert (sonst fehlt das Feld). */
+  zustand?: ZuluftZustand | null
+  /** Fork AI (forkai.238): Nur die Zuluft bei „zu wenig Unterschied" — das Band mit Messwert und Grenzen. */
+  balken?: ZuluftBalken | null
+}
+
+/** Fork AI (forkai.238): Warum der Lüfter gerade läuft oder nicht — Schild, Grund mit Zahlen, Farbe. */
+export type ZuluftZustand = {
+  wort: string
+  satz: string
+  ton: 'ok' | 'warn' | 'neutral'
+  balken?: ZuluftBalken | null
+}
+
+export type ZuluftBalken = {
+  ist: number
+  ausUnter: number
+  anAb: number
 }
 
 /** Fork AI (A-016): Eine Steuerung, die der Nutzer (noch) nicht hat — Titel und ein Satz, wofür sie da ist. */
@@ -351,6 +369,8 @@ export type ZuluftLive = {
   pauseZeltKalt: boolean | null
   /** Fork AI (forkai.225): Die Differenz, nach der die Regelung entscheidet (geglättet, sonst roh). */
   differenzRegelGm3: number | null
+  /** Fork AI (forkai.238): Warum der Lüfter läuft oder nicht — dieselbe Auskunft wie in der Kachel. */
+  zustand?: ZuluftZustand | null
 }
 
 export type ZuluftSeite = {

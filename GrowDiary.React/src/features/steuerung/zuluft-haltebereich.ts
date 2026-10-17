@@ -49,3 +49,8 @@ export function bandStellen(hb: Haltebereich, differenz: number | null): BandSte
   const pos = (w: number) => Math.min(100, Math.max(0, Math.round((w / bis) * 1000) / 10))
   return { bis, ausPos: pos(hb.ausUnter), anPos: pos(hb.anAb), istPos: ist == null ? null : pos(ist) }
 }
+
+/** Ein Messwert, wie er im Rechenweg steht — mit „–" statt einer erfundenen Null. */
+export function zeigZahl(wert: number | null, einheit: string, stellen: number): string {
+  return wert == null || !Number.isFinite(wert) ? '–' : wert.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen }) + einheit
+}

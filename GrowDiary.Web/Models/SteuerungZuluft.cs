@@ -106,4 +106,20 @@ public sealed record ZuluftLive(
     DateTime? LetzterWechsel,
     double? ZeltTempC = null,
     bool? PauseZeltKalt = null,
-    double? DifferenzRegelGm3 = null);
+    double? DifferenzRegelGm3 = null,
+    ZuluftZustand? Zustand = null);
+
+/// <summary>
+/// Fork AI (forkai.238): Warum der Lüfter gerade läuft oder nicht — ein Wort für das Schild und ein Satz mit
+/// den Zahlen, nach denen die Regelung entscheidet. Kachel und Detailseite zeigen denselben Text.
+/// </summary>
+/// <param name="Kennung">Maschinenlesbar: <c>automatik-aus</c>, <c>offline</c>, <c>saugt</c>, <c>sperre</c>, <c>startet</c>,
+/// <c>zelt-kalt</c>, <c>frost</c>, <c>aussen-feuchter</c>, <c>zu-wenig</c>, <c>differenz-unbekannt</c>, <c>bedarf-fehlt</c>.</param>
+/// <param name="Wort">Das Schild: „saugt", „wartet", „pausiert", „aus", „Automatik aus", „offline".</param>
+/// <param name="Satz">Der Grund mit Zahlen, auf Deutsch.</param>
+/// <param name="Ton"><c>ok</c> | <c>warn</c> | <c>neutral</c> — färbt das Schild.</param>
+/// <param name="Balken">Nur bei <c>zu-wenig</c>: Messwert und Grenzen für das Band.</param>
+public sealed record ZuluftZustand(string Kennung, string Wort, string Satz, string Ton, ZuluftBalken? Balken = null);
+
+/// <summary>Fork AI (forkai.238): Was das Band braucht — die Differenz und die zwei Grenzen der Hysterese.</summary>
+public sealed record ZuluftBalken(double Ist, double AusUnter, double AnAb);

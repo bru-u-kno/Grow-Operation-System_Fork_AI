@@ -5,6 +5,25 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.238
+
+**Fork AI.** Die Kachel der Zuluft in Steuerung › Übersicht sagt jetzt, **warum** der Lüfter gerade nicht läuft — mit den Zahlen, nach denen die Regelung entscheidet. Vorher stand dort bei ausgeschaltetem Lüfter fast immer nur „bereit".
+
+- **Was war:** Die Unterzeile las sich als „alles in Ordnung, es kann losgehen". Gemeint war nur: kein Bedarf, keine Schaltsperre, keine Kälte-Pause. An einer Anlage stand die Differenz bei 1,43 g/m³ (Außenluft trockener als der Keller), der Lüfter lief nicht, und die Kachel sagte „bereit" — die Einschaltschwelle war 1,5, und das stand nirgends. Dazu zeigte die große Zahl der Kachel die **rohe** Differenz, die Regelung entscheidet aber nach der **geglätteten**: Zum selben Zeitpunkt standen dort 1,55 (roh) gegen 1,40 (geglättet), und nur die zweite entscheidet, ob der Lüfter angeht.
+- **Jetzt:** Unter Titel und Wert steht eine Zeile mit einem Schild und einem Satz. Bei „zu wenig Unterschied" kommt das Band aus dem Reiter „Regel" dazu, mit Messwert, Abschaltgrenze und Einschaltschwelle. Die Fälle:
+  - **aus · zu wenig Unterschied · noch 0,07 bis 1,5** (mit Band) — Außenluft trockener, aber die Schwelle ist noch nicht erreicht;
+  - **aus · Außenluft ist feuchter als der Keller**;
+  - **saugt · Stufe 6 · hält bis unter 1,0** — der Lüfter läuft; „hält" nur, solange die Differenz unter der Einschaltschwelle liegt (Haltebereich);
+  - **wartet · Mindestpause noch 8 min, dann Stufe 6** — Bedarf da, Schaltsperre läuft; ohne Sperre: „Bedarf da · Lüfter schaltet gleich ein";
+  - **pausiert · Zelt 16,5 °C · ab 18 °C wieder frei** (Zelt zu kalt) und **pausiert · Außen … °C · Frostschutz bis … °C**;
+  - **Automatik aus · Lüfter bleibt, wie er steht** (vorher: „bereit") und **offline · Der Lüfter-Port meldet sich nicht**.
+  Der Punkt vor „Zuluft" wird gelb bei „wartet", „pausiert" und „offline".
+- **Eine Auskunft für beide Stellen:** Schild und Satz berechnet das Backend einmal; die Kachel und das Feld „Zustand" auf der Detailseite zeigen dasselbe. Auf der Detailseite steht dort jetzt „saugt" mit dem Satz darunter (früher „saugt · hält" und „Aus erst unter …"). Das Band ist eine gemeinsame Komponente für Kachel und Detailseite.
+- **Die große Zahl** in der Kachel ist jetzt die Differenz, nach der die Regelung entscheidet (geglättet, sonst roh) — dieselbe wie auf der Detailseite und im Satz.
+- **Nur Anzeige:** Die Regelung in Home Assistant, die Einstellungen und die Helfer bleiben unverändert; es wird nichts angelegt oder geschrieben. Die anderen Steuerungen (CO₂, Entfeuchter, Wasserkühler, Licht) behalten ihre Unterzeile rechts unter dem Wert.
+- **Geprüft:** 32 Backend-Tests für alle Gründe und Grenzfälle (genau auf der Schwelle, „noch 0,00" wird nie gesagt, Abschalt-Abstand 0, Differenz fehlt oder negativ, Reihenfolge der Gründe einschließlich „offline vor saugt", Zählung ohne Balken außer bei „zu wenig Unterschied") und für die Zuordnung der Kachel (Wert ist die Regeldifferenz, Zustand und Balken gelangen ins Ergebnis, Punktfarbe je Zustand); sechs E2E-Fälle gegen die gebaute App (Schild, Satz, Band, volle Breite der Zeile, Handy bei 320/360/390 px ohne Überlauf, Tipp öffnet die Detailseite zweimal hintereinander) in hellem und dunklem Thema angesehen. Bissnachweise: Schwelle `<` zu `<=` macht den Grenzfall-Test rot, die Offline-Prüfung hinter „saugt" macht ihren Test rot, ein nicht weitergegebener Balken macht den Kachel-Test rot, ohne die Breitenregel der Zeile wird der Layout-Test rot; alle danach wieder grün. Ein unabhängiger Prüfer hat die Gründe gegen die echte Bedarfs-Vorlage in Home Assistant nachgerechnet. Volle Backend-Mappe (3624), Vitest (1230) und 683 E2E-Fälle der Steuerung und der Querschnitte grün.
+- **Nicht enthalten:** Ein Hinweis, wenn der Bedarf trotz reichender Differenz ausbleibt und keiner der bekannten Gründe zutrifft („Bedarf noch nicht gemeldet" ist dann nur die ehrliche Auskunft, kein Grund). Die Kacheln der anderen Steuerungen bekommen die Zeile nicht.
+
 ## 2.0.0-forkai.237
 
 **Fork AI.** Die neu angelegten Helfer des Zusatz-Entfeuchters bekommen die Werte deiner Einstellungen — vorher standen sie auf dem Minimum von Home Assistant, Mindestpause und Mindestlaufzeit zum Beispiel auf einer Minute.

@@ -26,6 +26,19 @@
   .st-wert { flex: 0 1 auto; min-width: 0; max-width: 55%; overflow-wrap: anywhere; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .st-wert small { display: block; font-family: var(--font-sans); font-size: var(--fs-etikett); color: var(--faint); }
 
+  /* Fork AI (forkai.238): Zuluft — der Zustand als eigene Zeile unter Titel und Wert. */
+  .st-zeile.hat-zustand { flex-wrap: wrap; align-items: flex-start; row-gap: var(--s-2); }
+  .st-zustand { flex: 0 0 100%; display: block; min-width: 0; padding-top: var(--s-2); border-top: 1px solid var(--hair); }
+  .st-zustand-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+  .st-zustand-satz { min-width: 0; overflow-wrap: anywhere; font-size: var(--fs-text); }
+  .st-schild {
+    flex: 0 0 auto; padding: 1px var(--s-2); border-radius: 999px; border: 1px solid var(--hair);
+    font-size: var(--fs-etikett); font-weight: 600; color: var(--muted); white-space: nowrap;
+  }
+  .st-schild.ton-ok { color: var(--accent-text); border-color: var(--accent-dim); background: var(--accent-wash); }
+  .st-schild.ton-warn { color: var(--warn-text); border-color: var(--warn); background: var(--warn-wash); }
+  .st-zustand .zl-band { margin: var(--s-1) 0 0; }
+
   /* --- Chip-Leiste zum Umschalten zwischen den Steuerungen --- */
   .st-wechsel { display: flex; gap: var(--s-2); overflow-x: auto; padding-bottom: var(--s-2); scrollbar-width: none; }
   .st-wechsel::-webkit-scrollbar { display: none; }

@@ -317,7 +317,8 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
             zeltTemp,
             e.ZeltTemperaturMinC ?? Zahl(Entitaeten.ZeltTemperaturMin));
 
-        return new ZuluftLive(
+        var zeltMin = e.ZeltTemperaturMinC ?? Zahl(Entitaeten.ZeltTemperaturMin);
+        var live = new ZuluftLive(
             HaErreichbar: entities.Count > 0,
             DifferenzGm3: Zahl(Entitaeten.Differenz),
             AussenAbsolutGm3: Zahl(Entitaeten.AbsolutDraussen),
@@ -337,6 +338,87 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
             ZeltTempC: zeltTemp,
             PauseZeltKalt: pause,
             DifferenzRegelGm3: Zahl(Entitaeten.DifferenzGeglaettet) ?? Zahl(Entitaeten.Differenz));
+        return live with { Zustand = Zustand(live, e, zeltMin) };
+    }
+
+    /// <summary>
+    /// Fork AI (forkai.238): Warum läuft der Lüfter gerade — oder nicht? Die Reihenfolge der Gründe ist die, in der
+    /// sie einander ausschließen: Automatik aus, Port offline, läuft, Bedarf wartet auf die Sperre, Zelt zu kalt,
+    /// Frostschutz, Außenluft feuchter, zu wenig Unterschied. Gerechnet wird mit der Differenz, nach der die
+    /// Regelung entscheidet (geglättet, sonst roh) — nicht mit der rohen, die neben den Schwellen Zustände zeigt,
+    /// die es für die Regelung nie gab.
+    /// </summary>
+    public static ZuluftZustand Zustand(ZuluftLive live, ZuluftEinstellungen e, double? zeltMin)
+    {
+        var de = CultureInfo.GetCultureInfo("de-DE");
+        var diff = live.DifferenzRegelGm3 ?? live.DifferenzGm3;
+        var anAb = Math.Round(e.MindestDifferenzGm3, 2);
+        var ausUnter = Math.Max(0, Math.Round(e.MindestDifferenzGm3 - e.AbschaltAbstandGm3, 2));
+
+        if (live.AutomatikAn == false)
+        {
+            return new("automatik-aus", "Automatik aus", "Lüfter bleibt, wie er steht", "neutral");
+        }
+
+        if (live.PortOnline == false)
+        {
+            return new("offline", "offline", "Der Lüfter-Port meldet sich nicht", "warn");
+        }
+
+        if (live.PortAn == true)
+        {
+            var haelt = live.Bedarf == true && diff is { } d && d < anAb;
+            var teile = new List<string>();
+            if (live.IstStufe is { } stufe) teile.Add($"Stufe {stufe}");
+            if (haelt) teile.Add($"hält bis unter {ausUnter.ToString("0.0#", de)}");
+            return new("saugt", "saugt", teile.Count == 0 ? "Lüfter läuft" : string.Join(" · ", teile), "ok");
+        }
+
+        if (live.Bedarf == true)
+        {
+            if (live.SperreRestMin is > 0 and var rest)
+            {
+                var danach = live.Zielstufe is { } ziel ? $", dann Stufe {ziel}" : "";
+                return new("sperre", "wartet", $"Mindestpause noch {rest} min{danach}", "warn");
+            }
+
+            return new("startet", "wartet", "Bedarf da · Lüfter schaltet gleich ein", "warn");
+        }
+
+        if (live.PauseZeltKalt == true)
+        {
+            var satz = live.ZeltTempC is { } t && zeltMin is { } m
+                ? $"Zelt {t.ToString("0.0", de)} °C · ab {(m + 1).ToString("0.#", de)} °C wieder frei"
+                : "Zelt zu kalt";
+            return new("zelt-kalt", "pausiert", satz, "warn");
+        }
+
+        if (diff is not { } differenz)
+        {
+            return new("differenz-unbekannt", "aus", "Differenz unbekannt", "neutral");
+        }
+
+        if (differenz < 0)
+        {
+            return new("aussen-feuchter", "aus", "Außenluft ist feuchter als der Keller", "neutral");
+        }
+
+        if (differenz < anAb)
+        {
+            var fehlt = Math.Max(0.01, Math.Round(anAb - differenz, 2));
+            return new("zu-wenig", "aus",
+                $"zu wenig Unterschied · noch {fehlt.ToString("0.00", de)} bis {anAb.ToString("0.0#", de)}",
+                "neutral", new ZuluftBalken(differenz, ausUnter, anAb));
+        }
+
+        // Die Differenz reicht, der Bedarf ist trotzdem aus — dann hält etwas anderes ihn zurück.
+        if (live.AussenTempC is { } aussen && aussen < e.AussentemperaturMinC)
+        {
+            return new("frost", "pausiert",
+                $"Außen {aussen.ToString("0.0", de)} °C · Frostschutz bis {e.AussentemperaturMinC.ToString("0.#", de)} °C", "warn");
+        }
+
+        return new("bedarf-fehlt", "aus", live.Bedarf is null ? "Bedarf unbekannt" : "Bedarf noch nicht gemeldet", "neutral");
     }
 
     /// <summary>

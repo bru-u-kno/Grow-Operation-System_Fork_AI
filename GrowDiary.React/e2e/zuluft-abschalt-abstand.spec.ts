@@ -11,8 +11,8 @@ import { gibSchloss, nimmSchloss } from './schloss'
  * Assistant und war weder zu sehen noch einzustellen.
  *
  * <b>Was hier geprüft wird.</b> Das Feld, das Band, das dem Feld folgt, das Speichern mit
- * Neuladen, die Ablehnung eines zu großen Werts am Feld — und der Zustand „saugt · hält" gegen
- * einen Livestand. Den Livestand liefert der Demobestand nicht (kein Zuluft-Fühler); er wird
+ * Neuladen, die Ablehnung eines zu großen Werts am Feld — und der Zustand „saugt" mit dem Satz
+ * „hält bis unter …" gegen einen Livestand. Den Livestand liefert der Demobestand nicht (kein Zuluft-Fühler); er wird
  * über die Antwort der Seite gesetzt, gerendert wird die gebaute App.
  *
  * <b>Schreibt</b> die Zuluft-Einstellungen und stellt sie am Ende zurück.
@@ -33,6 +33,8 @@ const LIVE = {
   aussenTempC: 11.2, aussenRhProzent: 71, kellerTempC: 17.4, kellerRhProzent: 46,
   bedarf: true, zielstufe: 6, istStufe: 6, portAn: true, portOnline: true, automatikAn: true,
   sperreRestMin: 0, letzterWechsel: '2026-10-14T20:12:00', zeltTempC: 23.1, pauseZeltKalt: false,
+  // Fork AI (forkai.238): Schild und Satz kommen vom Backend; hier steht, was es für diesen Stand liefert.
+  zustand: { wort: 'saugt', satz: 'Stufe 6 · hält bis unter 0,5', ton: 'ok' },
 }
 
 async function zuluftOeffnen(page: Page): Promise<void> {
@@ -98,7 +100,7 @@ test('ein Abstand über der Mindest-Differenz wird am Feld abgelehnt', async ({ 
   expect(danach.einstellungen.abschaltAbstandGm3).toBe(vorher.einstellungen.abschaltAbstandGm3)
 })
 
-test('der Zustand sagt „saugt · hält", solange die Differenz im Haltebereich liegt', async ({ page }) => {
+test('der Zustand sagt „saugt" und nennt die Abschaltgrenze, solange die Differenz im Haltebereich liegt', async ({ page }) => {
   const mitLive = async (live: Record<string, unknown>) => {
     await page.route('**/api/steuerung/zuluft', async (route) => {
       if (route.request().method() !== 'GET') { await route.continue(); return }
@@ -111,14 +113,14 @@ test('der Zustand sagt „saugt · hält", solange die Differenz im Haltebereich
 
   // Im Haltebereich: Regelwert 0,78 (roh 0,73), Bedarf an, Lüfter läuft.
   await mitLive({})
-  await expect(zustand()).toContainText('saugt · hält')
-  await expect(zustand()).toContainText('Aus erst unter 0,5 g/m³')
+  await expect(zustand()).toContainText('saugt')
+  await expect(zustand()).toContainText('hält bis unter 0,5')
   // Die Kachel zeigt den Wert, nach dem die Regelung entscheidet — nicht den rohen.
   await expect(page.locator('.v1-stat', { hasText: 'Differenz' }).first()).toContainText('0,78')
 
   // Über der Einschaltgrenze: er saugt ohnehin, „hält" wäre falsch.
   await page.unroute('**/api/steuerung/zuluft')
-  await mitLive({ differenzGm3: 1.3, differenzRegelGm3: 1.34 })
+  await mitLive({ differenzGm3: 1.3, differenzRegelGm3: 1.34, zustand: { wort: 'saugt', satz: 'Stufe 6', ton: 'ok' } })
   await expect(zustand()).toContainText('saugt')
   await expect(zustand()).not.toContainText('hält')
 })

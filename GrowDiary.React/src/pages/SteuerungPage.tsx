@@ -22,6 +22,7 @@ import { BestandAbschnitt, BestandHinweis } from '../features/steuerung/Bestand'
 import { useBestand } from '../features/steuerung/bestand-laden'
 import { AuswahlFeld, NichtEingerichtet } from '../features/steuerung/Auswahl'
 import { useSteuerungAuswahl } from '../features/steuerung/useSteuerungAuswahl'
+import { HaltBand } from '../features/steuerung/HaltBand'
 
 /**
  * Fork AI: Was die Prüfung der vorhandenen CO₂-Automationen meldet.
@@ -194,8 +195,12 @@ export default function SteuerungPage() {
 
 function ModulZeile({ modul, onOeffnen }: { modul: SteuerungModul; onOeffnen: () => void }) {
   const punkt = modul.status === 'an' ? 'is-an' : modul.status === 'warn' ? 'is-warn' : 'is-aus'
+  // Fork AI (forkai.238): Hat ein Modul einen Zustand (Zuluft), steht er als eigene Zeile über die volle
+  // Breite — Schild, Grund mit Zahlen, bei „zu wenig Unterschied" das Band. Rechts bleibt dann nur der Wert;
+  // die anderen Module behalten ihre kleine Unterzeile unter dem Wert.
+  const zustand = modul.zustand ?? null
   return (
-    <button type="button" className="st-zeile" onClick={onOeffnen} disabled={!modul.hatDetail}>
+    <button type="button" className={zustand ? 'st-zeile hat-zustand' : 'st-zeile'} onClick={onOeffnen} disabled={!modul.hatDetail}>
       <span className="st-zeile-links">
         <i className={`st-punkt ${punkt}`} aria-hidden="true" />
         <span className="st-titel">
@@ -205,8 +210,23 @@ function ModulZeile({ modul, onOeffnen }: { modul: SteuerungModul; onOeffnen: ()
       </span>
       <span className="st-wert">
         {modul.wert}
-        <small>{modul.unterzeile}</small>
+        {!zustand && <small>{modul.unterzeile}</small>}
       </span>
+      {zustand && (
+        <span className="st-zustand">
+          <span className="st-zustand-zeile">
+            <span className={`st-schild ton-${zustand.ton}`}>{zustand.wort}</span>
+            <span className="st-zustand-satz">{zustand.satz}</span>
+          </span>
+          {modul.balken && (
+            <HaltBand
+              hb={{ anAb: modul.balken.anAb, ausUnter: modul.balken.ausUnter }}
+              differenz={modul.balken.ist}
+              kompakt
+            />
+          )}
+        </span>
+      )}
     </button>
   )
 }

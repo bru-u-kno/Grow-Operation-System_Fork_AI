@@ -153,17 +153,7 @@ public sealed class SteuerungApiController : ApiControllerBase
                 Wert: $"Stufe {live.T6Stufe?.ToString(de) ?? "–"}",
                 Unterzeile: live.KlimaOk == true ? "gedrosselt" : "Klima gesperrt",
                 HatDetail: false),
-            new(
-                Kennung: "zuluft",
-                Titel: "Zuluft",
-                Status: zuluft.AutomatikAn == false ? "aus" : zuluft.PortAn == true ? "an" : "aus",
-                Kurz: $"Ansaugen ab {F(Zahl(ZuluftSteuerungService.Entitaeten.MindestDifferenz), " g/m³", "0.0")} · {(zuluft.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
-                Wert: F(zuluft.DifferenzGm3, " g/m³", "0.00"),
-                Unterzeile: zuluft.PortAn == true
-                    ? $"saugt · Stufe {zuluft.IstStufe?.ToString(de) ?? "–"}"
-                    : zuluft.Bedarf == true ? "wartet auf Schaltsperre"
-                    : zuluft.PauseZeltKalt == true ? "pausiert · Zelt zu kalt" : "bereit",
-                HatDetail: true),
+            ZuluftKachel.Modul(zuluft, F(Zahl(ZuluftSteuerungService.Entitaeten.MindestDifferenz), " g/m³", "0.0")),
             new(
                 Kennung: "licht",
                 Titel: "Licht",
@@ -864,7 +854,38 @@ public sealed class SteuerungApiController : ApiControllerBase
         t.JournalEntryId is not null, t.VerbrauchId is not null, t.Flaschenwechsel);
 }
 
-public sealed record SteuerungModulDto(string Kennung, string Titel, string Status, string Kurz, string Wert, string Unterzeile, bool HatDetail);
+/// <summary>
+/// Fork AI (forkai.238): Die Zuluft-Kachel der Übersicht — als eigene Funktion, damit die Zuordnung (Punktfarbe,
+/// Wert, Zustand, Balken) ohne laufende App geprüft werden kann.
+/// </summary>
+/// <param name="schwelleText">Die Einschaltschwelle für die Kurzzeile, schon formatiert („1,5 g/m³").</param>
+public static class ZuluftKachel
+{
+    public static SteuerungModulDto Modul(ZuluftLive zuluft, string schwelleText)
+    {
+        var de = CultureInfo.GetCultureInfo("de-DE");
+        var diff = zuluft.DifferenzRegelGm3 ?? zuluft.DifferenzGm3;
+        return new(
+            Kennung: "zuluft",
+            Titel: "Zuluft",
+            Status: zuluft.AutomatikAn == false ? "aus" : zuluft.PortAn == true ? "an" : zuluft.Zustand?.Ton == "warn" ? "warn" : "aus",
+            Kurz: $"Ansaugen ab {schwelleText} · {(zuluft.AutomatikAn == true ? "Automatik an" : "Automatik aus")}",
+            // Die Differenz, nach der die Regelung entscheidet — dieselbe wie auf der Detailseite. Die rohe
+            // stand neben „noch 0,07 bis 1,5" und widersprach dem Satz (forkai.238).
+            Wert: diff is { } d ? d.ToString("0.00", de) + " g/m³" : "–",
+            Unterzeile: zuluft.Zustand is { } z ? $"{z.Wort} · {z.Satz}" : "Zustand unbekannt",
+            HatDetail: true,
+            Zustand: zuluft.Zustand is { } zz ? new SteuerungModulZustandDto(zz.Wort, zz.Satz, zz.Ton) : null,
+            Balken: zuluft.Zustand?.Balken is { } b ? new SteuerungModulBalkenDto(b.Ist, b.AusUnter, b.AnAb) : null);
+    }
+}
+
+/// <param name="Zustand">Fork AI (forkai.238): Nur die Zuluft — Schild und Satz als eigene Zeile unter dem Wert; die anderen Module behalten ihre Unterzeile rechts.</param>
+/// <param name="Balken">Fork AI (forkai.238): Nur die Zuluft bei „zu wenig Unterschied" — das Band mit Messwert und Grenzen.</param>
+public sealed record SteuerungModulDto(string Kennung, string Titel, string Status, string Kurz, string Wert, string Unterzeile, bool HatDetail,
+    SteuerungModulZustandDto? Zustand = null, SteuerungModulBalkenDto? Balken = null);
+public sealed record SteuerungModulZustandDto(string Wort, string Satz, string Ton);
+public sealed record SteuerungModulBalkenDto(double Ist, double AusUnter, double AnAb);
 public sealed record SteuerungKarteDto(string Kennung, string Titel, string Beschreibung);
 public sealed record SteuerungUebersichtDto(bool HaErreichbar, IReadOnlyList<SteuerungModulDto> Module, IReadOnlyList<SteuerungKarteDto> NichtEingerichtet, DateTime StandUtc);
 /// <param name="Module">Die Module, für die Bausteine in Home Assistant angelegt werden, in Anlege-Reihenfolge.</param>
