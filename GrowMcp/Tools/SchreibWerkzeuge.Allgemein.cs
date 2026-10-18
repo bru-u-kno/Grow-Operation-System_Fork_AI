@@ -150,7 +150,9 @@ public sealed partial class SchreibWerkzeuge
         }
 
         // Was der Assistent ändern wollte — vor dem Ergänzen gemerkt, sonst sähe jede Nebenwirkung gewollt aus.
-        var angefragt = rumpf is JsonObject gesendet ? gesendet.Select(p => p.Key).ToHashSet(StringComparer.OrdinalIgnoreCase) : [];
+        var angefragt = rumpf is JsonObject gesendet
+            ? gesendet.ToDictionary(p => p.Key, p => p.Value?.DeepClone(), StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
         var ergaenzt = new List<string>();
         var alsLeer = new List<string>();
         var nichtErgaenzt = new List<string>();
@@ -167,9 +169,23 @@ public sealed partial class SchreibWerkzeuge
                     return $"Nicht ausgeführt: PUT ersetzt bei Grow OS meist das ganze Objekt, und auf diesem Weg gibt es keinen Lese-Weg, aus dem ich die fehlenden Felder ergänzen könnte ({string.Join(", ", fehlen.Select(f => f.Name))}). "
                            + "Entweder alle Felder schicken oder ergaenzen=false — dann setzt Grow OS die fehlenden auf seine Vorgabe.";
                 }
-                if (vorher is not JsonObject stand)
+                if (vorher is null)
                 {
                     return $"Nicht ausgeführt: Den Stand vor der Änderung konnte ich nicht lesen ({funktion.Pfad}); ohne ihn würde dieser PUT die fehlenden Felder zurücksetzen. Bitte später noch einmal oder alle Felder selbst schicken.";
+                }
+                if (vorher is not JsonObject stand)
+                {
+                    return $"Nicht ausgeführt: Der gelesene Stand ({funktion.Pfad}) ist eine Liste, kein Objekt — daraus lässt sich der Rumpf nicht ergänzen. Bitte alle Felder selbst schicken.";
+                }
+
+                // Listen behandelt Grow OS je Weg verschieden: fehlt sie, bleibt sie mal unverändert (Sensoren eines Zelts),
+                // mal wird sie leer (Kacheln des Dashboards — Prüfer 18.10.2026). Nicht belegt → nicht raten, sondern abbrechen.
+                var listen = fehlen.Where(f => f.Typ.StartsWith("Liste", StringComparison.Ordinal) || f.Typ.StartsWith("Zuordnung", StringComparison.Ordinal)).ToList();
+                if (listen.Count > 0)
+                {
+                    return $"Nicht ausgeführt: Im Rumpf fehlt {(listen.Count == 1 ? "die Liste" : "die Listen")} {string.Join(", ", listen.Select(f => f.Name))}. "
+                           + "Was Grow OS mit einer fehlenden Liste tut, ist je Weg verschieden (manchmal wird sie leer). Bitte die Liste aus dem gelesenen Stand mitschicken "
+                           + "— oder ergaenzen=false, wenn sicher ist, dass Grow OS sie ohne Angabe unverändert lässt.";
                 }
 
                 // Die Quelle ist EIN Objekt — der gelesene Stand selbst oder ein Teil davon (etwa „einstellungen"), je
@@ -183,23 +199,23 @@ public sealed partial class SchreibWerkzeuge
 
                 foreach (var feld in fehlen)
                 {
-                    // Listen ersetzt Grow OS ganz (etwa die Sensoren eines Zelts — mit neuen Ids). Weglassen heißt dort meist „unverändert".
-                    if (feld.Typ.StartsWith("Liste", StringComparison.Ordinal) || feld.Typ.StartsWith("Zuordnung", StringComparison.Ordinal))
-                    {
-                        nichtErgaenzt.Add(feld.Name);
-                        continue;
-                    }
                     var wert = quelle.FirstOrDefault(p => string.Equals(p.Key, feld.Name, StringComparison.OrdinalIgnoreCase));
                     if (wert.Key is not null)
                     {
                         teil[feld.Name] = wert.Value?.DeepClone();
                         ergaenzt.Add(feld.Name);
                     }
-                    else
+                    else if (feld.Typ.EndsWith('?') || feld.Typ == "Text")
                     {
                         // Grow OS lässt leere Felder in der Antwort weg — fehlt es in der Quelle, war es leer.
                         teil[feld.Name] = null;
                         alsLeer.Add(feld.Name);
+                    }
+                    else
+                    {
+                        // Darf nicht leer sein und steht nicht im Stand (etwa ein Schalter wie „Schlauch jetzt gewechselt"):
+                        // weglassen, Grow OS nimmt seine Vorgabe — der Vergleich danach zeigt, ob sich dadurch etwas bewegt.
+                        nichtErgaenzt.Add(feld.Name);
                     }
                 }
                 rumpf = teil;
@@ -218,7 +234,7 @@ public sealed partial class SchreibWerkzeuge
         text.AppendLine();
         if (ergaenzt.Count > 0) text.AppendLine($"Aus dem gelesenen Stand ergänzt ({ergaenzt.Count}): {string.Join(", ", ergaenzt)}.");
         if (alsLeer.Count > 0) text.AppendLine($"Im gelesenen Stand leer, deshalb leer mitgeschickt: {string.Join(", ", alsLeer)}.");
-        if (nichtErgaenzt.Count > 0) text.AppendLine($"Listen nicht ergänzt (Grow OS ersetzt sie ganz; weggelassen bleiben sie meist, wie sie sind): {string.Join(", ", nichtErgaenzt)}.");
+        if (nichtErgaenzt.Count > 0) text.AppendLine($"Nicht im gelesenen Stand und nicht leer erlaubt, deshalb weggelassen (Grow OS nimmt seine Vorgabe): {string.Join(", ", nichtErgaenzt)}.");
 
         if (art == "DELETE")
         {
@@ -261,7 +277,7 @@ public sealed partial class SchreibWerkzeuge
     }
 
     /// <summary>Die Unterschiede in Worten — was gewollt war (Felder aus dem Rumpf) und was sonst noch.</summary>
-    private static string Aenderungen(JsonNode vorher, Dictionary<string, string>? vorherZweitesMal, JsonNode nachher, HashSet<string> gesendet)
+    private static string Aenderungen(JsonNode vorher, Dictionary<string, string>? vorherZweitesMal, JsonNode nachher, Dictionary<string, JsonNode?> gesendet)
     {
         var (geaendert, gleich, beweglich) = Funktionsverzeichnis.Vergleichen(
             Funktionsverzeichnis.Blaetter(vorher), vorherZweitesMal, Funktionsverzeichnis.Blaetter(nachher));
@@ -276,18 +292,22 @@ public sealed partial class SchreibWerkzeuge
             static string Letzter(string pfad) => pfad[(pfad.LastIndexOf('.') + 1)..].Split('[')[0];
 
             // Ganze Einträge einer Liste (nach id abgeglichen): neu oder entfernt in einer Zeile statt Feld für Feld.
-            var eintraege = geaendert
-                .Select(a => (Aenderung: a, Eintrag: Funktionsverzeichnis.Eintrag(a.Pfad)))
-                .Where(x => x.Eintrag is not null)
-                .GroupBy(x => x.Eintrag!)
-                .ToList();
-            var neu = eintraege.Where(g => g.All(x => x.Aenderung.Alt is null)).Select(g => g.Key).ToList();
-            var weg = eintraege.Where(g => g.All(x => x.Aenderung.Neu is null)).Select(g => g.Key).ToList();
-            geaendert = geaendert.Where(a => Funktionsverzeichnis.Eintrag(a.Pfad) is not { } e || (!neu.Contains(e) && !weg.Contains(e))).ToList();
+            // Neu oder entfernt ist ein Eintrag nur, wenn sein eigenes id-Blatt kommt oder geht (Prüfer 18.10.2026: sonst
+            // galt ein Abschnitt als „entfernt", aus dem nur zwei Kacheln fehlten).
+            var neu = geaendert.Where(a => a.Alt is null && a.Neu is not null && Funktionsverzeichnis.Eintrag(a.Pfad) is { } e && a.Pfad == e + ".id")
+                .Select(a => Funktionsverzeichnis.Eintrag(a.Pfad)!).ToList();
+            var weg = geaendert.Where(a => a.Neu is null && a.Alt is not null && Funktionsverzeichnis.Eintrag(a.Pfad) is { } e && a.Pfad == e + ".id")
+                .Select(a => Funktionsverzeichnis.Eintrag(a.Pfad)!).ToList();
+            bool Unter(string pfad, List<string> eintraege) => eintraege.Any(e => pfad == e || pfad.StartsWith(e + ".", StringComparison.Ordinal) || pfad.StartsWith(e + "[", StringComparison.Ordinal));
+            geaendert = geaendert.Where(a => !Unter(a.Pfad, neu) && !Unter(a.Pfad, weg)).ToList();
             if (neu.Count > 0) text.AppendLine($"Neu ({neu.Count}): {string.Join("; ", neu.Take(AenderungenHoechstens))}.");
             if (weg.Count > 0) text.AppendLine($"Entfernt ({weg.Count}): {string.Join("; ", weg.Take(AenderungenHoechstens))}.");
 
-            var gewollt = geaendert.Where(a => gesendet.Contains(Letzter(a.Pfad))).ToList();
+            // Gewollt heißt: das Feld stand im Rumpf UND hat jetzt den gesendeten Wert (bei einfachen Werten).
+            bool Gewollt(Funktionsverzeichnis.Aenderung a)
+                => gesendet.TryGetValue(Letzter(a.Pfad), out var wert)
+                   && (wert is JsonObject or JsonArray || (wert?.ToJsonString() ?? "null") == (a.Neu ?? "(fehlt)"));
+            var gewollt = geaendert.Where(Gewollt).ToList();
             var sonst = geaendert.Except(gewollt).ToList();
 
             string Zeile(Funktionsverzeichnis.Aenderung a) => $"{a.Pfad}: {Funktionsverzeichnis.Wert(a.Alt)} → {Funktionsverzeichnis.Wert(a.Neu)}";

@@ -5,7 +5,11 @@ using System.Text.Json;
 using GrowDiary.Web.Api.Controllers;
 using GrowDiary.Web.Infrastructure.KiZugriff;
 using GrowDiary.Web.Tests.Api;
+using GrowDiary.Web.Infrastructure;
+using GrowDiary.Web.Models;
+using GrowDiary.Web.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GrowDiary.Web.Tests.KiZugriff;
 
@@ -79,6 +83,48 @@ public sealed class KiPaketC1Tests : IClassFixture<KiZugriffApp>
     {
         var seite = await _ki.Oberflaeche().GetFromJsonAsync<JsonElement>("/api/kosten");
         return seite.GetProperty("nachfuellungen").EnumerateArray().Any(f => f.GetProperty("id").GetInt32() == id);
+    }
+
+    [Fact]
+    public void Kosten_aendern_sichert_vorher_und_der_Artikelpreis_braucht_Verwaltung()
+    {
+        // Prüfer 18.10.2026: ein Preis von 0 per PUT wirkt wie ein Löschen; Preis und Gebinde sind Grundlage jeder Bewertung.
+        foreach (var name in new[] { "UpdateNachfuellung", "UpdateAnschaffung", "UpdateArtikel" })
+        {
+            Assert.NotNull(typeof(KostenApiController).GetMethod(name)!.GetCustomAttribute<KiSicherungVorherAttribute>());
+        }
+        Assert.Equal(KiStufe.Verwaltung, typeof(KostenApiController).GetMethod("UpdateArtikel")!.GetCustomAttribute<KiStufeAttribute>()?.Stufe);
+    }
+
+    [Fact]
+    public async Task Grow_OS_lehnt_Zukunft_und_den_CO2_Artikel_selbst_ab()
+    {
+        var ui = _ki.Oberflaeche();
+        var artikelId = (await ui.GetFromJsonAsync<JsonElement>("/api/kosten/artikel")).EnumerateArray().First().GetProperty("id").GetInt32();
+
+        var zukunft = await ui.PostAsJsonAsync("/api/kosten/verbrauch", new { growId = 1, zeitpunkt = "2099-01-01T00:00:00Z", zeilen = new[] { new { artikelId, menge = 1.0 } } });
+        Assert.Equal(HttpStatusCode.BadRequest, zukunft.StatusCode);
+        Assert.Equal("zeitpunkt_future", (await zukunft.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+        var kauf = await ui.PostAsJsonAsync("/api/kosten/anschaffungen", new { name = "Morgen", einzelpreisEur = 1.0, datum = "2099-01-01T00:00:00Z" });
+        Assert.Equal(HttpStatusCode.BadRequest, kauf.StatusCode);
+
+        var steuerung = _ki.App.Services.GetRequiredService<SteuerungRepository>();
+        var co2 = steuerung.GetEinstellungen<Co2Einstellungen>(Co2SteuerungService.Modul) ?? new Co2Einstellungen();
+        var vorher = co2.KostenArtikelId;
+        co2.KostenArtikelId = artikelId;
+        steuerung.SetEinstellungen(Co2SteuerungService.Modul, co2);
+        try
+        {
+            var doppelt = await ui.PostAsJsonAsync("/api/kosten/verbrauch", new { growId = 1, zeilen = new[] { new { artikelId, menge = 0.1 } } });
+            Assert.Equal(HttpStatusCode.BadRequest, doppelt.StatusCode);
+            Assert.Equal("co2_bucht_selbst", (await doppelt.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        }
+        finally
+        {
+            co2.KostenArtikelId = vorher;
+            steuerung.SetEinstellungen(Co2SteuerungService.Modul, co2);
+        }
     }
 
     [Fact]

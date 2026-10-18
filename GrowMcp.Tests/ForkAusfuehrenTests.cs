@@ -62,6 +62,9 @@ public sealed class ForkAusfuehrenTests
             Eintrag("PUT", "/api/steuerung/co2", "stufe", ["GeraeteSchalten", "Verwaltung"], schalt: true, rumpfTyp: "Co2Einstellungen",
                 felder: [("zielWarmPpm", "Ganzzahl"), ("mindestlaufzeitMin", "Ganzzahl"), ("kostenArtikelId", "Ganzzahl?")]),
             Eintrag("PUT", "/api/steuerung/ohne-lesen", "stufe", ["Verwaltung"], rumpfTyp: "X", felder: [("a", "Zahl"), ("b", "Zahl")]),
+            Eintrag("GET", "/api/tents/{tentId}/dashboard", "frei", routen: [("tentId", "Ganzzahl")]),
+            Eintrag("PUT", "/api/tents/{tentId}/dashboard", "stufe", ["GrowPlanen"], routen: [("tentId", "Ganzzahl")], rumpfTyp: "DashboardRequest",
+                felder: [("isCustom", "ja/nein"), ("sections", "Liste von Objekt {id: Text}")]),
             Eintrag("GET", "/api/grows/{growId}/journal", "frei", routen: [("growId", "Ganzzahl")]),
             Eintrag("POST", "/api/grows/{growId}/journal", "stufe", ["Dokumentieren"], routen: [("growId", "Ganzzahl")], rumpfTyp: "JournalRequest", felder: [("title", "Text")]),
             Eintrag("DELETE", "/api/kosten/anschaffungen/{id}", "stufe", ["Verwaltung"], sicherung: true, routen: Id),
@@ -287,18 +290,75 @@ public sealed class ForkAusfuehrenTests
     // ------------------------------------------------------------------ Prüferbefunde vom 18.10.2026 (B1–B3, S1)
 
     [Fact]
-    public async Task B1_Listen_wie_die_Sensoren_eines_Zelts_werden_nie_ergaenzt()
+    public async Task B1_Eine_fehlende_Liste_bricht_ab_statt_zu_raten()
     {
+        // Prüfer 18.10.2026: Grow OS behandelt eine fehlende Liste je Weg verschieden — die Sensoren eines Zelts bleiben,
+        // die Kacheln des Dashboards werden leer. Also weder mitschicken (neue Sensor-Ids) noch still weglassen.
         var fork = Fork()
             .Antwort("GET", "api/settings/tents/1", 200, """{"id":1,"name":"Zelt","notes":"n","sensors":[{"id":31,"metricType":"Temperature"}]}""")
             .Antwort("PUT", "api/settings/tents/1", 200, """{"id":1,"name":"Neu","notes":"n"}""");
         var text = await Ausfuehren(fork, "PUT", "api/settings/tents/1", body: """{"name":"Neu"}""");
 
-        var put = JsonNode.Parse(Aufrufe(fork).Single(a => a.Methode == "PUT").Rumpf!)!.AsObject();
+        Assert.StartsWith("Nicht ausgeführt: Im Rumpf fehlt die Liste sensors.", text);
+        Assert.DoesNotContain(Aufrufe(fork), a => a.Methode == "PUT");
+
+        // Wer weiß, dass Grow OS die Liste ohne Angabe stehen lässt, schickt ohne Ergänzen.
+        await Ausfuehren(fork, "PUT", "api/settings/tents/1", body: """{"name":"Neu","notes":"n","raumId":null}""", ergaenzen: false);
+        var put = JsonNode.Parse(Assert.Single(Aufrufe(fork), a => a.Methode == "PUT").Rumpf!)!.AsObject();
         Assert.False(put.ContainsKey("sensors"));
-        Assert.Equal("n", put["notes"]!.GetValue<string>());
-        Assert.Contains("Listen nicht ergänzt", text);
-        Assert.Contains("sensors", text);
+    }
+
+    [Fact]
+    public async Task B2_Unter_der_Haelfte_passender_Felder_wird_nicht_ergaenzt()
+    {
+        var fork = Fork()
+            .Antwort("GET", "api/steuerung/co2", 200, """{"ganzAnders":{"x":1},"live":{"ppm":700}}""")
+            .Antwort("PUT", "api/steuerung/co2", 200, "{}");
+        var text = await Ausfuehren(fork, "PUT", "api/steuerung/co2", body: """{"zielWarmPpm":1000}""");
+
+        Assert.Contains("nicht sicher zuordnen (nur 0 von 3 Feldern gefunden)", text);
+        Assert.DoesNotContain(Aufrufe(fork), a => a.Methode == "PUT");
+    }
+
+    [Fact]
+    public async Task Ein_Pflichtfeld_das_im_Stand_fehlt_wird_weggelassen_nicht_leer_geschickt()
+    {
+        var fork = Fork()
+            .Antwort("GET", "api/steuerung/co2", 200, """{"einstellungen":{"zielWarmPpm":900,"kostenArtikelId":2}}""")
+            .Antwort("PUT", "api/steuerung/co2", 200, "{}");
+        var text = await Ausfuehren(fork, "PUT", "api/steuerung/co2", body: """{"zielWarmPpm":1000}""");
+
+        var put = JsonNode.Parse(Aufrufe(fork).Single(a => a.Methode == "PUT").Rumpf!)!.AsObject();
+        Assert.False(put.ContainsKey("mindestlaufzeitMin"));
+        Assert.Contains("nicht leer erlaubt, deshalb weggelassen (Grow OS nimmt seine Vorgabe): mindestlaufzeitMin.", text);
+    }
+
+    [Fact]
+    public async Task Ein_Stand_der_eine_Liste_ist_wird_als_solcher_benannt()
+    {
+        var fork = Fork().Antwort("GET", "api/steuerung/co2", 200, "[1,2]");
+        Assert.Contains("ist eine Liste, kein Objekt", await Ausfuehren(fork, "PUT", "api/steuerung/co2", body: """{"zielWarmPpm":1000}"""));
+    }
+
+    [Fact]
+    public async Task S1_In_verschachtelten_Listen_ist_nur_neu_oder_weg_was_sein_id_Blatt_verliert()
+    {
+        // Wie das Dashboard: Abschnitte mit Kacheln. Zwei Kacheln fallen weg, der Abschnitt bleibt.
+        var stand = JsonNode.Parse("""{"isCustom":true,"sections":[{"id":"klima","tiles":[{"id":"a","w":1},{"id":"b","w":2},{"id":"c","w":3}]}]}""")!.AsObject();
+        var fork = Fork()
+            .Antwort("GET", "api/tents/1/dashboard", _ => (200, stand.ToJsonString()))
+            .Antwort("PUT", "api/tents/1/dashboard", _ =>
+            {
+                stand = JsonNode.Parse("""{"isCustom":false,"sections":[{"id":"klima","tiles":[{"id":"a","w":1}]}]}""")!.AsObject();
+                return (200, "{}");
+            });
+        var text = await Ausfuehren(fork, "PUT", "api/tents/1/dashboard", body: """{"isCustom":true,"sections":[]}""");
+
+        Assert.Contains("Entfernt (2): sections[id=klima].tiles[id=b]; sections[id=klima].tiles[id=c].", text);
+        Assert.DoesNotContain("Entfernt (1): sections[id=klima]", text);
+        // isCustom wurde mit true geschickt und steht jetzt auf false — das ist keine gewollte Änderung.
+        Assert.DoesNotContain("Geändert (", text);
+        Assert.Contains("Außerdem verändert, ohne dass es im Rumpf stand (1) — bitte prüfen: isCustom: ja → nein.", text);
     }
 
     [Fact]
@@ -434,7 +494,7 @@ public sealed class ForkAusfuehrenTests
         // Mit dem MCP-Schlüssel: das Verzeichnis zu lesen braucht keinen Fork-Schlüssel.
         var text = await Funktionen(Fork(), suche: "Entfeuchter");
 
-        Assert.Contains("2 von 21 Funktionen passen zu „Entfeuchter\".", text);
+        Assert.Contains("2 von 23 Funktionen passen zu „Entfeuchter\".", text);
         Assert.Contains("PUT /api/steuerung/entfeuchter — ändern · braucht Geräte schalten + Verwaltung · zählt als Schaltbefehl", text);
         Assert.Contains("Rumpf (body) EntfeuchterEinstellungen: hystereseProzent (Zahl)", text);
     }
@@ -442,11 +502,11 @@ public sealed class ForkAusfuehrenTests
     [Fact]
     public async Task fork_funktionen_filtert_nach_Bereich_Art_und_Zugang()
     {
-        Assert.Contains("2 von 21 Funktionen passen im Bereich kosten (Art löschen).", await Funktionen(Fork(), bereich: "kosten", art: "löschen"));
+        Assert.Contains("2 von 23 Funktionen passen im Bereich kosten (Art löschen).", await Funktionen(Fork(), bereich: "kosten", art: "löschen"));
         var nie = await Funktionen(Fork(), zugang: "nie");
-        Assert.Contains("2 von 21", nie);
+        Assert.Contains("2 von 23", nie);
         Assert.Contains("NIE über einen Schlüssel — Die Schlüsselverwaltung", nie);
-        Assert.Contains("0 von 21", await Funktionen(Fork(), suche: "gibtesnicht"));
+        Assert.Contains("0 von 23", await Funktionen(Fork(), suche: "gibtesnicht"));
     }
 
     [Fact]

@@ -304,10 +304,11 @@ public static class Funktionsverzeichnis
         return ergebnis;
     }
 
-    /// <summary>Der Eintrag einer nach id abgeglichenen Liste, zu dem ein Blatt gehört (<c>journal[id=35]</c>) — oder null.</summary>
+    /// <summary>Der tiefste Eintrag einer nach id abgeglichenen Liste, zu dem ein Blatt gehört (<c>journal[id=35]</c>) — oder null.</summary>
     public static string? Eintrag(string pfad)
     {
-        var start = pfad.IndexOf("[id=", StringComparison.Ordinal);
+        // Der tiefste Eintrag: sections[id=a].tiles[id=b].wert gehört zu …tiles[id=b], nicht zum Abschnitt.
+        var start = pfad.LastIndexOf("[id=", StringComparison.Ordinal);
         if (start < 0) return null;
         var ende = pfad.IndexOf(']', start);
         return ende < 0 ? null : pfad[..(ende + 1)];

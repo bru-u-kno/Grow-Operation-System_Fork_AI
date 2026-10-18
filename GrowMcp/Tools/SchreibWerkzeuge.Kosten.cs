@@ -67,15 +67,10 @@ public sealed partial class SchreibWerkzeuge
         if (utc is not null) rumpf["zeitpunkt"] = utc;
 
         return await SchreibenAsync(HttpMethod.Post, "api/kosten/verbrauch", rumpf, "Verbrauch buchen",
-            _ =>
-            {
-                var preis = a.TryGetProperty("preisEur", out var p) && p.ValueKind == JsonValueKind.Number ? p.GetDouble() : (double?)null;
-                var gebinde = a.TryGetProperty("gebinde", out var g) && g.ValueKind == JsonValueKind.Number ? g.GetDouble() : (double?)null;
-                var betrag = preis is { } pr && gebinde is > 0 ? pr / gebinde.Value * menge : (double?)null;
-                return $"Gebucht: {menge.ToString("0.##", De)} {einheit} {name} auf Grow {growId}"
-                       + (betrag is { } b ? $" (rechnerisch {b.ToString("0.00", De)} € nach Artikelpreis)" : string.Empty) + "."
-                       + (betrag > HoherBetragEur ? $" ACHTUNG: ungewöhnlich hoch — {betrag.Value.ToString("0.00", De)} €. Stimmt die Menge?" : string.Empty);
-            }, cancellationToken, mitRumpf: false);
+            // Kein Eurobetrag hier: den bewertet Grow OS selbst (Preis der Füllung vor Artikelpreis, VerbrauchsansichtService) —
+            // eine eigene Rechnung wäre eine zweite Wahrheit (Prüfer 18.10.2026). Die Kosten zeigt danach das Werkzeug kosten.
+            _ => $"Gebucht: {menge.ToString("0.##", De)} {einheit} {name} auf Grow {growId}. Was es kostet, rechnet Grow OS (Werkzeug kosten).",
+            cancellationToken, mitRumpf: false);
     }
 
     // ------------------------------------------------------------------ Nachfüllung
@@ -107,9 +102,15 @@ public sealed partial class SchreibWerkzeuge
         var artikelId = a.GetProperty("id").GetInt32();
         var name = Text(a, "name") ?? $"Artikel {artikelId}";
         var einheit = Text(a, "einheit") ?? string.Empty;
-        var offenSeit = a.TryGetProperty("aktuell", out var aktuell) && aktuell.ValueKind == JsonValueKind.Object
-            ? Datum(aktuell, "zeitpunktUtc")
-            : null;
+        var offen = a.TryGetProperty("aktuell", out var aktuell) && aktuell.ValueKind == JsonValueKind.Object
+                    && aktuell.TryGetProperty("zeitpunktUtc", out var oz) && oz.ValueKind == JsonValueKind.String
+                    && DateTime.TryParse(oz.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var offenUtc)
+            ? offenUtc
+            : (DateTime?)null;
+        var offenSeit = offen?.ToLocalTime().ToString("dd.MM.yyyy", De);
+        // Grow OS schließt nur Füllungen, die VOR der neuen liegen (KostenApiController.CreateNachfuellung).
+        var neuUtc = utc is null ? DateTime.UtcNow : DateTime.Parse(utc, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+        var wirdGeschlossen = vorherigeLeer && offen is { } o && o < neuUtc;
 
         var rumpf = new JsonObject
         {
@@ -133,9 +134,11 @@ public sealed partial class SchreibWerkzeuge
                            + (json.TryGetProperty("growId", out var g) && g.ValueKind == JsonValueKind.Number ? $" (Grow {g.GetInt32()})." : " (keinem Grow zugerechnet).");
                 satz += offenSeit is null
                     ? " Eine offene vorige Füllung gab es nicht."
-                    : vorherigeLeer
+                    : wirdGeschlossen
                         ? $" Die vorige Füllung vom {offenSeit} ist als leer geschlossen."
-                        : $" Die vorige Füllung vom {offenSeit} bleibt offen (vorherigeLeer=false).";
+                        : vorherigeLeer
+                            ? $" Die vorige Füllung vom {offenSeit} bleibt offen — die neue liegt zeitlich vor ihr."
+                            : $" Die vorige Füllung vom {offenSeit} bleibt offen (vorherigeLeer=false).";
                 if (kostenEur > HoherBetragEur) satz += $" ACHTUNG: ungewöhnlich hoher Betrag — {kostenEur.Value.ToString("0.00", De)} €. Stimmt das?";
                 return satz;
             }, cancellationToken, mitRumpf: false);

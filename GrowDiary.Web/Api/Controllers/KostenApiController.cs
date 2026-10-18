@@ -190,6 +190,9 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpPut("artikel/{id:int}")]
+    // Fork AI (Paket C1, Prüfer 18.10.2026): Preis und Gebinde sind die Grundlage jeder Bewertung (Leitplanke 3).
+    [KiStufe(KiStufe.Verwaltung)]
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(Verbrauchsartikel), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public ActionResult<Verbrauchsartikel> UpdateArtikel(int id, [FromBody] ArtikelRequest request)
@@ -318,6 +321,8 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpPut("nachfuellungen/{id:int}")]
+    // Fork AI (Paket C1, Prüfer 18.10.2026): ein Preis von 0 wirkt wie ein Löschen — Sicherung vorher wie beim DELETE.
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(Nachfuellung), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public ActionResult<Nachfuellung> UpdateNachfuellung(int id, [FromBody] NachfuellungUpdateRequest request)
@@ -395,6 +400,8 @@ public sealed class KostenApiController : ApiControllerBase
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Die Anschaffung braucht einen Namen.");
         if (request.Stueck <= 0) return BadRequestError("stueck_invalid", "Stückzahl muss mindestens 1 sein.");
         if (request.EinzelpreisEur < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
+        // Fork AI (Paket C1, 18.10.2026): wie bei der Nachfüllung kein Datum in der Zukunft — vorher prüfte das nur der Grow MCP.
+        if (request.Datum is not null && ZuUtc(request.Datum) > DateTime.UtcNow.AddMinutes(5)) return BadRequestError("zeitpunkt_future", "Das Datum liegt in der Zukunft.");
         return null;
     }
 
@@ -456,6 +463,8 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpPut("anschaffungen/{id:int}")]
+    // Fork AI (Paket C1, Prüfer 18.10.2026): ein Preis von 0 wirkt wie ein Löschen — Sicherung vorher wie beim DELETE.
+    [KiSicherungVorher]
     [ProducesResponseType(typeof(Anschaffung), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public ActionResult<Anschaffung> UpdateAnschaffung(int id, [FromBody] AnschaffungRequest request)
@@ -522,7 +531,7 @@ public sealed class KostenApiController : ApiControllerBase
     [HttpPost("verbrauch")]
     [ProducesResponseType(typeof(IReadOnlyList<Verbrauch>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
-    public ActionResult<IReadOnlyList<Verbrauch>> CreateVerbrauch([FromBody] VerbrauchRequest request)
+    public ActionResult<IReadOnlyList<Verbrauch>> CreateVerbrauch([FromBody] VerbrauchRequest request, [FromServices] Co2SteuerungService co2)
     {
         if (request.Zeilen is not { Count: > 0 })
         {
@@ -531,10 +540,19 @@ public sealed class KostenApiController : ApiControllerBase
 
         var artikel = _repo.GetArtikel().ToDictionary(a => a.Id);
         var zeitpunkt = ZuUtc(request.Zeitpunkt);
+        // Fork AI (Paket C1, 18.10.2026): Zukunft und Doppelbuchung prüft Grow OS selbst, nicht nur der Grow MCP.
+        if (zeitpunkt > DateTime.UtcNow.AddMinutes(5)) return BadRequestError("zeitpunkt_future", "Der Zeitpunkt liegt in der Zukunft.");
+        var co2Artikel = co2.Einstellungen.KostenArtikelId;
 
         // Erst alles pruefen, dann alles schreiben.
         foreach (var zeile in request.Zeilen)
         {
+            if (co2Artikel is { } ca && zeile.ArtikelId == ca)
+            {
+                return BadRequestError("co2_bucht_selbst",
+                    $"Den Verbrauch von Artikel {ca} bucht die CO₂-Steuerung selbst — eine Buchung von Hand stünde doppelt in den Kosten.");
+            }
+
             if (!artikel.ContainsKey(zeile.ArtikelId))
             {
                 return BadRequestError("artikel_not_found", $"Verbrauchsartikel {zeile.ArtikelId} existiert nicht.");

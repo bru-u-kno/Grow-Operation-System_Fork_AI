@@ -192,8 +192,10 @@ Was `fork_ausfuehren` zusätzlich tut — es fügt keine Rechte hinzu, es vereng
   was sich verändert hat, ohne im Rumpf zu stehen. Live-Werte, die sich schon zwischen zwei Lesungen davor
   bewegen, vergleicht es nicht. Vor einem Löschen liest es den Eintrag und nennt ihn in der Antwort.
 - **PUT ergänzen:** Grow OS ersetzt bei PUT meist das ganze Objekt. Fehlende Rumpffelder füllt das Werkzeug
-  aus dem gelesenen Stand (gleiche Feldnamen), damit „nur die Hysterese ändern" nicht alles andere zurücksetzt;
-  `ergaenzen=false` schickt nur den Rumpf.
+  aus dem gelesenen Stand (aus dem Teil, in dem die meisten Rumpffelder stehen, etwa `einstellungen`), damit „nur
+  die Hysterese ändern" nicht alles andere zurücksetzt; `ergaenzen=false` schickt nur den Rumpf. Fehlt im Rumpf eine
+  **Liste** (Sensoren, Kacheln …), bricht es ab: was Grow OS mit einer fehlenden Liste tut, ist je Weg verschieden.
+  Ist der Stand nicht lesbar oder passt er nicht zum Rumpf, geht kein halber PUT hinaus.
 - **Keine Dateien:** kein Hochladen, keine Bilder oder Sicherungsdateien in der Antwort (dafür `foto_ansehen`).
 
 **Was über einen Schlüssel nie geht** — egal mit welcher Stufe, auch nicht über `fork_ausfuehren`:

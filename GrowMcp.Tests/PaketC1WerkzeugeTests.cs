@@ -114,7 +114,7 @@ public sealed class PaketC1WerkzeugeTests
         var fork = ForkAttrappe.MitGrow();
         var text = await Aufruf(fork, "verbrauch_buchen", new() { ["growId"] = 1, ["artikel"] = "ph minus", ["menge"] = 20.0 });
 
-        Assert.Equal("Gebucht: 20 ml pH-Minus auf Grow 1 (rechnerisch 0,18 € nach Artikelpreis).", text);
+        Assert.Equal("Gebucht: 20 ml pH-Minus auf Grow 1. Was es kostet, rechnet Grow OS (Werkzeug kosten).", text);
         var post = Rumpf(Assert.Single(Schreibend(fork)));
         Assert.Equal(1, post["growId"]!.GetValue<int>());
         Assert.Equal(2, post["zeilen"]![0]!["artikelId"]!.GetValue<int>());
@@ -134,7 +134,7 @@ public sealed class PaketC1WerkzeugeTests
         Assert.Empty(Schreibend(fork));
 
         // Der genaue Name gewinnt vor den ähnlichen.
-        Assert.StartsWith("Gebucht: 300 ml Purolyt auf Grow 1", await Aufruf(fork, "verbrauch_buchen", new() { ["growId"] = 1, ["artikel"] = "Purolyt", ["menge"] = 300.0 }));
+        Assert.StartsWith("Gebucht: 300 ml Purolyt auf Grow 1.", await Aufruf(fork, "verbrauch_buchen", new() { ["growId"] = 1, ["artikel"] = "Purolyt", ["menge"] = 300.0 }));
     }
 
     [Fact]
@@ -176,6 +176,17 @@ public sealed class PaketC1WerkzeugeTests
         var post = Rumpf(Assert.Single(Schreibend(fork)));
         Assert.Equal(leer, post["vorherigeLeer"]!.GetValue<bool>());
         Assert.DoesNotContain("ACHTUNG", text);
+    }
+
+    [Fact]
+    public async Task Eine_rueckdatierte_Fuellung_schliesst_die_spaetere_nicht()
+    {
+        // Grow OS schließt nur Füllungen VOR der neuen — die offene ist vom 02.09.2026.
+        var fork = ForkAttrappe.MitGrow();
+        var text = await Aufruf(fork, "nachfuellung_eintragen",
+            new() { ["artikel"] = "CO2", ["menge"] = 10.0, ["vorherigeLeer"] = true, ["zeitpunkt"] = "2026-09-01T10:00" });
+
+        Assert.Contains("Die vorige Füllung vom 02.09.2026 bleibt offen — die neue liegt zeitlich vor ihr.", text);
     }
 
     [Fact]

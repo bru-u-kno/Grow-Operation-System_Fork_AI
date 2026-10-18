@@ -16,7 +16,7 @@ namespace GrowMcp.Tools;
 /// schreibt es den vorherigen Stand zurück (Muster <c>zelt_aufstellraum_setzen</c>).</para>
 /// <para><b>Topf und Name:</b> Wie in der Oberfläche (<c>GrowPlantsCard.tsx</c>, <c>pflanzen-namen.ts</c>) zieht ein
 /// automatischer Name („Pflanze 3") beim Topfwechsel mit; ein selbst vergebener bleibt. Die Regel steht dort in
-/// TypeScript — <c>PflanzenNamenTests</c> hält diese Kopie gegen sie.</para>
+/// TypeScript — <c>PaketC1WerkzeugeTests.Die_Namensregel_ist_die_der_Oberflaeche</c> hält diese Kopie gegen sie.</para>
 /// </remarks>
 public sealed partial class SchreibWerkzeuge
 {
@@ -158,10 +158,21 @@ public sealed partial class SchreibWerkzeuge
             var zurueck = new JsonObject();
             foreach (var feld in PflanzenFelder) zurueck[feld] = vorher[feld]?.DeepClone();
             var rueck = await SendenAsync(HttpMethod.Put, $"api/plants/{pflanzeId}", zurueck, cancellationToken);
+            // Nachlesen, ob der alte Stand wirklich wieder da ist — „200" allein ist kein Beleg.
+            var kontrolle = await SendenAsync(HttpMethod.Get, $"api/plants/{pflanzeId}", null, cancellationToken);
+            JsonObject? wieder = null;
+            try
+            {
+                if (kontrolle.Antwort is { Erfolg: true } k) wieder = JsonNode.Parse(k.Text) as JsonObject;
+            }
+            catch (JsonException)
+            {
+            }
+            var wiederGleich = wieder is not null && PflanzenFelder.All(f => JsonNode.DeepEquals(vorher[f], wieder[f]));
             return $"ACHTUNG: Beim Speichern von {titel} haben sich außer {string.Join(", ", geaendert)} weitere Angaben verändert ({string.Join(", ", abweichend)}). "
-                   + (rueck.Antwort is { Erfolg: true }
-                       ? "Der vorherige Stand wurde zurückgeschrieben; bitte mit pflanzen nachsehen."
-                       : "Das Zurückschreiben ist NICHT gelungen — bitte sofort in Grow OS nachsehen.");
+                   + (rueck.Antwort is { Erfolg: true } && wiederGleich
+                       ? "Der vorherige Stand wurde zurückgeschrieben und nachgelesen — er ist wieder da."
+                       : "Das Zurückschreiben ist NICHT belegt — bitte sofort in Grow OS nachsehen.");
         }
 
         var aenderungen = geaendert.Select(f => $"{FeldName(f)} {Anzeige(vorher, f)} → {Anzeige(nachher, f)}");
