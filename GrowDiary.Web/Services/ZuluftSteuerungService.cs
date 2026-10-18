@@ -41,8 +41,8 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
     {
         public const string AussenTemp = "aussen_temp";
         public const string AussenRh = "aussen_rh";
-        public const string KellerTemp = "keller_temp";
-        public const string KellerRh = "keller_rh";
+        public const string RaumTemp = "raum_temp";
+        public const string RaumRh = "raum_rh";
         public const string PortZustand = "port_zustand";
         public const string PortStatus = "port_status";
         public const string PortIstStufe = "port_ist_stufe";
@@ -325,8 +325,8 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
             KellerAbsolutGm3: Zahl(Entitaeten.AbsolutKeller),
             AussenTempC: ZahlRolle(Rollen.AussenTemp),
             AussenRhProzent: ZahlRolle(Rollen.AussenRh),
-            KellerTempC: ZahlRolle(Rollen.KellerTemp),
-            KellerRhProzent: ZahlRolle(Rollen.KellerRh),
+            KellerTempC: ZahlRolle(Rollen.RaumTemp),
+            KellerRhProzent: ZahlRolle(Rollen.RaumRh),
             Bedarf: An(Entitaeten.Bedarf),
             Zielstufe: Zahl(Entitaeten.Zielstufe) is { } z ? (int)Math.Round(z) : null,
             IstStufe: ZahlRolle(Rollen.PortIstStufe) is { } i ? (int)Math.Round(i) : null,
@@ -337,7 +337,8 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
             LetzterWechsel: gewechselt,
             ZeltTempC: zeltTemp,
             PauseZeltKalt: pause,
-            DifferenzRegelGm3: Zahl(Entitaeten.DifferenzGeglaettet) ?? Zahl(Entitaeten.Differenz));
+            DifferenzRegelGm3: Zahl(Entitaeten.DifferenzGeglaettet) ?? Zahl(Entitaeten.Differenz),
+            RaumName: RaumService.NameAus(_repo));
         return live with { Zustand = Zustand(live, e, zeltMin) };
     }
 
@@ -400,7 +401,7 @@ public sealed class ZuluftSteuerungService : IStartwertDienst
 
         if (differenz < 0)
         {
-            return new("aussen-feuchter", "aus", "Außenluft ist feuchter als der Keller", "neutral");
+            return new("aussen-feuchter", "aus", $"Außenluft ist feuchter als im Raum „{live.RaumName ?? RaumService.VorgabeName}“", "neutral");
         }
 
         if (differenz < anAb)

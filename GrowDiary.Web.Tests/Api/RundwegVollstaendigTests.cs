@@ -350,6 +350,10 @@ public sealed class RundwegVollstaendigTests
             + "Hilfsstärke ist ein Name), und die Antwort ist der ganze Stand, nicht das Gesendete. Dass "
             + "genau ein Feld ankommt und nichts sonst sich bewegt, fahren EntfeuchterZusatzSpeichernTests "
             + "(auch zweimal speichern) und EntfeuchterZusatzApiTests.",
+        // Fork AI (forkai.241)
+        ["RaumAenderung"] =
+            "Ein einziger Name, bei dem leer die Vorgabe „Aufstellraum“ bedeutet; die feste Probe kennt die Vorgabe "
+            + "nicht. Name setzen, leeren und zu lange Namen fährt RaumApiTests, durch die ganze Kette.",
         ["EntfeuchterNamenAenderung"] =
             "Zwei Namen, bei denen „fehlt“ und „null“ verschiedenes heißen (Name bleibt / Vorgabe). Die "
             + "feste Probe kennt den Unterschied nicht. Fahren EntfeuchterZusatzApiTests.",

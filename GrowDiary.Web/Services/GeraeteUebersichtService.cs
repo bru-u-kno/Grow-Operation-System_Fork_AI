@@ -124,7 +124,8 @@ public sealed class GeraeteUebersichtService
             foreach (var rolle in SteuerungGeraeteRollen.FuerModul(modul))
             {
                 Merken(_steuerung.Entity(modul, rolle.Schluessel),
-                    $"Steuerung {modul.ToUpperInvariant()} · {rolle.Label}", GeraetQuellen.Steuerung);
+                    modul == SteuerungGeraeteRollen.RaumModul ? rolle.Label : $"Steuerung {modul.ToUpperInvariant()} · {rolle.Label}",
+                    GeraetQuellen.Steuerung);
             }
         }
 

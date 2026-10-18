@@ -1,5 +1,6 @@
 using GrowDiary.Web.Api.Contracts;
 using GrowDiary.Web.Models;
+using GrowDiary.Web.Services;
 using GrowDiary.Web.ViewModels;
 
 namespace GrowDiary.Web.Api.Mapping;
@@ -137,6 +138,7 @@ public static class RequestMapping
         HvacControllerEntityId = Normalize(request.HvacControllerEntityId),
         Co2Available = request.Co2Available,
         HasCo2Enrichment = request.HasCo2Enrichment,
+        RaumId = Normalize(request.RaumId),
         CameraEntityId = Normalize(request.CameraEntityId),
         LeafOffsetSyncService = Normalize(request.LeafOffsetSyncService),
         LeafOffsetSyncPort = request.LeafOffsetSyncPort ?? Tent.DefaultLeafOffsetSyncPort
@@ -165,6 +167,7 @@ public static class RequestMapping
         HvacControllerEntityId = Normalize(request.HvacControllerEntityId),
         Co2Available = request.Co2Available,
         HasCo2Enrichment = request.HasCo2Enrichment,
+        RaumId = Normalize(request.RaumId),
         CameraEntityId = Normalize(request.CameraEntityId),
         LeafOffsetSyncService = Normalize(request.LeafOffsetSyncService),
         LeafOffsetSyncPort = request.LeafOffsetSyncPort ?? Tent.DefaultLeafOffsetSyncPort

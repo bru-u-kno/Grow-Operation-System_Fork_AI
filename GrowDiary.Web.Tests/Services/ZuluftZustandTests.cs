@@ -72,7 +72,7 @@ public sealed class ZuluftZustandTests
         var z = Z(Live(diff: -0.4));
 
         Assert.Equal("aussen-feuchter", z.Kennung);
-        Assert.Equal("Außenluft ist feuchter als der Keller", z.Satz);
+        Assert.Equal("Außenluft ist feuchter als im Raum „Aufstellraum“", z.Satz);
         Assert.Null(z.Balken);
     }
 

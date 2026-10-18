@@ -340,7 +340,7 @@ export default function ZuluftDetail({ module, aktiv, onWechsel }: {
           />
           <p className="zl-pfeil" aria-hidden="true">↓</p>
           <Glied
-            marke="Keller"
+            marke={live.raumName ?? 'Raum'}
             wert={`${zeigZahl(live.kellerTempC, ' °C', 1)} · ${zeigZahl(live.kellerRhProzent, ' %', 0)} → ${zeigZahl(live.kellerAbsolutGm3, ' g/m³', 2)}`}
           />
           <p className="zl-pfeil" aria-hidden="true">↓</p>

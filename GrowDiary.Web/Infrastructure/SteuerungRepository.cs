@@ -51,6 +51,23 @@ public sealed class SteuerungRepository : RepositoryBase
         return connection;
     }
 
+    /// <summary>
+    /// Fork AI (forkai.241): Die Kellerfühler der Zuluft sind die Raum-Fühler des Raums. Die Zuordnung wandert (kopieren,
+    /// dann die alte Zeile weg), damit ein später geleertes Raumfeld nicht wieder auftaucht; ein zweiter Lauf findet nichts
+    /// mehr. Eine schon vorhandene Raum-Zeile gewinnt. Öffentlich, damit der Test die Wanderung ohne App prüft.
+    /// </summary>
+    public static void KellerfuehlerInRaumUebernehmen(SqliteConnection connection)
+    {
+        using var wandern = connection.CreateCommand();
+        wandern.CommandText = """
+            INSERT OR IGNORE INTO ForkSteuerungGeraete (Modul, Rolle, EntityId, UpdatedAtUtc)
+                SELECT 'raum', CASE Rolle WHEN 'keller_temp' THEN 'raum_temp' ELSE 'raum_rh' END, EntityId, UpdatedAtUtc
+                FROM ForkSteuerungGeraete WHERE Modul = 'zuluft' AND Rolle IN ('keller_temp', 'keller_rh');
+            DELETE FROM ForkSteuerungGeraete WHERE Modul = 'zuluft' AND Rolle IN ('keller_temp', 'keller_rh');
+            """;
+        wandern.ExecuteNonQuery();
+    }
+
     private static void EnsureSchema(SqliteConnection connection)
     {
         var datei = connection.DataSource ?? string.Empty;
@@ -92,6 +109,8 @@ public sealed class SteuerungRepository : RepositoryBase
                 );
                 """;
             command.ExecuteNonQuery();
+
+            KellerfuehlerInRaumUebernehmen(connection);
 
             // Fork AI (forkai.20): nachgereichte Spalten. ALTER TABLE ADD COLUMN
             // ist der einzige Weg, ohne die Tabelle neu zu bauen; auf einer

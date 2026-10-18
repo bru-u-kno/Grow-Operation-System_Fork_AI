@@ -134,8 +134,9 @@ public sealed class SteuerungAuswahlTests : IDisposable
         // Ein Modul mit Rollen, das in keiner Steuerung vorkommt, ließe sich nie auswählen.
         var vergeben = SteuerungAuswahlService.Alle.SelectMany(a => a.Module).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var ohne = SteuerungGeraeteRollen.Module.Where(m => !vergeben.Contains(m)).ToList();
-        // Bluelab ist ein Zusatz am Gerätealarm, keine Steuerung (eigene Seite).
-        Assert.Equal(["bluelab"], ohne);
+        // Bluelab ist ein Zusatz am Gerätealarm, keine Steuerung (eigene Seite); der Raum ist keine Steuerung, sondern
+        // der Ort, an dem Zuluft und Entfeuchter hängen (eigener Reiter „Räume“, forkai.241).
+        Assert.Equal(["raum", "bluelab"], ohne);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { rollenPfad } from './rollenPfad'
 import { ApiRequestError, apiFetch, formatApiError } from '../../api'
 import { V1Alert, V1Button, V1Card, V1Empty, V1Field, V1Section, V1Skeleton } from '../../components/v1'
 import { V1Select } from '../../components/V1Select'
@@ -94,7 +95,8 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
   }, [])
 
   const sichtbareModule = useMemo(
-    () => (seite?.module ?? []).filter((m) => !nurModule || nurModule.includes(m.modul)),
+    // Der Raum hat einen eigenen Reiter (Räume); nur dort, über nurModule, erscheint er.
+    () => (seite?.module ?? []).filter((m) => (nurModule ? nurModule.includes(m.modul) : m.modul !== 'raum')),
     [seite, nurModule],
   )
 
@@ -178,7 +180,7 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
         />
       )}
 
-      <div className="st-wechsel" role="tablist" aria-label="Steuerung">
+      {modul?.modul !== 'raum' && <div className="st-wechsel" role="tablist" aria-label="Steuerung">
         {sichtbareModule.map((eintrag) => {
           const luecken = eintrag.zeilen.filter((zeile) => zeile.pflicht && !zeile.gefunden).length
           return (
@@ -195,7 +197,14 @@ export function RollenReiter({ modulVorwahl, onModul, nurModule, schlank, onUnge
             </button>
           )
         })}
-      </div>
+      </div>}
+
+      {/* forkai.241: Die Fühler des Raums stehen im Reiter Räume — die Zuluft benutzt sie mit. */}
+      {modul?.modul === 'zuluft' && (
+        <p className="st-hinweis">
+          Raum-Fühler (Temperatur, Feuchte der Raumluft): <Link to={rollenPfad('raum')}>im Reiter „Räume“</Link> — dort einmal zuordnen, die Zuluft nutzt sie mit.
+        </p>
+      )}
 
       {/* A-009: Der Anzeigename gilt für beide Entfeuchter — er steht bei beiden Steuerungen. */}
       {(modul?.modul === 'entfeuchter' || modul?.modul === 'entfeuchter-zusatz') && <EntfeuchterNamen />}

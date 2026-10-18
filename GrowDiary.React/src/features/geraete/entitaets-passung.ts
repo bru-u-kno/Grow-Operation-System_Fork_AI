@@ -78,7 +78,8 @@ export const BEGRIFFE: readonly Begriff[] = [
   { id: 'ppfd', woerter: ['=ppfd', '=par'] },
   { id: 'zelt', woerter: ['zelt', '=tent', 'growtent', 'growbox', '=grow', 'canopy', '=box'] },
   { id: 'aussen', woerter: ['aussen', 'outside', 'outdoor', 'draussen', 'exterior'] },
-  { id: 'keller', woerter: ['keller', 'basement', 'cellar'] },
+  // Der Ort „Raum“ (forkai.241: Raum-Fühler); die Kennung bleibt „keller“, weil Entitäten oft nach dem Aufstellort heißen.
+  { id: 'keller', woerter: ['keller', 'basement', 'cellar', '=raum', 'raumluft'] },
   { id: 'wasser', woerter: ['wasser', 'water', 'nahrloesung', 'nahrlosung', 'naehrloesung', 'nutrient', 'reservoir', 'rdwc', '=tank'] },
   { id: 'stand', woerter: ['wasserstand', 'fuellstand', 'level', 'pegel'] },
   { id: 'licht', woerter: ['licht', '=light', '=lights', 'lampe', '=lamp', '=led', 'leuchte'] },

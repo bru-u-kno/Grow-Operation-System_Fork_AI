@@ -354,6 +354,8 @@ export type ZuluftLive = {
   aussenRhProzent: number | null
   kellerTempC: number | null
   kellerRhProzent: number | null
+  /** forkai.241: Name des Raums (Rechenweg, Sätze). */
+  raumName?: string | null
   bedarf: boolean | null
   zielstufe: number | null
   istStufe: number | null
@@ -585,6 +587,9 @@ export type EntfeuchterZusatzAenderung = Partial<Omit<EntfeuchterZusatzEinstellu
 
 /** Anzeigename je Entfeuchter-Gerät; `vorgabe` ist der Name der Entität in Home Assistant. */
 export type EntfeuchterName = { anzeigename: string; vorgabe: string }
+
+/** forkai.241: Der Raum — Name, Vorgabe und die Zelte darin (GET/PUT /api/steuerung/raum). */
+export type RaumStand = { id: string; name: string; vorgabe: string; zelte: Array<{ id: number; name: string }> }
 
 export type EntfeuchterNamen = { fuehrung: EntfeuchterName; zusatz: EntfeuchterName }
 

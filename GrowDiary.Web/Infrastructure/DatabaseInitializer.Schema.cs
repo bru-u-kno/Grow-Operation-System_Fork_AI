@@ -340,6 +340,8 @@ public sealed partial class DatabaseInitializer
         // Anreicherung ist nicht Sensor: nur mit Brenner/Flasche gibt es ein
         // CO2-Ziel. Default 0 — wer anreichert, schaltet es bewusst ein.
         EnsureColumn(connection, "Tents", "HasCo2Enrichment", "INTEGER NOT NULL DEFAULT 0");
+        // forkai.241: der Raum, in dem das Zelt steht (null = kein eigener Raum).
+        EnsureColumn(connection, "Tents", "RaumId", "TEXT NULL");
 
         // Pegelsensor in Liter umrechnen: zwei gemessene Punkte plus die
         // Litermenge, die beim Fuellen wirklich hineinging.

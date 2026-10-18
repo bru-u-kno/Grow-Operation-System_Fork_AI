@@ -47,6 +47,7 @@ describe('Rollenname → Begriffe', () => {
     ['Zeltfühler · Feuchte', ['feuchte', 'zelt']],
     ['CO₂-Sensor', ['co2']],
     ['Kellerfühler · Temperatur', ['temperatur', 'keller']],
+    ['Raum-Fühler · Temperatur', ['temperatur', 'keller']],
     ['Außenfühler · Feuchte', ['feuchte', 'aussen']],
     ['Zuluft-Lüfter · laufende Stufe', ['zuluft', 'luefter', 'stufe']],
     ['Entfeuchter · schalten', ['entfeuchter', 'schalter']],

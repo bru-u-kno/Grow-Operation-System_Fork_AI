@@ -10,6 +10,7 @@ import { V1Sheet } from '../components/V1Sheet'
 import { V1Tabs } from '../components/v1'
 import { MessgroessenReiter } from '../features/geraete/MessgroessenReiter'
 import { RollenReiter } from '../features/geraete/RollenReiter'
+import { RaumName } from '../features/geraete/RaumName'
 import { ordneEintraege } from '../features/geraete/eintraegeOrdnung'
 import { rollenPfad } from '../features/geraete/rollenPfad'
 import { WartungReiter } from '../features/geraete/WartungReiter'
@@ -99,8 +100,8 @@ function steuerungsModul(verwendung: Verwendung): string | null {
   return treffer ? treffer[1].toLowerCase() : null
 }
 
-type Reiter = 'geraete' | 'rollen' | 'messgroessen' | 'wartung'
-const REITER: Reiter[] = ['geraete', 'rollen', 'messgroessen', 'wartung']
+type Reiter = 'geraete' | 'rollen' | 'raeume' | 'messgroessen' | 'wartung'
+const REITER: Reiter[] = ['geraete', 'rollen', 'raeume', 'messgroessen', 'wartung']
 
 type SpeichernRequest = {
   name: string
@@ -426,6 +427,7 @@ export default function GeraetePage() {
         items={[
           { value: 'geraete', label: 'Geräte' },
           { value: 'rollen', label: 'Rollen' },
+          { value: 'raeume', label: 'Räume' },
           { value: 'messgroessen', label: 'Messgrößen' },
           { value: 'wartung', label: 'Wartung' },
         ]}
@@ -444,6 +446,7 @@ export default function GeraetePage() {
       )}
 
       {reiter === 'rollen' ? <RollenReiter modulVorwahl={modulParam} onModul={setModul} />
+        : reiter === 'raeume' ? <><RaumName /><RollenReiter nurModule={['raum']} schlank /></>
         : reiter === 'messgroessen' ? <MessgroessenReiter entities={entities} />
         : reiter === 'wartung' ? <WartungReiter geraeteNamen={geraeteNamen} /> : <>
 

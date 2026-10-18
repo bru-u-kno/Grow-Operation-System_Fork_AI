@@ -100,7 +100,7 @@ public class SteuerungBauteileTests
         {
             foreach (var rolle in b.HaengtAn ?? KeineRolle)
             {
-                Assert.NotNull(SteuerungGeraeteRollen.Finden(b.Modul, rolle));
+                Assert.NotNull(SteuerungGeraeteRollen.FuerModulMitMitbenutzten(b.Modul).FirstOrDefault(r => r.Schluessel == rolle));
             }
         }
     }
@@ -159,7 +159,7 @@ public class SteuerungBauteileTests
         {
             foreach (var rolle in SteuerungBauteile.PlatzhalterIn(b.Vorlage!))
             {
-                Assert.NotNull(SteuerungGeraeteRollen.Finden(b.Modul, rolle));
+                Assert.NotNull(SteuerungGeraeteRollen.FuerModulMitMitbenutzten(b.Modul).FirstOrDefault(r => r.Schluessel == rolle));
             }
         }
     }
@@ -177,7 +177,7 @@ public class SteuerungBauteileTests
             var haengtAn = b.HaengtAn ?? Array.Empty<string>();
             foreach (var rolle in platzhalter)
             {
-                var rollePflicht = SteuerungGeraeteRollen.Finden(b.Modul, rolle)?.Pflicht ?? false;
+                var rollePflicht = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(b.Modul).FirstOrDefault(r => r.Schluessel == rolle)?.Pflicht ?? false;
                 Assert.True(rollePflicht || haengtAn.Contains(rolle),
                     $"{b.EntityId} nutzt [[{rolle}]], haengt aber nicht daran.");
             }
@@ -193,8 +193,8 @@ public class SteuerungBauteileTests
         {
             foreach (var rolle in SteuerungBauteile.PlatzhalterIn(b.Verfuegbarkeit!))
             {
-                Assert.NotNull(SteuerungGeraeteRollen.Finden(b.Modul, rolle));
-                Assert.True(SteuerungGeraeteRollen.Finden(b.Modul, rolle)!.Pflicht
+                Assert.NotNull(SteuerungGeraeteRollen.FuerModulMitMitbenutzten(b.Modul).FirstOrDefault(r => r.Schluessel == rolle));
+                Assert.True(SteuerungGeraeteRollen.FuerModulMitMitbenutzten(b.Modul).FirstOrDefault(r => r.Schluessel == rolle)!.Pflicht
                     || (b.HaengtAn ?? KeineRolle).Contains(rolle),
                     $"{b.EntityId} prueft [[{rolle}]], haengt aber nicht daran.");
             }
@@ -220,7 +220,7 @@ public class SteuerungBauteileTests
         // wo keiner war.
         foreach (var b in SteuerungBauteile.Alle.Where(x => x.Vorlage is not null))
         {
-            var zuordnung = SteuerungGeraeteRollen.FuerModul(b.Modul)
+            var zuordnung = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(b.Modul)
                 .ToDictionary(r => r.Schluessel, r => $"sensor.probe_{r.Schluessel}", StringComparer.Ordinal);
 
             var fertig = SteuerungBauteile.VorlageFuellen(b.Vorlage!, zuordnung);
