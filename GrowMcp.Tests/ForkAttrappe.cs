@@ -63,6 +63,13 @@ internal sealed class ForkAttrappe : HttpMessageHandler
             if ((methode == "*" || methode == angekommen.Methode) && weg.IsMatch(angekommen.Weg))
             {
                 var (status, text) = antwort(angekommen);
+                // Fork AI (Paket D): Bilder und Dateien — als Bytes mit eigenem Inhaltstyp.
+                if (Dateien.FirstOrDefault(d => d.Weg.IsMatch(angekommen.Weg)) is { Typ: not null } datei)
+                {
+                    var inhalt = new ByteArrayContent(datei.Bytes);
+                    inhalt.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(datei.Typ);
+                    return new HttpResponseMessage((HttpStatusCode)status) { Content = inhalt };
+                }
                 return new HttpResponseMessage((HttpStatusCode)status)
                 {
                     Content = new StringContent(text, Encoding.UTF8, "application/json"),
@@ -74,6 +81,16 @@ internal sealed class ForkAttrappe : HttpMessageHandler
         {
             Content = new StringContent("{}", Encoding.UTF8, "application/json"),
         };
+    }
+
+    /// <summary>Fork AI (Paket D): Wege, die statt JSON eine Datei liefern (Regex auf den Pfad, Inhaltstyp, Bytes).</summary>
+    public List<(Regex Weg, string? Typ, byte[] Bytes)> Dateien { get; } = [];
+
+    /// <summary>Für GET auf diesen Weg ein Bild (oder eine Datei) liefern.</summary>
+    public ForkAttrappe Datei(string weg, string typ, byte[] bytes, int status = 200)
+    {
+        Dateien.Add((new Regex("^" + weg + "$"), typ, bytes));
+        return Antwort("GET", weg, status, string.Empty);
     }
 
     /// <summary>Eine Attrappe, die wie ein laufendes Grow OS mit einem Grow in der Blüte antwortet.</summary>

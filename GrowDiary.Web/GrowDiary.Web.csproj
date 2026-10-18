@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>GrowDiary.Web</RootNamespace>
     <Version>1.0.1</Version>
+    <!-- Fork AI (Paket D, 18.10.2026): Die XML-Doku liegt neben der Assembly; daraus liest das
+         Funktionsverzeichnis für KI-Assistenten (GET /api/ki-zugriff/funktionen) die Kurzbeschreibungen.
+         Die Doku-Warnungen (fehlende oder unpassende Kommentare) bleiben aus: sie waren nie Teil des Baus. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1570;CS1658;CS0419</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

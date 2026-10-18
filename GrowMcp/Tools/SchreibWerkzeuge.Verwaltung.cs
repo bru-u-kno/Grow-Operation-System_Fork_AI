@@ -12,9 +12,9 @@ namespace GrowMcp.Tools;
 /// Raum und Aufstellraum der Zelte — die ersten Werkzeuge der Stufe Verwaltung (A-027, Schritt 5).
 /// </summary>
 /// <remarks>
-/// <para>Bewusst <b>kein</b> freies „beliebige Einstellung ändern": jede Einstellung, die ein Assistent ändern darf,
-/// bekommt ein eigenes Werkzeug mit eigener Prüfung. Schlüsselverwaltung und KI-Hauptschalter bleiben
-/// ausgeschlossen (<c>[KeinKiZugriff]</c> in Grow OS) und haben hier keinen Weg.</para>
+/// <para>Feste Werkzeuge mit eigener Prüfung (Prüfsumme). Seit Paket D (18.10.2026) erreicht <c>fork_ausfuehren</c>
+/// jede andere Einstellung; Schlüsselverwaltung und KI-Hauptschalter bleiben ausgeschlossen (<c>[KeinKiZugriff]</c>
+/// in Grow OS) und haben auch dort keinen Weg.</para>
 /// <para>Wie überall entscheidet Grow OS, ob die Stufe Verwaltung frei ist; die Werkzeuge nennen sie nur.</para>
 /// </remarks>
 public sealed partial class SchreibWerkzeuge

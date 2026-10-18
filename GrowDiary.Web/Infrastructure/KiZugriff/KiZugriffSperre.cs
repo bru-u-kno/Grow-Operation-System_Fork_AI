@@ -25,6 +25,33 @@ public sealed record KiEntscheidung(
 }
 
 /// <summary>
+/// Fork AI (Paket D, 18.10.2026): Wie eine Aktion über einen Schlüssel eingestuft ist — unabhängig vom Schlüssel.
+/// </summary>
+/// <param name="Lesend">GET.</param>
+/// <param name="Verwaltungsweg">Der Pfad liegt unter <see cref="AdminAccessPolicy.IsAdminPath"/>: lesend wie schreibend Verwaltung.</param>
+/// <param name="Stufe">Die Stufe der schreibenden Aktion (Bits); <see cref="KiStufe.Keine"/> beim Lesen und bei fehlender Einstufung.</param>
+/// <param name="NieGrund">Gesetzt, wenn die Aktion über einen Schlüssel nie erreichbar ist (<see cref="KeinKiZugriffAttribute"/>).</param>
+/// <param name="Schaltbefehl">Zählt ins Stundenfenster der Schaltbefehle.</param>
+/// <param name="SicherungVorher">Grow OS legt vorher eine Sicherung an.</param>
+public sealed record KiEinstufung(
+    bool Lesend,
+    bool Verwaltungsweg,
+    KiStufe Stufe,
+    string? NieGrund,
+    bool Schaltbefehl,
+    bool SicherungVorher)
+{
+    /// <summary>Jeder gültige Schlüssel kommt durch, ohne Stufe.</summary>
+    public bool Frei => Lesend && !Verwaltungsweg;
+
+    /// <summary>Schreibend, aber keiner Stufe zugeordnet — über einen Schlüssel gesperrt (vergessen sperrt).</summary>
+    public bool NichtEingestuft => !Lesend && NieGrund is null && Stufe == KiStufe.Keine;
+
+    /// <summary>Alle Stufen, die ein Schlüssel zusammen braucht: Verwaltung für den Weg, dazu die der Aktion.</summary>
+    public KiStufe BenoetigteStufen => (Verwaltungsweg ? KiStufe.Verwaltung : KiStufe.Keine) | (Lesend ? KiStufe.Keine : Stufe);
+}
+
+/// <summary>
 /// Fork AI (A-003, 03.10.2026): Der Weg einer Anfrage mit Schlüssel.
 /// </summary>
 /// <remarks>
@@ -203,43 +230,82 @@ public static class KiZugriffSperre
     /// </remarks>
     public static KiEntscheidung Entscheiden(KiZugriffKontext kontext, Endpoint? endpunkt, string methode, PathString pfad)
     {
+        // Fork AI (Paket D, 18.10.2026): Die Einstufung steht seitdem in Einstufen() — dieselbe Funktion
+        // liest das Funktionsverzeichnis (KiFunktionsverzeichnis). Hier kommt nur noch der Schlüssel dazu.
+        var einstufung = Einstufen(endpunkt, methode, pfad);
+
         // Kein Endpunkt: die App antwortet ohnehin 404.
-        if (endpunkt is null || IstFallback(endpunkt)) return KiEntscheidung.Weiter;
+        if (einstufung is null || einstufung.Frei) return KiEntscheidung.Weiter;
 
-        var lesend = HttpMethods.IsGet(methode);
-        var verwaltungsweg = AdminAccessPolicy.IsAdminPath(pfad);
-        if (lesend && !verwaltungsweg) return KiEntscheidung.Weiter;
-
-        var einstufung = endpunkt.Metadata.LastOrDefault(m => m is KiStufeAttribute or KeinKiZugriffAttribute);
-
-        if (einstufung is KeinKiZugriffAttribute kein)
+        if (einstufung.NieGrund is { } grund)
         {
             return KiEntscheidung.Verboten("ki_kein_zugriff",
-                $"Das ist über einen KI-Assistenten nie erreichbar: {kein.Grund}");
+                $"Das ist über einen KI-Assistenten nie erreichbar: {grund}");
         }
 
-        if (verwaltungsweg && !kontext.Darf(KiStufe.Verwaltung))
+        if (einstufung.Verwaltungsweg && !kontext.Darf(KiStufe.Verwaltung))
         {
             return StufeFehlt(KiStufe.Verwaltung);
         }
 
-        if (lesend) return KiEntscheidung.Weiter;
+        if (einstufung.Lesend) return KiEntscheidung.Weiter;
 
-        if (einstufung is not KiStufeAttribute { Stufe: not KiStufe.Keine } stufe)
+        if (einstufung.NichtEingestuft)
         {
             return KiEntscheidung.Verboten("ki_nicht_eingestuft",
                 "Diese Aktion ist für KI-Assistenten nicht freigegeben: sie ist keiner Stufe zugeordnet.");
         }
 
-        if (!kontext.Darf(stufe.Stufe)) return StufeFehlt(stufe.Stufe);
+        if (!kontext.Darf(einstufung.Stufe)) return StufeFehlt(einstufung.Stufe);
 
         return new KiEntscheidung(
             Durch: true,
+            SchaltbefehlZaehlen: einstufung.Schaltbefehl,
+            SicherungVorher: einstufung.SicherungVorher);
+    }
+
+    /// <summary>
+    /// Fork AI (Paket D, 18.10.2026): Was eine Aktion über einen Schlüssel verlangt — ohne Schlüssel gefragt.
+    /// </summary>
+    /// <remarks>
+    /// <para>Die EINE Stelle der Regel. <see cref="Entscheiden"/> legt nur noch den Schlüssel daneben, und das
+    /// Funktionsverzeichnis (<c>GET /api/ki-zugriff/funktionen</c>) zeigt genau dieses Ergebnis. Zwei Stellen,
+    /// die dieselbe Regel nachbauen, liefen auseinander — dann versprach das Verzeichnis, was die Sperre ablehnt.</para>
+    /// <para><c>null</c> heißt: kein Endpunkt oder der SPA-Fallback — die App antwortet 404.</para>
+    /// </remarks>
+    public static KiEinstufung? Einstufen(Endpoint? endpunkt, string methode, PathString pfad)
+    {
+        if (endpunkt is null || IstFallback(endpunkt)) return null;
+
+        var lesend = HttpMethods.IsGet(methode);
+        var verwaltungsweg = AdminAccessPolicy.IsAdminPath(pfad);
+
+        // Lesen außerhalb der Verwaltungswege ist frei — auch an einem Controller mit [KeinKiZugriff]
+        // (etwa GET /api/ki-zugriff/ich); die Attribute werden dafür gar nicht gelesen.
+        if (lesend && !verwaltungsweg) return new KiEinstufung(Lesend: true, Verwaltungsweg: false, KiStufe.Keine, null, false, false);
+
+        // Aktion gewinnt vor Controller: die Metadaten führen die Attribute der Aktion zuletzt.
+        var attribut = endpunkt.Metadata.LastOrDefault(m => m is KiStufeAttribute or KeinKiZugriffAttribute);
+        if (attribut is KeinKiZugriffAttribute kein)
+        {
+            return new KiEinstufung(lesend, verwaltungsweg, KiStufe.Keine, kein.Grund, false, false);
+        }
+
+        if (lesend) return new KiEinstufung(Lesend: true, verwaltungsweg, KiStufe.Keine, null, false, false);
+
+        var stufe = attribut is KiStufeAttribute a ? a.Stufe : KiStufe.Keine;
+        return new KiEinstufung(
+            Lesend: false,
+            verwaltungsweg,
+            stufe,
+            NieGrund: null,
             // Per Bit: eine Aktion kann mehrere Stufen verlangen (etwa Verwaltung | GeraeteSchalten).
             // Ein Sicherheitsbefehl wie der Pumpen-Stopp zählt nie (KiOhneHoechstwertAttribute).
-            SchaltbefehlZaehlen: (stufe.Stufe & KiStufe.GeraeteSchalten) != 0
-                                 && endpunkt.Metadata.GetMetadata<KiOhneHoechstwertAttribute>() is null,
-            SicherungVorher: endpunkt.Metadata.GetMetadata<KiSicherungVorherAttribute>() is not null);
+            Schaltbefehl: stufe != KiStufe.Keine
+                          && (stufe & KiStufe.GeraeteSchalten) != 0
+                          && endpunkt.Metadata.GetMetadata<KiOhneHoechstwertAttribute>() is null,
+            SicherungVorher: stufe != KiStufe.Keine
+                             && endpunkt.Metadata.GetMetadata<KiSicherungVorherAttribute>() is not null);
     }
 
     /// <remarks>Öffentlich seit A-003 Etappe B (03.10.2026): <c>KiHomeAssistantApiController</c>

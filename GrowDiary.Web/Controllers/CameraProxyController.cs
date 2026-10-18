@@ -24,6 +24,8 @@ public sealed class CameraProxyController : ControllerBase
     // 02.09.2026 keinen einzigen Aufrufer — die Oberflaeche nimmt an allen
     // vier Stellen "live/tents/{id}/camera".
     [HttpGet("live/tents/{tentId:int}/camera")]
+    // Fork AI (Paket D): Die Antwort ist ein Bild — so steht es auch im Funktionsverzeichnis für KI-Assistenten.
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTentCamera(int tentId, [FromQuery] string? entity, CancellationToken cancellationToken)
     {
         var tent = _repository.GetTent(tentId);

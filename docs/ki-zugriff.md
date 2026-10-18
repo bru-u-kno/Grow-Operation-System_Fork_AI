@@ -34,7 +34,31 @@ Legt ein Schlüssel eine Aufgabe an (`POST /api/grows/{id}/tasks`, Stufe Dokumen
 
 ## Raum über den Assistenten (forkai.243, A-027)
 
-Der Grow MCP Fork AI kennt drei Werkzeuge für den Raum: `raum` (lesen), `raum_setzen` (`PUT /api/steuerung/raum`, Stufe Verwaltung) und `zelt_aufstellraum_setzen` (`GET`/`PUT /api/settings/tents/{id}`, Stufe Verwaltung). Das Zelt-Werkzeug schickt den gelesenen Stand mit geänderter `raumId` zurück und lässt `sensors`, `cameras` und `cameraEntityId` weg — ein mitgeschicktes `sensors` ersetzt alle Sensor-Zeilen durch neue Ids (`ReplaceTentSensors`). Danach vergleicht es alle übrigen Felder und schreibt bei einer Abweichung den alten Stand zurück. Ein freies „Einstellung ändern" gibt es bewusst nicht; Schlüsselverwaltung und KI-Hauptschalter bleiben `[KeinKiZugriff]`.
+Der Grow MCP Fork AI kennt drei Werkzeuge für den Raum: `raum` (lesen), `raum_setzen` (`PUT /api/steuerung/raum`, Stufe Verwaltung) und `zelt_aufstellraum_setzen` (`GET`/`PUT /api/settings/tents/{id}`, Stufe Verwaltung). Das Zelt-Werkzeug schickt den gelesenen Stand mit geänderter `raumId` zurück und lässt `sensors`, `cameras` und `cameraEntityId` weg — ein mitgeschicktes `sensors` ersetzt alle Sensor-Zeilen durch neue Ids (`ReplaceTentSensors`). Danach vergleicht es alle übrigen Felder und schreibt bei einer Abweichung den alten Stand zurück. Seit Paket D (18.10.2026) geht jede andere Einstellung über `fork_ausfuehren` (siehe oben); Schlüsselverwaltung und KI-Hauptschalter bleiben `[KeinKiZugriff]`.
+
+## Grundsatz seit 18.10.2026: alles über den Fork, vier Sperren bleiben (Paket D)
+
+Über einen Schlüssel lässt sich **alles** im Fork steuern, was die Stufen des Schlüssels erlauben — nicht nur
+das, wofür der Grow MCP ein festes Werkzeug hat. Der frühere Grundsatz „kein freies ‚Einstellung ändern'"
+(A-027, forkai.243) gilt nicht mehr. Gesperrt bleiben über jeden Schlüssel nur die Wege mit
+`[KeinKiZugriff]`: **Schlüsselverwaltung**, **KI-Hauptschalter**, **Sicherung zurückspielen/herunterladen**
+und **Home-Assistant-Adresse und -Token**. Daran ändert Paket D nichts.
+
+- **Funktionsverzeichnis** `GET /api/ki-zugriff/funktionen` (`KiFunktionenApiController`, `[NurMitKi]`, kein
+  Verwaltungsweg, lesen ohne Stufe): je Methode und Weg unter `/api` ein Eintrag mit `zugang` (frei, stufe,
+  nie, nicht-eingestuft), `stufen` (alle nötigen, Leitungsnamen), `verwaltungsweg`, `nieGrund`,
+  `schaltbefehl`, `sicherungVorher`, `beschreibung` (aus der XML-Doku — `GenerateDocumentationFile` ist
+  dafür an —, sonst Controller.Aktion), Weg- und Abfrageparametern, Rumpf (Typ und Felder unter JSON-Namen),
+  `dateiHochladen` und `liefertDatei`. Erzeugt beim ersten Abruf aus `EndpointDataSource`
+  (`KiFunktionsverzeichnis`), nichts von Hand gepflegt.
+- **Eine Wahrheit:** Die Einstufung kommt aus `KiZugriffSperre.Einstufen` — dieselbe Funktion, die
+  `Entscheiden` für jede Anfrage nutzt. `KiFunktionsverzeichnisTests` hält, dass jede Route im Verzeichnis
+  steht (Mengenwächter ≥ 300, 356 am 18.10.2026) und dass das Verzeichnis für sechs Schlüssel (keine Stufe,
+  jede einzeln, alle) genau das verspricht, was die Sperre entscheidet.
+- Im Grow MCP: `fork_funktionen` (Verzeichnis durchsuchen) und `fork_ausfuehren` (eine Funktion rufen; nur
+  Wege aus dem Verzeichnis unter `api/`, „nie"-Wege lehnt es vorher ab, Vorher/Nachher-Vergleich, das
+  Gelöschte in der Antwort, keine Dateien). Stufe, Höchstwerte, Sicherung vorher und Prüfprotokoll prüft
+  weiter nur die Sperre — der Grow MCP fügt keine Rechte hinzu.
 
 ## Stufen (`KiStufe`, Bits)
 

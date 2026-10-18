@@ -6,9 +6,16 @@ namespace GrowOsAccess;
 /// <summary>Was Grow OS auf eine Anfrage geantwortet hat — auch wenn es Nein war.</summary>
 /// <param name="Status">Der HTTP-Status.</param>
 /// <param name="Text">Der Rumpf der Antwort, roh.</param>
-public sealed record ForkAntwort(int Status, string Text)
+/// <param name="MedienTyp">Fork AI (Paket D): der Inhaltstyp der Antwort, falls bekannt.</param>
+/// <param name="Gekuerzt">Fork AI (Paket D): der Rumpf war länger als erlaubt und ist abgeschnitten.</param>
+public sealed record ForkAntwort(int Status, string Text, string? MedienTyp = null, bool Gekuerzt = false)
 {
     public bool Erfolg => Status is >= 200 and < 300;
+
+    /// <summary>Text oder JSON — keine Datei, kein Bild. Ohne Angabe gilt die Antwort als Text.</summary>
+    public bool IstText => MedienTyp is null
+                           || MedienTyp.Contains("json", StringComparison.OrdinalIgnoreCase)
+                           || MedienTyp.StartsWith("text/", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>

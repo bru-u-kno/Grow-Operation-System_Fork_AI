@@ -47,7 +47,7 @@ public sealed class AgentExportApiController : ApiControllerBase
 
     /// <summary>Dieselbe Datei zum Herunterladen.</summary>
     [HttpGet("grows/{growId:int}/download")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Download(int growId)
     {
@@ -100,7 +100,7 @@ public sealed class AgentExportApiController : ApiControllerBase
     /// Kürzel statt Meinungen.
     /// </remarks>
     [HttpGet("grows/{growId:int}/paket")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
     public IActionResult Package(int growId)
     {

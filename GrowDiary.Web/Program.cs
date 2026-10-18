@@ -113,6 +113,7 @@ builder.Services.AddSingleton<AppSettingsRepository>();
 builder.Services.AddSingleton<KiSchluesselRepository>();
 builder.Services.AddSingleton<KiZugriffDienst>();
 builder.Services.AddSingleton<KiHauptschalter>(); // Fork AI (A-011): globaler Schalter „KI-Funktionen"
+builder.Services.AddSingleton<KiFunktionsverzeichnis>(); // Fork AI (Paket D): Funktionsverzeichnis aus den Routen
 builder.Services.AddSingleton<IKiSicherung, KiSicherungUeberSystemApi>();
 builder.Services.AddSingleton<WaterProfileStore>();
 builder.Services.AddScoped<GrowCostService>();

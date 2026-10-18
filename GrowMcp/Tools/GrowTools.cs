@@ -22,7 +22,7 @@ namespace GrowMcp.Tools;
 /// sich Bedeutung verschieben kann.</para>
 /// </remarks>
 [McpServerToolType]
-public sealed class GrowTools(GrowOsReader reader)
+public sealed partial class GrowTools(GrowOsReader reader)
 {
     /// <summary>Die Messgrössen, die Grow OS kennt — für die Werkzeugbeschreibung.</summary>
     private const string Messgroessen =

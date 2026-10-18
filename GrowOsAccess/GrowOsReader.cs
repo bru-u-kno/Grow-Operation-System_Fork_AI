@@ -98,6 +98,48 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
     }
 
     /// <summary>
+    /// Fork AI (Paket D, 18.10.2026): Wie <see cref="SendenAsync"/>, aber vorsichtig mit der Antwort.
+    /// </summary>
+    /// <remarks>
+    /// <para>Für den allgemeinen Weg (<c>fork_ausfuehren</c>), der jede Funktion von Grow OS rufen kann. Der Rumpf wird
+    /// erst gelesen, wenn der Inhaltstyp Text oder JSON ist — ein Bild oder eine Sicherungsdatei kommt nie in den
+    /// Speicher, nur ihr Typ. Text wird nach <paramref name="maxBytes"/> abgeschnitten (<see cref="ForkAntwort.Gekuerzt"/>).</para>
+    /// </remarks>
+    public async Task<ForkAntwort> SendenBegrenztAsync(HttpMethod methode, string pfad, string? json, int maxBytes, CancellationToken cancellationToken)
+    {
+        var verbindung = await discovery.FindenAsync(cancellationToken);
+        if (!verbindung.Erreichbar || verbindung.Basis is null)
+        {
+            throw new GrowOsException(verbindung.Meldung);
+        }
+
+        using var anfrage = Anfrage(methode, $"{verbindung.Basis}/{pfad.TrimStart('/')}");
+        if (json is not null)
+        {
+            anfrage.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        }
+
+        using var antwort = await http.SendAsync(anfrage, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        var typ = antwort.Content.Headers.ContentType?.MediaType;
+        var leer = new ForkAntwort((int)antwort.StatusCode, string.Empty, typ);
+        if (!leer.IstText) return leer;
+
+        await using var strom = await antwort.Content.ReadAsStreamAsync(cancellationToken);
+        var puffer = new byte[maxBytes + 1];
+        var gelesen = 0;
+        while (gelesen < puffer.Length)
+        {
+            var n = await strom.ReadAsync(puffer.AsMemory(gelesen, puffer.Length - gelesen), cancellationToken);
+            if (n == 0) break;
+            gelesen += n;
+        }
+
+        var gekuerzt = gelesen > maxBytes;
+        var text = System.Text.Encoding.UTF8.GetString(puffer, 0, Math.Min(gelesen, maxBytes));
+        return new ForkAntwort((int)antwort.StatusCode, text, typ, gekuerzt);
+    }
+
+    /// <summary>
     /// Eine Anfrage bauen — mit dem Fork-Schlüssel der laufenden Anfrage, falls es einen gibt.
     /// </summary>
     /// <remarks>

@@ -133,6 +133,42 @@ Stufen.
   `zelt_aufstellraum_setzen` (ändert am Zelt nur die Raumzuordnung; alles andere bleibt, per Prüfsumme belegt)
 - „Wie warm war es die letzte Nacht im Zelt?" → `ha_zustaende`, dann `ha_verlauf`
 
+## Alles im Fork steuern: `fork_funktionen` und `fork_ausfuehren`
+
+Seit Grow OS Fork AI mit Funktionsverzeichnis lässt sich über den Grow MCP **jede** Funktion von Grow OS
+erreichen, nicht nur die festen Werkzeuge oben. Grow OS erzeugt dafür selbst ein Verzeichnis aus seinem
+Code (`GET /api/ki-zugriff/funktionen`, rund 350 Einträge): Weg, Art, was ein Schlüssel dafür braucht,
+Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben. Neue Funktionen stehen automatisch
+darin; die Einstufung kommt aus derselben Regel, mit der Grow OS jede Anfrage prüft.
+
+| Werkzeug | Stufe | Wofür |
+| --- | --- | --- |
+| `fork_funktionen` | keine (geht auch mit dem MCP-Schlüssel) | Das Verzeichnis durchsuchen: `suche` („kosten nachfuellung"), `bereich`, `art`, `zugang`. Bei wenigen Treffern mit allen Feldern, sonst eine Zeile je Funktion oder die Bereiche. |
+| `fork_ausfuehren` | je Funktion, Grow OS prüft | Eine Funktion aus dem Verzeichnis aufrufen: `methode`, `pfad` (etwa `api/plants/7`), `query`, `body` (JSON). |
+
+Was `fork_ausfuehren` zusätzlich tut — es fügt keine Rechte hinzu, es verengt nur:
+
+- **Nur, was im Verzeichnis steht**, und nur Wege unter `api/` — kein `..`, keine Adresse, kein anderer Host,
+  keine kodierten Zeichen. Wege, die Grow OS als „nie über einen Schlüssel" führt, lehnt es ab, bevor es sie ruft.
+- **Vorher und nachher lesen:** Kennt das Verzeichnis einen GET auf denselben Weg, meldet die Antwort, was
+  sich geändert hat („einstellungen.hystereseProzent: 2 → 3; 27 Werte unverändert"), und nennt ausdrücklich,
+  was sich verändert hat, ohne im Rumpf zu stehen. Live-Werte, die sich schon zwischen zwei Lesungen davor
+  bewegen, vergleicht es nicht. Vor einem Löschen liest es den Eintrag und nennt ihn in der Antwort.
+- **PUT ergänzen:** Grow OS ersetzt bei PUT meist das ganze Objekt. Fehlende Rumpffelder füllt das Werkzeug
+  aus dem gelesenen Stand (gleiche Feldnamen), damit „nur die Hysterese ändern" nicht alles andere zurücksetzt;
+  `ergaenzen=false` schickt nur den Rumpf.
+- **Keine Dateien:** kein Hochladen, keine Bilder oder Sicherungsdateien in der Antwort (dafür `foto_ansehen`).
+
+**Was über einen Schlüssel nie geht** — egal mit welcher Stufe, auch nicht über `fork_ausfuehren`:
+Schlüsselverwaltung, KI-Hauptschalter, Sicherung zurückspielen oder herunterladen, Home-Assistant-Adresse
+und -Token. Das bleibt dem Menschen in der Oberfläche von Grow OS.
+
+Für Alltägliches bleiben die festen Werkzeuge der bessere Weg: sie prüfen mehr (Messfelder, Höchstwerte,
+Prüfsummen) und antworten in Sätzen.
+
+- „Stell beim Entfeuchter die Hysterese auf 3 Prozent." → `fork_funktionen` (suche „entfeuchter"), dann
+  `fork_ausfuehren` mit `PUT`, `api/steuerung/entfeuchter`, `{"hystereseProzent":3}`
+
 ## Sicherheit
 
 - **Nur dein Netz.** Der Port 5080 ist im Heimnetz offen, nicht im Internet. Für
