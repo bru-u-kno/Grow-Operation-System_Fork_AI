@@ -61,11 +61,21 @@ public static class Stufen
 /// <para><see cref="Stufe"/> ist die Stufe, die Grow OS verlangt — nur zur
 /// Beschreibung; entschieden wird in Grow OS. <c>null</c> heisst: lesend, ein
 /// gültiger Schlüssel genügt.</para>
+///
+/// <para><see cref="NurLesen"/> (forkai.247): Das Werkzeug liest nur, braucht dafür
+/// aber eine Stufe — <c>sensoren</c> liest die Zelt-Einstellungen, und die liegen
+/// in Grow OS hinter „Verwaltung". Die Zählungen der schreibenden Werkzeuge
+/// lassen es aus.</para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class BrauchtForkSchluesselAttribute(string? stufe = null) : Attribute
 {
     public string? Stufe { get; } = stufe;
+
+    public bool NurLesen { get; init; }
+
+    /// <summary>Schreibt das Werkzeug? Dann trägt es eine Stufe und liest nicht nur.</summary>
+    public bool Schreibend => Stufe is not null && !NurLesen;
 }
 
 /// <summary>

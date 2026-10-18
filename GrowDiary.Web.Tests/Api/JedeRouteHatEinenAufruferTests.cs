@@ -122,6 +122,10 @@ public sealed class JedeRouteHatEinenAufruferTests
         ["POST /api/ki-ha/dienst"] =
             "Gerufen vom Grow MCP Fork AI, nicht aus der Oberflaeche: ein Dienst von Home "
             + "Assistant, eingestuft je Domain (KiHaEinstufung), nur mit Schluessel.",
+        // Fork AI (forkai.247): genau eine Sensor-Zuordnung an Ort und Stelle.
+        ["PUT /api/settings/tents/{id:int}/sensors/{metricType}"] =
+            "Gerufen vom Grow MCP Fork AI (sensor_zuordnen), nicht aus der Oberflaeche: die speichert das ganze Zelt. "
+            + "Ein Assistent darf nur die eine Messgroesse aendern, ohne den uebrigen Zeilen neue Ids zu geben.",
         ["GET /api/system/audit-events"] =
             "Das Protokoll kritischer Backend-Vorgaenge (SystemAuditEvents): Lichtflanken, "
             + "Nachtabsenkung, Sicherungen. Zum Nachsehen, wenn etwas passiert ist — dafuer "

@@ -1,5 +1,16 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.6
+
+**Sensoren zuordnen, Falsches löschen, Grenzen und Lichtplan ändern.** Sechs neue Werkzeuge:
+`sensoren` zeigt je Messgröße die zugeordnete Entität mit ihrem Wert und die freien Messgrößen; `sensor_zuordnen`
+ordnet genau eine Messgröße zu, hängt sie um oder löst sie — vorher wird geprüft, ob es die Entität in Home Assistant gibt
+(bei einem Tippfehler mit Vorschlag) und ob ihre Art passt, danach werden alle übrigen Zuordnungen vorher/nachher verglichen
+(Stufe Verwaltung). `journal_loeschen` und `messung_loeschen` löschen einen Eintrag bzw. eine Messung und nennen in der
+Antwort den ganzen Inhalt (Stufe Dokumentieren). `grenzwert_setzen` ändert eine Meldegrenze, `lichtplan_setzen` die
+Schaltzeiten des Lichtplans — jeweils nur dieses eine Feld, der Rest per Prüfsumme belegt (Stufe Grow planen).
+Braucht Grow OS Fork AI ab 2.0.0-forkai.247.
+
 ## 0.2.0-forkai.5
 
 **Raum und Aufstellraum einstellen.** Drei neue Werkzeuge, die ersten der Stufe Verwaltung:
