@@ -32,7 +32,7 @@ public sealed partial class SystemApiController
 
     [HttpGet("backend-health")]
     [ProducesResponseType(typeof(BackendHealthDto), StatusCodes.Status200OK)]
-    public ActionResult<BackendHealthDto> BackendHealth()
+    public async Task<ActionResult<BackendHealthDto>> BackendHealth()
     {
         var tents = _repository.GetTents(includeArchived: true);
         var hydroSetups = _repository.GetHydroSetups(includeArchived: true);
@@ -47,6 +47,7 @@ public sealed partial class SystemApiController
             GrowCount: grows.Count,
             ZeroTentStartupSupported: true,
             BauKennung: Bauzeit.Kennung,
+            AppVersion: await _versionAuskunft(),
             Capabilities: new[]
             {
                 "zero-tent-startup",

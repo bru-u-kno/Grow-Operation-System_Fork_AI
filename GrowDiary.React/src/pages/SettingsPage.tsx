@@ -11,7 +11,7 @@ import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
 type ImportPreview = { ok: boolean; title: string; details: string[] }
 type BackupManifest = { fileName?: string; downloadUrl?: string }
-type BackendHealth = { appName: string; backendSchema: string }
+type BackendHealth = { appName: string; backendSchema: string; appVersion?: string | null }
 
 /**
  * Einstellungen nach dem Entwurf: drei Panels — Darstellung, Daten, System.
@@ -383,7 +383,8 @@ function SettingsPage() {
             <div className="ls-panel-head"><span className="ls-label">System</span></div>
             <div className="co-row">
               <span className="co-row-text">Version</span>
-              <span className="co-row-value">{health ? `${health.appName} · Add-on` : 'Grow OS · Add-on'}</span>
+              {/* Die Nummer des installierten Add-ons laut Supervisor; außerhalb von Home Assistant kennt der Fork sie nicht. */}
+              <span className="co-row-value">{health?.appVersion ?? 'unbekannt'}</span>
             </div>
             {health && (
               <div className="co-row">

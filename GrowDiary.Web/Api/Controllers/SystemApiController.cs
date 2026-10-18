@@ -33,6 +33,9 @@ public sealed partial class SystemApiController : ApiControllerBase
     /// <summary>Der Neustart nach dem Zurückspielen einer Sicherung (siehe <see cref="SupervisorNeustart"/>).</summary>
     private readonly IAppNeustart? _neustart;
 
+    /// <summary>Wer die Add-on-Version nennt (Supervisor); in Tests austauschbar.</summary>
+    private readonly Func<Task<string?>> _versionAuskunft;
+
     /// <remarks>
     /// <paramref name="schema"/> kommt im Betrieb aus dem Container (Singleton aus
     /// Program.cs). Ohne Angabe — direkt gebaute Controller in Tests — entsteht
@@ -41,9 +44,11 @@ public sealed partial class SystemApiController : ApiControllerBase
     /// gestartet, und das Ergebnis sagt, dass ein Neustart nötig ist.
     /// </remarks>
     public SystemApiController(AppPaths paths, GrowRepository repository, SystemAuditRepository auditRepository,
-        DatabaseInitializer? schema = null, IAppNeustart? neustart = null)
+        DatabaseInitializer? schema = null, IAppNeustart? neustart = null, SupervisorInfoService? supervisor = null,
+        Func<Task<string?>>? versionAuskunft = null)
     {
         _neustart = neustart;
+        _versionAuskunft = versionAuskunft ?? (supervisor is null ? () => Task.FromResult<string?>(null) : () => supervisor.GetAddonVersionAsync());
         _paths = paths;
         _repository = repository;
         _auditRepository = auditRepository;

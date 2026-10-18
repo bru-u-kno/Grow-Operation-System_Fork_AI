@@ -28,7 +28,7 @@ test('Zielwerte der Live-Kacheln: Zahl und Einheit stehen nicht aneinander', asy
     return raus
   })
   // Mengenwächter: ohne Backend gibt es keine Kacheln, und eine leere Liste wäre grün, ohne etwas zu messen.
-  if (luecken.length === 0 && darfUeberspringen('Live-Kacheln mit Zielwert brauchen das Backend (Demobestand)')) return
+  darfUeberspringen(luecken.length === 0, 'Live-Kacheln mit Zielwert brauchen das Backend (Demobestand)')
   expect(luecken.length, 'Die Live-Seite zeigt keine Zielwerte mit Einheit').toBeGreaterThanOrEqual(3)
   expect(luecken.filter((x) => x.luecke < 1.5), 'Einheit klebt an der Zahl').toEqual([])
 })

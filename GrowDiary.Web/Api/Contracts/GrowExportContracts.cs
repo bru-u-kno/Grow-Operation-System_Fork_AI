@@ -123,7 +123,9 @@ public sealed record BackendHealthDto(
     int GrowCount,
     bool ZeroTentStartupSupported,
     IReadOnlyList<string> Capabilities,
-    string BauKennung);
+    string BauKennung,
+    /// <summary>Version des installierten Add-ons laut Supervisor; null außerhalb von Home Assistant.</summary>
+    string? AppVersion = null);
 
 public sealed record BackupManifestDto(
     string BackupSchema,

@@ -28,11 +28,33 @@ public sealed class SupervisorInfoService
     private readonly ILogger<SupervisorInfoService> _logger;
 
     private string? _cachedSlug;
+    private string? _cachedVersion;
 
     public SupervisorInfoService(IHttpClientFactory httpClientFactory, ILogger<SupervisorInfoService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Die Version des installierten Add-ons („2.0.0-forkai.246“), oder null außerhalb von Home Assistant.
+    /// Maßgeblich ist, was der Supervisor installiert hat — der Quelltext des Fork kennt seine Nummer nicht
+    /// (sie wird erst beim Release in <c>config.yaml</c> hochgezählt).
+    /// </summary>
+    public async Task<string?> GetAddonVersionAsync(CancellationToken cancellationToken = default)
+    {
+        // Testdatenmodus: kein Supervisor, also keine Version — die Oberfläche sagt „unbekannt“.
+        if (DemoData.IsEnabled)
+        {
+            return null;
+        }
+
+        if (_cachedVersion is null)
+        {
+            await GetAddonSlugAsync(cancellationToken);
+        }
+
+        return _cachedVersion;
     }
 
     /// <summary>Der Add-on-Slug, oder null wenn Grow OS nicht als Add-on läuft.</summary>
@@ -71,7 +93,9 @@ public sealed class SupervisorInfoService
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            _cachedSlug = ReadSlug(await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken));
+            using var antwort = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            _cachedSlug = ReadSlug(antwort);
+            _cachedVersion = ReadVersion(antwort);
             return _cachedSlug;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
@@ -95,6 +119,20 @@ public sealed class SupervisorInfoService
 
         var value = slug.GetString();
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    /// <summary>Die Version aus derselben Antwort — null, wenn sie fehlt, leer oder keine Zeichenkette ist.</summary>
+    public static string? ReadVersion(JsonDocument document)
+    {
+        if (!document.RootElement.TryGetProperty("data", out var data)
+            || !data.TryGetProperty("version", out var version)
+            || version.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var value = version.GetString();
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     /// <summary>

@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.248
+
+**Fork AI.** Die App zeigt jetzt, **welche Version läuft**. Das hilft bei Fehlerberichten und bei Fremdinstallationen: Man sieht sofort, ob das Update angekommen ist.
+
+- **Einstellungen → System → „Version" nennt die Nummer** des installierten Add-ons, zum Beispiel „2.0.0-forkai.248". Vorher stand dort nur „Grow OS · Add-on", nie eine Nummer.
+- **Woher die Nummer kommt:** vom Home-Assistant-Supervisor, also die Nummer, die wirklich installiert ist, nicht eine aus dem Quelltext (dort wird sie erst beim Release hochgezählt). Läuft der Fork außerhalb von Home Assistant (Docker ohne Supervisor, Entwicklung), steht dort „unbekannt" statt einer erfundenen Zahl.
+- **Technik:** `GET /api/system/backend-health` hat ein neues Feld `appVersion` (null ohne Supervisor); `SupervisorInfoService` liest Slug und Version aus derselben Supervisor-Antwort (`addons/self/info`) und merkt sie sich.
+- **Gemessen:** Backend-Tests 3689 bestanden (neu: Version lesen, ungültige Antworten, Gesundheits-Endpunkt mit und ohne Supervisor), Unit-Tests 1239, volle E2E-Mappe 1127 bestanden (neu: zwei Fälle zur Anzeige, vor der Änderung rot gesehen), Gerätematrix 288 von 288 grün.
+
 ## 2.0.0-forkai.247
 
 **Fork AI.** Dein KI-Assistent kann jetzt **Sensoren zuordnen**, **falsch Diktiertes löschen** und **Meldegrenzen und Lichtzeiten ändern** — über den Grow MCP Fork AI (Version 0.2.0-forkai.6). In der App selbst ändert sich keine Seite.
