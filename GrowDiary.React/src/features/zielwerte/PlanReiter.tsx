@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../../api'
 import { V1Sheet } from '../../components/V1Sheet'
 import { V1Alert, V1Badge, V1Button, V1Field, V1Section, V1Skeleton, V1Switch, V1Tabs } from '../../components/v1'
-import { classNames } from '../../utils'
+import { classNames, ohneWaise } from '../../utils'
 import {
   GRUPPEN, aenderungen, alsText, aufPlan, feldText, fehler, punkt, schluessel, startIndex, weichtAb,
   type Entwurf, type Wochenwerte,
@@ -416,8 +416,8 @@ export function PlanReiter() {
                     value={z.name} onChange={(e) => aendern({ name: e.target.value })} />
                 ) : (
                   <span className="pr-name">
-                    {z.name}
-                    {start && <small> · Start {alsText(start.minMlPerLiter)}</small>}
+                    {ohneWaise(z.name)}
+                    {start && <small>Start {alsText(start.minMlPerLiter)}</small>}
                   </span>
                 )}
                 <input className="wp-eingabe pr-ml" type="text" inputMode="decimal" aria-label={`${z.name || 'Zutat'} ml je Liter`}
@@ -436,7 +436,7 @@ export function PlanReiter() {
             + Zutat hinzufügen
           </button>
           {daten.volumen != null && (
-            <p className="wp-leise">Mengen rechts für {alsText(daten.volumen)} l Anlagenvolumen.</p>
+            <p className="wp-leise">Mengen rechts für {alsText(daten.volumen)}\u00a0L Anlagenvolumen.</p>
           )}
         </div>
       </V1Section>

@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.246
+
+**Fork AI.** Kleine Korrekturen aus der Sichtprüfung von Plan, Dosierung, Geräten, Kosten und der Live-Seite.
+
+- **Live: zwei Kacheln hießen beide „Wasserstand".** Wer den Wasserstand in Litern (aus einer Messung) und in Zentimetern (aus einem Pegelsensor) führt, sah zweimal „Wasserstand". Die Liter-Kachel heißt jetzt „Füllmenge", die Zentimeter-Kachel „Wasserstand". In der Alarm-Liste stehen sie als „Wasserstand (L)" und „Wasserstand (cm)", wie in den Messgrößen.
+- **Plan, Dosierung: hängender Punkt.** In der schmalen Spalte stand „CalMag Agent ·" mit dem Punkt allein am Zeilenende. Der Start-Wert steht jetzt in einer eigenen Zeile unter dem Namen.
+- **Plan: „208 l" statt „208 L".** Die Anlagen-Einheit war als einziger Liter-Wert klein geschrieben; sie steht jetzt wie überall als „L" und bleibt mit der Zahl zusammen.
+- **Namen mit einem Kurzbuchstaben am Ende** („Aqua Flores A", „Aqua Flores B") brechen so, dass der Buchstabe nicht allein in der letzten Zeile steht.
+- **Für Entwickler:** `ohneWaise()` in `utils.ts` (mit Test) für Namen aus Daten, die kein Bauteil selbst setzt.
+- **Gemessen:** Unit-Tests 1236 bestanden, Gerätematrix 288 von 288 grün; volle E2E-Mappe 1116 bestanden, die 10 roten Fälle (`deutsche-zahlen`, `form-und-bild`, `verlaufsdiagramm`, `worttrennung`) liefen bei hoher Last der Entwicklungsmaschine und sind einzeln wiederholt grün (257 von 257).
+
 ## 2.0.0-forkai.245
 
 **Fork AI.** Ergebnisse der Sichtprüfung der Hauptseiten (Live, Steuerung, Entfeuchtung, Tagebuch, Einstellungen) bei 360 px, hell und dunkel, sowie eines Abgleichs der Entfeuchtungs-Anzeige mit den Rohwerten in Home Assistant. Der Abgleich ergab keine Abweichung; die Sichtprüfung vier Fehler.

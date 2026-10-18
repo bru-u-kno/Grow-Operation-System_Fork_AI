@@ -76,3 +76,11 @@ export function classNames(...values: Array<string | false | null | undefined>):
 export function formatSeverityLabel(value: string | null | undefined): string {
   return stufenName(value)
 }
+
+/**
+ * Hängt ein sehr kurzes letztes Wort („A", „B", „(2)", bis drei Zeichen) per geschütztem Leerzeichen an das davor, damit es nicht allein auf
+ * der letzten Zeile steht. Für Namen aus Daten („Aqua Flores A"), die kein Bauteil selbst setzt.
+ */
+export function ohneWaise(text: string): string {
+  return text.replace(/ (\S{1,3})$/, ' $1')
+}

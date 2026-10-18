@@ -32,7 +32,9 @@ export const hydroMetricKeys = [
   ['orp', 'ORP', 'mV'],
   ['dissolved-oxygen', 'DO', 'mg/L'],
   ['reservoir-temp', 'Wassertemp.', '°C'],
-  ['reservoir-level', 'Wasserstand', 'L'],
+  // Zwei Wasserstände brauchen zwei Namen (Sichtprüfung 18.10.2026: zwei Kacheln „Wasserstand“). „Wasserstand (L)“ bricht in der
+  // schmalen Kachelkopfzeile um, deshalb die Wörter: Liter = Füllmenge, Zentimeter = Pegel/Wasserstand.
+  ['reservoir-level', 'Füllmenge', 'L'],
   ['reservoir-level-cm', 'Wasserstand', 'cm'],
 ] as const
 
