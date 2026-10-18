@@ -33,6 +33,28 @@ public sealed class SupervisorInfoServiceTests
         Assert.Equal("local_grow_os", SupervisorInfoService.ReadSlug(document));
     }
 
+    [Fact]
+    public void ReadsTheInstalledVersionFromTheSupervisorEnvelope()
+    {
+        // Einstellungen → System zeigt diese Zahl; sie muss die des installierten Add-ons sein, nicht die des Quelltexts.
+        using var document = Json("""{"result":"ok","data":{"slug":"d48160c2_grow_os_fork_ai","version":"2.0.0-forkai.246"}}""");
+
+        Assert.Equal("2.0.0-forkai.246", SupervisorInfoService.ReadVersion(document));
+    }
+
+    [Theory]
+    [InlineData("""{"result":"ok"}""")]
+    [InlineData("""{"result":"ok","data":{}}""")]
+    [InlineData("""{"result":"ok","data":{"version":""}}""")]
+    [InlineData("""{"result":"ok","data":{"version":"  "}}""")]
+    [InlineData("""{"result":"ok","data":{"version":12}}""")]
+    public void NoUsableVersionMeansNull(string text)
+    {
+        using var document = Json(text);
+
+        Assert.Null(SupervisorInfoService.ReadVersion(document));
+    }
+
     [Theory]
     [InlineData("""{"result":"ok"}""")]
     [InlineData("""{"result":"ok","data":{}}""")]

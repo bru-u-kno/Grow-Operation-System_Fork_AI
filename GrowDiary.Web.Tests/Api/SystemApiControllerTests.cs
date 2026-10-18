@@ -74,9 +74,29 @@ public sealed class SystemApiControllerTests : IDisposable
     }
 
     [Fact]
-    public void BackendHealth_ListsCurrentBackendCapabilities()
+    public async Task BackendHealth_NamesTheInstalledAddonVersion()
     {
-        var result = _controller.BackendHealth();
+        // Einstellungen → System: „Version“ zeigt die Nummer des installierten Add-ons, die der Supervisor nennt.
+        var controller = new SystemApiController(_paths, _repository, _auditRepository, versionAuskunft: () => Task.FromResult<string?>("2.0.0-forkai.246"));
+
+        var ok = Assert.IsType<OkObjectResult>((await controller.BackendHealth()).Result);
+
+        Assert.Equal("2.0.0-forkai.246", Assert.IsType<BackendHealthDto>(ok.Value).AppVersion);
+    }
+
+    [Fact]
+    public async Task BackendHealth_WithoutSupervisorHasNoVersion()
+    {
+        // Außerhalb von Home Assistant (Docker, Entwicklung) kennt der Fork seine Version nicht — dann null statt einer erfundenen Zahl.
+        var ok = Assert.IsType<OkObjectResult>((await _controller.BackendHealth()).Result);
+
+        Assert.Null(Assert.IsType<BackendHealthDto>(ok.Value).AppVersion);
+    }
+
+    [Fact]
+    public async Task BackendHealth_ListsCurrentBackendCapabilities()
+    {
+        var result = await _controller.BackendHealth();
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<BackendHealthDto>(ok.Value);
