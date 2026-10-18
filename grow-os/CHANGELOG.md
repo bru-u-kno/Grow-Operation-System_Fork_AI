@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.247
+
+**Fork AI.** Dein KI-Assistent kann jetzt **Sensoren zuordnen**, **falsch Diktiertes löschen** und **Meldegrenzen und Lichtzeiten ändern** — über den Grow MCP Fork AI (Version 0.2.0-forkai.6). In der App selbst ändert sich keine Seite.
+
+- **Sensoren zuordnen, ohne den Rest anzufassen:** Neue Werkzeuge `sensoren` (welche Messgröße an welcher Home-Assistant-Entität hängt, mit Wert, und welche frei sind) und `sensor_zuordnen` (genau eine Messgröße zuordnen, umhängen oder lösen; Stufe „Verwaltung"). Vorher prüft das Werkzeug, ob es die Entität in Home Assistant gibt (bei einem Tippfehler mit Vorschlag) und ob ihre Art passt. Grow OS hat dafür einen eigenen Weg bekommen, der nur diese eine Zeile ändert: Alle anderen Zuordnungen behalten ihre Ids, Geräte und Meldungen ihren Verweis, und der Geräte-Abgleich läuft wie beim Speichern in der App. Gelöst wird wie auf der Einrichtungsseite: Die Zeile bleibt inaktiv stehen.
+- **Löschen:** `journal_loeschen` und `messung_loeschen` (Stufe „Dokumentieren") löschen nur, was es unter der Id wirklich gibt, und nennen in der Antwort den ganzen Inhalt samt Zeitpunkt, damit er sich wieder eintragen lässt. Grow OS legt vorher eine Sicherung an.
+- **Meldegrenze und Lichtplan:** `grenzwert_setzen` ändert eine Meldegrenze (etwa „Melde erst ab 28 Grad"), `lichtplan_setzen` die Schaltzeiten des Lichtplans (Stufe „Grow planen"). Jeweils nur dieses eine Feld; der Rest ist per Prüfsumme als unverändert belegt. Ob eine Grenze physikalisch möglich ist, prüft Grow OS selbst. Die Lichtzeiten sind Uhrzeiten im Zelt und gehen nicht an Home Assistant oder den Controller.
+- **Eine Regel für passende Entitäten:** Welche Art von Entität zu welcher Messgröße passt, steht jetzt im Backend und wird per Test gegen die Vorschläge der Einrichtungsseite gehalten. Beim Licht nimmt sie auch Sensoren an (Helligkeit oder Leistung der Lampe), weil Grow OS die lesen kann.
+- **Gemessen:** Backend-Tests 3676 bestanden, Grow-MCP-Tests 427 bestanden. An einer Demo-App liefen alle sechs Werkzeuge echt: Am Zelt mit 14 Zuordnungen blieben beim Umhängen, Lösen und Zurückstellen alle 14 Sensor-Ids gleich, das pH-Gerät folgte der Entität mit unverändertem Verweis; Löschen, Grenze und Lichtplan hin und zurück ergaben den Ausgangsstand.
+
 ## 2.0.0-forkai.246
 
 **Fork AI.** Kleine Korrekturen aus der Sichtprüfung von Plan, Dosierung, Geräten, Kosten und der Live-Seite.

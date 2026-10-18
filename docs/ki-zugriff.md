@@ -64,6 +64,24 @@ zeigt sie als `zugang: nie`.
   Gelöschte in der Antwort, keine Dateien). Stufe, Höchstwerte, Sicherung vorher und Prüfprotokoll prüft
   weiter nur die Sperre — der Grow MCP fügt keine Rechte hinzu.
 
+## Sensoren, Löschen, Grenzen und Licht über den Assistenten (forkai.247)
+
+- **Eine Sensor-Zuordnung an Ort und Stelle:** `PUT /api/settings/tents/{id}/sensors/{metricType}` mit `{ "haEntityId": … }`
+  (Stufe Verwaltung, wie das ganze Zelt). Eine vorhandene Zeile behält ihre Id; eine neue Messgröße bekommt eine neue Zeile;
+  leer löst — die Zeile bleibt inaktiv und ohne Entität stehen, wie beim Leeren auf der Einrichtungsseite, damit Geräte
+  (`HardwareItems.TentSensorId`) und Meldungen ihren Verweis behalten. Danach läuft der Geräte-Abgleich wie beim Speichern des
+  Zelts. Die Domain muss zur Messgröße passen (`SensorMessgroessen`, gegen die Oberfläche gehalten). Ob es die Entität in Home
+  Assistant gibt, prüft der Grow MCP (`sensor_zuordnen`) vorher über `api/ki-ha/zustaende`. Lesen: `sensoren`.
+- **Messgrößen-Katalog:** `GET /api/messgroessen` (lesend, ohne Stufe) — Name, Schlüssel, Etikett wie in der App,
+  Etikett der Meldegrenzen und passende Domains. Der Grow MCP findet Messgrößen darüber.
+- **Löschen:** `journal_loeschen` (`DELETE /api/journal/{id}`) und `messung_loeschen` (`DELETE /api/measurements/{id}`), Stufe
+  Dokumentieren. Beide lesen vorher und löschen nur Vorhandenes; Grow OS legt vor dem Löschen über einen Schlüssel eine Sicherung an
+  (`[KiSicherungVorher]`). Die Antwort enthält den gelöschten Inhalt.
+- **Grenzen und Licht:** `grenzwert_setzen` (`PUT /api/alerts/tents/{id}`) und `lichtplan_setzen` (`PUT /api/light-schedules/{id}`),
+  Stufe Grow planen. Beide schicken den gelesenen Stand mit genau einer Änderung zurück und belegen den Rest per Prüfsumme. Die
+  Lichtzeiten sind Wanduhrzeit im Zelt (Zeitzone des Plans, sonst die des Servers = die von Home Assistant); sie gehen nicht nach
+  Home Assistant und nicht an den Controller.
+
 ## Stufen (`KiStufe`, Bits)
 
 | Stufe | Wert | Beispiele |

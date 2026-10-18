@@ -104,8 +104,19 @@ internal sealed class ForkAttrappe : HttpMessageHandler
             .Antwort("GET", @"api/steuerung/raum", 200, """{"id":"haupt","name":"Aufstellraum","vorgabe":"Aufstellraum","zelte":[]}""")
             .Antwort("PUT", @"api/steuerung/raum", 200, """{"id":"haupt","name":"Keller","vorgabe":"Aufstellraum","zelte":[]}""")
             .Antwort("GET", @"api/settings/tents", 200, """[{"id":1,"name":"Blütezelt","raumId":null}]""")
-            .Antwort("GET", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":null,"status":"Active"}""")
+            .Antwort("GET", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":null,"status":"Active","sensors":[{"id":31,"tentId":1,"metricType":"AirTemperature","haEntityId":"sensor.zelt_t","displayLabel":null,"isActive":true}]}""")
             .Antwort("PUT", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":"haupt"}""")
+            // forkai.247: Messgrößen, Sensor-Zuordnung, Löschen, Meldegrenzen, Lichtplan.
+            .Antwort("GET", @"api/messgroessen", 200, Katalog)
+            .Antwort("GET", @"api/ki-ha/zustaende", 200, """[{"entityId":"sensor.controller_temperatur","name":"Controller Temperatur","zustand":"20.9","einheit":"°C","bereich":null,"geaendertAmUtc":null}]""")
+            .Antwort("PUT", @"api/settings/tents/\d+/sensors/\w+", 200, """{"id":1,"name":"Blütezelt","sensors":[]}""")
+            .Antwort("GET", @"api/journal/\d+", a => (200, $$"""{"id":{{a.Weg.Split('/')[^1]}},"growId":1,"title":"Test","body":"MCP-Schreibtest","entryType":"Note","occurredAtUtc":"2026-10-18T12:30:00Z"}"""))
+            .Antwort("GET", @"api/measurements/\d+", a => (200,
+                $$"""{"id":{{a.Weg.Split('/')[^1]}},"growId":1,"takenAt":"2026-10-01T08:00:00","stage":"Flower","source":"Manual","notes":"alt","reservoirPh":5.8,"orpMv":450,"reservoirEc":1.2,"solutionChange":false}"""))
+            .Antwort("GET", @"api/alerts/tents/\d+", 200,
+                """{"tentId":1,"rules":[{"metricKey":"temperature","minValue":18,"maxValue":30,"notifyService":"","enabled":true,"cooldownMinutes":30,"quelle":"Fest","toleranz":null,"nightMinValue":null,"nightMaxValue":null}]}""")
+            .Antwort("GET", @"api/light-schedules", 200, "[" + Lichtplan + "]")
+            .Antwort("GET", @"api/light-schedules/\d+", 200, Lichtplan)
             // Fork AI (Paket C1): Kosten, CO₂-Artikel, Pflanze, Sorten, ein laufender Probelauf.
             .Antwort("GET", @"api/kosten", 200, KostenSeite)
             .Antwort("GET", @"api/steuerung/co2", 200, """{"einstellungen":{"kostenArtikelId":1}}""")
@@ -136,6 +147,26 @@ internal sealed class ForkAttrappe : HttpMessageHandler
     public const string Pflanze = """
         {"id":2,"strainId":1,"growId":1,"siteIndex":2,"label":"Pflanze 2","plantRole":"Production","plantStatus":"Active",
          "startedAt":"2026-08-06T12:00:00+02:00","notes":"alt","strainName":"White Widow","createdAtUtc":"2026-10-18T14:31:05Z","updatedAtUtc":"2026-10-18T14:31:05Z"}
+        """;
+
+    /// <summary>Ein Auszug aus <c>GET api/messgroessen</c> — so, wie Grow OS ihn liefert.</summary>
+    public const string Katalog = """
+        [{"metricType":"AirTemperature","metrikSchluessel":"temperature","etikett":"Lufttemp","meldeEtikett":"Lufttemp.","domains":["sensor"],"einheit":"°C"},
+         {"metricType":"Humidity","metrikSchluessel":"humidity","etikett":"Luftfeuchte","meldeEtikett":null,"domains":["sensor"],"einheit":"%"},
+         {"metricType":"LightStatus","metrikSchluessel":"light-status","etikett":"Licht","meldeEtikett":null,"domains":["switch","light","binary_sensor","input_boolean","sensor"],"einheit":null},
+         {"metricType":"ReservoirPh","metrikSchluessel":"reservoir-ph","etikett":"pH","meldeEtikett":null,"domains":["sensor"],"einheit":null},
+         {"metricType":"ReservoirDissolvedOxygen","metrikSchluessel":"dissolved-oxygen","etikett":"DO","meldeEtikett":null,"domains":["sensor"],"einheit":"mg/L"},
+         {"metricType":"ReservoirLevel","metrikSchluessel":"reservoir-level","etikett":"Wasserstand (L)","meldeEtikett":"Wasserstand","domains":["sensor"],"einheit":"L"},
+         {"metricType":"ReservoirLevelCm","metrikSchluessel":"reservoir-level-cm","etikett":"Wasserstand (cm)","meldeEtikett":"Wasserstand","domains":["sensor"],"einheit":"cm"},
+         {"metricType":"PumpCirculation","metrikSchluessel":"pump-circulation","etikett":"Umwälzpumpe","meldeEtikett":null,"domains":["switch","input_boolean"],"einheit":null},
+         {"metricType":"OutsideTemperature","metrikSchluessel":"outside-temperature","etikett":"Außen Temp.","meldeEtikett":null,"domains":["sensor"],"einheit":"°C"},
+         {"metricType":"OutsideHumidity","metrikSchluessel":"outside-humidity","etikett":"Außen RLF","meldeEtikett":null,"domains":["sensor"],"einheit":"%"},
+         {"metricType":"OutsideVpd","metrikSchluessel":"outside-vpd","etikett":"Außen VPD","meldeEtikett":null,"domains":["sensor"],"einheit":"kPa"}]
+        """;
+
+    /// <summary>Ein Lichtplan, wie <c>GET api/light-schedules/{id}</c> ihn liefert.</summary>
+    public const string Lichtplan = """
+        {"id":3,"tentId":1,"name":"Blüte 12/12","isActive":true,"lightsOnTime":"06:00","lightsOffTime":"18:00","timeZoneId":null,"source":"Manual","createdAtUtc":"2026-10-01T00:00:00Z","updatedAtUtc":"2026-10-01T00:00:00Z"}
         """;
 }
 

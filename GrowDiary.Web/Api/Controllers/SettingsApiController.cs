@@ -220,6 +220,95 @@ public sealed class SettingsApiController : ApiControllerBase
     }
 
     /// <summary>
+    /// Fork AI (forkai.247): Genau EINE Messgröße eines Zelts zuordnen, umhängen oder lösen — an Ort und Stelle.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Warum ein eigener Weg.</b> <see cref="SaveTent"/> ersetzt mit <c>sensors</c> ALLE Sensorzeilen
+    /// (<c>ReplaceTentSensors</c>: löschen, neu anlegen, neue Ids). An den Ids hängen Geräte (<c>HardwareItems.TentSensorId</c>) und
+    /// Meldungen (<c>RiskEvents.TentSensorId</c>, die dabei gelöst werden). Hier ändert sich nur die eine Zeile: vorhanden →
+    /// <c>UpdateTentSensor</c> (Id bleibt), sonst → <c>AddTentSensor</c> (neue Id nur für diese Messgröße).</para>
+    /// <para><b>Lösen</b> (leere Entität) lässt die Zeile stehen, inaktiv und ohne Entität — genau den Stand, den die
+    /// Einrichtungsseite Home Assistant beim Leeren eines Felds speichert. So behalten Geräte und Meldungen einen gültigen Verweis.
+    /// Gibt es keine Zeile, ist nichts zu lösen.</para>
+    /// <para><b>Danach wie beim Speichern des Zelts:</b> <see cref="TentSensorHardwareSyncService.SyncForTent"/>. Mehr stößt
+    /// <see cref="SaveTent"/> für die Sensoren nicht an: das Blatt-Offset ändert sich hier nicht, und Live-Werte, Meldungen und
+    /// Verlauf lesen die Zuordnung bei jedem Takt frisch aus der Datenbank. Das Prüfprotokoll eines Assistenten schreibt die
+    /// Sperre (<c>KiZugriffSperre</c>) wie bei jedem schreibenden Weg.</para>
+    /// <para>Die Domain muss zur Messgröße passen (<see cref="SensorMessgroessen"/>). Ob es die Entität in Home Assistant gibt,
+    /// prüft der Aufrufer — der Fork-MCP über <c>api/ki-ha/zustaende</c>; die Oberfläche bietet ohnehin nur vorhandene an.</para>
+    /// </remarks>
+    [HttpPut("tents/{id:int}/sensors/{metricType}")]
+    [ProducesResponseType(typeof(TentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
+    public ActionResult<TentDto> SetTentSensor(int id, string metricType, [FromBody] SetTentSensorRequest request)
+    {
+        var tent = _repository.GetTent(id);
+        if (tent is null)
+        {
+            return NotFoundError("tent_not_found", $"Zelt mit Id {id} existiert nicht.");
+        }
+
+        if (SensorMessgroessen.Lesen(metricType) is not { } messgroesse)
+        {
+            return BadRequestError("sensor_messgroesse_unbekannt",
+                $"Die Messgröße „{metricType}“ gibt es nicht. Möglich: {string.Join(", ", SensorMessgroessen.Alle.Keys.OrderBy(m => (int)m))}.");
+        }
+
+        var etikett = SensorMessgroessen.Alle[messgroesse].Etikett;
+        var entitaet = string.IsNullOrWhiteSpace(request?.HaEntityId) ? null : request.HaEntityId.Trim();
+        if (entitaet is not null)
+        {
+            if (!SensorMessgroessen.IstEineEntitaet(entitaet))
+            {
+                return BadRequestError("sensor_entitaet_ungueltig",
+                    $"„{entitaet}“ ist nicht genau eine Entität. Erwartet wird etwa sensor.zelt_temperatur.");
+            }
+
+            if (!SensorMessgroessen.DomainPasst(messgroesse, entitaet))
+            {
+                return BadRequestError("sensor_domain_passt_nicht",
+                    $"„{etikett}“ erwartet eine Entität der Art {string.Join(" oder ", SensorMessgroessen.Alle[messgroesse].Domains)}; "
+                    + $"{entitaet} ist {SensorMessgroessen.Domain(entitaet)}.");
+            }
+        }
+
+        // Die Zeile, die Grow OS für diese Messgröße liest (SensorMessgroessen.WirksameZeile), wird geändert. Stehen aus
+        // altem Bestand weitere Zeilen derselben Messgröße da, werden sie stillgelegt (inaktiv, ohne Entität, Id bleibt) —
+        // danach gilt genau eine, und kein Leser kann eine andere erwischen als die, die gemeldet wird.
+        var zeile = SensorMessgroessen.WirksameZeile(tent.Sensors, messgroesse);
+        foreach (var doppelt in tent.Sensors.Where(s => s.MetricType == messgroesse && s.Id != zeile?.Id))
+        {
+            if (!doppelt.IsActive && string.IsNullOrEmpty(doppelt.HaEntityId)) continue;
+            doppelt.HaEntityId = string.Empty;
+            doppelt.IsActive = false;
+            _repository.UpdateTentSensor(doppelt);
+        }
+
+        if (zeile is not null)
+        {
+            // Leer wie die Einrichtungsseite (MapTentSensors: null → ""), nicht NULL.
+            zeile.HaEntityId = entitaet ?? string.Empty;
+            zeile.IsActive = entitaet is not null;
+            _repository.UpdateTentSensor(zeile);
+        }
+        else if (entitaet is not null)
+        {
+            _repository.AddTentSensor(new TentSensor
+            {
+                TentId = id,
+                MetricType = messgroesse,
+                HaEntityId = entitaet,
+                IsActive = true,
+            });
+        }
+
+        var saved = _repository.GetTent(id)!;
+        _sensorHardwareSync.SyncForTent(saved);
+        return Ok(saved.ToDto());
+    }
+
+    /// <summary>
     /// Reicht ein geaendertes Blatt-Offset an den Klimacontroller weiter.
     ///
     /// Das Speichern selbst scheitert dabei NICHT, wenn der Dienst nicht durchkommt —

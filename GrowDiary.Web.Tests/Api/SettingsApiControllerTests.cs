@@ -392,4 +392,25 @@ public sealed class SettingsApiControllerTests : IDisposable
         Assert.Contains(_repository.GetTents(), tent => tent.Id == created.Id && tent.Status == TentStatus.Active);
     }
 
+    /// <summary>
+    /// forkai.247 (Prüfer): Stehen aus altem Bestand zwei Zeilen derselben Messgröße da, ändert der Einzelweg die Zeile, die Grow OS
+    /// liest (die letzte aktive), und legt die andere still — danach gilt genau eine. Lösen legt alle still.
+    /// </summary>
+    [Fact]
+    public void SetTentSensor_MitDoppelterZeile_GiltDanachGenauEine()
+    {
+        var zelt = _repository.GetTents().First().Id;
+        var alt = _repository.AddTentSensor(new TentSensor { TentId = zelt, MetricType = SensorMetricType.AirTemperature, HaEntityId = "sensor.alt", IsActive = true });
+        var neu = _repository.AddTentSensor(new TentSensor { TentId = zelt, MetricType = SensorMetricType.AirTemperature, HaEntityId = "sensor.neu", IsActive = true });
+        Assert.True(neu.Id > alt.Id);
+
+        Assert.IsType<OkObjectResult>(_controller.SetTentSensor(zelt, "AirTemperature", new SetTentSensorRequest { HaEntityId = "sensor.anders" }).Result);
+        var zeilen = _repository.GetTent(zelt)!.Sensors.Where(s => s.MetricType == SensorMetricType.AirTemperature).OrderBy(s => s.Id).ToList();
+        Assert.Equal([(alt.Id, "", false), (neu.Id, "sensor.anders", true)], zeilen.Select(s => (s.Id, s.HaEntityId, s.IsActive)));
+
+        Assert.IsType<OkObjectResult>(_controller.SetTentSensor(zelt, "AirTemperature", new SetTentSensorRequest { HaEntityId = null }).Result);
+        zeilen = _repository.GetTent(zelt)!.Sensors.Where(s => s.MetricType == SensorMetricType.AirTemperature).ToList();
+        Assert.Equal(2, zeilen.Count);
+        Assert.All(zeilen, s => Assert.False(s.IsActive));
+    }
 }

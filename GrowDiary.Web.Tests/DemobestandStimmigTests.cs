@@ -172,6 +172,24 @@ public sealed class DemobestandStimmigTests : IDisposable
         Assert.False(Demobestand.IstNoetig(_grows));
     }
 
+    /// <summary>
+    /// Fork AI (forkai.247): Jede Zuordnung im Bestand hat eine Domain, die der Fork-MCP für diese Messgröße annähme.
+    /// </summary>
+    /// <remarks>Eine Zuordnung, die <see cref="SensorMessgroessen.DomainPasst"/> ablehnt, wäre ein Fehler im Bestand — oder in der Regel.</remarks>
+    [Fact]
+    public void Die_Zuordnungen_passen_zur_Domainregel()
+    {
+        var zuordnungen = _grows.GetTents(includeArchived: true)
+            .SelectMany(t => t.Sensors)
+            .Where(s => s.IsActive && !string.IsNullOrWhiteSpace(s.HaEntityId))
+            .ToList();
+        Assert.True(zuordnungen.Count >= 10, $"Nur {zuordnungen.Count} Zuordnungen im Bestand — die Prüfung sähe nichts.");
+
+        var falsch = zuordnungen.Where(s => !SensorMessgroessen.DomainPasst(s.MetricType, s.HaEntityId))
+            .Select(s => $"{s.MetricType} → {s.HaEntityId}").ToList();
+        Assert.True(falsch.Count == 0, "Im Bestand passt die Domain nicht zur Messgröße: " + string.Join("; ", falsch));
+    }
+
     /// <summary>Der Lichtzyklus des Bestands passt zur Phase des Grows.</summary>
     /// <remarks>
     /// <para><b>Der Fund, aus dem diese Datei entstand.</b> Der Bestand fuhr

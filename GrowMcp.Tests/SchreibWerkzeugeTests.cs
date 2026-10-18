@@ -21,7 +21,7 @@ public sealed class SchreibWerkzeugeTests
         => Werkzeugkasten.Werkzeugmethoden().Where(m => m.GetCustomAttribute<BrauchtForkSchluesselAttribute>() is not null).ToArray();
 
     private static MethodInfo[] Schreibend()
-        => MitSchluessel().Where(m => m.GetCustomAttribute<BrauchtForkSchluesselAttribute>()!.Stufe is not null).ToArray();
+        => MitSchluessel().Where(m => m.GetCustomAttribute<BrauchtForkSchluesselAttribute>()!.Schreibend).ToArray();
 
     public static IEnumerable<object[]> WerkzeugeMitSchluessel() => MitSchluessel().Select(m => new object[] { Werkzeugkasten.Name(m) });
 
@@ -35,8 +35,9 @@ public sealed class SchreibWerkzeugeTests
     [Fact]
     public void Die_Zaehlung_sieht_ihre_Grundmenge()
     {
-        Assert.True(MitSchluessel().Length >= 15, $"Nur {MitSchluessel().Length} Werkzeuge mit Fork-Schlüssel gefunden.");
-        Assert.True(Schreibend().Length >= 11, $"Nur {Schreibend().Length} schreibende Werkzeuge gefunden.");
+        // forkai.247: 26 mit Fork-Schlüssel, davon 20 schreibend (sensoren liest nur, trägt aber Verwaltung).
+        Assert.True(MitSchluessel().Length >= 26, $"Nur {MitSchluessel().Length} Werkzeuge mit Fork-Schlüssel gefunden.");
+        Assert.True(Schreibend().Length >= 20, $"Nur {Schreibend().Length} schreibende Werkzeuge gefunden.");
     }
 
     [Fact]
@@ -85,7 +86,8 @@ public sealed class SchreibWerkzeugeTests
         var fork = ForkAttrappe.MitGrow()
             .Antwort("POST", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""")
             .Antwort("PUT", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""")
-            .Antwort("PATCH", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""");
+            .Antwort("PATCH", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""")
+            .Antwort("DELETE", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""");
 
         var text = await Werkzeugkasten.TextAsync(werkzeug, Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel), EinWert);
 

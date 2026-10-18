@@ -301,6 +301,11 @@ public sealed class RundwegVollstaendigTests
     /// <summary>Verträge ohne Rundweg — mit ausgeschriebenem Grund.</summary>
     private static readonly Dictionary<string, string> NichtGefahren = new(StringComparer.Ordinal)
     {
+        // Fork AI (forkai.247)
+        ["SetTentSensorRequest"] =
+            "Ein Feld (die Entitaet), und die Antwort ist das ganze Zelt, nicht das Gesendete. Eine feste Probe wie \"1\" ist "
+            + "keine Entitaet und gaebe 400. Setzen, Umhaengen, Loesen samt gespeichertem Stand und unveraenderten Ids der "
+            + "uebrigen Zeilen prueft SensorEinzelnZuordnenTests.",
         // Fork AI (A-011)
         ["KiHauptschalterDto"] =
             "Ein einziger Schalter (aktiv), kein Formular mit Feldern, die zurueckkommen koennten. Ihn "

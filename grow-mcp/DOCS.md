@@ -96,10 +96,10 @@ steht in Grow OS im Prüfprotokoll.
 | Stufe | Werkzeuge |
 | --- | --- |
 | — (nur ein gültiger Schlüssel) | `zugriff_pruefen`, `raum`, `ha_bereiche`, `ha_zustaende`, `ha_verlauf` |
-| Dokumentieren | `messung_eintragen`, `messung_aendern`, `journal_eintragen`, `journal_aendern`, `aufgabe_anlegen`, `aufgabe_erledigen`, `wartung_eintragen`, `kalibrierung_eintragen` |
-| Grow planen | `phase_bestaetigen` (Keimung, Bewurzelung, Veg, Blüte/Flip, Finish) |
+| Dokumentieren | `messung_eintragen`, `messung_aendern`, `messung_loeschen`, `journal_eintragen`, `journal_aendern`, `journal_loeschen`, `aufgabe_anlegen`, `aufgabe_erledigen`, `wartung_eintragen`, `kalibrierung_eintragen` |
+| Grow planen | `phase_bestaetigen` (Keimung, Bewurzelung, Veg, Blüte/Flip, Finish), `grenzwert_setzen`, `lichtplan_setzen` |
 | Geräte schalten | `pumpe_dosieren`, `pumpe_stoppen`, `licht_schalten`, `ha_dienst` |
-| Verwaltung | `raum_setzen`, `zelt_aufstellraum_setzen`; zusätzlich für `ha_dienst` auf Automationen, Skripte, Szenen und Helfer |
+| Verwaltung | `raum_setzen`, `zelt_aufstellraum_setzen`, `sensor_zuordnen`, dazu `sensoren` (liest nur, aber die Zelt-Einstellungen liegen hinter Verwaltung); zusätzlich für `ha_dienst` auf Automationen, Skripte, Szenen und Helfer |
 
 Manche Dienste in Home Assistant gehen über einen Schlüssel **nie**, egal mit
 welcher Stufe — etwa Neustart (`homeassistant`), Add-ons (`hassio`),
@@ -132,6 +132,18 @@ Stufen.
 - „Nenne den Raum Keller und stell das Zelt hinein." → `raum`, dann `raum_setzen` und
   `zelt_aufstellraum_setzen` (ändert am Zelt nur die Raumzuordnung; alles andere bleibt, per Prüfsumme belegt)
 - „Wie warm war es die letzte Nacht im Zelt?" → `ha_zustaende`, dann `ha_verlauf`
+- „Ordne die Außenwerte vom Controller dem Zelt zu." → `sensoren`, dann `sensor_zuordnen` je Messgröße (etwa „Außen Temp."
+  → `sensor.controller_temperatur`). Das Werkzeug prüft vorher, ob es die Entität in Home Assistant gibt (bei einem Tippfehler
+  mit Vorschlag) und ob ihre Art passt; danach vergleicht es alle übrigen Zuordnungen vorher/nachher — ihre Ids bleiben gleich.
+  Leer oder „keine" löst eine Zuordnung, die Zeile bleibt dann inaktiv stehen.
+- „Lösch den Testeintrag im Journal." → `journal`, dann `journal_loeschen`; die Antwort enthält Datum und den ganzen Text,
+  damit er sich wieder eintragen lässt
+- „Die Messung von eben war Unsinn, weg damit." → `messung_loeschen`; die Antwort nennt jeden Wert (einzelne Werte
+  korrigiert `messung_aendern`)
+- „Melde erst ab 28 Grad." → `alarme`, dann `grenzwert_setzen` (Lufttemp., max, 28). Nur diese eine Grenze ändert sich,
+  der Rest ist per Prüfsumme belegt; ob die Zahl physikalisch möglich ist, prüft Grow OS
+- „Lichtplan auf 7 bis 19 Uhr." → `licht`, dann `lichtplan_setzen`. Das ändert den Lichtplan in Grow OS (Nachtabsenkung,
+  Lichteinbruch-Wächter, Auto-Messungen, Nachtgrenzen), nicht den Zeitplan am Controller
 
 ## Kamera, Kosten, Pflanzen, Regelungen
 

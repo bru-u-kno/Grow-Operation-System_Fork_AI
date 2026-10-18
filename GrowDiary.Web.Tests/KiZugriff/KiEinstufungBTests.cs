@@ -111,6 +111,8 @@ public sealed class KiEinstufungBTests
         ["SettingsApiController.SaveHomeAssistant"] = Gesperrt,
         ["SettingsApiController.CreateTent"] = "Verwaltung",
         ["SettingsApiController.SaveTent"] = "Verwaltung",
+        // forkai.247: genau eine Sensor-Zuordnung — dieselbe Stufe wie das ganze Zelt.
+        ["SettingsApiController.SetTentSensor"] = "Verwaltung",
         ["SettingsApiController.ArchiveTent"] = "Verwaltung",
         ["SettingsApiController.DeleteTent"] = "Verwaltung" + Sicherung,
 
