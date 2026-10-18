@@ -44,9 +44,9 @@ public sealed class WerkzeugeVollstaendigTests
     {
         // Sonst laeuft die Schleife null Mal und der Test ist gruen, ohne etwas
         // geprueft zu haben — die Falle, in die seine Vorgaenger gelaufen sind.
-        // 23 lesende, 11 schreibende, 4 fuer Home Assistant; Paket D (18.10.2026): 45 mit fork_funktionen/fork_ausfuehren.
+        // 23 lesende, 11 schreibende, 4 fuer Home Assistant; Paket D (18.10.2026): 45, Paket C1: 53.
         var anzahl = Werkzeugkasten.Werkzeugmethoden().Length;
-        Assert.True(anzahl >= 45, $"Nur {anzahl} Werkzeuge gefunden — die Reflexion greift ins Leere.");
+        Assert.True(anzahl >= 53, $"Nur {anzahl} Werkzeuge gefunden — die Reflexion greift ins Leere.");
         Assert.True(Werkzeugkasten.Werkzeugklassen().Length >= 3,
             "Weniger als drei Werkzeugklassen — die Schreib- oder Home-Assistant-Werkzeuge fehlen in der Zaehlung.");
     }

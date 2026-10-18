@@ -29,7 +29,8 @@ public sealed class SchreibWerkzeugeTests
 
     /// <summary>Ein Wert für die Messungs-Werkzeuge — ohne jeden Wert tragen sie mit Absicht nichts ein.</summary>
     // „anhaengen" für journal_aendern: ohne jede Angabe ändert es mit Absicht nichts.
-    private static readonly Dictionary<string, object?> EinWert = new() { ["ph"] = 5.8, ["anhaengen"] = "Purolyt: 200 ml" };
+    // Paket C1: „notiz" für pflanze_aendern — ohne jede Angabe ändert es mit Absicht nichts.
+    private static readonly Dictionary<string, object?> EinWert = new() { ["ph"] = 5.8, ["anhaengen"] = "Purolyt: 200 ml", ["notiz"] = "Test" };
 
     [Fact]
     public void Die_Zaehlung_sieht_ihre_Grundmenge()

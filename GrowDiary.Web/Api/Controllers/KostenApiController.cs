@@ -357,6 +357,8 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpDelete("nachfuellungen/{id:int}")]
+    // Fork AI (Paket C1, 18.10.2026): Löschen nimmt Rechnungen mit — Verwaltung statt Dokumentieren, Sicherung vorher.
+    [KiStufe(KiStufe.Verwaltung)]
     [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -477,6 +479,8 @@ public sealed class KostenApiController : ApiControllerBase
     }
 
     [HttpDelete("anschaffungen/{id:int}")]
+    // Fork AI (Paket C1, 18.10.2026): Löschen nimmt Rechnungen mit — Verwaltung statt Dokumentieren, Sicherung vorher.
+    [KiStufe(KiStufe.Verwaltung)]
     [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
@@ -493,6 +497,8 @@ public sealed class KostenApiController : ApiControllerBase
     /// und verfaelscht jede Summe darueber.
     /// </summary>
     [HttpDelete("zaehlerstand/{id:int}")]
+    // Fork AI (Paket C1, 18.10.2026): Löschen nimmt Rechnungen mit — Verwaltung statt Dokumentieren, Sicherung vorher.
+    [KiStufe(KiStufe.Verwaltung)]
     [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult DeleteZaehlerstand(int id)
@@ -567,6 +573,8 @@ public sealed class KostenApiController : ApiControllerBase
 
     /// <summary>Eine Verbrauchsbuchung zuruecknehmen.</summary>
     [HttpDelete("verbrauch/{id:int}")]
+    // Fork AI (Paket C1, 18.10.2026): Löschen nimmt Rechnungen mit — Verwaltung statt Dokumentieren, Sicherung vorher.
+    [KiStufe(KiStufe.Verwaltung)]
     [KiSicherungVorher]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult DeleteVerbrauch(int id)

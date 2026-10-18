@@ -64,10 +64,10 @@ und **Home-Assistant-Adresse und -Token**. Daran ändert Paket D nichts.
 
 | Stufe | Wert | Beispiele |
 |---|---|---|
-| Dokumentieren | 1 | Messung anlegen/ändern, Journal anlegen/ändern, Beobachtung, Aufgabe abhaken, Wartung/Kalibrierung festhalten, Kosten, Einkaufsliste, Meldung quittieren |
+| Dokumentieren | 1 | Messung anlegen/ändern, Journal anlegen/ändern, Beobachtung, Aufgabe abhaken, Wartung/Kalibrierung festhalten, Kosten eintragen (nicht löschen), Einkaufsliste, Meldung quittieren |
 | GrowPlanen | 2 | Phase wechseln, Zielwerte, Mischplan, Lichtplan, Wochenplan, Pflanzen/Sorten/Setups bearbeiten |
 | GeraeteSchalten | 4 | Licht-Befehl, AC-Stufe, Dosierpumpe auslösen/stoppen, Probeschaltung, Steuerungs-Einstellungen, die sofort schalten |
-| Verwaltung | 8 | Einstellungen, Sicherung anlegen, Import/Export, Löschen von Stammdaten, HA-Automationen/Helfer anlegen, Pumpen einrichten und kalibrieren. Sicherung zurückspielen/herunterladen: nie über einen Schlüssel (Prüfer 03.10.2026) |
+| Verwaltung | 8 | Einstellungen, Sicherung anlegen, Import/Export, Löschen von Stammdaten, HA-Automationen/Helfer anlegen, Pumpen einrichten und kalibrieren, Kosten löschen (Nachfüllung, Anschaffung, Zählerstand, Verbrauch; seit Paket C1, 18.10.2026, vorher Dokumentieren). Sicherung zurückspielen/herunterladen: nie über einen Schlüssel (Prüfer 03.10.2026) |
 
 Stufen bauen **nicht** aufeinander auf; jede wird einzeln eingestellt.
 
@@ -96,6 +96,7 @@ Vorbelegung eines neuen Schlüssels: Dokumentieren frei, alles andere gesperrt.
   (fail closed). `KiStufenVollstaendigTests` zählt über alle Controller-Aktionen
   per Reflexion: jede schreibende hat `KiStufe` oder `KeinKiZugriff` mit Grund.
   Mit Selbsttest (Grundmenge ≥ 150 schreibende Aktionen).
+- `[KiOhneHoechstwert]` — Not-Aus, zählt nie ins Stundenfenster: Pumpen-Stopp und (seit Paket C1) Probelauf abbrechen.
 - Im Zweifel die **höhere** Stufe. Was eine HA-Automation oder einen Helfer
   anlegt/überschreibt: Verwaltung. Was ein Gerät sofort schaltet: GeraeteSchalten.
 

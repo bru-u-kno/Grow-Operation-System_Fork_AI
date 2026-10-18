@@ -105,7 +105,38 @@ internal sealed class ForkAttrappe : HttpMessageHandler
             .Antwort("PUT", @"api/steuerung/raum", 200, """{"id":"haupt","name":"Keller","vorgabe":"Aufstellraum","zelte":[]}""")
             .Antwort("GET", @"api/settings/tents", 200, """[{"id":1,"name":"Blütezelt","raumId":null}]""")
             .Antwort("GET", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":null,"status":"Active"}""")
-            .Antwort("PUT", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":"haupt"}""");
+            .Antwort("PUT", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":"haupt"}""")
+            // Fork AI (Paket C1): Kosten, CO₂-Artikel, Pflanze, Sorten, ein laufender Probelauf.
+            .Antwort("GET", @"api/kosten", 200, KostenSeite)
+            .Antwort("GET", @"api/steuerung/co2", 200, """{"einstellungen":{"kostenArtikelId":1}}""")
+            .Antwort("POST", @"api/kosten/verbrauch", 201, """[{"id":5,"artikelId":2,"menge":20}]""")
+            .Antwort("POST", @"api/kosten/nachfuellungen", 201, """{"id":12,"artikelId":1,"menge":10,"kostenEur":38,"growId":1,"zeitpunktUtc":"2026-10-18T10:00:00Z"}""")
+            .Antwort("POST", @"api/kosten/anschaffungen", 201, """{"id":3,"name":"Luftbefeuchter","stueck":1,"einzelpreisEur":49,"gesamtEur":49,"growId":1}""")
+            .Antwort("GET", @"api/plants/\d+", 200, Pflanze)
+            .Antwort("PUT", @"api/plants/\d+", 200, Pflanze)
+            .Antwort("GET", @"api/strains", 200, """[{"id":1,"name":"White Widow"},{"id":2,"name":"Gorilla Glue"}]""")
+            .Antwort("GET", @"api/steuerung/probelauf", 200, """[{"id":7,"modul":"entfeuchter","modulTitel":"Entfeuchter","status":"Laeuft","restSekunden":600}]""")
+            .Antwort("POST", @"api/steuerung/probelauf/\d+/abbrechen", 200, """{"id":7,"modulTitel":"Entfeuchter","status":"Nachlauf","abbruchGrund":"Von Hand abgebrochen."}""");
+
+    /// <summary>Fork AI (Paket C1): die Kostenseite eines Grows in der Form von <c>GET /api/kosten?growId=</c>.</summary>
+    public const string KostenSeite = """
+        {"grow":{"id":1,"name":"Test","tag":74,"phase":"Blüte","pflanzen":4},
+         "summe":{"gesamtEur":165.27,"stromEur":145.77,"artikelEur":19.5,"anschaffungenEur":0,"proTagEur":2.23,"proPflanzeEur":41.32,"prognoseErnteEur":227.8,"prognoseHinweis":"bei 9 Wochen Blüte"},
+         "strom":{"eingerichtet":true,"preisCentProKwh":32,"kwhSeitStart":455.5,"kwhProTag":6.24,"eurProTag":2.0},
+         "artikel":[
+           {"id":1,"name":"CO₂-Flasche","einheit":"kg","preisEur":39,"gebinde":10,"aktiv":true,
+            "aktuell":{"id":2,"zeitpunktUtc":"2026-09-02T10:00:00Z","menge":10,"kostenEur":39,"fuellstandProzent":50,"fuellstandQuelle":"gemessen","prognoseLeerAmUtc":"2026-11-19T19:00:00Z","prognoseTage":64.4,"prognoseQuelle":"gemessen","eurProTag":0.61}},
+           {"id":2,"name":"pH-Minus","einheit":"ml","preisEur":9,"gebinde":1000,"aktiv":true},
+           {"id":3,"name":"Purolyt","einheit":"ml","preisEur":49.9,"gebinde":5000,"aktiv":true},
+           {"id":4,"name":"Purolyt alt","einheit":"ml","preisEur":45,"gebinde":5000,"aktiv":false}],
+         "anschaffungen":[]}
+        """;
+
+    /// <summary>Fork AI (Paket C1): eine Pflanze wie <c>GET /api/plants/{id}</c> (Null-Felder fehlen wie bei Grow OS).</summary>
+    public const string Pflanze = """
+        {"id":2,"strainId":1,"growId":1,"siteIndex":2,"label":"Pflanze 2","plantRole":"Production","plantStatus":"Active",
+         "startedAt":"2026-08-06T12:00:00+02:00","notes":"alt","strainName":"White Widow","createdAtUtc":"2026-10-18T14:31:05Z","updatedAtUtc":"2026-10-18T14:31:05Z"}
+        """;
 }
 
 /// <summary>Ein fester Schlüssel — anstelle der laufenden HTTP-Anfrage.</summary>

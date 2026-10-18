@@ -122,9 +122,9 @@ public sealed partial class GrowTools
     private static string BereichListe(IEnumerable<Funktionsverzeichnis.Funktion> funktionen)
         => string.Join(", ", funktionen.GroupBy(f => f.Bereich).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} ({g.Count()})"));
 
-    /// <summary>Kleinbuchstaben, Umlaute ausgeschrieben — „Nachfüllung" findet „nachfuellungen".</summary>
+    /// <summary>Kleinbuchstaben, Umlaute ausgeschrieben, ₂ als 2 — „Nachfüllung" findet „nachfuellungen", „CO2" findet „CO₂".</summary>
     internal static string Vereinfachen(string text)
-        => text.ToLowerInvariant().Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue").Replace("ß", "ss");
+        => text.ToLowerInvariant().Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue").Replace("ß", "ss").Replace("₂", "2");
 
     private static string? ArtWort(string? art)
         => string.IsNullOrWhiteSpace(art) ? null : Vereinfachen(art.Trim()) switch

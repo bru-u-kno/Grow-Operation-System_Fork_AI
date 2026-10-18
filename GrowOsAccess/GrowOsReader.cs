@@ -172,6 +172,21 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
         long maxBytes,
         CancellationToken cancellationToken)
     {
+        var bild = await BildLesenAsync(pfad, maxBytes, cancellationToken);
+        return (bild.Bytes, bild.MedienTyp);
+    }
+
+    /// <summary>Ein Bild samt Kopfzeilen der Antwort (etwa <c>X-Camera-Live</c>).</summary>
+    /// <remarks>
+    /// Fork AI (Paket C1, 18.10.2026): Sagt Grow OS Nein, steht der Grund im JSON-Rumpf
+    /// („Für dieses Zelt ist keine Kamera-Entity hinterlegt") — der kommt in die Ausnahme,
+    /// statt nur die Zahl.
+    /// </remarks>
+    public async Task<GrowOsBild> BildLesenAsync(
+        string pfad,
+        long maxBytes,
+        CancellationToken cancellationToken)
+    {
         var verbindung = await discovery.FindenAsync(cancellationToken);
         if (!verbindung.Erreichbar || verbindung.Basis is null)
         {
@@ -181,14 +196,16 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
         using var anfrage = Anfrage(HttpMethod.Get, $"{verbindung.Basis}/{pfad.TrimStart('/')}");
         using var antwort = await http.SendAsync(anfrage, cancellationToken);
 
-        if (antwort.StatusCode == HttpStatusCode.NotFound)
-        {
-            throw new GrowOsException($"Grow OS kennt das nicht: {pfad}", nichtGefunden: true);
-        }
-
         if (!antwort.IsSuccessStatusCode)
         {
-            throw new GrowOsException($"Grow OS antwortete mit {(int)antwort.StatusCode} auf {pfad}.");
+            var grund = await GrundAusRumpfAsync(antwort, cancellationToken);
+            if (antwort.StatusCode == HttpStatusCode.NotFound)
+            {
+                throw new GrowOsException(grund ?? $"Grow OS kennt das nicht: {pfad}", nichtGefunden: true);
+            }
+            throw new GrowOsException(grund is null
+                ? $"Grow OS antwortete mit {(int)antwort.StatusCode} auf {pfad}."
+                : $"Grow OS antwortete mit {(int)antwort.StatusCode}: {grund}");
         }
 
         // Erst die angekuendigte Groesse pruefen, dann erst laden: sonst liegt
@@ -222,6 +239,36 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
             };
         }
 
-        return (bytes, typ);
+        var kopf = antwort.Headers.Concat(antwort.Content.Headers)
+            .ToDictionary(h => h.Key, h => string.Join(",", h.Value), StringComparer.OrdinalIgnoreCase);
+        return new GrowOsBild(bytes, typ, kopf);
+    }
+
+    /// <summary>Die Meldung aus einer JSON-Absage (<c>message</c> oder <c>meldung</c>) — oder null.</summary>
+    private static async Task<string?> GrundAusRumpfAsync(HttpResponseMessage antwort, CancellationToken cancellationToken)
+    {
+        if (antwort.Content.Headers.ContentType?.MediaType?.Contains("json", StringComparison.OrdinalIgnoreCase) != true) return null;
+        try
+        {
+            var text = await antwort.Content.ReadAsStringAsync(cancellationToken);
+            if (text.Length > 64 * 1024) return null;
+            using var json = System.Text.Json.JsonDocument.Parse(text);
+            foreach (var name in new[] { "meldung", "message" })
+            {
+                if (json.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && json.RootElement.TryGetProperty(name, out var wert)
+                    && wert.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    return wert.GetString();
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+        return null;
     }
 }
+
+/// <summary>Fork AI (Paket C1): Ein Bild aus Grow OS mit den Kopfzeilen der Antwort.</summary>
+public sealed record GrowOsBild(byte[] Bytes, string MedienTyp, IReadOnlyDictionary<string, string> Kopf);

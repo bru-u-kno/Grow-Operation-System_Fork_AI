@@ -181,7 +181,7 @@ public sealed partial class SchreibWerkzeuge
         if (funktion.Schaltbefehl) text.Append(" Zählt als Schaltbefehl.");
         text.AppendLine();
         if (ergaenzt.Count > 0) text.AppendLine($"Aus dem gelesenen Stand ergänzt ({ergaenzt.Count}): {string.Join(", ", ergaenzt)}.");
-        if (fehlend.Count > 0) text.AppendLine($"Nicht im gelesenen Stand gefunden, also nicht mitgeschickt (Grow OS nimmt dafür seine Vorgabe): {string.Join(", ", fehlend)}.");
+        if (fehlend.Count > 0) text.AppendLine($"Nicht im gelesenen Stand (dort leer oder nicht geführt), also nicht mitgeschickt — Grow OS nimmt dafür seine Vorgabe; ob sich dadurch etwas geändert hat, zeigt der Vergleich: {string.Join(", ", fehlend)}.");
 
         if (art == "DELETE")
         {

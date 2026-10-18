@@ -97,6 +97,8 @@ public sealed class ProbelaufApiController : ApiControllerBase
     /// <summary>Beendet den Eingriff von Hand: es wird zurückgestellt, der Nachlauf wird noch aufgezeichnet.</summary>
     [HttpPost("{id:long}/abbrechen")]
     [KiStufe(KiStufe.GeraeteSchalten)]
+    [KiOhneHoechstwert("Ein Not-Aus wie der Pumpen-Stopp: ein laufender Eingriff muss sich immer zurückstellen lassen, "
+                       + "auch wenn das Stundenkontingent der Schaltbefehle verbraucht ist.")]
     [ProducesResponseType(typeof(ProbelaufLaufDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ProbelaufLaufDto>> Abbrechen(long id, CancellationToken ct)
     {
