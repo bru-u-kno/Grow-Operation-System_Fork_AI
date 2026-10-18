@@ -45,9 +45,9 @@ public sealed class WerkzeugeVollstaendigTests
         // Sonst laeuft die Schleife null Mal und der Test ist gruen, ohne etwas
         // geprueft zu haben — die Falle, in die seine Vorgaenger gelaufen sind.
         // forkai.247: 49 Werkzeuge (davon 20 schreibende; neu sensoren, sensor_zuordnen, journal_loeschen, messung_loeschen,
-        // grenzwert_setzen, lichtplan_setzen). Paket D (fork_funktionen, fork_ausfuehren) und C1 (8 Werkzeuge): 59.
+        // grenzwert_setzen, lichtplan_setzen). Paket D (fork_funktionen, fork_ausfuehren) und C1 (8 Werkzeuge): 59, Kamera (tagesbilder, kamera_foto_speichern): 61.
         var anzahl = Werkzeugkasten.Werkzeugmethoden().Length;
-        Assert.True(anzahl >= 59, $"Nur {anzahl} Werkzeuge gefunden — die Reflexion greift ins Leere.");
+        Assert.True(anzahl >= 61, $"Nur {anzahl} Werkzeuge gefunden — die Reflexion greift ins Leere.");
         Assert.True(Werkzeugkasten.Werkzeugklassen().Length >= 3,
             "Weniger als drei Werkzeugklassen — die Schreib- oder Home-Assistant-Werkzeuge fehlen in der Zaehlung.");
     }

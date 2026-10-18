@@ -62,7 +62,10 @@ public sealed class PhotoStorageService
     /// Persists raw camera snapshot bytes (e.g. from an auto-measurement trigger) as a
     /// grow photo so it shows up in the grow's photo timeline.
     /// </summary>
-    public async Task<PhotoAsset> SaveSnapshotAsync(GrowRun grow, int? measurementId, byte[] bytes, CancellationToken cancellationToken = default)
+    /// <remarks>Fork AI (Paket C2, 18.10.2026): Bildunterschrift und Motiv wahlweise — für „Kamerabild als Foto speichern"
+    /// über den Assistenten. Ohne Angabe wie bisher „Auto-Snapshot" und Übersicht.</remarks>
+    public async Task<PhotoAsset> SaveSnapshotAsync(GrowRun grow, int? measurementId, byte[] bytes, CancellationToken cancellationToken = default,
+        string? caption = null, PhotoTag tag = PhotoTag.Overview)
     {
         var directory = Path.Combine(_paths.UploadRootPath, grow.Id.ToString());
         Directory.CreateDirectory(directory);
@@ -75,8 +78,8 @@ public sealed class PhotoStorageService
             GrowId = grow.Id,
             MeasurementId = measurementId,
             RelativePath = $"/uploads/{grow.Id}/{fileName}".Replace("\\", "/"),
-            Caption = "Auto-Snapshot",
-            Tag = PhotoTag.Overview,
+            Caption = string.IsNullOrWhiteSpace(caption) ? "Auto-Snapshot" : caption.Trim(),
+            Tag = tag,
             Source = ValueOrigin.HomeAssistant,
             TakenAtUtc = DateTime.UtcNow
         };

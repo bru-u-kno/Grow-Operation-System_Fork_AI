@@ -82,6 +82,17 @@ zeigt sie als `zugang: nie`.
   Lichtzeiten sind Wanduhrzeit im Zelt (Zeitzone des Plans, sonst die des Servers = die von Home Assistant); sie gehen nicht nach
   Home Assistant und nicht an den Controller.
 
+## Kamera über den Assistenten (Paket C2, 18.10.2026)
+
+- `GET /api/tents/{id}/tagesbilder` — die Tagesbilder (`{SnapshotsPath}/{zelt}/{yyyy-MM-dd}.jpg`, vom
+  `HomeAssistantSnapshotWorker` ab 12 Uhr) und die Kameras des Zelts; `GET …/tagesbilder/{datum}` liefert das JPEG.
+  Das Datum gilt nur genau als `yyyy-MM-dd` (sonst 400), der Dateiname entsteht aus dem geprüften Datum und der Zelt-Id
+  aus der Datenbank. Lesen ohne Stufe, wie das Livebild unter `/api/live`.
+- `POST /api/grows/{id}/kamerafoto` (`{kamera?, motiv?, bildunterschrift?}`, Stufe Dokumentieren): Grow OS holt das Bild
+  selbst von einer Kamera **des Zelts** und legt es wie die Auto-Messung ab (`PhotoStorageService.SaveSnapshotAsync`).
+  Nur laufende Grows; kein gültiges Bild → 502, nichts gespeichert. Ein Upload über den Assistenten gibt es nicht.
+- Im Grow MCP: `kamera_bild`, `tagesbilder`, `kamera_foto_speichern`. Gehalten von `KameraBilderApiTests`.
+
 ## Stufen (`KiStufe`, Bits)
 
 | Stufe | Wert | Beispiele |

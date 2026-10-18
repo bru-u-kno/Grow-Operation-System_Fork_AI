@@ -157,6 +157,8 @@ Stufen.
 | `anschaffung_eintragen` | Dokumentieren | Einen Kauf verbuchen, mit Gesamtbetrag |
 | `pflanze_aendern` | Grow planen | Status, Sorte, Topf, Name oder Notiz einer Pflanze — nur das Genannte, der Rest per Prüfsumme belegt |
 | `probelauf_abbrechen` | Geräte schalten | Not-Aus für einen Probelauf; scheitert nie am Höchstwert der Schaltbefehle |
+| `tagesbilder` | keine | Die täglichen Kamerabilder eines Zelts (ab 12 Uhr, erste Kamera): Liste der Tage und Kameras, mit `datum` das Bild |
+| `kamera_foto_speichern` | Dokumentieren | Das aktuelle Kamerabild als Foto in den Grow, mit Motiv und Bildunterschrift (nur laufende Grows, nur Kameras des Zelts) |
 
 Artikel und Sorten gehen per Name; passen mehrere, kommt die Auswahl zurück und nichts wird gebucht. Beträge
 über 500 € nennt die Antwort ausdrücklich, negative und Zeitpunkte in der Zukunft werden abgelehnt. Kosten
@@ -165,6 +167,8 @@ Artikel und Sorten gehen per Name; passen mehrere, kommt die Auswahl zurück und
 - „Neue CO₂-Flasche, 10 Kilo für 38 Euro, die alte ist leer." → `nachfuellung_eintragen` mit `vorherigeLeer=true`
 - „Pflanze 2 ist ein Zwitter, die ist raus." → `pflanze_aendern` mit `status=raus`
 - „Warum läuft der Entfeuchter gerade nicht?" → `steuerung` mit `modul=entfeuchter`
+- „Wie sah das Zelt letzten Sonntag aus?" → `tagesbilder` (Liste), dann mit `datum`
+- „Mach ein Foto fürs Tagebuch, Blätter oben werden hell." → `kamera_foto_speichern` mit `motiv=blatt`
 
 ## Alles im Fork steuern: `fork_funktionen` und `fork_ausfuehren`
 

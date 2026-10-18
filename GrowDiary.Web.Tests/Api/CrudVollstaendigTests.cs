@@ -52,6 +52,12 @@ public sealed class CrudVollstaendigTests
             + "ist; die abgeschlossenen sind das Wissen, auf dem der Kenntnisstand aufbaut. Loeschen alter Laeufe kommt, "
             + "wenn die Liste zu lang wird.",
 
+        // Fork AI (Paket C2, 18.10.2026)
+        ["KameraBilderApiController"] =
+            "201 steht am Kamerafoto: es legt ein Grow-Foto an wie die Auto-Messung und der Foto-Upload. Fotos haben in "
+            + "der ganzen App keinen eigenen Loeschweg; sie gehen mit ihrem Grow bzw. ihrer Messung (FotosVerschwindenMitTests). "
+            + "Ein Loeschweg nur fuer Kamerafotos waere eine zweite Regel fuer dieselben Fotos.",
+
         ["SystemApiController"] =
             "201 steht an der Sicherung (Backup). Eine Sicherung wird nicht ueber die "
             + "API geloescht — sie liegt als Datei im Add-on-Ordner, und ein "
