@@ -259,10 +259,30 @@ GERAETE=alle …                                                                
 
 - Die Projekte `geraet-*` gibt es nur mit `GERAETE`; der gewohnte Lauf und das Tor sehen sie nicht. `GERAETE=alle` braucht installierte
   WebKit- und Firefox-Browser (`npx playwright install webkit firefox`) — auf der VM nicht ohne sudo, in der CI möglich.
-- **Die Matrix ist rot, solange es Befunde gibt, und das ist gewollt:** Am 17.10.2026 meldete sie auf der Demo-App 110 von 288
-  Fällen (zu kleine Ziele, Überstand bei doppelter Schrift auf 360 px). Sie gehört deshalb noch nicht in das Tor; erst nach
-  einer Basisliste oder den Korrekturen.
+- **Stand 18.10.2026 (forkai.242): 288 von 288 grün** (am 17.10. waren es 110 rote: zu kleine Ziele, Überstand bei doppelter Schrift auf
+  360 px). Die Korrekturen stehen zentral: Touch-Untergrenze in `styles/widgets.css` (ein Bauteil dort eintragen statt einzeln
+  flicken — und `forkai-shell.css` lädt NACH `widgets.css`, dort eigene Regeln hinter die Definition setzen), Textbreiten in rem.
+  Die Matrix stellt die große Schrift VOR dem Laden ein (`addInitScript`): ein Gerät hat sie von Anfang an, und Rechnungen beim Aufbau
+  (Diagramm-Achsen) sehen sie nur so. Sie gehört trotzdem noch nicht in das Tor (zwölf Seiten, vier Fassungen: rund 8 Minuten).
 - Nicht nachgestellt: das Scrollverhalten der WebView in der HA-App (F-049) — das zeigt nur ein echtes Gerät.
+
+### Die Umbruchprüfung (`e2e/umbruch.spec.ts`)
+
+Sieht, was `worttrennung` (nur mitten durchbrechende Wörter, nur 390/1440 px, nur normale Schrift) und die Randmessung nicht sehen:
+**Zahl und Einheit auf getrennten Zeilen** („~75" / „min"), eine **Waisenzeile** mit einem kurzen Wort („pH", „°C"), **abgeschnittene
+Texte** (Auslassungspunkte), **umbrechende Knöpfe und Chips**, eine **zu schmale Spalte**. Alle Menüseiten bei 360 px (normal und mit
+doppelter Systemschrift) und 768 px. Mit Mengenwächter (mindestens 500 Textblöcke).
+
+```bash
+GROW_OS_URL=http://127.0.0.1:5191 UMBRUCH=1 npx playwright test e2e/umbruch.spec.ts   # eigenes Projekt `umbruch`, nicht im Tor
+```
+
+- **Rot, solange es Funde gibt, und das ist gewollt.** Stand 18.10.2026 (nach forkai.242): 32 Funde bei 360 px, 236 mit doppelter Schrift,
+  8 bei 768 px. Wer eine Seite repariert, lässt sie laufen; erst wenn die Liste leer ist, kommt sie in das Tor.
+- **Behebung bei Zahl und Einheit:** geschütztes Leerzeichen (`\u00a0`) zwischen Wert und Einheit setzen — im Frontend und in den
+  Backend-Texten (`$"{x}\u00a0W"`); dazu den Test anpassen, der den Satz vergleicht (`PumpWatchTests`).
+- Die Höhe von Kennzahlen mit `overflow: hidden` meldet sie bewusst nicht: die Erkundung hielt sie für abgeschnitten, auf dem Bild standen sie
+  vollständig da.
 
 ### Die Hooks nehmen mir zwei Prüfungen ab
 

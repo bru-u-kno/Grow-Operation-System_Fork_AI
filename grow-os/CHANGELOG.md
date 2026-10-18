@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.242
+
+**Fork AI.** Die Oberfläche ist auf Handy, Tablet und mit großer Systemschrift sauberer. Die Gerätematrix aus forkai.240 meldete 110 von 288 Fällen rot — jetzt sind es **0**. Dazu kommt eine neue Prüfung für Umbrüche, die vorher niemand gesehen hat.
+
+- **Seitenleiste am Tablet:** Die Einträge der Seitenleiste waren am 1024-px-Tablet nur 34 px hoch, zu klein für den Finger. Sie erreichen jetzt 44 px (nur bei Touch; mit der Maus bleibt alles wie vorher).
+- **Kleine Bedienziele am Handy:** Die Wochenpunkte im Plan (12 px), die Pfeile, „Nachts eigene Werte", „+ Zutat hinzufügen", die Auswahlfelder unter Geräte → Rollen, „Weitere Angaben", die Nachmessungs-Knöpfe 15/30/60 min im Addback, „Nachfüllen"/„Leer" bei den Kosten und die Häkchen „buchen" im Wasserwechsel sind jetzt mindestens 44 px treffbar. Die Wochenpunkte sehen gleich aus; nur die Trefferfläche ist größer.
+- **Untere Leiste:** „Steuerung", „Tagebuch" und „Aufgaben" standen als „Steuer…", „Tagebu…" und „Aufgab…" da. Die Beschriftung ist jetzt in der Proportionalschrift der App gesetzt und passt in jedes Sechstel.
+- **Zahl und Einheit bleiben zusammen:** „~75 / min", „100 / %", „208 / L" oder „2 / W" standen am Zeilenende auseinander. In Wissen, Dosierung, Hydro, Aufgaben und den Wartezeiten steht jetzt ein geschütztes Leerzeichen dazwischen.
+- **Große Schrift:** Bei doppelter Systemschrift ragten Überschriften („Wasserwechsel"), die Live-Kacheln (Lichtzeiten, Zielbereich, Einheiten), die Aufgabenliste, die Zelt-Karte, die Topf-Auswahl und der Plan-Kopf über den Rand. Sie brechen jetzt um oder rutschen in die nächste Zeile; die Spalten der Zelt-Karte werden in rem statt in px gerechnet und fallen bei großer Schrift auf eine Spalte zurück. Die Achsenbeschriftung im Verlauf rechnet ihre Breite mit der Systemschrift mit.
+- **Neue Prüfung „Umbrüche" (für Entwickler):** `e2e/umbruch.spec.ts` sucht auf allen Menüseiten bei 360 und 768 px, auch mit doppelter Schrift, nach Zahl und Einheit auf getrennten Zeilen, Waisenzeilen, abgeschnittenen Texten und umbrechenden Knöpfen. Sie läuft nur mit `UMBRUCH=1` und ist noch rot (32 Funde bei 360 px); sie kommt erst ins Tor, wenn die Liste leer ist. Die Gerätematrix stellt die große Schrift jetzt vor dem Laden ein, wie ein echtes Gerät.
+- **Gemessen:** Gerätematrix 288 von 288 grün (vorher 110 rot); volle E2E-Mappe 1124 bestanden.
+
 ## 2.0.0-forkai.241
 
 **Fork AI.** Der **Raum** ist jetzt eine eigene, zentrale Einheit: der Ort, in dem ein Zelt steht und aus dem es seine Luft zieht („Aufstellraum"). Vorher war er als „Kellerfühler" tief in der Zuluft versteckt und ließ sich nirgends benennen.

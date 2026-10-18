@@ -37,7 +37,7 @@ const FASSUNGEN = [
 test.setTimeout(900_000)
 
 for (const f of FASSUNGEN) {
-  test(`Umbruch-Erkundung ${f.name}`, async ({ browser }) => {
+  test(`Umbruchprüfung ${f.name}`, async ({ browser }) => {
     const kontext = await browser.newContext({ viewport: { width: f.breite, height: f.hoehe } })
     const page = await kontext.newPage()
     // Große Schrift gilt auf einem echten Gerät von Anfang an — Rechnungen beim Aufbau (z. B. Diagramm-Achsen) sehen sie dann.
