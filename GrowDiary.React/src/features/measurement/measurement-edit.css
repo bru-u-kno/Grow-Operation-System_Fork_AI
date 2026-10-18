@@ -32,7 +32,7 @@
   }
   .chk-row:last-child { border-bottom: 0; }
   .chk-delta {
-    flex: 0 0 52px; text-align: right;
+    flex: 0 0 auto; min-width: 52px; white-space: nowrap; text-align: right;
     font-family: var(--font-mono); font-variant-numeric: tabular-nums;
     font-size: var(--fs-klein); font-weight: 600;
   }

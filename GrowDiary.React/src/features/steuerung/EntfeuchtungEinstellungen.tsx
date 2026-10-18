@@ -83,7 +83,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
   const bandBisN = Math.ceil(Math.max(he.feuchteEinNacht, planObenNacht ?? 0) + 4)
   const einHinweis = hl.deckelProzent == null
     ? 'Ab dieser Luftfeuchte schalten die Entfeuchter ein.'
-    : `Ab dieser Luftfeuchte schalten die Entfeuchter ein — höchstens ${zahl(hl.deckelProzent, 0)} % (Plan-Obergrenze minus Klima-Abstand), darüber begrenzt der Plan.`
+    : `Ab dieser Luftfeuchte schalten die Entfeuchter ein — höchstens ${zahl(hl.deckelProzent, 0)}\u00a0% (Plan-Obergrenze minus Klima-Abstand), darüber begrenzt der Plan.`
 
   // ------------------------------------------------------------------ Höchsttemperatur
   const tagMax = tempMax(anzeige.tempMaxTagModus, anzeige.tempMaxTagAbstandK, anzeige.tempMaxTagFestC, hl.planLuftTagC)
@@ -135,7 +135,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
       {/* ----------------------------------------------------------------- Ziel */}
       <Klappkachel
         titel="Ziel · Luftfeuchte"
-        zusammenfassung={vpd ? 'nach VPD geregelt' : `Ein ${zahl(he.feuchteEinTag, 0)} · Aus ${zahl(aus, 0)} %${planWirkt ? ' · aus dem Plan' : ''}`}
+        zusammenfassung={vpd ? 'nach VPD geregelt' : `Ein ${zahl(he.feuchteEinTag, 0)} · Aus ${zahl(aus, 0)}\u00a0%${planWirkt ? ' · aus dem Plan' : ''}`}
         id={KACHEL_ZIEL}
       >
         <V1Card>
@@ -144,8 +144,8 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
               ? 'Gerade wird nach VPD geregelt (unter „Erweitert“). Die Schwellen folgen dem VPD-Band aus dem Plan; die festen Werte hier gelten als Rückfallebene.'
               : 'Geregelt wird nach der Luftfeuchte. Der Plan setzt die Obergrenze, die Schwelle darunter stellst du ein.'}
           </p>
-          <Lesen label="Plan-Obergrenze Tag" hinweis={hl.planWoche ? `aus dem Plan · Woche ${hl.planWoche}` : 'aus dem Plan'} wert={planOben == null ? '–' : `≤ ${zahl(planOben, 0)} %`} />
-          <Lesen label="Plan-Obergrenze Nacht" hinweis={hl.rhObergrenzeNachtProzent == null ? 'Der Plan nennt keine eigene — es gilt die des Tages.' : 'aus dem Plan · gleiche Woche'} wert={planObenNacht == null ? '–' : `≤ ${zahl(planObenNacht, 0)} %`} />
+          <Lesen label="Plan-Obergrenze Tag" hinweis={hl.planWoche ? `aus dem Plan · Woche ${hl.planWoche}` : 'aus dem Plan'} wert={planOben == null ? '–' : `≤ ${zahl(planOben, 0)}\u00a0%`} />
+          <Lesen label="Plan-Obergrenze Nacht" hinweis={hl.rhObergrenzeNachtProzent == null ? 'Der Plan nennt keine eigene — es gilt die des Tages.' : 'aus dem Plan · gleiche Woche'} wert={planObenNacht == null ? '–' : `≤ ${zahl(planObenNacht, 0)}\u00a0%`} />
           {!vpd && (
             <ZielBandAnzeige von={bandVon} bis={bandBis} zielVon={aus} zielBis={he.feuchteEinTag} grenzen={[aus, he.feuchteEinTag]} ist={null} urteil={null} />
           )}
@@ -178,10 +178,10 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
             <>
               <Zahl label="Vorlauf unter der Plan-Obergrenze" hinweis="Wie weit unter der Obergrenze die Geräte einschalten. Wandert mit dem Plan: wechselt die Woche, wechseln auch die Schwellen." einheit="%" wert={vorlauf} min={0} max={20} schritt={0.5}
                 onChange={(v) => h.setzMehrere({ vorlaufProzent: v, ...schwellenAusPlan(planOben!, planObenNacht, v, he.hystereseProzent) })} fehler={h.feldFehler.VorlaufProzent} />
-              <Lesen label="Einschalten über · Tag" hinweis={`= Plan-Obergrenze ${zahl(planOben, 0)} % minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)} %`} wert={`${zahl(he.feuchteEinTag, he.feuchteEinTag % 1 ? 1 : 0)} %`} />
-              <Lesen label="Ausschalten unter · Tag" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(aus, aus % 1 ? 1 : 0)} %`} />
-              <Lesen label="Einschalten über · Nacht" hinweis={`= Plan-Obergrenze Nacht ${zahl(planObenNacht, 0)} % minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)} %`} wert={`${zahl(he.feuchteEinNacht, he.feuchteEinNacht % 1 ? 1 : 0)} %`} />
-              <Lesen label="Ausschalten unter · Nacht" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(ausN, ausN % 1 ? 1 : 0)} %`} />
+              <Lesen label="Einschalten über · Tag" hinweis={`= Plan-Obergrenze ${zahl(planOben, 0)}\u00a0% minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)}\u00a0%`} wert={`${zahl(he.feuchteEinTag, he.feuchteEinTag % 1 ? 1 : 0)}\u00a0%`} />
+              <Lesen label="Ausschalten unter · Tag" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)}\u00a0%) — folgt der Stufe`} wert={`${zahl(aus, aus % 1 ? 1 : 0)}\u00a0%`} />
+              <Lesen label="Einschalten über · Nacht" hinweis={`= Plan-Obergrenze Nacht ${zahl(planObenNacht, 0)}\u00a0% minus Vorlauf ${zahl(vorlauf, vorlauf % 1 ? 1 : 0)}\u00a0%`} wert={`${zahl(he.feuchteEinNacht, he.feuchteEinNacht % 1 ? 1 : 0)}\u00a0%`} />
+              <Lesen label="Ausschalten unter · Nacht" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)}\u00a0%) — folgt der Stufe`} wert={`${zahl(ausN, ausN % 1 ? 1 : 0)}\u00a0%`} />
             </>
           ) : getrennt ? (
             <>
@@ -189,24 +189,24 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
                 onChange={(v) => h.setzMehrere(einSchwelleSetzen(he, he.hystereseProzent, { wert: v, tageszeit: 'tag' }))} fehler={h.feldFehler.FeuchteEinTag ?? h.feldFehler.FeuchteAusTag} />
               <Zahl ruht={vpd} label="Einschalten über (Nacht)" hinweis="Licht aus." einheit="%" wert={he.feuchteEinNacht} min={einMinimum(he.hystereseProzent)} max={SCHWELLE_MAX} schritt={1}
                 onChange={(v) => h.setzMehrere(einSchwelleSetzen(he, he.hystereseProzent, { wert: v, tageszeit: 'nacht' }))} fehler={h.feldFehler.FeuchteEinNacht ?? h.feldFehler.FeuchteAusNacht} />
-              <Lesen label="Ausschalten unter (Tag · Nacht)" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %)`} wert={`${zahl(aus, 0)} · ${zahl(ausN, 0)} %`} />
+              <Lesen label="Ausschalten unter (Tag · Nacht)" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)}\u00a0%)`} wert={`${zahl(aus, 0)} · ${zahl(ausN, 0)}\u00a0%`} />
             </>
           ) : (
             <>
               <Zahl ruht={vpd} label="Einschalten über" hinweis={`Tag und Nacht. ${einHinweis}`} einheit="%" wert={he.feuchteEinTag} min={einMinimum(he.hystereseProzent)} max={SCHWELLE_MAX} schritt={1}
                 onChange={(v) => h.setzMehrere(einSchwelleSetzen(he, he.hystereseProzent, { wert: v, tageszeit: 'beide' }))} fehler={h.feldFehler.FeuchteEinTag ?? h.feldFehler.FeuchteAusTag} />
-              <Lesen label="Ausschalten unter" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)} %) — folgt der Stufe`} wert={`${zahl(aus, 0)} %`} />
+              <Lesen label="Ausschalten unter" hinweis={`= Einschalten minus Abstand (${zahl(he.hystereseProzent, 0)}\u00a0%) — folgt der Stufe`} wert={`${zahl(aus, 0)}\u00a0%`} />
             </>
           )}
         </V1Card>
       </Klappkachel>
 
       {/* ----------------------------------------------------------------- Höchsttemperatur */}
-      <Klappkachel titel="Höchsttemperatur · darüber gehen alle aus" zusammenfassung={`Tag ${zahl(tagMax)} °C · Nacht ${zahl(nachtMax)} °C`} id={KACHEL_HOECHST}>
+      <Klappkachel titel="Höchsttemperatur · darüber gehen alle aus" zusammenfassung={`Tag ${zahl(tagMax)}\u00a0°C · Nacht ${zahl(nachtMax)}\u00a0°C`} id={KACHEL_HOECHST}>
         <V1Card>
           <TempMaxBlock
             titel="Tag"
-            planText={hl.planLuftTagC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft: ${zahl(hl.planLuftTagC)} °C`}
+            planText={hl.planLuftTagC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft: ${zahl(hl.planLuftTagC)}\u00a0°C`}
             modus={he.tempMaxTagModus}
             abstand={he.tempMaxTagAbstandK}
             fest={he.tempMaxTagFestC}
@@ -220,7 +220,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
           />
           <TempMaxBlock
             titel="Nacht"
-            planText={hl.planLuftNachtC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft Nacht: ${zahl(hl.planLuftNachtC)} °C`}
+            planText={hl.planLuftNachtC == null ? 'Kein Plan-Wert — es gilt der feste Wert.' : `Plan-Luft Nacht: ${zahl(hl.planLuftNachtC)}\u00a0°C`}
             modus={he.tempMaxNachtModus}
             abstand={he.tempMaxNachtAbstandK}
             fest={he.tempMaxNachtFestC}
@@ -233,7 +233,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
             fehlerFest={h.feldFehler.TempMaxNachtFestC}
           />
           {ueberCo2 && (
-            <V1Alert tone="warn" message={`Liegt über der CO₂-Grenze von ${zahl(co2Grenze)} °C — dann steigt der Entfeuchter erst nach der CO₂-Klimasperre aus.`} />
+            <V1Alert tone="warn" message={`Liegt über der CO₂-Grenze von ${zahl(co2Grenze)}\u00a0°C — dann steigt der Entfeuchter erst nach der CO₂-Klimasperre aus.`} />
           )}
           <p className="st-hinweis">Kein Pflanzenziel, sondern Geräteschutz: Entfeuchter geben selbst Wärme ab. Die Höchsttemperatur gilt für {z ? 'alle Entfeuchter' : 'den Entfeuchter'}, getrennt für Tag und Nacht.</p>
         </V1Card>
@@ -264,8 +264,8 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
             <tbody>
               <tr>
                 <th scope="row">Abstand EIN → AUS</th>
-                {STUFEN_AUSWAHL.map((s) => <td key={s.wert} className={stufe === s.wert ? 'is-gewaehlt' : undefined}>{zahl(STUFEN[s.wert].abstandProzent, 0)} %</td>)}
-                {stufe === 'eigene' && <td className="is-gewaehlt">{zahl(he.hystereseProzent, he.hystereseProzent % 1 ? 1 : 0)} %</td>}
+                {STUFEN_AUSWAHL.map((s) => <td key={s.wert} className={stufe === s.wert ? 'is-gewaehlt' : undefined}>{zahl(STUFEN[s.wert].abstandProzent, 0)}{'\u00a0'}%</td>)}
+                {stufe === 'eigene' && <td className="is-gewaehlt">{zahl(he.hystereseProzent, he.hystereseProzent % 1 ? 1 : 0)}{'\u00a0'}%</td>}
               </tr>
               <tr>
                 <th scope="row">Einschalten nach</th>
@@ -326,7 +326,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
             <>
               <Lesen label="Luftfeuchte Tag" hinweis={zielwerte?.feuchteQuelle ?? 'Grenzwert'} wert={bereich(feuchteRegel.min, feuchteRegel.max, '%')} />
               {feuchteRegel.nachtMax != null && feuchteRegel.nachtMax !== feuchteRegel.max && (
-                <Lesen label="Luftfeuchte Nacht" hinweis="eigener Wert für die Dunkelphase" wert={`≤ ${kurzeZahl(feuchteRegel.nachtMax)} %`} />
+                <Lesen label="Luftfeuchte Nacht" hinweis="eigener Wert für die Dunkelphase" wert={`≤ ${kurzeZahl(feuchteRegel.nachtMax)}\u00a0%`} />
               )}
             </>
           )}
@@ -396,7 +396,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
               if (!an) h.setzMehrere(einSchwelleSetzen(he, he.hystereseProzent, { wert: he.feuchteEinTag, tageszeit: 'beide' }))
             }}
             hint={getrennt
-              ? `Gilt für die feste Einschalt-Schwelle der Luftfeuchte. Aus: die Nacht übernimmt den Wert vom Tag${he.feuchteEinNacht === he.feuchteEinTag ? '' : ` (jetzt Nacht ${zahl(he.feuchteEinNacht, 0)} % → ${zahl(he.feuchteEinTag, 0)} %)`}.`
+              ? `Gilt für die feste Einschalt-Schwelle der Luftfeuchte. Aus: die Nacht übernimmt den Wert vom Tag${he.feuchteEinNacht === he.feuchteEinTag ? '' : ` (jetzt Nacht ${zahl(he.feuchteEinNacht, 0)}\u00a0% → ${zahl(he.feuchteEinTag, 0)}\u00a0%)`}.`
               : 'Gilt für die feste Einschalt-Schwelle der Luftfeuchte. Aus: ein Wert für Tag und Nacht.'}
           />
           {z && ze && (

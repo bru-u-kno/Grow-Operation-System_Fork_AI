@@ -681,7 +681,7 @@ function ScoreRing({ value, tone }: { value: number | null; tone: 'ok' | 'warn' 
 
 /** „19,4 °C" — eine Nachkommastelle, deutsches Komma. */
 function grad(wert: number): string {
-  return `${wert.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`
+  return `${wert.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}\u00a0°C`
 }
 
 function sinceLabel(iso: string): string {

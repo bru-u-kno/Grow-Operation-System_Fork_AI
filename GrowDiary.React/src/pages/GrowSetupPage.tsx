@@ -748,7 +748,7 @@ function vegHinweis(form: GrowUpsertPayload): string {
   if (Number.isNaN(start.getTime())) return 'Flip nach dieser Dauer ab Bewurzelung.'
   const flip = new Date(start.getTime() + form.plannedVegDays * 86_400_000)
   const datum = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(flip)
-  return `Flip am ${datum}, wenn ab Start gerechnet wird \u2014 mit Bewurzelungsdatum entsprechend spaeter.`
+  return `Flip am ${datum}, wenn ab Start gerechnet wird \u2014 mit Bewurzelungsdatum entsprechend später.`
 }
 
 function ProgramStep({ programs, selected, custom, setCustom, selectProgram, patch, planName, form, planBluete }: { programs: NutrientProgramDto[]; selected: string; custom: string; setCustom: (value: string) => void; selectProgram: (key: string | null) => void; patch: (value: Partial<GrowUpsertPayload>) => void; planName: string | null; form: GrowUpsertPayload; planBluete: number | null }) {
@@ -809,7 +809,7 @@ function Summary({ form, tent, hydro, program, custom }: { form: GrowUpsertPaylo
   return <V1Card className="grow-summary-card"><span className="v1-card-kicker">Grow-Basis</span><h2>{form.name || 'Neuer Grow'}</h2><div className="grow-summary-list"><span><b>Zelt</b>{tent?.name ?? 'offen'}</span><span><b>Hydro</b>{hydro?.name ?? 'offen'}</span><span><b>Programm</b>{program?.name || custom || form.nutrients || 'offen'}</span></div></V1Card>
 }
 
-function formatTentSize(tent: TentDto) { return !tent.widthCm && !tent.depthCm && !tent.tentHeightCm ? 'Größe offen' : `${tent.widthCm ?? '–'}×${tent.depthCm ?? '–'}×${tent.tentHeightCm ?? '–'} cm` }
+function formatTentSize(tent: TentDto) { return !tent.widthCm && !tent.depthCm && !tent.tentHeightCm ? 'Größe offen' : `${tent.widthCm ?? '–'}×${tent.depthCm ?? '–'}×${tent.tentHeightCm ?? '–'}\u00a0cm` }
 function validateStep(step: number, form: GrowUpsertPayload, hydro: HydroSetupDto | null) { if (step === 1 && !form.name.trim()) return 'Bitte Grow-Namen eingeben.'; if (step === 2 && !form.tentId) return 'Bitte Zelt wählen.'; if (step === 3 && !hydro) return 'Bitte Hydro-Setup wählen.'; return null }
 
 export default GrowSetupPage

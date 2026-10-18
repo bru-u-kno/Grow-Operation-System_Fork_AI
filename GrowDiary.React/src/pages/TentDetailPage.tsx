@@ -221,8 +221,8 @@ async function fetchPlantsForSetups(setups: SetupDto[], signal?: AbortSignal): P
 // Die Tabelle steht in deutsche-woerter.ts — sie stand vorher hier UND in
 // live-model.ts, und an einer dritten Stelle gar nicht.
 function formatTentType(value: string) { return zeltZweckName(value) }
-function formatSize(tent: TentDto) { return !tent.widthCm && !tent.depthCm && !tent.tentHeightCm ? 'Größe offen' : `${tent.widthCm ?? '–'}×${tent.depthCm ?? '–'}×${tent.tentHeightCm ?? '–'} cm` }
-function formatLiters(value: number | null | undefined) { return value == null ? '–' : `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} L` }
+function formatSize(tent: TentDto) { return !tent.widthCm && !tent.depthCm && !tent.tentHeightCm ? 'Größe offen' : `${tent.widthCm ?? '–'}×${tent.depthCm ?? '–'}×${tent.tentHeightCm ?? '–'}\u00a0cm` }
+function formatLiters(value: number | null | undefined) { return value == null ? '–' : `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })}\u00a0L` }
 
 export default TentDetailPage
 

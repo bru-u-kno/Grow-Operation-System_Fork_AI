@@ -152,7 +152,7 @@ export default function EntfeuchtungSeite({ module, aktiv, onWechsel }: {
         <V1Alert tone="warn" title={`${zusatz} zieht nichts`} message={`Der Shelly ist an, das Gerät nimmt aber ${zl.leistungW == null ? 'kaum etwas' : `nur ${zahl(zl.leistungW, 0)} W`} auf. Tank voll oder Gerät ausgeschaltet?`} />
       )}
       {pausiert && grenzen && (
-        <V1Alert tone="warn" title={`${zusatz} pausiert: Zelt zu warm`} message={`Er bleibt aus, bis das Zelt wieder unter ${zahl(grenzen.wiederEin)} °C liegt.`} />
+        <V1Alert tone="warn" title={`${zusatz} pausiert: Zelt zu warm`} message={`Er bleibt aus, bis das Zelt wieder unter ${zahl(grenzen.wiederEin)}\u00a0°C liegt.`} />
       )}
 
       {zeilen.length > 0 && (

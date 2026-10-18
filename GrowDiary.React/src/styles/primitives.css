@@ -172,8 +172,9 @@
      Container-Hintergrund mit gap:1px. Sonst rendert jede Rasterzelle
      OHNE Kind (z. B. 4 Kinder in 3 Spalten) als eingefaerbte Flaeche und
      sieht wie ein leeres, unerklaertes Panel aus. */
+  /* Spurbreite in rem, nicht px: bei doppelter Systemschrift wird die Kachel eine Spalte breit, statt „221,6…“ zu kürzen. */
   .v1-kpi-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
     background: var(--panel);
     border: 1px solid var(--hair); border-radius: var(--r); overflow: hidden;
   }

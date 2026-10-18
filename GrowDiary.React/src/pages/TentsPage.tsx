@@ -551,7 +551,7 @@ function Row({ label, value, faint }: { label: string; value: string; faint?: bo
 
 function headMeta(tent: TentDto): string {
   const parts: string[] = []
-  if (tent.widthCm && tent.depthCm && tent.tentHeightCm) parts.push(`${tent.widthCm}×${tent.depthCm}×${tent.tentHeightCm} cm`)
+  if (tent.widthCm && tent.depthCm && tent.tentHeightCm) parts.push(`${tent.widthCm}×${tent.depthCm}×${tent.tentHeightCm}\u00a0cm`)
   if (tent.lightWatt) parts.push(`${tent.lightWatt} W`)
   return parts.join(' · ')
 }

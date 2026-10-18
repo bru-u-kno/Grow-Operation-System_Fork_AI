@@ -740,7 +740,7 @@ function weightSummary(weights: PhenoWeightsDto): string {
     .map((bucket) => ({ label: bucket.label, anteil: Math.round(((weights[bucket.key] ?? 0) / summe) * 100) }))
     .sort((a, b) => b.anteil - a.anteil)
     .slice(0, 2)
-    .map((item) => `${item.label} ${item.anteil} %`)
+    .map((item) => `${item.label} ${item.anteil}\u00a0%`)
     .join(' · ')
 }
 

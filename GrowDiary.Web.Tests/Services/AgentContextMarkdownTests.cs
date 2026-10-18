@@ -94,6 +94,16 @@ public sealed class AgentContextMarkdownTests
     }
 
     [Fact]
+    public void ATargetWithoutSpreadIsShownAsOneValue()
+    {
+        // „5,8–5,8“ las sich wie ein Fehler; ein Ziel ohne Spanne ist ein einzelner Wert.
+        var text = AgentContextBuilder.ToMarkdown(Context([Line("pH", 6.08, 5.8, 5.8, "Phasen-Profil", 0, "über dem Ziel")]));
+
+        Assert.Contains("| 5,8 |", text);
+        Assert.DoesNotContain("5,8–5,8", text);
+    }
+
+    [Fact]
     public void EachRowCarriesItsVerdict()
     {
         // Damit ein Agent nicht selbst vergleichen muss — und dabei die Einheit

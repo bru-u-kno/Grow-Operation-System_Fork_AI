@@ -70,8 +70,8 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const fWort = abweichungsWort('feuchte', hl.feuchteProzent, fBand, fZone)
   const tWort = abweichungsWort('temperatur', hl.tempC, tBand, tZone)
   const lageText = [
-    fZone && `Luftfeuchte ${zahl(hl.feuchteProzent)} % — ${fWort}${zielText(fBand) ? ` (Ziel ${zielText(fBand)} %)` : ''}`,
-    tZone && `Temperatur ${zahl(hl.tempC)} °C — ${tWort}${zielText(tBand) ? ` (Ziel ${zielText(tBand)} °C)` : ''}, die Entfeuchter dürfen bis ${zahl(aktivMax)} °C laufen`,
+    fZone && `Luftfeuchte ${zahl(hl.feuchteProzent)}\u00a0% — ${fWort}${zielText(fBand) ? ` (Ziel ${zielText(fBand)}\u00a0%)` : ''}`,
+    tZone && `Temperatur ${zahl(hl.tempC)}\u00a0°C — ${tWort}${zielText(tBand) ? ` (Ziel ${zielText(tBand)}\u00a0°C)` : ''}, die Entfeuchter dürfen bis ${zahl(aktivMax)}\u00a0°C laufen`,
   ].filter(Boolean).join(' · ')
 
   const feuchteWerte = [hl.feuchteProzent, fBand.unten, fBand.oben, fBand.oben == null ? null : fBand.oben + RF_KNAPP_PUNKTE].filter((w): w is number => w != null && Number.isFinite(w))
@@ -94,13 +94,13 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const bremsen = hl.bremsen ?? []
 
   const warum: WarumZeile[] = [
-    { frage: `${haupt}: Feuchte über der EIN-Schwelle`, antwort: `${zahl(hl.feuchteProzent)} % · EIN ab ${zahl(hl.einAktivProzent)} %`, ok: hl.feuchteProzent == null || hl.einAktivProzent == null ? null : hl.feuchteProzent > hl.einAktivProzent },
-    { frage: `${haupt}: Zelt unter der Höchsttemperatur (${zahl(aktivMax)} °C)`, antwort: `${zahl(hl.tempC)} °C`, ok: hl.tempC == null ? null : hl.tempC < aktivMax },
+    { frage: `${haupt}: Feuchte über der EIN-Schwelle`, antwort: `${zahl(hl.feuchteProzent)}\u00a0% · EIN ab ${zahl(hl.einAktivProzent)}\u00a0%`, ok: hl.feuchteProzent == null || hl.einAktivProzent == null ? null : hl.feuchteProzent > hl.einAktivProzent },
+    { frage: `${haupt}: Zelt unter der Höchsttemperatur (${zahl(aktivMax)}\u00a0°C)`, antwort: `${zahl(hl.tempC)}\u00a0°C`, ok: hl.tempC == null ? null : hl.tempC < aktivMax },
     ...(phase === 'Tag' ? [{ frage: `${haupt}: Tagbetrieb erlaubt`, antwort: a.tagbetriebErlauben ? 'ja — er darf auch bei Licht an laufen' : 'nein — nur in der Dunkelphase', ok: a.tagbetriebErlauben }] : []),
     ...(zl && grenzen && z?.geladen
       ? [
           { frage: `${zusatz}: ${haupt} läuft`, antwort: zl.fuehrungAn == null ? 'unbekannt' : zl.fuehrungAn ? 'ja — der Zusatz darf mithelfen' : 'nein — der Zusatz startet sofort, wenn nötig', ok: zl.fuehrungAn },
-          { frage: `${zusatz}: Zelt nicht zu warm (geht ab ${zahl(grenzen.folgeAus)} °C aus)`, antwort: `${zahl(zl.tempC)} °C · wieder an unter ${zahl(grenzen.wiederEin)} °C`, ok: zusatzTempOk(zl.tempC, zl.zusatzAn === true, grenzen) },
+          { frage: `${zusatz}: Zelt nicht zu warm (geht ab ${zahl(grenzen.folgeAus)}\u00a0°C aus)`, antwort: `${zahl(zl.tempC)}\u00a0°C · wieder an unter ${zahl(grenzen.wiederEin)}\u00a0°C`, ok: zusatzTempOk(zl.tempC, zl.zusatzAn === true, grenzen) },
           { frage: `${zusatz}: Hilfe und Automatik an`, antwort: z.geladen.hilfe === 'aus' ? 'Hilfe steht auf „aus".' : z.geladen.automatikAktiv ? 'ja' : 'Automatik ist aus.', ok: z.geladen.hilfe !== 'aus' && z.geladen.automatikAktiv },
         ]
       : []),
@@ -115,29 +115,29 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
   const einAusQuelle = a.vpdRegelung
     ? 'aus dem VPD-Band des Plans'
     : a.arbeitsbereichQuelle === 'plan' && hl.rhObergrenzeProzent != null
-      ? `aus dem Plan (Obergrenze ${zahl(hl.grenzeAktivProzent ?? hl.rhObergrenzeProzent, 0)} % minus Vorlauf ${zahl(a.vorlaufProzent, a.vorlaufProzent % 1 ? 1 : 0)} %)`
+      ? `aus dem Plan (Obergrenze ${zahl(hl.grenzeAktivProzent ?? hl.rhObergrenzeProzent, 0)}\u00a0% minus Vorlauf ${zahl(a.vorlaufProzent, a.vorlaufProzent % 1 ? 1 : 0)}\u00a0%)`
       : hl.deckelProzent != null && eingestelltEin > hl.deckelProzent
-      ? `vom Plan gedeckelt (Obergrenze minus Klima-Abstand = ${zahl(hl.deckelProzent, 0)} %)`
+      ? `vom Plan gedeckelt (Obergrenze minus Klima-Abstand = ${zahl(hl.deckelProzent, 0)}\u00a0%)`
       : 'von dir, unter Einstellungen'
   const feuchteHerkunft = [
-    ...(fBand.oben == null ? [] : [{ wert: `Obergrenze ${kurzeZahl(fBand.oben)} %${hl.rhObergrenzeNachtProzent != null && hl.rhObergrenzeProzent != null && hl.rhObergrenzeNachtProzent !== hl.rhObergrenzeProzent ? ` (${phase === 'Nacht' ? 'Nacht' : 'Tag'})` : ''}`, quelle: hl.rhObergrenzeProzent == null ? 'aus der Einschalt-Schwelle (kein Plan-Wert)' : planText }]),
-    ...(fBand.unten == null ? [] : [{ wert: `Untergrenze ${kurzeZahl(fBand.unten)} %`, quelle: 'dein Grenzwert' }]),
-    ...(hl.einAktivProzent == null ? [] : [{ wert: `Ein ${zahl(hl.einAktivProzent, 0)} / Aus ${zahl(hl.ausAktivProzent, 0)} %`, quelle: einAusQuelle }]),
+    ...(fBand.oben == null ? [] : [{ wert: `Obergrenze ${kurzeZahl(fBand.oben)}\u00a0%${hl.rhObergrenzeNachtProzent != null && hl.rhObergrenzeProzent != null && hl.rhObergrenzeNachtProzent !== hl.rhObergrenzeProzent ? ` (${phase === 'Nacht' ? 'Nacht' : 'Tag'})` : ''}`, quelle: hl.rhObergrenzeProzent == null ? 'aus der Einschalt-Schwelle (kein Plan-Wert)' : planText }]),
+    ...(fBand.unten == null ? [] : [{ wert: `Untergrenze ${kurzeZahl(fBand.unten)}\u00a0%`, quelle: 'dein Grenzwert' }]),
+    ...(hl.einAktivProzent == null ? [] : [{ wert: `Ein ${zahl(hl.einAktivProzent, 0)} / Aus ${zahl(hl.ausAktivProzent, 0)}\u00a0%`, quelle: einAusQuelle }]),
   ]
   const toleranz = zielwerte?.temperaturRegel?.toleranz
   const temperaturHerkunft = [
-    ...(planLuft == null ? [] : [{ wert: `Ziel ${kurzeZahl(planLuft)} °C`, quelle: `${planText} · Plan-Luft${phase === 'Nacht' ? ' Nacht' : ''}` }]),
+    ...(planLuft == null ? [] : [{ wert: `Ziel ${kurzeZahl(planLuft)}\u00a0°C`, quelle: `${planText} · Plan-Luft${phase === 'Nacht' ? ' Nacht' : ''}` }]),
     ...(tBand.unten != null && zielwerte?.temperaturRegel
-      ? [{ wert: `Spielraum${toleranz ? ` ± ${kurzeZahl(toleranz)} K` : ''} (${zielText(tBand)} °C)`, quelle: `dein Grenzwert${zielwerte.temperaturQuelle ? ` · ${zielwerte.temperaturQuelle}` : ''}` }]
+      ? [{ wert: `Spielraum${toleranz ? ` ± ${kurzeZahl(toleranz)} K` : ''} (${zielText(tBand)}\u00a0°C)`, quelle: `dein Grenzwert${zielwerte.temperaturQuelle ? ` · ${zielwerte.temperaturQuelle}` : ''}` }]
       : []),
-    { wert: `Höchsttemperatur ${zahl(aktivMax)} °C`, quelle: (phase === 'Nacht' ? a.tempMaxNachtModus : a.tempMaxTagModus) === 'plan' ? 'aus dem Plan (Plan-Luft + Abstand)' : 'von dir eingestellt (fest)' },
+    { wert: `Höchsttemperatur ${zahl(aktivMax)}\u00a0°C`, quelle: (phase === 'Nacht' ? a.tempMaxNachtModus : a.tempMaxTagModus) === 'plan' ? 'aus dem Plan (Plan-Luft + Abstand)' : 'von dir eingestellt (fest)' },
   ]
 
   return (
     <>
       {lage && <Lage zone={lage} titel="Entfeuchtung" text={lageText} />}
 
-      <Klappkachel titel="Messwerte & Zonen (Zelt)" zusammenfassung={`${zahl(hl.feuchteProzent)} % rF · ${zahl(hl.tempC)} °C${phase ? ` · ${phase}` : ''}`}>
+      <Klappkachel titel="Messwerte & Zonen (Zelt)" zusammenfassung={`${zahl(hl.feuchteProzent)}\u00a0% rF · ${zahl(hl.tempC)}\u00a0°C${phase ? ` · ${phase}` : ''}`}>
         <V1Card className="ef-band">
           <Kontext plaketten={kontextPlaketten(hl.tagPhase, zielwerte?.woche ?? hl.planWoche)} />
 
@@ -172,7 +172,7 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
               zone={tZone}
               zustand={tWort}
               ton={tZone === 'kritisch' ? 'kritisch' : tZone === 'knapp' ? 'warn' : undefined}
-              beiwerk={`Entfeuchter dürfen bis ${zahl(aktivMax)} °C`}
+              beiwerk={`Entfeuchter dürfen bis ${zahl(aktivMax)}\u00a0°C`}
             />
             {zielText(tBand) && <ZielZeile text={zielText(tBand)!} einheit="°C" />}
             <ZielBandAnzeige
@@ -191,7 +191,7 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
             titel="So liest du das Band"
             zeilen={[
               { wert: 'Grün', quelle: 'Ziel — hier gibt es keine Abweichung' },
-              { wert: 'Gelbe Striche', quelle: `Grenzen; bei ${zahl(aktivMax)} °C gehen alle Entfeuchter aus${grenzen ? `, der Zusatz schon bei ${zahl(grenzen.folgeAus)} °C` : ''}` },
+              { wert: 'Gelbe Striche', quelle: `Grenzen; bei ${zahl(aktivMax)}\u00a0°C gehen alle Entfeuchter aus${grenzen ? `, der Zusatz schon bei ${zahl(grenzen.folgeAus)}\u00a0°C` : ''}` },
               { wert: 'Zu trocken oder zu kühl', quelle: 'zählt genauso als Abweichung wie zu feucht oder zu warm' },
             ]}
           />
@@ -232,9 +232,9 @@ export function UeberblickTab({ h, z, haupt, zusatz, zielwerte, onSpringen }: Ct
       )}
 
       {zl && (zl.energieHeuteKwh != null || zl.leistungW != null) && (
-        <Klappkachel titel={`Verbrauch heute · ${zusatz}`} zusammenfassung={zl.energieHeuteKwh == null ? '' : `${zahl(zl.energieHeuteKwh)} kWh`} offen={false}>
+        <Klappkachel titel={`Verbrauch heute · ${zusatz}`} zusammenfassung={zl.energieHeuteKwh == null ? '' : `${zahl(zl.energieHeuteKwh)}\u00a0kWh`} offen={false}>
           <V1Card>
-            {zl.energieHeuteKwh != null && <Lesen label="Energie heute" wert={`${zahl(zl.energieHeuteKwh)} kWh`} />}
+            {zl.energieHeuteKwh != null && <Lesen label="Energie heute" wert={`${zahl(zl.energieHeuteKwh)}\u00a0kWh`} />}
             {zl.leistungW != null && <Lesen label="Leistung jetzt" wert={`${zahl(zl.leistungW, 0)} W`} />}
           </V1Card>
         </Klappkachel>

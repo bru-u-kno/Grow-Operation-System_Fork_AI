@@ -99,12 +99,12 @@ export function Zusammenspiel({ haupt, zusatz, tempMax, abstaende }: {
           <p><b>{haupt} führt.</b> Beide regeln nach derselben Größe (Luftfeuchte oder VPD, einstellbar unter Einstellungen › Erweitert); die Schwellen kommen aus dem Plan.</p>
           <p><b>{zusatz} hilft.</b> Er springt zu, wenn {haupt} eine Weile läuft, und geht früher wieder aus. Er steht im Zelt und gibt Wärme ab.</p>
           <p>
-            <b>Zu warm: beide aus.</b> Über {zahl(tempMax)} °C geht {haupt} aus
-            {abstaende ? `, ${zusatz} schon bei ${zahl(abstaende.folgeAus)} °C.` : `, ${zusatz} etwas früher.`}
+            <b>Zu warm: beide aus.</b> Über {zahl(tempMax)}{'\u00a0'}°C geht {haupt} aus
+            {abstaende ? `, ${zusatz} schon bei ${zahl(abstaende.folgeAus)}\u00a0°C.` : `, ${zusatz} etwas früher.`}
           </p>
           <p>
             <b>Wieder an erst, wenn es kühler ist.</b> {zusatz} kommt erst
-            {abstaende ? ` unter ${zahl(abstaende.wiederEin)} °C zurück, frühestens nach ${abstaende.mindestpauseMin} min Pause.` : ' nach einem weiteren Abstand zurück, frühestens nach seiner Mindestpause.'}
+            {abstaende ? ` unter ${zahl(abstaende.wiederEin)}\u00a0°C zurück, frühestens nach ${abstaende.mindestpauseMin} min Pause.` : ' nach einem weiteren Abstand zurück, frühestens nach seiner Mindestpause.'}
             {' '}Das verhindert das Takten an der Grenze.
           </p>
           <p><b>Wo du es einstellst.</b> Alles unter „Einstellungen“: Betrieb, Ziel, Höchsttemperatur, Stufe und Zusatz-Stärke.</p>

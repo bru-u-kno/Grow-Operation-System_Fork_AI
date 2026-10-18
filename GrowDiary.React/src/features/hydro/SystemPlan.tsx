@@ -44,7 +44,7 @@ export function SystemPlan(props: Props) {
         {plan.tank && (
           <div className="system-plan__tank" style={box(plan.tank)}>
             <span>Tank</span>
-            <strong>{Math.round(props.tankLiters)} L</strong>
+            <strong>{Math.round(props.tankLiters)}{'\u00a0'}L</strong>
           </div>
         )}
 
@@ -67,7 +67,7 @@ export function SystemPlan(props: Props) {
         <div className="system-plan__legend">
           <span><i className="swatch is-return" />Rücklauf 50 mm</span>
           <span><i className="swatch is-feed" />Zulauf / Pumpe</span>
-          <span><i className="swatch is-site" />Site {Math.round(props.potLiters)} L</span>
+          <span><i className="swatch is-site" />Site {Math.round(props.potLiters)}{'\u00a0'}L</span>
           <span className={plan.fits ? 'check is-ok' : 'check is-bad'}>{fitMessage(plan)}</span>
         </div>
       )}
@@ -77,6 +77,6 @@ export function SystemPlan(props: Props) {
 
 function formatTent(input: PlanInput): string {
   if (!input.tentWidthCm || !input.tentDepthCm) return 'Zeltmaß nicht hinterlegt'
-  return `${Math.round(input.tentWidthCm)}×${Math.round(input.tentDepthCm)} cm`
+  return `${Math.round(input.tentWidthCm)}×${Math.round(input.tentDepthCm)}\u00a0cm`
 }
 

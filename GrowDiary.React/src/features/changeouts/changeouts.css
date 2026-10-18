@@ -107,11 +107,10 @@
   .changeouts-section .v1-list-row > em { grid-area: art; }
   .changeouts-section .v1-list-row > .changeouts-weg { grid-area: weg; }
   @media (max-width: 640px) {
-    .changeouts-section .v1-list-row {
-      grid-template-columns: minmax(0, 1fr) auto auto;
-      grid-template-areas: "datum art weg" "text text text"; row-gap: 6px;
-    }
-    /* 320 px: Datum darf umbrechen, statt unter den Knopf zu laufen. */
-    .changeouts-section .v1-list-row > strong { white-space: normal; min-width: 0; }
+    /* Flex mit Umbruch: bei doppelter Schrift rutschen „ganz“ und „Entfernen“ unter das Datum, statt es auf drei Zeilen zu quetschen. */
+    .changeouts-section .v1-list-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s-2); }
+    .changeouts-section .v1-list-row > strong { flex: 1 1 9rem; white-space: nowrap; }
+    .changeouts-section .v1-list-row > em, .changeouts-section .v1-list-row > .changeouts-weg { flex: 0 0 auto; }
+    .changeouts-section .v1-list-row > span { flex: 1 1 100%; order: 3; }
   }
 }

@@ -296,7 +296,7 @@ function Zusammenfassung({ seite, onWahl }: { seite: KostenSeite; onWahl: (growI
 
       {/* Fakten-Leiste wie im Grow-Detail: dieselbe Leiste, dieselben Linien. */}
       <section className="v1-kpi-grid" data-audit="kosten-summe">
-        <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)} kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
+        <V1Stat label="Strom" value={euro(summe.stromEur)} hint={seite.strom.kwhSeitStart != null ? `${formatNumber(seite.strom.kwhSeitStart, 0)}\u00a0kWh` : seite.strom.eingerichtet ? 'noch keine Differenz' : 'keine Quelle'} />
         <V1Stat label="Verbrauchsartikel" value={euro(artikel)} hint={`${seite.nachfuellungen.filter((f) => grow && f.growId === grow.id).length} Nachfüllungen`} />
         <V1Stat label="Anschaffungen" value={euro(anschaffungen)} hint={`${seite.anschaffungen.filter((x) => grow && x.growId === grow.id).length} Positionen im Grow`} />
         <V1Stat label="Je Pflanze" value={euro(summe.proPflanzeEur)} hint={grow?.pflanzen ? `${grow.pflanzen} Pflanzen, bisher` : 'Pflanzenzahl im Grow eintragen'} />
@@ -457,7 +457,7 @@ function StromQuelleForm({ quelle, zelte, onChanged, onError }: { quelle: StromQ
     setBusy(true)
     try {
       const stand = await apiFetch<Zaehlerstand | null>('/api/kosten/zaehlerstand', { method: 'POST' })
-      if (stand) onChanged(`Zählerstand festgehalten: ${formatNumber(stand.kwh, 1)} kWh.`)
+      if (stand) onChanged(`Zählerstand festgehalten: ${formatNumber(stand.kwh, 1)}\u00a0kWh.`)
       else onError('Kein Wert vom Zähler — Entität prüfen und Home Assistant-Verbindung ansehen.')
     } catch (caught) {
       onError(formatApiError(caught, 'Zählerstand konnte nicht festgehalten werden.'))
@@ -885,7 +885,7 @@ function ohneDatum(notiz: string | null, datum: string): string | null {
  */
 function menge(wert: number, einheit: string): string {
   if (einheit === 'kg' && Math.abs(wert) < 1) return `${formatNumber(wert * 1000, 0)} g`
-  if (einheit === 'L' && Math.abs(wert) < 1) return `${formatNumber(wert * 1000, 0)} ml`
+  if (einheit === 'L' && Math.abs(wert) < 1) return `${formatNumber(wert * 1000, 0)}\u00a0ml`
   return `${formatNumber(wert, wert >= 100 ? 0 : 2)} ${einheit}`
 }
 
@@ -977,7 +977,7 @@ function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel
     ? 'zeigen'
     : ansicht.buchungen === 0
       ? 'noch nichts gebucht'
-      : `${SPANNEN.find((s) => s.wert === spanne)?.label ?? ''} · ${formatNumber(ansicht.summeEur, 2)} €`
+      : `${SPANNEN.find((s) => s.wert === spanne)?.label ?? ''} · ${formatNumber(ansicht.summeEur, 2)}\u00a0€`
 
   return (
     <div className="ko-verbrauch">

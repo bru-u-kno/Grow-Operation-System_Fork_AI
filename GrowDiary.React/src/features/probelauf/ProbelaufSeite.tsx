@@ -289,9 +289,9 @@ function LaufAnsicht({ lauf, sendet, onAbbrechen, onZurueck, offen }: {
           <table className="pl-tabelle">
             <thead><tr><th>Wert</th><th>Zuletzt</th><th>Grenze</th></tr></thead>
             <tbody>
-              {jetzt.feuchte != null && <tr><td>Luftfeuchte</td><td>{wertText('Feuchte', jetzt.feuchte)}</td><td>{lauf.grenzen.feuchteMax != null ? `max. ${formatNumber(lauf.grenzen.feuchteMax, 1)} %` : '–'}</td></tr>}
-              {jetzt.temp != null && <tr><td>Temperatur</td><td>{wertText('Temperatur', jetzt.temp)}</td><td>{lauf.grenzen.tempMax != null ? `max. ${formatNumber(lauf.grenzen.tempMax, 1)} °C` : '–'}</td></tr>}
-              {jetzt.vpd != null && <tr><td>VPD</td><td>{wertText('VPD', jetzt.vpd)}</td><td>{lauf.grenzen.vpdMin != null || lauf.grenzen.vpdMax != null ? `${formatNumber(lauf.grenzen.vpdMin, 2)} bis ${formatNumber(lauf.grenzen.vpdMax, 2)} kPa` : '–'}</td></tr>}
+              {jetzt.feuchte != null && <tr><td>Luftfeuchte</td><td>{wertText('Feuchte', jetzt.feuchte)}</td><td>{lauf.grenzen.feuchteMax != null ? `max. ${formatNumber(lauf.grenzen.feuchteMax, 1)}\u00a0%` : '–'}</td></tr>}
+              {jetzt.temp != null && <tr><td>Temperatur</td><td>{wertText('Temperatur', jetzt.temp)}</td><td>{lauf.grenzen.tempMax != null ? `max. ${formatNumber(lauf.grenzen.tempMax, 1)}\u00a0°C` : '–'}</td></tr>}
+              {jetzt.vpd != null && <tr><td>VPD</td><td>{wertText('VPD', jetzt.vpd)}</td><td>{lauf.grenzen.vpdMin != null || lauf.grenzen.vpdMax != null ? `${formatNumber(lauf.grenzen.vpdMin, 2)} bis ${formatNumber(lauf.grenzen.vpdMax, 2)}\u00a0kPa` : '–'}</td></tr>}
             </tbody>
           </table>
         )}

@@ -63,11 +63,11 @@ function HydroDetailPage() {
             bessere Zahl — und soll nicht raten muessen, welche der beiden gilt. */}
         <V1Card>
           <span className="v1-card-kicker">Volumen</span>
-          <h2>{formatNumber(setup.levelSensorFullLiters ?? setup.totalVolumeLiters, 0)} L</h2>
+          <h2>{formatNumber(setup.levelSensorFullLiters ?? setup.totalVolumeLiters, 0)}{'\u00a0'}L</h2>
           <p>{setup.levelSensorFullLiters == null
             ? 'Gesamt'
             : weichtAb(setup.levelSensorFullLiters, setup.totalVolumeLiters)
-              ? `Gemessen · gerechnet ${formatNumber(setup.totalVolumeLiters, 0)} L`
+              ? `Gemessen · gerechnet ${formatNumber(setup.totalVolumeLiters, 0)}\u00a0L`
               : 'Gemessen'}</p>
         </V1Card>
         <V1Card><span className="v1-card-kicker">Sites</span><h2>{setup.potCount ?? '–'}</h2><p>{aufstellungName(setup.layoutType)}</p></V1Card>
@@ -121,7 +121,7 @@ function HydroDetailPage() {
 }
 
 function Info({ label, value }: { label: string; value: string }) { return <div className="v1-info"><span>{label}</span><strong>{value}</strong></div> }
-function formatLiters(value: number | null | undefined) { return value == null ? '–' : `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} L` }
+function formatLiters(value: number | null | undefined) { return value == null ? '–' : `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })}\u00a0L` }
 /**
  * Lohnt es sich, beide Zahlen zu nennen?
  *

@@ -412,7 +412,7 @@ public static partial class Demobestand
                 WaterUsed = grow.WaterSource,
                 Notes = komplett
                     ? "Testdaten: kompletter Reset, Becken geschrubbt."
-                    : "Testdaten: planmaessiger Teilwechsel.",
+                    : "Testdaten: planmäßiger Teilwechsel.",
             });
         }
     }

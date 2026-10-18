@@ -537,7 +537,7 @@ function ManualMeasurementPage() {
               <V1Section title="Klima">
                 <FieldGrid fields={climateFields} draft={draft} patch={patch} status={fieldStatus}>
                   <div className="rc2-measurement-derived" data-audit="measurement-vpd">
-                    <span>VPD{leafOffset < 0 ? ` · Blatt ${leafOffset} °C` : ''}</span>
+                    <span>VPD{leafOffset < 0 ? ` · Blatt ${leafOffset}\u00a0°C` : ''}</span>
                     <strong>{vpd ?? '–'}<em>kPa</em></strong>
                   </div>
                 </FieldGrid>

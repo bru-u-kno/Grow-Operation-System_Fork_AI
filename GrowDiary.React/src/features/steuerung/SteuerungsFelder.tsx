@@ -62,8 +62,8 @@ export function TempMaxBlock({ titel, ariaLabel, planText, modus, abstand, fest,
         <>
           <Zahl label="Abstand zum Plan" hinweis="Wandert mit der Planwoche." einheit="K" wert={abstand} min={0} max={15} schritt={0.5} onChange={onAbstand} />
           <p className="ef-formel">
-            {plan == null ? `Ohne Plan: fester Wert ${zahl(fest)} °C` : `${zahl(plan)} + ${zahl(abstand)} = `}
-            {plan != null && <b>{zahl(ergebnis)} °C</b>}
+            {plan == null ? `Ohne Plan: fester Wert ${zahl(fest)}\u00a0°C` : `${zahl(plan)} + ${zahl(abstand)} = `}
+            {plan != null && <b>{zahl(ergebnis)}{'\u00a0'}°C</b>}
           </p>
         </>
       ) : (

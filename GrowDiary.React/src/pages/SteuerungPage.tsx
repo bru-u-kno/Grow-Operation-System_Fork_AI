@@ -421,7 +421,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
           <span className="st-gross">{live.co2Ppm != null ? formatNumber(live.co2Ppm, 0) : '–'}<span>ppm</span></span>
           <span className="st-neben">
             Ziel <b>{live.zielPpm ?? '–'}</b>
-            {entwurf.zielQuelle === 'plan' && seite.planPpm != null && <> · {seite.planPpm} ppm aus dem Plan</>}
+            {entwurf.zielQuelle === 'plan' && seite.planPpm != null && <> · {seite.planPpm}{'\u00a0'}ppm aus dem Plan</>}
             <br />
             {live.ventilOffen ? 'Ventil offen' : 'Ventil zu'}
             {live.nachschubUnterPpm != null && <> · nächster Impuls unter {live.nachschubUnterPpm}</>}
@@ -430,8 +430,8 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
         <div className="st-marken">
           <span className={`st-marke ${live.klimaOk ? 'is-ok' : 'is-warn'}`}>{live.klimaOk ? 'Klima OK' : 'Klima sperrt'}</span>
           {live.t6Stufe != null && <span className="st-marke">Abluft Stufe {live.t6Stufe}</span>}
-          {live.canopyC != null && <span className="st-marke">Canopy {formatNumber(live.canopyC, 1)} °C</span>}
-          {live.rhProzent != null && <span className="st-marke">RH {formatNumber(live.rhProzent, 0)} %</span>}
+          {live.canopyC != null && <span className="st-marke">Canopy {formatNumber(live.canopyC, 1)}{'\u00a0'}°C</span>}
+          {live.rhProzent != null && <span className="st-marke">RH {formatNumber(live.rhProzent, 0)}{'\u00a0'}%</span>}
           {live.vpd != null && <span className="st-marke">VPD {formatNumber(live.vpd, 2)}</span>}
           {live.lichtAn === false && <span className="st-marke">Licht aus</span>}
         </div>
@@ -479,7 +479,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             )}
 
             <Zahl label="Hysterese" hinweis="Nachschub erst, wenn der Wert so weit unter dem Ziel liegt." einheit="ppm" wert={entwurf.hysteresePpm} onChange={(v) => setz('hysteresePpm', v)} fehler={feldFehler.HysteresePpm} />
-            <p className="st-hinweis">Ergibt {ziele.kuehl} / {ziele.mittel} / {ziele.warm} ppm.</p>
+            <p className="st-hinweis">Ergibt {ziele.kuehl} / {ziele.mittel} / {ziele.warm}{'\u00a0'}ppm.</p>
           </V1Card>
         </V1Section>
       )}
@@ -518,20 +518,20 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
             <div className="st-feldzeile">
               <span className="st-etikett">
                 Canopy
-                <small>tief nur bis {live.tiefBisTempC != null ? `${formatNumber(live.tiefBisTempC, 1)} °C` : '–'}</small>
+                <small>tief nur bis {live.tiefBisTempC != null ? `${formatNumber(live.tiefBisTempC, 1)}\u00a0°C` : '–'}</small>
               </span>
               <span className="st-eingaben">
-                <span className="st-nurlesen">{live.canopyC != null ? `${formatNumber(live.canopyC, 1)} °C` : '–'}</span>
+                <span className="st-nurlesen">{live.canopyC != null ? `${formatNumber(live.canopyC, 1)}\u00a0°C` : '–'}</span>
                 {tempOk != null && <span className={`st-marke ${tempOk ? 'is-ok' : 'is-warn'}`}>{tempOk ? 'erfüllt' : 'zu warm'}</span>}
               </span>
             </div>
             <div className="st-feldzeile">
               <span className="st-etikett">
                 Feuchte
-                <small>tief nur bis {live.tiefBisRhProzent != null ? `${formatNumber(live.tiefBisRhProzent, 0)} %` : '–'}</small>
+                <small>tief nur bis {live.tiefBisRhProzent != null ? `${formatNumber(live.tiefBisRhProzent, 0)}\u00a0%` : '–'}</small>
               </span>
               <span className="st-eingaben">
-                <span className="st-nurlesen">{live.rhProzent != null ? `${formatNumber(live.rhProzent, 1)} %` : '–'}</span>
+                <span className="st-nurlesen">{live.rhProzent != null ? `${formatNumber(live.rhProzent, 1)}\u00a0%` : '–'}</span>
                 {rhOk != null && <span className={`st-marke ${rhOk ? 'is-ok' : 'is-warn'}`}>{rhOk ? 'erfüllt' : 'zu feucht'}</span>}
               </span>
             </div>
@@ -539,9 +539,9 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               <div className="st-feldzeile">
                 <span className="st-etikett">
                   Feuchte im Mittel
-                  <small>entscheidet über die Freigabe · frei ab {live.freiAbProzent != null ? `${formatNumber(live.freiAbProzent, 1)} %` : '–'}</small>
+                  <small>entscheidet über die Freigabe · frei ab {live.freiAbProzent != null ? `${formatNumber(live.freiAbProzent, 1)}\u00a0%` : '–'}</small>
                 </span>
-                <span className="st-nurlesen">{live.rhMittelProzent != null ? `${formatNumber(live.rhMittelProzent, 1)} %` : '–'}</span>
+                <span className="st-nurlesen">{live.rhMittelProzent != null ? `${formatNumber(live.rhMittelProzent, 1)}\u00a0%` : '–'}</span>
               </div>
             )}
             <p className="st-hinweis">{tiefGrund}</p>
@@ -557,7 +557,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                   Feuchte-Obergrenze
                   <small>Kommt aus dem Plan des Grows, ändern unter Plan.</small>
                 </span>
-                <span className="st-nurlesen">{formatNumber(live.rhObergrenzeProzent ?? live.rhObergrenzeAusPlan, 0)} %</span>
+                <span className="st-nurlesen">{formatNumber(live.rhObergrenzeProzent ?? live.rhObergrenzeAusPlan, 0)}{'\u00a0'}%</span>
               </div>
             ) : (
               <Zahl label="Feuchte-Obergrenze" hinweis="Darüber wird gesperrt — der Plan gibt sie je Blütewoche vor." einheit="%" schritt={0.5} wert={entwurf.rhObergrenzeProzent} onChange={(v) => setz('rhObergrenzeProzent', v)} fehler={feldFehler.RhObergrenzeProzent} />
@@ -584,7 +584,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
               label="Canopy-Obergrenze"
               hinweis={entwurf.canopyObergrenzeModus === 'plan'
                 ? (live.planLuftTagC != null
-                  ? `Darüber sperrt es. Folgt der Lufttemperatur aus dem Plan (${live.planWoche ?? 'diese Woche'}: ${formatNumber(live.planLuftTagC, 1)} °C).`
+                  ? `Darüber sperrt es. Folgt der Lufttemperatur aus dem Plan (${live.planWoche ?? 'diese Woche'}: ${formatNumber(live.planLuftTagC, 1)}\u00a0°C).`
                   : 'Der Plan nennt keine Lufttemperatur — es gilt der feste Wert.')
                 : 'Darüber sperrt es.'}
               einheit="°C"
@@ -786,7 +786,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
 
 /** Eine Zahlenzeile — Etikett links, Eingabe rechts, Fehler darunter. */
 function fmtProzent(wert: number | null | undefined): string {
-  return wert != null && Number.isFinite(wert) ? `${formatNumber(wert, wert % 1 === 0 ? 0 : 1)} %` : '–'
+  return wert != null && Number.isFinite(wert) ? `${formatNumber(wert, wert % 1 === 0 ? 0 : 1)}\u00a0%` : '–'
 }
 
 /**

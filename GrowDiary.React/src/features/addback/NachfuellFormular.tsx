@@ -287,7 +287,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
   const vergangen = nachmessungAm != null && nachmessungAm.getTime() < jetzt
 
   // ---- Was gespeichert wird
-  const wasserName = wasserWahl === 'eigen' ? 'eigenes Wasser' : wasserWahl === 'Mixed' ? `Mischung (${zahl(osmoseZahl ?? 0, 0)} % Osmose)` : WASSER_NAMEN[wasserWahl]
+  const wasserName = wasserWahl === 'eigen' ? 'eigenes Wasser' : wasserWahl === 'Mixed' ? `Mischung (${zahl(osmoseZahl ?? 0, 0)}\u00a0% Osmose)` : WASSER_NAMEN[wasserWahl]
   const eigeneZeile = wasserWahl === 'eigen' ? eigenesWasserZeile(eigenW) : null
   const zugabenText = zeilen.filter((z) => zeilenMenge(z) > 0)
     .map((z) => ({ name: z.name, menge: zeilenMenge(z), einheit: einheitVon(zeilenArtikel(z), z.einheit) }))
@@ -525,14 +525,14 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
                   <input id="nf-danach" inputMode="decimal" value={danach} onChange={(e) => setDanach(e.target.value)} placeholder={anlageLiter != null ? zahl(anlageLiter, 0) : ''} />
                   <span className="e">L</span>
                 </div>
-                <small>Voll = Anlagevolumen aus deinem Hydro-System{anlageLiter != null ? ` (${zahl(anlageLiter, 0)} L)` : ''}. Nur ändern, wenn das Reservoir danach nicht ganz voll ist.</small>
+                <small>Voll = Anlagevolumen aus deinem Hydro-System{anlageLiter != null ? ` (${zahl(anlageLiter, 0)}\u00a0L)` : ''}. Nur ändern, wenn das Reservoir danach nicht ganz voll ist.</small>
               </div>
             </div>
 
             {wasserWahl !== 'eigen' && (
               <div className="nf-wasser" data-audit="nachfuellen-wasserwerte">
                 {wasserWahl === 'Mixed' && literZahl != null && literZahl > 0 && (
-                  <span><b>{zahl(literZahl * (anteilOsmose), 1)} L</b> Osmose + <b>{zahl(literZahl * (1 - anteilOsmose), 1)} L</b> Leitung</span>
+                  <span><b>{zahl(literZahl * (anteilOsmose), 1)}{'\u00a0'}L</b> Osmose + <b>{zahl(literZahl * (1 - anteilOsmose), 1)}{'\u00a0'}L</b> Leitung</span>
                 )}
                 <span>EC <b>{wasserEc != null ? zahl(wasserEc, 2) : '–'}</b> mS/cm</span>
                 {wasserWahl !== 'RO' && wasserPh != null && <span>pH <b>{zahl(wasserPh, 1)}</b></span>}
@@ -542,7 +542,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
             {vorschlagFehler && <p className="nf-fehler" role="alert">{vorschlagFehler}</p>}
 
             {wasserTeile.map((w) => (
-              <ArtikelZeile key={w.name} name={w.name} menge={`${zahl(w.menge, 1)} L`} einheit="L"
+              <ArtikelZeile key={w.name} name={w.name} menge={`${zahl(w.menge, 1)}\u00a0L`} einheit="L"
                 artikel={artikelFuerName(artikel, w.name)} aus={buchenAus.has(`wasser:${w.name}`)}
                 frage={frage?.schluessel === `wasser:${w.name}` ? frage : null} frageFehler={frageFehler} einheitFest="L"
                 onBuchen={(an) => umschalten(buchenAus, setBuchenAus, `wasser:${w.name}`, !an)}
@@ -661,14 +661,14 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
           </div>
         </>
       )}
-      <div className="v1-eyebrow nf-abschnitt">{mitWasser ? `Im Tank danach (${literZahl != null && literZahl > 0 ? `${zahl(literZahl, Number.isInteger(literZahl) ? 0 : 1)} L dazu` : 'Erwartung, keine Messung'})` : 'So sieht das Reservoir danach aus (Erwartung, keine Messung)'}</div>
+      <div className="v1-eyebrow nf-abschnitt">{mitWasser ? `Im Tank danach (${literZahl != null && literZahl > 0 ? `${zahl(literZahl, Number.isInteger(literZahl) ? 0 : 1)}\u00a0L dazu` : 'Erwartung, keine Messung'})` : 'So sieht das Reservoir danach aus (Erwartung, keine Messung)'}</div>
       <div className="nf-vor" data-audit="nachfuellen-erwartung">
         <div>
           <div className="k">Volumen</div>
-          <div className="z">{fl.danach != null ? <>{mitWasser && literZahl != null && literZahl > 0 && fl.vorher != null && <s>{zahl(fl.vorher, 1)} L</s>}{zahl(fl.danach, 1)} L</> : '–'}</div>
+          <div className="z">{fl.danach != null ? <>{mitWasser && literZahl != null && literZahl > 0 && fl.vorher != null && <s>{zahl(fl.vorher, 1)}{'\u00a0'}L</s>}{zahl(fl.danach, 1)}{'\u00a0'}L</> : '–'}</div>
           <div className="n">{!mitWasser ? 'unverändert'
             : fl.danach == null ? 'Das Anlagevolumen fehlt — trag den Füllstand danach ein.'
-              : literZahl != null && literZahl > 0 ? `${zahl(fl.danach, 1)} L danach − ${zahl(literZahl, 1)} L eingefüllt`
+              : literZahl != null && literZahl > 0 ? `${zahl(fl.danach, 1)}\u00a0L danach − ${zahl(literZahl, 1)}\u00a0L eingefüllt`
                 : 'Trag die Liter ein, dann rechnet der Fork.'}</div>
         </div>
         <div>
@@ -692,7 +692,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
       <div className="nf-ein" data-audit="nachfuellen-eintrag">
         <div className="kopf">✓ Das wird eingetragen</div>
         {mitWasser && (
-          <div className="z"><span className="k">Wasser</span><span className="w"><b>{literZahl != null && literZahl > 0 ? `${zahl(literZahl, Number.isInteger(literZahl) ? 0 : 1)} L` : 'Noch keine Liter'}</b> {wasserName}<small>EC {wasserEc != null ? zahl(wasserEc, 2) : '–'} mS/cm{wasserPh != null ? ` · pH ${zahl(wasserPh, 1)}` : ''}</small></span></div>
+          <div className="z"><span className="k">Wasser</span><span className="w"><b>{literZahl != null && literZahl > 0 ? `${zahl(literZahl, Number.isInteger(literZahl) ? 0 : 1)}\u00a0L` : 'Noch keine Liter'}</b> {wasserName}<small>EC {wasserEc != null ? zahl(wasserEc, 2) : '–'} mS/cm{wasserPh != null ? ` · pH ${zahl(wasserPh, 1)}` : ''}</small></span></div>
         )}
         {zugegeben.length > 0 && (
           <div className="z"><span className="k">Zusätze</span><span className="w liste">{zugegeben.map((z) => <span key={z.schluessel}><em style={{ fontStyle: 'normal' }}>{z.name}</em><i>{zahl(zeilenMenge(z), Number.isInteger(zeilenMenge(z)) ? 0 : 1)} {einheitVon(zeilenArtikel(z), z.einheit)}</i></span>)}</span></div>
@@ -701,7 +701,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
           <span className="k">Verbrauch</span>
           <span className="w">
             <span className="pills">
-              {wasserBuchungen.map((w) => <span key={w.name} className="pill">✓ {w.name} {zahl(w.menge, 1)} L</span>)}
+              {wasserBuchungen.map((w) => <span key={w.name} className="pill">✓ {w.name} {zahl(w.menge, 1)}{'\u00a0'}L</span>)}
               {gebucht.map((z) => <span key={z.schluessel} className="pill">✓ {z.name}</span>)}
               {[...wasserOhneArtikel.map((w) => w.name), ...ohneArtikel.map((z) => z.name)].map((n) => <span key={n} className="pill nein">⚠ {n} · kein Artikel</span>)}
               {wasserBuchungen.length + gebucht.length + wasserOhneArtikel.length + ohneArtikel.length === 0 && <span className="pill aus">nichts zu buchen</span>}
@@ -709,7 +709,7 @@ export function NachfuellFormular({ growId, startModus = 'wasser', vorbelegung =
             {wasserOhneArtikel.length + ohneArtikel.length > 0 && <small>Ohne Artikel wird nur im Tagebuch notiert. „Als Artikel anlegen …“ oben bucht es mit.</small>}
           </span>
         </div>
-        <div className="z"><span className="k">Reservoir</span><span className="w"><b>{fl.danach != null ? `${zahl(fl.danach, 1)} L` : '–'}</b> danach{!mitWasser ? ' (unverändert)' : ''}</span></div>
+        <div className="z"><span className="k">Reservoir</span><span className="w"><b>{fl.danach != null ? `${zahl(fl.danach, 1)}\u00a0L` : '–'}</b> danach{!mitWasser ? ' (unverändert)' : ''}</span></div>
         <div className="z"><span className="k">Tagebuch</span><span className="w">{mitWasser && (literZahl == null || literZahl <= 0) ? 'eine Zeile, sobald die Liter eingetragen sind' : `1 Zeile: ${tagebuch.titel}`}</span></div>
         <div className="z"><span className="k">Nachmessung</span><span className="w">
           {nachherHatWerte ? <b>selbst eingetragen</b>

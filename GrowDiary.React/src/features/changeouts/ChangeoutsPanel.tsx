@@ -124,8 +124,8 @@ export function ChangeoutsPanel({ growId, growName, neuLaden, markiert, onGeaend
                 <strong>{formatDateTime(item.performedAtUtc)}</strong>
                 <span>
                   {item.kind === 'Full' ? 'Komplettwechsel' : 'Teilwechsel'}
-                  {item.percentChanged != null && item.kind !== 'Full' ? ` · ${formatNumber(item.percentChanged, 0)} %` : ''}
-                  {item.volumeChangedLiters != null ? ` · ${formatNumber(item.volumeChangedLiters, 1)} L` : ''}
+                  {item.percentChanged != null && item.kind !== 'Full' ? ` · ${formatNumber(item.percentChanged, 0)}\u00a0%` : ''}
+                  {item.volumeChangedLiters != null ? ` · ${formatNumber(item.volumeChangedLiters, 1)}\u00a0L` : ''}
                   {` · EC ${pair(item.ecBefore, item.ecAfter)} · pH ${pair(item.phBefore, item.phAfter)}`}
                   {item.notes ? ` · ${item.notes}` : ''}
                   {vorgang && <small className="changeouts-vorgang">Vorgang: {teileText(vorgang)}</small>}

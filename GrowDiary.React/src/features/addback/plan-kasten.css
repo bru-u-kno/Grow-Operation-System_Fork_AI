@@ -5,11 +5,13 @@
 .plan-kasten .kz span{border:1px solid var(--hair-2);border-radius:999px;padding:2px 12px}
 .plan-kasten .nm{margin:4px 0 var(--s-2)}
 /* Eine Zeile je Ziel: links Name und Hinweis, rechts die Zahl und darunter der Abstand. */
-.plan-kasten .zeile{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--s-3);align-items:baseline;border-top:1px solid var(--hair);padding:var(--s-2) 0}
-.plan-kasten .zeile .w{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.plan-kasten .zeile{display:flex;flex-wrap:wrap;gap:2px var(--s-3);align-items:baseline;border-top:1px solid var(--hair);padding:var(--s-2) 0}
+/* Flex statt Raster: bei doppelter Schrift steht der Wert unter dem Namen, statt ihn auf ein Zeichen je Zeile zu quetschen. */
+.plan-kasten .zeile .n{flex:1 1 7rem;min-width:0}
+.plan-kasten .zeile .w{flex:0 0 auto;margin-left:auto;font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .plan-kasten .zeile .w small{font-size:var(--fs-klein);font-weight:400;color:var(--faint);margin-left:4px}
-.plan-kasten .zeile .h{grid-column:1;color:var(--faint);font-size:var(--fs-klein)}
-.plan-kasten .zeile .a{grid-column:1 / -1;text-align:right;font-size:var(--fs-klein);color:var(--warn-text)}
+.plan-kasten .zeile .h{flex:1 1 100%;color:var(--faint);font-size:var(--fs-klein)}
+.plan-kasten .zeile .a{flex:1 1 100%;text-align:right;font-size:var(--fs-klein);color:var(--warn-text)}
 .plan-kasten .zeile .a.gut{color:var(--accent-text)}
 .plan-kasten .alter{color:var(--faint);font-size:var(--fs-klein);margin-top:var(--s-2)}
 .plan-kasten .alter.alt{color:var(--warn-text)}

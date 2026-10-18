@@ -371,7 +371,7 @@ function EigeneGeraete({
       {seite.eigene.length === 0 && !offen && (
         <p className="st-hinweis">
           Noch keine. Hier stehen Geräte, die keiner Steuerung allein gehören — Zuluft, Außenluft-Fühler.
-          Eine Rolle greift sie über <code>@Name</code> ab.
+          Eine Rolle greift sie über <code>@Name</code>{'\u00a0'}ab.
         </p>
       )}
 

@@ -436,7 +436,7 @@ export function PlanReiter() {
             + Zutat hinzufügen
           </button>
           {daten.volumen != null && (
-            <p className="wp-leise">Mengen rechts für {alsText(daten.volumen)}\u00a0L Anlagenvolumen.</p>
+            <p className="wp-leise">Mengen rechts für {alsText(daten.volumen)}{'\u00a0'}L Anlagenvolumen.</p>
           )}
         </div>
       </V1Section>

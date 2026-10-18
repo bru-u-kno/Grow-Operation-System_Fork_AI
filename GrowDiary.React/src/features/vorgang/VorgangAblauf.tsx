@@ -506,7 +506,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
                 <div className="wa-gross">
                   <div><small>EC</small><b>{sensor.ec ? zahl(sensor.ec.wert, 2) : '—'}</b></div>
                   <div><small>pH</small><b>{sensor.ph ? zahl(sensor.ph.wert, 2) : '—'}</b></div>
-                  <div><small>Wasser</small><b>{sensor.wasserTemp ? `${zahl(sensor.wasserTemp.wert, 1)} °C` : '—'}</b></div>
+                  <div><small>Wasser</small><b>{sensor.wasserTemp ? `${zahl(sensor.wasserTemp.wert, 1)}\u00a0°C` : '—'}</b></div>
                 </div>
                 {ecNull && <p className="wa-warnung" data-audit={`${t.audit}-ec-null`}>{ecNull}</p>}
                 <p className="wa-hinweis">Steht unten nichts drin, gelten diese Werte. DO und ORP haben keinen Sensor — die misst du von Hand, wenn du magst.</p>
@@ -529,7 +529,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
       {schritt === 2 && (
         <V1Section title={t.titel2}>
           <div className="v1-form-grid wa-felder">
-            <V1Field label={t.literLabel} hint={vorschlag?.anlageLiter != null ? `Liter · Anlage fasst ${zahl(vorschlag.anlageLiter, 0)} L` : 'Liter'}>
+            <V1Field label={t.literLabel} hint={vorschlag?.anlageLiter != null ? `Liter · Anlage fasst ${zahl(vorschlag.anlageLiter, 0)}\u00a0L` : 'Liter'}>
               <input value={liter} onChange={(e) => setLiter(e.target.value)} inputMode="decimal" aria-label={t.literAria}
                 className={istUnlesbar(liter) ? 'is-unlesbar' : undefined} />
             </V1Field>
@@ -588,7 +588,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
           <div className="wa-tabelle" role="table" aria-label="Mischplan" data-audit={`${t.audit}-tabelle`}>
             <div className="wa-tr wa-th" role="row">
               <span role="columnheader">Produkt</span>
-              <span role="columnheader">{literZahl != null ? `Vorschlag für ${zahl(literZahl, 0)} L` : 'Vorschlag'}</span>
+              <span role="columnheader">{literZahl != null ? `Vorschlag für ${zahl(literZahl, 0)}\u00a0L` : 'Vorschlag'}</span>
               <span role="columnheader">Eingesetzt</span>
               <span role="columnheader">Buchen</span>
             </div>
@@ -609,13 +609,13 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
                       </select>
                     )}
                   </span>
-                  <span role="cell" className="wa-vorschlag">{z.vorschlagMl != null ? `${zahl(z.vorschlagMl, 0)} ml` : '—'}</span>
+                  <span role="cell" className="wa-vorschlag">{z.vorschlagMl != null ? `${zahl(z.vorschlagMl, 0)}\u00a0ml` : '—'}</span>
                   <span role="cell" className="wa-eingabe-zelle">
                     <span className="wa-eingabe">
                       <input value={wertDerZeile(z, eigen)} onChange={(e) => setze(z.schluessel, e.target.value)} inputMode="decimal"
                         aria-label={`${z.name} eingesetzt`} className={classNames(geaendertHier && 'is-geaendert', istUnlesbar(wertDerZeile(z, eigen)) && 'is-unlesbar')} /> {z.einheit}
                     </span>
-                    {geaendertHier && z.vorschlagMl != null && <Zurueck text={`${zahl(z.vorschlagMl, 0)} ml`} onClick={() => setze(z.schluessel, null)} />}
+                    {geaendertHier && z.vorschlagMl != null && <Zurueck text={`${zahl(z.vorschlagMl, 0)}\u00a0ml`} onClick={() => setze(z.schluessel, null)} />}
                     {meinsVerfuegbar(z, eigen, gemerkt) && <Meins text={`${gemerkt[z.schluessel]} ${z.einheit}`} onClick={() => setze(z.schluessel, gemerkt[z.schluessel])} />}
                     {z.art === 'extra' && (
                       <button type="button" className="wa-zurueck" onClick={() => { setExtra((alt) => alt.filter((a) => `extra:${a.id}` !== z.schluessel)); setze(z.schluessel, null) }}>✕ entfernen</button>
@@ -645,7 +645,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
           </div>
           {wasserOhneArtikel.map((w) => (
             <div key={w.name} className="wa-artikelfrage">
-              <ArtikelZeile name={w.name} menge={`${zahl(w.menge, Number.isInteger(w.menge) ? 0 : 1)} L`} einheit="L" einheitFest="L" artikel={null} aus={false}
+              <ArtikelZeile name={w.name} menge={`${zahl(w.menge, Number.isInteger(w.menge) ? 0 : 1)}\u00a0L`} einheit="L" einheitFest="L" artikel={null} aus={false}
                 frage={frage?.schluessel === `wasser:${w.name}` ? frage : null} frageFehler={frageFehler}
                 onBuchen={() => undefined}
                 onFrage={() => { setFrageFehler(null); setFrage({ schluessel: `wasser:${w.name}`, name: w.name, einheit: 'L' }) }}
@@ -717,7 +717,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
       {schritt === 4 && (
         <V1Section title="Das wird gespeichert — als ein Vorgang">
           <ul className="wa-liste" data-audit={`${t.audit}-zusammenfassung`}>
-            <li>✓ <b>Wasserwechsel</b> {wechselArt === 'Full' ? 'komplett' : 'teilweise'}, {literZahl != null ? `${zahl(literZahl, 0)} L` : '— L'} {WASSER_NAME[wasser]}{vorschlag?.wasserEc != null ? ` (EC ${zahl(vorschlag.wasserEc, 2)})` : ''}</li>
+            <li>✓ <b>Wasserwechsel</b> {wechselArt === 'Full' ? 'komplett' : 'teilweise'}, {literZahl != null ? `${zahl(literZahl, 0)}\u00a0L` : '—\u00a0L'} {WASSER_NAME[wasser]}{vorschlag?.wasserEc != null ? ` (EC ${zahl(vorschlag.wasserEc, 2)})` : ''}</li>
             <li>
               {vorherHatWerte || nachherHatWerte ? '✓' : '–'} <b>{[vorherHatWerte, nachherHatWerte].filter(Boolean).length} {[vorherHatWerte, nachherHatWerte].filter(Boolean).length === 1 ? 'Messwert' : 'Messwerte'}</b>
               {vorherHatWerte && `: vorher (${vorherHerkunft === 'Sensor' ? 'Sensor' : vorherHerkunft === 'gemischt' ? 'Sensor und von Hand' : 'von Hand'}${sensorGenutzt && sensorZeit ? `, ${uhrzeit(sensorZeit)}` : ''}${vorher.do != null ? `, DO ${zahl(vorher.do, 1)}` : ''})`}

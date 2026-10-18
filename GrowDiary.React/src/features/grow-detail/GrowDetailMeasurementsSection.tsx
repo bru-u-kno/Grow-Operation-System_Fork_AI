@@ -160,7 +160,7 @@ export function GrowDetailMeasurementsSection({
                 <div className="tl-dot measurement" />
                 <div className="tl-line" />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: '1 1 9rem', minWidth: 0 }}>
                 <div className="tl-title">{phaseName(measurement.stage)} · pH {formatNumber(measurement.reservoirPh, stellenFuer('ph'))} · EC {formatNumber(measurement.reservoirEc, stellenFuer('ec'))}</div>
                 <div className="tl-sub">{formatNumber(measurement.airTemperatureC, stellenFuer('air-temp'))}°C · {formatNumber(measurement.humidityPercent, stellenFuer('humidity'))}% rF · {herkunftWort(measurement.source)}{kurz ? ' · ' + kurz : ''}</div>
               </div>

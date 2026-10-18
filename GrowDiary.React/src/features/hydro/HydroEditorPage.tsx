@@ -190,7 +190,7 @@ export default function HydroEditorPage() {
           <section className="v1-section">
             <header className="v1-section-head">
               <h2>3 · Sites &amp; Volumen</h2>
-              <span className="v1-badge">{plan.cols}×{plan.rows} · {plan.totalLiters} L</span>
+              <span className="v1-badge">{plan.cols}×{plan.rows} · {plan.totalLiters}{'\u00a0'}L</span>
             </header>
             <div className="v1-section-body v1-form-grid">
               {isRdwc && (
@@ -268,11 +268,11 @@ export default function HydroEditorPage() {
                 <div key={problem} className="v1-list-row warning"><span>{problem}</span></div>
               ))}
               {!plan.fits && plan.sites.length > 1 && (
-                <div className="v1-list-row critical"><span>Sites passen nicht ins Zelt — nur {Math.round(Math.min(plan.aisleCm, plan.rowGapCm))} cm Luft.</span></div>
+                <div className="v1-list-row critical"><span>Sites passen nicht ins Zelt — nur {Math.round(Math.min(plan.aisleCm, plan.rowGapCm))}{'\u00a0'}cm Luft.</span></div>
               )}
-              {tankThin && <div className="v1-list-row warning"><span>Tankanteil {plan.tankSharePct} % — unter 25 % puffert das System pH und EC kaum.</span></div>}
+              {tankThin && <div className="v1-list-row warning"><span>Tankanteil {plan.tankSharePct}{'\u00a0'}% — unter 25 % puffert das System pH und EC kaum.</span></div>}
               {problems.length === 0 && plan.fits && !tankThin && (
-                <div className="v1-list-row"><span>Alles plausibel. Systemvolumen {plan.totalLiters} L — Addback rechnet damit.</span></div>
+                <div className="v1-list-row"><span>Alles plausibel. Systemvolumen {plan.totalLiters}{'\u00a0'}L — Addback rechnet damit.</span></div>
               )}
             </div>
             <div className="v1-section-body v1-form-actions">

@@ -5,6 +5,31 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.250
+
+**Fork AI.** Sichtprüfung im dunklen Thema und bei doppelter Systemschrift: ein Textfehler und mehrere abgeschnittene oder
+zerquetschte Stellen behoben, dazu Zahl und Einheit an rund 110 Stellen zusammengehalten.
+
+- **Plan:** Unter der Dosierung stand „Mengen rechts für 208\u00a0L“ — das Zeichen stand als Escape-Folge im Text und wurde
+  nicht aufgelöst. Jetzt „208 L“, nicht trennbar.
+- **Plan bei großer Schrift:** Bereichsfelder (EC-Band, pH, CO₂ …) zeigten „120“ statt „1200“; das zweite Feld rutscht
+  jetzt in die nächste Zeile. In der Dosierung steht der Name allein oben statt mitten im Wort („Cannab/oost“) zu brechen,
+  und die Leiste „Keine Änderungen · Verwerfen · Speichern“ überlappt sich nicht mehr. Die Schrittkette
+  „Plan · Grenzwerte · Handy“ schneidet die Namen nicht mehr ab.
+- **Kosten, Messung, Addback, Wasserwechsel bei großer Schrift:** Die Kennzahlen („221,6…“) stehen untereinander statt gekürzt;
+  die Messfelder brechen „Luftfeuchte“ nicht mehr mitten im Wort; Zahl und Einheit in „1,53 mS/cm“ bleiben zusammen; die
+  Zeile „EC mit deinen Mengen“ und die Liste der bisherigen Wechsel werden nicht mehr auf ein Zeichen je Zeile gequetscht.
+- **Messungen (Grow-Detail):** Bei großer Schrift blieb für „Blüte · pH 5,88 · EC 1,53“ eine Spalte von 28 Pixeln; Zeit und
+  Knopf rutschen jetzt darunter.
+- **Zahl und Einheit zusammenhalten:** An rund 110 Stellen (ml, L, °C, %, €, kWh, ppm, cm …) steht jetzt ein geschütztes
+  Leerzeichen, damit die Einheit nicht allein am Zeilenanfang steht. Gespeicherte Tagebuchtexte bleiben unverändert.
+- **Ziel ohne Spanne:** Ein Ziel, dessen Ober- und Untergrenze gleich sind, zeigt die Diagnose-Zeile und der Lagebericht für
+  den KI-Assistenten als einen Wert („1,4 kPa“, „5,8“) statt „1,4-1,4“ bzw. „5,8–5,8“.
+- **Kleinigkeiten:** „später“ statt „spaeter“ im Hinweis zum Flip; „planmäßiger“ im Testbestand; ein einzelnes „ab.“ steht
+  nicht mehr allein auf der letzten Zeile der Geräte-Rollen.
+- **Prüfungen:** Neue Tests für die Zielanzeige (vitest, xUnit) und eine E2E-Prüfung, dass auf sechs Seiten keine
+  Escape-Folge im sichtbaren Text steht.
+
 ## 2.0.0-forkai.249
 
 **Fork AI.** Über den KI-Assistenten (Grow MCP) lässt sich jetzt alles im Fork steuern — dazu Kamera, Kosten und Pflanzen per Sprache.

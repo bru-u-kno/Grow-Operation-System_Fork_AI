@@ -375,7 +375,7 @@ function DosingPage() {
                           <V1Button onClick={() => void kalibrierlauf(pump, { targetMl: targetForPump(pump.mlPerMinute) })} disabled={dosing}>
                             {dosing
                               ? `Läuft… noch ${restSekunden ?? 0} s`
-                              : `Genau kalibrieren · ${targetForPump(pump.mlPerMinute)} ml`}
+                              : `Genau kalibrieren · ${targetForPump(pump.mlPerMinute)}\u00a0ml`}
                           </V1Button>
                           <span style={{ font: '400 11px/1.4 var(--font-mono)', color: 'var(--faint)' }}>
                             läuft {zahl(runSecondsForPump(pump.mlPerMinute), 0)} s in den Messbecher
@@ -456,7 +456,7 @@ function DosingPage() {
                     {dose.pumpName}
                     {dose.simulated && <span className="dz-badge is-small">Test</span>}
                   </div>
-                  <div className="co-td">{dose.outcome === 'Done' ? `${zahl(dose.dosedMl, 1)} ml` : '—'}</div>
+                  <div className="co-td">{dose.outcome === 'Done' ? `${zahl(dose.dosedMl, 1)}\u00a0ml` : '—'}</div>
                   <div className="co-td">{zahl(dose.valueBefore)}</div>
                   <div className="co-td">{zahl(dose.valueAfter)}</div>
                   <div className={classNames('co-td', dose.outcome !== 'Done' && 'is-muted')}>{dose.reason ?? '—'}</div>
@@ -492,7 +492,7 @@ function SuggestionPanel({ suggestion }: { suggestion: Suggestion }) {
     <div className={classNames('dz-suggestion', suggestion.allowed && 'is-allowed')}>
       <div className="dz-suggestion-head">
         {suggestion.allowed
-          ? <b>{zahl(suggestion.ml, 2)} ml · {zahl(suggestion.seconds, 1)} s</b>
+          ? <b>{zahl(suggestion.ml, 2)}{'\u00a0'}ml · {zahl(suggestion.seconds, 1)} s</b>
           : <b>Kein Vorschlag</b>}
         <span>{suggestion.reason}</span>
       </div>

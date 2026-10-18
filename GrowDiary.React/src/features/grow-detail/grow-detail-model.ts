@@ -89,13 +89,17 @@ export function formatDeviationValue(value: number | null, unit: string | null):
 
 export function formatDeviationTarget(deviation: GrowDeviationDto): string | null {
   if (deviation.targetMin == null && deviation.targetMax == null) return null
+  // Geschütztes Leerzeichen: sonst steht die Einheit allein am Zeilenanfang.
+  const einheit = deviation.unit ? `\u00a0${deviation.unit}` : ''
   if (deviation.targetMin != null && deviation.targetMax != null) {
-    return `${formatNumber(deviation.targetMin, 2)}-${formatNumber(deviation.targetMax, 2)}${deviation.unit ? ` ${deviation.unit}` : ''}`
+    // Ein Ziel ohne Spanne („1,4-1,4“) ist ein einzelner Wert.
+    if (deviation.targetMin === deviation.targetMax) return `${formatNumber(deviation.targetMin, 2)}${einheit}`
+    return `${formatNumber(deviation.targetMin, 2)}-${formatNumber(deviation.targetMax, 2)}${einheit}`
   }
   if (deviation.targetMin != null) {
-    return `>= ${formatNumber(deviation.targetMin, 2)}${deviation.unit ? ` ${deviation.unit}` : ''}`
+    return `>= ${formatNumber(deviation.targetMin, 2)}${einheit}`
   }
-  return `<= ${formatNumber(deviation.targetMax, 2)}${deviation.unit ? ` ${deviation.unit}` : ''}`
+  return `<= ${formatNumber(deviation.targetMax, 2)}${einheit}`
 }
 
 export function formatGrowStatus(status: GrowDetail['status']) {

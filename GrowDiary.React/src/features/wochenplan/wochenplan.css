@@ -81,8 +81,9 @@
   /* Einheiten nicht in Versalien: aus µmol/m²s würde sonst ΜMOL/M²S. */
   .wp-zelle-n .wp-einheit { text-transform: none; letter-spacing: 0; color: var(--faint); }
   .wp-zelle.ist-eigen { border-color: var(--warn); background: var(--warn-wash); }
-  .wp-eingaben { display: flex; align-items: center; gap: var(--s-1); margin-top: var(--s-1); }
-  .wp-eingabe-paar { display: flex; align-items: center; gap: var(--s-1); min-width: 0; flex: 1; }
+  /* Mindestbreite je Feld in rem: bei doppelter Schrift rutscht das zweite Feld eines Bereichs in die nächste Zeile, statt „1200“ zu „120“ abzuschneiden. */
+  .wp-eingaben { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); margin-top: var(--s-1); }
+  .wp-eingabe-paar { display: flex; align-items: center; gap: var(--s-1); min-width: 0; flex: 1 1 4.5rem; }
   .wp-eingabe {
     width: 100%; min-width: 0; min-height: var(--h-sm);
     border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel);
@@ -110,12 +111,12 @@
 
   .wp-speicherbalken {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-    display: flex; align-items: center; gap: var(--s-2);
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2);
     padding: var(--s-2) var(--s-3) calc(var(--s-2) + var(--safe-bottom));
     border-top: 1px solid var(--hair-2); background: var(--panel);
   }
   .wp-speicherbalken-zahl {
-    flex: 1; min-width: 0;
+    flex: 1 1 8rem; min-width: 0;
     font: 400 var(--fs-klein)/1.3 var(--font-mono); color: var(--muted);
   }
 }

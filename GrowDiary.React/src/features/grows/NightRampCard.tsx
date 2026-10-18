@@ -21,7 +21,7 @@ type NightRamp = {
   chiller: Kuehler | null
 }
 
-const grad = (wert: number) => `${wert.toLocaleString('de-DE', { maximumFractionDigits: 1 })} °C`
+const grad = (wert: number) => `${wert.toLocaleString('de-DE', { maximumFractionDigits: 1 })}\u00a0°C`
 
 /**
  * Der Stand des Crop Steering an diesem Grow — und der Weg zur Seite.

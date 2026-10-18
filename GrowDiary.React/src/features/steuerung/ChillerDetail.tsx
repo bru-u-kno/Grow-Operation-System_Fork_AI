@@ -271,7 +271,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
                   <small>Dazwischen passiert nichts.</small>
                 </span>
                 <span className="st-nurlesen">
-                  {live.einschaltenAbC == null ? '–' : `ein ${grad1(live.einschaltenAbC)} · aus ${grad1(live.ausschaltenBeiC)} °C`}
+                  {live.einschaltenAbC == null ? '–' : `ein ${grad1(live.einschaltenAbC)} · aus ${grad1(live.ausschaltenBeiC)}\u00a0°C`}
                 </span>
               </div>
             )}
@@ -289,7 +289,7 @@ export default function ChillerDetail({ module, aktiv, onWechsel }: {
                     Soll im Gerät
                     <small>{sollStimmt ? 'stimmt mit dem Ziel' : 'wird beim nächsten Abgleich nachgezogen'}</small>
                   </span>
-                  <span className="st-nurlesen">{zahl(live.kuehlerSollC)} °C</span>
+                  <span className="st-nurlesen">{zahl(live.kuehlerSollC)}{'\u00a0'}°C</span>
                 </div>
               </>
             )}

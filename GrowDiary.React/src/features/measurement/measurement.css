@@ -163,8 +163,9 @@
     .rc2-measurement-main {
       gap: 12px;
     }
+    /* rem statt fester zwei Spalten: bei doppelter Systemschrift bricht „Luftfeuchte“ sonst mitten im Wort. */
     .rc2-measurement-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
       gap: 10px;
     }
     .rc2-measurement-extra {

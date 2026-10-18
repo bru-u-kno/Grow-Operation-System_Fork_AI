@@ -78,12 +78,12 @@ export function NachfuellListe({ growId, growName, eintraege, vorgaenge, laedt, 
                 <strong>{formatDateTime(eintrag.performedAtUtc)}</strong>
                 <span>
                   {NACHFUELL_ART[eintrag.kind]}
-                  {eintrag.litersAdded != null ? ` · ${formatNumber(eintrag.litersAdded, 1)} L` : ''}
+                  {eintrag.litersAdded != null ? ` · ${formatNumber(eintrag.litersAdded, 1)}\u00a0L` : ''}
                   {eintrag.waterUsed ? ` ${WASSER[eintrag.waterUsed] ?? ''}` : ''}
                   {` · EC ${paar(eintrag.ecBefore, eintrag.ecAfter)} · pH ${paar(eintrag.phBefore, eintrag.phAfter)}`}
                   {/* Altdaten: der frühere Assistent schrieb seine Komponentenliste in die Notiz. */}
                   {eintrag.notes && !vorgang ? <small className="changeouts-vorgang nachfuell-notiz">{eintrag.notes}</small> : eintrag.notes ? ` · ${eintrag.notes}` : ''}
-                  {eintrag.consumedLiters != null && <small className="changeouts-vorgang">Verbrauch seit dem letzten Mal: {formatNumber(eintrag.consumedLiters, 1)} L</small>}
+                  {eintrag.consumedLiters != null && <small className="changeouts-vorgang">Verbrauch seit dem letzten Mal: {formatNumber(eintrag.consumedLiters, 1)}{'\u00a0'}L</small>}
                   {vorgang && <small className="changeouts-vorgang">Vorgang: {teileText(vorgang)}</small>}
                   {vorgang?.nachmessungStatus === 'offen' && vorgang.nachmessungFaelligUtc && (
                     <small className="changeouts-vorgang" data-audit="nachfuellen-nachmessung-offen">Nachmessung: der Fork trägt EC und pH um {uhrzeitText(new Date(vorgang.nachmessungFaelligUtc))} selbst ein.</small>

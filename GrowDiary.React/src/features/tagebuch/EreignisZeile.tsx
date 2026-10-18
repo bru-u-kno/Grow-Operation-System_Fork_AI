@@ -76,7 +76,7 @@ function Inhalt({ growId, e, onGeaendert }: { growId: string; e: TagebuchEreigni
       return (
         <>
           <Kopf tag="Dosierung" ton="info" titel={e.titel} herkunft={d.automatisch ? 'automatisch' : 'von Hand'} />
-          <p className="tb-zahlen">{zahl(d.ml, 1)} ml{werte}</p>
+          <p className="tb-zahlen">{zahl(d.ml, 1)}{'\u00a0'}ml{werte}</p>
         </>
       )
     }
@@ -215,8 +215,8 @@ function Vorgang({ growId, w, posten, onGeaendert }: { growId: string; w: Tagebu
       {(wasser || w.liter != null) && (
         <p className="tb-zahlen">
           {[w.komplett ? 'Komplettwechsel' : 'Teilwechsel',
-            w.liter != null ? `${zahl(w.liter, w.liter % 1 === 0 ? 0 : 1)} L` : null,
-            w.prozent != null && !w.komplett ? `${zahl(w.prozent, 0)} %` : null,
+            w.liter != null ? `${zahl(w.liter, w.liter % 1 === 0 ? 0 : 1)}\u00a0L` : null,
+            w.prozent != null && !w.komplett ? `${zahl(w.prozent, 0)}\u00a0%` : null,
             wasser,
             w.wasserEc != null ? `Wasser-EC ${zahl(w.wasserEc, 2)}` : null].filter(Boolean).join(' · ')}
         </p>

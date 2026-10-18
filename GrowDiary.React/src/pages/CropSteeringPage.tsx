@@ -451,7 +451,7 @@ export function CropSteeringPage() {
                 <div ref={untergrenzeRef} className="scroll-ziel">
                   <V1Field
                     label="Untergrenze (°C)"
-                    hint={`Leer: Finish-Wert des Profils. Nie unter ${grad(stand.hardFloorC)} °C.`}>
+                    hint={`Leer: Finish-Wert des Profils. Nie unter ${grad(stand.hardFloorC)}\u00a0°C.`}>
                     <input inputMode="decimal" value={boden} onChange={(e) => setBoden(e.target.value)} placeholder="16" />
                   </V1Field>
                   {/* Die Luecke steht AUCH hier, nicht nur oben in der Kette:
