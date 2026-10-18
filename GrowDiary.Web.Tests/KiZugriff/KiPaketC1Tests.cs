@@ -97,10 +97,13 @@ public sealed class KiPaketC1Tests : IClassFixture<KiZugriffApp>
     }
 
     [Fact]
-    public async Task Grow_OS_lehnt_Zukunft_und_den_CO2_Artikel_selbst_ab()
+    public async Task Ueber_einen_Schluessel_lehnt_Grow_OS_Zukunft_und_den_CO2_Artikel_selbst_ab()
     {
-        var ui = _ki.Oberflaeche();
-        var artikelId = (await ui.GetFromJsonAsync<JsonElement>("/api/kosten/artikel")).EnumerateArray().First().GetProperty("id").GetInt32();
+        await _ki.SchalterAsync(true);
+        var oberflaeche = _ki.Oberflaeche();
+        var artikelId = (await oberflaeche.GetFromJsonAsync<JsonElement>("/api/kosten/artikel")).EnumerateArray().First().GetProperty("id").GetInt32();
+        var (_, doku) = await _ki.SchluesselAsync("Kosten", "Dokumentieren");
+        var ui = _ki.App.AddonClient("172.30.33.5", doku);
 
         var zukunft = await ui.PostAsJsonAsync("/api/kosten/verbrauch", new { growId = 1, zeitpunkt = "2099-01-01T00:00:00Z", zeilen = new[] { new { artikelId, menge = 1.0 } } });
         Assert.Equal(HttpStatusCode.BadRequest, zukunft.StatusCode);
@@ -119,6 +122,10 @@ public sealed class KiPaketC1Tests : IClassFixture<KiZugriffApp>
             var doppelt = await ui.PostAsJsonAsync("/api/kosten/verbrauch", new { growId = 1, zeilen = new[] { new { artikelId, menge = 0.1 } } });
             Assert.Equal(HttpStatusCode.BadRequest, doppelt.StatusCode);
             Assert.Equal("co2_bucht_selbst", (await doppelt.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+            // Die Oberfläche bleibt, wie sie war: die Messseite bucht Zugaben erst nach dem Speichern der Messung.
+            var vonHand = await oberflaeche.PostAsJsonAsync("/api/kosten/verbrauch", new { growId = 1, zeilen = new[] { new { artikelId, menge = 0.1 } } });
+            Assert.Equal(HttpStatusCode.Created, vonHand.StatusCode);
         }
         finally
         {

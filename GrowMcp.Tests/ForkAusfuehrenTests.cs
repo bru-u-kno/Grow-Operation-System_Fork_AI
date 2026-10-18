@@ -334,6 +334,23 @@ public sealed class ForkAusfuehrenTests
     }
 
     [Fact]
+    public async Task Ein_bewusst_geleertes_Feld_ist_gewollt_auch_wenn_Grow_OS_es_weglaesst()
+    {
+        var stand = JsonNode.Parse("""{"einstellungen":{"zielWarmPpm":900,"mindestlaufzeitMin":5,"kostenArtikelId":2}}""")!.AsObject();
+        var fork = Fork()
+            .Antwort("GET", "api/steuerung/co2", _ => (200, stand.ToJsonString()))
+            .Antwort("PUT", "api/steuerung/co2", _ =>
+            {
+                stand["einstellungen"]!.AsObject().Remove("kostenArtikelId");
+                return (200, "{}");
+            });
+        var text = await Ausfuehren(fork, "PUT", "api/steuerung/co2", body: """{"kostenArtikelId":null}""");
+
+        Assert.Contains("Geändert (1): einstellungen.kostenArtikelId: 2 → (fehlte).", text);
+        Assert.DoesNotContain("Außerdem verändert", text);
+    }
+
+    [Fact]
     public async Task Ein_Stand_der_eine_Liste_ist_wird_als_solcher_benannt()
     {
         var fork = Fork().Antwort("GET", "api/steuerung/co2", 200, "[1,2]");

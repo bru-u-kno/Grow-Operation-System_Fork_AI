@@ -400,8 +400,12 @@ public sealed class KostenApiController : ApiControllerBase
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequestError("name_missing", "Die Anschaffung braucht einen Namen.");
         if (request.Stueck <= 0) return BadRequestError("stueck_invalid", "Stückzahl muss mindestens 1 sein.");
         if (request.EinzelpreisEur < 0) return BadRequestError("preis_invalid", "Der Preis kann nicht negativ sein.");
-        // Fork AI (Paket C1, 18.10.2026): wie bei der Nachfüllung kein Datum in der Zukunft — vorher prüfte das nur der Grow MCP.
-        if (request.Datum is not null && ZuUtc(request.Datum) > DateTime.UtcNow.AddMinutes(5)) return BadRequestError("zeitpunkt_future", "Das Datum liegt in der Zukunft.");
+        // Fork AI (Paket C1, 18.10.2026): Über einen KI-Schlüssel kein Datum in der Zukunft (wie bei der Nachfüllung).
+        // Nur dort: die Oberfläche schickt Ortszeit ohne Zone, und ein Container ohne TZ läge um Stunden daneben (Prüfer).
+        if (KiZugriffKontext.Aus(HttpContext) is not null && request.Datum is not null && ZuUtc(request.Datum) > DateTime.UtcNow.AddMinutes(5))
+        {
+            return BadRequestError("zeitpunkt_future", "Das Datum liegt in der Zukunft.");
+        }
         return null;
     }
 
@@ -540,9 +544,13 @@ public sealed class KostenApiController : ApiControllerBase
 
         var artikel = _repo.GetArtikel().ToDictionary(a => a.Id);
         var zeitpunkt = ZuUtc(request.Zeitpunkt);
-        // Fork AI (Paket C1, 18.10.2026): Zukunft und Doppelbuchung prüft Grow OS selbst, nicht nur der Grow MCP.
-        if (zeitpunkt > DateTime.UtcNow.AddMinutes(5)) return BadRequestError("zeitpunkt_future", "Der Zeitpunkt liegt in der Zukunft.");
-        var co2Artikel = co2.Einstellungen.KostenArtikelId;
+        // Fork AI (Paket C1, 18.10.2026): Über einen KI-Schlüssel prüft Grow OS Zukunft und Doppelbuchung selbst — so gilt es
+        // auch für fork_ausfuehren, nicht nur für das feste Werkzeug. Die Messseite bucht Zugaben erst NACH dem Speichern
+        // der Messung und bietet den CO₂-Artikel noch an; dort hätte eine Absage eine halb gespeicherte Eingabe hinterlassen
+        // (Prüfer 18.10.2026) — deshalb bleibt die Oberfläche hier, wie sie war (offener Punkt).
+        var ueberSchluessel = KiZugriffKontext.Aus(HttpContext) is not null;
+        if (ueberSchluessel && zeitpunkt > DateTime.UtcNow.AddMinutes(5)) return BadRequestError("zeitpunkt_future", "Der Zeitpunkt liegt in der Zukunft.");
+        var co2Artikel = ueberSchluessel ? co2.Einstellungen.KostenArtikelId : null;
 
         // Erst alles pruefen, dann alles schreiben.
         foreach (var zeile in request.Zeilen)

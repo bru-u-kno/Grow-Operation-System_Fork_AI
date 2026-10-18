@@ -190,6 +190,8 @@ public sealed class KameraBilderApiTests : IClassFixture<KameraBilderApiTests.Ka
     [InlineData(1, """{"kamera":"camera.nachbar"}""", HttpStatusCode.BadRequest, "camera_not_in_tent")]
     [InlineData(1, """{"kamera":"camera.kaputt"}""", HttpStatusCode.BadGateway, "ha_camera_unavailable")]
     [InlineData(1, """{"motiv":"Selfie"}""", HttpStatusCode.BadRequest, "motiv_ungueltig")]
+    [InlineData(1, """{"motiv":"99"}""", HttpStatusCode.BadRequest, "motiv_ungueltig")]
+    [InlineData(1, """{"motiv":"Overview,Leaf"}""", HttpStatusCode.BadRequest, "motiv_ungueltig")]
     [InlineData(2, "{}", HttpStatusCode.BadRequest, "grow_nicht_aktiv")]
     [InlineData(999, "{}", HttpStatusCode.NotFound, "grow_not_found")]
     public async Task Ohne_passende_Kamera_oder_laufenden_Grow_wird_nichts_gespeichert(int growId, string rumpf, HttpStatusCode status, string code)

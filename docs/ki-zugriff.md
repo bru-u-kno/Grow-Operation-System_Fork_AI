@@ -131,9 +131,12 @@ Vorbelegung eines neuen Schlüssels: Dokumentieren frei, alles andere gesperrt.
   Mit Selbsttest (Grundmenge ≥ 150 schreibende Aktionen).
 - `[KiOhneHoechstwert]` — Not-Aus, zählt nie ins Stundenfenster: Pumpen-Stopp und (seit Paket C1) Probelauf abbrechen.
 - Kosten (Paket C1, Prüfer 18.10.2026): `PUT` auf Nachfüllung und Anschaffung legen über einen Schlüssel vorher eine
-  Sicherung an, `PUT /api/kosten/artikel/{id}` (Preis, Gebinde) braucht Verwaltung. Kein Zeitpunkt in der Zukunft bei
-  Verbrauch und Anschaffung, und den Artikel der CO₂-Steuerung (`Co2Einstellungen.KostenArtikelId`) lehnt
-  `POST /api/kosten/verbrauch` ab (400 `co2_bucht_selbst`) — für jeden, nicht nur für den Grow MCP.
+  Sicherung an und bleiben bei Dokumentieren — einen falschen Preis korrigieren ist Alltag, die Sicherung macht es
+  umkehrbar; löschen braucht Verwaltung. `PUT /api/kosten/artikel/{id}` (Preis, Gebinde) braucht Verwaltung. Über einen
+  Schlüssel lehnt Grow OS außerdem einen Zeitpunkt in der Zukunft bei Verbrauch und Anschaffung ab und den Artikel der
+  CO₂-Steuerung (`Co2Einstellungen.KostenArtikelId`) bei `POST /api/kosten/verbrauch` (400 `co2_bucht_selbst`). Nur über
+  einen Schlüssel: die Messseite bucht Zugaben erst nach dem Speichern der Messung und bietet den CO₂-Artikel noch an —
+  dort bliebe nach einer Absage eine halbe Eingabe stehen (offener Punkt).
 - Im Zweifel die **höhere** Stufe. Was eine HA-Automation oder einen Helfer
   anlegt/überschreibt: Verwaltung. Was ein Gerät sofort schaltet: GeraeteSchalten.
 

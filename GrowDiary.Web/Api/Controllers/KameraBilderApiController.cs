@@ -123,7 +123,10 @@ public sealed class KameraBilderApiController : ApiControllerBase
         }
 
         var motiv = PhotoTag.Overview;
-        if (!string.IsNullOrWhiteSpace(request.Motiv) && !Enum.TryParse(request.Motiv.Trim(), ignoreCase: true, out motiv))
+        // Nur die Namen — Enum.TryParse nähme auch „99" und „Overview,Leaf" (Prüfer 18.10.2026).
+        if (!string.IsNullOrWhiteSpace(request.Motiv)
+            && (Enum.GetNames<PhotoTag>().FirstOrDefault(n => string.Equals(n, request.Motiv.Trim(), StringComparison.OrdinalIgnoreCase)) is not { } motivName
+                || !Enum.TryParse(motivName, out motiv)))
         {
             return BadRequestError("motiv_ungueltig", $"Unbekanntes Motiv. Möglich: {string.Join(", ", Enum.GetNames<PhotoTag>())}.");
         }

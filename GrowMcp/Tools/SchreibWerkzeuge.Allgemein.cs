@@ -306,7 +306,10 @@ public sealed partial class SchreibWerkzeuge
             // Gewollt heißt: das Feld stand im Rumpf UND hat jetzt den gesendeten Wert (bei einfachen Werten).
             bool Gewollt(Funktionsverzeichnis.Aenderung a)
                 => gesendet.TryGetValue(Letzter(a.Pfad), out var wert)
-                   && (wert is JsonObject or JsonArray || (wert?.ToJsonString() ?? "null") == (a.Neu ?? "(fehlt)"));
+                   && (wert is JsonObject or JsonArray
+                       || (wert?.ToJsonString() ?? "null") == (a.Neu ?? "(fehlt)")
+                       // Grow OS lässt leere Felder in der Antwort weg: ein gesendetes null kommt als „fehlt" zurück.
+                       || (wert is null && (a.Neu is null || a.Neu == "null")));
             var gewollt = geaendert.Where(Gewollt).ToList();
             var sonst = geaendert.Except(gewollt).ToList();
 
