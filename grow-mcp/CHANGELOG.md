@@ -1,5 +1,16 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.5
+
+**Raum und Aufstellraum einstellen.** Drei neue Werkzeuge, die ersten der Stufe Verwaltung:
+`raum` zeigt Raumname, Vorgabe und die Zelte darin; `raum_setzen` ändert den Raumnamen (leer =
+Vorgabe „Aufstellraum"); `zelt_aufstellraum_setzen` ordnet ein Zelt dem Raum zu oder löst die Zuordnung.
+Das Zelt-Werkzeug ändert nur diese eine Angabe: Es liest den Ist-Stand, schickt ihn mit der neuen Raumzuordnung
+zurück (ohne Sensoren und Kameras, die Grow OS dann nicht anfasst), vergleicht danach alle übrigen Felder per
+Prüfsumme und schreibt den alten Stand zurück, falls sich etwas verändert hat. Ein freies „Einstellung ändern"
+gibt es bewusst nicht; Schlüsselverwaltung und KI-Hauptschalter bleiben außerhalb. Braucht Grow OS Fork AI
+ab 2.0.0-forkai.241.
+
 ## 0.2.0-forkai.4
 
 **Aufgaben anlegen.** Neues Werkzeug `aufgabe_anlegen` (Stufe Dokumentieren): legt eine Aufgabe in der

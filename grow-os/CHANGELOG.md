@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.243
+
+**Fork AI.** Dein KI-Assistent kann jetzt den **Raumnamen** ändern und **Zelte dem Raum zuordnen** — über den Grow MCP Fork AI, ohne dass der Schlüssel durch ein Gespräch läuft. Die App selbst bleibt in diesem Release unverändert; neu ist der Grow MCP (Version 0.2.0-forkai.5).
+
+- **Drei neue Werkzeuge im Grow MCP:** `raum` (Name, Vorgabe, Zelte darin), `raum_setzen` (Name ändern; leer = „Aufstellraum") und `zelt_aufstellraum_setzen` (Zelt in den Raum stellen oder lösen). Die beiden schreibenden brauchen die Stufe „Verwaltung" des Schlüssels; Rückfrage und Höchstwerte gelten wie sonst.
+- **Nur die Raumzuordnung ändert sich:** Das Werkzeug schickt den gelesenen Stand des Zelts zurück, nur mit anderer Raumzuordnung, und lässt Sensoren und Kameras weg — würde es sie mitschicken, vergäbe Grow OS die Sensor-Zeilen neu (gemessen: 14 Sensoren, Ids 1–14 bleiben so gleich, mit Mitschicken wären es 15–28). Danach vergleicht es alle übrigen Felder per Prüfsumme und schreibt den alten Stand zurück, wenn sich etwas verändert hat.
+- **Bewusst nicht dabei:** ein freies „beliebige Einstellung ändern". Schlüsselverwaltung und KI-Hauptschalter bleiben für Schlüssel gesperrt.
+- **Geprüft:** alle 322 Tests im Grow MCP grün (neu: 19 eigene für Raum und Zelt, darunter die nachgespielte Sensor-Verlust-Falle), Gegenprobe der Zelt-Speicherung an der echten App mit Demobestand.
+
 ## 2.0.0-forkai.242
 
 **Fork AI.** Die Oberfläche ist auf Handy, Tablet und mit großer Systemschrift sauberer. Die Gerätematrix aus forkai.240 meldete 110 von 288 Fällen rot — jetzt sind es **0**. Dazu kommt eine neue Prüfung für Umbrüche, die vorher niemand gesehen hat.

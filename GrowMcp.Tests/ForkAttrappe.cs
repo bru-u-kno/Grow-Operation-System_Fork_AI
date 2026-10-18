@@ -25,7 +25,7 @@ internal sealed record Angekommen(string Methode, string Pfad, string? Authoriza
 /// </summary>
 internal sealed class ForkAttrappe : HttpMessageHandler
 {
-    private readonly List<(string Methode, Regex Weg, int Status, string Rumpf)> _antworten = [];
+    private readonly List<(string Methode, Regex Weg, Func<Angekommen, (int Status, string Rumpf)> Antwort)> _antworten = [];
 
     public List<Angekommen> Anfragen { get; } = [];
 
@@ -35,7 +35,14 @@ internal sealed class ForkAttrappe : HttpMessageHandler
     /// <summary>Für diese Methode und diesen Weg (Regex auf den Pfad ohne Abfrage) so antworten.</summary>
     public ForkAttrappe Antwort(string methode, string weg, int status, string rumpf)
     {
-        _antworten.Add((methode, new Regex("^" + weg + "$"), status, rumpf));
+        _antworten.Add((methode, new Regex("^" + weg + "$"), _ => (status, rumpf)));
+        return this;
+    }
+
+    /// <summary>Wie <see cref="Antwort(string,string,int,string)"/>, aber die Antwort hängt von der Anfrage (und vom Stand) ab.</summary>
+    public ForkAttrappe Antwort(string methode, string weg, Func<Angekommen, (int Status, string Rumpf)> antwort)
+    {
+        _antworten.Add((methode, new Regex("^" + weg + "$"), antwort));
         return this;
     }
 
@@ -51,10 +58,11 @@ internal sealed class ForkAttrappe : HttpMessageHandler
 
         // Die zuletzt eingetragene passende Antwort gewinnt — ein Test kann so
         // die Vorgabe für einen Weg überschreiben.
-        foreach (var (methode, weg, status, text) in Enumerable.Reverse(_antworten))
+        foreach (var (methode, weg, antwort) in Enumerable.Reverse(_antworten))
         {
             if ((methode == "*" || methode == angekommen.Methode) && weg.IsMatch(angekommen.Weg))
             {
+                var (status, text) = antwort(angekommen);
                 return new HttpResponseMessage((HttpStatusCode)status)
                 {
                     Content = new StringContent(text, Encoding.UTF8, "application/json"),
@@ -75,7 +83,12 @@ internal sealed class ForkAttrappe : HttpMessageHandler
             .Antwort("GET", @"api/measurements/\d+", 200,
                 """{"id":7,"growId":1,"takenAt":"2026-10-01T08:00:00","stage":"Flower","source":"Manual","notes":"alt","reservoirPh":5.8,"orpMv":450,"reservoirEc":1.2,"solutionChange":false}""")
             .Antwort("POST", @"api/grows/\d+/measurements", 201, """{"id":42,"growId":1,"stage":"Flower"}""")
-            .Antwort("POST", @"api/dosing/pumps/\d+/dose", 200, """{"dosed":true,"ml":2,"seconds":3.1,"reason":"Dosiert."}""");
+            .Antwort("POST", @"api/dosing/pumps/\d+/dose", 200, """{"dosed":true,"ml":2,"seconds":3.1,"reason":"Dosiert."}""")
+            .Antwort("GET", @"api/steuerung/raum", 200, """{"id":"haupt","name":"Aufstellraum","vorgabe":"Aufstellraum","zelte":[]}""")
+            .Antwort("PUT", @"api/steuerung/raum", 200, """{"id":"haupt","name":"Keller","vorgabe":"Aufstellraum","zelte":[]}""")
+            .Antwort("GET", @"api/settings/tents", 200, """[{"id":1,"name":"Blütezelt","raumId":null}]""")
+            .Antwort("GET", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":null,"status":"Active"}""")
+            .Antwort("PUT", @"api/settings/tents/\d+", 200, """{"id":1,"name":"Blütezelt","raumId":"haupt"}""");
 }
 
 /// <summary>Ein fester Schlüssel — anstelle der laufenden HTTP-Anfrage.</summary>

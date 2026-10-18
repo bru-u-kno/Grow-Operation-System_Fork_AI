@@ -95,11 +95,11 @@ steht in Grow OS im Prüfprotokoll.
 
 | Stufe | Werkzeuge |
 | --- | --- |
-| — (nur ein gültiger Schlüssel) | `zugriff_pruefen`, `ha_bereiche`, `ha_zustaende`, `ha_verlauf` |
+| — (nur ein gültiger Schlüssel) | `zugriff_pruefen`, `raum`, `ha_bereiche`, `ha_zustaende`, `ha_verlauf` |
 | Dokumentieren | `messung_eintragen`, `messung_aendern`, `journal_eintragen`, `journal_aendern`, `aufgabe_anlegen`, `aufgabe_erledigen`, `wartung_eintragen`, `kalibrierung_eintragen` |
 | Grow planen | `phase_bestaetigen` (Keimung, Bewurzelung, Veg, Blüte/Flip, Finish) |
 | Geräte schalten | `pumpe_dosieren`, `pumpe_stoppen`, `licht_schalten`, `ha_dienst` |
-| Verwaltung | zusätzlich für `ha_dienst` auf Automationen, Skripte, Szenen und Helfer |
+| Verwaltung | `raum_setzen`, `zelt_aufstellraum_setzen`; zusätzlich für `ha_dienst` auf Automationen, Skripte, Szenen und Helfer |
 
 Manche Dienste in Home Assistant gehen über einen Schlüssel **nie**, egal mit
 welcher Stufe — etwa Neustart (`homeassistant`), Add-ons (`hassio`),
@@ -129,6 +129,8 @@ Stufen.
 - „Gib 2 ml pH-Minus." → `pumpe_dosieren`; Grow OS meldet, ob wirklich dosiert
   wurde
 - „Licht auf Stufe 7." → `licht_schalten`
+- „Nenne den Raum Keller und stell das Zelt hinein." → `raum`, dann `raum_setzen` und
+  `zelt_aufstellraum_setzen` (ändert am Zelt nur die Raumzuordnung; alles andere bleibt, per Prüfsumme belegt)
 - „Wie warm war es die letzte Nacht im Zelt?" → `ha_zustaende`, dann `ha_verlauf`
 
 ## Sicherheit
