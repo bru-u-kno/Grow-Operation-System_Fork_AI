@@ -32,6 +32,10 @@ vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 
 Legt ein Schlüssel eine Aufgabe an (`POST /api/grows/{id}/tasks`, Stufe Dokumentieren), speichert Grow OS seinen Namen in `GrowTasks.CreatedByAssistant`; die Terminliste zeigt dann „von KI". Über den Grow MCP Fork AI geht das mit dem Werkzeug `aufgabe_anlegen`; der Schlüssel liegt dabei in der Verbindungseinstellung des Assistenten, nicht im Gespräch.
 
+## Raum über den Assistenten (forkai.243, A-027)
+
+Der Grow MCP Fork AI kennt drei Werkzeuge für den Raum: `raum` (lesen), `raum_setzen` (`PUT /api/steuerung/raum`, Stufe Verwaltung) und `zelt_aufstellraum_setzen` (`GET`/`PUT /api/settings/tents/{id}`, Stufe Verwaltung). Das Zelt-Werkzeug schickt den gelesenen Stand mit geänderter `raumId` zurück und lässt `sensors`, `cameras` und `cameraEntityId` weg — ein mitgeschicktes `sensors` ersetzt alle Sensor-Zeilen durch neue Ids (`ReplaceTentSensors`). Danach vergleicht es alle übrigen Felder und schreibt bei einer Abweichung den alten Stand zurück. Ein freies „Einstellung ändern" gibt es bewusst nicht; Schlüsselverwaltung und KI-Hauptschalter bleiben `[KeinKiZugriff]`.
+
 ## Stufen (`KiStufe`, Bits)
 
 | Stufe | Wert | Beispiele |

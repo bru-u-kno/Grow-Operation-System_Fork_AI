@@ -30,7 +30,7 @@ namespace GrowMcp.Tools;
 /// überhaupt: es antwortet mit dem Hinweis, wo es den richtigen Schlüssel gibt.</para>
 /// </remarks>
 [McpServerToolType]
-public sealed class SchreibWerkzeuge(GrowOsReader reader)
+public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
 {
     private static readonly JsonSerializerOptions Ausgabe = new()
     {
