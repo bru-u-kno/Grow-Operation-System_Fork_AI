@@ -277,8 +277,8 @@ doppelter Systemschrift) und 768 px. Mit Mengenwächter (mindestens 500 Textblö
 GROW_OS_URL=http://127.0.0.1:5191 UMBRUCH=1 npx playwright test e2e/umbruch.spec.ts   # eigenes Projekt `umbruch`, nicht im Tor
 ```
 
-- **Rot, solange es Funde gibt, und das ist gewollt.** Stand 18.10.2026 (nach forkai.242): 32 Funde bei 360 px, 236 mit doppelter Schrift,
-  8 bei 768 px. Wer eine Seite repariert, lässt sie laufen; erst wenn die Liste leer ist, kommt sie in das Tor.
+- **Rot, solange es Funde gibt, und das ist gewollt.** Stand 18.10.2026 (nach forkai.244): 8 Funde bei 360 px, 157 mit doppelter Schrift,
+  5 bei 768 px (vor der Korrektur waren es 32, 236 und 8; `text-wrap: pretty` in `reset.css` allein räumte die meisten Waisenzeilen ab). Wer eine Seite repariert, lässt sie laufen; erst wenn die Liste leer ist, kommt sie in das Tor.
 - **Behebung bei Zahl und Einheit:** geschütztes Leerzeichen (`\u00a0`) zwischen Wert und Einheit setzen — im Frontend und in den
   Backend-Texten (`$"{x}\u00a0W"`); dazu den Test anpassen, der den Satz vergleicht (`PumpWatchTests`).
 - Die Höhe von Kennzahlen mit `overflow: hidden` meldet sie bewusst nicht: die Erkundung hielt sie für abgeschnitten, auf dem Bild standen sie

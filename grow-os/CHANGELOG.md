@@ -5,6 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.244
+
+**Fork AI.** Zweite Welle der Oberflächen-Korrekturen: weniger einzelne Wörter, die allein auf der letzten Zeile stehen, und zwei Stellen, an denen Text oder Zahlen schief standen. Die Umbruchprüfung aus forkai.242 meldet jetzt 8 statt 32 Fälle bei 360 px.
+
+- **Keine Waisenzeilen mehr in Fließtext:** Die App setzt Text jetzt mit `text-wrap: pretty`. Der Browser zieht dafür ein zweites Wort auf die letzte Zeile, statt „pH", „°C", „A" oder „kPa" allein stehen zu lassen. Das gilt überall, wo ein Bauteil den Umbruch nicht selbst regelt.
+- **Ernte & Archiv:** In der Kostenspalte stand der Trennpunkt am Zeilenende („355 € ·" / „3,29 €/g"). Der Punkt hängt jetzt am folgenden Betrag.
+- **Sensoren & Wartung:** In der Zeile „Kalibrierung" standen „seit 6 Tagen überfällig" und die Art der Pflege nebeneinander in zwei schmalen Spalten. Sie stehen jetzt untereinander.
+- **Dosierung:** Trug ein Mittel die Konzentration schon im Namen („Phosphorsäure 30 %"), hängte die Karte sie noch einmal an („… 30 % 30 %"). Das passiert nicht mehr.
+- **Zeit-Knöpfe im Verlauf:** „1 Std" brach auf zwei Zeilen. Die Knöpfe bleiben einzeilig; bei doppelter Systemschrift rutschen sie in eine zweite Reihe, statt aus dem Rahmen zu ragen.
+- **Zahl und Einheit zusammen:** „104 ml" im Plan, „unter 25 °C" in der Steuerung und „gemischt (2)" bei den Sorten brechen nicht mehr auseinander.
+- **Für Entwickler:** Die Umbruchprüfung nimmt den Phasenbalken aus (dort steht die Zahl absichtlich vorn und der Name fällt beim Kürzen) und zählt zweizeilige Standardknöpfe bei großer Schrift nicht mehr als Fehler. Offen sind 8 Funde bei 360 px, 5 bei 768 px und 157 bei doppelter Schrift.
+- **Gemessen:** volle E2E-Mappe 1124 bestanden, Gerätematrix 288 von 288 grün, Unit-Tests 1234 bestanden.
+
 ## 2.0.0-forkai.243
 
 **Fork AI.** Dein KI-Assistent kann jetzt den **Raumnamen** ändern und **Zelte dem Raum zuordnen** — über den Grow MCP Fork AI, ohne dass der Schlüssel durch ein Gespräch läuft. Die App selbst bleibt in diesem Release unverändert; neu ist der Grow MCP (Version 0.2.0-forkai.5).
