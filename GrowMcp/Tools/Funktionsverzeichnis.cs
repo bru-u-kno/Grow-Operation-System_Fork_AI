@@ -286,7 +286,11 @@ public static class Funktionsverzeichnis
                     break;
                 case JsonArray a:
                     if (a.Count == 0) ergebnis[pfad] = "[]";
-                    for (var i = 0; i < a.Count; i++) Gehen(a[i], $"{pfad}[{i}]");
+                    // Einträge mit eindeutiger id nach id, nicht nach Stelle: ein neuer Eintrag vorne verschöbe sonst alle
+                    // und sähe aus, als wären bestehende umbenannt (Prüfer, 18.10.2026).
+                    var ids = a.Select(e => e is JsonObject o && o["id"] is JsonValue v ? v.ToJsonString().Trim('"') : null).ToList();
+                    var nachId = ids.All(i => i is not null) && ids.Distinct().Count() == ids.Count;
+                    for (var i = 0; i < a.Count; i++) Gehen(a[i], nachId ? $"{pfad}[id={ids[i]}]" : $"{pfad}[{i}]");
                     break;
                 case null:
                     ergebnis[pfad] = "null";
@@ -298,6 +302,15 @@ public static class Funktionsverzeichnis
         }
         Gehen(knoten, string.Empty);
         return ergebnis;
+    }
+
+    /// <summary>Der Eintrag einer nach id abgeglichenen Liste, zu dem ein Blatt gehört (<c>journal[id=35]</c>) — oder null.</summary>
+    public static string? Eintrag(string pfad)
+    {
+        var start = pfad.IndexOf("[id=", StringComparison.Ordinal);
+        if (start < 0) return null;
+        var ende = pfad.IndexOf(']', start);
+        return ende < 0 ? null : pfad[..(ende + 1)];
     }
 
     /// <summary>Ein Unterschied zwischen zwei Ständen: Pfad, alter und neuer Wert (null = fehlte).</summary>

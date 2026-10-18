@@ -55,6 +55,15 @@ public sealed class ForkAusfuehrenTests
             Eintrag("GET", "/api/kosten/nachfuellungen/{id}", "frei", routen: Id),
             Eintrag("DELETE", "/api/kosten/nachfuellungen/{id}", "stufe", ["Verwaltung"], sicherung: true, routen: Id),
             Eintrag("GET", "/api/kosten", "frei", beschreibung: "Die Kostenseite."),
+            Eintrag("GET", "/api/settings/tents/{id}", "stufe", ["Verwaltung"], routen: Id),
+            Eintrag("PUT", "/api/settings/tents/{id}", "stufe", ["Verwaltung"], routen: Id, rumpfTyp: "UpsertTentRequest",
+                felder: [("name", "Text"), ("notes", "Text"), ("raumId", "Text"), ("sensors", "Liste von Objekt {metricType: Text}")]),
+            Eintrag("GET", "/api/steuerung/co2", "frei"),
+            Eintrag("PUT", "/api/steuerung/co2", "stufe", ["GeraeteSchalten", "Verwaltung"], schalt: true, rumpfTyp: "Co2Einstellungen",
+                felder: [("zielWarmPpm", "Ganzzahl"), ("mindestlaufzeitMin", "Ganzzahl"), ("kostenArtikelId", "Ganzzahl?")]),
+            Eintrag("PUT", "/api/steuerung/ohne-lesen", "stufe", ["Verwaltung"], rumpfTyp: "X", felder: [("a", "Zahl"), ("b", "Zahl")]),
+            Eintrag("GET", "/api/grows/{growId}/journal", "frei", routen: [("growId", "Ganzzahl")]),
+            Eintrag("POST", "/api/grows/{growId}/journal", "stufe", ["Dokumentieren"], routen: [("growId", "Ganzzahl")], rumpfTyp: "JournalRequest", felder: [("title", "Text")]),
             Eintrag("DELETE", "/api/kosten/anschaffungen/{id}", "stufe", ["Verwaltung"], sicherung: true, routen: Id),
             Eintrag("POST", "/api/kosten/anschaffungen", "stufe", ["Dokumentieren"], rumpfTyp: "AnschaffungRequest",
                 felder: [("name", "Text"), ("stueck", "Ganzzahl"), ("einzelpreisEur", "Zahl")]),
@@ -275,6 +284,76 @@ public sealed class ForkAusfuehrenTests
         Assert.Empty(fork.VonWerkzeugen);
     }
 
+    // ------------------------------------------------------------------ Prüferbefunde vom 18.10.2026 (B1–B3, S1)
+
+    [Fact]
+    public async Task B1_Listen_wie_die_Sensoren_eines_Zelts_werden_nie_ergaenzt()
+    {
+        var fork = Fork()
+            .Antwort("GET", "api/settings/tents/1", 200, """{"id":1,"name":"Zelt","notes":"n","sensors":[{"id":31,"metricType":"Temperature"}]}""")
+            .Antwort("PUT", "api/settings/tents/1", 200, """{"id":1,"name":"Neu","notes":"n"}""");
+        var text = await Ausfuehren(fork, "PUT", "api/settings/tents/1", body: """{"name":"Neu"}""");
+
+        var put = JsonNode.Parse(Aufrufe(fork).Single(a => a.Methode == "PUT").Rumpf!)!.AsObject();
+        Assert.False(put.ContainsKey("sensors"));
+        Assert.Equal("n", put["notes"]!.GetValue<string>());
+        Assert.Contains("Listen nicht ergänzt", text);
+        Assert.Contains("sensors", text);
+    }
+
+    [Fact]
+    public async Task B2_Ergaenzt_wird_aus_dem_Teil_mit_den_meisten_Feldern_nicht_aus_live()
+    {
+        var fork = Fork()
+            .Antwort("GET", "api/steuerung/co2", 200, """{"einstellungen":{"zielWarmPpm":900,"mindestlaufzeitMin":25},"live":{"mindestlaufzeitMin":10,"ppm":700}}""")
+            .Antwort("PUT", "api/steuerung/co2", 200, "{}");
+        var text = await Ausfuehren(fork, "PUT", "api/steuerung/co2", body: """{"zielWarmPpm":1000}""");
+
+        var put = JsonNode.Parse(Aufrufe(fork).Single(a => a.Methode == "PUT").Rumpf!)!.AsObject();
+        Assert.Equal(25, put["mindestlaufzeitMin"]!.GetValue<int>());
+        // kostenArtikelId fehlt im gelesenen Stand — Grow OS lässt leere Felder weg; es geht ausdrücklich leer hinaus.
+        Assert.True(put.ContainsKey("kostenArtikelId"));
+        Assert.Null(put["kostenArtikelId"]);
+        Assert.Contains("Im gelesenen Stand leer, deshalb leer mitgeschickt: kostenArtikelId.", text);
+    }
+
+    [Fact]
+    public async Task B3_Ohne_gelesenen_Stand_geht_kein_halber_PUT_hinaus()
+    {
+        var fork = Fork().Antwort("GET", "api/steuerung/entfeuchter", 503, """{"code":"x","message":"weg"}""");
+        var text = await Ausfuehren(fork, "PUT", "api/steuerung/entfeuchter", body: """{"hystereseProzent":3}""");
+        Assert.Contains("Den Stand vor der Änderung konnte ich nicht lesen", text);
+
+        var ohne = await Ausfuehren(fork, "PUT", "api/steuerung/ohne-lesen", body: """{"a":1}""");
+        Assert.Contains("keinen Lese-Weg", ohne);
+        Assert.DoesNotContain(Aufrufe(fork), a => a.Methode == "PUT");
+
+        // Mit allen Feldern oder ergaenzen=false geht es.
+        await Ausfuehren(fork, "PUT", "api/steuerung/ohne-lesen", body: """{"a":1,"b":2}""");
+        await Ausfuehren(fork, "PUT", "api/steuerung/ohne-lesen", body: """{"a":1}""", ergaenzen: false);
+        Assert.Equal(2, Aufrufe(fork).Count(a => a.Methode == "PUT"));
+    }
+
+    [Fact]
+    public async Task S1_Ein_neuer_Eintrag_vorne_in_der_Liste_ist_neu_und_kein_Umbenennen()
+    {
+        var stand = new JsonArray(new JsonObject { ["id"] = 2, ["title"] = "B" }, new JsonObject { ["id"] = 1, ["title"] = "A" });
+        var fork = Fork()
+            .Antwort("GET", "api/grows/1/journal", _ => (200, stand.ToJsonString()))
+            .Antwort("POST", "api/grows/1/journal", _ =>
+            {
+                stand.Insert(0, new JsonObject { ["id"] = 3, ["title"] = "C" });
+                return (201, """{"id":3,"title":"C"}""");
+            });
+        var text = await Ausfuehren(fork, "POST", "api/grows/1/journal", body: """{"title":"C"}""");
+
+        Assert.Contains("Neu (1): [id=3].", text);
+        Assert.DoesNotContain("Geändert", text);
+        Assert.DoesNotContain("Verändert (", text);
+        Assert.DoesNotContain("Außerdem verändert", text);
+        Assert.Contains("4 Werte unverändert.", text);
+    }
+
     // ------------------------------------------------------------------ Löschen
 
     [Fact]
@@ -355,7 +434,7 @@ public sealed class ForkAusfuehrenTests
         // Mit dem MCP-Schlüssel: das Verzeichnis zu lesen braucht keinen Fork-Schlüssel.
         var text = await Funktionen(Fork(), suche: "Entfeuchter");
 
-        Assert.Contains("2 von 14 Funktionen passen zu „Entfeuchter\".", text);
+        Assert.Contains("2 von 21 Funktionen passen zu „Entfeuchter\".", text);
         Assert.Contains("PUT /api/steuerung/entfeuchter — ändern · braucht Geräte schalten + Verwaltung · zählt als Schaltbefehl", text);
         Assert.Contains("Rumpf (body) EntfeuchterEinstellungen: hystereseProzent (Zahl)", text);
     }
@@ -363,11 +442,11 @@ public sealed class ForkAusfuehrenTests
     [Fact]
     public async Task fork_funktionen_filtert_nach_Bereich_Art_und_Zugang()
     {
-        Assert.Contains("2 von 14 Funktionen passen im Bereich kosten (Art löschen).", await Funktionen(Fork(), bereich: "kosten", art: "löschen"));
+        Assert.Contains("2 von 21 Funktionen passen im Bereich kosten (Art löschen).", await Funktionen(Fork(), bereich: "kosten", art: "löschen"));
         var nie = await Funktionen(Fork(), zugang: "nie");
-        Assert.Contains("2 von 14", nie);
+        Assert.Contains("2 von 21", nie);
         Assert.Contains("NIE über einen Schlüssel — Die Schlüsselverwaltung", nie);
-        Assert.Contains("0 von 14", await Funktionen(Fork(), suche: "gibtesnicht"));
+        Assert.Contains("0 von 21", await Funktionen(Fork(), suche: "gibtesnicht"));
     }
 
     [Fact]

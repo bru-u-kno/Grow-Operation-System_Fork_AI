@@ -19,7 +19,7 @@ public sealed partial class GrowTools
     private const int AntwortHoechstens = 24_000;
 
     [McpServerTool(Name = "fork_funktionen")]
-    [Description("Das Verzeichnis ALLER Funktionen von Grow OS (rund 350): Weg, Art (lesen/anlegen/ändern/löschen), was ein Schlüssel dafür braucht (frei, Stufen oder nie), Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben (Weg-, Abfrage- und Rumpffelder). Mit suche (Wörter, etwa „entfeuchter hysterese\"), bereich (etwa kosten, steuerung, plants), art oder zugang eingrenzen. Grow OS erzeugt das Verzeichnis selbst aus seinem Code. Vor fork_ausfuehren aufrufen, um Weg und Felder zu finden. Für Alltägliches (Messung, Journal, Licht, Dosieren …) gibt es feste Werkzeuge — die zuerst nehmen.")]
+    [Description("Das Verzeichnis ALLER Funktionen von Grow OS: Weg, Art (lesen/anlegen/ändern/löschen), was ein Schlüssel dafür braucht (frei, Stufen oder nie), Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben (Weg-, Abfrage- und Rumpffelder). Mit suche (Wörter, etwa „entfeuchter hysterese\"), bereich (etwa kosten, steuerung, plants), art oder zugang eingrenzen. Grow OS erzeugt das Verzeichnis selbst aus seinem Code. Vor fork_ausfuehren aufrufen, um Weg und Felder zu finden. Für Alltägliches (Messung, Journal, Licht, Dosieren …) gibt es feste Werkzeuge — die zuerst nehmen.")]
     public Task<string> ForkFunktionenAsync(
         [Description("Suchwörter, alle müssen passen (Weg, Beschreibung, Bereich, Rumpffelder), etwa „kosten nachfuellung\"")] string? suche = null,
         [Description("Nur dieser Bereich (der Teil nach /api/), etwa kosten, steuerung, grows, plants, settings")] string? bereich = null,

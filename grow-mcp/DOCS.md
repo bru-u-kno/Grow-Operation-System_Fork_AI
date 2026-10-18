@@ -158,7 +158,7 @@ Artikel und Sorten gehen per Name; passen mehrere, kommt die Auswahl zurück und
 
 Seit Grow OS Fork AI mit Funktionsverzeichnis lässt sich über den Grow MCP **jede** Funktion von Grow OS
 erreichen, nicht nur die festen Werkzeuge oben. Grow OS erzeugt dafür selbst ein Verzeichnis aus seinem
-Code (`GET /api/ki-zugriff/funktionen`, rund 350 Einträge): Weg, Art, was ein Schlüssel dafür braucht,
+Code (`GET /api/ki-zugriff/funktionen`, je Methode und Weg ein Eintrag): Weg, Art, was ein Schlüssel dafür braucht,
 Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben. Neue Funktionen stehen automatisch
 darin; die Einstufung kommt aus derselben Regel, mit der Grow OS jede Anfrage prüft.
 
@@ -182,7 +182,8 @@ Was `fork_ausfuehren` zusätzlich tut — es fügt keine Rechte hinzu, es vereng
 
 **Was über einen Schlüssel nie geht** — egal mit welcher Stufe, auch nicht über `fork_ausfuehren`:
 Schlüsselverwaltung, KI-Hauptschalter, Sicherung zurückspielen oder herunterladen, Home-Assistant-Adresse
-und -Token. Das bleibt dem Menschen in der Oberfläche von Grow OS.
+und -Token ändern. Das bleibt dem Menschen in der Oberfläche von Grow OS. Maßgeblich ist, was Grow OS selbst
+als „nie" führt: `fork_funktionen` mit `zugang=nie`.
 
 Für Alltägliches bleiben die festen Werkzeuge der bessere Weg: sie prüfen mehr (Messfelder, Höchstwerte,
 Prüfsummen) und antworten in Sätzen.

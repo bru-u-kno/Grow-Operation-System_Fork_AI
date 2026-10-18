@@ -23,6 +23,9 @@ namespace GrowDiary.Web.Tests.KiZugriff;
 /// <para><b>Einstufung:</b> Für jede Route und sechs Schlüssel (keine Stufe, jede einzeln, alle) wird
 /// <see cref="KiZugriffSperre.Entscheiden"/> gefragt und mit dem verglichen, was der Assistent im Verzeichnis liest
 /// (zugang, stufen, schaltbefehl, sicherungVorher) — so, wie ein Assistent es auslegen würde.</para>
+/// <para><b>Was diese Zählung nicht sieht:</b> einen Fehler in <see cref="KiZugriffSperre.Einstufen"/> selbst — beide Seiten
+/// rufen dieselbe Funktion. Den halten die älteren Prüfungen der Regel (<c>KiZugriffRegelTests</c>, <c>KiSchluesselWegTests</c>);
+/// der Prüfer hat am 18.10.2026 zusätzlich über 100.000 Fälle gegen die alte Fassung von <c>Entscheiden</c> verglichen.</para>
 /// </remarks>
 [Collection(IntegrationsSammlung.Name)]
 public sealed class KiFunktionsverzeichnisTests : IClassFixture<KiZugriffApp>

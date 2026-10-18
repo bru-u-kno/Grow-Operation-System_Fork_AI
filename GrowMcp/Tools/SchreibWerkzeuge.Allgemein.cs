@@ -36,7 +36,7 @@ public sealed partial class SchreibWerkzeuge
                  + "Ob die Stufe reicht, prüft Grow OS (Stufe je Funktion, siehe zugriff_pruefen); Höchstwerte, Sicherung vorher und Prüfprotokoll gelten wie überall. "
                  + "Bei Änderungen wird vorher und nachher gelesen und gemeldet, was sich geändert hat; beim Löschen steht das Gelöschte in der Antwort. "
                  + "PUT ersetzt bei Grow OS meist das ganze Objekt: fehlende Rumpffelder ergänzt das Werkzeug aus dem gelesenen Stand (ergaenzen). "
-                 + "Nie über einen Schlüssel: Schlüsselverwaltung, KI-Hauptschalter, Sicherung zurückspielen/herunterladen, Home-Assistant-Adresse/-Token. Keine Datei-Uploads, keine Bilder (dafür kamera_bild, tagesbilder, foto_ansehen). "
+                 + "Was Grow OS als „nie über einen Schlüssel\" führt (fork_funktionen mit zugang=nie), lehnt das Werkzeug ab, ohne es zu rufen. Keine Datei-Uploads, keine Bilder (dafür kamera_bild, tagesbilder, foto_ansehen). "
                  + "Für Alltägliches die festen Werkzeuge nehmen (messung_eintragen, journal_eintragen, licht_schalten, pumpe_dosieren …) — sie prüfen mehr. Vor Änderungen die Rückfrage-Regel aus zugriff_pruefen beachten.")]
     [BrauchtForkSchluessel]
     public async Task<string> ForkAusfuehrenAsync(
@@ -152,21 +152,57 @@ public sealed partial class SchreibWerkzeuge
         // Was der Assistent ändern wollte — vor dem Ergänzen gemerkt, sonst sähe jede Nebenwirkung gewollt aus.
         var angefragt = rumpf is JsonObject gesendet ? gesendet.Select(p => p.Key).ToHashSet(StringComparer.OrdinalIgnoreCase) : [];
         var ergaenzt = new List<string>();
-        var fehlend = new List<string>();
-        if (art == "PUT" && ergaenzen && rumpf is JsonObject teil && vorher is JsonObject stand && funktion.RumpfFelder.Count > 0)
+        var alsLeer = new List<string>();
+        var nichtErgaenzt = new List<string>();
+        if (art == "PUT" && ergaenzen && funktion.RumpfFelder.Count > 0)
         {
-            foreach (var feld in funktion.RumpfFelder)
+            if (rumpf is not null and not JsonObject) return "Nicht ausgeführt: Zum Ergänzen muss body ein JSON-Objekt sein (oder ergaenzen=false).";
+            var teil = rumpf as JsonObject ?? new JsonObject();
+            var fehlen = funktion.RumpfFelder.Where(f => !teil.Any(p => string.Equals(p.Key, f.Name, StringComparison.OrdinalIgnoreCase))).ToList();
+            if (fehlen.Count > 0)
             {
-                if (teil.ContainsKey(feld.Name)) continue;
-                if (Finden(stand, feld.Name) is { } gefunden)
+                // PUT ersetzt bei Grow OS meist das Ganze: ohne gelesenen Stand würde ein halber Rumpf den Rest zurücksetzen.
+                if (leseWeg is null)
                 {
-                    teil[feld.Name] = gefunden.Wert?.DeepClone();
-                    ergaenzt.Add(feld.Name);
+                    return $"Nicht ausgeführt: PUT ersetzt bei Grow OS meist das ganze Objekt, und auf diesem Weg gibt es keinen Lese-Weg, aus dem ich die fehlenden Felder ergänzen könnte ({string.Join(", ", fehlen.Select(f => f.Name))}). "
+                           + "Entweder alle Felder schicken oder ergaenzen=false — dann setzt Grow OS die fehlenden auf seine Vorgabe.";
                 }
-                else
+                if (vorher is not JsonObject stand)
                 {
-                    fehlend.Add(feld.Name);
+                    return $"Nicht ausgeführt: Den Stand vor der Änderung konnte ich nicht lesen ({funktion.Pfad}); ohne ihn würde dieser PUT die fehlenden Felder zurücksetzen. Bitte später noch einmal oder alle Felder selbst schicken.";
                 }
+
+                // Die Quelle ist EIN Objekt — der gelesene Stand selbst oder ein Teil davon (etwa „einstellungen"), je
+                // nachdem, wo die meisten Rumpffelder stehen. Nie Feld für Feld irgendwo: dasselbe Feld steht oft auch unter „live".
+                var (quelle, quellName, treffer) = ErgaenzQuelle(stand, funktion.RumpfFelder);
+                if (treffer * 2 < funktion.RumpfFelder.Count)
+                {
+                    return $"Nicht ausgeführt: Den gelesenen Stand kann ich dem Rumpf {funktion.RumpfTyp} nicht sicher zuordnen (nur {treffer} von {funktion.RumpfFelder.Count} Feldern gefunden). "
+                           + "Bitte alle Felder selbst schicken oder ergaenzen=false.";
+                }
+
+                foreach (var feld in fehlen)
+                {
+                    // Listen ersetzt Grow OS ganz (etwa die Sensoren eines Zelts — mit neuen Ids). Weglassen heißt dort meist „unverändert".
+                    if (feld.Typ.StartsWith("Liste", StringComparison.Ordinal) || feld.Typ.StartsWith("Zuordnung", StringComparison.Ordinal))
+                    {
+                        nichtErgaenzt.Add(feld.Name);
+                        continue;
+                    }
+                    var wert = quelle.FirstOrDefault(p => string.Equals(p.Key, feld.Name, StringComparison.OrdinalIgnoreCase));
+                    if (wert.Key is not null)
+                    {
+                        teil[feld.Name] = wert.Value?.DeepClone();
+                        ergaenzt.Add(feld.Name);
+                    }
+                    else
+                    {
+                        // Grow OS lässt leere Felder in der Antwort weg — fehlt es in der Quelle, war es leer.
+                        teil[feld.Name] = null;
+                        alsLeer.Add(feld.Name);
+                    }
+                }
+                rumpf = teil;
             }
         }
 
@@ -181,7 +217,8 @@ public sealed partial class SchreibWerkzeuge
         if (funktion.Schaltbefehl) text.Append(" Zählt als Schaltbefehl.");
         text.AppendLine();
         if (ergaenzt.Count > 0) text.AppendLine($"Aus dem gelesenen Stand ergänzt ({ergaenzt.Count}): {string.Join(", ", ergaenzt)}.");
-        if (fehlend.Count > 0) text.AppendLine($"Nicht im gelesenen Stand (dort leer oder nicht geführt), also nicht mitgeschickt — Grow OS nimmt dafür seine Vorgabe; ob sich dadurch etwas geändert hat, zeigt der Vergleich: {string.Join(", ", fehlend)}.");
+        if (alsLeer.Count > 0) text.AppendLine($"Im gelesenen Stand leer, deshalb leer mitgeschickt: {string.Join(", ", alsLeer)}.");
+        if (nichtErgaenzt.Count > 0) text.AppendLine($"Listen nicht ergänzt (Grow OS ersetzt sie ganz; weggelassen bleiben sie meist, wie sie sind): {string.Join(", ", nichtErgaenzt)}.");
 
         if (art == "DELETE")
         {
@@ -204,6 +241,10 @@ public sealed partial class SchreibWerkzeuge
         else if (leseWeg is null)
         {
             text.AppendLine("Kein Lese-Weg auf diesem Pfad — Vorher/Nachher ließ sich nicht vergleichen.");
+        }
+        else
+        {
+            text.AppendLine("Den Stand vorher konnte ich nicht lesen — kein Vorher/Nachher-Vergleich. Bitte mit GET nachsehen.");
         }
 
         if (!antwort.IstText)
@@ -233,6 +274,19 @@ public sealed partial class SchreibWerkzeuge
         else
         {
             static string Letzter(string pfad) => pfad[(pfad.LastIndexOf('.') + 1)..].Split('[')[0];
+
+            // Ganze Einträge einer Liste (nach id abgeglichen): neu oder entfernt in einer Zeile statt Feld für Feld.
+            var eintraege = geaendert
+                .Select(a => (Aenderung: a, Eintrag: Funktionsverzeichnis.Eintrag(a.Pfad)))
+                .Where(x => x.Eintrag is not null)
+                .GroupBy(x => x.Eintrag!)
+                .ToList();
+            var neu = eintraege.Where(g => g.All(x => x.Aenderung.Alt is null)).Select(g => g.Key).ToList();
+            var weg = eintraege.Where(g => g.All(x => x.Aenderung.Neu is null)).Select(g => g.Key).ToList();
+            geaendert = geaendert.Where(a => Funktionsverzeichnis.Eintrag(a.Pfad) is not { } e || (!neu.Contains(e) && !weg.Contains(e))).ToList();
+            if (neu.Count > 0) text.AppendLine($"Neu ({neu.Count}): {string.Join("; ", neu.Take(AenderungenHoechstens))}.");
+            if (weg.Count > 0) text.AppendLine($"Entfernt ({weg.Count}): {string.Join("; ", weg.Take(AenderungenHoechstens))}.");
+
             var gewollt = geaendert.Where(a => gesendet.Contains(Letzter(a.Pfad))).ToList();
             var sonst = geaendert.Except(gewollt).ToList();
 
@@ -306,19 +360,19 @@ public sealed partial class SchreibWerkzeuge
         }
     }
 
-    /// <summary>Ein Feld im gelesenen Stand: oben, sonst eine Ebene tiefer — nur wenn es dort genau einmal vorkommt.</summary>
-    private static (string Pfad, JsonNode? Wert)? Finden(JsonObject stand, string name)
+    /// <summary>
+    /// Das Objekt im gelesenen Stand, aus dem ergänzt wird: der Stand selbst oder einer seiner Teile — das mit den
+    /// meisten Rumpffeldern. Bei Gleichstand gewinnt der Stand selbst.
+    /// </summary>
+    private static (JsonObject Quelle, string Name, int Treffer) ErgaenzQuelle(JsonObject stand, IReadOnlyList<Funktionsverzeichnis.Feld> felder)
     {
-        foreach (var (schluessel, wert) in stand)
+        int Zaehlen(JsonObject o) => felder.Count(f => o.Any(p => string.Equals(p.Key, f.Name, StringComparison.OrdinalIgnoreCase)));
+        var beste = (Quelle: stand, Name: string.Empty, Treffer: Zaehlen(stand));
+        foreach (var (name, wert) in stand)
         {
-            if (string.Equals(schluessel, name, StringComparison.OrdinalIgnoreCase)) return (schluessel, wert);
+            if (wert is JsonObject teil && Zaehlen(teil) is var n && n > beste.Treffer) beste = (teil, name, n);
         }
-
-        var tiefer = stand
-            .Where(p => p.Value is JsonObject)
-            .SelectMany(p => ((JsonObject)p.Value!).Where(q => string.Equals(q.Key, name, StringComparison.OrdinalIgnoreCase)).Select(q => ($"{p.Key}.{q.Key}", q.Value)))
-            .ToList();
-        return tiefer.Count == 1 ? tiefer[0] : null;
+        return beste;
     }
 
     private async Task<JsonNode?> JsonLesenAsync(string weg, CancellationToken cancellationToken)

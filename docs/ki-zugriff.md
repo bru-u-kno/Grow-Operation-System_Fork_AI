@@ -42,7 +42,9 @@ Der Grow MCP Fork AI kennt drei Werkzeuge für den Raum: `raum` (lesen), `raum_s
 das, wofür der Grow MCP ein festes Werkzeug hat. Der frühere Grundsatz „kein freies ‚Einstellung ändern'"
 (A-027, forkai.243) gilt nicht mehr. Gesperrt bleiben über jeden Schlüssel nur die Wege mit
 `[KeinKiZugriff]`: **Schlüsselverwaltung**, **KI-Hauptschalter**, **Sicherung zurückspielen/herunterladen**
-und **Home-Assistant-Adresse und -Token**. Daran ändert Paket D nichts.
+und **Home-Assistant-Adresse und -Token ändern** (lesen geht mit Verwaltung: die Adresse ja, das Token nur
+maskiert). Daran ändert Paket D nichts. Maßgeblich ist das Attribut, nicht diese Aufzählung — das Verzeichnis
+zeigt sie als `zugang: nie`.
 
 - **Funktionsverzeichnis** `GET /api/ki-zugriff/funktionen` (`KiFunktionenApiController`, `[NurMitKi]`, kein
   Verwaltungsweg, lesen ohne Stufe): je Methode und Weg unter `/api` ein Eintrag mit `zugang` (frei, stufe,
@@ -50,7 +52,9 @@ und **Home-Assistant-Adresse und -Token**. Daran ändert Paket D nichts.
   `schaltbefehl`, `sicherungVorher`, `beschreibung` (aus der XML-Doku — `GenerateDocumentationFile` ist
   dafür an —, sonst Controller.Aktion), Weg- und Abfrageparametern, Rumpf (Typ und Felder unter JSON-Namen),
   `dateiHochladen` und `liefertDatei`. Erzeugt beim ersten Abruf aus `EndpointDataSource`
-  (`KiFunktionsverzeichnis`), nichts von Hand gepflegt.
+  (`KiFunktionsverzeichnis`), nichts von Hand gepflegt. **Bewusst ohne Schlüssel lesbar** (auch aus dem
+  Add-on-Netz): Es enthält nur, was im öffentlichen Quelltext steht — Wege, Einstufung, Doku-Sätze, Feldnamen —,
+  keine Daten und keine Einstellungen. Anders das Betriebs-Manifest `/api/system/api-manifest` (Verwaltungsweg).
 - **Eine Wahrheit:** Die Einstufung kommt aus `KiZugriffSperre.Einstufen` — dieselbe Funktion, die
   `Entscheiden` für jede Anfrage nutzt. `KiFunktionsverzeichnisTests` hält, dass jede Route im Verzeichnis
   steht (Mengenwächter ≥ 300, 356 am 18.10.2026) und dass das Verzeichnis für sechs Schlüssel (keine Stufe,
