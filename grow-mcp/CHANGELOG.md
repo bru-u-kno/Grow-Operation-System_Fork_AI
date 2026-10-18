@@ -1,5 +1,13 @@
 # Änderungen — Grow MCP
 
+## 0.2.0-forkai.7
+
+**Alles im Fork steuern.** `fork_funktionen` durchsucht das Funktionsverzeichnis von Grow OS, `fork_ausfuehren` ruft jede
+Funktion auf (Stufe prüft Grow OS; Vorher/Nachher bei Änderungen, das Gelöschte beim Löschen; gesperrt bleiben
+Schlüsselverwaltung, KI-Hauptschalter, Sicherungen und Home-Assistant-Zugang). Dazu `kamera_bild`, `tagesbilder`,
+`kamera_foto_speichern`, `steuerung`, `kosten`, `verbrauch_buchen`, `nachfuellung_eintragen`, `anschaffung_eintragen`,
+`pflanze_aendern` und `probelauf_abbrechen`. Braucht Grow OS Fork AI ab 2.0.0-forkai.249.
+
 ## 0.2.0-forkai.6
 
 **Sensoren zuordnen, Falsches löschen, Grenzen und Lichtplan ändern.** Sechs neue Werkzeuge:

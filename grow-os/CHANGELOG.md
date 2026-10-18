@@ -5,6 +5,37 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.249
+
+**Fork AI.** Über den KI-Assistenten (Grow MCP) lässt sich jetzt alles im Fork steuern — dazu Kamera, Kosten und Pflanzen per Sprache.
+
+- **Funktionsverzeichnis:** Grow OS erzeugt aus seinem Code selbst ein Verzeichnis aller rund 350 Funktionen: Weg, Art,
+  was ein Schlüssel dafür braucht (frei, welche Stufe oder nie), ob vorher gesichert wird, ob es als Schaltbefehl zählt,
+  eine Kurzbeschreibung und die erwarteten Angaben. Die Einstufung kommt aus derselben Regel, mit der Grow OS jede
+  Anfrage über einen Schlüssel prüft. Neue Funktionen stehen automatisch darin.
+- **Grow MCP `fork_funktionen` und `fork_ausfuehren`:** Der Assistent erreicht jede Funktion, nicht nur die festen
+  Werkzeuge. Bei Änderungen liest er vorher und nachher und sagt genau, was sich geändert hat („Hysterese 4 → 3;
+  30 Werte unverändert"), und ausdrücklich, wenn sich etwas Unverlangtes bewegt hat. Beim Löschen steht das Gelöschte
+  in der Antwort. Fehlende Felder ergänzt er aus dem gelesenen Stand, unbekannte Felder lehnt er ab.
+- **Weiter gesperrt** für jeden Schlüssel: Schlüsselverwaltung, KI-Hauptschalter, Sicherung zurückspielen oder
+  herunterladen, Home-Assistant-Adresse und -Token. Stufen, Höchstwerte, Sicherung vorher und Prüfprotokoll gelten
+  unverändert; der Grow MCP fügt keine Rechte hinzu, Dateien gehen über diesen Weg weder hinauf noch herunter.
+- **Kamera:** `kamera_bild` zeigt das Livebild der Zelt-Kamera; `tagesbilder` die täglichen Kamerabilder nach Datum
+  (sie lagen bisher nur auf der Platte, jetzt gibt es Liste und Bild je Tag); `kamera_foto_speichern` legt das aktuelle
+  Kamerabild als Foto in den Grow.
+- **Regelungen und Kosten lesen:** `steuerung` sagt in Klartext, was jede Regelung gerade tut und warum; `kosten` fasst
+  Summe, Strom und offene Gebinde eines Grows zusammen.
+- **Kosten per Sprache buchen:** `verbrauch_buchen` („20 ml pH-Minus"), `nachfuellung_eintragen` („neue CO₂-Flasche,
+  38 Euro") und `anschaffung_eintragen`. Mehrdeutige Artikel werden nachgefragt, ob die alte Füllung leer ist, muss
+  ausdrücklich gesagt werden, Beträge über 500 € nennt die Antwort ausdrücklich. Den CO₂-Verbrauch bucht weiter nur die
+  CO₂-Steuerung, nichts zählt doppelt.
+- **Pflanzen:** `pflanze_aendern` ändert Status, Sorte, Topf, Name oder Notiz einer Pflanze, nur das Genannte.
+  `probelauf_abbrechen` ist ein Not-Aus für einen laufenden Probelauf.
+- **Sicherer über KI-Schlüssel:** Kosten-Einträge löschen braucht jetzt die Stufe „Verwaltung" statt „Dokumentieren"
+  (Sicherung vorher wie bisher); Nachfüllung und Anschaffung ändern legt vorher eine Sicherung an, Artikel ändern braucht
+  „Verwaltung"; ein Datum in der Zukunft und Verbrauch auf den Artikel der CO₂-Steuerung lehnt Grow OS selbst ab;
+  der Probelauf-Abbruch scheitert nie am Höchstwert der Schaltbefehle.
+
 ## 2.0.0-forkai.248
 
 **Fork AI.** Die App zeigt jetzt, **welche Version läuft**. Das hilft bei Fehlerberichten und bei Fremdinstallationen: Man sieht sofort, ob das Update angekommen ist.
