@@ -174,6 +174,7 @@
 
 /* Fork AI (Grow-Plan, Schritt 3b): Reiter „Plan“. Nur Tokens. */
 @layer features {
+  .pr-kopf .v1-badge { max-width: 100%; height: auto; white-space: normal; }
   .pr-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-3); font: 400 var(--fs-klein)/1.4 var(--font-mono); color: var(--muted); }
   .pr-kopf b { color: var(--ink); font-weight: 600; }
   .pr-dosis { display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-4); }
@@ -207,6 +208,7 @@
 /* Fork AI (Grow-Plan, Schritt 6b): Auswertung auf der Grow-Seite. Nur Tokens. */
 @layer features {
   .pa { padding: var(--s-3) var(--s-4); display: grid; gap: var(--s-3); }
+  .pa > * { min-width: 0; }
   .pa-leer { margin: 0; padding: var(--s-2) var(--s-4); font-size: var(--fs-klein); color: var(--muted); }
   .pa-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); }
   .pa-chip {

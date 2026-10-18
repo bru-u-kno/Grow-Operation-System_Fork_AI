@@ -319,8 +319,9 @@
   display: inline-flex; align-items: center; gap: 6px;
   font: 500 var(--fs-etikett)/1 var(--font-mono);
   letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
-  flex: 0 0 auto;
+  flex: 0 1 auto; flex-wrap: wrap; min-width: 0; max-width: 100%;
 }
+.gp-topf select { min-width: 0; max-width: 100%; }
 .gp-topf input { width: 64px; min-width: 64px; min-height: var(--h-md); }
 
 /* Die Topfbilanz — „3 von 4 Töpfen belegt". Beantwortet die Frage, die beim

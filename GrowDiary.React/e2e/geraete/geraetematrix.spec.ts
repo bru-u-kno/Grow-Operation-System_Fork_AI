@@ -55,6 +55,20 @@ async function schriftSetzen(ziel: Page | Frame, prozent: number): Promise<void>
 
 async function oeffnen(page: Page, pfad: string, fassung: Fassung): Promise<Page | Frame> {
   await page.addInitScript((t) => localStorage.setItem('growos.theme', t), fassung.thema)
+  // Große Schrift gilt auf einem echten Gerät von Anfang an: Rechnungen beim Aufbau (Diagramm-Achsen, Textbreiten) sehen sie
+  // dann. Nur nachträglich umzustellen ließ „Licht · an 08:00 · aus 20:00" im Verlauf rot werden, obwohl es auf dem Gerät passt.
+  if (!fassung.haRahmen && fassung.schrift !== 100) {
+    await page.addInitScript((p) => {
+      const setzen = () => {
+        const st = document.createElement('style')
+        st.textContent = `html{font-size:${p}% !important}`
+        document.documentElement.appendChild(st)
+      }
+      // Das Skript läuft vor dem Dokument: erst setzen, wenn es ein <html> gibt.
+      if (document.documentElement) setzen()
+      else new MutationObserver((_, o) => { if (document.documentElement) { o.disconnect(); setzen() } }).observe(document, { childList: true })
+    }, fassung.schrift)
+  }
   if (fassung.haRahmen) {
     const rahmen = await imHaRahmen(page, pfad)
     await rahmen.waitForLoadState('networkidle')
@@ -64,7 +78,6 @@ async function oeffnen(page: Page, pfad: string, fassung: Fassung): Promise<Page
   }
   await page.goto(pfad, { waitUntil: 'networkidle' })
   await expect(page.locator('.v1-app-shell')).toBeVisible()
-  await schriftSetzen(page, fassung.schrift)
   return page
 }
 

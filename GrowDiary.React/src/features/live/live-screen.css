@@ -389,7 +389,7 @@
   /* ---------- Aufgaben ---------- */
   .ls-tasks { list-style: none; margin: 0; padding: 0; display: grid; }
   .ls-tasks li {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
     padding: 10px 14px; border-bottom: 1px solid var(--hair);
     min-height: 46px;
   }

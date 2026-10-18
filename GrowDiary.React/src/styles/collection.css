@@ -38,6 +38,8 @@
   .co-td input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--accent); flex: 0 0 auto; }
   /* Die Checkbox tippt man über das umschließende Label — am Telefon wächst
      dessen Trefferfläche auf die 44px-Untergrenze. */
+  /* Kurze Mengenangaben („~75 min“) dürfen nicht zwischen Zahl und Einheit brechen (Umbruchprüfung 18.10.2026). */
+  .co-td.is-kurz { white-space: nowrap; }
   .co-check { display: inline-grid; place-items: center; min-width: 28px; align-self: stretch; cursor: pointer; }
   @media (pointer: coarse) {
     .co-check { min-height: 44px; min-width: 44px; }

@@ -23,7 +23,7 @@
   }
 
   .gos-metric-head { display: flex; justify-content: space-between; gap: 6px; }
-  .gos-metric-label { font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .14em; color: var(--faint); }
+  .gos-metric-label { font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .14em; color: var(--faint); min-width: 0; overflow-wrap: anywhere; }
   .gos-metric-status { font: 500 var(--fs-etikett)/1 var(--font-mono); white-space: nowrap; }
   .gos-metric.is-ok   .gos-metric-status { color: var(--accent-text); }
   .gos-metric.is-warn .gos-metric-status { color: var(--warn-text); }
@@ -34,6 +34,8 @@
     font: 500 var(--fs-zahl)/1 var(--font-mono);
     font-variant-numeric: tabular-nums;
     overflow-wrap: normal; word-break: normal;
+    /* Einheit rutscht in die nächste Zeile, statt aus der Kachel zu ragen (doppelte Systemschrift). */
+    display: flex; flex-wrap: wrap; align-items: baseline;
   }
   .gos-metric.is-crit .gos-metric-value { color: var(--danger); }
   .gos-metric-value .unit { margin-left: 3px; font-size: var(--fs-etikett); color: var(--muted); }
@@ -109,10 +111,12 @@
   .gos-metric-ziel-n { font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .12em; color: var(--faint); }
   .gos-metric-zv, .gos-metric-tn {
     margin-top: 4px; font: 400 var(--fs-text)/1.2 var(--font-mono);
-    font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink);
+    font-variant-numeric: tabular-nums; color: var(--ink);
   }
-  .gos-metric-zv .u { font-size: var(--fs-etikett); color: var(--faint); }
-  .gos-metric-tn { display: flex; gap: 12px; }
+  /* Zahl und Einheit bleiben je als Block zusammen; bricht die Zeile, dann zwischen ihnen, nicht mitten im Wort. */
+  .gos-metric-zv .u { display: inline-block; white-space: nowrap; font-size: var(--fs-etikett); color: var(--faint); }
+  /* Umbrechen statt hinausragen, wenn die Systemschrift verdoppelt ist (Gerätematrix 18.10.2026). */
+  .gos-metric-tn { display: flex; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
   .gos-metric-tn span { color: var(--faint); }
   .gos-metric-tn span.is-aktiv { color: var(--ink); }
   .gos-metric-tn i { font-style: normal; font-size: var(--fs-etikett); margin-right: 4px; font-variant-emoji: text; }
@@ -141,7 +145,7 @@
 
   /* Licht: Schaltzeiten untereinander, die nächste hell; darunter die Restzeit. */
   .gos-metric-licht {
-    display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 3px; margin-top: 10px;
+    display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; row-gap: 3px; margin-top: 10px;
     font: 400 var(--fs-text)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap;
   }
   .gos-metric-licht .k { font-size: var(--fs-etikett); color: var(--faint); align-self: center; }

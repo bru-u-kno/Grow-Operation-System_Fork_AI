@@ -87,7 +87,7 @@ public static class AerationCheck
         if (volumenLiter is not { } liter || liter <= 0) return null;
 
         var jeLiter = Math.Round(lph / 60.0 / liter, 3);
-        var basis = $"{lph:0} L/h auf {liter:0} L Wasser";
+        var basis = $"{lph:0}\u00a0L/h auf {liter:0}\u00a0L Wasser";
 
         // Zwei Faustregeln, die nicht dasselbe sagen — und beide bleiben stehen:
         //

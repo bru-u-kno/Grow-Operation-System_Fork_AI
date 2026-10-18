@@ -179,9 +179,45 @@
      Stellen haetten die anderen weiter zu klein gelassen — und waeren an
      dieser hier ohnehin gescheitert, die drei Klassen stark ist. */
   .v1-section-body p a:not(.v1-button):not(.v1-link-button),
-  .v1-card p a:not(.v1-button):not(.v1-link-button) {
+  .v1-card p a:not(.v1-button):not(.v1-link-button),
+  /* Gerätematrix 18.10.2026: Verweise in Tabellenzellen (Kosten → Verbrauch, 18 px hoch). */
+  .v1-card td a:not(.v1-button):not(.v1-link-button) {
     padding-block: 12px;
     margin-block: -12px;
     display: inline-block;
   }
+
+  /* --- Gerätematrix 18.10.2026 (110 von 288 Fällen rot): Bauteile, die auf Touch unter 44 px blieben.
+     Die Namen stammen aus dem Messprotokoll der Matrix, nicht aus dem Gedächtnis. --- */
+  .v1-nav-item,        /* Seitenleiste auf dem 1024-px-Tablet: 34 px */
+  .wp-pfeil,           /* Plan: Wochen-Pfeile, 38 px */
+  .st-chip,            /* Steuerung/Geräte: Auswahl-Chips, 40 px */
+  .nf-chips button,    /* Addback: 15/30/60 min, 32 px */
+  .ko-link,            /* Kosten: Nachfüllen / Leer, 24 px */
+  .ko-mehr,
+  .st-kk-kopf,         /* einklappbare Kopfzeile „Weitere Angaben“, 40 px */
+  .pr-zutat,           /* Plan: „+ Zutat hinzufügen“, 38 px */
+  label:has(> input[type='checkbox']) {
+    min-height: var(--h-lg);
+  }
+  .ko-link, .ko-mehr, label:has(> input[type='checkbox']) { display: inline-flex; align-items: center; }
+  /* Eigenständige Verweise neben Text: Höhe wächst, die Zeile nicht. */
+  a.pk-link, a.ls-panel-meta { display: inline-flex; align-items: center; min-height: var(--h-lg); }
+  /* Die Wochenpunkte bleiben klein sichtbar. Der Knopf selbst ist 44 px hoch, der Punkt wird darin gezeichnet
+     (eine überstehende Fläche per ::after wurde von der Messung nicht anerkannt, 18.10.2026). */
+  .wp-punkt {
+    position: relative; width: 20px; height: var(--h-lg);
+    border: 0; background: none; box-shadow: none; transform: none;
+  }
+  .wp-punkt::before {
+    content: ''; position: absolute; left: 50%; top: 50%; width: var(--s-3); height: var(--s-3);
+    margin: calc(var(--s-3) / -2) 0 0 calc(var(--s-3) / -2);
+    border: 1px solid var(--hair-2); border-radius: var(--r-pill); background: var(--sunk);
+  }
+  .wp-punkt.ist-jetzt::before { border-color: var(--accent); }
+  .wp-punkt.ist-eigen::before { background: var(--warn); border-color: var(--warn); }
+  .wp-punkt.ist-offen::before { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--warn); }
+  .wp-punkt.ist-aktiv::before { transform: scale(1.35); background: var(--accent); border-color: var(--accent); }
+  .wp-punkt.ist-aktiv.ist-eigen::before { background: var(--warn); }
+  .wp-plan-zurueck, .pr-nacht-knopf, .theme-toggle { min-height: var(--h-lg); min-width: var(--h-lg); }
 }

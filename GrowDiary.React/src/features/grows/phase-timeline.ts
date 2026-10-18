@@ -131,7 +131,7 @@ export type PhaseTimelineInput = {
 export const TROCKNEN_TAGE = 10
 export const AUSHAERTEN_TAGE = 30
 const READY_NOTE =
-  `Rechnung: ${TROCKNEN_TAGE} Tage Trocknen (Bereich 7–14) und ${AUSHAERTEN_TAGE} Tage Aushärten `
+  `Rechnung: ${TROCKNEN_TAGE}\u00a0Tage Trocknen (Bereich 7–14) und ${AUSHAERTEN_TAGE}\u00a0Tage Aushärten `
   + '(Minimum 14, üblich 30–60) nach der Ernte. Richtwerte aus der Curing-Literatur, keine Termine.'
 
 const TAG = 86_400_000

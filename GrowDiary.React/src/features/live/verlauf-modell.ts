@@ -225,9 +225,15 @@ export function teilung(breite: number): { schrittMinuten: number; art: Teilungs
   return { schrittMinuten: 1440, art: 'tag' }
 }
 
-/** Breite eines Achsentexts in px — 11 px Monospace, 0,6 em je Zeichen, mit Reserve. */
+/**
+ * Breite eines Achsentexts in px — 11 px Monospace, 0,6 em je Zeichen, mit Reserve.
+ * Die Achsenschrift rechnet in rem und wächst mit der Systemschrift („große Schrift“); die Schätzung wächst mit,
+ * sonst passt der Text laut Rechnung und ragt bei doppelter Schrift über den Rand (Gerätematrix 18.10.2026).
+ */
 export function textBreite(text: string): number {
-  return text.length * 6.9
+  const grund = typeof document !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) : 16
+  const faktor = Number.isFinite(grund) && grund > 0 ? grund / 16 : 1
+  return text.length * 6.9 * faktor
 }
 
 export type AchsenMarke = { t: number; x: number; text: string }

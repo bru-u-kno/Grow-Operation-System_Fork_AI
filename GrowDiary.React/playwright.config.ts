@@ -30,7 +30,9 @@ export default defineConfig({
   },
   projects: [
     // Die Gerätematrix läuft nur in ihren eigenen Projekten (`GERAETE=1`, siehe e2e/geraete/geraete.ts), nicht zusätzlich hier.
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /geraetematrix\.spec\.ts/ },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /(geraetematrix|umbruch)\.spec\.ts/ },
+    // Die Umbruchprüfung läuft nur mit `UMBRUCH=1` (rot, solange es Funde gibt; siehe e2e/umbruch.spec.ts).
+    ...(process.env.UMBRUCH ? [{ name: 'umbruch', use: { ...devices['Desktop Chrome'] }, testMatch: /umbruch\.spec\.ts/ }] : []),
     ...geraeteFuer(process.env.GERAETE).map((g) => ({ name: `geraet-${g.name}`, use: g.use, testMatch: /geraetematrix\.spec\.ts/ })),
   ],
   // Gegen eine laufende App keinen zweiten Server hochziehen.

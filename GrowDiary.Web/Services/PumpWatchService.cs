@@ -108,9 +108,9 @@ public sealed class PumpWatchService
             {
                 befunde.Add(new PumpBefund(
                     zustandKey, name, "kritisch",
-                    $"{name} meldet „an“, zieht aber nur {watt!.Value.ToString("0.0", AppCulture.German)} W — sie läuft nicht."
+                    $"{name} meldet „an“, zieht aber nur {watt!.Value.ToString("0.0", AppCulture.German)}\u00a0W — sie läuft nicht."
                         + Folge(lebenswichtig),
-                    $"Leistungsaufnahme unter {LeerlaufWatt.ToString("0.#", AppCulture.German)} W (Faustregel für Leerlauf)."));
+                    $"Leistungsaufnahme unter {LeerlaufWatt.ToString("0.#", AppCulture.German)}\u00a0W (Faustregel für Leerlauf)."));
                 continue;
             }
 

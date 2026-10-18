@@ -73,7 +73,7 @@ public sealed class PumpWatchTests
 
         var luft = befunde.Single();
         Assert.Equal("kritisch", luft.Stufe);
-        Assert.Contains("zieht aber nur 0,3 W", luft.Meldung);
+        Assert.Contains("zieht aber nur 0,3\u00a0W", luft.Meldung);
         Assert.Contains("Leerlauf", luft.Herkunft);
     }
 

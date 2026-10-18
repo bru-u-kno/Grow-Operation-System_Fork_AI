@@ -321,7 +321,7 @@ function DosingPage() {
                       <div className="row"><span>Aufgabe</span><b>{PURPOSE_LABEL[pump.purpose] ?? pump.purpose}</b></div>
                       <div className="row">
                         <span>Mittel</span>
-                        <b>{pump.agent ?? '—'}{pump.concentrationPercent != null ? ` ${zahl(pump.concentrationPercent, 0)} %` : ''}</b>
+                        <b>{pump.agent ?? '—'}{pump.concentrationPercent != null ? ` ${zahl(pump.concentrationPercent, 0)}\u00a0%` : ''}</b>
                       </div>
                       <div className="row">
                         <span>Fördermenge</span>

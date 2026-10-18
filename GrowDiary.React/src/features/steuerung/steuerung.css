@@ -55,7 +55,7 @@
 
   /* Fork AI (forkai.21): Verweis auf die Geraete-Zuordnung. */
   .st-geraete-zeile {
-    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2);
     margin-top: var(--s-2); padding: var(--s-2) var(--s-3);
     border: 1px solid var(--hair); border-radius: var(--r-sm);
     background: var(--surface); color: var(--muted); font-size: var(--fs-text);

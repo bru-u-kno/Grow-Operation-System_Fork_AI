@@ -857,7 +857,7 @@ function KnowledgePage() {
                   <SopZeile key={entry.key}>
                     <div className="co-td is-name">{entry.title}</div>
                     <div className="co-td is-muted">{fakten.art}</div>
-                    <div className="co-td">{fakten.dauer}</div>
+                    <div className="co-td is-kurz">{fakten.dauer}</div>
                     <div className="co-td">{fakten.schritte}</div>
                     <div className="co-td">
                       <button type="button" className="ls-btn is-small" style={{ marginLeft: 0 }} onClick={() => zeigeEintrag(sopsKategorie, entry)}>Öffnen</button>

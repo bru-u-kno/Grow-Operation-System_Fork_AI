@@ -622,9 +622,11 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
                     )}
                   </span>
                   <span role="cell">
-                    <input type="checkbox" checked={wirdGebucht(z)} disabled={z.artikelId == null || menge === 0}
-                      onChange={(e) => setBuchenAus((alt) => { const neu = new Set(alt); if (e.target.checked) neu.delete(z.schluessel); else neu.add(z.schluessel); return neu })}
-                      aria-label={`${z.name} buchen`} />
+                    <label className="co-check">
+                      <input type="checkbox" checked={wirdGebucht(z)} disabled={z.artikelId == null || menge === 0}
+                        onChange={(e) => setBuchenAus((alt) => { const neu = new Set(alt); if (e.target.checked) neu.delete(z.schluessel); else neu.add(z.schluessel); return neu })}
+                        aria-label={`${z.name} buchen`} />
+                    </label>
                   </span>
                 </div>
               )
@@ -636,7 +638,7 @@ export function VorgangAblauf({ growId, stand = null, startSchritt = 1, vorbeleg
                   <span role="cell"><b>{w.name}</b><small>{fehlt ? 'Noch kein Artikel — wird nicht gebucht' : 'Kosten je Liter im Artikel'}</small></span>
                   <span role="cell" className="wa-vorschlag">—</span>
                   <span role="cell" className="wa-eingabe"><input value={zahl(w.menge, Number.isInteger(w.menge) ? 0 : 1)} readOnly aria-label={`${w.name} eingesetzt`} /> L</span>
-                  <span role="cell"><input type="checkbox" checked={wasserBuchen} onChange={(e) => setWasserBuchen(e.target.checked)} aria-label={`${w.name} buchen`} /></span>
+                  <span role="cell"><label className="co-check"><input type="checkbox" checked={wasserBuchen} onChange={(e) => setWasserBuchen(e.target.checked)} aria-label={`${w.name} buchen`} /></label></span>
                 </div>
               )
             })}

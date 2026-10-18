@@ -45,10 +45,14 @@
     padding: 0 0 var(--s-3);
     border-bottom: 1px solid var(--hair);
   }
+  /* Kopf-Block ohne eigene Klasse: ohne min-width:0 sprengt ein langes Wort („Wasserwechsel“) bei doppelter
+     Systemschrift den Rahmen (Gerätematrix 18.10.2026). Brechen darf es nur, wenn es gar nicht passt. */
+  .v1-hero > * { min-width: 0; }
   .v1-hero h1 {
     margin: 6px 0 0;
     font: 600 var(--fs-zahl)/1.15 var(--font-mono);
     letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
   }
   .v1-hero p {
     margin: 7px 0 0; max-width: 68ch;

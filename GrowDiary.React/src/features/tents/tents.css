@@ -314,7 +314,7 @@
   }
 
   .tn-groups {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr)); /* rem statt px: bei doppelter Systemschrift wird es eine Spalte statt einer abgeschnittenen (Gerätematrix 18.10.2026) */
     /* Linien an den Kindern, nicht als Luecke im Untergrund: bei einer
        unvollstaendigen letzten Reihe blieb sonst der graue Untergrund als
        Loch stehen. Funktioniert rueckstandsfrei nur, weil der umgebende
@@ -333,7 +333,7 @@
     font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
     color: var(--muted); margin-bottom: 9px;
   }
-  .tn-row { display: flex; justify-content: space-between; gap: 10px; font-size: var(--fs-text); margin-top: 7px; }
+  .tn-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; font-size: var(--fs-text); margin-top: 7px; }
   .tn-row:first-of-type { margin-top: 0; }
   .tn-row span { color: var(--muted); }
   .tn-row strong { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; }
