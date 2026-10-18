@@ -107,7 +107,8 @@ public sealed record ZuluftLive(
     double? ZeltTempC = null,
     bool? PauseZeltKalt = null,
     double? DifferenzRegelGm3 = null,
-    ZuluftZustand? Zustand = null);
+    ZuluftZustand? Zustand = null,
+    string? RaumName = null);
 
 /// <summary>
 /// Fork AI (forkai.238): Warum der Lüfter gerade läuft oder nicht — ein Wort für das Schild und ein Satz mit

@@ -4,5 +4,6 @@
  * jeder wieder auf die erste Steuerung (F-027).
  */
 export function rollenPfad(modul?: string | null): string {
+  if (modul === 'raum') return '/geraete?reiter=raeume' // forkai.241: der Raum hat einen eigenen Reiter
   return modul ? `/geraete?reiter=rollen&modul=${encodeURIComponent(modul)}` : '/geraete?reiter=rollen'
 }

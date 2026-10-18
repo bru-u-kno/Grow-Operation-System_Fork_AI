@@ -133,15 +133,17 @@ public static class SteuerungGeraeteRollen
         // Zuluft: zwei Fuehlerpaare und ein Luefter-Port. Temperatur und Feuchte
         // stehen getrennt, weil die absolute Feuchte aus beiden gerechnet wird —
         // ein kombinierter Fuehler waere die Ausnahme, nicht die Regel.
+        // Fork AI (forkai.241): Der Raum ist eine eigene Einheit — seine Fühler hängen nicht mehr an der Zuluft,
+        // sondern am Raum (Modul „raum“) und werden von der Zuluft mitbenutzt (siehe MitbenutztVon).
+        new("raum", "raum_temp", "Raum-Fühler · Temperatur", GruppeMessen,
+            new[] { "sensor" }, Einheit: "°C",
+            Hinweis: "Die Luft im Raum, nicht im Zelt und nicht draußen."),
+        new("raum", "raum_rh", "Raum-Fühler · Feuchte", GruppeMessen,
+            new[] { "sensor" }, Einheit: "%"),
         new("zuluft", "aussen_temp", "Außenfühler · Temperatur", GruppeMessen,
             new[] { "sensor" }, Einheit: "°C",
             Hinweis: "Die Luft, die angesaugt wird."),
         new("zuluft", "aussen_rh", "Außenfühler · Feuchte", GruppeMessen,
-            new[] { "sensor" }, Einheit: "%"),
-        new("zuluft", "keller_temp", "Kellerfühler · Temperatur", GruppeMessen,
-            new[] { "sensor" }, Einheit: "°C",
-            Hinweis: "Die Luft, die verdrängt werden soll."),
-        new("zuluft", "keller_rh", "Kellerfühler · Feuchte", GruppeMessen,
             new[] { "sensor" }, Einheit: "%"),
         new("zuluft", "port_schalter", "Zuluft-Lüfter · schalten", GruppeSchalten,
             new[] { "select", "switch", "input_boolean" },
@@ -262,6 +264,9 @@ public static class SteuerungGeraeteRollen
     /// <summary>Die Kennung des Zusatz-Entfeuchters.</summary>
     public const string ZusatzModul = "entfeuchter-zusatz";
 
+    /// <summary>Die Kennung des Raums (Aufstellraum) — seine Fühler gehören dem Raum, Steuerungen benutzen sie mit.</summary>
+    public const string RaumModul = "raum";
+
     /// <summary>
     /// Fork AI (A-009): Rollen, die ein Modul von einem anderen mitbenutzt — keine
     /// doppelte Zuordnung. Zelt-Fühler und Licht des Zusatz-Entfeuchters sind die
@@ -270,7 +275,9 @@ public static class SteuerungGeraeteRollen
     public static IReadOnlyList<(string Quelle, string Rolle)> MitbenutztVon(string modul)
         => string.Equals(modul, ZusatzModul, StringComparison.OrdinalIgnoreCase)
             ? [("entfeuchter", "zelt_rh"), ("entfeuchter", "zelt_temp"), ("entfeuchter", "zelt_vpd"), ("entfeuchter", "licht_zustand")]
-            : [];
+            : string.Equals(modul, "zuluft", StringComparison.OrdinalIgnoreCase)
+                ? [(RaumModul, "raum_temp"), (RaumModul, "raum_rh")]
+                : [];
 
     /// <summary>Die eigenen Rollen eines Moduls und die mitbenutzten.</summary>
     public static IReadOnlyList<GeraeteRolle> FuerModulMitMitbenutzten(string modul)

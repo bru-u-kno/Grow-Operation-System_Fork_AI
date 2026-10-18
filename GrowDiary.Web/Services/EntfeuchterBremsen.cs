@@ -100,7 +100,7 @@ public static class EntfeuchterBremsen
             && x.WartezeitAussenluftMin > x.EinschaltverzoegerungMin)
         {
             liste.Add(new EntfeuchterBremse("aussenluft", "warnung", "Wartet auf Außenluft",
-                $"Die Zuluft läuft und die Außenluft ist trockener als der Raum. Der Entfeuchter wartet deshalb {x.WartezeitAussenluftMin} statt "
+                $"Die Zuluft läuft und die Außenluft ist trockener als die Raumluft. Der Entfeuchter wartet deshalb {x.WartezeitAussenluftMin} statt "
                 + $"{x.EinschaltverzoegerungMin} Minuten, bevor er einschaltet."));
         }
 

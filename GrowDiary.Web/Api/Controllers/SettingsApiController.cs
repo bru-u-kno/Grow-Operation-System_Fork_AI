@@ -387,6 +387,14 @@ public sealed class SettingsApiController : ApiControllerBase
             request.ExhaustM3h,
             request.CirculationFanCount,
             request.Sensors);
+        ValidateRaum(request.RaumId);
+    }
+
+    /// <summary>forkai.241: Ein Zelt steht im bekannten Raum oder in keinem; alles andere ist ein Tippfehler, kein Wunsch.</summary>
+    private void ValidateRaum(string? raumId)
+    {
+        if (!string.IsNullOrWhiteSpace(raumId) && RaumService.RaumIdNormal(raumId) is null)
+            ModelState.AddModelError("raumId", "Diesen Raum gibt es nicht.");
     }
 
     private void ValidateTentRequest(UpdateTentRequest request)
@@ -405,6 +413,7 @@ public sealed class SettingsApiController : ApiControllerBase
             request.ExhaustM3h,
             request.CirculationFanCount,
             request.Sensors);
+        ValidateRaum(request.RaumId);
     }
 
     private void ValidateTentBase(

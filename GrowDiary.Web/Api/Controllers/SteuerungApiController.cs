@@ -411,6 +411,27 @@ public sealed class SteuerungApiController : ApiControllerBase
         return Ok(await _zusatz.NamenAsync(ct));
     }
 
+    /// <summary>Fork AI (forkai.241): Der Raum — Name, Vorgabe und die Zelte darin. Die Fühler stehen bei den Geräte-Rollen (Modul <c>raum</c>).</summary>
+    [HttpGet("raum")]
+    [ProducesResponseType(typeof(RaumDto), StatusCodes.Status200OK)]
+    public ActionResult<RaumDto> Raum([FromServices] RaumService raum) => Ok(raum.Stand());
+
+    /// <summary>Den Raumnamen ändern; leer setzt auf die Vorgabe „Aufstellraum“.</summary>
+    [HttpPut("raum")]
+    [KiStufe(KiStufe.Verwaltung)]
+    [ProducesResponseType(typeof(RaumDto), StatusCodes.Status200OK)]
+    public ActionResult<RaumDto> RaumSpeichern([FromBody] RaumAenderung request, [FromServices] RaumService raum)
+    {
+        if (request is null) return BadRequestError("raum_invalid", "Es wurde nichts übergeben.");
+        var fehler = raum.NameSpeichern(request.Name);
+        if (fehler.Count > 0)
+        {
+            foreach (var (feld, meldung) in fehler) ModelState.AddModelError(feld, meldung);
+            return ValidationError();
+        }
+        return Ok(raum.Stand());
+    }
+
     /// <summary>Fork AI (A-015): Wie viele Entfeuchter es gibt — null heißt „nach der Zuordnung entscheiden".</summary>
     [HttpGet("entfeuchtung-einrichtung")]
     [ProducesResponseType(typeof(EntfeuchtungEinrichtungDto), StatusCodes.Status200OK)]
@@ -841,6 +862,7 @@ public sealed class SteuerungApiController : ApiControllerBase
         "co2" => "CO₂ · Begasung",
         "licht" => "Licht · Lampe",
         "zuluft" => "Zuluft · Lüfter",
+        "raum" => "Raum",
         "chiller" => "Wasserkühler",
         "entfeuchter" => "Entfeuchter",
         "entfeuchter-zusatz" => "Zusatz-Entfeuchter",

@@ -23,6 +23,7 @@ public sealed class CreateTentRequest
     public string? HvacControllerEntityId { get; set; }
     public bool Co2Available { get; set; }
     public bool HasCo2Enrichment { get; set; }
+    public string? RaumId { get; set; }
     public string? CameraEntityId { get; set; }
     public List<string>? Cameras { get; set; }
 
@@ -60,6 +61,7 @@ public sealed class UpdateTentRequest
     public string? HvacControllerEntityId { get; set; }
     public bool Co2Available { get; set; }
     public bool HasCo2Enrichment { get; set; }
+    public string? RaumId { get; set; }
     public string? CameraEntityId { get; set; }
     public List<string>? Cameras { get; set; }
 

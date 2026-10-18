@@ -95,6 +95,13 @@ public sealed class Tent
     /// kein Ziel statt ein unerreichbares.
     /// </remarks>
     public bool HasCo2Enrichment { get; set; }
+
+    /// <summary>
+    /// Fork AI (forkai.241): Der Raum, in dem das Zelt steht und aus dem es seine Luft zieht — <c>null</c>, wenn kein eigener
+    /// Raum nötig ist (Pflanzen direkt im Raum: dann ist der Raum das Zelt). Bis zum Mehrraum-Ausbau gibt es einen Raum,
+    /// <see cref="Services.RaumService.HauptRaumId"/>.
+    /// </summary>
+    public string? RaumId { get; set; }
     public string? CameraEntityId { get; set; }
 
     /// <summary>

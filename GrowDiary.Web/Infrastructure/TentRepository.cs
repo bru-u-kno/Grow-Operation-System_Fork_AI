@@ -89,14 +89,14 @@ public sealed class TentRepository : RepositoryBase
                 WidthCm, DepthCm, TentHeightCm, LightType, LightWatt,
                 LightController, LightControllerEntityId, ExhaustFanCount, ExhaustM3h,
                 CirculationFanCount, HvacController, HvacControllerEntityId,
-                Co2Available, HasCo2Enrichment, CameraEntityId, CameraEntityIds, WaterTargetEntityId, ChillerSwitchEntityId, ChillerControlEnabled, ChillerHysteresisC, ChillerMinRunMinutes, ChillerMinPauseMinutes, ChillerMaxReadingAgeMinutes, LeafTempOffsetC, LeafOffsetSyncService, LeafOffsetSyncPort, CreatedAtUtc, UpdatedAtUtc
+                Co2Available, HasCo2Enrichment, RaumId, CameraEntityId, CameraEntityIds, WaterTargetEntityId, ChillerSwitchEntityId, ChillerControlEnabled, ChillerHysteresisC, ChillerMinRunMinutes, ChillerMinPauseMinutes, ChillerMaxReadingAgeMinutes, LeafTempOffsetC, LeafOffsetSyncService, LeafOffsetSyncPort, CreatedAtUtc, UpdatedAtUtc
             )
             VALUES (
                 $name, $kind, $tentType, $status, $notes, $displayOrder, $accentColor,
                 $widthCm, $depthCm, $tentHeightCm, $lightType, $lightWatt,
                 $lightController, $lightControllerEntityId, $exhaustFanCount, $exhaustM3h,
                 $circulationFanCount, $hvacController, $hvacControllerEntityId,
-                $co2Available, $hasCo2Enrichment, $cameraEntityId, $cameraEntityIds, $waterTargetEntityId, $chillerSwitchEntityId, $chillerControlEnabled, $chillerHysteresisC, $chillerMinRunMinutes, $chillerMinPauseMinutes, $chillerMaxReadingAgeMinutes, $leafTempOffsetC, $leafOffsetSyncService, $leafOffsetSyncPort, datetime('now'), datetime('now')
+                $co2Available, $hasCo2Enrichment, $raumId, $cameraEntityId, $cameraEntityIds, $waterTargetEntityId, $chillerSwitchEntityId, $chillerControlEnabled, $chillerHysteresisC, $chillerMinRunMinutes, $chillerMinPauseMinutes, $chillerMaxReadingAgeMinutes, $leafTempOffsetC, $leafOffsetSyncService, $leafOffsetSyncPort, datetime('now'), datetime('now')
             );
             SELECT last_insert_rowid();
         """;
@@ -140,6 +140,7 @@ public sealed class TentRepository : RepositoryBase
                 HvacControllerEntityId = $hvacControllerEntityId,
                 Co2Available = $co2Available,
                 HasCo2Enrichment = $hasCo2Enrichment,
+                RaumId = $raumId,
                 CameraEntityId = $cameraEntityId,
                 CameraEntityIds = $cameraEntityIds,
                 WaterTargetEntityId = $waterTargetEntityId,
@@ -504,6 +505,7 @@ public sealed class TentRepository : RepositoryBase
             HvacControllerEntityId = NullString(reader["HvacControllerEntityId"]),
             Co2Available = reader["Co2Available"] is not DBNull and not null && Convert.ToInt32(reader["Co2Available"], CultureInfo.InvariantCulture) == 1,
             HasCo2Enrichment = HasColumn(reader, "HasCo2Enrichment") && reader["HasCo2Enrichment"] is not DBNull and not null && Convert.ToInt32(reader["HasCo2Enrichment"], CultureInfo.InvariantCulture) == 1,
+            RaumId = HasColumn(reader, "RaumId") ? NullString(reader["RaumId"]) : null,
             CameraEntityId = NullString(reader["CameraEntityId"]),
             CameraEntityIds = HasColumn(reader, "CameraEntityIds") ? NullString(reader["CameraEntityIds"]) : null,
             WaterTargetEntityId = HasColumn(reader, "WaterTargetEntityId") ? NullString(reader["WaterTargetEntityId"]) : null,
@@ -576,6 +578,7 @@ public sealed class TentRepository : RepositoryBase
         command.Parameters.AddWithValue("$hvacControllerEntityId", (object?)tent.HvacControllerEntityId ?? DBNull.Value);
         command.Parameters.AddWithValue("$co2Available", tent.Co2Available ? 1 : 0);
         command.Parameters.AddWithValue("$hasCo2Enrichment", tent.HasCo2Enrichment ? 1 : 0);
+        command.Parameters.AddWithValue("$raumId", (object?)tent.RaumId ?? DBNull.Value);
         command.Parameters.AddWithValue("$cameraEntityId", (object?)tent.CameraEntityId ?? DBNull.Value);
         command.Parameters.AddWithValue("$cameraEntityIds", (object?)tent.CameraEntityIds ?? DBNull.Value);
         command.Parameters.AddWithValue("$waterTargetEntityId", (object?)tent.WaterTargetEntityId ?? DBNull.Value);

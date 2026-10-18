@@ -5,6 +5,18 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.241
+
+**Fork AI.** Der **Raum** ist jetzt eine eigene, zentrale Einheit: der Ort, in dem ein Zelt steht und aus dem es seine Luft zieht („Aufstellraum"). Vorher war er als „Kellerfühler" tief in der Zuluft versteckt und ließ sich nirgends benennen.
+
+- **Neuer Reiter „Räume"** unter Geräte & Entitäten: der **Name des Raums** (leer = „Aufstellraum"), die beiden **Raum-Fühler** (Temperatur und Feuchte der Raumluft — nicht Zelt, nicht draußen) und die Zelte, die darin stehen.
+- **Zelt-Formular:** neues Feld **„Aufstellraum"** („Kein eigener Raum" oder der Raum). Stehen die Pflanzen direkt im Raum, braucht es keinen eigenen Raum — dann ist der Raum das Zelt.
+- **Zuluft benutzt die Raum-Fühler mit:** keine eigene Zuordnung mehr. **Bestehende Zuordnungen wandern beim Start von selbst** (Kellerfühler → Raum-Fühler, einmal, ohne Verlust); Werte, Rechenwerte und Regelung bleiben unverändert. Die Rollen der Zuluft verweisen auf den Reiter „Räume".
+- **Der Raumname steht in den Sätzen:** „Außenluft ist feuchter als im Raum „…"", Rechenweg der Zuluft, Hinweis des Entfeuchters („trockener als die Raumluft").
+- **Rechenweg der Hilfswerte** (`sensor.absolute_feuchte_keller`): unverändert — nur die Platzhalter heißen intern `raum_temp`/`raum_rh`.
+- **Technik:** `GET/PUT /api/steuerung/raum`, `Tent.RaumId` (nullable, `UpdateTentRequest.raumId`), Rollen-Modul `raum`. Ein Zelt mit unbekanntem Raum wird abgewiesen (400).
+- **Noch nicht in diesem Release** (folgt getrennt): Außen-Messwerte des Zelts aus dem Raum ableiten, mehrere Räume, Pflanzen ohne Zelt.
+
 ## 2.0.0-forkai.240
 
 **Fork AI.** Neue Prüfung für Entwickler: die **Gerätematrix**. Sie öffnet dieselben Seiten auf mehreren Endgeräten und prüft, ob etwas über den Rand ragt, ob Bedienelemente groß genug zum Antippen sind und ob die Konsole sauber bleibt. **Für die Anwendung ändert sich nichts:** keine Oberfläche, kein Backend, keine Einstellung.

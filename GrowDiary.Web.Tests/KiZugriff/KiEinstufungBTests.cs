@@ -71,6 +71,7 @@ public sealed class KiEinstufungBTests
         // Zusatz ausschalten (Hilfe „aus") — wie der Entfeuchter. Die Namen sind nur Anzeige.
         ["SteuerungApiController.EntfeuchterZusatzSpeichern"] = "GeraeteSchalten, Verwaltung",
         ["SteuerungApiController.EntfeuchterNamenSpeichern"] = "Verwaltung",
+        ["SteuerungApiController.RaumSpeichern"] = "Verwaltung",
         // Fork AI (A-015): sagt nur, wie viele Entfeuchter es gibt — die Regelung bleibt unberührt.
         ["SteuerungApiController.EntfeuchtungEinrichtungSpeichern"] = "Verwaltung",
         ["SteuerungApiController.AuswahlSpeichern"] = "Verwaltung", // A-016: blendet Steuerungen ein/aus

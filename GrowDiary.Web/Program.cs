@@ -128,6 +128,7 @@ builder.Services.AddScoped<StromKachel>();
 builder.Services.AddScoped<ZaehlerstandImportService>();
 // Fork AI (forkai.20): Steuerung — CO₂-Leitstand
 builder.Services.AddSingleton<SteuerungRepository>();
+builder.Services.AddSingleton<RaumService>(); // Fork AI (forkai.241)
 builder.Services.AddSingleton<WochenwertRepository>(); // Fork AI (F-004)
 builder.Services.AddSingleton<WochenwertUeberlagerung>(); // Fork AI (F-004)
 builder.Services.AddSingleton<GrowPlanRepository>(); // Fork AI (Grow-Plan)

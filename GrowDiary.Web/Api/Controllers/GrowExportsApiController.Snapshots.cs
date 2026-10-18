@@ -44,6 +44,7 @@ public sealed partial class GrowExportsApiController
             Co2Available: snapshot.Co2Available,
             // Aeltere Schnappschuesse kennen die Anreicherung nicht — false ist der ehrliche Default.
             HasCo2Enrichment: false,
+            RaumId: null,
             CameraEntityId: snapshot.CameraEntityId,
             ActiveGrowCount: 0,
             ArchivedGrowCount: 0,
