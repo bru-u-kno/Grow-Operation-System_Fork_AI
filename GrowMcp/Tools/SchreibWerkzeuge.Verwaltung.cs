@@ -21,7 +21,7 @@ public sealed partial class SchreibWerkzeuge
 {
     private const string StufeVerwaltung = $"Braucht Stufe „{Stufen.VerwaltungText}\".";
 
-    private static readonly string[] KeinRaumWoerter = ["", "keiner", "kein", "keinen", "ohne", "ohne raum", "none", "-"];
+    private static readonly string[] KeinRaumWoerter = ["keiner", "kein", "keinen", "ohne", "ohne raum", "none"];
 
     /// <summary>Felder der Zelt-Antwort, die Grow OS selbst zählt und die ein Speichern nicht annimmt.</summary>
     private static readonly string[] ZeltZaehlfelder = ["id", "activeGrowCount", "archivedGrowCount", "activeSetupCount", "archivedSetupCount"];
@@ -120,10 +120,10 @@ public sealed partial class SchreibWerkzeuge
     // ------------------------------------------------------------------ Raumname
 
     [McpServerTool(Name = "raum_setzen")]
-    [Description($"Ändert den Namen des Raums, in dem die Zelte stehen (etwa „Keller\"). Leer lassen = zurück auf die Vorgabe „Aufstellraum\". Der Name erscheint in Zuluft-Zustand und Entfeuchter-Bremse. Ändert sonst nichts. {StufeVerwaltung}")]
+    [Description($"Ändert den Namen des Raums, in dem die Zelte stehen (etwa „Keller\"). Ein leerer Text = zurück auf die Vorgabe „Aufstellraum\". Der Name erscheint in Zuluft-Zustand und Entfeuchter-Bremse. Ändert sonst nichts. {StufeVerwaltung}")]
     [BrauchtForkSchluessel(Stufen.Verwaltung)]
     public async Task<string> RaumSetzenAsync(
-        [Description("Der neue Name, höchstens 60 Zeichen. Leer = Vorgabe.")] string? name = null,
+        [Description("Der neue Name, höchstens 60 Zeichen. Nur ein ausdrücklich leerer Text (\"\") setzt auf die Vorgabe zurück.")][Beispiel("Keller")] string name,
         CancellationToken cancellationToken = default)
     {
         if (!reader.HatForkSchluessel) return ForkFehler.SchluesselNoetig;
@@ -234,8 +234,12 @@ public sealed partial class SchreibWerkzeuge
             foreach (var feld in ZeltZaehlfelder.Concat(ZeltUnberuehrt)) zurueck.Remove(feld);
             var rueck = await SendenAsync(HttpMethod.Put, $"api/settings/tents/{zeltId}", zurueck, cancellationToken);
             var zurueckgesetzt = rueck.Antwort is { Erfolg: true };
+            // Sensoren und Kameras schreibt das Zurückschreiben nicht (es lässt sie wie das erste Speichern weg).
+            var nichtZurueck = abweichend.Intersect(ZeltUnberuehrt).ToList();
             return $"ACHTUNG: Beim Speichern von Zelt {zeltId} „{zeltName}\" haben sich außer der Raumzuordnung weitere Angaben verändert ({string.Join(", ", abweichend)}). "
-                   + (zurueckgesetzt
+                   + (nichtZurueck.Count > 0
+                       ? $"Davon lassen sich {string.Join(", ", nichtZurueck)} NICHT automatisch zurückschreiben — bitte sofort in Grow OS prüfen und von Hand wiederherstellen."
+                       : zurueckgesetzt
                        ? "Der vorherige Stand wurde zurückgeschrieben; bitte mit raum und in Grow OS nachsehen, ob alles wieder stimmt (Sensoren-Zuordnung prüfen)."
                        : "Das Zurückschreiben des vorherigen Stands ist NICHT gelungen — bitte sofort in Grow OS nachsehen.");
         }
@@ -278,7 +282,7 @@ public sealed partial class SchreibWerkzeuge
     {
         var namen = vorher.Select(p => p.Key).Concat(nachher.Select(p => p.Key)).Distinct(StringComparer.Ordinal);
         return namen
-            .Where(n => !string.Equals(n, "raumId", StringComparison.Ordinal))
+            .Where(n => !string.Equals(n, "raumId", StringComparison.Ordinal) && !ZeltZaehlfelder.Contains(n))
             .Where(n => !JsonNode.DeepEquals(vorher[n], nachher[n]))
             .ToList();
     }
@@ -287,7 +291,7 @@ public sealed partial class SchreibWerkzeuge
     public static string Pruefsumme(JsonObject zelt)
     {
         var ohne = new JsonObject();
-        foreach (var feld in zelt.Where(p => p.Key != "raumId").OrderBy(p => p.Key, StringComparer.Ordinal))
+        foreach (var feld in zelt.Where(p => p.Key != "raumId" && !ZeltZaehlfelder.Contains(p.Key)).OrderBy(p => p.Key, StringComparer.Ordinal))
         {
             ohne[feld.Key] = feld.Value?.DeepClone();
         }

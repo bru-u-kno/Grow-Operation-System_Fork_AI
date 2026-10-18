@@ -239,6 +239,28 @@ public sealed class VerwaltungWerkzeugeTests
     }
 
     [Fact]
+    public async Task Ein_leeres_Raumargument_loest_die_Zuordnung_nicht()
+    {
+        var fork = Fork(zelt: Zelt.Replace("\"raumId\":null", "\"raumId\":\"haupt\""));
+        var text = await Aufruf(fork, "zelt_aufstellraum_setzen", new() { ["zeltId"] = 1, ["raum"] = "" });
+
+        Assert.DoesNotContain(fork.VonWerkzeugen, a => a.Methode == "PUT");
+        Assert.StartsWith("Nichts geändert", text);
+    }
+
+    [Fact]
+    public async Task Eine_Aenderung_der_Zaehlfelder_zwischen_den_Abfragen_ist_kein_Fehlalarm()
+    {
+        var fork = Fork().Antwort("GET", @"api/settings/tents/1", a =>
+            (200, Zelt.Replace("\"activeGrowCount\":1", a.Methode == "GET" && fork2Aufrufe++ > 0 ? "\"activeGrowCount\":0" : "\"activeGrowCount\":1")));
+        var text = await Aufruf(fork, "zelt_aufstellraum_setzen", new() { ["zeltId"] = 1, ["raum"] = "Keller" });
+
+        Assert.DoesNotContain("ACHTUNG", text);
+    }
+
+    private int fork2Aufrufe;
+
+    [Fact]
     public void Die_Pruefsumme_ignoriert_raumId_und_sieht_jede_andere_Aenderung()
     {
         var a = JsonNode.Parse(Zelt)!.AsObject();
