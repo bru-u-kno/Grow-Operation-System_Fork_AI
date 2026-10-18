@@ -742,9 +742,18 @@ public static class DemoData
     /// perfekt konstante Wirkung gibt es an keinem echten Becken, und ein
     /// Vorschlag, der aus makellosen Zahlen entsteht, prüft nichts.
     /// </remarks>
-    public static IEnumerable<DoseEvent> SeedDoses(int pumpId, int tentId, DateTime nowUtc)
+    public static IEnumerable<DoseEvent> SeedDoses(int pumpId, int tentId, DateTime nowUtc, bool fuerEc = false)
     {
-        var muster = new[]
+        // Eine Nährstoffpumpe hebt den EC; mit pH-Werten (6,31 → 6,04) stand im Tagebuch „EC 6,31 → 6,04“ (Sichtprüfung 18.10.2026).
+        var muster = fuerEc
+            ? new[]
+            {
+                (Stunden: 52.0, Ml: 3.5, Vorher: 1.38, Wirkung: 0.05),
+                (Stunden: 34.0, Ml: 2.0, Vorher: 1.42, Wirkung: 0.06),
+                (Stunden: 22.0, Ml: 3.0, Vorher: 1.40, Wirkung: 0.05),
+                (Stunden: 9.0,  Ml: 2.5, Vorher: 1.45, Wirkung: 0.06),
+            }
+            : new[]
         {
             (Stunden: 52.0, Ml: 3.5, Vorher: 6.42, Wirkung: -0.11),
             (Stunden: 34.0, Ml: 2.0, Vorher: 6.28, Wirkung: -0.12),

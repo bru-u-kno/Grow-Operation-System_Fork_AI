@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.245
+
+**Fork AI.** Ergebnisse der Sichtprüfung der Hauptseiten (Live, Steuerung, Entfeuchtung, Tagebuch, Einstellungen) bei 360 px, hell und dunkel, sowie eines Abgleichs der Entfeuchtungs-Anzeige mit den Rohwerten in Home Assistant. Der Abgleich ergab keine Abweichung; die Sichtprüfung vier Fehler.
+
+- **Live-Kacheln: Einheit klebte an der Zahl.** Seit forkai.242 standen die Zielwerte als „1,4kPa", „1,5–1,7mS/cm" und „400–450mV" da: die Korrektur für den Umbruch hatte das Leerzeichen vor der Einheit verschluckt. Der Abstand ist wieder da; ein neuer Test (`einheit-abstand`) misst ihn und wurde vor der Reparatur rot.
+- **Entfeuchtung: hängender Punkt im Gerätenamen.** Hieß die Entität „Gerät · Zustand" oder „Gerät - Status", blieb nach dem Abschneiden der Endung das Trennzeichen stehen („Demo Entfeuchter ·: Feuchte über der EIN-Schwelle"). Der Name wird jetzt ohne Trennzeichen abgeleitet. Bei Namen mit Leerzeichen, wie in der eigenen Anlage, ändert sich nichts.
+- **Tagebuch: Spaltenüberschrift „Änderun/g".** In der Vorher-nachher-Tabelle der Wasserwechsel brach die Überschrift bei 360 px mitten im Wort. Bis 379 px steht dort jetzt das kurze „±".
+- **Testbestand: Nährstoffdosis mit pH-Werten.** Die Demodosen der Nährstoffpumpe trugen pH-Werte (6,31 → 6,04) und erschienen im Tagebuch als „EC 6,31 → 6,04". Sie tragen jetzt EC-Werte (1,45 → 1,60); ein Test hält die Größenordnung je Messgröße fest. Betrifft nur den Testbestand.
+- **Gemessen:** Backend-Tests 3654 bestanden, Unit-Tests 1234 bestanden; volle E2E-Mappe 1125 bestanden, Gerätematrix 288 von 288 grün.
+
 ## 2.0.0-forkai.244
 
 **Fork AI.** Zweite Welle der Oberflächen-Korrekturen: weniger einzelne Wörter, die allein auf der letzten Zeile stehen, und zwei Stellen, an denen Text oder Zahlen schief standen. Die Umbruchprüfung aus forkai.242 meldet jetzt 8 statt 32 Fälle bei 360 px.

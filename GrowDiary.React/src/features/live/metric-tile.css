@@ -114,7 +114,8 @@
     font-variant-numeric: tabular-nums; color: var(--ink);
   }
   /* Zahl und Einheit bleiben je als Block zusammen; bricht die Zeile, dann zwischen ihnen, nicht mitten im Wort. */
-  .gos-metric-zv .u { display: inline-block; white-space: nowrap; font-size: var(--fs-etikett); color: var(--faint); }
+  /* Der Abstand steht als Rand, nicht als Leerzeichen: das Leerzeichen im Span (` kPa`) verschluckt ein Inline-Block am Anfang. */
+  .gos-metric-zv .u { display: inline-block; white-space: nowrap; margin-left: .3em; font-size: var(--fs-etikett); color: var(--faint); }
   /* Umbrechen statt hinausragen, wenn die Systemschrift verdoppelt ist (Gerätematrix 18.10.2026). */
   .gos-metric-tn { display: flex; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
   .gos-metric-tn span { color: var(--faint); }

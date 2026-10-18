@@ -632,6 +632,10 @@ public sealed class EntfeuchterZusatzTests
         Assert.Equal("RDWC Dehumi", EntfeuchterZusatzSteuerungService.GeraeteName("RDWC Dehumi Aktiver Modus"));
         Assert.Equal("Dehumi RDWC Tent", EntfeuchterZusatzSteuerungService.GeraeteName("Dehumi RDWC Tent"));
         Assert.Equal("Trotec", EntfeuchterZusatzSteuerungService.GeraeteName("Trotec Zustand"));
+        // Trennzeichen vor der Endung bleiben nicht als hängender Rest stehen („Demo Entfeuchter ·: Feuchte …“, 18.10.2026).
+        Assert.Equal("Demo Entfeuchter", EntfeuchterZusatzSteuerungService.GeraeteName("Demo Entfeuchter · Aktiver Modus"));
+        Assert.Equal("Trotec", EntfeuchterZusatzSteuerungService.GeraeteName("Trotec - Zustand"));
+        Assert.Equal("Trotec", EntfeuchterZusatzSteuerungService.GeraeteName("Trotec: Status"));
         // Nicht auf nichts kürzen.
         Assert.Equal("Zustand", EntfeuchterZusatzSteuerungService.GeraeteName("Zustand"));
         Assert.Null(EntfeuchterZusatzSteuerungService.GeraeteName(null));

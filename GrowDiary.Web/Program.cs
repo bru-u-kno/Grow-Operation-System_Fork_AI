@@ -424,7 +424,7 @@ if (DemoData.IsEnabled)
                 continue;
             }
 
-            foreach (var dose in DemoData.SeedDoses(pump.Id, pump.TentId, nowUtc))
+            foreach (var dose in DemoData.SeedDoses(pump.Id, pump.TentId, nowUtc, pump.MetricKey == "reservoir-ec"))
             {
                 dosing.InsertEvent(dose);
             }

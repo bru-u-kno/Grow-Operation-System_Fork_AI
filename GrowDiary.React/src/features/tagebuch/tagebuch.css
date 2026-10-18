@@ -119,7 +119,8 @@
     .tb-vt-kopf > span { min-width: 0; overflow-wrap: anywhere; }
     .tb-kacheln { grid-template-columns: 1fr 1fr; }
   }
-  @media (max-width: 359px) {
+  /* 379 statt 359: bei 360 px (Android-Handy) stand „Änderun/g“ — die Spalte ist dort schmaler als das Wort. */
+  @media (max-width: 379px) {
     .tb-lang { display: none; }
     .tb-kurz { display: inline; }
   }

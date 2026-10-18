@@ -812,7 +812,9 @@ public sealed class EntfeuchterZusatzSteuerungService : IStartwertDienst
         {
             if (name.EndsWith(endung, StringComparison.OrdinalIgnoreCase) && name.Length > endung.Length)
             {
-                return name[..^endung.Length].Trim();
+                // Auch das Trennzeichen davor („Gerät · Zustand“, „Gerät - Status“) gehört zur Endung, sonst bleibt es als Rest stehen.
+                var kurz = name[..^endung.Length].TrimEnd(' ', '·', '-', '–', '—', ':', '|', '/');
+                return kurz.Length > 0 ? kurz : name[..^endung.Length].Trim();
             }
         }
         return name;

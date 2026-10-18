@@ -972,4 +972,16 @@ public sealed class DemobestandStimmigTests : IDisposable
         Assert.True(programme.Count >= 2, $"Nur {programme.Count} Programme gefunden — die Prüfung sähe ihre Grundmenge nicht.");
         return programme.Single(p => p?.Id == id)!;
     }
+
+    [Fact]
+    public void DemoDosen_TragenWerteInDerGroessenordnungIhrerMessgroesse()
+    {
+        // Sichtprüfung 18.10.2026: Beide Pumpen bekamen pH-Werte, und das Tagebuch zeigte „EC 6,31 → 6,04“.
+        var ph = DemoData.SeedDoses(1, 1, DateTime.UtcNow, fuerEc: false).ToList();
+        var ec = DemoData.SeedDoses(2, 1, DateTime.UtcNow, fuerEc: true).ToList();
+        Assert.True(ph.Count >= 3 && ec.Count >= 3, "Die Prüfung sähe ihre Grundmenge nicht.");
+        Assert.All(ph, d => Assert.InRange(d.ValueBefore!.Value, 5.0, 7.5));
+        Assert.All(ec, d => Assert.InRange(d.ValueBefore!.Value, 0.5, 3.0));
+        Assert.All(ec, d => Assert.True(d.ValueAfter > d.ValueBefore, "Eine Nährstoffdosis hebt den EC."));
+    }
 }
