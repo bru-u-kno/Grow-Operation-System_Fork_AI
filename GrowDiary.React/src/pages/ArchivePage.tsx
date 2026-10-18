@@ -198,7 +198,7 @@ function gemessen(durchgang: KostenDurchgang | undefined): durchgang is KostenDu
  * „≈ 96 € geschätzt" — oder ein ehrliches Minus, wenn auch dafür Preise fehlen.
  */
 function ArchivKosten({ durchgang, schaetzung, trockenGramm }: { durchgang: KostenDurchgang | undefined; schaetzung: GrowKosten | undefined; trockenGramm: number | null }) {
-  const jeGramm = (summe: number) => (trockenGramm != null && trockenGramm > 0 ? ` · ${formatNumber(summe / trockenGramm, 2)}\u00a0€/g` : '')
+  const jeGramm = (summe: number) => (trockenGramm != null && trockenGramm > 0 ? ` ·\u00a0${formatNumber(summe / trockenGramm, 2)}\u00a0€/g` : '')
   if (gemessen(durchgang)) {
     return (
       <div className="co-td" data-kosten="gemessen" title="wie auf der Kostenseite: Strom vom kWh-Zähler, Verbrauchsartikel und Anschaffungen dieses Durchgangs">

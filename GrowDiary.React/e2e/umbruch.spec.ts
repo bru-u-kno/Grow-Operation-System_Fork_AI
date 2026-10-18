@@ -88,8 +88,10 @@ for (const f of FASSUNGEN) {
           }
           const BLOCK = 'main *, header *, nav *'
           const gesehen = new Set<Element>()
+          // Entwurf, kein Fehler: im Phasenbalken steht die Zahl vorn und der Name fällt beim Kürzen (siehe `balkenText`).
+          const gewollt = (el: Element) => !!el.closest('.ls-phase')
           for (const el of Array.from(document.querySelectorAll<HTMLElement>(BLOCK))) {
-            if (gesehen.has(el) || !sichtbar(el)) continue
+            if (gesehen.has(el) || !sichtbar(el) || gewollt(el)) continue
             const tag = el.tagName.toLowerCase()
             if (['script', 'style', 'svg', 'path', 'code', 'pre', 'option', 'select', 'textarea'].includes(tag)) continue
             // nur Blätter mit eigenem Text
@@ -134,7 +136,7 @@ for (const f of FASSUNGEN) {
                 raus.push({ art: 'waise', text: `„${l[0]}"   (${volltext})`, tag, klasse, kasten })
             }
             // D: Knopf/Link/Chip/Kopf mit kurzem Text bricht um
-            const istSteuerung = tag === 'button' || tag === 'th' || tag === 'label' || (tag === 'a' && !!el.closest('nav, header')) || /chip|badge|pill|tag|tab/i.test(klasse)
+            const istSteuerung = (tag === 'button' && !/v1-button/.test(klasse)) || tag === 'th' || tag === 'label' || (tag === 'a' && !!el.closest('nav, header')) || /chip|badge|pill|tag|tab/i.test(klasse)
             if (istSteuerung && reihe.length >= 2 && volltext.length <= 24)
               raus.push({ art: 'knopf-umbruch', text: `${reihe.length} Zeilen: ${volltext}`, tag, klasse, kasten })
             // E: Fließtext in zu schmaler Spalte

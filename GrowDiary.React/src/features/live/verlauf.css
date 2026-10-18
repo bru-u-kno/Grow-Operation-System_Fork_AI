@@ -57,13 +57,15 @@
 
 /* Segmente: Zeitraum und Darstellung */
 .vd-segment {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  /* rem statt feste vier Spalten: bei doppelter Systemschrift rutschen die Knöpfe in eine zweite Reihe, statt aus dem Rahmen zu ragen. */
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
   border: 1px solid var(--hair-2); border-radius: var(--r-sm); overflow: hidden;
 }
 .vd-segment.is-zwei { grid-template-columns: repeat(2, 1fr); }
 .vd-seg {
   min-height: 36px; border: 0; background: transparent; color: var(--muted);
   font: 600 var(--fs-klein) var(--font-mono); cursor: pointer; padding: 0 4px;
+  white-space: nowrap; /* „1 Std“ nicht auf zwei Zeilen */
 }
 .vd-seg + .vd-seg { border-left: 1px solid var(--hair-2); }
 .vd-seg[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }

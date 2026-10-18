@@ -36,7 +36,7 @@ describe('sortenText', () => {
 
   it('mehrere Sorten heissen „gemischt (N)"', () => {
     expect(sortenText({ strain: 'White Widow', pflanzenSorten: ['A', 'B', 'C'] }))
-      .toBe('gemischt (3)')
+      .toBe('gemischt\u00a0(3)')
   })
 })
 

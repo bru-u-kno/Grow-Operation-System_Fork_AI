@@ -780,10 +780,11 @@ function HardwareRowView({ row, liveState, saving, onStatus, onEdit, onDelete, o
       <td data-label="Wert">{liveState ?? <span className="hw-empty">—</span>}</td>
       <td data-label="Kalibrierung">
         {row.nextCare ? (
-          <>
+          // Ein Block: als zwei Kinder der Zelle stünden die Fälligkeit und die Art nebeneinander in zwei schmalen Spalten.
+          <div>
             <strong className={classNames(row.overdue && 'hw-overdue')}>{dueLabel(row.dueInDays)}</strong>
             <span className="hw-sub">{row.nextCare.kind}: {row.nextCare.title}</span>
-          </>
+          </div>
         ) : <span className="hw-empty">—</span>}
       </td>
       <td data-label="Aktionen">

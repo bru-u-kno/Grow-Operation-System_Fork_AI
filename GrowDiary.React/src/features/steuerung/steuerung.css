@@ -91,7 +91,9 @@
   .st-feldzeile > .v1-button,
   .st-feldzeile > .st-nurlesen,
   .st-geraete-zeile > .v1-button { flex: 0 0 auto; white-space: nowrap; }
+  /* Wert und Einheit bleiben zusammen („unter 25 °C“). */
   .st-etikett { font-size: var(--fs-text); }
+  .st-etikett:not(:has(small)) { white-space: nowrap; }
   .st-etikett small { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--faint); }
   .st-eingaben { flex: 0 0 auto; display: flex; align-items: center; gap: var(--s-2); }
   .st-eingaben input[type='number'] { width: 6rem; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

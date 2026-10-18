@@ -1233,7 +1233,7 @@ public static partial class Demobestand
     {
         hardware.CreateRiskEvent(new RiskEvent
         {
-            Title = "Umwälzpumpe meldet an, zieht aber 0 W (Testdaten)",
+            Title = "Umwälzpumpe meldet an, zieht aber 0\u00a0W (Testdaten)",
             EventType = RiskEventType.PumpOffline,
             Severity = RiskEventSeverity.Critical,
             Status = RiskEventStatus.Open,

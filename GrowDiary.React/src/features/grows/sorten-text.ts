@@ -39,7 +39,7 @@ export function sortenText(grow: SortenQuelle): string | null {
   const sorten = grow.pflanzenSorten ?? []
   if (sorten.length === 0) return grow.strain ?? null
   if (sorten.length === 1) return sorten[0]
-  return `gemischt (${sorten.length})`
+  return `gemischt\u00a0(${sorten.length})`
 }
 
 /**

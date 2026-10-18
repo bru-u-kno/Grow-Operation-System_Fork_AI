@@ -66,6 +66,8 @@ body {
    Home-Assistant-Ingress-Iframe eine zweite Scrollleiste erzeugen. */
 body {
   overflow-x: clip;
+  /* Keine einzelnen Wörter auf der letzten Zeile (pH, °C, A). Wirkt auf jeden Text, den ein Bauteil nicht selbst setzt. */
+  text-wrap: pretty;
 }
 
 img,
