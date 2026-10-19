@@ -17,6 +17,8 @@ RUN dotnet publish GrowMcp/GrowMcp.csproj -c Release -o /app/publish --no-restor
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY LICENSE THIRD-PARTY-NOTICES.md /licenses/
+COPY LICENSES/ /licenses/LICENSES/
 
 # Die Ports stehen fest im Programm (siehe GrowMcp/Tueren.cs) — welcher Port was
 # darf, ist eine Sicherheitsfrage und keine Umgebungsvariable.

@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.260
+
+**Eigenes Symbol, Lizenzhinweise und neue Anleitungsbilder.** Cultivate Control hat ein eigenes Symbol, die Drittlizenzen sind vollständig dokumentiert, und die Anleitung zeigt die heutige Oberfläche.
+
+- **Symbol:** Ein Regelkreis (offener Kreis mit Pfeil) um einen Keimling ersetzt das Sechseck mit dem „GOS“-Zeichen des Ursprungsprojekts. Es gilt als App-Symbol auf dem Handy-Startbildschirm (auch als runde Android-Variante), als Favicon und als Logo. Die alten, nirgends mehr eingebundenen Logo-Dateien sind entfernt.
+- **Neu in Home Assistant:** Cultivate Control und Cultivate Control MCP haben jetzt ein Add-on-Symbol und ein Logo im Store und auf der Add-on-Seite; vorher hatten sie keins.
+- **Lizenzen:** Neue Datei `THIRD-PARTY-NOTICES.md` mit allen mitgelieferten Bibliotheken, Schriften und ihren Lizenzen, dazu die Lizenztexte im Ordner `LICENSES`. Beides liegt auch in beiden Images unter `/licenses`. Dazu ein Hinweis zu den genannten Herstellernamen in der Wissensbasis.
+- **Anleitung:** Die sechs Bilder in der README zeigten noch die Oberfläche des Ursprungsprojekts mit dem alten Namen. Sie sind durch Aufnahmen der heutigen App ersetzt (Demobestand).
+- **Unverändert:** Funktionen und Daten.
+
 ## 2.0.0-cc.259
 
 **Fotos und Kamerabilder lassen sich mitsichern.** Unter Einstellungen → Daten gibt es beim Sichern den Haken „Fotos und Kamerabilder mitsichern“. Damit kommen die Bilder beim Zurückspielen mit, auch bei einem Umzug auf ein neues Add-on.

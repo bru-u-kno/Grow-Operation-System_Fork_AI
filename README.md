@@ -1,3 +1,5 @@
+<p align="center"><img src="GrowDiary.Web/wwwroot/images/logo.svg" width="96" alt="Cultivate Control"></p>
+
 # Cultivate Control — the RDWC/DWC grow add-on for Home Assistant
 
 > **Herkunft:** Cultivate Control ist die Weiterentwicklung eines Open-Source-Projekts (MIT). Was gegenüber dem Ursprung neu ist, steht in [FORK.md](FORK.md).

@@ -36,4 +36,6 @@ EXPOSE 5076
 VOLUME ["/data"]
 
 COPY --from=publish /app/publish ./
+COPY LICENSE THIRD-PARTY-NOTICES.md /licenses/
+COPY LICENSES/ /licenses/LICENSES/
 ENTRYPOINT ["dotnet", "GrowDiary.Web.dll"]
