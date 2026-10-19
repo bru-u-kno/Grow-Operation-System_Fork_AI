@@ -102,6 +102,7 @@ public sealed class KiEinstufungBTests
         ["SystemApiController.RestorePlan"] = "Verwaltung",
         ["SystemApiController.CreateBackup"] = "Verwaltung",
         ["SystemApiController.RestoreBackup"] = Gesperrt,
+        ["SystemApiController.UploadBackup"] = Gesperrt,
         ["SystemApiController.UpgradePreflight"] = "Verwaltung",
 
         ["GrowExportsApiController.ImportGrow"] = "Verwaltung" + Sicherung,

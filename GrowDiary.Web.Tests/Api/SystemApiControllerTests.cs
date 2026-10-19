@@ -354,6 +354,87 @@ public sealed class SystemApiControllerTests : IDisposable
         Assert.True(dto.EntryCount >= 1);
     }
 
+    private static Microsoft.AspNetCore.Http.IFormFile Zip(byte[] inhalt, string name = "grow-os-backup-x.zip")
+        => new Microsoft.AspNetCore.Http.FormFile(new MemoryStream(inhalt), 0, inhalt.Length, "file", name);
+
+    private static byte[] ZipMit(params (string Name, string Inhalt)[] eintraege)
+    {
+        using var speicher = new MemoryStream();
+        using (var archiv = new ZipArchive(speicher, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (name, inhalt) in eintraege)
+            {
+                var eintrag = archiv.CreateEntry(name);
+                using var schreiber = new StreamWriter(eintrag.Open());
+                schreiber.Write(inhalt);
+            }
+        }
+
+        return speicher.ToArray();
+    }
+
+    [Fact]
+    public async Task UploadBackup_NimmtEineSicherungAnUndSieLaesstSichPruefenUndZurueckspielen()
+    {
+        // Rundweg des Umzugs: auf der alten Installation sichern, herunterladen, auf der neuen hochladen.
+        var erzeugt = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+        var bytes = await System.IO.File.ReadAllBytesAsync(Path.Combine(_paths.BackupsPath, erzeugt.FileName));
+
+        var antwort = await _controller.UploadBackup(new BackupUploadRequest { File = Zip(bytes, "irgendein-name.zip") }, CancellationToken.None);
+
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(antwort.Result).Value);
+        Assert.NotEqual(erzeugt.FileName, manifest.FileName);
+        Assert.StartsWith("grow-os-backup-", manifest.FileName);
+        Assert.True(manifest.IncludesDatabase);
+        Assert.True(System.IO.File.Exists(Path.Combine(_paths.BackupsPath, manifest.FileName)));
+        Assert.Empty(Directory.GetFiles(_paths.BackupsPath, "*.upload"));
+
+        var plan = Assert.IsType<BackupRestorePlanDto>(Assert.IsType<OkObjectResult>(_controller.RestorePlan(manifest.FileName).Result).Value);
+        Assert.True(plan.RestoreSupported, string.Join(" | ", plan.Blockers));
+
+        var zurueck = _controller.RestoreBackup(manifest.FileName);
+        Assert.IsType<OkObjectResult>(zurueck.Result);
+    }
+
+    [Fact]
+    public async Task UploadBackup_WeistLeereDateiUndFalscheEndungAb()
+    {
+        var leer = await _controller.UploadBackup(new BackupUploadRequest { File = null }, CancellationToken.None);
+        Assert.Equal("backup_upload_empty", Assert.IsType<ApiError>(Assert.IsType<BadRequestObjectResult>(leer.Result).Value).Code);
+
+        var endung = await _controller.UploadBackup(new BackupUploadRequest { File = Zip([1, 2, 3], "sicherung.json") }, CancellationToken.None);
+        Assert.Equal("backup_upload_not_zip", Assert.IsType<ApiError>(Assert.IsType<BadRequestObjectResult>(endung.Result).Value).Code);
+    }
+
+    [Fact]
+    public async Task UploadBackup_WeistKaputtesZipAbUndHinterlaesstNichts()
+    {
+        var antwort = await _controller.UploadBackup(new BackupUploadRequest { File = Zip([1, 2, 3, 4, 5]) }, CancellationToken.None);
+
+        Assert.Equal("backup_upload_invalid", Assert.IsType<ApiError>(Assert.IsType<BadRequestObjectResult>(antwort.Result).Value).Code);
+        Assert.False(Directory.Exists(_paths.BackupsPath) && Directory.GetFiles(_paths.BackupsPath).Length > 0);
+    }
+
+    [Fact]
+    public async Task UploadBackup_WeistEinZipOhneDatenbankAb()
+    {
+        var ohneDatenbank = ZipMit(("App_Data/knowledge/etwas.json", "{}"));
+
+        var antwort = await _controller.UploadBackup(new BackupUploadRequest { File = Zip(ohneDatenbank) }, CancellationToken.None);
+
+        Assert.Equal("backup_upload_no_database", Assert.IsType<ApiError>(Assert.IsType<BadRequestObjectResult>(antwort.Result).Value).Code);
+        Assert.False(Directory.Exists(_paths.BackupsPath) && Directory.GetFiles(_paths.BackupsPath).Length > 0);
+    }
+
+    [Fact]
+    public void UploadBackup_IstFuerKiSchluesselGesperrt()
+    {
+        // Wie das Zurückspielen: Ein Assistent darf keine fremde Datenbank einschleusen.
+        var methode = typeof(SystemApiController).GetMethod(nameof(SystemApiController.UploadBackup))!;
+
+        Assert.NotNull(System.Reflection.CustomAttributeExtensions.GetCustomAttribute<GrowDiary.Web.Infrastructure.KiZugriff.KeinKiZugriffAttribute>(methode, inherit: true));
+    }
+
     [Fact]
     public void ValidateBackup_RejectsUnsafeFileNames()
     {

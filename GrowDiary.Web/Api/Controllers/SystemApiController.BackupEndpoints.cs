@@ -268,6 +268,120 @@ public sealed partial class SystemApiController
 
 
 
+    /// <summary>Größte erlaubte Sicherung, gepackt. Die Sicherung der App (Datenbank und Wissensbasis) ist weit kleiner.</summary>
+    private const long MaxBackupUploadBytes = 500L * 1024 * 1024;
+
+    /// <summary>Größte erlaubte Gesamtgröße nach dem Entpacken — Schutz vor Zip-Bomben.</summary>
+    private const long MaxBackupUnpackedBytes = 2L * 1024 * 1024 * 1024;
+
+    /// <summary>
+    /// Eine Sicherung hochladen, die auf einer anderen Installation entstanden ist (Umzug,
+    /// neues Add-on). Sie landet unter neuem Namen im Sicherungsordner; geprüft und
+    /// zurückgespielt wird danach wie bei jeder anderen Sicherung (<c>restore-plan</c>,
+    /// <c>restore</c>). Hier wird nur abgewiesen, was keine Sicherung dieser App sein kann.
+    /// </summary>
+    [HttpPost("backup/upload")]
+    [KeinKiZugriff("Eine hochgeladene Sicherung ersetzt beim Zurückspielen die ganze Datenbank, "
+        + "auch die Schlüssel und ihre Stufen. Ein Assistent darf keine fremde Datenbank einschleusen; "
+        + "hochladen geht deshalb nur von Hand.")]
+    [RequestSizeLimit(MaxBackupUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxBackupUploadBytes)]
+    [ProducesResponseType(typeof(BackupManifestDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BackupManifestDto>> UploadBackup(
+        [FromForm] BackupUploadRequest request,
+        CancellationToken cancellationToken)
+    {
+        var file = request.File;
+        if (file is null || file.Length == 0)
+        {
+            return BadRequestError("backup_upload_empty", "Bitte wähle eine Sicherungsdatei (.zip) aus.");
+        }
+
+        if (!file.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequestError("backup_upload_not_zip", "Eine Sicherung ist eine .zip-Datei.");
+        }
+
+        if (file.Length > MaxBackupUploadBytes)
+        {
+            return BadRequestError("backup_upload_too_large", "Die Sicherung ist größer als 500 MB.");
+        }
+
+        var backupRoot = _paths.BackupsPath;
+        Directory.CreateDirectory(backupRoot);
+        var fileName = CreateUniqueBackupFileName(backupRoot);
+        var backupPath = Path.Combine(backupRoot, fileName);
+        var tempPath = backupPath + ".upload";
+
+        try
+        {
+            await using (var target = System.IO.File.Create(tempPath))
+            {
+                await file.CopyToAsync(target, cancellationToken);
+            }
+
+            bool containsDatabase;
+            bool containsWal;
+            bool containsKnowledge;
+            try
+            {
+                using var archive = ZipFile.OpenRead(tempPath);
+                var names = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
+                containsDatabase = names.Contains("App_Data/grow-diary.db", StringComparer.OrdinalIgnoreCase);
+                containsWal = names.Contains("App_Data/grow-diary.db-wal", StringComparer.OrdinalIgnoreCase);
+                containsKnowledge = names.Any(name => name.StartsWith("App_Data/knowledge/", StringComparison.OrdinalIgnoreCase));
+                if (archive.Entries.Sum(entry => entry.Length) > MaxBackupUnpackedBytes)
+                {
+                    System.IO.File.Delete(tempPath);
+                    return BadRequestError("backup_upload_too_large", "Die Sicherung ist entpackt größer als 2 GB.");
+                }
+            }
+            catch (InvalidDataException)
+            {
+                System.IO.File.Delete(tempPath);
+                LogSystemAudit("backup", "backup-upload-rejected", "Hochgeladene Datei ist kein gültiges Zip.", false, severity: "warning");
+                return BadRequestError("backup_upload_invalid", "Die Datei ist keine gültige Sicherung (kein lesbares Zip).");
+            }
+
+            if (!containsDatabase)
+            {
+                System.IO.File.Delete(tempPath);
+                LogSystemAudit("backup", "backup-upload-rejected", "Hochgeladene Sicherung enthält keine Hauptdatenbank.", false, severity: "warning");
+                return BadRequestError("backup_upload_no_database", "Die Datei enthält keine Datenbank der App und ist keine Sicherung.");
+            }
+
+            System.IO.File.Move(tempPath, backupPath);
+
+            var info = new FileInfo(backupPath);
+            var downloadUrl = $"/api/system/backup/{Uri.EscapeDataString(fileName)}";
+            var manifest = new BackupManifestDto(
+                BackupSchema: "grow-os.backup.v1",
+                CreatedAtUtc: DateTime.UtcNow,
+                FileName: fileName,
+                SizeBytes: info.Length,
+                IncludesDatabase: containsDatabase,
+                IncludesWal: containsWal,
+                IncludesKnowledgeRuntimeCopy: containsKnowledge,
+                ExcludesSecrets: true,
+                ExcludesHomeAssistantConfig: true,
+                ExcludesDataProtectionKeys: true,
+                ExcludesUploads: true,
+                RestoreSupported: true,
+                DownloadUrl: downloadUrl);
+
+            LogSystemAudit("backup", "backup-uploaded", $"Sicherung {fileName} hochgeladen.", true, relatedFileName: fileName);
+            return Created(downloadUrl, manifest);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempPath))
+            {
+                System.IO.File.Delete(tempPath);
+            }
+        }
+    }
+
     [HttpPost("backup/{fileName}/restore")]
     [KeinKiZugriff("Eine Sicherung enthält die Schlüssel und ihre Stufen. Über einen Schlüssel "
         + "zurückgespielt, holte sich ein heruntergestufter Schlüssel seine alten Stufen zurück "

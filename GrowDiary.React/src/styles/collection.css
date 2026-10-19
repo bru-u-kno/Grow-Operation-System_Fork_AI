@@ -255,6 +255,16 @@
   .st-preview strong { color: var(--accent-text); font-weight: 600; }
   .st-preview.is-bad strong { color: var(--danger); }
 
+  /* Sicherung zurueckspielen: die Pruefzeilen. */
+  .st-pruefung { list-style: none; margin: 12px 0; padding: 0; }
+  .st-pruefung li {
+    display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
+    border-top: 1px solid var(--hair-2);
+  }
+  .st-pruefung li:first-child { border-top: 0; }
+  .st-pruefung .is-gut { color: var(--accent-text); }
+  .st-pruefung .is-schlecht { color: var(--danger-text); }
+
   /* Rueckverweis auf den Grow, aus dem man kam. */
   /* DREI Klassen. `.ls-btn.is-small` traegt `margin-left: auto` und hat
      dieselbe Spezifitaet wie `.gs-back` allein, steht aber spaeter — die

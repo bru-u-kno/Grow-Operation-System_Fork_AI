@@ -7,6 +7,7 @@ import { useTheme } from '../useTheme'
 import { useNavBar } from '../useNavBar'
 import { useKiAktiv } from '../ki-aktiv'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
+import { SicherungZurueckspielen } from '../features/sicherung/SicherungZurueckspielen'
 import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
 type ImportPreview = { ok: boolean; title: string; details: string[] }
@@ -20,6 +21,7 @@ type BackendHealth = { appName: string; backendSchema: string; appVersion?: stri
  */
 function SettingsPage() {
   const { theme, toggle } = useTheme()
+  const [sicherungOffen, setSicherungOffen] = useState(false)
   const { dashboardPath, saveDashboardPath } = useNavBar()
   // Abgeleitet statt gespiegelt: `null` heisst „noch nichts getippt“, dann
   // zeigt das Feld den gespeicherten Wert. So springt es waehrend des Tippens
@@ -348,7 +350,10 @@ function SettingsPage() {
                 <div className="co-row-title">Backup</div>
                 <div className="co-row-sub">läuft über Home-Assistant-Backups mit</div>
               </div>
-              <div className="co-row-end"><button type="button" className="ls-btn is-small" onClick={() => void createFullBackup()}>Jetzt sichern</button></div>
+              <div className="co-row-end">
+                <button type="button" className="ls-btn is-small" onClick={() => void createFullBackup()}>Jetzt sichern</button>
+                <button type="button" className="ls-btn is-small" onClick={() => setSicherungOffen(true)} data-audit="sicherung-zurueckspielen-oeffnen">Zurückspielen …</button>
+              </div>
             </div>
             <div className="co-row">
               <div style={{ minWidth: 0 }}>
@@ -415,6 +420,7 @@ function SettingsPage() {
           <div className="co-row-end"><Link className="ls-btn is-small" to="/ki?tab=zugriff">Zum KI-Assistenten</Link></div>
         </div>
       </section>}
+      <SicherungZurueckspielen open={sicherungOffen} onClose={() => setSicherungOffen(false)} />
     </V1Page>
   )
 }

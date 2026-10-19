@@ -10,6 +10,7 @@ public sealed class AdminAccessPolicyTests
     [InlineData("/api/settings")]
     [InlineData("/api/settings/tents")]
     [InlineData("/api/system/backup")]
+    [InlineData("/api/system/backup/upload")]
     [InlineData("/api/system/backup/grow-os-backup-20260101-120000.zip")]
     [InlineData("/api/system/release-readiness")]
     [InlineData("/api/system/database-status")]

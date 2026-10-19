@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.255
+
+**Sicherung zurückspielen.** Unter Einstellungen → Daten gibt es neben „Jetzt sichern“ den Knopf „Zurückspielen …“. Damit lässt sich eine Sicherung, die auf einer anderen Installation entstanden ist, hochladen, prüfen und einspielen. So zieht man auf ein neues Add-on um, ohne den Datenordner von Hand zu kopieren.
+
+- **Was war:** Die App konnte Sicherungen erzeugen und herunterladen, aber nicht wieder einlesen. Der Server dafür (Prüfung und Zurückspielen) existierte schon, hatte aber keinen Knopf, und hochladen ging gar nicht. Wer das Add-on wechselte, ließ seine Daten zurück.
+- **Jetzt:** Datei auswählen, die App lädt sie hoch und prüft sie (enthält sie die Datenbank, passt der Datenbank-Stand zur App, stehen keine Zugangsdaten oder unsicheren Pfade darin). Erst dann wird „Jetzt zurückspielen“ frei. Vorher sichert die App den jetzigen Stand selbst, danach startet sie neu.
+- **Schutz:** Hochladen und Zurückspielen gehen nur von Hand, nicht über einen KI-Schlüssel — ein Assistent kann keine fremde Datenbank einschleusen. Erlaubt sind nur Zip-Dateien bis 500 MB (entpackt bis 2 GB); eine Datei ohne Datenbank oder mit kaputtem Zip wird abgewiesen, ohne etwas zu hinterlassen.
+- **Prüfungen:** Backend-Tests für gültige und ungültige Dateien, die Sperre für KI-Schlüssel und den Rundweg Sichern → Hochladen → Prüfen → Zurückspielen; ein Browser-Test, der den Weg an der Oberfläche durchspielt.
+
 ## 2.0.0-cc.254
 
 **Neuer Name: Cultivate Control.** Aus „Grow OS Fork AI“ wird „Cultivate Control“. Funktionen und Daten bleiben gleich, geändert haben sich Name, Kennung und Adresse.
