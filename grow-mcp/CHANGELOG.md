@@ -1,5 +1,9 @@
 # Änderungen — Grow MCP
 
+## 0.3.0-cc.3
+
+**Neues Logo.** Cultivate Control MCP zeigt in Home Assistant jetzt das Logo mit Wortmarke („CULTIVATE / CONTROL“ neben dem Regelkreis mit Keimling) statt nur des Symbols. Funktionen unverändert.
+
 ## 0.3.0-cc.2
 
 **Symbol und Lizenzhinweise.** Cultivate Control MCP hat ein Add-on-Symbol und ein Logo in Home Assistant, und das Image enthält jetzt die Lizenzdateien (`/licenses`). Funktionen unverändert.
