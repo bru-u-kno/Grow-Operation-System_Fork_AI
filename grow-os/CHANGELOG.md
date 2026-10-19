@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.258
+
+**Sicherung zurückspielen sagt, was nicht mitkommt.** Beim Umzug auf ein neues Add-on fehlten danach der Zugriff für KI-Assistenten und der Schlüssel; die App hatte nirgends gesagt, dass das so gewollt ist.
+
+- **Was war:** Beim Zurückspielen bleibt der Sicherheitszustand der KI (Schalter „Zugriff für KI-Assistenten“ und alle Schlüssel) bewusst so, wie er in der Installation ist, in die zurückgespielt wird. Sonst würde ein gelöschter oder verratener Schlüssel über eine alte Sicherung wieder gültig (Prüfer-Befund vom 03.10.2026). In einem neuen, leeren Add-on heißt das: Zugriff aus, keine Schlüssel. Das stand nirgends auf dem Schirm. Dazu kommt, dass Fotos und Kamerabilder nicht in der Sicherung stehen.
+- **Jetzt:** Das Blatt „Sicherung zurückspielen“ nennt es vorher in einem Hinweiskasten und danach im Ergebnis: Zugriff neu einschalten, neuen Schlüssel anlegen, Fotos und Kamerabilder kommen nicht mit. Dieselbe Warnung steht jetzt auch an „Jetzt sichern“ (Einstellungen → Daten).
+- **Unverändert:** Das Verhalten selbst, es ist Absicht.
+
 ## 2.0.0-cc.257
 
 **Sicherung zurückspielen — und „Jetzt sichern“ geht wieder.** Unter Einstellungen → Daten gibt es neben „Jetzt sichern“ den Knopf „Zurückspielen …“. Damit lässt sich eine Sicherung, die auf einer anderen Installation entstanden ist, hochladen, prüfen und einspielen. So zieht man auf ein neues Add-on um, ohne den Datenordner von Hand zu kopieren. Und „Jetzt sichern“ selbst funktioniert in Home Assistant wieder.

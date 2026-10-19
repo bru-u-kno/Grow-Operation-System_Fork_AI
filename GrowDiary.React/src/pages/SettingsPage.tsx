@@ -349,7 +349,7 @@ function SettingsPage() {
             <div className="co-row">
               <div style={{ minWidth: 0 }}>
                 <div className="co-row-title">Backup</div>
-                <div className="co-row-sub">läuft über Home-Assistant-Backups mit</div>
+                <div className="co-row-sub">läuft über Home-Assistant-Backups mit · Fotos und Kamerabilder sind nicht dabei</div>
               </div>
               <div className="co-row-end">
                 <button type="button" className="ls-btn is-small" onClick={() => void createFullBackup()}>Jetzt sichern</button>

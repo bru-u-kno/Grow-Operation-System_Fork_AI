@@ -105,6 +105,7 @@ export function SicherungZurueckspielen({ open, onClose }: { open: boolean; onCl
               : 'Bitte starte die App neu, damit alles aus der Sicherung gilt.'}
           />
           <p className="v1-muted">Der Stand davor liegt als Sicherung bereit: <b>{ergebnis.safetyBackupFileName}</b></p>
+          <p className="v1-muted">Noch zu tun nach einem Umzug: den Zugriff für KI-Assistenten unter KI-Assistent → Zugriff &amp; Schlüssel einschalten und einen neuen Schlüssel anlegen. Fotos und Kamerabilder kommen nicht mit.</p>
           {ergebnis.warnings.map((warnung) => <p key={warnung} className="v1-muted">{warnung}</p>)}
         </div>
       ) : (
@@ -113,6 +114,11 @@ export function SicherungZurueckspielen({ open, onClose }: { open: boolean; onCl
             Wähle die Sicherungsdatei (<b>grow-os-backup-….zip</b>), die du auf der alten Installation mit „Jetzt sichern“ heruntergeladen hast.
             Beim Auswählen wird sie hochgeladen und geprüft. Es wird noch nichts geändert.
           </p>
+          <V1Alert
+            tone="warn"
+            title="Was nicht mitkommt"
+            message="Der Zugriff für KI-Assistenten (Schalter und Schlüssel) bleibt so, wie er in dieser Installation ist. Das ist Absicht: Ein gelöschter oder verratener Schlüssel soll nicht über eine alte Sicherung wieder gültig werden. Nach einem Umzug schaltest du den Zugriff unter KI-Assistent → Zugriff & Schlüssel neu ein und legst einen neuen Schlüssel an. Fotos und Kamerabilder sind nicht in der Sicherung."
+          />
           <FileInput accept=".zip,application/zip" disabled={arbeitet} fileNames={dateiName ? [dateiName] : []} onFiles={(dateien) => void dateiGewaehlt(dateien[0] ?? null)} />
           {arbeitet && !plan && <p className="v1-muted">Wird hochgeladen und geprüft …</p>}
           {fehler && <V1Alert tone="critical" message={fehler} />}
