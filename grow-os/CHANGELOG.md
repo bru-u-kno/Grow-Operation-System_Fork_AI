@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.253
+
+**Fork AI.** Die Zuluft-Seite zählt ihre Geräte wieder richtig: Statt „Geräte 10 / 8“ steht dort „Geräte 10 / 10“.
+
+- **Was war:** Seit forkai.241 benutzt die Zuluft zwei Rollen des Raums mit (Raum-Temperatur und Raum-Feuchte). Der Zähler („zugeordnet“) rechnete sie mit ein, der Nenner („gesamt“) nur die acht eigenen Rollen. Sobald beide Raum-Fühler gesetzt waren, stand auf der Zuluft-Seite und in der Steuerungs-Übersicht „10 / 8“ — mehr Geräte zugeordnet, als es gibt — und die Zahl färbte sich nie „vollständig“.
+- **Jetzt:** Zähler und Nenner zählen dieselben Rollen (eigene und mitbenutzte, wie schon beim Zusatz-Entfeuchter). Der Entfeuchter nutzt dieselbe Zählung. Die anderen Module (CO₂, Licht, Wasserkühler, Entfeuchter, Zusatz-Entfeuchter) hatten die Abweichung nicht; das ist am laufenden Stand gegengeprüft (9 / 9, 6 / 6, 5 / 5, 9 / 9, 8 / 8).
+- **Prüfungen:** Neuer Test `GeraeteZaehlerTests`: Für alle sechs Seiten darf „zugeordnet“ nie größer als „gesamt“ sein, und die Zuluft muss die mitbenutzten Rollen im Nenner zählen. Ohne die Korrektur wird der Fall rot (erwartet 10, geliefert 8).
+
 ## 2.0.0-forkai.252
 
 **Fork AI.** Der Kühlbedarf des Wasserkühlers vergisst im Haltebereich nicht mehr, ob der Kühler gerade kühlen soll: Er merkt sich seinen Zustand in einem eigenen Helfer („Chiller Kuhlbedarf Merker“) und überlebt damit einen kurzen Fühlerausfall und das Neuladen — dasselbe Verfahren wie bei der Zuluft (forkai.234).

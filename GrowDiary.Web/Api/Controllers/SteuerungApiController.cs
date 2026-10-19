@@ -280,7 +280,9 @@ public sealed class SteuerungApiController : ApiControllerBase
             // Werkseinstellungen haelt und blind speichert.
             AusHomeAssistantUebernommen = _zuluft.Gespeichert is null,
             GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
-            GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(ZuluftSteuerungService.Modul).Count,
+            // Zähler und Nenner zählen dieselben Rollen: EntitiesFuerModul liefert die eigenen UND die
+            // mitbenutzten (Raum-Fühler), also muss der Nenner sie auch zählen (sonst „10 / 8“).
+            GeraeteGesamt = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(ZuluftSteuerungService.Modul).Count,
         });
     }
 
@@ -319,7 +321,7 @@ public sealed class SteuerungApiController : ApiControllerBase
             Abweichungen = await _entfeuchter.AbweichungenAsync(einstellungen, ct),
             AusHomeAssistantUebernommen = _entfeuchter.Gespeichert is null,
             GeraeteZugeordnet = geraete.Count(g => g.Value is not null),
-            GeraeteGesamt = SteuerungGeraeteRollen.FuerModul(EntfeuchterSteuerungService.Modul).Count,
+            GeraeteGesamt = SteuerungGeraeteRollen.FuerModulMitMitbenutzten(EntfeuchterSteuerungService.Modul).Count,
         });
     }
 
