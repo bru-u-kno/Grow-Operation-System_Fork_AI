@@ -1,5 +1,5 @@
 name: Cultivate Control
-version: "2.0.0-cc.255"
+version: "2.0.0-cc.256"
 slug: cultivate_control
 description: RDWC/DWC grow management, natively integrated with Home Assistant
 url: https://github.com/bru-u-kno/cultivate-control
