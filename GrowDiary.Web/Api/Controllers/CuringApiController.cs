@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Api.Controllers;
 /// Das Aushärten im Glas — der Teil des Laufs, der bisher ohne die App lief.
 /// </summary>
 /// <remarks>
-/// <para>Nach der Ernte setzt Grow OS den Grow auf „beendet". Das Aushärten
+/// <para>Nach der Ernte setzt Cultivate Control den Grow auf „beendet". Das Aushärten
 /// beginnt aber genau dann und dauert 30–60 Tage: die App verabschiedete sich
 /// vor dem Schritt, der über die Qualität entscheidet.</para>
 ///

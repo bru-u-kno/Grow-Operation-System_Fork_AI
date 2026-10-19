@@ -338,7 +338,7 @@ public static class DosingGuard
             return DosingDecision.No("Automatik ist für diese Pumpe aus.");
         }
 
-        // Ohne Abschaltung in Home Assistant läuft die Pumpe weiter, wenn Grow OS
+        // Ohne Abschaltung in Home Assistant läuft die Pumpe weiter, wenn Cultivate Control
         // zwischen Ein- und Ausschalten abstürzt. Von Hand ist das vertretbar —
         // jemand steht daneben. Unbeaufsichtigt nicht. Im Testbetrieb entfällt
         // die Forderung: es gibt nichts, das weiterlaufen könnte.
@@ -574,7 +574,7 @@ public sealed class DosingService
     /// Wirft beim Start jede eingerichtete Pumpe aus — bis sie „aus" meldet.
     /// </summary>
     /// <remarks>
-    /// <para>Der Totmann: Ist Grow OS mitten in einer Dosis abgestürzt, läuft die
+    /// <para>Der Totmann: Ist Cultivate Control mitten in einer Dosis abgestürzt, läuft die
     /// Pumpe seither. Der erste Handgriff nach dem Hochfahren ist deshalb, alle
     /// abzuschalten — das kostet nichts, wenn ohnehin alles aus war.</para>
     /// <para>Vorher ein einziger Versuch ohne Blick aufs Ergebnis. Startet das

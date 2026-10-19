@@ -10,23 +10,23 @@ using ModelContextProtocol.Server;
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Eintragen und Schalten in Grow OS — mit einem Fork-Schlüssel.
+/// Eintragen und Schalten in Cultivate Control — mit einem Fork-Schlüssel.
 /// </summary>
 /// <remarks>
-/// <para>Fork AI (A-004, 03.10.2026): Bis hierher war der Grow MCP nur lesend,
-/// mit Absicht — Grow OS liess aus dem Add-on-Netz nichts anderes zu. Seit
-/// forkai.163 kann der Betreiber in Grow OS Schlüssel für KI-Assistenten
+/// <para>Fork AI (A-004, 03.10.2026): Bis hierher war der Cultivate Control MCP nur lesend,
+/// mit Absicht — Cultivate Control liess aus dem Add-on-Netz nichts anderes zu. Seit
+/// forkai.163 kann der Betreiber in Cultivate Control Schlüssel für KI-Assistenten
 /// anlegen (Einrichtung → KI-Assistent → Zugriff & Schlüssel) und dort je Schlüssel
 /// Stufen anhaken. Wer den Connector mit so einem Schlüssel einrichtet, bekommt
 /// diese Werkzeuge.</para>
 ///
 /// <para><b>Hier wird nichts entschieden.</b> Welche Stufe was darf, welche
-/// Höchstwerte gelten, ob der Schlüssel noch besteht — das prüft Grow OS bei
+/// Höchstwerte gelten, ob der Schlüssel noch besteht — das prüft Cultivate Control bei
 /// jeder Anfrage selbst. Jedes Werkzeug nennt die Stufe nur, damit der
-/// Assistent weiss, was ihn erwartet. Die Absage von Grow OS kommt als Satz
+/// Assistent weiss, was ihn erwartet. Die Absage von Cultivate Control kommt als Satz
 /// zurück (<see cref="ForkFehler"/>), nie als Ausnahme.</para>
 ///
-/// <para>Mit dem MCP-Schlüssel des Add-ons fragt keines dieser Werkzeuge Grow OS
+/// <para>Mit dem MCP-Schlüssel des Add-ons fragt keines dieser Werkzeuge Cultivate Control
 /// überhaupt: es antwortet mit dem Hinweis, wo es den richtigen Schlüssel gibt.</para>
 /// </remarks>
 [McpServerToolType]
@@ -46,7 +46,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     // ------------------------------------------------------------------ Zugriff
 
     [McpServerTool(Name = "zugriff_pruefen")]
-    [Description("Zuerst aufrufen: welche Stufen frei sind, wobei vorher nachgefragt werden soll und welche Höchstwerte gelten. Liefert das in Klartext; ohne Schlüssel aus Grow OS steht dort, wie man ihn bekommt.")]
+    [Description("Zuerst aufrufen: welche Stufen frei sind, wobei vorher nachgefragt werden soll und welche Höchstwerte gelten. Liefert das in Klartext; ohne Schlüssel aus Cultivate Control steht dort, wie man ihn bekommt.")]
     [BrauchtForkSchluessel]
     public async Task<string> ZugriffPruefenAsync(CancellationToken cancellationToken = default)
     {
@@ -74,7 +74,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     /// Die Antwort von <c>GET api/ki-zugriff/ich</c> in Klartext.
     /// </summary>
     /// <remarks>
-    /// <para>Die Rückfrage-Regel: seit A-005 (03.10.2026) liefert Grow OS
+    /// <para>Die Rückfrage-Regel: seit A-005 (03.10.2026) liefert Cultivate Control
     /// <c>rueckfrageBei</c> (eine Liste von Stufen, je Schlüssel). Ein Fork aus
     /// forkai.163 liefert noch <c>rueckfrageAbStufe</c> (eine Stufe, ab der
     /// gefragt wird; <c>null</c> = nie). Beides wird gelesen; steht beides da,
@@ -85,7 +85,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     {
         var text = new StringBuilder();
         var name = Text(ich, "schluesselName");
-        text.AppendLine(name is null ? "Verbunden mit einem Schlüssel aus Grow OS." : $"Verbunden mit dem Schlüssel „{name}\" aus Grow OS.");
+        text.AppendLine(name is null ? "Verbunden mit einem Schlüssel aus Cultivate Control." : $"Verbunden mit dem Schlüssel „{name}\" aus Cultivate Control.");
 
         var frei = Liste(ich, "stufen");
         text.AppendLine(frei.Count == 0
@@ -95,13 +95,13 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         var gesperrt = Stufen.Alle.Where(s => !frei.Contains(s.Name, StringComparer.OrdinalIgnoreCase)).Select(s => s.Text).ToList();
         if (gesperrt.Count > 0)
         {
-            text.AppendLine("Nicht freigegeben: " + string.Join(", ", gesperrt) + " — dafür lehnt Grow OS ab.");
+            text.AppendLine("Nicht freigegeben: " + string.Join(", ", gesperrt) + " — dafür lehnt Cultivate Control ab.");
         }
 
         var rueckfrage = RueckfrageBei(ich);
         text.AppendLine(rueckfrage switch
         {
-            null => "Rückfrage: Grow OS sagt dazu nichts — im Zweifel vor allem außer Dokumentieren nachfragen.",
+            null => "Rückfrage: Cultivate Control sagt dazu nichts — im Zweifel vor allem außer Dokumentieren nachfragen.",
             { Count: 0 } => "Rückfrage: nie — der Betreiber will vorher nicht gefragt werden.",
             _ => "Vorher den Betreiber fragen bei: " + string.Join(", ", rueckfrage.Select(Stufen.Text))
                  + ". Erst nach seinem Ja ausführen.",
@@ -120,7 +120,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>Bei welchen Stufen vorher gefragt werden soll — leer heisst nie, <c>null</c> heisst: Grow OS sagt nichts.</summary>
+    /// <summary>Bei welchen Stufen vorher gefragt werden soll — leer heisst nie, <c>null</c> heisst: Cultivate Control sagt nichts.</summary>
     public static IReadOnlyList<string>? RueckfrageBei(JsonElement ich)
     {
         if (ich.TryGetProperty("rueckfrageBei", out var liste))
@@ -198,7 +198,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
             rumpf[Messfelder.FeldZeitpunkt] = zeit;
         }
 
-        // Ohne Phase die des Grows — NICHT still „Veg". Grow OS setzt im Vertrag
+        // Ohne Phase die des Grows — NICHT still „Veg". Cultivate Control setzt im Vertrag
         // Veg als Vorgabe; eine Blüte-Messung, die als Veg gespeichert wird,
         // wird gegen die falschen Sollwerte beurteilt, und niemand sieht es.
         string? stufe;
@@ -225,7 +225,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
 
         return await SchreibenAsync(HttpMethod.Post, $"api/grows/{growId}/measurements", rumpf, "Messung eintragen",
             json => $"Eingetragen als Messung {Zahl(json, "id")} bei Grow {growId}, Phase {Text(json, "stage") ?? stufe}. "
-                    + "Grow OS hat gespeichert:", cancellationToken);
+                    + "Cultivate Control hat gespeichert:", cancellationToken);
     }
 
     [McpServerTool(Name = "messung_aendern")]
@@ -280,7 +280,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         string? neuePhase = null;
         if (phase is not null && (neuePhase = Messfelder.Phase(phase)) is null) return PhaseUnbekannt(phase);
 
-        // Grow OS ersetzt beim Ändern die GANZE Messung (PUT). Wer nur den pH
+        // Cultivate Control ersetzt beim Ändern die GANZE Messung (PUT). Wer nur den pH
         // schickt, löscht damit EC, ORP und alles andere. Deshalb zuerst den
         // gespeicherten Stand holen und nur die genannten Werte darüberlegen.
         var vorher = await SendenAsync(HttpMethod.Get, $"api/measurements/{messungId}", null, cancellationToken);
@@ -298,22 +298,22 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         }
 
         // Was die Antwort mehr hat als die Anfrage braucht: Kennungen und den
-        // Zeitpunkt in UTC. Ohne takenAtLocal behält Grow OS den gespeicherten.
+        // Zeitpunkt in UTC. Ohne takenAtLocal behält Cultivate Control den gespeicherten.
         foreach (var feld in new[] { "id", "growId", "takenAt" }) rumpf.Remove(feld);
         if (neueZeit is not null) rumpf[Messfelder.FeldZeitpunkt] = neueZeit;
         if (neuePhase is not null) rumpf[Messfelder.FeldPhase] = neuePhase;
         Messfelder.Einsetzen(rumpf, werte);
 
         return await SchreibenAsync(HttpMethod.Put, $"api/measurements/{messungId}", rumpf, "Messung ändern",
-            _ => $"Messung {messungId} geändert. Grow OS hat gespeichert:", cancellationToken);
+            _ => $"Messung {messungId} geändert. Cultivate Control hat gespeichert:", cancellationToken);
     }
 
     /// <summary>Die Arten eines Journaleintrags, die ein Mensch selbst wählt (<c>JournalEntryType</c>).</summary>
     /// <remarks>
     /// Die Meilensteine (Keimung, Bewurzelung, Veg-Beginn, Flip, Finish) fehlen
-    /// mit Absicht: die schreibt Grow OS selbst, wenn sie mit phase_bestaetigen
+    /// mit Absicht: die schreibt Cultivate Control selbst, wenn sie mit phase_bestaetigen
     /// bestätigt werden — ein Journaleintrag allein verschöbe keine Phase.
-    /// <c>MessfelderTests</c> prüft die linke Spalte gegen das Enum in Grow OS.
+    /// <c>MessfelderTests</c> prüft die linke Spalte gegen das Enum in Cultivate Control.
     /// </remarks>
     public static IReadOnlyList<(string Wert, string[] Woerter)> JournalArten { get; } =
     [
@@ -388,7 +388,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
             return "Entweder den Text ersetzen oder eine Zeile anhängen — nicht beides in einem Schritt.";
         }
 
-        // Grow OS lässt beim Ändern jedes Feld, das fehlt (null), wie es ist.
+        // Cultivate Control lässt beim Ändern jedes Feld, das fehlt (null), wie es ist.
         // Darum geht hier nur mit, was genannt wurde.
         var rumpf = new JsonObject();
         if (text is not null) rumpf["body"] = text.Trim();
@@ -435,7 +435,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         }
 
         return await SchreibenAsync(HttpMethod.Put, $"api/journal/{eintragId}", rumpf, "Journal-Eintrag ändern",
-            _ => $"Journal-Eintrag {eintragId} geändert. Grow OS hat gespeichert:", cancellationToken);
+            _ => $"Journal-Eintrag {eintragId} geändert. Cultivate Control hat gespeichert:", cancellationToken);
     }
 
     [McpServerTool(Name = "aufgabe_anlegen")]
@@ -499,7 +499,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         return null;
     }
 
-    /// <summary>Die Prioritäten einer Aufgabe (<c>TaskPriority</c>) — geprüft gegen Grow OS in den Tests.</summary>
+    /// <summary>Die Prioritäten einer Aufgabe (<c>TaskPriority</c>) — geprüft gegen Cultivate Control in den Tests.</summary>
     public static IReadOnlyList<(string Wert, string[] Woerter)> AufgabenPrioritaet { get; } =
     [
         ("Low", ["niedrig", "low", "gering"]),
@@ -525,7 +525,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
             "Aufgabe abhaken", json => $"Aufgabe {aufgabeId} „{Text(json, "title")}\" steht jetzt auf {status}:", cancellationToken);
     }
 
-    /// <summary>Die Zustände einer Aufgabe (<c>GrowTaskStatus</c>) — geprüft gegen Grow OS in <c>MessfelderTests</c>.</summary>
+    /// <summary>Die Zustände einer Aufgabe (<c>GrowTaskStatus</c>) — geprüft gegen Cultivate Control in <c>MessfelderTests</c>.</summary>
     public static IReadOnlyList<(string Wert, string[] Woerter)> AufgabenStatus { get; } =
     [
         ("Open", ["offen", "open"]),
@@ -534,7 +534,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     ];
 
     [McpServerTool(Name = "wartung_eintragen")]
-    [Description($"Hält fest, dass eine anstehende Wartung gemacht ist; Grow OS plant danach den nächsten Termin. Die Wartungs-Id steht im Werkzeug technik unter „wartung\". {StufeDokumentieren}")]
+    [Description($"Hält fest, dass eine anstehende Wartung gemacht ist; Cultivate Control plant danach den nächsten Termin. Die Wartungs-Id steht im Werkzeug technik unter „wartung\". {StufeDokumentieren}")]
     [BrauchtForkSchluessel(Stufen.Dokumentieren)]
     public async Task<string> WartungEintragenAsync(
         [Description("Die Id der Wartung aus technik")] int wartungId,
@@ -558,7 +558,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     }
 
     [McpServerTool(Name = "kalibrierung_eintragen")]
-    [Description($"Hält fest, dass eine anstehende Sonden-Kalibrierung gemacht ist, mit Referenz und Werten vorher/nachher; Grow OS plant danach den nächsten Termin. Die Id steht im Werkzeug technik unter „kalibrierung\". {StufeDokumentieren}")]
+    [Description($"Hält fest, dass eine anstehende Sonden-Kalibrierung gemacht ist, mit Referenz und Werten vorher/nachher; Cultivate Control plant danach den nächsten Termin. Die Id steht im Werkzeug technik unter „kalibrierung\". {StufeDokumentieren}")]
     [BrauchtForkSchluessel(Stufen.Dokumentieren)]
     public async Task<string> KalibrierungEintragenAsync(
         [Description("Die Id der Kalibrierung aus technik")] int kalibrierungId,
@@ -594,7 +594,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     // ------------------------------------------------------------------ Grow planen
 
     /// <summary>Die Bestätigungen im Ablauf eines Grows — die Knöpfe auf der Grow-Seite.</summary>
-    /// <remarks>Rechts die Wege in Grow OS (<c>GrowWorkflowApiController</c>, <c>actions/…</c>); <c>ForkWegeTests</c> prüft, dass es sie gibt.</remarks>
+    /// <remarks>Rechts die Wege in Cultivate Control (<c>GrowWorkflowApiController</c>, <c>actions/…</c>); <c>ForkWegeTests</c> prüft, dass es sie gibt.</remarks>
     public static IReadOnlyList<(string Schritt, string Weg, string[] Woerter)> PhasenSchritte { get; } =
     [
         ("keimung", "confirm-germination", ["keimung", "gekeimt", "germination"]),
@@ -630,7 +630,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     // ------------------------------------------------------------------ Geräte schalten
 
     [McpServerTool(Name = "pumpe_dosieren")]
-    [Description($"Lässt eine Dosierpumpe eine Menge in ml fördern. Grow OS prüft vorher seine eigenen Sperren und den Höchstwert je Befehl (zugriff_pruefen) und meldet, ob wirklich dosiert wurde. Pumpen-Id aus dosierungen; was Grow OS selbst empfehlen würde, sagt dosier_vorschlag. {StufeSchalten}")]
+    [Description($"Lässt eine Dosierpumpe eine Menge in ml fördern. Cultivate Control prüft vorher seine eigenen Sperren und den Höchstwert je Befehl (zugriff_pruefen) und meldet, ob wirklich dosiert wurde. Pumpen-Id aus dosierungen; was Cultivate Control selbst empfehlen würde, sagt dosier_vorschlag. {StufeSchalten}")]
     [BrauchtForkSchluessel(Stufen.GeraeteSchalten)]
     public async Task<string> PumpeDosierenAsync(
         [Description("Die Id der Pumpe aus dosierungen")] int pumpeId,
@@ -645,7 +645,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     }
 
     [McpServerTool(Name = "pumpe_stoppen")]
-    [Description($"Schaltet eine Dosierpumpe sofort aus. Scheitert nie an einem Höchstwert — Ausschalten geht immer, auch wenn die Pumpe laut Grow OS schon steht. {StufeSchalten}")]
+    [Description($"Schaltet eine Dosierpumpe sofort aus. Scheitert nie an einem Höchstwert — Ausschalten geht immer, auch wenn die Pumpe laut Cultivate Control schon steht. {StufeSchalten}")]
     [BrauchtForkSchluessel(Stufen.GeraeteSchalten)]
     public async Task<string> PumpeStoppenAsync(
         [Description("Die Id der Pumpe aus dosierungen")] int pumpeId,
@@ -658,7 +658,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     }
 
     [McpServerTool(Name = "licht_schalten")]
-    [Description($"Schaltet das Licht über die Steuerung von Grow OS: an, aus, ein Preset (veggie = 18/6, bluete = 12/12) oder eine Dimmstufe 1–10; quittieren räumt eine gemeldete Fehlmeldung weg. Meldet, ob Home Assistant den Befehl angenommen hat. {StufeSchalten}")]
+    [Description($"Schaltet das Licht über die Steuerung von Cultivate Control: an, aus, ein Preset (veggie = 18/6, bluete = 12/12) oder eine Dimmstufe 1–10; quittieren räumt eine gemeldete Fehlmeldung weg. Meldet, ob Home Assistant den Befehl angenommen hat. {StufeSchalten}")]
     [BrauchtForkSchluessel(Stufen.GeraeteSchalten)]
     public async Task<string> LichtSchaltenAsync(
         [Description("an, aus, preset, stufe oder quittieren")][Beispiel("an")] string befehl,
@@ -668,7 +668,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
     {
         if (!reader.HatForkSchluessel) return ForkFehler.SchluesselNoetig;
 
-        // Die Wörter, die Grow OS annimmt: SteuerungApiController.LichtBefehl
+        // Die Wörter, die Cultivate Control annimmt: SteuerungApiController.LichtBefehl
         // („aus", „an", „preset", „stufe", „quittieren") und
         // LichtSteuerungService.BefehlAsync („veggie", „bluete", Stufe 1–10).
         var art = befehl.Trim().ToLowerInvariant() switch
@@ -702,14 +702,14 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
 
         return await SchreibenAsync(HttpMethod.Post, "api/steuerung/licht/befehl", rumpf, "Licht schalten",
             json => json.TryGetProperty("haAngenommen", out var an) && an.ValueKind == JsonValueKind.False
-                ? "Grow OS hat den Befehl geschickt, aber Home Assistant hat ihn NICHT angenommen — das Licht hat sich vermutlich nicht verändert. Stand laut Grow OS:"
-                : "Befehl angenommen. Stand laut Grow OS:", cancellationToken);
+                ? "Cultivate Control hat den Befehl geschickt, aber Home Assistant hat ihn NICHT angenommen — das Licht hat sich vermutlich nicht verändert. Stand laut Cultivate Control:"
+                : "Befehl angenommen. Stand laut Cultivate Control:", cancellationToken);
     }
 
     // ------------------------------------------------------------------ Hilfe
 
     internal const string AndersAlsErwartet =
-        "Grow OS hat anders geantwortet als erwartet. Vermutlich passen die Fassungen von Grow OS und Grow MCP nicht zusammen — bitte beide aktualisieren.";
+        "Cultivate Control hat anders geantwortet als erwartet. Vermutlich passen die Fassungen von Cultivate Control und Cultivate Control MCP nicht zusammen — bitte beide aktualisieren.";
 
     /// <summary>Was ein Dosierbefehl bewirkt hat — „angenommen" ist nicht „dosiert".</summary>
     private static string DosisBeschreiben(JsonElement json)
@@ -722,7 +722,7 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
                 : "?";
             return $"Dosiert: {ml} ml. {grund}".TrimEnd();
         }
-        return $"NICHT dosiert. {grund ?? "Grow OS hat keinen Grund genannt."}";
+        return $"NICHT dosiert. {grund ?? "Cultivate Control hat keinen Grund genannt."}";
     }
 
     /// <summary>Ergebnis einer Anfrage: entweder eine Antwort oder schon der Satz für den Assistenten.</summary>
@@ -741,18 +741,18 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         }
         catch (HttpRequestException)
         {
-            return new Ergebnis(null, "Grow OS ist gerade nicht erreichbar. Es wurde nichts ausgeführt.");
+            return new Ergebnis(null, "Cultivate Control ist gerade nicht erreichbar. Es wurde nichts ausgeführt.");
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new Ergebnis(null, "Grow OS hat nicht rechtzeitig geantwortet. Ob der Befehl ankam, ist offen — vor einem zweiten Versuch mit dem passenden Lese-Werkzeug nachsehen.");
+            return new Ergebnis(null, "Cultivate Control hat nicht rechtzeitig geantwortet. Ob der Befehl ankam, ist offen — vor einem zweiten Versuch mit dem passenden Lese-Werkzeug nachsehen.");
         }
     }
 
     /// <summary>
     /// Schreiben und die Antwort in einen Satz fassen — oder die Absage.
     /// </summary>
-    /// <param name="mitRumpf">Die rohe Antwort von Grow OS anhängen. Bei kurzen Bestätigungen genügt der Satz.</param>
+    /// <param name="mitRumpf">Die rohe Antwort von Cultivate Control anhängen. Bei kurzen Bestätigungen genügt der Satz.</param>
     private async Task<string> SchreibenAsync(
         HttpMethod methode, string pfad, JsonObject? rumpf, string was,
         Func<JsonElement, string> erfolg, CancellationToken cancellationToken, bool mitRumpf = true)
@@ -773,8 +773,8 @@ public sealed partial class SchreibWerkzeuge(GrowOsReader reader)
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
         {
-            // Gespeichert hat Grow OS trotzdem — der Status war Erfolg.
-            return $"{was}: Grow OS meldet Erfolg ({antwort.Status}).";
+            // Gespeichert hat Cultivate Control trotzdem — der Status war Erfolg.
+            return $"{was}: Cultivate Control meldet Erfolg ({antwort.Status}).";
         }
     }
 

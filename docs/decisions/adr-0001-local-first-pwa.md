@@ -5,16 +5,16 @@
 Teilweise abgeloest. Die Grundentscheidung (lokale Web-App statt nativer App-Store-App)
 gilt weiter. Die Verteilung erfolgt inzwischen ausschliesslich als Home-Assistant-Add-on:
 kein eigenstaendiger Selfhost-Betrieb, kein eigener Remote-Zugriff und keine PWA-Installation
-mehr — Grow OS laeuft in Home Assistant und wird ueber dessen Oberflaeche (inkl. Mobil-App)
+mehr — Cultivate Control laeuft in Home Assistant und wird ueber dessen Oberflaeche (inkl. Mobil-App)
 erreicht. Die folgenden Abschnitte sind der historische Original-Kontext.
 
 ## Kontext
 
-Grow OS soll kostenlos, selfhosted und datenschutzfreundlich bleiben. Zielnutzer betreiben die App lokal, im Heimnetz oder ueber bewusst abgesicherten Remote-Zugriff. Mobile Nutzung ist wichtig, aber ein App-Store-Release wuerde zusaetzliche Abhaengigkeiten, Kosten und Review-Prozesse erzeugen.
+Cultivate Control soll kostenlos, selfhosted und datenschutzfreundlich bleiben. Zielnutzer betreiben die App lokal, im Heimnetz oder ueber bewusst abgesicherten Remote-Zugriff. Mobile Nutzung ist wichtig, aber ein App-Store-Release wuerde zusaetzliche Abhaengigkeiten, Kosten und Review-Prozesse erzeugen.
 
 ## Entscheidung
 
-Grow OS wird als lokale Web-App mit PWA-Unterstuetzung gebaut, nicht als native iOS- oder Android-App.
+Cultivate Control wird als lokale Web-App mit PWA-Unterstuetzung gebaut, nicht als native iOS- oder Android-App.
 
 ## Konsequenzen
 

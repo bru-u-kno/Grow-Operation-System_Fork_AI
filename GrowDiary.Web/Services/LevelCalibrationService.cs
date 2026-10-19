@@ -36,16 +36,16 @@ public sealed record CalibrationState(
 /// <remarks>
 /// <para>Der Ablauf kommt aus der Praxis und nicht aus dem Formular: Wer sein
 /// System kalibrieren will, steht mit dem Schlauch daneben und liest an der
-/// Wasseruhr ab. Er soll nicht Zahlen abtippen, sondern füllen — Grow OS schaut
+/// Wasseruhr ab. Er soll nicht Zahlen abtippen, sondern füllen — Cultivate Control schaut
 /// dabei zu.</para>
 ///
 /// <list type="number">
-/// <item>System ist leer, Assistent starten. Grow OS liest sofort mit und nimmt
+/// <item>System ist leer, Assistent starten. Cultivate Control liest sofort mit und nimmt
 /// den Stand, der 15 s ruhig ist, als Nullpunkt. <b>Nicht</b> „den ersten Wert,
 /// den wir bekommen": wer schon gießt, bevor er klickt, hätte sonst einen
 /// Nullpunkt mitten im Füllen.</item>
 /// <item>Füllen. Der Wert steigt, die Anzeige zeigt ihn live.</item>
-/// <item>Steht der Wert 60 s im Band, meldet Grow OS „voll?" — <b>und fragt</b>.
+/// <item>Steht der Wert 60 s im Band, meldet Cultivate Control „voll?" — <b>und fragt</b>.
 /// Eine Füllpause sieht für den Sensor genauso aus wie „fertig".</item>
 /// <item>Der Nutzer bestätigt und trägt die Liter von der Wasseruhr ein.</item>
 /// </list>

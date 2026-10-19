@@ -1,10 +1,10 @@
 using GrowMcp;
 using GrowMcp.Services;
 
-// Grow MCP Fork AI: Grow OS Fork AI als Werkzeugkasten fuer einen beliebigen MCP-Klienten —
+// Cultivate Control MCP: Cultivate Control als Werkzeugkasten fuer einen beliebigen MCP-Klienten —
 // Claude Code, Claude Desktop, was auch immer im eigenen Netz laeuft.
 //
-// Der Unterschied zur Berater-Mappe, die Grow OS zum Herunterladen anbietet: die
+// Der Unterschied zur Berater-Mappe, die Cultivate Control zum Herunterladen anbietet: die
 // ist EIN fertiger Stapel Papier mit dem Stand von jetzt. Hier bekommt das Modell
 // Griffe und fragt gezielt nach — der einzige Weg zu Verlaufsfragen, denn ein
 // Momentwert zeigt keine Bewegung.
@@ -19,7 +19,7 @@ using GrowMcp.Services;
 //              das Absichern keinen Sinn.
 //
 // Zwei Schluessel (A-004, 03.10.2026): der MCP-Schluessel dieses Add-ons liest
-// nur. Ein Schluessel aus Grow OS (gok_…) wird bei jeder Anfrage an Grow OS
+// nur. Ein Schluessel aus Cultivate Control (gok_…) wird bei jeder Anfrage an Cultivate Control
 // durchgereicht; dort entscheiden Stufen und Hoechstwerte, ob eingetragen oder
 // geschaltet werden darf. Dienste und Tuer stehen in Aufbau.cs.
 

@@ -9,7 +9,7 @@ import '../features/actest/actest.css'
 /**
  * Zelt (AC-Test) — der Versuchsaufbau.
  *
- * **Die Frage dahinter:** kann Grow OS die Zentrale sein, von der aus der ganze
+ * **Die Frage dahinter:** kann Cultivate Control die Zentrale sein, von der aus der ganze
  * Grow läuft? Beantworten kann das kein Entwurf, sondern jemand, der es
  * benutzt. Deshalb steht es als eigener Menüpunkt da und nicht versteckt in den
  * Einstellungen — dort probiert es niemand aus und niemand gibt Rückmeldung.
@@ -261,7 +261,7 @@ export function AcTestPage() {
     }
   }
 
-  const untertitel = 'Geräte am AC-Infinity-Controller direkt aus Grow OS stellen.'
+  const untertitel = 'Geräte am AC-Infinity-Controller direkt aus Cultivate Control stellen.'
 
   if (laedt) {
     return (
@@ -295,7 +295,7 @@ export function AcTestPage() {
           'Dieser Bereich ist ein Versuch und noch nicht fertig. Er schreibt echte Werte an '
           + 'deine Geräte, sobald du eine Stufe anklickst — sonst passiert nichts von selbst. '
           + 'Sag uns, was fehlt und was hakt: davon hängt ab, wie die Gerätesteuerung in '
-          + 'Grow OS am Ende aussieht.'
+          + 'Cultivate Control am Ende aussieht.'
         } />
 
       {fehler && <V1Alert title="Fehler" message={fehler} tone="critical" />}
@@ -403,7 +403,7 @@ export function AcTestPage() {
                         einer Faustregel — und er wird angeboten, nicht gesetzt. */}
                     {stand.lichtplan && (
                       <p className="ac-hinweis ac-vorschlag">
-                        Grow OS kennt für dieses Zelt den Lichtplan
+                        Cultivate Control kennt für dieses Zelt den Lichtplan
                         {' '}<strong>{stand.lichtplan.name}</strong>:
                         {' '}{stand.lichtplan.ein}–{stand.lichtplan.aus}.
                         {' '}
@@ -467,7 +467,7 @@ export function AcTestPage() {
                 Die Entitäten findest du in Home Assistant unter deinem AC-Infinity-Gerät.
                 Für die Stufe brauchst du „… Einschaltleistung" (beginnt mit <code>number.</code>);
                 der aktive Modus (<code>select.</code>) ist freiwillig und wird nur angezeigt.
-                Trägst du zusätzlich beide <code>time.</code>-Entitäten ein, kann Grow OS
+                Trägst du zusätzlich beide <code>time.</code>-Entitäten ein, kann Cultivate Control
                 auch den Zeitplan stellen.
               </p>
             )}

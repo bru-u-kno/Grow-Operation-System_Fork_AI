@@ -7,7 +7,7 @@ using GrowOsAccess;
 namespace GrowMcp.Tests;
 
 /// <summary>
-/// Eintragen und Schalten: mit dem MCP-Schlüssel nie, mit dem Fork-Schlüssel immer über Grow OS.
+/// Eintragen und Schalten: mit dem MCP-Schlüssel nie, mit dem Fork-Schlüssel immer über Cultivate Control.
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026). Gezählt wird über die Grundmenge — jedes
@@ -62,7 +62,7 @@ public sealed class SchreibWerkzeugeTests
         var text = await Werkzeugkasten.TextAsync(werkzeug, Werkzeugkasten.Leser(fork, schluessel: null));
 
         Assert.Contains(ForkFehler.SchluesselNoetig, text);
-        // Nicht einmal angeklopft: kein Weg zu Grow OS, auch kein lesender.
+        // Nicht einmal angeklopft: kein Weg zu Cultivate Control, auch kein lesender.
         Assert.Empty(fork.Anfragen);
     }
 
@@ -82,7 +82,7 @@ public sealed class SchreibWerkzeugeTests
     [MemberData(nameof(SchreibendeWerkzeuge))]
     public async Task Eine_Absage_von_Grow_OS_kommt_als_deutscher_Satz_zurueck(string werkzeug)
     {
-        const string meldung = "Dafür fehlt die Freigabe für Stufe „Grow planen“. Der Betreiber kann sie in Grow OS für diesen Schlüssel anhaken.";
+        const string meldung = "Dafür fehlt die Freigabe für Stufe „Grow planen“. Der Betreiber kann sie in Cultivate Control für diesen Schlüssel anhaken.";
         var fork = ForkAttrappe.MitGrow()
             .Antwort("POST", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""")
             .Antwort("PUT", ".*", 403, $$"""{"code":"ki_stufe_fehlt","message":"{{meldung}}","status":403}""")
@@ -97,12 +97,12 @@ public sealed class SchreibWerkzeugeTests
 
     [Theory]
     [InlineData(401, """{"code":"ki_schluessel_ungueltig","message":"Der Schlüssel ist ungültig."}""", "Der Schlüssel ist ungültig.")]
-    [InlineData(403, """{"code":"ki_zugriff_aus","message":"Der Zugriff für KI-Assistenten ist in Grow OS ausgeschaltet."}""", "ausgeschaltet")]
-    [InlineData(403, """{"code":"admin_access_required","message":"Admin access required."}""", "erst ab Grow OS Fork AI")]
+    [InlineData(403, """{"code":"ki_zugriff_aus","message":"Der Zugriff für KI-Assistenten ist in Cultivate Control ausgeschaltet."}""", "ausgeschaltet")]
+    [InlineData(403, """{"code":"admin_access_required","message":"Admin access required."}""", "erst ab Cultivate Control")]
     [InlineData(422, """{"code":"ki_hoechstwert","message":"KI-Höchstwert: 12 ml angefragt, über den Assistenten sind je Befehl höchstens 10 ml erlaubt."}""", "höchstens 10 ml")]
     [InlineData(429, """{"code":"ki_hoechstwert","message":"Höchstwert erreicht: über KI-Assistenten sind höchstens 20 Schalt- und Dosierbefehle je Stunde erlaubt."}""", "später noch einmal")]
     [InlineData(404, """{"code":"endpoint_not_found","message":"Es gibt keinen Endpunkt."}""", "aktualisieren")]
-    [InlineData(500, "<html>kaputt</html>", "Grow OS antwortete mit 500")]
+    [InlineData(500, "<html>kaputt</html>", "Cultivate Control antwortete mit 500")]
     public async Task Jede_Art_Absage_wird_ein_Satz_ohne_Ausnahme(int status, string rumpf, string erwartet)
     {
         var fork = ForkAttrappe.MitGrow().Antwort("POST", @"api/dosing/pumps/\d+/dose", status, rumpf);
@@ -117,7 +117,7 @@ public sealed class SchreibWerkzeugeTests
     [Fact]
     public async Task Angenommen_ist_nicht_dosiert()
     {
-        // Grow OS antwortet 200, wenn seine eigene Sperre die Dosis verweigert —
+        // Cultivate Control antwortet 200, wenn seine eigene Sperre die Dosis verweigert —
         // mit dosed=false. „Schalten meldete Erfolg und veränderte nichts" (CLAUDE.md).
         var fork = ForkAttrappe.MitGrow().Antwort("POST", @"api/dosing/pumps/\d+/dose", 200,
             """{"dosed":false,"ml":0,"seconds":0,"reason":"pH liegt schon im Zielbereich."}""");
@@ -142,7 +142,7 @@ public sealed class SchreibWerkzeugeTests
     }
 
     [Theory]
-    [InlineData(503, "ha_nicht_eingerichtet", "Home Assistant ist in Grow OS nicht eingerichtet.")]
+    [InlineData(503, "ha_nicht_eingerichtet", "Home Assistant ist in Cultivate Control nicht eingerichtet.")]
     [InlineData(502, "ha_nicht_erreichbar", "Home Assistant ist gerade nicht erreichbar.")]
     public async Task Home_Assistant_nicht_da_wird_ein_Satz(int status, string code, string meldung)
     {
@@ -176,7 +176,7 @@ public sealed class SchreibWerkzeugeTests
     [Fact]
     public async Task Anzahl_und_Stunden_bleiben_in_den_Grenzen_von_Grow_OS()
     {
-        // Grow OS gibt ausserhalb 1–500 bzw. 1–168 ein 400, statt zu kappen.
+        // Cultivate Control gibt ausserhalb 1–500 bzw. 1–168 ein 400, statt zu kappen.
         var fork = ForkAttrappe.MitGrow();
         var leser = Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel);
 
@@ -210,7 +210,7 @@ public sealed class SchreibWerkzeugeTests
         Assert.Contains("Automationen", beschreibung);
         Assert.Contains("Helfer", beschreibung);
         Assert.Contains("nie", beschreibung);
-        // Seit dem Prüferbefund vom 04.10.2026 gilt in Grow OS eine Positivliste
+        // Seit dem Prüferbefund vom 04.10.2026 gilt in Cultivate Control eine Positivliste
         // (KiHaEinstufung): die Beschreibung nennt sie, und dass alles andere nie geht.
         foreach (var domain in new[] { "light", "switch", "fan", "climate", "humidifier", "cover", "valve", "number",
                      "select", "button", "water_heater", "vacuum", "media_player" })
@@ -224,7 +224,7 @@ public sealed class SchreibWerkzeugeTests
     [Fact]
     public async Task Ohne_Phase_gilt_die_des_Grows_und_nicht_still_Veg()
     {
-        // Der Grow steht in der Blüte (ForkAttrappe.MitGrow). Grow OS selbst setzt
+        // Der Grow steht in der Blüte (ForkAttrappe.MitGrow). Cultivate Control selbst setzt
         // ohne Angabe Veg — eine Blüte-Messung würde gegen die Veg-Sollwerte beurteilt.
         var fork = ForkAttrappe.MitGrow();
         await Werkzeugkasten.TextAsync("messung_eintragen", Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel),
@@ -251,7 +251,7 @@ public sealed class SchreibWerkzeugeTests
     [Fact]
     public async Task Aendern_loescht_nichts_was_nicht_genannt_wurde()
     {
-        // Grow OS ersetzt beim PUT die ganze Messung. Wer nur den pH schickt,
+        // Cultivate Control ersetzt beim PUT die ganze Messung. Wer nur den pH schickt,
         // verlöre ORP, EC und Notiz.
         var fork = ForkAttrappe.MitGrow();
         await Werkzeugkasten.TextAsync("messung_aendern", Werkzeugkasten.Leser(fork, Werkzeugkasten.ForkSchluessel),
@@ -266,7 +266,7 @@ public sealed class SchreibWerkzeugeTests
         Assert.Equal(1.2, wurzel.GetProperty("reservoirEc").GetDouble());
         Assert.Equal("alt", wurzel.GetProperty("notes").GetString());
         Assert.Equal("Flower", wurzel.GetProperty("stage").GetString());
-        // Ohne neuen Zeitpunkt keiner — sonst schöbe Grow OS die Messung.
+        // Ohne neuen Zeitpunkt keiner — sonst schöbe Cultivate Control die Messung.
         Assert.False(wurzel.TryGetProperty("takenAtLocal", out _));
         Assert.False(wurzel.TryGetProperty("id", out _));
     }
@@ -274,7 +274,7 @@ public sealed class SchreibWerkzeugeTests
     [Fact]
     public async Task Journal_aendern_schickt_nur_was_genannt_wurde()
     {
-        // Grow OS lässt beim Journal-PUT fehlende Felder stehen. Geht hier
+        // Cultivate Control lässt beim Journal-PUT fehlende Felder stehen. Geht hier
         // mehr mit als genannt, überschreibt das Werkzeug still Titel oder
         // Zeitpunkt.
         var fork = ForkAttrappe.MitGrow();
@@ -373,7 +373,7 @@ public sealed class SchreibWerkzeugeTests
         => Assert.Contains("Rückfrage: nie", Beschreiben(json));
 
     /// <summary>
-    /// Fork AI (A-005, 03.10.2026): genau die Form, die Grow OS jetzt schickt —
+    /// Fork AI (A-005, 03.10.2026): genau die Form, die Cultivate Control jetzt schickt —
     /// <c>rueckfrageBei</c> je Schlüssel, kein <c>rueckfrageAbStufe</c> mehr.
     /// </summary>
     [Fact]
@@ -387,7 +387,7 @@ public sealed class SchreibWerkzeugeTests
         Assert.Contains("Freigegeben: Dokumentieren, Grow planen, Geräte schalten.", text);
         Assert.Contains("Nicht freigegeben: Verwaltung", text);
         Assert.Contains("Vorher den Betreiber fragen bei: Grow planen.", text);
-        Assert.DoesNotContain("Grow OS sagt dazu nichts", text);
+        Assert.DoesNotContain("Cultivate Control sagt dazu nichts", text);
     }
 
     [Fact]

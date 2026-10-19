@@ -61,7 +61,7 @@ function errorMessage(caught: unknown, fallback: string): string {
  * Benachrichtigungen — Bearbeiten wechselt in den jeweiligen Tab.
  *
  * Karenz gilt je Regel (der Entwurf zeigt sie je Zeile); solange der Wert
- * außerhalb liegt, erinnert Grow OS in diesem Takt erneut.
+ * außerhalb liegt, erinnert Cultivate Control in diesem Takt erneut.
  */
 function AlertsPage() {
   const [, setParams] = useSearchParams()

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace GrowDiary.Web.Api.Controllers;
 
 /// <summary>
-/// Serves the sensor history Grow OS has been recording all along: raw readings (kept for
+/// Serves the sensor history Cultivate Control has been recording all along: raw readings (kept for
 /// 7 days, one every 5 minutes) and the permanent daily statistics (min/median/max).
 /// This is what the charts, the trend context and the watchdog read from.
 /// </summary>

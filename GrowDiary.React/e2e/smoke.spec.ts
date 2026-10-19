@@ -66,7 +66,7 @@ for (const route of ROUTES) {
 
     // App shell must be present (proves React mounted, not a white screen).
     await expect(page.locator('.v1-app-shell')).toBeVisible()
-    await expect(page.getByText('Grow OS').first()).toBeVisible()
+    await expect(page.getByText('Cultivate Control').first()).toBeVisible()
 
     // The route frame must have actually rendered the page (some content), not sit
     // empty — even in a loading/error/empty state the page component renders markup.

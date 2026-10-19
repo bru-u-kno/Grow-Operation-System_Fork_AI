@@ -97,9 +97,9 @@ describe('Die Meldung aus einer Fehlerantwort', () => {
 
   it('faellt auf den Ersatztext zurueck, wenn kein Rumpf kam', () => {
     // Bei 502 oder abgerissener Verbindung gibt es kein JSON.
-    const fehler = new ApiRequestError(502, null, 'Grow OS antwortet nicht.')
+    const fehler = new ApiRequestError(502, null, 'Cultivate Control antwortet nicht.')
 
-    expect(fehler.message).toBe('Grow OS antwortet nicht.')
+    expect(fehler.message).toBe('Cultivate Control antwortet nicht.')
     expect(fehler.status).toBe(502)
   })
 

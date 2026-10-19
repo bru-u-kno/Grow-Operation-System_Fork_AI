@@ -13,7 +13,7 @@ namespace GrowDiary.Web.Api.Controllers;
 /// <remarks>
 /// In der App selbst steckt keine KI, und das bleibt so. Wer trotzdem einen
 /// Assistenten fragen will, bekommt hier eine Datei und entscheidet selbst, wem
-/// er sie vorlegt. Das ist der ehrlichere Weg: Grow OS braucht keinen Schlüssel,
+/// er sie vorlegt. Das ist der ehrlichere Weg: Cultivate Control braucht keinen Schlüssel,
 /// verschickt nichts, und was den Rechner verlässt, verlässt ihn, weil jemand
 /// auf „Herunterladen" gedrückt hat.
 /// </remarks>

@@ -71,7 +71,7 @@ jobs:
             V="${V#v}"
           fi
           if ! printf '%s' "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then
-            echo "::error::'$GITHUB_REF_NAME' traegt keine Version wie 2.0.0-forkai.153."
+            echo "::error::'$GITHUB_REF_NAME' traegt keine Version wie 2.0.0-cc.254."
             exit 1
           fi
           # Beim Branch-Weg legt der Workflow den Tag am Ende selbst an. Gibt

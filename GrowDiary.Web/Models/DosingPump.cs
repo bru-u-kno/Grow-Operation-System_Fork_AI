@@ -37,10 +37,10 @@ public enum DoseOutcome
 }
 
 /// <summary>
-/// Eine Peristaltikpumpe, die Grow OS über Home Assistant schaltet.
+/// Eine Peristaltikpumpe, die Cultivate Control über Home Assistant schaltet.
 /// </summary>
 /// <remarks>
-/// Grow OS hat selbst keine Anschlüsse; geschaltet wird immer eine HA-Entität
+/// Cultivate Control hat selbst keine Anschlüsse; geschaltet wird immer eine HA-Entität
 /// (in der Regel ein <c>switch</c>). Alles hier Gespeicherte dient einer von
 /// zwei Fragen: „wie viele Sekunden sind die gewünschten Milliliter" und „darf
 /// gerade überhaupt dosiert werden".
@@ -124,13 +124,13 @@ public sealed class DosingPump
     /// <summary>
     /// Bestätigt, dass in Home Assistant eine Abschaltung eingerichtet ist, die
     /// die Pumpe von sich aus abwirft. Ohne sie bleibt die Automatik gesperrt:
-    /// stürzt Grow OS zwischen Ein- und Ausschalten ab, läuft die Pumpe sonst
+    /// stürzt Cultivate Control zwischen Ein- und Ausschalten ab, läuft die Pumpe sonst
     /// weiter, und niemand ist da, der sie stoppt.
     /// </summary>
     public bool HasHomeAssistantAutoOff { get; set; }
 
     /// <summary>
-    /// Testbetrieb: Grow OS rechnet, protokolliert und zeigt die Pumpe laufen —
+    /// Testbetrieb: Cultivate Control rechnet, protokolliert und zeigt die Pumpe laufen —
     /// schaltet aber nichts. Es fließt nichts.
     /// </summary>
     /// <remarks>

@@ -1,11 +1,11 @@
-# Grow OS installieren
+# Cultivate Control installieren
 
-Grow OS ist ein **Home-Assistant-Add-on**. Die Installation dauert unter einer Minute
+Cultivate Control ist ein **Home-Assistant-Add-on**. Die Installation dauert unter einer Minute
 und braucht **keine Programmierkenntnisse**.
 
 > Entwickler, die den Quellcode bauen wollen, finden alles unter [setup.md](setup.md).
 
-## So sieht Grow OS aus
+## So sieht Cultivate Control aus
 
 <p align="center">
   <img src="images/live-dashboard-desktop.png" alt="Live-Dashboard am PC" width="100%">
@@ -21,7 +21,7 @@ und braucht **keine Programmierkenntnisse**.
 Eine **Home Assistant OS**- oder **Supervised**-Installation. Bei Home Assistant
 Container/Core gibt es keine Add-ons.
 
-Grow OS bezieht seine Sensordaten aus Home Assistant — deshalb läuft alles direkt als
+Cultivate Control bezieht seine Sensordaten aus Home Assistant — deshalb läuft alles direkt als
 Add-on *in* Home Assistant, ohne separaten Server und ohne manuelle Verbindung.
 
 ## Schritt 1 — Repository hinzufügen
@@ -30,22 +30,22 @@ In Home Assistant: **Einstellungen → Add-ons → Add-on-Store**, oben rechts
 **⋮ → Repositories**, und diese Adresse einfügen:
 
 ```
-https://github.com/Nerdstreak/Grow-Operation-System
+https://github.com/bru-u-kno/cultivate-control
 ```
 
 ## Schritt 2 — Installieren und starten
 
-**Grow OS** erscheint im Store → **Installieren** → **Starten**.
+**Cultivate Control** erscheint im Store → **Installieren** → **Starten**.
 
 ## Schritt 3 — In der Seitenleiste anzeigen
 
-Damit Grow OS in der **Seitenleiste** auftaucht, auf der **Info**-Seite des Add-ons den
+Damit Cultivate Control in der **Seitenleiste** auftaucht, auf der **Info**-Seite des Add-ons den
 Schalter **„In Seitenleiste anzeigen"** aktivieren. Danach erscheint das Symbol 🌱 in
 der linken Leiste.
 
 ## Schritt 4 — Öffnen und Sensoren wählen
 
-Grow OS ist **sofort mit Home Assistant verbunden** — keine URL, kein Token. Beim
+Cultivate Control ist **sofort mit Home Assistant verbunden** — keine URL, kein Token. Beim
 Zelt-Mapping
 wählst du deine Sensoren bequem aus einem **Dropdown** deiner echten HA-Entitäten
 (kein Abtippen von Entity-IDs).
@@ -58,7 +58,7 @@ wählst du deine Sensoren bequem aus einem **Dropdown** deiner echten HA-Entitä
 
 ## Kamera einbinden (optional)
 
-Grow OS zeigt das Live-Bild jeder Kamera-Entity, die in Home Assistant verfügbar ist
+Cultivate Control zeigt das Live-Bild jeder Kamera-Entity, die in Home Assistant verfügbar ist
 (z. B. eine USB-Webcam über [go2rtc](https://github.com/AlexxIT/go2rtc)). Beim
 Zelt-Mapping die Kamera-Entity aus dem Dropdown wählen und „Kamera testen".
 
@@ -69,4 +69,4 @@ Zelt-Mapping die Kamera-Entity aus dem Dropdown wählen und „Kamera testen".
 - **Kein Bild / Fehler?** Add-on-Tab **Protokoll** ansehen; nach Änderungen
   **Neu starten**. Prüfe, ob deine Entitäten in Home Assistant sichtbar sind.
 - Fragen oder Fehler bitte als
-  [GitHub Issue](https://github.com/Nerdstreak/Grow-Operation-System/issues) melden.
+  [GitHub Issue](https://github.com/bru-u-kno/cultivate-control/issues) melden.

@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Api.Controllers;
 public sealed record HaWaechterDto(string EntityId, string Name, bool Aktiv, string? Zweck, bool Bekannt);
 
 /// <summary>
-/// Fork AI (Umbau „Ziele &amp; Meldungen“, Schritt 4): was außer Grow OS noch
+/// Fork AI (Umbau „Ziele &amp; Meldungen“, Schritt 4): was außer Cultivate Control noch
 /// Meldungen schickt.
 /// </summary>
 /// <remarks>

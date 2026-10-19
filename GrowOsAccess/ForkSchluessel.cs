@@ -5,9 +5,9 @@ namespace GrowOsAccess;
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026): Ein Assistent, der mit einem Schlüssel aus
-/// Grow OS (<c>gok_…</c>, „Zugriff für KI-Assistenten") verbunden ist, darf
+/// Cultivate Control (<c>gok_…</c>, „Zugriff für KI-Assistenten") verbunden ist, darf
 /// eintragen und schalten — so weit, wie der Betreiber es dort angehakt hat.
-/// Entschieden wird das allein in Grow OS. Diese Bibliothek reicht den Schlüssel
+/// Entschieden wird das allein in Cultivate Control. Diese Bibliothek reicht den Schlüssel
 /// nur durch, und zwar bei <b>jeder</b> Anfrage, lesend wie schreibend.</para>
 ///
 /// <para>Die Quelle wird je Anfrage gefragt und hält nichts fest. Der Schlüssel
@@ -32,10 +32,10 @@ public sealed class KeinForkSchluessel : IForkSchluesselQuelle
 public static class ForkSchluessel
 {
     /// <summary>
-    /// Die Vorsilbe, an der Grow OS einen Schlüssel erkennt.
+    /// Die Vorsilbe, an der Cultivate Control einen Schlüssel erkennt.
     /// </summary>
     /// <remarks>
-    /// Steht in Grow OS als <c>KiZugriffDienst.Vorsilbe</c>;
+    /// Steht in Cultivate Control als <c>KiZugriffDienst.Vorsilbe</c>;
     /// <c>ForkWegeTests</c> liest den Wert dort per Reflexion nach, statt ihn
     /// abzutippen.
     /// </remarks>
@@ -45,10 +45,10 @@ public static class ForkSchluessel
     /// Sieht das wie ein Fork-Schlüssel aus?
     /// </summary>
     /// <remarks>
-    /// Nur die Form, nicht die Gültigkeit — die kennt allein Grow OS. Verlangt
-    /// werden die Vorsilbe und dahinter mindestens acht Zeichen base64url (Grow OS
+    /// Nur die Form, nicht die Gültigkeit — die kennt allein Cultivate Control. Verlangt
+    /// werden die Vorsilbe und dahinter mindestens acht Zeichen base64url (Cultivate Control
     /// erzeugt 43, die ersten acht zeigt es als Präfix). Leerzeichen oder
-    /// Steuerzeichen kommen so gar nicht erst in einen Kopf nach Grow OS.
+    /// Steuerzeichen kommen so gar nicht erst in einen Kopf nach Cultivate Control.
     /// </remarks>
     public static bool HatForm(string? wert)
     {

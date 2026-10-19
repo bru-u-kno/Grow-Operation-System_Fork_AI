@@ -80,8 +80,8 @@ export function DashboardEditorBar({
 /**
  * Kachel hinzufügen: zwei Quellen in einer Liste.
  *
- * Oben, was Grow OS selbst misst — mit Zielbereich und Ampelfarbe. Darunter
- * jede beliebige Entität aus Home Assistant, auch solche, von denen Grow OS
+ * Oben, was Cultivate Control selbst misst — mit Zielbereich und Ampelfarbe. Darunter
+ * jede beliebige Entität aus Home Assistant, auch solche, von denen Cultivate Control
  * nichts weiß. Genau dafür gibt es das Feature.
  */
 function AddTileDialog({
@@ -226,7 +226,7 @@ function AddTileDialog({
 
           {metriken.length > 0 && (
             <>
-              <div className="ls-dialog-cap">Grow OS kennt</div>
+              <div className="ls-dialog-cap">Cultivate Control kennt</div>
               {metriken.map((metric) => (
                 <button key={metric.key} type="button" className="ls-pick" onClick={() => onAdd(sectionId, metricTile(metric.key, metric.label))}>
                   <span className="dot" />

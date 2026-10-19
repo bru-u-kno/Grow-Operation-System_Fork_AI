@@ -397,8 +397,8 @@ public sealed partial class SystemApiController
                ein Neustart erfasst alle, auch die, die später dazukommen. */
             var neustartGeplant = _neustart?.Planen($"Sicherung {fileName} zurückgespielt") ?? false;
             warnings.Add(neustartGeplant
-                ? "Grow OS startet in wenigen Sekunden neu, damit alles im Speicher zur zurückgespielten Sicherung passt."
-                : "Grow OS bitte jetzt neu starten: bis dahin halten Grow-Plan, Wissensbasis und Wochenwerte im Speicher den Stand vor dem Zurückspielen.");
+                ? "Cultivate Control startet in wenigen Sekunden neu, damit alles im Speicher zur zurückgespielten Sicherung passt."
+                : "Cultivate Control bitte jetzt neu starten: bis dahin halten Grow-Plan, Wissensbasis und Wochenwerte im Speicher den Stand vor dem Zurückspielen.");
 
             var result = new BackupRestoreResultDto(
                 RestoreSchema: "grow-os.backup-restore.v1",

@@ -1,4 +1,4 @@
-# Grow OS Dokumentation
+# Cultivate Control Dokumentation
 
 Zwei Hälften: **was die App kann** (die Referenz-Mappe) und **wie man daran
 arbeitet** (bauen, ausliefern, Entscheidungen).
@@ -20,7 +20,7 @@ Chronologisch statt nach Bereich: `grow-os/CHANGELOG.md` und
 
 ## Projektüberblick
 
-Grow OS ist ein **Home-Assistant-Add-on** für RDWC/DWC-Anbau. Es kombiniert:
+Cultivate Control ist ein **Home-Assistant-Add-on** für RDWC/DWC-Anbau. Es kombiniert:
 
 - Sensor- und Statusdaten aus Home Assistant (Verbindung automatisch über den Supervisor)
 - Grows, Messungen, Journal, Fotos und Aufgaben
@@ -33,8 +33,8 @@ Grow OS ist ein **Home-Assistant-Add-on** für RDWC/DWC-Anbau. Es kombiniert:
 
 **Keine KI in der App.** Wer eine eigene benutzen will, verbindet sie unter
 **Einrichtung → KI-Assistent**: über das eigene Konto bei Claude oder ChatGPT,
-mit einem Schlüssel aus Grow OS und nur so weit, wie er freigegeben ist — oder
-ohne Verbindung als ZIP („Mappe"). Grow OS ruft selbst keine KI auf.
+mit einem Schlüssel aus Cultivate Control und nur so weit, wie er freigegeben ist — oder
+ohne Verbindung als ZIP („Mappe"). Cultivate Control ruft selbst keine KI auf.
 
 ## Wie man daran arbeitet
 

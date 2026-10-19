@@ -2,7 +2,7 @@
 
 ## Produktfokus
 
-Grow OS ist aktuell auf RDWC/DWC-Workflows ausgerichtet. Andere Medien wie Soil, Coco, NFT oder Aeroponic sollen erst dann in den normalen Flow, wenn die jeweiligen Datenmodelle und Workflows sauber ausgearbeitet sind.
+Cultivate Control ist aktuell auf RDWC/DWC-Workflows ausgerichtet. Andere Medien wie Soil, Coco, NFT oder Aeroponic sollen erst dann in den normalen Flow, wenn die jeweiligen Datenmodelle und Workflows sauber ausgearbeitet sind.
 
 Die App unterstuetzt den Grower, ersetzt aber kein Fachwissen und fuehrt keine gefaehrlichen automatischen Recovery-Aktionen ohne Nutzerkontrolle aus.
 

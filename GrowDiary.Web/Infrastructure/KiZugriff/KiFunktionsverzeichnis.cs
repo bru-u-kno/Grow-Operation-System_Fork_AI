@@ -16,11 +16,11 @@ using Microsoft.AspNetCore.Routing.Patterns;
 namespace GrowDiary.Web.Infrastructure.KiZugriff;
 
 /// <summary>
-/// Fork AI (Paket D, 18.10.2026): Das Verzeichnis aller Funktionen von Grow OS unter <c>/api</c> —
+/// Fork AI (Paket D, 18.10.2026): Das Verzeichnis aller Funktionen von Cultivate Control unter <c>/api</c> —
 /// erzeugt aus den Routen der laufenden App, nicht von Hand gepflegt.
 /// </summary>
 /// <remarks>
-/// <para><b>Wozu.</b> Über den Grow MCP soll sich alles im Fork steuern lassen. Statt für jede Funktion ein
+/// <para><b>Wozu.</b> Über den Cultivate Control MCP soll sich alles im Fork steuern lassen. Statt für jede Funktion ein
 /// eigenes Werkzeug zu bauen, liest der Assistent dieses Verzeichnis und ruft die Funktion über ein allgemeines
 /// Werkzeug auf. Was erlaubt ist, entscheidet weiter die Sperre (<see cref="KiZugriffSperre"/>).</para>
 /// <para><b>Eine Wahrheit.</b> Die Einstufung jedes Eintrags kommt aus <see cref="KiZugriffSperre.Einstufen"/> —
@@ -51,7 +51,7 @@ public sealed class KiFunktionsverzeichnis
     public const string Hinweis =
         "Je Methode und Weg ein Eintrag. zugang: frei = jeder gültige Schlüssel; stufe = der Schlüssel braucht alle Stufen in stufen; "
         + "nie = über einen Schlüssel nie (Grund in nieGrund); nicht-eingestuft = gesperrt. schaltbefehl = zählt gegen die Schaltbefehle je Stunde, "
-        + "sicherungVorher = Grow OS legt vorher eine Sicherung an. Platzhalter wie {id} im pfad durch den Wert ersetzen.";
+        + "sicherungVorher = Cultivate Control legt vorher eine Sicherung an. Platzhalter wie {id} im pfad durch den Wert ersetzen.";
 
     /// <summary>Das Verzeichnis aus einer Menge von Endpunkten — öffentlich für die Zählung.</summary>
     public static KiFunktionenDto Erzeugen(IEnumerable<Endpoint> endpunkte, XmlDoku doku)

@@ -9,7 +9,7 @@ public sealed partial class SystemApiController
     /// Der stabile Weg auf das Handy.
     /// </summary>
     /// <remarks>
-    /// Grow OS wird über den Ingress ausgeliefert. Dieser Pfad trägt ein Token,
+    /// Cultivate Control wird über den Ingress ausgeliefert. Dieser Pfad trägt ein Token,
     /// das pro Anfrage wechselt — wer sich die Adresse aus der Adresszeile als
     /// Lesezeichen ablegt, hat morgen eine tote Kachel auf dem Startbildschirm.
     ///
@@ -32,7 +32,7 @@ public sealed partial class SystemApiController
             slug,
             panelPath,
             reason = panelPath is null
-                ? "Grow OS läuft hier nicht als Home-Assistant-Add-on — es gibt keinen Panel-Pfad, auf den ein Handy zeigen könnte."
+                ? "Cultivate Control läuft hier nicht als Home-Assistant-Add-on — es gibt keinen Panel-Pfad, auf den ein Handy zeigen könnte."
                 : null,
         });
     }

@@ -235,7 +235,7 @@ public static class DemoData
         ["dissolved-oxygen"] = (7.6, 0.5, 9, 0, "mg/L", "Demo Sauerstoff"),
         // Die Raumluft am Controller, außerhalb des Zelts — wie der eingebaute
         // Fühler eines AC Infinity 69 Pro. Mit eigenem VPD, weil der Controller
-        // es selbst meldet (innen rechnet Grow OS es aus).
+        // es selbst meldet (innen rechnet Cultivate Control es aus).
         ["outside-temperature"] = (20, 1, 24, 0, "°C", "Demo Controller Außen Temperatur"),
         ["outside-humidity"] = (60, 4, 24, 0, "%", "Demo Controller Außen Luftfeuchte"),
         ["outside-vpd"] = (0.94, 0.15, 24, 0, "kPa", "Demo Controller Außen VPD"),

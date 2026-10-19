@@ -2,7 +2,7 @@
    Reihenfolge und Auswahl der fünf Ziele in der Leiste.
 
    Warum ein eigener Modus und kein langer Druck auf das Zeichen selbst:
-   Grow OS läuft am Telefon im WebView der Companion-App. Ein langer Druck ist
+   Cultivate Control läuft am Telefon im WebView der Companion-App. Ein langer Druck ist
    dort schon vergeben — er startet die Textauswahl und, je nach Android-Version,
    das Kontextmenü. Beides lässt sich von innen nicht zuverlässig abschalten, und
    ein Ziehen, das mal die Leiste sortiert und mal die Seite scrollt, ist

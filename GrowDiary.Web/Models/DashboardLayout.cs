@@ -2,12 +2,12 @@ using System.Text.Json.Serialization;
 
 namespace GrowDiary.Web.Models;
 
-/// <summary>What a tile shows: a value Grow OS knows, or any Home Assistant entity.</summary>
+/// <summary>What a tile shows: a value Cultivate Control knows, or any Home Assistant entity.</summary>
 public enum DashboardTileKind
 {
-    /// <summary>One of Grow OS's own metric keys (temperature, reservoir-ph, …).</summary>
+    /// <summary>One of Cultivate Control's own metric keys (temperature, reservoir-ph, …).</summary>
     Metric,
-    /// <summary>Any Home Assistant entity — including ones Grow OS knows nothing about.</summary>
+    /// <summary>Any Home Assistant entity — including ones Cultivate Control knows nothing about.</summary>
     Entity,
     /// <summary>A camera entity, shown as a refreshing still image.</summary>
     Camera,
@@ -81,7 +81,7 @@ public sealed class DashboardLayout
     public bool IsEmpty => Sections.Count == 0 || Sections.All(section => section.Tiles.Count == 0);
 
     /// <summary>
-    /// What Grow OS shows out of the box — the same climate and reservoir grouping the
+    /// What Cultivate Control shows out of the box — the same climate and reservoir grouping the
     /// dashboard always had, now as an editable starting point rather than fixed code.
     /// </summary>
     public static DashboardLayout Default(int tentId) => new()

@@ -33,7 +33,7 @@ export type DashboardLayout = {
   isCustom: boolean
 }
 
-/** Die Werte, die Grow OS selbst kennt — im Dialog beim Namen genannt, nicht als Schlüssel. */
+/** Die Werte, die Cultivate Control selbst kennt — im Dialog beim Namen genannt, nicht als Schlüssel. */
 export const KNOWN_METRICS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'temperature', label: 'Temperatur' },
   { key: 'humidity', label: 'Luftfeuchte' },
@@ -170,9 +170,9 @@ export function layoutIsEmpty(layout: DashboardLayout): boolean {
   return layout.sections.every((section) => section.tiles.length === 0)
 }
 
-/** Eine Kachel für einen Wert, den Grow OS selbst misst. */
+/** Eine Kachel für einen Wert, den Cultivate Control selbst misst. */
 /**
- * Eine Kachel für einen Messwert, den Grow OS kennt.
+ * Eine Kachel für einen Messwert, den Cultivate Control kennt.
  *
  * Das Label wird mitgegeben, obwohl `resolveTile` es normalerweise aus den
  * aktuellen Messwerten holt. Grund: findet es den Schlüssel dort nicht, fiel

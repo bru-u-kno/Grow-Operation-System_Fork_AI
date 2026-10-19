@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace GrowOsAccess;
 
-/// <summary>Die Anbindung an Grow OS in einem Rutsch registrieren.</summary>
+/// <summary>Die Anbindung an Cultivate Control in einem Rutsch registrieren.</summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>Supervisor-Draht, Suche und Leser eintragen.</summary>
@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
     /// </param>
     /// <param name="eigenerSlug">
     /// Der Slug dieses Add-ons aus seiner <c>config.yaml</c>, derzeit
-    /// <c>grow_mcp</c>. Daraus wird der Name von Grow OS abgeleitet.
+    /// <c>cultivate_control_mcp</c>. Daraus wird der Name von Cultivate Control abgeleitet.
     /// </param>
     public static IServiceCollection AddGrowOsAccess(
         this IServiceCollection services, string? adresse, string eigenerSlug)
@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GrowOsDiscovery>();
 
         // Ohne eigene Quelle geht kein Schlüssel mit — nur lesen, wie bisher.
-        // Der Grow MCP trägt vorher seine eigene ein (Schlüssel aus der
+        // Der Cultivate Control MCP trägt vorher seine eigene ein (Schlüssel aus der
         // laufenden HTTP-Anfrage); TryAdd lässt sie dann stehen.
         services.TryAddSingleton<IForkSchluesselQuelle, KeinForkSchluessel>();
 

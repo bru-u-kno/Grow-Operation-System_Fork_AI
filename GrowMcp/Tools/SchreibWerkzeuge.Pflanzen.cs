@@ -27,7 +27,7 @@ public sealed partial class SchreibWerkzeuge
     public static readonly string[] PflanzenFelder =
         ["strainId", "setupId", "growId", "siteIndex", "parentPlantId", "label", "plantRole", "plantStatus", "phenoLabel", "startedAt", "endedAt", "notes"];
 
-    /// <summary>Was Grow OS selbst führt oder ableitet — kein Vergleich.</summary>
+    /// <summary>Was Cultivate Control selbst führt oder ableitet — kein Vergleich.</summary>
     private static readonly string[] PflanzenAbgeleitet = ["updatedAtUtc", "createdAtUtc", "strainName"];
 
     private static readonly (string Wert, string[] Woerter)[] PflanzenStatus =
@@ -75,7 +75,7 @@ public sealed partial class SchreibWerkzeuge
             return AndersAlsErwartet;
         }
 
-        // Der Rumpf: genau die Felder des PUT, aus dem gelesenen Stand (fehlende Felder schickt Grow OS als null zurück).
+        // Der Rumpf: genau die Felder des PUT, aus dem gelesenen Stand (fehlende Felder schickt Cultivate Control als null zurück).
         var rumpf = new JsonObject();
         foreach (var feld in PflanzenFelder) rumpf[feld] = vorher[feld]?.DeepClone();
         var geaendert = new List<string>();
@@ -172,7 +172,7 @@ public sealed partial class SchreibWerkzeuge
             return $"ACHTUNG: Beim Speichern von {titel} haben sich außer {string.Join(", ", geaendert)} weitere Angaben verändert ({string.Join(", ", abweichend)}). "
                    + (rueck.Antwort is { Erfolg: true } && wiederGleich
                        ? "Der vorherige Stand wurde zurückgeschrieben und nachgelesen — er ist wieder da."
-                       : "Das Zurückschreiben ist NICHT belegt — bitte sofort in Grow OS nachsehen.");
+                       : "Das Zurückschreiben ist NICHT belegt — bitte sofort in Cultivate Control nachsehen.");
         }
 
         var aenderungen = geaendert.Select(f => $"{FeldName(f)} {Anzeige(vorher, f)} → {Anzeige(nachher, f)}");

@@ -4,7 +4,7 @@ using GrowDiary.Web.Services.Knowledge.Schema;
 namespace GrowDiary.Web.Tests.Services;
 
 /// <summary>
-/// Die Berater-Mappe: das Wissen von Grow OS als lesbarer Text.
+/// Die Berater-Mappe: das Wissen von Cultivate Control als lesbarer Text.
 /// </summary>
 /// <remarks>
 /// Geprüft wird nicht die Formatierung, sondern was ein Berater daraus

@@ -14,8 +14,8 @@ namespace GrowMcp.Tools;
 /// <remarks>
 /// <para>Feste Werkzeuge mit eigener Prüfung (Prüfsumme). Seit Paket D (18.10.2026) erreicht <c>fork_ausfuehren</c>
 /// jede andere Einstellung; Schlüsselverwaltung und KI-Hauptschalter bleiben ausgeschlossen (<c>[KeinKiZugriff]</c>
-/// in Grow OS) und haben auch dort keinen Weg.</para>
-/// <para>Wie überall entscheidet Grow OS, ob die Stufe Verwaltung frei ist; die Werkzeuge nennen sie nur.</para>
+/// in Cultivate Control) und haben auch dort keinen Weg.</para>
+/// <para>Wie überall entscheidet Cultivate Control, ob die Stufe Verwaltung frei ist; die Werkzeuge nennen sie nur.</para>
 /// </remarks>
 public sealed partial class SchreibWerkzeuge
 {
@@ -23,13 +23,13 @@ public sealed partial class SchreibWerkzeuge
 
     private static readonly string[] KeinRaumWoerter = ["keiner", "kein", "keinen", "ohne", "ohne raum", "none"];
 
-    /// <summary>Felder der Zelt-Antwort, die Grow OS selbst zählt und die ein Speichern nicht annimmt.</summary>
+    /// <summary>Felder der Zelt-Antwort, die Cultivate Control selbst zählt und die ein Speichern nicht annimmt.</summary>
     private static readonly string[] ZeltZaehlfelder = ["id", "activeGrowCount", "archivedGrowCount", "activeSetupCount", "archivedSetupCount"];
 
     /// <summary>
-    /// Felder, die beim Speichern eines Zelts <b>weggelassen</b> werden, damit Grow OS sie nicht anfasst:
+    /// Felder, die beim Speichern eines Zelts <b>weggelassen</b> werden, damit Cultivate Control sie nicht anfasst:
     /// Sensoren (sonst bekommen alle Zeilen neue Ids und die Verweise darauf werden gelöst) und Kameras
-    /// (Grow OS behält ohne Angabe Liste und Einzelfeld).
+    /// (Cultivate Control behält ohne Angabe Liste und Einzelfeld).
     /// </summary>
     private static readonly string[] ZeltUnberuehrt = ["sensors", "cameras", "cameraEntityId"];
 
@@ -139,10 +139,10 @@ public sealed partial class SchreibWerkzeuge
             json =>
             {
                 var jetzt = Text(json, "name") ?? neu ?? vorgabe;
-                if (neu is null) return $"Raumname von „{alterName}\" auf die Vorgabe „{jetzt}\" zurückgesetzt. Grow OS hat gespeichert:";
+                if (neu is null) return $"Raumname von „{alterName}\" auf die Vorgabe „{jetzt}\" zurückgesetzt. Cultivate Control hat gespeichert:";
                 return string.Equals(alterName, jetzt, StringComparison.Ordinal)
-                    ? $"Der Raum hieß schon „{jetzt}\"; nichts verändert. Grow OS hat gespeichert:"
-                    : $"Raumname von „{alterName}\" auf „{jetzt}\" gesetzt. Grow OS hat gespeichert:";
+                    ? $"Der Raum hieß schon „{jetzt}\"; nichts verändert. Cultivate Control hat gespeichert:"
+                    : $"Raumname von „{alterName}\" auf „{jetzt}\" gesetzt. Cultivate Control hat gespeichert:";
             }, cancellationToken);
     }
 
@@ -200,8 +200,8 @@ public sealed partial class SchreibWerkzeuge
             return $"Nichts geändert: Zelt {zeltId} „{zeltName}\" ist schon {(ziel is null ? "keinem Raum zugeordnet" : $"im Raum „{raumName}\"")}.";
         }
 
-        // Grow OS ersetzt beim Speichern das GANZE Zelt (PUT). Deshalb den Ist-Stand schicken, nur mit anderer raumId.
-        // Sensoren und Kameras weglassen: ohne Angabe fasst Grow OS sie nicht an (mit Angabe bekämen die Sensoren neue Ids).
+        // Cultivate Control ersetzt beim Speichern das GANZE Zelt (PUT). Deshalb den Ist-Stand schicken, nur mit anderer raumId.
+        // Sensoren und Kameras weglassen: ohne Angabe fasst Cultivate Control sie nicht an (mit Angabe bekämen die Sensoren neue Ids).
         var rumpf = (JsonObject)vorher.DeepClone();
         foreach (var feld in ZeltZaehlfelder.Concat(ZeltUnberuehrt)) rumpf.Remove(feld);
         rumpf["raumId"] = ziel;
@@ -223,7 +223,7 @@ public sealed partial class SchreibWerkzeuge
 
         if (nachher is null)
         {
-            return $"Zelt {zeltId} „{zeltName}\" wurde gespeichert, aber der Stand danach ließ sich nicht lesen — die Prüfsumme fehlt. Bitte mit raum und in Grow OS nachsehen.";
+            return $"Zelt {zeltId} „{zeltName}\" wurde gespeichert, aber der Stand danach ließ sich nicht lesen — die Prüfsumme fehlt. Bitte mit raum und in Cultivate Control nachsehen.";
         }
 
         var abweichend = AbweichendeFelder(vorher, nachher);
@@ -238,15 +238,15 @@ public sealed partial class SchreibWerkzeuge
             var nichtZurueck = abweichend.Intersect(ZeltUnberuehrt).ToList();
             return $"ACHTUNG: Beim Speichern von Zelt {zeltId} „{zeltName}\" haben sich außer der Raumzuordnung weitere Angaben verändert ({string.Join(", ", abweichend)}). "
                    + (nichtZurueck.Count > 0
-                       ? $"Davon lassen sich {string.Join(", ", nichtZurueck)} NICHT automatisch zurückschreiben — bitte sofort in Grow OS prüfen und von Hand wiederherstellen."
+                       ? $"Davon lassen sich {string.Join(", ", nichtZurueck)} NICHT automatisch zurückschreiben — bitte sofort in Cultivate Control prüfen und von Hand wiederherstellen."
                        : zurueckgesetzt
-                       ? "Der vorherige Stand wurde zurückgeschrieben; bitte mit raum und in Grow OS nachsehen, ob alles wieder stimmt (Sensoren-Zuordnung prüfen)."
-                       : "Das Zurückschreiben des vorherigen Stands ist NICHT gelungen — bitte sofort in Grow OS nachsehen.");
+                       ? "Der vorherige Stand wurde zurückgeschrieben; bitte mit raum und in Cultivate Control nachsehen, ob alles wieder stimmt (Sensoren-Zuordnung prüfen)."
+                       : "Das Zurückschreiben des vorherigen Stands ist NICHT gelungen — bitte sofort in Cultivate Control nachsehen.");
         }
 
         var summe = Pruefsumme(nachher);
         return $"Zelt {zeltId} „{zeltName}\" ist jetzt {(ziel is null ? "keinem Raum zugeordnet" : $"im Raum „{raumName}\"")} (vorher: {(alt is null ? "ohne Raum" : "im Raum")}). "
-               + $"Alle anderen Zelt-Einstellungen sind unverändert (Prüfsumme {summe} vorher und nachher gleich). Grow OS hat gespeichert:"
+               + $"Alle anderen Zelt-Einstellungen sind unverändert (Prüfsumme {summe} vorher und nachher gleich). Cultivate Control hat gespeichert:"
                + Environment.NewLine
                + new JsonObject { ["id"] = zeltId, ["name"] = zeltName, ["raumId"] = nachher["raumId"]?.DeepClone() }.ToJsonString(Ausgabe);
     }

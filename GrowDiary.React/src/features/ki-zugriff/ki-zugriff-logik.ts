@@ -39,7 +39,7 @@ export const STUFEN_WARNUNG: Partial<Record<KiStufe, string>> = {
   Verwaltung:
     'Mit „Verwaltung" kann der Assistent Einstellungen ändern, Sicherungen anlegen, '
     + 'Daten importieren und Stammdaten löschen. Vor dem Importieren und Löschen '
-    + 'legt Grow OS eine Sicherung an. Über die Zelt- und Steuerungseinstellungen kann er '
+    + 'legt Cultivate Control eine Sicherung an. Über die Zelt- und Steuerungseinstellungen kann er '
     + 'auch Dienste in Home Assistant auslösen — gib das nur einem Assistenten, dem du '
     + 'wie dir selbst vertraust. Schlüssel verwalten kann er nie.',
 }
@@ -55,7 +55,7 @@ export function istRiskant(stufe: KiStufe): boolean {
 /**
  * Was ein Schlüssel bei einer Stufe darf.
  *
- * - `gesperrt`: Grow OS lehnt ab.
+ * - `gesperrt`: Cultivate Control lehnt ab.
  * - `rueckfrage`: freigegeben, der Assistent soll aber vorher fragen.
  * - `frei`: freigegeben, ohne Rückfrage.
  *

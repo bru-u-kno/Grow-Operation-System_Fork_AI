@@ -157,7 +157,7 @@ public static class Kalibrierpunkte
     ///
     /// <para><b>Faustregel, keine Messgröße dieser App:</b> 95–105 % gelten als
     /// gut, unter 85 % ist die Sonde fällig. Die Zahlen stehen so in den
-    /// Handbüchern gängiger Sonden (Bluelab, Hanna, Milwaukee); Grow OS gibt
+    /// Handbüchern gängiger Sonden (Bluelab, Hanna, Milwaukee); Cultivate Control gibt
     /// sie weiter und erfindet keine eigene Schwelle.</para>
     /// </remarks>
     public static double? SteilheitProzent(IReadOnlyList<Kalibrierpunkt> punkte)

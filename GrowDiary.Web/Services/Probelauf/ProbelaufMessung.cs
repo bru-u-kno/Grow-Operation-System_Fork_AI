@@ -188,5 +188,5 @@ public sealed class ProbelaufMeldung : IProbelaufMeldung
     public ProbelaufMeldung(NotificationService benachrichtigung) => _benachrichtigung = benachrichtigung;
 
     public async Task SendenAsync(string titel, string text, CancellationToken ct)
-        => await _benachrichtigung.SendAsync(NotificationCategory.System, "🌱 Grow OS · " + titel, text, ct, trotzRuhezeit: true);
+        => await _benachrichtigung.SendAsync(NotificationCategory.System, "🌱 Cultivate Control · " + titel, text, ct, trotzRuhezeit: true);
 }

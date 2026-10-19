@@ -117,7 +117,7 @@ Alternativ kann `GrowDiary.Web/App_Data/ha-config.example.json` als Vorlage fuer
 
 ## Home Assistant
 
-Grow OS kann ohne konfigurierte Home-Assistant-Verbindung starten, der volle Nutzen entsteht aber mit HA. Wichtig ist, dass der Grow-OS-Server Home Assistant erreichen kann, nicht nur das Handy oder der Browser.
+Cultivate Control kann ohne konfigurierte Home-Assistant-Verbindung starten, der volle Nutzen entsteht aber mit HA. Wichtig ist, dass der Grow-OS-Server Home Assistant erreichen kann, nicht nur das Handy oder der Browser.
 
 Typische Base URLs:
 

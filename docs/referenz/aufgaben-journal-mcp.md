@@ -12,7 +12,7 @@
 | Begleitungsstufe (Voll · Wichtiges · Experte) | `/settings` (alt: `/einstellungen`) → `PUT /api/companion/settings` |
 | Eigene Fotos zu einem Symptom | `/wissen` → `SymptomPhotos.tsx` |
 | Menü „Einrichtung" → „KI-Assistent", Reiter „Mappe" (bis forkai.164 unter „Wissen") | `/ki?tab=mappe` (alt: `/berater`) → `MappeReiter`, siehe `ki-assistent.md` |
-| Grow MCP: Einrichtungsseite mit Schlüssel und fertigem Befehl | eigenes Add-on, HA-Seitenleiste (Ingress 5078) |
+| Cultivate Control MCP: Einrichtungsseite mit Schlüssel und fertigem Befehl | eigenes Add-on, HA-Seitenleiste (Ingress 5078) |
 | Grow MCP: die Schnittstelle selbst | `http://<heimnetz-adresse>:5080/mcp` (5079 belegt der Grow MCP des Originals) |
 
 ## Was es tut
@@ -70,8 +70,8 @@ Journaldatum wäre eine zweite Wahrheit. Eine unbekannte Art (etwa `99`) lehnen
 Anlegen und Ändern mit 400 ab. Anlass: ein Wasserwechsel mit
 „pH- Menge nicht notiert" ließ sich nicht korrigieren.
 
-**Grow MCP** gibt einem MCP-Klienten im Heimnetz 22 **lesende** Werkzeuge auf
-Grow OS, darunter `foto_ansehen` (Bild plus Zusammenhangs-Satz); sein Zweck
+**Cultivate Control MCP** gibt einem MCP-Klienten im Heimnetz 22 **lesende** Werkzeuge auf
+Cultivate Control, darunter `foto_ansehen` (Bild plus Zusammenhangs-Satz); sein Zweck
 gegenüber der Mappe sind Verlaufsfragen. **Die Mappe** (`/ki?tab=mappe`, alt `/berater`) ist ein ZIP
 aus neun Markdown-Dateien — Anweisung, Lagebericht, fünf Wissensdateien,
 Prüffragen — und hält den Stand von jetzt fest.
@@ -92,7 +92,7 @@ Prüffragen — und hält den Stand von jetzt fest.
 | MCP: Werkzeuge, alle lesend; Bild höchstens | 22; 6 MB | `GrowMcp/Tools/GrowTools.cs` |
 | MCP: `messwert_verlauf` | 14 Tage voreingestellt (1–365); bis 2 Tage Einzelwerte, darüber Tageswerte | `GrowTools` |
 | MCP: `dosierungen` | 30 Einträge, höchstens 200 | `GrowTools` |
-| MCP: wo Grow OS liegt | Port 5076, Slug `grow_os`, mindestens 2.0.0-beta.24 | `GrowOsAccess/GrowOsLocator.cs` |
+| MCP: wo Cultivate Control liegt | Port 5076, Slug `grow_os`, mindestens 2.0.0-beta.24 | `GrowOsAccess/GrowOsLocator.cs` |
 | Mappe | 9 Dateien, 4 Prüffragen | `AgentPackageBuilder.Build`, `AgentPruefung.Alle` |
 
 ## Was es bewusst NICHT tut
@@ -107,12 +107,12 @@ Prüffragen — und hält den Stand von jetzt fest.
   gilt ein Grow als beendet, das Aushärten läuft weiter.
 - **Keine fremden Symptombilder** (Urheberrecht) — nur eine Zuordnung eigener
   Aufnahmen, kein zweiter Bildbestand (`SymptomPhotosApiController`).
-- **Kein MCP-Werkzeug schreibt.** Dosieren und Schalten bleiben in Grow OS.
+- **Kein MCP-Werkzeug schreibt.** Dosieren und Schalten bleiben in Cultivate Control.
 - **Die Einrichtungsseite ist über Port 5079 nicht erreichbar** (`Tueren.Pruefen`
   → 404), sonst holte sich jeder im WLAN den Schlüssel.
 - **Kein `hassio_role: manager`**, obwohl der Supervisor die Netzwerkadresse nur
   dann herausgibt: die Rolle dürfte jedes andere Add-on deinstallieren.
-- **Grow OS verschickt nichts von selbst**; die Mappe verlässt den Rechner nur
+- **Cultivate Control verschickt nichts von selbst**; die Mappe verlässt den Rechner nur
   per „Herunterladen". Anweisung und Prüffragen stehen offen auf `/ki?tab=mappe`,
   nicht nur im ZIP — „ungelesene Grenzen sind keine".
 
@@ -128,7 +128,7 @@ Prüffragen — und hält den Stand von jetzt fest.
 | Fotos ablegen, Schnappschuss, Prüfung; Bilder je Symptom | `Services/PhotoStorageService.cs`, `Api/Controllers/SymptomPhotosApiController.cs` |
 | MCP-Werkzeuge (alle 22) | `GrowMcp/Tools/GrowTools.cs` |
 | Welcher Port was darf; Schlüssel; Heimnetz-Prüfung | `GrowMcp/Tueren.cs`, `Program.cs`, `Services/TokenSpeicher.cs`, `Services/Heimnetzadresse.cs` |
-| Grow OS finden | `GrowOsAccess/GrowOsLocator.cs` |
+| Cultivate Control finden | `GrowOsAccess/GrowOsLocator.cs` |
 | Mappe bauen, Anweisung, Prüffragen | `GrowDiary.Web/Services/AgentPackageBuilder.cs`, `AgentPromptTexts.cs`, `AgentPruefung.cs` |
 
 ## Fallen
@@ -149,7 +149,7 @@ Prüffragen — und hält den Stand von jetzt fest.
   (`uploads/uploads/4/x.jpg`) — und es fiel nicht auf, weil der SPA-Fallback
   jeden Pfad außerhalb `/api` mit `index.html` und **Status 200** beantwortet
   (Kommentar an `GrowTools.BildPfad`, grow-mcp 0.1.5).
-- **Der MCP-Server fand Grow OS nicht**, weil der eigene Slug fest im Code stand
+- **Der MCP-Server fand Cultivate Control nicht**, weil der eigene Slug fest im Code stand
   und auf ein anderes Add-on zeigte (`GrowOsLocator.Kandidaten`, 0.1.1).
 - **Die Einrichtungsseite schlug eine Adresse vor, unter der nie etwas lief:**
   sie hängt am Ingress und ist unter jeder HA-Adresse offen, auch einer aus dem

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Startet Grow OS lokal mit Testdaten — für den Entwicklungsrechner.
+    Startet Cultivate Control lokal mit Testdaten — für den Entwicklungsrechner.
 
 .DESCRIPTION
     Auf dem Entwicklungsrechner gibt es kein Zelt, keine Sonden und kein Home
@@ -37,7 +37,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host ""
-Write-Host "  Grow OS - TESTDATEN" -ForegroundColor Cyan
+Write-Host "  Cultivate Control - TESTDATEN" -ForegroundColor Cyan
 Write-Host "  Alle Messwerte sind erfunden. Kein Home Assistant, es wird nichts geschaltet." -ForegroundColor DarkGray
 Write-Host "  http://localhost:$Port" -ForegroundColor Cyan
 Write-Host ""

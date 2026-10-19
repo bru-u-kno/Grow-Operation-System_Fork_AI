@@ -12,7 +12,7 @@ public sealed record AgentPackage(string GrowName, IReadOnlyList<AgentPackageFil
 /// Die Berater-Mappe: Anweisung, Lage, Wissen und Selbsttest in einem Paket.
 /// </summary>
 /// <remarks>
-/// <para>Die Idee dahinter: In Grow OS steckt keine KI und soll auch keine
+/// <para>Die Idee dahinter: In Cultivate Control steckt keine KI und soll auch keine
 /// stecken. Aber das Fachwissen liegt hier — Abläufe, Behandlungen, Symptome,
 /// Regeln, Sollwerte. Wer einen Assistenten fragen will, soll ihm nicht nur
 /// seine Messwerte vorlegen, sondern auch das Material, an dem sie zu messen

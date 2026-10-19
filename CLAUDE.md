@@ -122,7 +122,7 @@ einzigen Nacht:
 | Schalten meldete Erfolg | und veränderte nichts |
 
 Deshalb: `GrowDiary.Web.Tests/DemobestandStimmigTests.cs` prüft den Bestand
-gegen die **eigenen Regeln der App** — wo Grow OS eine Warnung ausgeben würde,
+gegen die **eigenen Regeln der App** — wo Cultivate Control eine Warnung ausgeben würde,
 ist der Bestand falsch, nicht die Warnung.
 
 ### Mein Rechner ist nicht die Anlage
@@ -387,10 +387,10 @@ Wo eine Zahl gebraucht wird, die es schon gibt: **verweisen, nicht abtippen.**
 
 ## FACHLICHE REGELN
 
-- **Keine KI in der App.** Nie vorschlagen. Grow OS rechnet selbst und ruft
+- **Keine KI in der App.** Nie vorschlagen. Cultivate Control rechnet selbst und ruft
   keine KI auf. Gewollt ist dagegen, den **eigenen Assistenten des Bedieners**
   anzubinden (Einrichtung → KI-Assistent, `docs/ki-zugriff.md`): er kommt über
-  sein Konto bei Claude oder ChatGPT und einen Schlüssel aus Grow OS. Die meisten
+  sein Konto bei Claude oder ChatGPT und einen Schlüssel aus Cultivate Control. Die meisten
   Bediener haben den kostenlosen Plan oder ein Abo, keinen API-Schlüssel (der Nutzer,
   04.10.2026) — ein Weg, der einen API-Schlüssel verlangt, ist nie der Hauptweg.
 - **Faustregeln nur mit Etikett**, Empfehlungen nur mit Quelle. Eine Zahl, die
@@ -462,7 +462,7 @@ nächsten Release einer anderen Sitzung nicht mehr.
   Branches wechseln oder committen; der bleibt auf `main`.
 - **Stand live, nie aus dem Gedächtnis.** Welche Version auf `main` liegt, steht
   in `grow-os/config.yaml` auf `origin/main`; welche installiert ist, zeigt Home
-  Assistant (`update.grow_os_fork_ai_update`). Beides vor Release und Installation
+  Assistant (`update.cultivate_control_update`). Beides vor Release und Installation
   neu nachsehen. Versionsnummern in Notizen und Gedächtnis sind Geschichte.
 - **Vor dem Release frisch einmischen.** `git fetch origin main`, einmischen, Tor
   ansehen, erst dann `release/<Nummer>` pushen — die Nummer ist die auf

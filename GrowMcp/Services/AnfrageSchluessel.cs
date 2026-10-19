@@ -7,8 +7,8 @@ namespace GrowMcp.Services;
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026): Der Connector schickt bei jeder Anfrage
-/// <c>Authorization: Bearer …</c>. Steht dort ein Schlüssel aus Grow OS
-/// (<c>gok_…</c>), reicht ihn <see cref="GrowOsReader"/> an Grow OS weiter.
+/// <c>Authorization: Bearer …</c>. Steht dort ein Schlüssel aus Cultivate Control
+/// (<c>gok_…</c>), reicht ihn <see cref="GrowOsReader"/> an Cultivate Control weiter.
 /// Steht dort der MCP-Schlüssel dieses Add-ons, kommt hier <c>null</c> heraus:
 /// der MCP-Schlüssel öffnet nur die Tür dieses Add-ons und verlässt es nie.</para>
 ///

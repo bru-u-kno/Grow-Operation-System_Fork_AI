@@ -29,7 +29,7 @@
   .kv-kopierfeld .ab-anweisung { margin-top: 0; max-height: none; }
   .kv code { overflow-wrap: anywhere; }
 
-  /* Hinweis, dass ein Weg an Grow OS vorbeigeht (Prüfer 04.10.2026): eine
+  /* Hinweis, dass ein Weg an Cultivate Control vorbeigeht (Prüfer 04.10.2026): eine
      Grenze nur dort versprechen, wo sie durchgesetzt wird. */
   .kv-warnung {
     margin: 4px 0 10px;

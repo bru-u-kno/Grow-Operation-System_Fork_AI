@@ -1,7 +1,7 @@
-# Grow OS — Home Assistant Add-on
+# Cultivate Control — Home Assistant Add-on
 
 Runs [Grow OS](https://github.com/Nerdstreak/Grow-Operation-System) directly inside
-Home Assistant. Because Grow OS relies on Home Assistant for all sensor data, this
+Home Assistant. Because Cultivate Control relies on Home Assistant for all sensor data, this
 is the simplest way to install it: one click, no separate server, no manual token.
 
 ## Installation
@@ -9,25 +9,25 @@ is the simplest way to install it: one click, no separate server, no manual toke
 1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**.
 2. Top-right **⋮ → Repositories**, add:
    `https://github.com/Nerdstreak/Grow-Operation-System`
-3. **Grow OS** appears in the store — click **Install**, then **Start**.
-4. On this add-on's **Info** page, enable **"Show in sidebar"** so Grow OS appears in
-   the Home Assistant sidebar (🌱 Grow OS).
+3. **Cultivate Control** appears in the store — click **Install**, then **Start**.
+4. On this add-on's **Info** page, enable **"Show in sidebar"** so Cultivate Control appears in
+   the Home Assistant sidebar (🌱 Cultivate Control).
 5. Open it from the sidebar.
 
 ## What "native integration" means here
 
-- **No manual connection.** As an add-on, Grow OS receives a Supervisor token and
+- **No manual connection.** As an add-on, Cultivate Control receives a Supervisor token and
   reaches Home Assistant at `http://supervisor/core` automatically. You never paste
   a URL or a long-lived access token.
-- **Pick sensors from a dropdown.** Grow OS reads your Home Assistant entities and
+- **Pick sensors from a dropdown.** Cultivate Control reads your Home Assistant entities and
   lets you choose them from a searchable list (filtered by device class), instead
   of typing entity IDs.
-- **Automatic backups.** The Grow OS database lives on the add-on's `/data` volume,
+- **Automatic backups.** The Cultivate Control database lives on the add-on's `/data` volume,
   which is included in Home Assistant snapshots.
 
 ## Data & persistence
 
-All Grow OS data (SQLite database, uploads, snapshots) is stored under `/data` and
+All Cultivate Control data (SQLite database, uploads, snapshots) is stored under `/data` and
 survives restarts and updates. Uninstalling the add-on removes this data — take a
 Home Assistant backup first if you want to keep it.
 
@@ -40,11 +40,11 @@ Home Assistant backup first if you want to keep it.
 
 ## Zugriff für KI-Assistenten
 
-Ein KI-Assistent (etwa Claude über das Home-Assistant-MCP oder den Grow MCP Fork AI) kann
+Ein KI-Assistent (etwa Claude über das Home-Assistant-MCP oder den Cultivate Control MCP) kann
 Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
 
 1. **Einrichtung → KI-Assistent → Zugriff & Schlüssel:** „Zugriff erlauben" anhaken, speichern.
-2. **Neuer Schlüssel:** Namen vergeben und je Stufe wählen: **Gesperrt** (Grow OS lehnt ab),
+2. **Neuer Schlüssel:** Namen vergeben und je Stufe wählen: **Gesperrt** (Cultivate Control lehnt ab),
    **Mit Rückfrage** (erlaubt, der Assistent soll dich aber vorher fragen) oder **Frei**.
    Vorbelegt ist Dokumentieren frei, alles andere gesperrt. „Geräte schalten" und
    „Verwaltung" verlassen Gesperrt erst, wenn du den Warnhinweis bestätigst. Anlegen und den
@@ -52,7 +52,7 @@ Einträge selbst vornehmen, wenn du es erlaubst. Ab Werk ist das aus.
 3. Den Schlüssel deinem Assistenten geben. Er schickt ihn bei jeder Anfrage als
    `Authorization: Bearer gok_…` mit; `GET /api/ki-zugriff/ich` sagt ihm, welche Stufen
    erlaubt sind, bei welchen er vorher fragen soll (`rueckfrageBei`) und welche Höchstwerte
-   gelten. Die Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann Grow OS nur
+   gelten. Die Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann Cultivate Control nur
    „Gesperrt".
 
 Die Rückfrage gilt je Schlüssel; eine Einstellung „Vorher nachfragen ab …" für alle gibt es
@@ -69,7 +69,7 @@ Ein Schlüssel wird nur aus dem internen Add-on-Netz angenommen. Geht er verlore
 löschen und einen neuen anlegen. Was über einen Schlüssel geändert wurde, steht im
 Prüfprotokoll.
 
-Kommen von einer Adresse zehn ungültige Schlüssel in zehn Minuten, weist Grow OS von dort
+Kommen von einer Adresse zehn ungültige Schlüssel in zehn Minuten, weist Cultivate Control von dort
 15 Minuten lang jeden ungültigen Schlüssel sofort ab (429). Ein gültiger Schlüssel kommt
 trotzdem durch — sonst könnten erfundene Schlüssel aus dem Heimnetz deinen echten Assistenten
-aussperren, denn alle Anfragen über den Grow MCP kommen von derselben Adresse.
+aussperren, denn alle Anfragen über den Cultivate Control MCP kommen von derselben Adresse.

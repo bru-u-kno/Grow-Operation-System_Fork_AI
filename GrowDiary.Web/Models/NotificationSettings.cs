@@ -1,7 +1,7 @@
 namespace GrowDiary.Web.Models;
 
 /// <summary>
-/// One central place for all push notifications Grow OS sends through a Home Assistant
+/// One central place for all push notifications Cultivate Control sends through a Home Assistant
 /// notify service: which device to notify, quiet hours, and which categories are on.
 /// Stored as key/value rows in AppSettings.
 /// </summary>

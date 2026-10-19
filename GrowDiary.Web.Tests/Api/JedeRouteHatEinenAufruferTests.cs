@@ -111,20 +111,20 @@ public sealed class JedeRouteHatEinenAufruferTests
             + "Oberflaeche bekaeme ohne Schluessel ohnehin nur 401.",
         // Fork AI (A-003 Etappe B, 03.10.2026): Home Assistant über den Fork.
         ["GET /api/ki-ha/bereiche"] =
-            "Gerufen vom Grow MCP Fork AI, nicht aus der Oberflaeche: die Bereiche von Home "
+            "Gerufen vom Cultivate Control MCP, nicht aus der Oberflaeche: die Bereiche von Home "
             + "Assistant fuer einen KI-Assistenten mit Schluessel (ohne Schluessel 401).",
         ["GET /api/ki-ha/zustaende"] =
-            "Gerufen vom Grow MCP Fork AI, nicht aus der Oberflaeche: Zustaende von Home "
+            "Gerufen vom Cultivate Control MCP, nicht aus der Oberflaeche: Zustaende von Home "
             + "Assistant fuer einen KI-Assistenten mit Schluessel (ohne Schluessel 401).",
         ["GET /api/ki-ha/verlauf"] =
-            "Gerufen vom Grow MCP Fork AI, nicht aus der Oberflaeche: Verlauf einer Entitaet "
+            "Gerufen vom Cultivate Control MCP, nicht aus der Oberflaeche: Verlauf einer Entitaet "
             + "fuer einen KI-Assistenten mit Schluessel (ohne Schluessel 401).",
         ["POST /api/ki-ha/dienst"] =
-            "Gerufen vom Grow MCP Fork AI, nicht aus der Oberflaeche: ein Dienst von Home "
+            "Gerufen vom Cultivate Control MCP, nicht aus der Oberflaeche: ein Dienst von Home "
             + "Assistant, eingestuft je Domain (KiHaEinstufung), nur mit Schluessel.",
         // Fork AI (forkai.247): genau eine Sensor-Zuordnung an Ort und Stelle.
         ["PUT /api/settings/tents/{id:int}/sensors/{metricType}"] =
-            "Gerufen vom Grow MCP Fork AI (sensor_zuordnen), nicht aus der Oberflaeche: die speichert das ganze Zelt. "
+            "Gerufen vom Cultivate Control MCP (sensor_zuordnen), nicht aus der Oberflaeche: die speichert das ganze Zelt. "
             + "Ein Assistent darf nur die eine Messgroesse aendern, ohne den uebrigen Zeilen neue Ids zu geben.",
         ["GET /api/system/audit-events"] =
             "Das Protokoll kritischer Backend-Vorgaenge (SystemAuditEvents): Lichtflanken, "

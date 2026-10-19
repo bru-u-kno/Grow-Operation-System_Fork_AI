@@ -13,7 +13,7 @@
    Bis forkai.167 hat sich die App nicht angemeldet; jeder Tipp endete
    ohnehin vorher in „404: Not Found", weil der Link auf /<slug> zeigte.
 
-   Zweiter Weg (05.10.2026): Wer Grow OS über ein Panel der HACS-Integration
+   Zweiter Weg (05.10.2026): Wer Cultivate Control über ein Panel der HACS-Integration
    „Ingress" ohne HA-Kopfleiste öffnet, bekommt den Link /<panel>?index=<seite>
    (IngressPanelService). Beim ersten Öffnen lädt hass_ingress die Seite selbst
    in den iframe. Ist das Panel schon offen, lädt es nichts neu — dann liest

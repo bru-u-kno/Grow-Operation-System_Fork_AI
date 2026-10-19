@@ -13,7 +13,7 @@ namespace GrowMcp.Tests;
 /// Wurzeln in Woche sieben.</para>
 ///
 /// <para>Deshalb ist diese Notiz kein Beiwerk, sondern der halbe Nutzen des
-/// Werkzeugs. Sie darf nur behaupten, was wirklich am Foto steht: was Grow OS
+/// Werkzeugs. Sie darf nur behaupten, was wirklich am Foto steht: was Cultivate Control
 /// nicht weiß, bleibt weg.</para>
 /// </remarks>
 public sealed class AufnahmenotizTests
@@ -68,7 +68,7 @@ public sealed class AufnahmenotizTests
     /// <remarks>
     /// Dieser Test existiert, weil genau hier ein Fehler war: der Pfad wurde
     /// doppelt zusammengesetzt (<c>uploads/uploads/4/x.jpg</c>), und das
-    /// Werkzeug lieferte nie ein Bild. Aufgefallen waere es kaum — Grow OS
+    /// Werkzeug lieferte nie ein Bild. Aufgefallen waere es kaum — Cultivate Control
     /// beantwortet jeden Pfad ausserhalb von <c>/api</c> mit der Startseite und
     /// Status 200, ein 404 kommt also gar nicht erst zurueck.
     /// </remarks>

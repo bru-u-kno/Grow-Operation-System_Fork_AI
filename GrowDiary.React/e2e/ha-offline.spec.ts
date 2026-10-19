@@ -33,7 +33,7 @@ test('schweigt, solange Home Assistant antwortet', async ({ page }) => {
 })
 
 test('schweigt bei jemandem, der Home Assistant gar nicht eingerichtet hat', async ({ page }) => {
-  // Sonst stünde bei jedem, der Grow OS ohne HA benutzt, dauerhaft eine Warnung.
+  // Sonst stünde bei jedem, der Cultivate Control ohne HA benutzt, dauerhaft eine Warnung.
   await page.route('**/api/home-assistant/health', (route) =>
     route.fulfill({ json: { configured: false, reachable: false, retryAtUtc: null } }))
 

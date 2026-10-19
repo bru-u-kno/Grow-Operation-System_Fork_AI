@@ -10,9 +10,9 @@ namespace GrowMcp.Tools;
 /// Fork AI (Paket C2, 18.10.2026): <c>kamera_foto_speichern</c> — das aktuelle Kamerabild als Foto in den Grow.
 /// </summary>
 /// <remarks>
-/// Der Grow MCP lädt keine Dateien hoch: Grow OS holt das Bild selbst von der Kamera des Zelts
+/// Der Cultivate Control MCP lädt keine Dateien hoch: Cultivate Control holt das Bild selbst von der Kamera des Zelts
 /// (<c>POST /api/grows/{id}/kamerafoto</c>) und legt es ab wie die Auto-Messung. Ob die Kamera zum Zelt gehört und der
-/// Grow läuft, prüft Grow OS.
+/// Grow läuft, prüft Cultivate Control.
 /// </remarks>
 public sealed partial class SchreibWerkzeuge
 {

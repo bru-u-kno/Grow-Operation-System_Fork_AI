@@ -7,7 +7,7 @@ public readonly record struct LevelSample(DateTime AtUtc, double Value);
 /// Steht der Füllstand still?
 /// </summary>
 /// <remarks>
-/// <para>Der Kern des Kalibrier-Assistenten. Grow OS liest den Pegelsensor
+/// <para>Der Kern des Kalibrier-Assistenten. Cultivate Control liest den Pegelsensor
 /// laufend mit, während der Nutzer Wasser einfüllt und die Menge an seiner
 /// Wasseruhr abliest. Wann der Nullpunkt steht und wann „voll" erreicht ist,
 /// erkennt die App am Stillstand des Werts — der Nutzer soll nicht auf die Uhr

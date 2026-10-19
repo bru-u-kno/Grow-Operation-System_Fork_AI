@@ -8,7 +8,7 @@ namespace GrowOsAccess;
 /// </summary>
 /// <remarks>
 /// <para>Gebraucht wird er für genau eine Frage: wie heisse ich selbst? Aus dem
-/// eigenen Namen folgt der von Grow OS, denn beide kommen aus demselben
+/// eigenen Namen folgt der von Cultivate Control, denn beide kommen aus demselben
 /// Repository und tragen denselben Hash-Vorsatz.</para>
 ///
 /// <para><c>/addons/self/info</c> ist eine Info-Abfrage und damit von der

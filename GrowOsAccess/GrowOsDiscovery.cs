@@ -15,11 +15,11 @@ public sealed class GrowOsOptions
 
     /// <summary>
     /// Der eigene Slug ohne Repository-Vorsatz, so wie er in der
-    /// <c>config.yaml</c> dieses Add-ons steht, derzeit <c>grow_mcp</c>.
+    /// <c>config.yaml</c> dieses Add-ons steht, derzeit <c>cultivate_control_mcp</c>.
     /// </summary>
     /// <remarks>
-    /// Daraus wird der Name von Grow OS abgeleitet. Wer ihn falsch angibt, findet
-    /// ein Grow OS aus dem Store nicht mehr.
+    /// Daraus wird der Name von Cultivate Control abgeleitet. Wer ihn falsch angibt, findet
+    /// ein Cultivate Control aus dem Store nicht mehr.
     /// </remarks>
     public string EigenerSlug { get; init; } = string.Empty;
 }
@@ -31,19 +31,19 @@ public sealed class GrowOsOptions
 public sealed record GrowOsVerbindung(bool Erreichbar, string? Basis, string Meldung);
 
 /// <summary>
-/// Findet Grow OS und merkt sich, wo es steckt.
+/// Findet Cultivate Control und merkt sich, wo es steckt.
 /// </summary>
 /// <remarks>
 /// <para>Drei Wege, in dieser Reihenfolge: eine von Hand eingetragene Adresse
 /// schlägt alles — wer den Weg kennt, soll nicht an einer fehlenden Auskunft
 /// scheitern. Läuft dieses Programm nicht als Add-on, ist Entwicklungsbetrieb
-/// gemeint und Grow OS liegt auf demselben Rechner. Sonst wird der Name aus dem
+/// gemeint und Cultivate Control liegt auf demselben Rechner. Sonst wird der Name aus dem
 /// eigenen abgeleitet und der Reihe nach angeklopft.</para>
 ///
 /// <para>Die gefundene Adresse wird behalten. Ohne das klopfte ein MCP-Server bei
 /// jedem einzelnen Werkzeugaufruf erneut an bis zu drei Namen — der erste Aufruf
 /// darf suchen, der zwanzigste nicht mehr. Antwortet die gemerkte Adresse nicht
-/// mehr, wird sie verworfen und neu gesucht; ein Neustart von Grow OS unter
+/// mehr, wird sie verworfen und neu gesucht; ein Neustart von Cultivate Control unter
 /// anderem Namen heilt sich damit von selbst.</para>
 /// </remarks>
 public sealed class GrowOsDiscovery
@@ -81,11 +81,11 @@ public sealed class GrowOsDiscovery
         _logger = logger;
     }
 
-    /// <summary>Antwortet Grow OS unter dieser Adresse?</summary>
+    /// <summary>Antwortet Cultivate Control unter dieser Adresse?</summary>
     /// <remarks>
     /// Gefragt wird nach der Mappen-Übersicht: ein kleiner, lesender Endpunkt, den
-    /// es nur in Grow OS gibt. Ein beliebiger Webserver auf demselben Port fiele
-    /// damit durch, statt sich als Grow OS auszugeben.
+    /// es nur in Cultivate Control gibt. Ein beliebiger Webserver auf demselben Port fiele
+    /// damit durch, statt sich als Cultivate Control auszugeben.
     /// </remarks>
     public async Task<bool> ErreichbarAsync(string basis, CancellationToken cancellationToken)
     {
@@ -97,12 +97,12 @@ public sealed class GrowOsDiscovery
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Grow OS unter {Basis} nicht erreichbar.", basis);
+            _logger.LogDebug(ex, "Cultivate Control unter {Basis} nicht erreichbar.", basis);
             return false;
         }
     }
 
-    /// <summary>Grow OS suchen — oder sagen, warum es nicht geht.</summary>
+    /// <summary>Cultivate Control suchen — oder sagen, warum es nicht geht.</summary>
     public async Task<GrowOsVerbindung> FindenAsync(CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(_optionen.Adresse))
@@ -112,8 +112,8 @@ public sealed class GrowOsDiscovery
             return new GrowOsVerbindung(
                 erreichbar, adresse,
                 erreichbar
-                    ? $"Grow OS laut Einstellungen unter {adresse}."
-                    : $"Unter der eingetragenen Adresse {adresse} antwortet Grow OS nicht.");
+                    ? $"Cultivate Control laut Einstellungen unter {adresse}."
+                    : $"Unter der eingetragenen Adresse {adresse} antwortet Cultivate Control nicht.");
         }
 
         if (!SupervisorClient.ImAddon)
@@ -121,12 +121,12 @@ public sealed class GrowOsDiscovery
             var lokal = GrowOsLocator.BaseUrl("localhost");
             return new GrowOsVerbindung(
                 await ErreichbarAsync(lokal, cancellationToken), lokal,
-                "Entwicklungsbetrieb: Grow OS auf localhost.");
+                "Entwicklungsbetrieb: Cultivate Control auf localhost.");
         }
 
         if (_gemerkt is { } bekannt && await ErreichbarAsync(bekannt, cancellationToken))
         {
-            return new GrowOsVerbindung(true, bekannt, $"Grow OS unter {bekannt}.");
+            return new GrowOsVerbindung(true, bekannt, $"Cultivate Control unter {bekannt}.");
         }
 
         _gemerkt = null;
@@ -138,7 +138,7 @@ public sealed class GrowOsDiscovery
             if (!await ErreichbarAsync(basis, cancellationToken)) continue;
 
             _gemerkt = basis;
-            return new GrowOsVerbindung(true, basis, $"Grow OS gefunden unter {basis}.");
+            return new GrowOsVerbindung(true, basis, $"Cultivate Control gefunden unter {basis}.");
         }
 
         return new GrowOsVerbindung(false, null, GrowOsLocator.NichtGefunden.Meldung);

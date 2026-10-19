@@ -749,7 +749,7 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                     <summary>Formeln vergleichen</summary>
                     <span>In Home Assistant</span>
                     <code>{r.alteFormel}</code>
-                    <span>Aktuelle Fassung von Fork AI</span>
+                    <span>Aktuelle Fassung von Cultivate Control</span>
                     <code>{r.neueFormel}</code>
                   </details>
                 )}

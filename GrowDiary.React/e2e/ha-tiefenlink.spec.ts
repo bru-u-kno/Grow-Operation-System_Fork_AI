@@ -3,7 +3,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 import { nimmSchloss, gibSchloss } from './schloss'
 
 /**
- * Tipp auf eine Push-Meldung → die richtige Seite in Grow OS.
+ * Tipp auf eine Push-Meldung → die richtige Seite in Cultivate Control.
  *
  * Der Link heißt /app/<slug>/<seite> (SupervisorInfoService.PanelPath). Home
  * Assistant lädt im iframe immer die Startseite der App und nennt den Rest
@@ -17,7 +17,7 @@ import { nimmSchloss, gibSchloss } from './schloss'
  * schon auf „404: Not Found", weil er auf /<slug> zeigte (04.10.2026).
  */
 
-const SLUG = 'd48160c2_grow_os_fork_ai'
+const SLUG = '00d580e3_cultivate_control'
 
 /** Lädt eine gleich-herkünftige Seite und baut daraus die HA-Hülle mit der App im iframe. */
 async function huelle(page: Page, haPfad: string): Promise<Frame> {
@@ -84,7 +84,7 @@ test.describe('Push-Link öffnet die Seite aus der Meldung', () => {
     await page.waitForTimeout(300)
     expect(await appPfad(frame)).toBe('/grows')
 
-    // Zweiter Tipp, Grow OS ist schon offen.
+    // Zweiter Tipp, Cultivate Control ist schon offen.
     await tippe(page, `/app/${SLUG}/sensoren`)
     await expect.poll(() => appPfad(frame)).toBe('/sensoren')
 

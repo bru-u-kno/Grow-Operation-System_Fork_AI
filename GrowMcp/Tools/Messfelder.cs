@@ -34,11 +34,11 @@ public sealed record Messwerte
 }
 
 /// <summary>
-/// Von den diktierten Werten zu den Feldern, die Grow OS erwartet.
+/// Von den diktierten Werten zu den Feldern, die Cultivate Control erwartet.
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026): Ziel ist <c>MeasurementUpsertRequest</c> in
-/// Grow OS (<c>POST api/grows/{id}/measurements</c>, <c>PUT
+/// Cultivate Control (<c>POST api/grows/{id}/measurements</c>, <c>PUT
 /// api/measurements/{id}</c>). Die Namen stehen hier EINMAL. Geprüft werden sie
 /// nicht gegen eine abgetippte Liste, sondern gegen den echten Typ:
 /// <c>MessfelderTests</c> lädt die gebaute <c>GrowDiary.Web.dll</c>, liest den
@@ -47,12 +47,12 @@ public sealed record Messwerte
 /// eine Ausnahme mit Grund hat.</para>
 ///
 /// <para>Ein falscher Name wäre hier kein Fehler, sondern Stille: ASP.NET
-/// übergeht unbekannte Felder, Grow OS speichert eine Messung ohne den Wert, und
+/// übergeht unbekannte Felder, Cultivate Control speichert eine Messung ohne den Wert, und
 /// der Assistent meldet „eingetragen".</para>
 /// </remarks>
 public static class Messfelder
 {
-    /// <summary>Feld in Grow OS → Wert aus dem Diktat.</summary>
+    /// <summary>Feld in Cultivate Control → Wert aus dem Diktat.</summary>
     public static IReadOnlyList<(string Feld, Func<Messwerte, object?> Wert)> Tabelle { get; } =
     [
         ("reservoirPh", m => m.Ph),
@@ -105,11 +105,11 @@ public static class Messfelder
     }
 
     /// <summary>
-    /// Die Phasen von Grow OS (<c>GrowStage</c>) mit den Wörtern, mit denen man sie sagt.
+    /// Die Phasen von Cultivate Control (<c>GrowStage</c>) mit den Wörtern, mit denen man sie sagt.
     /// </summary>
     /// <remarks>
-    /// Links der Wert für Grow OS — <c>MessfelderTests</c> verlangt, dass die
-    /// Liste genau den Namen des Enums in Grow OS entspricht.
+    /// Links der Wert für Cultivate Control — <c>MessfelderTests</c> verlangt, dass die
+    /// Liste genau den Namen des Enums in Cultivate Control entspricht.
     /// </remarks>
     public static IReadOnlyList<(string Wert, string[] Woerter)> Phasen { get; } =
     [
@@ -123,7 +123,7 @@ public static class Messfelder
         ("Cure", ["aushärten", "aushaerten", "curing", "cure"]),
     ];
 
-    /// <summary>Ein gesagtes Wort in die Phase von Grow OS übersetzen, oder <c>null</c>.</summary>
+    /// <summary>Ein gesagtes Wort in die Phase von Cultivate Control übersetzen, oder <c>null</c>.</summary>
     public static string? Phase(string? gesagt)
     {
         if (string.IsNullOrWhiteSpace(gesagt)) return null;
@@ -143,7 +143,7 @@ public static class Messfelder
         ("Strong", ["stark", "strong"]),
     ];
 
-    /// <summary>Die gesagte Strömung als Wert für Grow OS. Unbekanntes geht unverändert durch — Grow OS lehnt es dann mit Feldfehler ab.</summary>
+    /// <summary>Die gesagte Strömung als Wert für Cultivate Control. Unbekanntes geht unverändert durch — Cultivate Control lehnt es dann mit Feldfehler ab.</summary>
     public static string? Stroemung(string? gesagt)
     {
         if (string.IsNullOrWhiteSpace(gesagt)) return null;
@@ -155,8 +155,8 @@ public static class Messfelder
         return gesagt.Trim();
     }
 
-    /// <summary>Das Format, in dem Grow OS die Ortszeit einer Messung oder eines Eintrags liest.</summary>
-    /// <remarks>Steht in Grow OS als <c>MeasurementsApiController.ZeitFormat</c>.</remarks>
+    /// <summary>Das Format, in dem Cultivate Control die Ortszeit einer Messung oder eines Eintrags liest.</summary>
+    /// <remarks>Steht in Cultivate Control als <c>MeasurementsApiController.ZeitFormat</c>.</remarks>
     public const string OrtszeitFormat = "yyyy-MM-ddTHH:mm";
 
     private static readonly string[] Lesbare =
@@ -165,7 +165,7 @@ public static class Messfelder
         "dd.MM.yyyy HH:mm", "d.M.yyyy HH:mm", "dd.MM.yyyy H:mm", "d.M.yyyy H:mm",
     ];
 
-    /// <summary>Einen gesagten Zeitpunkt (Ortszeit) in das Format von Grow OS bringen.</summary>
+    /// <summary>Einen gesagten Zeitpunkt (Ortszeit) in das Format von Cultivate Control bringen.</summary>
     /// <returns><c>null</c>, wenn er sich nicht lesen lässt.</returns>
     public static string? Ortszeit(string gesagt)
         => DateTime.TryParseExact(gesagt.Trim(), Lesbare, CultureInfo.InvariantCulture, DateTimeStyles.None, out var zeit)

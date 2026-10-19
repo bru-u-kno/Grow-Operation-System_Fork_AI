@@ -1,7 +1,7 @@
 namespace GrowDiary.Web.Services;
 
 /// <summary>
-/// Tracks, in memory, which mapped sensors have stopped reporting so Grow OS can push once
+/// Tracks, in memory, which mapped sensors have stopped reporting so Cultivate Control can push once
 /// when a sensor goes offline and once when it recovers. A sensor must look offline for a
 /// couple of consecutive polls before it counts, so a single transient Home Assistant hiccup
 /// does not raise a false alarm. Owned by the snapshot worker (a single long-lived instance).

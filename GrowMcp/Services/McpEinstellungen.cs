@@ -7,7 +7,7 @@ namespace GrowMcp.Services;
 /// </summary>
 /// <remarks>
 /// Es ist genau eine Angabe, und die braucht fast niemand: normalerweise findet
-/// der Server Grow OS von selbst. Home Assistant legt die Optionen als
+/// der Server Cultivate Control von selbst. Home Assistant legt die Optionen als
 /// <c>/data/options.json</c> ab; beim Entwickeln gibt es die Datei nicht, dann
 /// greift die Umgebungsvariable.
 /// </remarks>

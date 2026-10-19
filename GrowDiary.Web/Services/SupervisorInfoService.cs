@@ -7,7 +7,7 @@ namespace GrowDiary.Web.Services;
 /// Fragt den Supervisor, wie dieses Add-on heisst.
 /// </summary>
 /// <remarks>
-/// Wofür: Grow OS wird über den Ingress ausgeliefert, und dieser Pfad
+/// Wofür: Cultivate Control wird über den Ingress ausgeliefert, und dieser Pfad
 /// (<c>/api/hassio_ingress/&lt;token&gt;/</c>) trägt ein Token, das pro Anfrage
 /// wechselt — ein Lesezeichen darauf ist am nächsten Tag tot. Stabil ist nur der
 /// Panel-Pfad, und dafür braucht es den Slug.
@@ -57,7 +57,7 @@ public sealed class SupervisorInfoService
         return _cachedVersion;
     }
 
-    /// <summary>Der Add-on-Slug, oder null wenn Grow OS nicht als Add-on läuft.</summary>
+    /// <summary>Der Add-on-Slug, oder null wenn Cultivate Control nicht als Add-on läuft.</summary>
     public async Task<string?> GetAddonSlugAsync(CancellationToken cancellationToken = default)
     {
         // Testdatenmodus: der Entwicklungsrechner hat keinen Supervisor. Ein

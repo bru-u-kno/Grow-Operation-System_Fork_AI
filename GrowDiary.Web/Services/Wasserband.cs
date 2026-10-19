@@ -13,7 +13,7 @@ namespace GrowDiary.Web.Services;
 /// physikalischen Grenzen belegt.</para>
 ///
 /// <para><b>Und warum die Untergrenze rechnet statt fest zu stehen.</b> Seit
-/// beta.32 plant Grow OS eine Nachtabsenkung, seit beta.52 fährt es sie auch:
+/// beta.32 plant Cultivate Control eine Nachtabsenkung, seit beta.52 fährt es sie auch:
 /// je Blütewoche ein Grad tiefer, bis zum Finish-Nachtwert des Profils — im
 /// Standardprofil 16 °C. Der Arbeitsbereich beginnt aber bei 17 °C. Ab
 /// Blütewoche 3 meldete die App damit ihre <b>eigene Regelung</b> als

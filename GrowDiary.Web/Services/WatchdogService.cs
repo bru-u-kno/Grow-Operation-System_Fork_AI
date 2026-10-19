@@ -100,11 +100,11 @@ public sealed class WatchdogService
                 && seitStart <= TimeSpan.FromMinutes(StalledMinutes))
             {
                 return new WatchdogVerdict(Starting, "Startet gerade",
-                    "Grow OS ist eben hochgefahren und hat noch keine Runde gedreht.", false, Starting);
+                    "Cultivate Control ist eben hochgefahren und hat noch keine Runde gedreht.", false, Starting);
             }
 
             return new WatchdogVerdict(WorkerStalled, "Überwachung steht",
-                "Grow OS hat seit über 15 Minuten keine Runde mehr gedreht. Ein Neustart des Add-ons behebt das meist.", true, WorkerStalled);
+                "Cultivate Control hat seit über 15 Minuten keine Runde mehr gedreht. Ein Neustart des Add-ons behebt das meist.", true, WorkerStalled);
         }
 
         var haAge = Age(input.LastHomeAssistantSuccessUtc, nowUtc);
@@ -186,7 +186,7 @@ public sealed class WatchdogService
         if (schritt.Warnen)
         {
             var sent = await _notifications.SendAsync(
-                NotificationCategory.System, "🌱 Grow OS · Systemwarnung", $"{verdict.Headline}: {verdict.Detail}", cancellationToken,
+                NotificationCategory.System, "🌱 Cultivate Control · Systemwarnung", $"{verdict.Headline}: {verdict.Detail}", cancellationToken,
                 // Die Warnung des Watchdogs steht oben auf Live, nicht unter Aufgaben.
                 seite: NotificationService.LiveSeite());
             if (sent)
@@ -215,7 +215,7 @@ public sealed class WatchdogService
         if (schritt.EntwarnungSenden)
         {
             await _notifications.SendAsync(
-                NotificationCategory.System, "🌱 Grow OS · Entwarnung", "Die Überwachung läuft wieder — Sensordaten kommen an.", cancellationToken,
+                NotificationCategory.System, "🌱 Cultivate Control · Entwarnung", "Die Überwachung läuft wieder — Sensordaten kommen an.", cancellationToken,
                 seite: NotificationService.LiveSeite());
             _heartbeat.NotifiedCode = null;
             _logger.LogInformation("Watchdog: wieder normal.");

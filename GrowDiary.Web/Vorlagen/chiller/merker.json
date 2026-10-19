@@ -1,6 +1,6 @@
 {
   "alias": "Chiller Merker Abgleich",
-  "description": "Haelt den Merker input_boolean.chiller_kuhlbedarf_merker auf dem Zustand von binary_sensor.chiller_kuhlbedarf, solange dieser an oder aus ist. Faellt der Bedarf kurz auf nicht verfuegbar (Fuehler- oder Helferaussetzer, Neuladen des Rechenwerts), reagiert die Automation absichtlich NICHT - so bleibt im Haltebereich der Hysterese der letzte Zustand erhalten, und der Bedarf springt danach nicht auf aus. Der Minutentakt gleicht nach, falls eine Aenderung verpasst wurde. Ausschalten dieser Automation heisst: der Merker friert ein und kann den Bedarf im Haltebereich falsch halten. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/merker/1.",
+  "description": "Haelt den Merker input_boolean.chiller_kuhlbedarf_merker auf dem Zustand von binary_sensor.chiller_kuhlbedarf, solange dieser an oder aus ist. Faellt der Bedarf kurz auf nicht verfuegbar (Fuehler- oder Helferaussetzer, Neuladen des Rechenwerts), reagiert die Automation absichtlich NICHT - so bleibt im Haltebereich der Hysterese der letzte Zustand erhalten, und der Bedarf springt danach nicht auf aus. Der Minutentakt gleicht nach, falls eine Aenderung verpasst wurde. Ausschalten dieser Automation heisst: der Merker friert ein und kann den Bedarf im Haltebereich falsch halten. Angelegt von Cultivate Control - Herkunft: fork-ai/chiller/merker/1.",
   "mode": "single",
   "max_exceeded": "silent",
   "triggers": [

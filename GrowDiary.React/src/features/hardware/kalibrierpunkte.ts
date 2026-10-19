@@ -111,7 +111,7 @@ export function steilheitProzent(punkte: readonly Punkt[]): number | null {
  *
  * Projektregel: Faustregeln nur mit Etikett. Die Zahlen 95–105 % und 85 %
  * stehen so in den Handbüchern gängiger Sonden (Bluelab, Hanna, Milwaukee);
- * Grow OS gibt sie weiter und erfindet keine eigene Schwelle.
+ * Cultivate Control gibt sie weiter und erfindet keine eigene Schwelle.
  */
 export const STEILHEIT_GUT_AB = 95
 export const STEILHEIT_GUT_BIS = 105

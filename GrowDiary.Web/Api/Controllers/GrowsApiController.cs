@@ -603,7 +603,7 @@ public sealed class GrowsApiController : ApiControllerBase
             return true;
         }
 
-        ModelState.AddModelError(nameof(GrowUpsertRequest.HydroStyle), "Grow OS unterstuetzt neue Grows aktuell nur mit DWC oder RDWC.");
+        ModelState.AddModelError(nameof(GrowUpsertRequest.HydroStyle), "Cultivate Control unterstuetzt neue Grows aktuell nur mit DWC oder RDWC.");
         return false;
     }
 

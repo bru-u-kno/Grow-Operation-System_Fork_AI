@@ -83,7 +83,7 @@ public sealed partial class GrowTools
                 .Select(a => $"{SchreibWerkzeuge.Text(a, "name")} {Euro(a, "gesamtEur")} am {Datum(a, "datumUtc")}")) + ".");
         }
 
-        return text.Length == 0 ? "Grow OS hat keine Kosten geliefert." : text.ToString().TrimEnd();
+        return text.Length == 0 ? "Cultivate Control hat keine Kosten geliefert." : text.ToString().TrimEnd();
     }
 
     private static string Roh(JsonElement e, string name)

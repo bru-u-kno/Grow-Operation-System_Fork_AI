@@ -205,7 +205,7 @@ export const navGroups: NavGroup[] = [
       { to: '/handy', label: 'Handy', end: true, icon: '▯', short: 'Handy', keywords: 'handy push benachrichtigung benachrichtigungen meldung meldungen ruhezeit tagesbericht wächter smartphone mobil qr code startbildschirm lesezeichen app icon telefon aufs handy holen' },
       // Fork AI (04.10.2026): alles zur eigenen KI an einer Stelle — Verbinden,
       // Zugriff & Schlüssel (vorher unten in den Einstellungen) und die Mappe
-      // (vorher unter Wissen). In Grow OS steckt keine KI; die Seite verbindet
+      // (vorher unter Wissen). In Cultivate Control steckt keine KI; die Seite verbindet
       // den Assistenten des Bedieners, sie bringt keinen mit.
       { to: '/ki', label: 'KI-Assistent', end: true, ki: true, keywords: 'ki assistent agent claude chatgpt ollama connector mcp schlüssel zugriff api diktieren protokoll mappe export lagebericht prompt prüffragen berater' },
     ],

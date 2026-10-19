@@ -15,7 +15,7 @@ namespace GrowDiary.Web.Services;
 /// </param>
 /// <param name="EinZeitEntityId">
 /// Das <c>time.</c>-Feld der geplanten Ein-Zeit; bei AC Infinity
-/// „… Geplante Ein-Zeit". Nur noetig, wenn Grow OS den Zeitplan stellen soll.
+/// „… Geplante Ein-Zeit". Nur noetig, wenn Cultivate Control den Zeitplan stellen soll.
 /// </param>
 /// <param name="AusZeitEntityId">Dasselbe fuer die Aus-Zeit.</param>
 public sealed record AcGeraet(
@@ -39,7 +39,7 @@ public sealed record AcGeraetStand(
     public string? ModusName => Modus is null ? null : AcModi.Name(Modus);
 }
 
-/// <summary>Was Grow OS ueber die Lichtzeiten dieses Zelts schon weiss.</summary>
+/// <summary>Was Cultivate Control ueber die Lichtzeiten dieses Zelts schon weiss.</summary>
 /// <remarks>
 /// <b>Eine Wahrheit je Zahl.</b> Die Zeiten werden hier NICHT erfunden — kein
 /// „18/6 in der Vegetation" aus dem Kopf. Sie kommen aus dem Lichtplan des
@@ -58,12 +58,12 @@ public sealed record AcTestStand(
     AcLichtplan? Lichtplan);
 
 /// <summary>
-/// Der Versuchsaufbau: Geräte eines AC-Infinity-Controllers direkt aus Grow OS
+/// Der Versuchsaufbau: Geräte eines AC-Infinity-Controllers direkt aus Cultivate Control
 /// stellen.
 /// </summary>
 /// <remarks>
 /// <para><b>Warum das ausdrücklich ein Test ist.</b> Es geht um die Frage, ob
-/// Grow OS die Zentrale sein kann, von der aus der ganze Grow läuft. Die
+/// Cultivate Control die Zentrale sein kann, von der aus der ganze Grow läuft. Die
 /// Antwort darauf gibt kein Entwurf, sondern ein Nutzer, der es benutzt. Also
 /// steht es als eigener Menüpunkt da, mit einem Streifen obendrüber, der sagt,
 /// was es ist — und nicht versteckt in den Einstellungen, wo es niemand

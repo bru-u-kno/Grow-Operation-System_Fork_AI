@@ -35,7 +35,7 @@ public sealed class ListenZusammenlegenTests
     public void SomethingThatIsNotAListIsHandedBackUnchanged()
     {
         // Lieber die erste Antwort unveraendert durchreichen als eine
-        // Fehlermeldung erfinden — Grow OS hat dann schon etwas gesagt.
+        // Fehlermeldung erfinden — Cultivate Control hat dann schon etwas gesagt.
         Assert.Equal("""{"fehler":"kaputt"}""", GrowTools.Verschmelzen("""{"fehler":"kaputt"}""", "[]"));
         Assert.Equal("kein json", GrowTools.Verschmelzen("kein json", "[]"));
     }

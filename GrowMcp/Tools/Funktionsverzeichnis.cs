@@ -6,14 +6,14 @@ using System.Text.Json.Nodes;
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Fork AI (Paket D, 18.10.2026): Das Funktionsverzeichnis von Grow OS (<c>GET /api/ki-zugriff/funktionen</c>) auf
-/// der Seite des Grow MCP — lesen, filtern, einen Pfad einer Funktion zuordnen, Antworten vergleichen.
+/// Fork AI (Paket D, 18.10.2026): Das Funktionsverzeichnis von Cultivate Control (<c>GET /api/ki-zugriff/funktionen</c>) auf
+/// der Seite des Cultivate Control MCP — lesen, filtern, einen Pfad einer Funktion zuordnen, Antworten vergleichen.
 /// </summary>
 /// <remarks>
 /// <para>Die Einstufung (frei, Stufen, nie) steht im Verzeichnis und kommt dort aus derselben Funktion wie die Sperre
-/// von Grow OS. Hier wird sie nur gelesen und weitergesagt — entschieden wird bei jeder Anfrage in Grow OS.</para>
-/// <para>Bewusst <b>ohne</b> Abhängigkeit zu den Verträgen von Grow OS: das Verzeichnis kommt als JSON, und ein Feld, das
-/// fehlt, bleibt leer statt den Grow MCP zu brechen.</para>
+/// von Cultivate Control. Hier wird sie nur gelesen und weitergesagt — entschieden wird bei jeder Anfrage in Cultivate Control.</para>
+/// <para>Bewusst <b>ohne</b> Abhängigkeit zu den Verträgen von Cultivate Control: das Verzeichnis kommt als JSON, und ein Feld, das
+/// fehlt, bleibt leer statt den Cultivate Control MCP zu brechen.</para>
 /// </remarks>
 public static class Funktionsverzeichnis
 {
@@ -46,7 +46,7 @@ public static class Funktionsverzeichnis
 
     // ------------------------------------------------------------------ Lesen
 
-    /// <summary>Das Verzeichnis aus der Antwort von Grow OS — oder null, wenn es nicht so aussieht.</summary>
+    /// <summary>Das Verzeichnis aus der Antwort von Cultivate Control — oder null, wenn es nicht so aussieht.</summary>
     public static IReadOnlyList<Funktion>? Lesen(string json)
     {
         try
@@ -165,7 +165,7 @@ public static class Funktionsverzeichnis
         var segmente = roh.Split('/');
         if (segmente.Length < 2 || !string.Equals(segmente[0], "api", StringComparison.OrdinalIgnoreCase))
         {
-            fehler = "Nur Wege von Grow OS unter api/ sind erlaubt, etwa api/grows — keine Adressen, keine anderen Dienste.";
+            fehler = "Nur Wege von Cultivate Control unter api/ sind erlaubt, etwa api/grows — keine Adressen, keine anderen Dienste.";
             return null;
         }
 
@@ -191,13 +191,13 @@ public static class Funktionsverzeichnis
             }
         }
 
-        // Gegenprobe wie beim echten Aufruf: der Pfad hängt an der Adresse von Grow OS und darf sie nicht verlassen.
+        // Gegenprobe wie beim echten Aufruf: der Pfad hängt an der Adresse von Cultivate Control und darf sie nicht verlassen.
         var basis = new Uri("http://grow-os.invalid/");
         if (!Uri.TryCreate(basis, roh, out var ziel)
             || ziel.Host != basis.Host || ziel.Port != basis.Port || ziel.Scheme != basis.Scheme
             || !ziel.AbsolutePath.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
         {
-            fehler = "Der Pfad führt aus Grow OS hinaus — nicht erlaubt.";
+            fehler = "Der Pfad führt aus Cultivate Control hinaus — nicht erlaubt.";
             return null;
         }
 

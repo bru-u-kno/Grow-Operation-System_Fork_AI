@@ -4,7 +4,7 @@ export interface HomeAssistantSettingsDto {
   baseUrl: string | null
   accessToken: string | null
   enabled: boolean
-  // True when Grow OS runs as a Home Assistant add-on: the connection is managed
+  // True when Cultivate Control runs as a Home Assistant add-on: the connection is managed
   // automatically, so the manual URL/token fields are hidden.
   isManagedByAddon?: boolean
 }

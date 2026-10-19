@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// <summary>
 /// Behavior tests for HomeAssistantService against faked HA HTTP responses: entity
 /// parsing, the supervisor base-path regression, error handling, the circuit breaker,
-/// and the exact notify calls Grow OS sends.
+/// and the exact notify calls Cultivate Control sends.
 /// </summary>
 public sealed class HomeAssistantServiceBehaviorTests
 {
@@ -153,14 +153,14 @@ public sealed class HomeAssistantServiceBehaviorTests
     {
         var handler = new RecordingHttpHandler((_, _) => RecordingHttpHandler.Json("[]"));
 
-        var sent = await Service(handler).SendNotificationAsync(Settings, "notify.mobile_app_pixel", "🌱 Grow OS", "pH über Zielbereich: 6.8.");
+        var sent = await Service(handler).SendNotificationAsync(Settings, "notify.mobile_app_pixel", "🌱 Cultivate Control", "pH über Zielbereich: 6.8.");
 
         Assert.True(sent);
         var request = Assert.Single(handler.Requests);
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal("http://ha.local:8123/api/services/notify/mobile_app_pixel", request.Uri.ToString());
         Assert.Contains("\"title\":", request.Body);
-        Assert.Contains("Grow OS", request.Body);
+        Assert.Contains("Cultivate Control", request.Body);
         Assert.Contains("\"message\":", request.Body);
         Assert.Contains("Zielbereich: 6.8.", request.Body);
     }

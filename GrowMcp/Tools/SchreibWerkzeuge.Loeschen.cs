@@ -11,9 +11,9 @@ namespace GrowMcp.Tools;
 /// Einen falsch diktierten Journal-Eintrag oder eine Messung löschen (forkai.247).
 /// </summary>
 /// <remarks>
-/// <para><b>Erst lesen, dann löschen, dann alles nennen.</b> Gelöscht wird nur, was Grow OS vorher unter dieser Id geliefert hat.
+/// <para><b>Erst lesen, dann löschen, dann alles nennen.</b> Gelöscht wird nur, was Cultivate Control vorher unter dieser Id geliefert hat.
 /// Die Antwort enthält den vollen Inhalt — Datum, Text bzw. jeden Wert — und die Angaben, mit denen er sich wieder eintragen lässt.
-/// Ein Löschen über einen Schlüssel legt Grow OS vorher eine Sicherung an (<c>[KiSicherungVorher]</c>); scheitert die, wird nicht
+/// Ein Löschen über einen Schlüssel legt Cultivate Control vorher eine Sicherung an (<c>[KiSicherungVorher]</c>); scheitert die, wird nicht
 /// gelöscht.</para>
 /// </remarks>
 public sealed partial class SchreibWerkzeuge
@@ -21,7 +21,7 @@ public sealed partial class SchreibWerkzeuge
     private static readonly CultureInfo Deutsch = CultureInfo.GetCultureInfo("de-DE");
 
     [McpServerTool(Name = "journal_loeschen")]
-    [Description($"Löscht EINEN Journal-Eintrag. Liest ihn vorher und löscht nur, wenn es ihn gibt; die Antwort nennt Datum, Art, Titel und den vollen Text, damit er sich mit journal_eintragen wieder eintragen lässt. Die Eintrags-Id liefert journal. Grow OS legt vorher eine Sicherung an. {StufeDokumentieren}")]
+    [Description($"Löscht EINEN Journal-Eintrag. Liest ihn vorher und löscht nur, wenn es ihn gibt; die Antwort nennt Datum, Art, Titel und den vollen Text, damit er sich mit journal_eintragen wieder eintragen lässt. Die Eintrags-Id liefert journal. Cultivate Control legt vorher eine Sicherung an. {StufeDokumentieren}")]
     [BrauchtForkSchluessel(Stufen.Dokumentieren)]
     public async Task<string> JournalLoeschenAsync(
         [Description("Die Id des Journal-Eintrags (aus journal)")] int eintragId,
@@ -45,7 +45,7 @@ public sealed partial class SchreibWerkzeuge
             growId = Zahl(e, "growId");
             wann = Ortszeit(Text(e, "occurredAtUtc"), utc: true);
             var roh = Text(e, "entryType");
-            // Meilensteine (Keimung bestätigt, Flip …) schreibt Grow OS beim Bestätigen einer Phase selbst; journal_eintragen kennt sie nicht.
+            // Meilensteine (Keimung bestätigt, Flip …) schreibt Cultivate Control beim Bestätigen einer Phase selbst; journal_eintragen kennt sie nicht.
             meilenstein = roh is not null && !JournalArten.Any(a => string.Equals(a.Wert, roh, StringComparison.OrdinalIgnoreCase));
             art = JournalArtText(roh);
             titel = Text(e, "title");
@@ -66,7 +66,7 @@ public sealed partial class SchreibWerkzeuge
         if (meilenstein)
         {
             satz.Append(Environment.NewLine)
-                .Append($"Das war ein Meilenstein ({art}), den Grow OS beim Bestätigen einer Phase selbst schreibt. Als Meilenstein lässt er sich nicht wieder eintragen, ")
+                .Append($"Das war ein Meilenstein ({art}), den Cultivate Control beim Bestätigen einer Phase selbst schreibt. Als Meilenstein lässt er sich nicht wieder eintragen, ")
                 .Append("die Phase selbst bleibt davon unberührt. Als Notiz: journal_eintragen mit growId ").Append(growId).Append($", zeitpunkt {wann}, art Notiz")
                 .Append(string.IsNullOrWhiteSpace(titel) ? "" : $", titel „{titel}\"")
                 .Append(string.IsNullOrWhiteSpace(text) ? "." : ", text wie oben.");
@@ -81,7 +81,7 @@ public sealed partial class SchreibWerkzeuge
     }
 
     [McpServerTool(Name = "messung_loeschen")]
-    [Description($"Löscht EINE Messung. Liest sie vorher und löscht nur, wenn es sie gibt; die Antwort nennt Zeitpunkt, Phase und jeden Wert, damit sie sich mit messung_eintragen wieder eintragen lässt. Die Messungs-Id steht in der Antwort von messung_eintragen oder im lagebericht. Zum Korrigieren einzelner Werte messung_aendern nehmen. Grow OS legt vorher eine Sicherung an. {StufeDokumentieren}")]
+    [Description($"Löscht EINE Messung. Liest sie vorher und löscht nur, wenn es sie gibt; die Antwort nennt Zeitpunkt, Phase und jeden Wert, damit sie sich mit messung_eintragen wieder eintragen lässt. Die Messungs-Id steht in der Antwort von messung_eintragen oder im lagebericht. Zum Korrigieren einzelner Werte messung_aendern nehmen. Cultivate Control legt vorher eine Sicherung an. {StufeDokumentieren}")]
     [BrauchtForkSchluessel(Stufen.Dokumentieren)]
     public async Task<string> MessungLoeschenAsync(
         [Description("Die Id der Messung")] int messungId,
@@ -103,7 +103,7 @@ public sealed partial class SchreibWerkzeuge
             var m = doc.RootElement;
             if (m.ValueKind != JsonValueKind.Object || Zahl(m, "id") != messungId.ToString(CultureInfo.InvariantCulture)) return AndersAlsErwartet;
             growId = Zahl(m, "growId");
-            // takenAt führt Grow OS in Ortszeit (Measurement.TakenAt = DateTime.Now), nicht in UTC.
+            // takenAt führt Cultivate Control in Ortszeit (Measurement.TakenAt = DateTime.Now), nicht in UTC.
             wann = Ortszeit(Text(m, "takenAt"), utc: false);
             phase = Text(m, "stage");
             werte = MesswerteLesen(m);
@@ -127,10 +127,10 @@ public sealed partial class SchreibWerkzeuge
     }
 
     /// <summary>
-    /// Feld der Messung in Grow OS → Parameter von <c>messung_eintragen</c>, Anzeige und Einheit.
+    /// Feld der Messung in Cultivate Control → Parameter von <c>messung_eintragen</c>, Anzeige und Einheit.
     /// </summary>
     /// <remarks>
-    /// Die Feldnamen sind die aus <see cref="Messfelder.Tabelle"/> (Anfrage und Antwort heißen in Grow OS gleich).
+    /// Die Feldnamen sind die aus <see cref="Messfelder.Tabelle"/> (Anfrage und Antwort heißen in Cultivate Control gleich).
     /// <c>MessfelderTests</c> verlangt, dass jedes Feld der Tabelle hier genau einmal steht und dass der Parameter bei
     /// <c>messung_eintragen</c> wirklich in dieses Feld schreibt.
     /// </remarks>
@@ -187,7 +187,7 @@ public sealed partial class SchreibWerkzeuge
         return werte;
     }
 
-    /// <summary>Ein Zeitpunkt aus Grow OS als „18.10.2026 14:30" in Ortszeit — der Form, die die Eintrags-Werkzeuge lesen.</summary>
+    /// <summary>Ein Zeitpunkt aus Cultivate Control als „18.10.2026 14:30" in Ortszeit — der Form, die die Eintrags-Werkzeuge lesen.</summary>
     private static string Ortszeit(string? zeitpunkt, bool utc)
     {
         if (zeitpunkt is null) return "?";

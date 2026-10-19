@@ -4,7 +4,7 @@ using GrowMcp.Tools;
 namespace GrowMcp.Tests;
 
 /// <summary>
-/// Mehrere Antworten von Grow OS zu einer machen.
+/// Mehrere Antworten von Cultivate Control zu einer machen.
 /// </summary>
 /// <remarks>
 /// Sieben der Werkzeuge holen zwei oder drei Dinge und geben sie gemeinsam

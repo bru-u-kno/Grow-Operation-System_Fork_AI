@@ -4,7 +4,7 @@ using GrowDiary.Web.Models;
 namespace GrowDiary.Web.Services;
 
 /// <summary>
-/// Was Grow OS aus den beobachteten Lichtflanken macht.
+/// Was Cultivate Control aus den beobachteten Lichtflanken macht.
 /// </summary>
 /// <remarks>
 /// Zwei Aufgaben: den Zyklus lernen (fuer die Kachel und den Abgleich mit der

@@ -11,9 +11,9 @@ const eigenschaften = (prefix: unknown, path: unknown) => ({
 
 describe('tiefenlinkAus', () => {
   it('liest die Seite hinter dem Slug', () => {
-    expect(tiefenlinkAus(eigenschaften('/app/d48160c2_grow_os_fork_ai', '/aufgaben'))).toEqual({
+    expect(tiefenlinkAus(eigenschaften('/app/00d580e3_cultivate_control', '/aufgaben'))).toEqual({
       pfad: '/aufgaben',
-      praefix: '/app/d48160c2_grow_os_fork_ai',
+      praefix: '/app/00d580e3_cultivate_control',
     })
     expect(tiefenlinkAus(eigenschaften('/app/local_grow_os', '/zelte/3'))?.pfad).toBe('/zelte/3')
   })

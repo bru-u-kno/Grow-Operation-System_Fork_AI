@@ -4,7 +4,7 @@ using GrowDiary.Web.Models;
 namespace GrowDiary.Web.Services;
 
 /// <summary>
-/// Single gateway for every push Grow OS sends. Callers say what category a message is;
+/// Single gateway for every push Cultivate Control sends. Callers say what category a message is;
 /// this checks the central settings (a notify service is configured, the category is on,
 /// and it is not quiet hours) and then pushes through Home Assistant.
 /// </summary>
@@ -73,12 +73,12 @@ public sealed class NotificationService
     public static string LiveSeite(int? zeltId = null) => zeltId is { } id ? $"live/{id}" : "live";
 
     /// <summary>
-    /// Der HA-interne Pfad zur Grow-OS-Seite, oder null wenn Grow OS nicht als
+    /// Der HA-interne Pfad zur Grow-OS-Seite, oder null wenn Cultivate Control nicht als
     /// Add-on laeuft (dann gibt es nichts, auf das man zeigen koennte).
     /// </summary>
     /// <remarks>
     /// Gibt es ein Ingress-Panel ohne HA-Kopfleiste für dieses Add-on, zeigt
-    /// der Link dorthin — so öffnet der Bediener Grow OS sonst auch
+    /// der Link dorthin — so öffnet der Bediener Cultivate Control sonst auch
     /// (<see cref="IngressPanelService"/>, 05.10.2026). Sonst das App-Panel.
     /// </remarks>
     private async Task<string?> ZielPfadAsync(string seite, CancellationToken ct)

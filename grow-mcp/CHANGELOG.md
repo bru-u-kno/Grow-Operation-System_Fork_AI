@@ -1,5 +1,13 @@
 # Änderungen — Grow MCP
 
+## 0.3.0-cc.1
+
+**Neuer Name: Cultivate Control MCP.** Aus „Grow MCP Fork AI“ wird „Cultivate Control MCP“. Funktionen bleiben gleich.
+
+- Neue Kennung `cultivate_control_mcp`, Image `ghcr.io/bru-u-kno/cultivate-control-mcp`. Home Assistant zeigt es als neues Add-on; das alte kann nach dem Umstieg entfernt werden.
+- Der Name beim Klienten heißt jetzt `cultivate-control`: `claude mcp remove grow-os-fork-ai`, dann neu mit `claude mcp add … cultivate-control …` (Befehl steht auf der Einrichtungsseite).
+- Braucht Cultivate Control ab 2.0.0-cc.254 (ältere Fassungen heißen noch „Grow OS Fork AI“).
+
 ## 0.2.0-forkai.7
 
 **Alles im Fork steuern.** `fork_funktionen` durchsucht das Funktionsverzeichnis von Grow OS, `fork_ausfuehren` ruft jede

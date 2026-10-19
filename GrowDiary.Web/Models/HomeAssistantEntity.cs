@@ -2,7 +2,7 @@ namespace GrowDiary.Web.Models;
 
 /// <summary>
 /// A single Home Assistant entity as returned by <c>GET /api/states</c>, reduced
-/// to the fields Grow OS needs to offer a searchable sensor picker (friendly
+/// to the fields Cultivate Control needs to offer a searchable sensor picker (friendly
 /// name, current value, unit and device class for filtering).
 /// </summary>
 public sealed class HomeAssistantEntity

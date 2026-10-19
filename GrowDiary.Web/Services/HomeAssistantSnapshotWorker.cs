@@ -200,7 +200,7 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
 
                         // Die Nachtabsenkung haengt sich an dieselbe Flanke: bei
                         // Licht an der Tagwert, bei Licht aus der Nachtwert.
-                        // Zweimal am Tag ein Sollwert — mehr macht Grow OS hier
+                        // Zweimal am Tag ein Sollwert — mehr macht Cultivate Control hier
                         // nicht, geregelt wird in Home Assistant.
                         // Fork AI (forkai.136): stillgelegt, der Grow-Plan führt das Ziel.
                         if (GrowDiary.Web.Infrastructure.ForkAiSchalter.CropSteeringAktiv)
@@ -319,11 +319,11 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
             switch (transition)
             {
                 case SensorOfflineTracker.Transition.WentOffline:
-                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Grow OS · {tent.Name}", $"Sensor liefert keine Werte mehr: {name}.", cancellationToken,
+                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Cultivate Control · {tent.Name}", $"Sensor liefert keine Werte mehr: {name}.", cancellationToken,
                         seite: NotificationService.LiveSeite(tent.Id));
                     break;
                 case SensorOfflineTracker.Transition.CameOnline:
-                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Grow OS · {tent.Name}", $"Sensor liefert wieder Werte: {name}.", cancellationToken,
+                    await notifications.SendAsync(NotificationCategory.SensorOffline, $"🌱 Cultivate Control · {tent.Name}", $"Sensor liefert wieder Werte: {name}.", cancellationToken,
                         seite: NotificationService.LiveSeite(tent.Id));
                     break;
             }

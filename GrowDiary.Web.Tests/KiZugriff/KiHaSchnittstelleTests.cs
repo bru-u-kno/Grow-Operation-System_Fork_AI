@@ -45,7 +45,7 @@ public sealed class KiHaSchnittstelleTests : IClassFixture<KiHaApp>
 
     /// <summary>
     /// Ohne Schlüssel 401 — auch aus dem Add-on-Netz, wo Lesen sonst ohne
-    /// Schlüssel geht. Sonst griffe jedes Nachbar-Add-on über Grow OS alle
+    /// Schlüssel geht. Sonst griffe jedes Nachbar-Add-on über Cultivate Control alle
     /// Zustände von Home Assistant ab, mit dem Token des Forks.
     /// </summary>
     [Fact]

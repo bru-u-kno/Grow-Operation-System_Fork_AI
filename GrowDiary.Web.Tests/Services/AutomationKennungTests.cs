@@ -161,7 +161,7 @@ public sealed class AutomationKennungTests : IDisposable
         ha.Configs["fork_ai_co2_dosierung"] = new JsonObject
         {
             ["alias"] = "CO2 Dosierung",
-            ["description"] = "… Angelegt von Grow OS Fork AI - Herkunft: fork-ai/co2/dosierung/3. …",
+            ["description"] = "… Angelegt von Cultivate Control - Herkunft: fork-ai/co2/dosierung/3. …",
         };
         ha.Configs["fork_ai_co2_waechter"] = new JsonObject
         {

@@ -203,7 +203,7 @@ function NotificationsPage() {
   return (
     <>
       <div className="co-tabhead">
-        <p className="gc-facts">Wähle einmal dein Handy, lege Ruhezeiten fest und entscheide, worüber Grow OS dich über Home Assistant erinnert.</p>
+        <p className="gc-facts">Wähle einmal dein Handy, lege Ruhezeiten fest und entscheide, worüber Cultivate Control dich über Home Assistant erinnert.</p>
         <V1Button variant="primary" onClick={() => void save()} disabled={saving}>{saving ? 'Speichert…' : 'Speichern'}</V1Button>
       </div>
       {error && <V1Alert message={error} tone="critical" />}
@@ -232,7 +232,7 @@ function NotificationsPage() {
 
       <V1Section title="Ruhezeiten">
         <V1Card>
-          <p style={{ marginTop: 0, color: 'var(--ix-muted, #8a988e)', fontSize: 'var(--fs-text)' }}>In diesem Zeitfenster (Stunde 0–23) schickt Grow OS keine Push-Nachrichten. Beide Felder leer = immer erlaubt.</p>
+          <p style={{ marginTop: 0, color: 'var(--ix-muted, #8a988e)', fontSize: 'var(--fs-text)' }}>In diesem Zeitfenster (Stunde 0–23) schickt Cultivate Control keine Push-Nachrichten. Beide Felder leer = immer erlaubt.</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <V1Field label="Von (Uhr)">
               <input
@@ -300,7 +300,7 @@ function NotificationsPage() {
             </div>
           </V1Card>
           <V1Card tone={watchdog?.isProblem ? 'warn' : 'neutral'}>
-            <V1Switch label="Systemüberwachung" hint="Meldet, wenn die Überwachung selbst schweigt — keine neuen Messwerte, Home Assistant nicht erreichbar oder Grow OS steht. Dazu gehört auch der Pumpen-Wächter (Pumpe steht oder sollte geprüft werden, samt Entwarnung)." checked={settings.systemWatch} onChange={(checked) => patch({ systemWatch: checked })} />
+            <V1Switch label="Systemüberwachung" hint="Meldet, wenn die Überwachung selbst schweigt — keine neuen Messwerte, Home Assistant nicht erreichbar oder Cultivate Control steht. Dazu gehört auch der Pumpen-Wächter (Pumpe steht oder sollte geprüft werden, samt Entwarnung)." checked={settings.systemWatch} onChange={(checked) => patch({ systemWatch: checked })} />
             {watchdog && (
               <p className="rc2-measurement-note" style={{ margin: '10px 0 0' }}>
                 <strong style={{ color: watchdog.isProblem ? 'var(--v1-text)' : 'var(--accent-text)' }}>{watchdog.headline}</strong> — {watchdog.detail}

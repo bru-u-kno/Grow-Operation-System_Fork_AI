@@ -15,7 +15,7 @@ import { expect, type Frame, type Page } from '@playwright/test'
  * Was hier NICHT nachgestellt ist: das Scrollverhalten der WebView in der
  * HA-App (F-049) — das kann nur ein echtes Gerät zeigen (Punkt 3 des Plans).
  */
-const SLUG = 'd48160c2_grow_os_fork_ai'
+const SLUG = '00d580e3_cultivate_control'
 export const HA_SCHMAL_BIS = 870
 const KOPFLEISTE = 56
 const SEITENLEISTE = 256
@@ -29,9 +29,9 @@ export async function imHaRahmen(page: Page, pfad: string): Promise<Frame> {
       document.documentElement.innerHTML = `
         <body style="margin:0;background:#111;font-family:sans-serif;overflow:hidden">
           ${schmal
-            ? `<div id="ha-kopf" style="height:${kopf}px;background:#03a9f4;color:#fff;display:flex;align-items:center;padding:0 16px">Grow OS Fork AI</div>`
+            ? `<div id="ha-kopf" style="height:${kopf}px;background:#03a9f4;color:#fff;display:flex;align-items:center;padding:0 16px">Cultivate Control</div>`
             : `<div id="ha-seite" style="position:fixed;left:0;top:0;bottom:0;width:${seite}px;background:#1c1c1c"></div>`}
-          <iframe id="f" title="Grow OS" src="${pfad}"
+          <iframe id="f" title="Cultivate Control" src="${pfad}"
             style="position:fixed;border:0;${schmal
               ? `left:0;right:0;top:${kopf}px;bottom:0;width:100%;height:calc(100% - ${kopf}px)`
               : `left:${seite}px;top:0;width:calc(100% - ${seite}px);height:100%`}"></iframe>

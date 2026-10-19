@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GrowMcp\GrowMcp.csproj" />
-    <!-- Fork AI (A-004): Grow OS wird mitgebaut, aber NICHT referenziert. Die
+    <!-- Fork AI (A-004): Cultivate Control wird mitgebaut, aber NICHT referenziert. Die
          Schreib-Werkzeuge werden gegen die echten Typen und Wege in der gebauten
          GrowDiary.Web.dll geprueft (GrowOsBau.cs laedt sie per Reflexion in
          einen eigenen Ladekontext). Eine echte Referenz zoege die

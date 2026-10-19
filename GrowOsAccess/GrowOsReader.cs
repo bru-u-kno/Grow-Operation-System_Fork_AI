@@ -2,7 +2,7 @@ using System.Net;
 
 namespace GrowOsAccess;
 
-/// <summary>Grow OS antwortet nicht so, wie es soll.</summary>
+/// <summary>Cultivate Control antwortet nicht so, wie es soll.</summary>
 /// <remarks>
 /// Eigene Ausnahme, damit ein Werkzeug den Fehler als lesbaren Satz weitergeben
 /// kann statt als Stapelverfolgung. Ein Modell, das „404" liest, rät weiter; eines,
@@ -11,12 +11,12 @@ namespace GrowOsAccess;
 public sealed class GrowOsException(string message, bool nichtGefunden = false) : Exception(message)
 {
     /// <summary>
-    /// Grow OS lief, kannte den Weg aber nicht.
+    /// Cultivate Control lief, kannte den Weg aber nicht.
     /// </summary>
     /// <remarks>
     /// Der Unterschied entscheidet, ob ein Werkzeug weitermachen darf. „Zu
     /// diesem Grow gibt es keinen Pheno Hunt" ist eine Antwort und soll die
-    /// Pflanzenliste daneben nicht mitreissen. „Grow OS ist nicht erreichbar"
+    /// Pflanzenliste daneben nicht mitreissen. „Cultivate Control ist nicht erreichbar"
     /// dagegen muss durchschlagen — sonst sieht ein halb leeres Ergebnis aus wie
     /// ein vollstaendiges.
     /// </remarks>
@@ -24,16 +24,16 @@ public sealed class GrowOsException(string message, bool nichtGefunden = false) 
 }
 
 /// <summary>
-/// Spricht mit Grow OS — lesend, und mit einem Fork-Schlüssel auch schreibend.
+/// Spricht mit Cultivate Control — lesend, und mit einem Fork-Schlüssel auch schreibend.
 /// </summary>
 /// <remarks>
-/// <para>Bis forkai.163 bewusst nur <c>GET</c>: Grow OS liess aus dem internen
+/// <para>Bis forkai.163 bewusst nur <c>GET</c>: Cultivate Control liess aus dem internen
 /// Add-on-Netz nur Lesezugriffe zu. Seit dem Zugriff für KI-Assistenten (A-003)
-/// nimmt Grow OS auch schreibende Anfragen an — aber nur mit einem Schlüssel,
+/// nimmt Cultivate Control auch schreibende Anfragen an — aber nur mit einem Schlüssel,
 /// den der Betreiber dort angelegt hat, und nur in den Stufen, die er angehakt
 /// hat. Dieser Leser entscheidet darüber nichts: er reicht den Schlüssel der
 /// laufenden Anfrage (<see cref="IForkSchluesselQuelle"/>) bei jeder Anfrage als
-/// <c>Authorization: Bearer gok_…</c> mit, und Grow OS sagt Ja oder Nein.</para>
+/// <c>Authorization: Bearer gok_…</c> mit, und Cultivate Control sagt Ja oder Nein.</para>
 ///
 /// <para>Ohne Schlüssel geht keine Kopfzeile mit — der MCP-Schlüssel des Add-ons
 /// verlässt dieses Programm nie.</para>
@@ -53,17 +53,17 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
 
         if (antwort.Status == (int)HttpStatusCode.NotFound)
         {
-            throw new GrowOsException($"Grow OS kennt das nicht: {pfad}", nichtGefunden: true);
+            throw new GrowOsException($"Cultivate Control kennt das nicht: {pfad}", nichtGefunden: true);
         }
 
         if (!antwort.Erfolg)
         {
             // Mit einem Fork-Schlüssel kann auch ein Lesezugriff abgewiesen
-            // werden (Zugriff aus, Schlüssel gesperrt). Die Begründung von Grow OS
+            // werden (Zugriff aus, Schlüssel gesperrt). Die Begründung von Cultivate Control
             // ist dann mehr wert als die blosse Zahl.
             throw new GrowOsException(antwort.Status is 401 or 403 or 429
                 ? ForkFehler.Text(antwort.Status, antwort.Text, $"lesen {pfad}")
-                : $"Grow OS antwortete mit {antwort.Status} auf {pfad}.");
+                : $"Cultivate Control antwortete mit {antwort.Status} auf {pfad}.");
         }
 
         return antwort.Text;
@@ -73,7 +73,7 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
     /// Eine Anfrage schicken und die Antwort zurückgeben, wie sie ist — auch eine Absage.
     /// </summary>
     /// <remarks>
-    /// Wirft nur, wenn Grow OS gar nicht erreichbar ist. Ein 403 ist eine
+    /// Wirft nur, wenn Cultivate Control gar nicht erreichbar ist. Ein 403 ist eine
     /// Antwort, die der Aufrufer in einen Satz übersetzt (<see cref="ForkFehler"/>).
     /// </remarks>
     /// <param name="methode">GET, POST, PUT, PATCH …</param>
@@ -101,7 +101,7 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
     /// Fork AI (Paket D, 18.10.2026): Wie <see cref="SendenAsync"/>, aber vorsichtig mit der Antwort.
     /// </summary>
     /// <remarks>
-    /// <para>Für den allgemeinen Weg (<c>fork_ausfuehren</c>), der jede Funktion von Grow OS rufen kann. Der Rumpf wird
+    /// <para>Für den allgemeinen Weg (<c>fork_ausfuehren</c>), der jede Funktion von Cultivate Control rufen kann. Der Rumpf wird
     /// erst gelesen, wenn der Inhaltstyp Text oder JSON ist — ein Bild oder eine Sicherungsdatei kommt nie in den
     /// Speicher, nur ihr Typ. Text wird nach <paramref name="maxBytes"/> abgeschnitten (<see cref="ForkAntwort.Gekuerzt"/>).</para>
     /// </remarks>
@@ -178,7 +178,7 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
 
     /// <summary>Ein Bild samt Kopfzeilen der Antwort (etwa <c>X-Camera-Live</c>).</summary>
     /// <remarks>
-    /// Fork AI (Paket C1, 18.10.2026): Sagt Grow OS Nein, steht der Grund im JSON-Rumpf
+    /// Fork AI (Paket C1, 18.10.2026): Sagt Cultivate Control Nein, steht der Grund im JSON-Rumpf
     /// („Für dieses Zelt ist keine Kamera-Entity hinterlegt") — der kommt in die Ausnahme,
     /// statt nur die Zahl.
     /// </remarks>
@@ -201,11 +201,11 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
             var grund = await GrundAusRumpfAsync(antwort, cancellationToken);
             if (antwort.StatusCode == HttpStatusCode.NotFound)
             {
-                throw new GrowOsException(grund ?? $"Grow OS kennt das nicht: {pfad}", nichtGefunden: true);
+                throw new GrowOsException(grund ?? $"Cultivate Control kennt das nicht: {pfad}", nichtGefunden: true);
             }
             throw new GrowOsException(grund is null
-                ? $"Grow OS antwortete mit {(int)antwort.StatusCode} auf {pfad}."
-                : $"Grow OS antwortete mit {(int)antwort.StatusCode}: {grund}");
+                ? $"Cultivate Control antwortete mit {(int)antwort.StatusCode} auf {pfad}."
+                : $"Cultivate Control antwortete mit {(int)antwort.StatusCode}: {grund}");
         }
 
         // Erst die angekuendigte Groesse pruefen, dann erst laden: sonst liegt
@@ -270,5 +270,5 @@ public sealed class GrowOsReader(HttpClient http, GrowOsDiscovery discovery, IFo
     }
 }
 
-/// <summary>Fork AI (Paket C1): Ein Bild aus Grow OS mit den Kopfzeilen der Antwort.</summary>
+/// <summary>Fork AI (Paket C1): Ein Bild aus Cultivate Control mit den Kopfzeilen der Antwort.</summary>
 public sealed record GrowOsBild(byte[] Bytes, string MedienTyp, IReadOnlyDictionary<string, string> Kopf);

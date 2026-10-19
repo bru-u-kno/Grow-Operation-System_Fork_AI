@@ -239,7 +239,7 @@ export default function HydroEditorPage() {
               <label className="v1-switch"><input type="checkbox" checked={draft.hasChiller} onChange={(event) => patch({ hasChiller: event.target.checked })} /><strong>Chiller</strong></label>
               <label className="v1-switch"><input type="checkbox" checked={draft.hasUvSterilizer} onChange={(event) => patch({ hasUvSterilizer: event.target.checked })} /><strong>UV-C</strong></label>
               <V1Field label="Luftsteine"><input type="number" min={0} max={24} value={draft.airStoneCount} onChange={(event) => patch({ airStoneCount: Number(event.target.value) })} /></V1Field>
-              <V1Field label="Luftpumpe (L/h)" hint="Steht auf dem Karton — z. B. V-20: 1200. Daraus schätzt Grow OS, ob die Belüftung reicht.">
+              <V1Field label="Luftpumpe (L/h)" hint="Steht auf dem Karton — z. B. V-20: 1200. Daraus schätzt Cultivate Control, ob die Belüftung reicht.">
                 <input inputMode="decimal" value={draft.airPumpLitersPerHour} onChange={(event) => patch({ airPumpLitersPerHour: event.target.value })} placeholder="z. B. 1200" />
               </V1Field>
               <V1Field label="Notizen" wide><textarea rows={3} value={draft.notes} onChange={(event) => patch({ notes: event.target.value })} /></V1Field>

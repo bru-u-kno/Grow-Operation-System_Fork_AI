@@ -1,6 +1,6 @@
 # Home Assistant, Regeln und Hintergrunddienste
 
-> Home Assistant liefert alle Live-Werte und schaltet alles Schaltbare; Grow OS
+> Home Assistant liefert alle Live-Werte und schaltet alles Schaltbare; Cultivate Control
 > ordnet zu, wertet aus, meldet und gibt Befehle.
 
 ## Wo in der App
@@ -81,7 +81,7 @@ Alle starten versetzt, damit sie nicht im Gleichschritt auf HA einschlagen.
 
 ## Was es bewusst NICHT tut
 
-- **Grow OS schaltet nichts selbst.** Es hat keine Anschlüsse; jeder Befehl geht
+- **Cultivate Control schaltet nichts selbst.** Es hat keine Anschlüsse; jeder Befehl geht
   über `HomeAssistantService.CallEntityServiceAsync`. Geregelt wird in HA.
 - **Keine KI.** Weder hier noch sonst in der App.
 - **Nachts kein Alarm für PPFD, CO₂ und VPD** — 0 µmol ist bei Licht aus der

@@ -438,7 +438,7 @@ if (DemoData.IsEnabled)
     }
 }
 
-// Der Totmann: Ist Grow OS mitten in einer Dosis abgestuerzt, laeuft die Pumpe
+// Der Totmann: Ist Cultivate Control mitten in einer Dosis abgestuerzt, laeuft die Pumpe
 // seither weiter — niemand ist da, der sie stoppt. Der erste Handgriff nach dem
 // Hochfahren ist deshalb, jede eingerichtete Pumpe einmal auszuwerfen. Kostet
 // nichts, wenn ohnehin alles aus war.

@@ -7,7 +7,7 @@ namespace GrowDiary.Web.Tests;
 /// <summary>
 /// Der Arbeitsbereich der Wassertemperatur — eine Zahl, eine Stelle.
 ///
-/// <para><b>Der Anlass.</b> Seit beta.52 fährt Grow OS die Nachtabsenkung
+/// <para><b>Der Anlass.</b> Seit beta.52 fährt Cultivate Control die Nachtabsenkung
 /// wirklich: je Blütewoche ein Grad tiefer bis zum Finish-Nachtwert des
 /// Profils, im Standardprofil 16 °C. Der Arbeitsbereich begann bei 17 °C.
 /// Ab Blütewoche 3 meldete die App damit ihre <b>eigene Regelung</b> als

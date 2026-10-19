@@ -30,16 +30,16 @@ vorsichtige Vorbelegung, alles in der Oberfläche einstellbar.
 
 ## Aufgaben über den Assistenten (forkai.230)
 
-Legt ein Schlüssel eine Aufgabe an (`POST /api/grows/{id}/tasks`, Stufe Dokumentieren), speichert Grow OS seinen Namen in `GrowTasks.CreatedByAssistant`; die Terminliste zeigt dann „von KI". Über den Grow MCP Fork AI geht das mit dem Werkzeug `aufgabe_anlegen`; der Schlüssel liegt dabei in der Verbindungseinstellung des Assistenten, nicht im Gespräch.
+Legt ein Schlüssel eine Aufgabe an (`POST /api/grows/{id}/tasks`, Stufe Dokumentieren), speichert Cultivate Control seinen Namen in `GrowTasks.CreatedByAssistant`; die Terminliste zeigt dann „von KI". Über den Cultivate Control MCP geht das mit dem Werkzeug `aufgabe_anlegen`; der Schlüssel liegt dabei in der Verbindungseinstellung des Assistenten, nicht im Gespräch.
 
 ## Raum über den Assistenten (forkai.243, A-027)
 
-Der Grow MCP Fork AI kennt drei Werkzeuge für den Raum: `raum` (lesen), `raum_setzen` (`PUT /api/steuerung/raum`, Stufe Verwaltung) und `zelt_aufstellraum_setzen` (`GET`/`PUT /api/settings/tents/{id}`, Stufe Verwaltung). Das Zelt-Werkzeug schickt den gelesenen Stand mit geänderter `raumId` zurück und lässt `sensors`, `cameras` und `cameraEntityId` weg — ein mitgeschicktes `sensors` ersetzt alle Sensor-Zeilen durch neue Ids (`ReplaceTentSensors`). Danach vergleicht es alle übrigen Felder und schreibt bei einer Abweichung den alten Stand zurück. Seit Paket D (18.10.2026) geht jede andere Einstellung über `fork_ausfuehren` (siehe oben); Schlüsselverwaltung und KI-Hauptschalter bleiben `[KeinKiZugriff]`.
+Der Cultivate Control MCP kennt drei Werkzeuge für den Raum: `raum` (lesen), `raum_setzen` (`PUT /api/steuerung/raum`, Stufe Verwaltung) und `zelt_aufstellraum_setzen` (`GET`/`PUT /api/settings/tents/{id}`, Stufe Verwaltung). Das Zelt-Werkzeug schickt den gelesenen Stand mit geänderter `raumId` zurück und lässt `sensors`, `cameras` und `cameraEntityId` weg — ein mitgeschicktes `sensors` ersetzt alle Sensor-Zeilen durch neue Ids (`ReplaceTentSensors`). Danach vergleicht es alle übrigen Felder und schreibt bei einer Abweichung den alten Stand zurück. Seit Paket D (18.10.2026) geht jede andere Einstellung über `fork_ausfuehren` (siehe oben); Schlüsselverwaltung und KI-Hauptschalter bleiben `[KeinKiZugriff]`.
 
 ## Grundsatz seit 18.10.2026: alles über den Fork, vier Sperren bleiben (Paket D)
 
 Über einen Schlüssel lässt sich **alles** im Fork steuern, was die Stufen des Schlüssels erlauben — nicht nur
-das, wofür der Grow MCP ein festes Werkzeug hat. Der frühere Grundsatz „kein freies ‚Einstellung ändern'"
+das, wofür der Cultivate Control MCP ein festes Werkzeug hat. Der frühere Grundsatz „kein freies ‚Einstellung ändern'"
 (A-027, forkai.243) gilt nicht mehr. Gesperrt bleiben über jeden Schlüssel nur die Wege mit
 `[KeinKiZugriff]`: **Schlüsselverwaltung**, **KI-Hauptschalter**, **Sicherung zurückspielen/herunterladen**
 und **Home-Assistant-Adresse und -Token ändern** (lesen geht mit Verwaltung: die Adresse ja, das Token nur
@@ -59,10 +59,10 @@ zeigt sie als `zugang: nie`.
   `Entscheiden` für jede Anfrage nutzt. `KiFunktionsverzeichnisTests` hält, dass jede Route im Verzeichnis
   steht (Mengenwächter ≥ 300, 356 am 18.10.2026) und dass das Verzeichnis für sechs Schlüssel (keine Stufe,
   jede einzeln, alle) genau das verspricht, was die Sperre entscheidet.
-- Im Grow MCP: `fork_funktionen` (Verzeichnis durchsuchen) und `fork_ausfuehren` (eine Funktion rufen; nur
+- Im Cultivate Control MCP: `fork_funktionen` (Verzeichnis durchsuchen) und `fork_ausfuehren` (eine Funktion rufen; nur
   Wege aus dem Verzeichnis unter `api/`, „nie"-Wege lehnt es vorher ab, Vorher/Nachher-Vergleich, das
   Gelöschte in der Antwort, keine Dateien). Stufe, Höchstwerte, Sicherung vorher und Prüfprotokoll prüft
-  weiter nur die Sperre — der Grow MCP fügt keine Rechte hinzu.
+  weiter nur die Sperre — der Cultivate Control MCP fügt keine Rechte hinzu.
 
 ## Sensoren, Löschen, Grenzen und Licht über den Assistenten (forkai.247)
 
@@ -71,11 +71,11 @@ zeigt sie als `zugang: nie`.
   leer löst — die Zeile bleibt inaktiv und ohne Entität stehen, wie beim Leeren auf der Einrichtungsseite, damit Geräte
   (`HardwareItems.TentSensorId`) und Meldungen ihren Verweis behalten. Danach läuft der Geräte-Abgleich wie beim Speichern des
   Zelts. Die Domain muss zur Messgröße passen (`SensorMessgroessen`, gegen die Oberfläche gehalten). Ob es die Entität in Home
-  Assistant gibt, prüft der Grow MCP (`sensor_zuordnen`) vorher über `api/ki-ha/zustaende`. Lesen: `sensoren`.
+  Assistant gibt, prüft der Cultivate Control MCP (`sensor_zuordnen`) vorher über `api/ki-ha/zustaende`. Lesen: `sensoren`.
 - **Messgrößen-Katalog:** `GET /api/messgroessen` (lesend, ohne Stufe) — Name, Schlüssel, Etikett wie in der App,
-  Etikett der Meldegrenzen und passende Domains. Der Grow MCP findet Messgrößen darüber.
+  Etikett der Meldegrenzen und passende Domains. Der Cultivate Control MCP findet Messgrößen darüber.
 - **Löschen:** `journal_loeschen` (`DELETE /api/journal/{id}`) und `messung_loeschen` (`DELETE /api/measurements/{id}`), Stufe
-  Dokumentieren. Beide lesen vorher und löschen nur Vorhandenes; Grow OS legt vor dem Löschen über einen Schlüssel eine Sicherung an
+  Dokumentieren. Beide lesen vorher und löschen nur Vorhandenes; Cultivate Control legt vor dem Löschen über einen Schlüssel eine Sicherung an
   (`[KiSicherungVorher]`). Die Antwort enthält den gelöschten Inhalt.
 - **Grenzen und Licht:** `grenzwert_setzen` (`PUT /api/alerts/tents/{id}`) und `lichtplan_setzen` (`PUT /api/light-schedules/{id}`),
   Stufe Grow planen. Beide schicken den gelesenen Stand mit genau einer Änderung zurück und belegen den Rest per Prüfsumme. Die
@@ -88,10 +88,10 @@ zeigt sie als `zugang: nie`.
   `HomeAssistantSnapshotWorker` ab 12 Uhr) und die Kameras des Zelts; `GET …/tagesbilder/{datum}` liefert das JPEG.
   Das Datum gilt nur genau als `yyyy-MM-dd` (sonst 400), der Dateiname entsteht aus dem geprüften Datum und der Zelt-Id
   aus der Datenbank. Lesen ohne Stufe, wie das Livebild unter `/api/live`.
-- `POST /api/grows/{id}/kamerafoto` (`{kamera?, motiv?, bildunterschrift?}`, Stufe Dokumentieren): Grow OS holt das Bild
+- `POST /api/grows/{id}/kamerafoto` (`{kamera?, motiv?, bildunterschrift?}`, Stufe Dokumentieren): Cultivate Control holt das Bild
   selbst von einer Kamera **des Zelts** und legt es wie die Auto-Messung ab (`PhotoStorageService.SaveSnapshotAsync`).
   Nur laufende Grows; kein gültiges Bild → 502, nichts gespeichert. Ein Upload über den Assistenten gibt es nicht.
-- Im Grow MCP: `kamera_bild`, `tagesbilder`, `kamera_foto_speichern`. Gehalten von `KameraBilderApiTests`.
+- Im Cultivate Control MCP: `kamera_bild`, `tagesbilder`, `kamera_foto_speichern`. Gehalten von `KameraBilderApiTests`.
 
 ## Stufen (`KiStufe`, Bits)
 
@@ -108,7 +108,7 @@ Stufen bauen **nicht** aufeinander auf; jede wird einzeln eingestellt.
 
 | Zustand | über die Leitung | was gilt |
 |---|---|---|
-| Gesperrt | nicht in `stufen` | Grow OS lehnt ab (403 `ki_stufe_fehlt`) |
+| Gesperrt | nicht in `stufen` | Cultivate Control lehnt ab (403 `ki_stufe_fehlt`) |
 | Mit Rückfrage | in `stufen` **und** in `rueckfrageBei` | erlaubt; der Assistent soll vorher fragen |
 | Frei | nur in `stufen` | erlaubt, ohne Rückfrage |
 
@@ -133,7 +133,7 @@ Vorbelegung eines neuen Schlüssels: Dokumentieren frei, alles andere gesperrt.
 - Kosten (Paket C1, Prüfer 18.10.2026): `PUT` auf Nachfüllung und Anschaffung legen über einen Schlüssel vorher eine
   Sicherung an und bleiben bei Dokumentieren — einen falschen Preis korrigieren ist Alltag, die Sicherung macht es
   umkehrbar; löschen braucht Verwaltung. `PUT /api/kosten/artikel/{id}` (Preis, Gebinde) braucht Verwaltung. Über einen
-  Schlüssel lehnt Grow OS außerdem einen Zeitpunkt in der Zukunft bei Verbrauch und Anschaffung ab und den Artikel der
+  Schlüssel lehnt Cultivate Control außerdem einen Zeitpunkt in der Zukunft bei Verbrauch und Anschaffung ab und den Artikel der
   CO₂-Steuerung (`Co2Einstellungen.KostenArtikelId`) bei `POST /api/kosten/verbrauch` (400 `co2_bucht_selbst`). Nur über
   einen Schlüssel: die Messseite bucht Zugaben erst nach dem Speichern der Messung und bietet den CO₂-Artikel noch an —
   dort bliebe nach einer Absage eine halbe Eingabe stehen (offener Punkt).
@@ -177,7 +177,7 @@ Fehlversuche: je IP im Speicher; ab 10 Fehlversuchen in 10 Minuten ist diese IP
 15 Minuten lang gesperrt. **Während der Sperre wird trotzdem geprüft** (Hash +
 `FixedTimeEquals`, billig): ein gültiger Schlüssel kommt durch, jeder ungültige oder
 gesperrte bekommt 429 `ki_zu_viele_versuche` und zählt nicht weiter (A-005, 03.10.2026).
-Grund: alle Anfragen über den Grow MCP und das HA-MCP kommen von EINER Container-IP —
+Grund: alle Anfragen über den Cultivate Control MCP und das HA-MCP kommen von EINER Container-IP —
 zehn erfundene Schlüssel aus dem Heimnetz sperrten sonst den echten Assistenten aus. Ein
 Schlüssel hat 256 Bit Zufall, Raten ist aussichtslos; die Sperre dient nur gegen Lärm im
 Protokoll und darf deshalb nie einen gültigen Schlüssel treffen. Bei ausgeschaltetem
@@ -264,13 +264,13 @@ bzw. Status. Je Schlüssel „Nur diesen zeigen", zurück über „Alle zeigen".
 `GET /api/ki-zugriff/ich` zuerst: welche Stufen erlaubt sind (`stufen`), bei welchen
 er vorher fragen soll (`rueckfrageBei`, leer = bei keiner) und welche Höchstwerte gelten.
 Die Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann der Fork nur die
-Stufen. `zugriff_pruefen` im Grow MCP liest `rueckfrageBei` und zur Not noch das alte
+Stufen. `zugriff_pruefen` im Cultivate Control MCP liest `rueckfrageBei` und zur Not noch das alte
 `rueckfrageAbStufe` eines Forks aus forkai.163.
 
 ## Home Assistant über den Fork
 
 Fork AI (A-003 Etappe B, 03.10.2026). Ein Assistent bedient mit **einem**
-Connector (Grow MCP Fork AI) den Fork und Home Assistant — ohne eigenen HA-MCP.
+Connector (Cultivate Control MCP) den Fork und Home Assistant — ohne eigenen HA-MCP.
 Der Weg führt durch den Fork, damit dieselben Stufen, Höchstwerte und dasselbe
 Prüfprotokoll gelten. Controller: `Api/Controllers/KiHomeAssistantApiController.cs`,
 Verträge: `Api/Contracts/KiHomeAssistantContracts.cs`, HA-Zugang:
@@ -359,14 +359,14 @@ erlaubt ist, nie** (403 `ki_kein_zugriff`, „nur bekannte Gerätebereiche erlau
 |---|---|
 | `homeassistant` | Neustart, Stopp, Konfiguration neu laden, generisches Schalten jeder Domain — umginge die Tabelle |
 | `hassio` | Supervisor: Add-ons, Host, Neustart, Sicherungen |
-| `backup` | Sicherungen anlegen/zurückspielen — auch in Grow OS nie über einen Schlüssel |
+| `backup` | Sicherungen anlegen/zurückspielen — auch in Cultivate Control nie über einen Schlüssel |
 | `recorder` | Löscht oder sperrt die Geschichte — nicht zurückzudrehen |
 | `system_log` | Leert/schreibt das Systemprotokoll, die Spur des Geschehenen |
 | `logger` | Ändert, was protokolliert wird |
 | `shell_command` | Befehle auf dem Host |
 | `python_script`, `pyscript` | Beliebiger Code in Home Assistant |
 | `rest_command` | Anfragen an beliebige Adressen |
-| `notify` | Nachrichten an Menschen gehen von Grow OS aus, nicht vom Assistenten |
+| `notify` | Nachrichten an Menschen gehen von Cultivate Control aus, nicht vom Assistenten |
 | `persistent_notification` | Meldungen in HA — dem Betreiber nichts unterschieben |
 | `tts` | Sprachausgabe an Lautsprecher im Haus |
 | `conversation` | Der Sprachassistent führt beliebige Absichten aus — umginge die Tabelle |
@@ -392,5 +392,5 @@ bzw. „… — abgewiesen".
 
 Gehalten von `GrowDiary.Web.Tests/KiZugriff/KiHaSchnittstelleTests.cs` (an der
 echten App mit nachgestelltem Home Assistant) und den Ausnahmen in
-`JedeRouteHatEinenAufruferTests` (gerufen vom Grow MCP Fork AI, nicht aus der
+`JedeRouteHatEinenAufruferTests` (gerufen vom Cultivate Control MCP, nicht aus der
 Oberfläche).

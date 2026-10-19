@@ -23,7 +23,7 @@ namespace GrowDiary.Web.Tests;
 /// die der Regler im Betrieb nie gelesen hätte.</para>
 ///
 /// <para><b>Was hier NICHT geprüft wird.</b> Nicht, ob die Zahlen hübsch sind.
-/// Geprüft wird, ob der Bestand eine Geschichte erzählt, die Grow OS selbst für
+/// Geprüft wird, ob der Bestand eine Geschichte erzählt, die Cultivate Control selbst für
 /// möglich hält — mit denselben Prüfern, die auch auf echte Daten losgehen. Wo
 /// die App eine Warnung ausgeben würde, ist der Bestand falsch, nicht die
 /// Warnung.</para>
@@ -587,7 +587,7 @@ public sealed class DemobestandStimmigTests : IDisposable
     /// <c>Math.Max(0, …)</c> auf „0 Tage / frisch" — der Fehler wird unsichtbar
     /// gerechnet. Gefunden vom Prüfer, der auf die Uhr geschaut hat.</para>
     ///
-    /// <para>„Der Testbestand ist Produktionscode": wo Grow OS eine Warnung
+    /// <para>„Der Testbestand ist Produktionscode": wo Cultivate Control eine Warnung
     /// ausgeben würde, ist der Bestand falsch, nicht die Warnung.</para>
     /// </remarks>
     [Fact]

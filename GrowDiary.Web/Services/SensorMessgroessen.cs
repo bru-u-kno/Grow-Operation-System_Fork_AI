@@ -81,7 +81,7 @@ public static class SensorMessgroessen
     private static readonly Regex NurBuchstaben = new("^[A-Za-z][A-Za-z0-9]*$", RegexOptions.CultureInvariant);
 
     /// <summary>
-    /// Die Zeile, die Grow OS für eine Messgröße liest: die letzte aktive mit Entität (wie <c>HomeAssistantService.GetStatesAsync</c>:
+    /// Die Zeile, die Cultivate Control für eine Messgröße liest: die letzte aktive mit Entität (wie <c>HomeAssistantService.GetStatesAsync</c>:
     /// <c>GroupBy(…).Last()</c>), sonst die älteste. <c>null</c>, wenn es keine gibt.
     /// </summary>
     public static TentSensor? WirksameZeile(IEnumerable<TentSensor> zeilen, SensorMetricType messgroesse)

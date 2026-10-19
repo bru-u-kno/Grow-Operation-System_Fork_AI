@@ -1,24 +1,24 @@
-name: Grow OS Fork AI
+name: Cultivate Control
 version: "2.0.0-forkai.253"
-slug: grow_os_fork_ai
+slug: cultivate_control
 description: RDWC/DWC grow management, natively integrated with Home Assistant
-url: https://github.com/bru-u-kno/Grow-Operation-System_Fork_AI
+url: https://github.com/bru-u-kno/cultivate-control
 # Prebuilt public multi-arch image, pulled directly by the Supervisor (the tag
 # matches this add-on version; Docker resolves the right architecture). Updates are
 # a clean image pull with no on-device rebuild and no data loss.
-image: ghcr.io/bru-u-kno/grow-operation-system_fork_ai
-# The Grow OS image is published multi-arch; these are the Raspberry Pi + PC targets.
+image: ghcr.io/bru-u-kno/cultivate-control
+# The Cultivate Control image is published multi-arch; these are the Raspberry Pi + PC targets.
 arch:
   - aarch64
   - armv7
   - amd64
-# Grow OS ships its own dotnet ENTRYPOINT, so the s6 init layer is not needed.
+# Cultivate Control ships its own dotnet ENTRYPOINT, so the s6 init layer is not needed.
 init: false
 # Serve the UI inside the Home Assistant sidebar (Home Assistant handles auth).
 ingress: true
 ingress_port: 5076
 panel_icon: mdi:sprout
-panel_title: Grow OS Fork AI
+panel_title: Cultivate Control
 # Grants the add-on a SUPERVISOR_TOKEN with access to the Home Assistant core API
 # (http://supervisor/core) — this is what makes the HA connection zero-config.
 homeassistant_api: true

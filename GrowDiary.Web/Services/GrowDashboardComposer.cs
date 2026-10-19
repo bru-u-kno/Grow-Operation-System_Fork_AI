@@ -265,7 +265,7 @@ public sealed class GrowDashboardComposer
         // AC-Infinity-Controller. Nur mit zugeordnetem, liefernden Sensor: wer
         // keinen hat, bekaeme sonst drei leere Kacheln, und „N Sensoren live"
         // zaehlte nichts, was nicht wirklich misst. Ohne Ziel — die Raumluft ist
-        // die Umgebung, an der das Zeltklima haengt, nicht etwas, das Grow OS
+        // die Umgebung, an der das Zeltklima haengt, nicht etwas, das Cultivate Control
         // auf ein Band bringen will. Beschriftung und Einheit aus derselben
         // Tabelle wie Verlauf und Meldungen.
         foreach (var aussen in AussenSchluessel)
@@ -622,7 +622,7 @@ public sealed class GrowDashboardComposer
     {
         // Der gelernte Zyklus aus den beobachteten Flanken — „18/6", „12/12".
         // Das TODO von Sprint B1b ist damit erledigt: niemand traegt den Zyklus
-        // ein, Grow OS liest ihn aus dem, was ohnehin aufgezeichnet wird.
+        // ein, Cultivate Control liest ihn aus dem, was ohnehin aufgezeichnet wird.
         var cycle = lightCycles?.CycleFor(tent.Id, DateTime.UtcNow);
         // Show the live light on/off state from the mapped LightStatus entity.
         if (states.TryGetValue(TentSensorMetricKeyMap.Resolve(SensorMetricType.LightStatus), out var lightState))

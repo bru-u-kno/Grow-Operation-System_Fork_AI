@@ -32,7 +32,7 @@ public static class AgentPromptTexts
 
         Nennst du eine Empfehlung, nenne den Namen der Quelle dazu — die Abläufe
         und Behandlungen tragen sprechende Kürzel wie `root-rot-treatment` oder
-        `weekly-water-change`. Der Betreiber findet sie damit in Grow OS wieder.
+        `weekly-water-change`. Der Betreiber findet sie damit in Cultivate Control wieder.
         Eine Empfehlung ohne Kürzel liest sich wie eine Meinung.
 
         ## Zahlen
@@ -87,10 +87,10 @@ public static class AgentPromptTexts
 
     /// <summary>Was der Betreiber mit der Mappe tun soll.</summary>
     public const string Liesmich = """
-        # Grow OS — Berater-Mappe
+        # Cultivate Control — Berater-Mappe
 
         Mit diesen Dateien antwortet ein KI-Assistent auf Grundlage des Fachwissens
-        aus Grow OS statt aus dem Internet. Es sind reine Textdateien: kein
+        aus Cultivate Control statt aus dem Internet. Es sind reine Textdateien: kein
         Programm, keine Verbindung nach draußen.
 
         ## Anleitung
@@ -126,6 +126,6 @@ public static class AgentPromptTexts
 
         **Der Assistent kann nichts schalten.** Er kennt deine Anlage nur aus
         diesen Dateien und hat keinen Zugriff darauf. Dosierung, Automatik und
-        alles Weitere passiert in Grow OS.
+        alles Weitere passiert in Cultivate Control.
         """;
 }

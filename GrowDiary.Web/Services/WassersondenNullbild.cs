@@ -19,7 +19,7 @@ namespace GrowDiary.Web.Services;
 /// <b>„0"</b> aufgezeichnet — alle drei Entitäten der Bluelab-Sonde in
 /// derselben Millisekunde (23:18:10,507), 71 Sekunden lang, danach wieder
 /// normale Werte. Die Langzeitstatistik von Home Assistant zeigt ein
-/// pH-Tagesminimum von 0 an 13 der letzten 31 Tage; Grow OS erwischt so einen
+/// pH-Tagesminimum von 0 an 13 der letzten 31 Tage; Cultivate Control erwischt so einen
 /// Ausfall, wenn sein 5-Minuten-Takt in das Fenster fällt.</para>
 ///
 /// <para><b>Warum nicht „jede 0 verwerfen".</b> EC 0 ist ein echter Wert

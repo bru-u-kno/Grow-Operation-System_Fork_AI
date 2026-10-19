@@ -4,7 +4,7 @@ namespace GrowDiary.Web.Api.Contracts;
 // GET /api/ki-zugriff/funktionen. Erzeugt zur Laufzeit aus den Routen
 // (KiFunktionsverzeichnis), nichts davon ist von Hand gepflegt.
 
-/// <summary>Alle Funktionen von Grow OS unter <c>/api</c>, je Methode ein Eintrag.</summary>
+/// <summary>Alle Funktionen von Cultivate Control unter <c>/api</c>, je Methode ein Eintrag.</summary>
 public sealed record KiFunktionenDto(
     /// <summary>Wie viele Einträge <see cref="Funktionen"/> hat.</summary>
     int Anzahl,
@@ -32,7 +32,7 @@ public sealed record KiFunktionDto(
     string? NieGrund,
     /// <summary>Zählt gegen den Höchstwert der Schaltbefehle je Stunde.</summary>
     bool Schaltbefehl,
-    /// <summary>Grow OS legt vorher eine Sicherung an.</summary>
+    /// <summary>Cultivate Control legt vorher eine Sicherung an.</summary>
     bool SicherungVorher,
     /// <summary>Kurzbeschreibung aus der Code-Doku, sonst Controller und Aktion.</summary>
     string Beschreibung,

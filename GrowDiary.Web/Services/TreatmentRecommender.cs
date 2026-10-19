@@ -208,7 +208,7 @@ public sealed class TreatmentRecommender
             SopId: null,
             SopTitle: null,
             Confidence: ResolveConfidence(deviation),
-            Reason: "Zu dieser Abweichung kennt Grow OS kein Krankheitsbild — hier hilft nur der Blick auf die Pflanze.",
+            Reason: "Zu dieser Abweichung kennt Cultivate Control kein Krankheitsbild — hier hilft nur der Blick auf die Pflanze.",
             SafetyNotes: Array.Empty<string>(),
             SourceDocumentIds: Array.Empty<string>(),
             Conflicts: Array.Empty<string>(),

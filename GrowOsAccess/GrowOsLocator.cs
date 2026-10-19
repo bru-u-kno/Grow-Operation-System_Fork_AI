@@ -1,10 +1,10 @@
 namespace GrowOsAccess;
 
-/// <summary>Wo Grow OS steckt — oder warum es nicht gefunden wurde.</summary>
+/// <summary>Wo Cultivate Control steckt — oder warum es nicht gefunden wurde.</summary>
 public sealed record GrowOsFund(string? Slug, string? Host, string Meldung, bool Gefunden);
 
 /// <summary>
-/// Grow OS im internen Add-on-Netz finden.
+/// Cultivate Control im internen Add-on-Netz finden.
 /// </summary>
 /// <remarks>
 /// <para>Der Hostname eines Add-ons setzt sich aus Repository und Slug zusammen
@@ -25,41 +25,41 @@ public sealed record GrowOsFund(string? Slug, string? Host, string Meldung, bool
 /// </remarks>
 public static class GrowOsLocator
 {
-    /// <summary>Der Slug von Grow OS, ohne den Repository-Teil davor.</summary>
+    /// <summary>Der Slug von Cultivate Control, ohne den Repository-Teil davor.</summary>
     /// <remarks>
-    /// Fork AI (02.10.2026): <c>grow_os_fork_ai</c>, wie in
+    /// Fork AI (02.10.2026): <c>cultivate_control</c>, wie in
     /// <c>grow-os/config.yaml</c>. Bis dahin stand hier <c>grow_os</c> — der Slug
     /// des Originals. Der Fork-MCP hätte dadurch im eigenen Store ein Grow OS
     /// gesucht, das es dort nicht gibt. <c>GrowOsLocatorTests</c> liest die
     /// config.yaml und hält beide gleich.
     /// </remarks>
-    public const string Slug = "grow_os_fork_ai";
+    public const string Slug = "cultivate_control";
 
-    /// <summary>Der Port, auf dem Grow OS im Container lauscht.</summary>
+    /// <summary>Der Port, auf dem Cultivate Control im Container lauscht.</summary>
     public const int Port = 5076;
 
     /// <summary>
-    /// Die Namen, unter denen Grow OS stecken kann — in der Reihenfolge, in der
+    /// Die Namen, unter denen Cultivate Control stecken kann — in der Reihenfolge, in der
     /// es sich lohnt, anzuklopfen.
     /// </summary>
     /// <param name="vollerSlug">
     /// Der eigene Slug samt Repository-Vorsatz, wie ihn der Supervisor meldet,
-    /// etwa <c>a1b2c3d4_grow_mcp</c>.
+    /// etwa <c>a1b2c3d4_cultivate_control_mcp</c>.
     /// </param>
     /// <param name="eigenerBasisSlug">
     /// Der eigene Slug OHNE Vorsatz, wie er in der <c>config.yaml</c> steht,
-    /// derzeit <c>grow_mcp</c>.
+    /// derzeit <c>cultivate_control_mcp</c>.
     /// </param>
     /// <remarks>
     /// <para>Zuerst der abgeleitete Name: gleicher Store, gleicher Vorsatz, das
     /// ist der Normalfall. Danach die beiden Namen, die ohne jede Auskunft
-    /// feststehen — wer Grow OS aus dem Ordner heraus installiert hat, findet es
+    /// feststehen — wer Cultivate Control aus dem Ordner heraus installiert hat, findet es
     /// unter <c>local_grow_os</c>. Angeklopft wird nacheinander; wer nicht
     /// antwortet, fällt raus.</para>
     ///
     /// <para>Der eigene Basis-Slug wird übergeben und steht nicht fest im Code.
     /// Als hier noch der Slug eines anderen Add-ons verdrahtet war, griff die
-    /// Ableitung nicht — und Grow OS aus dem Store blieb unauffindbar, weil
+    /// Ableitung nicht — und Cultivate Control aus dem Store blieb unauffindbar, weil
     /// dessen Vorsatz nur aus dem eigenen Namen zu holen ist. Kommt je ein
     /// weiteres Add-on dazu, bleibt das ein Parameter.</para>
     /// </remarks>
@@ -71,7 +71,7 @@ public static class GrowOsLocator
             !string.IsNullOrWhiteSpace(eigenerBasisSlug) &&
             vollerSlug.EndsWith(eigenerBasisSlug, StringComparison.Ordinal))
         {
-            // "a1b2c3d4_grow_mcp" -> "a1b2c3d4_" -> "a1b2c3d4_grow_os"
+            // "a1b2c3d4_cultivate_control_mcp" -> "a1b2c3d4_" -> "a1b2c3d4_grow_os"
             namen.Add(string.Concat(vollerSlug.AsSpan(0, vollerSlug.Length - eigenerBasisSlug.Length), Slug));
         }
 
@@ -84,7 +84,7 @@ public static class GrowOsLocator
     /// <summary>Die Meldung, wenn unter keinem Namen jemand antwortet.</summary>
     public static GrowOsFund NichtGefunden { get; } = new(
         null, null,
-        "Grow OS ist von hier aus nicht erreichbar. Läuft das Add-on, und ist es "
+        "Cultivate Control ist von hier aus nicht erreichbar. Läuft das Add-on, und ist es "
         + "mindestens Version 2.0.0-beta.24? Sonst trag seine Adresse in den "
         + "Einstellungen dieses Add-ons ein.",
         false);
@@ -93,6 +93,6 @@ public static class GrowOsLocator
     /// <remarks>Unterstriche sind in einem DNS-Namen nicht erlaubt.</remarks>
     public static string Hostname(string slug) => slug.Replace('_', '-');
 
-    /// <summary>Die Adresse, unter der die Schnittstelle von Grow OS erreichbar ist.</summary>
+    /// <summary>Die Adresse, unter der die Schnittstelle von Cultivate Control erreichbar ist.</summary>
     public static string BaseUrl(string host) => $"http://{host}:{Port}";
 }

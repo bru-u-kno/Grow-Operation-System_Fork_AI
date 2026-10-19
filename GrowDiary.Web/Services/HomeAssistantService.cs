@@ -593,7 +593,7 @@ public sealed class HomeAssistantService
     /// <c>switch.turn_on</c> für <c>switch.dosier_ph_minus</c>.
     /// </summary>
     /// <remarks>
-    /// Grow OS hat selbst keine Anschlüsse — alles Schaltbare hängt an Home
+    /// Cultivate Control hat selbst keine Anschlüsse — alles Schaltbare hängt an Home
     /// Assistant. Dieselbe Strecke, die schon die Push-Nachrichten geht, nur mit
     /// <c>entity_id</c> statt Titel und Text.
     /// </remarks>

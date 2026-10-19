@@ -66,7 +66,7 @@ Der Supervisor warnt bei jeder Prüfung:
 
 ```
 App config 'arch' uses deprecated values ['armv7'].
-Please report this to the maintainer of Grow OS
+Please report this to the maintainer of Cultivate Control
 ```
 
 `armv7` in `grow-os/config.yaml` ist abgekündigt. Das Entfernen würde 32-Bit-Installationen

@@ -690,7 +690,7 @@ function HardwarePage() {
             )}
 
             <p className="hw-note">
-              Feste Sensoren legt Grow OS selbst an, sobald du unter{' '}
+              Feste Sensoren legt Cultivate Control selbst an, sobald du unter{' '}
               <V1LinkButton to="/home-assistant" variant="ghost">Home Assistant</V1LinkButton>{' '}
               eine Entity zuordnest — samt Kalibrier-Intervall, das du hier je Sensor ändern kannst.
             </p>

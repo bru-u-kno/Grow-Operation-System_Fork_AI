@@ -7,7 +7,7 @@ namespace GrowMcp.Tests;
 /// Wer über welchen Port was sehen darf.
 /// </summary>
 /// <remarks>
-/// <para>Grow OS selbst hat keinen offenen Port; der MCP-Server braucht einen,
+/// <para>Cultivate Control selbst hat keinen offenen Port; der MCP-Server braucht einen,
 /// sonst käme kein Klient aus dem Heimnetz heran. Damit dieser Port nicht zum
 /// Scheunentor wird, hängen zwei Türen an zwei Ports: die Einrichtungsseite mit
 /// dem Schlüssel darauf am Ingress-Port, die Schnittstelle am Netz-Port.</para>

@@ -5,7 +5,7 @@ using GrowDiary.Web.Services.Knowledge.Schema;
 namespace GrowDiary.Web.Services;
 
 /// <summary>
-/// Das Wissen von Grow OS als lesbarer Text.
+/// Das Wissen von Cultivate Control als lesbarer Text.
 /// </summary>
 /// <remarks>
 /// <para>Die Wissensdateien sind für die App geschrieben, nicht für einen
@@ -30,7 +30,7 @@ public static class AgentKnowledgeRenderer
         var text = new StringBuilder();
         Kopf(text, "Abläufe (SOPs)",
             "Jeder Ablauf hat ein Kürzel. Nenne es, wenn du dich darauf beziehst — "
-            + "der Betreiber kann ihn dann in Grow OS öffnen und Schritt für Schritt abhaken.");
+            + "der Betreiber kann ihn dann in Cultivate Control öffnen und Schritt für Schritt abhaken.");
 
         foreach (var sop in sops.OrderBy(s => s.Id, StringComparer.Ordinal))
         {

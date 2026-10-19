@@ -14,7 +14,7 @@ const RANGES = [
 type AlertRule = { metricKey: string; minValue: number | null; maxValue: number | null; enabled: boolean }
 
 /**
- * Shows the sensor history Grow OS records anyway — one curve per metric, with the tent's
+ * Shows the sensor history Cultivate Control records anyway — one curve per metric, with the tent's
  * own threshold range drawn behind it so "am I inside my limits?" is answered at a glance.
  */
 export function TentHistorySection({ tentId }: { tentId: number }) {
@@ -76,7 +76,7 @@ export function TentHistorySection({ tentId }: { tentId: number }) {
         <V1Card>
           <span className="v1-card-kicker">Noch nichts aufgezeichnet</span>
           <h2>Der Verlauf füllt sich von selbst</h2>
-          <p>Grow OS speichert alle 5 Minuten die Werte deiner zugeordneten Sensoren und verdichtet sie nachts zu Tageswerten. Ab dem ersten vollen Tag erscheinen hier Kurven.</p>
+          <p>Cultivate Control speichert alle 5 Minuten die Werte deiner zugeordneten Sensoren und verdichtet sie nachts zu Tageswerten. Ab dem ersten vollen Tag erscheinen hier Kurven.</p>
         </V1Card>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 12 }}>

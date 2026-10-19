@@ -52,7 +52,7 @@ public sealed class SettingsApiController : ApiControllerBase
         => HomeAssistant();
 
     [HttpPut("home-assistant")]
-    [KeinKiZugriff("Adresse und Zugangs-Token von Home Assistant stellt nur ein Mensch ein — ein Assistent könnte Grow OS sonst auf ein anderes Home Assistant umlenken oder die Verbindung kappen.")]
+    [KeinKiZugriff("Adresse und Zugangs-Token von Home Assistant stellt nur ein Mensch ein — ein Assistent könnte Cultivate Control sonst auf ein anderes Home Assistant umlenken oder die Verbindung kappen.")]
     [ProducesResponseType(typeof(HomeAssistantSettingsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
     public ActionResult<HomeAssistantSettingsDto> SaveHomeAssistant([FromBody] SaveHomeAssistantSettingsRequest request)
@@ -273,7 +273,7 @@ public sealed class SettingsApiController : ApiControllerBase
             }
         }
 
-        // Die Zeile, die Grow OS für diese Messgröße liest (SensorMessgroessen.WirksameZeile), wird geändert. Stehen aus
+        // Die Zeile, die Cultivate Control für diese Messgröße liest (SensorMessgroessen.WirksameZeile), wird geändert. Stehen aus
         // altem Bestand weitere Zeilen derselben Messgröße da, werden sie stillgelegt (inaktiv, ohne Entität, Id bleibt) —
         // danach gilt genau eine, und kein Leser kann eine andere erwischen als die, die gemeldet wird.
         var zeile = SensorMessgroessen.WirksameZeile(tent.Sensors, messgroesse);
@@ -314,10 +314,10 @@ public sealed class SettingsApiController : ApiControllerBase
     /// Das Speichern selbst scheitert dabei NICHT, wenn der Dienst nicht durchkommt —
     /// sonst haette der Nutzer einen Wert im Formular, der nirgends steht. Stattdessen
     /// geht eine Warnung zurueck, damit die Oberflaeche es sagen kann. Ein stilles
-    /// Auseinanderlaufen zwischen App, Controller und Grow OS ist genau der Zustand,
+    /// Auseinanderlaufen zwischen App, Controller und Cultivate Control ist genau der Zustand,
     /// den dieses Feld beseitigen soll.
     ///
-    /// Vorzeichen: Grow OS fuehrt das Offset positiv ("Blatt 2 °C kuehler"), die
+    /// Vorzeichen: Cultivate Control fuehrt das Offset positiv ("Blatt 2 °C kuehler"), die
     /// AC-Infinity-App negativ (-2). Gleiche Bedeutung, andere Schreibweise — gedreht
     /// wird genau hier, damit es nur an einer Stelle passiert.
     /// </summary>

@@ -6,7 +6,7 @@ using ModelContextProtocol.Server;
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Fork AI (Paket D, 18.10.2026): <c>fork_funktionen</c> — das Verzeichnis aller Funktionen von Grow OS.
+/// Fork AI (Paket D, 18.10.2026): <c>fork_funktionen</c> — das Verzeichnis aller Funktionen von Cultivate Control.
 /// </summary>
 public sealed partial class GrowTools
 {
@@ -19,7 +19,7 @@ public sealed partial class GrowTools
     private const int AntwortHoechstens = 24_000;
 
     [McpServerTool(Name = "fork_funktionen")]
-    [Description("Das Verzeichnis ALLER Funktionen von Grow OS: Weg, Art (lesen/anlegen/ändern/löschen), was ein Schlüssel dafür braucht (frei, Stufen oder nie), Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben (Weg-, Abfrage- und Rumpffelder). Mit suche (Wörter, etwa „entfeuchter hysterese\"), bereich (etwa kosten, steuerung, plants), art oder zugang eingrenzen. Grow OS erzeugt das Verzeichnis selbst aus seinem Code. Vor fork_ausfuehren aufrufen, um Weg und Felder zu finden. Für Alltägliches (Messung, Journal, Licht, Dosieren …) gibt es feste Werkzeuge — die zuerst nehmen.")]
+    [Description("Das Verzeichnis ALLER Funktionen von Cultivate Control: Weg, Art (lesen/anlegen/ändern/löschen), was ein Schlüssel dafür braucht (frei, Stufen oder nie), Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben (Weg-, Abfrage- und Rumpffelder). Mit suche (Wörter, etwa „entfeuchter hysterese\"), bereich (etwa kosten, steuerung, plants), art oder zugang eingrenzen. Cultivate Control erzeugt das Verzeichnis selbst aus seinem Code. Vor fork_ausfuehren aufrufen, um Weg und Felder zu finden. Für Alltägliches (Messung, Journal, Licht, Dosieren …) gibt es feste Werkzeuge — die zuerst nehmen.")]
     public Task<string> ForkFunktionenAsync(
         [Description("Suchwörter, alle müssen passen (Weg, Beschreibung, Bereich, Rumpffelder), etwa „kosten nachfuellung\"")] string? suche = null,
         [Description("Nur dieser Bereich (der Teil nach /api/), etwa kosten, steuerung, grows, plants, settings")] string? bereich = null,
@@ -35,16 +35,16 @@ public sealed partial class GrowTools
             return FunktionenBeschreiben(verzeichnis, suche, bereich, art, zugang);
         });
 
-    /// <summary>Warum das Verzeichnis nicht kam — „KI aus" und „Grow OS zu alt" sind die häufigen Gründe.</summary>
+    /// <summary>Warum das Verzeichnis nicht kam — „KI aus" und „Cultivate Control zu alt" sind die häufigen Gründe.</summary>
     internal static string VerzeichnisFehler(ForkAntwort antwort)
     {
         if (antwort.Status == 404 && antwort.Text.Contains("\"ki_aus\"", StringComparison.Ordinal))
         {
-            return "Das Funktionsverzeichnis gibt es nur, wenn in Grow OS die KI-Funktionen eingeschaltet sind (Einrichtung → KI-Assistent).";
+            return "Das Funktionsverzeichnis gibt es nur, wenn in Cultivate Control die KI-Funktionen eingeschaltet sind (Einrichtung → KI-Assistent).";
         }
         if (antwort.Status == 404)
         {
-            return "Grow OS kennt das Funktionsverzeichnis noch nicht — bitte Grow OS Fork AI aktualisieren.";
+            return "Cultivate Control kennt das Funktionsverzeichnis noch nicht — bitte Cultivate Control aktualisieren.";
         }
         return ForkFehler.Text(antwort.Status, antwort.Text, "Funktionsverzeichnis lesen");
     }

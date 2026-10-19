@@ -8,7 +8,7 @@ namespace GrowMcp.Tests;
 /// Fork AI (Paket D, 18.10.2026): <c>fork_funktionen</c> und <c>fork_ausfuehren</c>.
 /// </summary>
 /// <remarks>
-/// Das Verzeichnis der Attrappe ist ein Ausschnitt in der Form, die Grow OS liefert (<c>GET /api/ki-zugriff/funktionen</c>);
+/// Das Verzeichnis der Attrappe ist ein Ausschnitt in der Form, die Cultivate Control liefert (<c>GET /api/ki-zugriff/funktionen</c>);
 /// die Einträge stammen aus dem Verzeichnis der Demo-App vom 18.10.2026.
 /// </remarks>
 public sealed class ForkAusfuehrenTests
@@ -89,7 +89,7 @@ public sealed class ForkAusfuehrenTests
 
     // ------------------------------------------------------------------ Pfad
 
-    /// <summary>Jeder Ausbruchsversuch scheitert, bevor Grow OS gefragt wird — auch das Verzeichnis nicht.</summary>
+    /// <summary>Jeder Ausbruchsversuch scheitert, bevor Cultivate Control gefragt wird — auch das Verzeichnis nicht.</summary>
     [Theory]
     [InlineData("api/../system/backup/x")]
     [InlineData("api/grows/../../etc/passwd")]
@@ -207,7 +207,7 @@ public sealed class ForkAusfuehrenTests
 
     // ------------------------------------------------------------------ Ändern mit Vorher/Nachher
 
-    /// <summary>Ein Entfeuchter, dessen PUT wie in Grow OS das Ganze ersetzt; die Live-Werte bewegen sich bei jedem Lesen.</summary>
+    /// <summary>Ein Entfeuchter, dessen PUT wie in Cultivate Control das Ganze ersetzt; die Live-Werte bewegen sich bei jedem Lesen.</summary>
     private static ForkAttrappe EntfeuchterFork(bool vergisstMindestlaufzeit = false)
     {
         var stand = new JsonObject { ["hystereseProzent"] = 2, ["mindestlaufzeitMin"] = 10, ["automatikAktiv"] = true };
@@ -292,7 +292,7 @@ public sealed class ForkAusfuehrenTests
     [Fact]
     public async Task B1_Eine_fehlende_Liste_bricht_ab_statt_zu_raten()
     {
-        // Prüfer 18.10.2026: Grow OS behandelt eine fehlende Liste je Weg verschieden — die Sensoren eines Zelts bleiben,
+        // Prüfer 18.10.2026: Cultivate Control behandelt eine fehlende Liste je Weg verschieden — die Sensoren eines Zelts bleiben,
         // die Kacheln des Dashboards werden leer. Also weder mitschicken (neue Sensor-Ids) noch still weglassen.
         var fork = Fork()
             .Antwort("GET", "api/settings/tents/1", 200, """{"id":1,"name":"Zelt","notes":"n","sensors":[{"id":31,"metricType":"Temperature"}]}""")
@@ -302,7 +302,7 @@ public sealed class ForkAusfuehrenTests
         Assert.StartsWith("Nicht ausgeführt: Im Rumpf fehlt die Liste sensors.", text);
         Assert.DoesNotContain(Aufrufe(fork), a => a.Methode == "PUT");
 
-        // Wer weiß, dass Grow OS die Liste ohne Angabe stehen lässt, schickt ohne Ergänzen.
+        // Wer weiß, dass Cultivate Control die Liste ohne Angabe stehen lässt, schickt ohne Ergänzen.
         await Ausfuehren(fork, "PUT", "api/settings/tents/1", body: """{"name":"Neu","notes":"n","raumId":null}""", ergaenzen: false);
         var put = JsonNode.Parse(Assert.Single(Aufrufe(fork), a => a.Methode == "PUT").Rumpf!)!.AsObject();
         Assert.False(put.ContainsKey("sensors"));
@@ -330,7 +330,7 @@ public sealed class ForkAusfuehrenTests
 
         var put = JsonNode.Parse(Aufrufe(fork).Single(a => a.Methode == "PUT").Rumpf!)!.AsObject();
         Assert.False(put.ContainsKey("mindestlaufzeitMin"));
-        Assert.Contains("nicht leer erlaubt, deshalb weggelassen (Grow OS nimmt seine Vorgabe): mindestlaufzeitMin.", text);
+        Assert.Contains("nicht leer erlaubt, deshalb weggelassen (Cultivate Control nimmt seine Vorgabe): mindestlaufzeitMin.", text);
     }
 
     [Fact]
@@ -388,7 +388,7 @@ public sealed class ForkAusfuehrenTests
 
         var put = JsonNode.Parse(Aufrufe(fork).Single(a => a.Methode == "PUT").Rumpf!)!.AsObject();
         Assert.Equal(25, put["mindestlaufzeitMin"]!.GetValue<int>());
-        // kostenArtikelId fehlt im gelesenen Stand — Grow OS lässt leere Felder weg; es geht ausdrücklich leer hinaus.
+        // kostenArtikelId fehlt im gelesenen Stand — Cultivate Control lässt leere Felder weg; es geht ausdrücklich leer hinaus.
         Assert.True(put.ContainsKey("kostenArtikelId"));
         Assert.Null(put["kostenArtikelId"]);
         Assert.Contains("Im gelesenen Stand leer, deshalb leer mitgeschickt: kostenArtikelId.", text);
@@ -441,7 +441,7 @@ public sealed class ForkAusfuehrenTests
             .Antwort("DELETE", @"api/kosten/nachfuellungen/41", 204, string.Empty);
         var text = await Ausfuehren(fork, "DELETE", "api/kosten/nachfuellungen/41");
 
-        Assert.Contains("Ausgeführt: DELETE /api/kosten/nachfuellungen/41 → 204. Grow OS hat vorher eine Sicherung angelegt.", text);
+        Assert.Contains("Ausgeführt: DELETE /api/kosten/nachfuellungen/41 → 204. Cultivate Control hat vorher eine Sicherung angelegt.", text);
         Assert.Contains("Gelöscht: id: 41, artikelName: „pH-Minus 1 L\"", text);
         Assert.Contains("12.9", text);
         Assert.Equal(["GET", "DELETE"], Aufrufe(fork).Select(a => a.Methode).ToArray());
@@ -450,7 +450,7 @@ public sealed class ForkAusfuehrenTests
     [Fact]
     public async Task Ein_Loeschen_ohne_eigenen_Leseweg_findet_den_Eintrag_in_der_Liste_darueber()
     {
-        // Wie in Grow OS: GET api/kosten führt die Anschaffungen als Liste; daneben eine Nachfüllung mit derselben Id.
+        // Wie in Cultivate Control: GET api/kosten führt die Anschaffungen als Liste; daneben eine Nachfüllung mit derselben Id.
         var fork = Fork()
             .Antwort("GET", "api/kosten", 200, """{"nachfuellungen":[{"id":5,"artikelName":"Falsch"}],"anschaffungen":[{"id":4,"name":"Andere"},{"id":5,"name":"Testkauf","gesamtEur":4.5}]}""")
             .Antwort("DELETE", "api/kosten/anschaffungen/5", 204, string.Empty);
@@ -472,12 +472,12 @@ public sealed class ForkAusfuehrenTests
         Assert.Empty(Aufrufe(fork));
     }
 
-    // ------------------------------------------------------------------ Absagen von Grow OS
+    // ------------------------------------------------------------------ Absagen von Cultivate Control
 
     [Theory]
     [InlineData(403, """{"code":"ki_stufe_fehlt","message":"Dafür fehlt die Freigabe für Stufe „Verwaltung“."}""", "Dafür fehlt die Freigabe für Stufe „Verwaltung“.")]
     [InlineData(429, """{"code":"ki_hoechstwert","message":"Höchstwert erreicht: über KI-Assistenten sind höchstens 20 Schalt- und Dosierbefehle je Stunde erlaubt."}""", "Bitte später noch einmal versuchen.")]
-    [InlineData(503, """{"code":"ki_sicherung_fehlgeschlagen","message":"Vor dieser Aktion legt Grow OS eine Sicherung an, und das ist gerade nicht gelungen. Es wurde nichts ausgeführt."}""", "Es wurde nichts ausgeführt.")]
+    [InlineData(503, """{"code":"ki_sicherung_fehlgeschlagen","message":"Vor dieser Aktion legt Cultivate Control eine Sicherung an, und das ist gerade nicht gelungen. Es wurde nichts ausgeführt."}""", "Es wurde nichts ausgeführt.")]
     [InlineData(400, """{"code":"validation_failed","message":"Die Angaben passen nicht.","fieldErrors":{"HystereseProzent":["Höchstens 10 %."]}}""", "HystereseProzent: Höchstens 10 %.")]
     public async Task Eine_Absage_von_Grow_OS_kommt_als_Satz(int status, string rumpf, string erwartet)
     {

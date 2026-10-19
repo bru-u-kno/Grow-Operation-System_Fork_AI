@@ -90,7 +90,7 @@ public sealed class NotificationsApiController : ControllerBase
         // Mit Ziel, damit der Test auch den Tipp auf die Meldung prüft — der
         // führte bis forkai.167 auf „404: Not Found", und kein Test sah es.
         var sent = await _homeAssistant.SendNotificationAsync(
-            settings, service, "🌱 Grow OS", "Test-Benachrichtigung — deine Push-Nachrichten sind richtig eingerichtet.", cancellationToken,
+            settings, service, "🌱 Cultivate Control", "Test-Benachrichtigung — deine Push-Nachrichten sind richtig eingerichtet.", cancellationToken,
             await _notifications.StartPfadAsync(cancellationToken));
 
         return Ok(new { ok = sent });
@@ -131,7 +131,7 @@ public sealed class NotificationsApiController : ControllerBase
         {
             var body = CalibrationReminderService.BuildDueMessage(due)
                 ?? "Test: So sieht eine Kalibrierungs-Erinnerung aus. Aktuell ist nichts fällig.";
-            sent = await _notifications.SendAsync(NotificationCategory.Calibration, "🌱 Grow OS · Kalibrierung", body, cancellationToken);
+            sent = await _notifications.SendAsync(NotificationCategory.Calibration, "🌱 Cultivate Control · Kalibrierung", body, cancellationToken);
             message = sent
                 ? (due.Count > 0
                     ? $"{due.Count} Kalibrierung(en) fällig — Erinnerung ans Handy gesendet."
@@ -200,7 +200,7 @@ public sealed class NotificationsApiController : ControllerBase
         }
 
         var sent = await _notifications.SendAsync(
-            NotificationCategory.System, "🌱 Grow OS · Systemtest", $"{verdict.Headline}: {verdict.Detail}", cancellationToken,
+            NotificationCategory.System, "🌱 Cultivate Control · Systemtest", $"{verdict.Headline}: {verdict.Detail}", cancellationToken,
             // Derselbe Weg wie die echte Watchdog-Meldung (WatchdogService) — sonst belegt der Test einen anderen.
             seite: NotificationService.LiveSeite());
         return Ok(new

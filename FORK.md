@@ -1,10 +1,10 @@
-# Grow OS Fork AI — Unterschiede zum Original
+# Cultivate Control — Herkunft und Unterschiede zum Original
 
-Dieses Repository ist ein Ableger von [Grow OS](https://github.com/Nerdstreak/Grow-Operation-System)
+Cultivate Control ist ein Ableger von [Grow Operation System](https://github.com/Nerdstreak/Grow-Operation-System)
 (Nerdstreak, MIT-Lizenz). Ziel: Weiterentwicklungen ausprobieren, die dem
 Original-Projekt später als Pull Request angeboten werden können.
 
-**Basis:** Grow OS 2.0.0-beta.65 · **Add-on:** „Grow OS Fork AI" (`grow_os_fork_ai`),
+**Basis:** Grow Operation System 2.0.0-beta.65 · **Add-on:** „Cultivate Control" (`cultivate_control`; bis forkai.253 „Grow OS Fork AI", `grow_os_fork_ai`),
 läuft parallel zum Original, eigene Datenbank, eigenes Image.
 
 Diese Seite ist die Kurzfassung. Wer es Version für Version braucht:
@@ -61,7 +61,7 @@ täglich um 06:00 in HA-Helfer, nach denen dort die Automationen regeln. Von Han
 verstellte Helfer erkennt der Abgleich, überschreibt sie nicht und bietet sie zum
 Freigeben an (im Reiter „Werte“). Jeder Helfer hat dabei genau eine schreibende
 Stelle im Fork: was der Plan führt, lassen CO₂- und Kühler-Seite aus; das CO₂-Ziel schreibt
-allein die CO₂-Steuerung als Staffel aus dem Wochenwert. Leitgedanke: Grow OS
+allein die CO₂-Steuerung als Staffel aus dem Wochenwert. Leitgedanke: Cultivate Control
 plant, Home Assistant regelt.
 
 **Tag/Nacht-Zielwerte.** Die Zelt-Grenzwerte tragen ein zweites Band für die
@@ -196,17 +196,17 @@ und trägt in `configuration.yaml` ein:
 ingress:
   growos:
     work_mode: hassio
-    url: d48160c2_grow_os_fork_ai   # eigener Add-on-Slug, siehe Add-on-Seite in HA
+    url: 00d580e3_cultivate_control   # eigener Add-on-Slug, siehe Add-on-Seite in HA
     ui_mode: normal                 # 'normal' = ohne HA-Kopfleiste
-    title: Grow OS
+    title: Cultivate Control
     icon: mdi:sprout
 ```
 
 Danach Home Assistant neu starten. In der Seitenleiste erscheint ein neuer
-Eintrag, der Grow OS bildschirmfüllend öffnet; der alte Add-on-Eintrag bleibt
+Eintrag, der Cultivate Control bildschirmfüllend öffnet; der alte Add-on-Eintrag bleibt
 daneben bestehen.
 
-**Push-Meldungen öffnen dann dieses Panel** (seit forkai.171): Grow OS fragt Home
+**Push-Meldungen öffnen dann dieses Panel** (seit forkai.171): Cultivate Control fragt Home
 Assistant per `get_panels`, ob es ein Ingress-Panel mit `ui_mode: normal` für den
 eigenen Slug gibt, und schickt den Tipp auf `/<panel>?index=<seite>`
 (`IngressPanelService`). Gibt es keins, bleibt es bei `/app/<slug>/<seite>`.

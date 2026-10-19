@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// Push-Meldungen öffnen das Ingress-Panel ohne HA-Kopfleiste, wenn es eins gibt.
 /// </summary>
 /// <remarks>
-/// Anlass (05.10.2026): der Nutzer öffnet Grow OS am Handy über ein Panel der
+/// Anlass (05.10.2026): der Nutzer öffnet Cultivate Control am Handy über ein Panel der
 /// HACS-Integration „Ingress" ohne die weiße HA-Kopfleiste. Der Tipp auf eine
 /// Meldung öffnete aber <c>/app/&lt;slug&gt;/…</c> — mit Leiste. Die Antworten von
 /// <c>get_panels</c> hier sind der Form nachgebaut, die <c>panel_custom</c> und
@@ -18,7 +18,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </remarks>
 public sealed class IngressPanelServiceTests
 {
-    private const string Slug = "d48160c2_grow_os_fork_ai";
+    private const string Slug = "00d580e3_cultivate_control";
 
     private static readonly HomeAssistantSettings Ha = new() { BaseUrl = "http://ha.local:8123", AccessToken = "token", Enabled = true };
 
@@ -27,7 +27,7 @@ public sealed class IngressPanelServiceTests
         "{{name}}": {
           "component_name": "custom",
           "icon": "mdi:sprout",
-          "title": "Grow OS",
+          "title": "Cultivate Control",
           "url_path": "{{name}}",
           "require_admin": false,
           "config": {

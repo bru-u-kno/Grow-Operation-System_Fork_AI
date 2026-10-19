@@ -27,7 +27,7 @@ namespace GrowMcp.Tests;
 /// mit den Schreib- und Home-Assistant-Werkzeugen kamen zwei Klassen dazu, und
 /// eine Zählung über eine feste Klasse hätte sie nie gesehen. Jedes Werkzeug
 /// läuft zweimal — mit dem MCP-Schlüssel (nur lesen) und mit einem Schlüssel
-/// aus Grow OS.</para>
+/// aus Cultivate Control.</para>
 /// </summary>
 public sealed class WerkzeugeVollstaendigTests
 {

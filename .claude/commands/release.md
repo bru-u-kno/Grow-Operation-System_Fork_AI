@@ -123,12 +123,12 @@ Store noch einlesen und das Update installieren? Das kannst du doch selber."
 
 1. `ha_manage_app(action='check_updates')` — liest den Store neu ein. Sonst
    erscheint das Update erst beim nächsten Abgleich des Supervisors (alle
-   paar Stunden). In der Antwort muss `d48160c2_grow_os_fork_ai` mit
+   paar Stunden). In der Antwort muss `00d580e3_cultivate_control` mit
    `version_after` = `<X>` stehen.
-2. `ha_manage_app(slug='d48160c2_grow_os_fork_ai', action='update')`.
-3. `ha_get_app(slug='d48160c2_grow_os_fork_ai')` — `version` = `<X>` und
+2. `ha_manage_app(slug='00d580e3_cultivate_control', action='update')`.
+3. `ha_get_app(slug='00d580e3_cultivate_control')` — `version` = `<X>` und
    `state` = `started`. Die Meldung „update completed" allein ist kein Beleg.
-4. `ha_get_logs(source='supervisor', slug='d48160c2_grow_os_fork_ai')` —
+4. `ha_get_logs(source='supervisor', slug='00d580e3_cultivate_control')` —
    der Start bis „Application started" ohne Fehler, Migrationen gelesen.
 5. Eine Anfrage an die laufende App über den Ingress
    (`ha_manage_app(slug=…, path='/api/grows')`) — antwortet sie mit 200 und

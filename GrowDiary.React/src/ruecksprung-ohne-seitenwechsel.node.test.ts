@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
  * <b>Was hier geprüft wird.</b> Der Rücksprung im HA-Rahmen benutzt die
  * Verlaufsliste plus das Ereignis `location-changed`, mit dem das Frontend
  * seine Ansicht wechselt. `location.href` bleibt nur die Rückfallebene für den
- * Fall, dass Grow OS gar nicht im Rahmen steckt (eigener Tab, fremder Proxy).
+ * Fall, dass Cultivate Control gar nicht im Rahmen steckt (eigener Tab, fremder Proxy).
  */
 describe('Rücksprung nach Home Assistant', () => {
   const quelle = readFileSync(new URL('./useHomeAssistantFrame.ts', import.meta.url), 'utf8')

@@ -1,18 +1,18 @@
-# Grow OS — das RDWC/DWC-Grow-Add-on für Home Assistant
+# Cultivate Control — das RDWC/DWC-Grow-Add-on für Home Assistant
 
 [English](README.md) · **Deutsch**
 
-**Mach aus deinen Home-Assistant-Sensoren ein echtes Grow-Management-Cockpit.** Grow OS
+**Mach aus deinen Home-Assistant-Sensoren ein echtes Grow-Management-Cockpit.** Cultivate Control
 ist ein kostenloses, lokal-first Home-Assistant-Add-on für Hydro-Grower (RDWC/DWC): ein
 Live-Instrumenten-Dashboard, Grow-Dokumentation, SOPs, Hardware- & Wartungs-Tracking,
 sensorgestützte Diagnose und Risiko-Warnungen — alles direkt in Home Assistant, alles
 auf deiner eigenen Hardware. Keine Cloud, kein Account, kein SaaS.
 
 <p align="center">
-  <img src="docs/images/live-dashboard-desktop.png" alt="Grow OS Live-Dashboard" width="100%">
+  <img src="docs/images/live-dashboard-desktop.png" alt="Cultivate Control Live-Dashboard" width="100%">
 </p>
 
-## Warum Grow OS
+## Warum Cultivate Control
 
 - **Home-Assistant-nativ.** Es liest deine vorhandenen HA-Entitäten — dadurch
   funktioniert *jeder* Sensor, den HA unterstützt: pH, EC, Wassertemperatur, DO, ORP,
@@ -44,7 +44,7 @@ auf deiner eigenen Hardware. Keine Cloud, kein Account, kein SaaS.
 - 📱 **Mobiltauglich** — läuft direkt in der Home-Assistant-App.
 
 <p align="center">
-  <img src="docs/images/live-dashboard-mobile.png" alt="Grow OS am Handy" width="260">
+  <img src="docs/images/live-dashboard-mobile.png" alt="Cultivate Control am Handy" width="260">
 </p>
 
 ## Screenshots
@@ -67,18 +67,18 @@ gibt es keine Add-ons).
 
 > 🍓 **Ganz von vorne?** Wenn du noch kein Home Assistant hast, führt dich die
 > [Schritt-für-Schritt-Anleitung: Raspberry Pi von Grund auf](docs/pi-setup.md) von der
-> leeren SD-Karte bis Grow OS läuft — ganz ohne Vorwissen.
+> leeren SD-Karte bis Cultivate Control läuft — ganz ohne Vorwissen.
 
 1. In Home Assistant: **Einstellungen → Add-ons → Add-on-Store**.
 2. Oben rechts **⋮ → Repositories**, und hinzufügen:
 
    ```
-   https://github.com/Nerdstreak/Grow-Operation-System
+   https://github.com/bru-u-kno/cultivate-control
    ```
 
-3. **Grow OS** erscheint im Store → **Installieren** → **Starten**.
+3. **Cultivate Control** erscheint im Store → **Installieren** → **Starten**.
 4. Auf der **Info**-Seite des Add-ons den Schalter **„In Seitenleiste anzeigen"**
-   aktivieren, damit Grow OS in der Home-Assistant-Seitenleiste erscheint (🌱).
+   aktivieren, damit Cultivate Control in der Home-Assistant-Seitenleiste erscheint (🌱).
 5. Über die Seitenleiste öffnen. Es ist bereits mit Home Assistant verbunden — wähl
    einfach deine Sensoren aus dem Dropdown.
 

@@ -52,12 +52,12 @@ Wer sie beim Bauen kennt, baut sie nicht ein.
 ## Sperren und Grenzen
 
 12. **Eine Sperre darf nie den Berechtigten treffen.** Viele Clients teilen sich
-    eine Adresse (Grow MCP, HA-MCP). Eine IP-Sperre gegen Fehlversuche ließ
+    eine Adresse (Cultivate Control MCP, HA-MCP). Eine IP-Sperre gegen Fehlversuche ließ
     früher auch den gültigen Schlüssel nicht mehr durch (Befund A-005).
 13. **Ein Stopp scheitert nie an einer Grenze** (`[KiOhneHoechstwert]` am
     Pumpen-Stopp).
 13a. **Eine Grenze nur dort versprechen, wo sie durchgesetzt wird.** Ein Weg,
-    der an Grow OS vorbeiführt, sagt das. Die erste Fassung der Seite
+    der an Cultivate Control vorbeiführt, sagt das. Die erste Fassung der Seite
     KI-Assistent versprach Stufen und „nie über einen Schlüssel" auch für den
     Home Assistant MCP Server — der hat selbst vollen Zugriff auf Home
     Assistant (Prüfer 04.10.2026).

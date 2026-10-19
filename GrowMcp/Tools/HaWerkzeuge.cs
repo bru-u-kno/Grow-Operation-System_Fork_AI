@@ -8,17 +8,17 @@ using ModelContextProtocol.Server;
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Home Assistant lesen und schalten — über Grow OS, mit einem Fork-Schlüssel.
+/// Home Assistant lesen und schalten — über Cultivate Control, mit einem Fork-Schlüssel.
 /// </summary>
 /// <remarks>
-/// <para>Fork AI (A-004, 03.10.2026): Der Grow MCP spricht nie selbst mit Home
-/// Assistant. Grow OS hat den Zugang dorthin schon (es schaltet Licht und
+/// <para>Fork AI (A-004, 03.10.2026): Der Cultivate Control MCP spricht nie selbst mit Home
+/// Assistant. Cultivate Control hat den Zugang dorthin schon (es schaltet Licht und
 /// Pumpen darüber) und bietet ihn Assistenten unter <c>/api/ki-ha/…</c> an —
 /// nur mit Schlüssel, und mit den Stufen, die der Betreiber vergeben hat. Ein
 /// zweiter Weg zu Home Assistant hier hätte eigene Rechte gebraucht und hätte
-/// die Stufen von Grow OS umgangen.</para>
+/// die Stufen von Cultivate Control umgangen.</para>
 ///
-/// <para><b>Vertrag</b> (baut Grow OS, Stand 03.10.2026):
+/// <para><b>Vertrag</b> (baut Cultivate Control, Stand 03.10.2026):
 /// <c>GET bereiche</c> → <c>[{ id, name }]</c>;
 /// <c>GET zustaende?bereich=&amp;domain=&amp;suche=&amp;anzahl=</c> →
 /// <c>[{ entityId, name, zustand, einheit, bereich, geaendertAmUtc }]</c>;
@@ -26,14 +26,14 @@ namespace GrowMcp.Tools;
 /// <c>POST dienst</c> mit <c>{ domain, dienst, entityId?, daten? }</c> →
 /// <c>{ erfolg, meldung }</c>. Ohne Schlüssel 401 <c>ki_schluessel_fehlt</c>.</para>
 ///
-/// <para><b>Wie Grow OS ihn gebaut hat</b> (Branch <c>ki-ha-schnittstelle</c>,
+/// <para><b>Wie Cultivate Control ihn gebaut hat</b> (Branch <c>ki-ha-schnittstelle</c>,
 /// <c>KiHomeAssistantApiController</c>, <c>KiHaEinstufung</c>): <c>anzahl</c>
 /// ausserhalb 1–500 und <c>stunden</c> ausserhalb 1–168 geben 400 statt still zu
 /// kappen — deshalb begrenzen die Werkzeuge vorher. <c>domain</c> und
 /// <c>dienst</c> nur aus <c>[a-z0-9_]</c>, <c>entityId</c> genau eine Entität mit
 /// dem Präfix der Domain, in <c>daten</c> keine Zielfelder. Dieselben Regeln
 /// stehen hier als Vorprüfung, damit der Assistent den Grund sofort und auf
-/// Deutsch bekommt; entscheidend bleibt die Prüfung in Grow OS. Ein Dienst, den
+/// Deutsch bekommt; entscheidend bleibt die Prüfung in Cultivate Control. Ein Dienst, den
 /// Home Assistant nicht bestätigt, kommt als 200 mit <c>erfolg: false</c> — das
 /// ist ein Misserfolg und wird so gemeldet. Neu sind 503
 /// <c>ha_nicht_eingerichtet</c> und 502 <c>ha_nicht_erreichbar</c>.</para>
@@ -49,13 +49,13 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
     };
 
     [McpServerTool(Name = "ha_bereiche")]
-    [Description("Die Bereiche (Räume) in Home Assistant mit Id und Name — zum Eingrenzen von ha_zustaende. Lesend; braucht einen Schlüssel aus Grow OS, aber keine Stufe.")]
+    [Description("Die Bereiche (Räume) in Home Assistant mit Id und Name — zum Eingrenzen von ha_zustaende. Lesend; braucht einen Schlüssel aus Cultivate Control, aber keine Stufe.")]
     [BrauchtForkSchluessel]
     public Task<string> BereicheAsync(CancellationToken cancellationToken = default)
         => AnfragenAsync(HttpMethod.Get, $"{Basis}/bereiche", null, "Bereiche lesen", cancellationToken);
 
     [McpServerTool(Name = "ha_zustaende")]
-    [Description("Der aktuelle Zustand von Geräten und Sensoren in Home Assistant: Entity-Id, Name, Zustand, Einheit, Bereich, letzte Änderung. Mit Bereich, Domain (light, switch, sensor …) oder Suchwort eingrenzen. Lesend; braucht einen Schlüssel aus Grow OS, aber keine Stufe.")]
+    [Description("Der aktuelle Zustand von Geräten und Sensoren in Home Assistant: Entity-Id, Name, Zustand, Einheit, Bereich, letzte Änderung. Mit Bereich, Domain (light, switch, sensor …) oder Suchwort eingrenzen. Lesend; braucht einen Schlüssel aus Cultivate Control, aber keine Stufe.")]
     [BrauchtForkSchluessel]
     public Task<string> ZustaendeAsync(
         [Description("Id eines Bereichs aus ha_bereiche")] string? bereich = null,
@@ -74,7 +74,7 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
     }
 
     [McpServerTool(Name = "ha_verlauf")]
-    [Description("Der Verlauf EINER Entity in Home Assistant über die letzten Stunden (1 bis 168): Zeitpunkte (UTC) mit Zustand. Lesend; braucht einen Schlüssel aus Grow OS, aber keine Stufe.")]
+    [Description("Der Verlauf EINER Entity in Home Assistant über die letzten Stunden (1 bis 168): Zeitpunkte (UTC) mit Zustand. Lesend; braucht einen Schlüssel aus Cultivate Control, aber keine Stufe.")]
     [BrauchtForkSchluessel]
     public Task<string> VerlaufAsync(
         [Description("Genau eine Entity-Id, etwa sensor.zelt_temperatur")][Beispiel("sensor.zelt_temperatur")] string entityId,
@@ -95,14 +95,14 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
     /// <summary>Genau eine Entität: <c>domain.objekt</c>, beides aus <c>[a-z0-9_]</c>.</summary>
     private static readonly System.Text.RegularExpressions.Regex EineEntitaet = new(@"^[a-z0-9_]+\.[a-z0-9_]+$");
 
-    /// <summary>Name einer Domain oder eines Dienstes — so streng wie Grow OS.</summary>
+    /// <summary>Name einer Domain oder eines Dienstes — so streng wie Cultivate Control.</summary>
     private static readonly System.Text.RegularExpressions.Regex Bezeichner = new(@"^[a-z0-9_]+$");
 
     /// <summary>
     /// Zielfelder, die in <c>daten</c> nichts zu suchen haben.
     /// </summary>
     /// <remarks>
-    /// Steht in Grow OS am Vertrag (<c>KiHaDienstRequest.Daten</c>): das Ziel geht
+    /// Steht in Cultivate Control am Vertrag (<c>KiHaDienstRequest.Daten</c>): das Ziel geht
     /// NUR über <c>entityId</c>. Sonst könnte <c>light.turn_on</c> mit
     /// <c>{"area_id": "haus"}</c> jede Lampe im Haus schalten — an der Prüfung
     /// der Entität vorbei.
@@ -111,7 +111,7 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
         ["entity_id", "device_id", "area_id", "floor_id", "label_id", "target", "entities", "snapshot_entities"];
 
     [McpServerTool(Name = "ha_dienst")]
-    [Description($"Ruft einen Dienst in Home Assistant auf, etwa domain light, dienst turn_on, entityId light.zelt, daten {{\"brightness_pct\": 60}}. Braucht Stufe „{Stufen.GeraeteSchaltenText}\". Automationen, Skripte, Szenen und Helfer (input_*, timer, counter, schedule) brauchen zusätzlich Stufe „{Stufen.VerwaltungText}\". Erlaubt sind nur Gerätebereiche: light, switch, fan, climate, humidifier, cover, valve, number, select, button, water_heater, vacuum, media_player — und dort nur ihre Steuerdienste (etwa turn_on, turn_off, set_temperature; media_player ohne play_media, vacuum ohne send_command). Jede andere Domain und jeder reload-Dienst geht über einen Schlüssel nie, egal mit welcher Stufe; Grow OS lehnt sie mit Begründung ab. Die Entität geht nur über entityId (genau eine, Präfix = Domain); entity_id, device_id, area_id, floor_id, label_id, target, entities und snapshot_entities sind in daten verboten. erfolg=false heißt: NICHT ausgeführt.")]
+    [Description($"Ruft einen Dienst in Home Assistant auf, etwa domain light, dienst turn_on, entityId light.zelt, daten {{\"brightness_pct\": 60}}. Braucht Stufe „{Stufen.GeraeteSchaltenText}\". Automationen, Skripte, Szenen und Helfer (input_*, timer, counter, schedule) brauchen zusätzlich Stufe „{Stufen.VerwaltungText}\". Erlaubt sind nur Gerätebereiche: light, switch, fan, climate, humidifier, cover, valve, number, select, button, water_heater, vacuum, media_player — und dort nur ihre Steuerdienste (etwa turn_on, turn_off, set_temperature; media_player ohne play_media, vacuum ohne send_command). Jede andere Domain und jeder reload-Dienst geht über einen Schlüssel nie, egal mit welcher Stufe; Cultivate Control lehnt sie mit Begründung ab. Die Entität geht nur über entityId (genau eine, Präfix = Domain); entity_id, device_id, area_id, floor_id, label_id, target, entities und snapshot_entities sind in daten verboten. erfolg=false heißt: NICHT ausgeführt.")]
     [BrauchtForkSchluessel(Stufen.GeraeteSchalten)]
     public async Task<string> DienstAsync(
         [Description("Domain des Dienstes, etwa light, switch, climate")][Beispiel("light")] string domain,
@@ -163,7 +163,7 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
 
         var text = await AnfragenAsync(HttpMethod.Post, $"{Basis}/dienst", rumpf, "Home-Assistant-Dienst", cancellationToken);
 
-        // „angenommen" ist nicht „ausgeführt": Grow OS meldet erfolg=false mit
+        // „angenommen" ist nicht „ausgeführt": Cultivate Control meldet erfolg=false mit
         // Begründung, wenn Home Assistant den Aufruf abweist. Das gehört nach
         // vorn, sonst liest der Assistent nur die erste Zeile.
         try
@@ -185,7 +185,7 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
         return text;
     }
 
-    /// <summary>Eine Anfrage an den Home-Assistant-Zugang von Grow OS — Antwort roh oder als Satz.</summary>
+    /// <summary>Eine Anfrage an den Home-Assistant-Zugang von Cultivate Control — Antwort roh oder als Satz.</summary>
     private async Task<string> AnfragenAsync(HttpMethod methode, string pfad, JsonObject? rumpf, string was, CancellationToken cancellationToken)
     {
         if (!reader.HatForkSchluessel) return ForkFehler.SchluesselNoetig;
@@ -201,20 +201,20 @@ public sealed class HaWerkzeuge(GrowOsReader reader)
         }
         catch (HttpRequestException)
         {
-            return "Grow OS ist gerade nicht erreichbar. Es wurde nichts ausgeführt.";
+            return "Cultivate Control ist gerade nicht erreichbar. Es wurde nichts ausgeführt.";
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return "Grow OS hat nicht rechtzeitig geantwortet. Ob der Aufruf ankam, ist offen — vor einem zweiten Versuch mit ha_zustaende nachsehen.";
+            return "Cultivate Control hat nicht rechtzeitig geantwortet. Ob der Aufruf ankam, ist offen — vor einem zweiten Versuch mit ha_zustaende nachsehen.";
         }
 
         if (antwort.Erfolg) return antwort.Text;
 
-        // Gibt es den Weg in Grow OS noch gar nicht, ist das eine Frage der
+        // Gibt es den Weg in Cultivate Control noch gar nicht, ist das eine Frage der
         // Fassung, nicht der Rechte.
         if (antwort.Status == 404 && antwort.Text.Contains("endpoint_not_found", StringComparison.Ordinal))
         {
-            return "Diese Fassung von Grow OS kennt den Zugang zu Home Assistant für Assistenten noch nicht. Bitte Grow OS Fork AI aktualisieren.";
+            return "Diese Fassung von Cultivate Control kennt den Zugang zu Home Assistant für Assistenten noch nicht. Bitte Cultivate Control aktualisieren.";
         }
 
         return ForkFehler.Text(antwort.Status, antwort.Text, was);

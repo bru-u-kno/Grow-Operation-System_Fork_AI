@@ -223,7 +223,7 @@ public sealed class DosingGuardTests
     [Fact]
     public void WithoutTheHomeAssistantAutoOff_AutomationStaysLocked()
     {
-        // Stuerzt Grow OS zwischen Ein- und Ausschalten ab, laeuft die Pumpe
+        // Stuerzt Cultivate Control zwischen Ein- und Ausschalten ab, laeuft die Pumpe
         // weiter. Unbeaufsichtigt ist das nicht vertretbar.
         var decision = DosingGuard.EvaluateAutomatic(Pump(p => p.HasHomeAssistantAutoOff = false), 2, Context(), Now);
 

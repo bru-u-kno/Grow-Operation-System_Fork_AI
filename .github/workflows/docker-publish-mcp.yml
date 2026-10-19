@@ -1,6 +1,6 @@
 name: Docker image (MCP)
 
-# Eigener Ablauf, weil der MCP-Server seine eigene Versionsnummer hat: Grow OS
+# Eigener Ablauf, weil der MCP-Server seine eigene Versionsnummer hat: Cultivate Control
 # soll sich nicht mitbewegen, nur weil hier etwas erscheint.
 on:
   push:

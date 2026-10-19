@@ -39,7 +39,7 @@ public sealed partial class SystemApiController
         var grows = _repository.GetAllGrows();
 
         return Ok(new BackendHealthDto(
-            AppName: "Grow OS",
+            AppName: "Cultivate Control",
             BackendSchema: "backend-core.v0.18-candidate",
             CheckedAtUtc: DateTime.UtcNow,
             TentCount: tents.Count,
@@ -119,7 +119,7 @@ public sealed partial class SystemApiController
             new("migration_engine_foundation", "pass", "Migrationen besitzen einen maschinenlesbaren Plan, Backup-Pflicht und Destructive-Guardrails als Fundament."),
             new("grow_snapshots", "pass", "Neue Grows speichern unveränderliche Zelt- und HydroSetup-Snapshots für stabile Vergleiche und Exporte."),
             new("migration_engine", "partial", "Schema-Migrationen werden protokolliert; destructive Rollbacks und echte Restore-/Rollback-Automation fehlen noch."),
-            new("auth_remote", "pass", "Als Home-Assistant-Add-on laeuft Grow OS hinter dem Ingress; Home Assistant uebernimmt Authentifizierung und Remote-Zugriff."),
+            new("auth_remote", "pass", "Als Home-Assistant-Add-on laeuft Cultivate Control hinter dem Ingress; Home Assistant uebernimmt Authentifizierung und Remote-Zugriff."),
             new("grow_import_execute", "pass", "Grow-Exports koennen kontrolliert als neue lokale Vergleichs-Grows importiert werden, ohne bestehende Grows, Zelte oder HydroSetups zu ueberschreiben.")
         };
 
@@ -361,7 +361,7 @@ public sealed partial class SystemApiController
             ProtectedRoutePrefixes: AdminAccessPolicy.ProtectedRoutePrefixes,
             Notes: new[]
             {
-                "Grow OS laeuft als Home-Assistant-Add-on hinter dem Ingress-Proxy; Home Assistant authentifiziert jeden Zugriff.",
+                "Cultivate Control laeuft als Home-Assistant-Add-on hinter dem Ingress-Proxy; Home Assistant authentifiziert jeden Zugriff.",
                 "Der Add-on-Port ist nicht ins Netzwerk veroeffentlicht (ingress-only) und daher nicht direkt erreichbar.",
                 "Administrative System-, Settings- und Export-Endpunkte sind zusaetzlich nur lokal oder ueber den Ingress erreichbar."
             },

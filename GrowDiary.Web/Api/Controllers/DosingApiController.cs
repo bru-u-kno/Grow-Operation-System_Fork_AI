@@ -403,7 +403,7 @@ public sealed class DosingApiController : ApiControllerBase
     /// </summary>
     /// <remarks>
     /// Fragt nichts und prüft nichts — Ausschalten darf nie an einer Bedingung
-    /// scheitern. Läuft auch dann, wenn die Pumpe aus Sicht von Grow OS längst
+    /// scheitern. Läuft auch dann, wenn die Pumpe aus Sicht von Cultivate Control längst
     /// steht: dann kostet es einen wirkungslosen Aufruf, und das ist der
     /// richtige Preis.
     /// </remarks>
@@ -423,7 +423,7 @@ public sealed class DosingApiController : ApiControllerBase
 
     /// <summary>Nur rechnen, nicht dosieren — was würde jetzt herauskommen.</summary>
     /// <remarks>
-    /// Stufe 2: Grow OS rechnet, der Mensch entscheidet. Der Vorschlag geht durch
+    /// Stufe 2: Cultivate Control rechnet, der Mensch entscheidet. Der Vorschlag geht durch
     /// dieselben Anschläge wie eine echte Dosis, damit hier nie eine Menge steht,
     /// die beim Druck auf „Dosieren" abgelehnt würde.
     /// </remarks>
@@ -471,7 +471,7 @@ public sealed class DosingApiController : ApiControllerBase
         if (ml is null)
         {
             return Ok(Antwort(false, 0, 0, gelernt is null
-                ? "Noch keine Erfahrung — die ersten Dosen gibst du von Hand, danach rechnet Grow OS."
+                ? "Noch keine Erfahrung — die ersten Dosen gibst du von Hand, danach rechnet Cultivate Control."
                 : "Nichts zu tun: der Wert liegt schon richtig, oder diese Pumpe wirkt andersherum."));
         }
 

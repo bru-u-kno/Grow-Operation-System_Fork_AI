@@ -1,6 +1,6 @@
 {
   "alias": "Water Chiller Sollwert",
-  "description": "Fuer Kuehler mit eigenem Thermostat (climate- oder number-Geraet): schreibt das aktive Ziel (sensor.chiller_zieltemperatur_aktiv, Tag oder Nacht je nach Licht) ins Geraet, sobald es sich aendert, beim Start von Home Assistant und alle 15 Minuten, falls das Geraet nach einem Neustart seinen eigenen Wert zurueckholt. Geschrieben wird nur, wenn das Geraet mehr als 0,05 K abweicht. Kommt der Wasserfuehler nach einem Ausfall zurueck, schaltet die Automation einen climate-Kuehler wieder ein, den der Waechter abgeschaltet hatte. Automation ausschalten heisst: das Geraet behaelt seinen letzten Sollwert. Angelegt von Grow OS Fork AI - Herkunft: fork-ai/chiller/sollwert/1.",
+  "description": "Fuer Kuehler mit eigenem Thermostat (climate- oder number-Geraet): schreibt das aktive Ziel (sensor.chiller_zieltemperatur_aktiv, Tag oder Nacht je nach Licht) ins Geraet, sobald es sich aendert, beim Start von Home Assistant und alle 15 Minuten, falls das Geraet nach einem Neustart seinen eigenen Wert zurueckholt. Geschrieben wird nur, wenn das Geraet mehr als 0,05 K abweicht. Kommt der Wasserfuehler nach einem Ausfall zurueck, schaltet die Automation einen climate-Kuehler wieder ein, den der Waechter abgeschaltet hatte. Automation ausschalten heisst: das Geraet behaelt seinen letzten Sollwert. Angelegt von Cultivate Control - Herkunft: fork-ai/chiller/sollwert/1.",
   "mode": "restart",
   "triggers": [
     { "trigger": "state", "id": "ziel", "entity_id": "sensor.chiller_zieltemperatur_aktiv" },

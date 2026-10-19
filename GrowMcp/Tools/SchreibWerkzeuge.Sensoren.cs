@@ -15,8 +15,8 @@ namespace GrowMcp.Tools;
 /// <remarks>
 /// <para><b>Warum nicht über das ganze Zelt.</b> <c>PUT api/settings/tents/{id}</c> mit <c>sensors</c> legt alle Sensorzeilen neu an
 /// (neue Ids; Geräte und Meldungen hängen daran). Deshalb lässt <c>zelt_aufstellraum_setzen</c> die Sensoren weg, und deshalb gibt
-/// es in Grow OS <c>PUT api/settings/tents/{id}/sensors/{metricType}</c>, das genau eine Zeile ändert.</para>
-/// <para><b>Namen nicht von hier.</b> Etikett, Schlüssel und passende Domains liefert Grow OS (<c>GET api/messgroessen</c>); dort
+/// es in Cultivate Control <c>PUT api/settings/tents/{id}/sensors/{metricType}</c>, das genau eine Zeile ändert.</para>
+/// <para><b>Namen nicht von hier.</b> Etikett, Schlüssel und passende Domains liefert Cultivate Control (<c>GET api/messgroessen</c>); dort
 /// sind sie gegen die App-Oberfläche geprüft. Hier wird nur toleriert, wie ein Mensch sie sagt.</para>
 /// <para><b>Gemessen, nicht behauptet.</b> <c>sensor_zuordnen</c> liest das Zelt vor und nach dem Speichern und vergleicht jede
 /// andere Zeile (Id, Messgröße, Entität, aktiv). Erst dann steht in der Antwort, dass sie gleich geblieben sind.</para>
@@ -32,13 +32,13 @@ public sealed partial class SchreibWerkzeuge
         public IEnumerable<string> Namen => new[] { MetricType, Schluessel, Etikett, MeldeEtikett }.OfType<string>();
     }
 
-    /// <summary>Eine Sensorzeile eines Zelts, wie Grow OS sie liefert.</summary>
+    /// <summary>Eine Sensorzeile eines Zelts, wie Cultivate Control sie liefert.</summary>
     public readonly record struct SensorZeile(int Id, string MetricType, string Entitaet, bool Aktiv);
 
     // ------------------------------------------------------------------ sensoren
 
     [McpServerTool(Name = "sensoren")]
-    [Description($"Die Sensor-Zuordnung eines Zelts: je Messgröße (deutsches Etikett wie in der App) die Home-Assistant-Entität, ob aktiv, ihr Wert jetzt — und welche Messgrößen noch frei sind. Ohne zeltId bei nur einem Zelt dieses. Liest nur; Grow OS verlangt für die Zelt-Einstellungen trotzdem Stufe „{Stufen.VerwaltungText}\". Vor sensor_zuordnen aufrufen.")]
+    [Description($"Die Sensor-Zuordnung eines Zelts: je Messgröße (deutsches Etikett wie in der App) die Home-Assistant-Entität, ob aktiv, ihr Wert jetzt — und welche Messgrößen noch frei sind. Ohne zeltId bei nur einem Zelt dieses. Liest nur; Cultivate Control verlangt für die Zelt-Einstellungen trotzdem Stufe „{Stufen.VerwaltungText}\". Vor sensor_zuordnen aufrufen.")]
     [BrauchtForkSchluessel(Stufen.Verwaltung, NurLesen = true)]
     public async Task<string> SensorenAsync(
         [Description("Die Id des Zelts; weglassen, wenn es nur eines gibt")] int? zeltId = null,
@@ -98,7 +98,7 @@ public sealed partial class SchreibWerkzeuge
     [BrauchtForkSchluessel(Stufen.Verwaltung)]
     public async Task<string> SensorZuordnenAsync(
         [Description("Die Id des Zelts (aus sensoren oder raum)")] int zeltId,
-        [Description("Die Messgröße wie in der App („Außen Temp.\", „pH\", „Luftfeuchte\") oder ihr Name in Grow OS (OutsideTemperature, outside-temperature)")][Beispiel("Außen Temp.")] string messgroesse,
+        [Description("Die Messgröße wie in der App („Außen Temp.\", „pH\", „Luftfeuchte\") oder ihr Name in Cultivate Control (OutsideTemperature, outside-temperature)")][Beispiel("Außen Temp.")] string messgroesse,
         [Description("Die Entity-Id in Home Assistant, etwa sensor.controller_temperatur. Nur ein ausdrücklich leerer Text (\"\") oder „keine\" löst die Zuordnung.")][Beispiel("sensor.controller_temperatur")] string entitaet,
         CancellationToken cancellationToken = default)
     {
@@ -162,7 +162,7 @@ public sealed partial class SchreibWerkzeuge
         if (ziel is not null)
         {
             var zielStimmt = neu is { Aktiv: true } n && n.Entitaet == ziel;
-            if (!zielStimmt) satz.Append($"ACHTUNG: Grow OS hat gespeichert, aber {groesse.Etikett} zeigt danach nicht auf {ziel}. Bitte mit sensoren nachsehen. ");
+            if (!zielStimmt) satz.Append($"ACHTUNG: Cultivate Control hat gespeichert, aber {groesse.Etikett} zeigt danach nicht auf {ziel}. Bitte mit sensoren nachsehen. ");
             satz.Append($"{wo}: vorher {altText ?? "keine Zuordnung"}, jetzt {ziel} (gerade {WertText(stand.Zustand!, stand.Einheit)}");
             satz.Append(neu is { } z ? (alt is { } va && va.Id == z.Id ? $"; Sensor-Id {z.Id} wie vorher)." : $"; neue Sensor-Id {z.Id}).") : ").");
         }
@@ -171,7 +171,7 @@ public sealed partial class SchreibWerkzeuge
             satz.Append($"{wo}: Zuordnung gelöst (vorher {altText}).");
             var eigene = nachher.Zeilen.Where(z => z.MetricType == groesse.MetricType).ToList();
             if (eigene.Any(z => z.Aktiv && z.Entitaet.Length > 0))
-                satz.Insert(0, $"ACHTUNG: Grow OS hat gespeichert, aber {groesse.Etikett} ist danach noch zugeordnet. Bitte mit sensoren nachsehen. ");
+                satz.Insert(0, $"ACHTUNG: Cultivate Control hat gespeichert, aber {groesse.Etikett} ist danach noch zugeordnet. Bitte mit sensoren nachsehen. ");
             else if (eigene.Count == 1) satz.Append($" Die Zeile bleibt mit Sensor-Id {eigene[0].Id} inaktiv stehen, so behalten Geräte und Meldungen ihren Verweis.");
             else if (eigene.Count > 1) satz.Append($" Die Zeilen mit den Sensor-Ids {string.Join(", ", eigene.Select(z => z.Id))} bleiben inaktiv stehen, so behalten Geräte und Meldungen ihren Verweis.");
         }
@@ -180,8 +180,8 @@ public sealed partial class SchreibWerkzeuge
             ? uebrige == 0
                 ? " Weitere Zuordnungen hat das Zelt nicht (vorher und nachher verglichen)."
                 : $" Die übrigen {uebrige} Zuordnungen sind unverändert (Ids gleich, vorher und nachher verglichen)."
-            : $" ACHTUNG: Bei anderen Zuordnungen hat sich etwas verändert: {string.Join("; ", abweichend)}. Bitte sofort mit sensoren und in Grow OS prüfen.");
-        if (ziel is not null) satz.Append(" Grow OS liest den Wert ab dem nächsten Messtakt.");
+            : $" ACHTUNG: Bei anderen Zuordnungen hat sich etwas verändert: {string.Join("; ", abweichend)}. Bitte sofort mit sensoren und in Cultivate Control prüfen.");
+        if (ziel is not null) satz.Append(" Cultivate Control liest den Wert ab dem nächsten Messtakt.");
         return satz.ToString();
     }
 
@@ -201,7 +201,7 @@ public sealed partial class SchreibWerkzeuge
         => katalog.FirstOrDefault(m => m.MetricType == metricType)?.Etikett ?? metricType;
 
     /// <summary>
-    /// Die Zeile, die für eine Messgröße gilt — dieselbe Wahl wie Grow OS (<c>SensorMessgroessen.WirksameZeile</c>): die letzte aktive
+    /// Die Zeile, die für eine Messgröße gilt — dieselbe Wahl wie Cultivate Control (<c>SensorMessgroessen.WirksameZeile</c>): die letzte aktive
     /// mit Entität, sonst die älteste.
     /// </summary>
     private static SensorZeile? AktuelleZeile(IReadOnlyList<SensorZeile> zeilen, string metricType)
@@ -268,7 +268,7 @@ public sealed partial class SchreibWerkzeuge
     {
         var antwort = await SendenAsync(HttpMethod.Get, "api/messgroessen", null, cancellationToken);
         if (antwort.Fehler is { } fehler) return ([], fehler);
-        if (antwort.Antwort!.Status == 404) return ([], "Diese Fassung von Grow OS kennt die Messgrößen-Liste noch nicht (ab forkai.247). Bitte Grow OS Fork AI aktualisieren.");
+        if (antwort.Antwort!.Status == 404) return ([], "Diese Fassung von Cultivate Control kennt die Messgrößen-Liste noch nicht (ab forkai.247). Bitte Cultivate Control aktualisieren.");
         if (!antwort.Antwort.Erfolg) return ([], ForkFehler.Text(antwort.Antwort.Status, antwort.Antwort.Text, "Messgrößen lesen"));
         try
         {
@@ -332,7 +332,7 @@ public sealed partial class SchreibWerkzeuge
             var zelte = ZeltListe(JsonSerializer.SerializeToElement(new { zelte = doc.RootElement }), "zelte");
             return zelte.Count switch
             {
-                0 => new(0, "In Grow OS ist noch kein Zelt angelegt."),
+                0 => new(0, "In Cultivate Control ist noch kein Zelt angelegt."),
                 1 => new(zelte[0].Id, null),
                 _ => new(0, "Es gibt mehrere Zelte — bitte zeltId angeben: " + string.Join("; ", zelte.Select(z => $"Zelt {z.Id} „{z.Name}\"")) + "."),
             };
@@ -345,7 +345,7 @@ public sealed partial class SchreibWerkzeuge
 
     private readonly record struct HaStand(string? Zustand, string? Einheit, string? Fehler);
 
-    /// <summary>Zustand und Einheit genau dieser Entität über den Home-Assistant-Zugang von Grow OS; <c>Zustand null</c> = gibt es nicht.</summary>
+    /// <summary>Zustand und Einheit genau dieser Entität über den Home-Assistant-Zugang von Cultivate Control; <c>Zustand null</c> = gibt es nicht.</summary>
     private async Task<HaStand> HaZustandAsync(string entityId, CancellationToken cancellationToken)
     {
         var antwort = await SendenAsync(HttpMethod.Get, $"api/ki-ha/zustaende?suche={Uri.EscapeDataString(entityId)}&anzahl=500", null, cancellationToken);

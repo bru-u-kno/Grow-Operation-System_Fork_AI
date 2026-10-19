@@ -27,7 +27,7 @@ export function RulesCollectionPage() {
     <TabbedCollectionPage
       eyebrow="Betrieb / Auto-Messungen"
       title="Auto-Messungen"
-      subtitle="Wann Grow OS von selbst misst. Grenzwerte und Push aufs Handy haben eigene Menüpunkte."
+      subtitle="Wann Cultivate Control von selbst misst. Grenzwerte und Push aufs Handy haben eigene Menüpunkte."
       tabs={[
         { key: 'automatik', label: 'Auto-Messungen', render: () => <AutomationPage /> },
       ]}
@@ -70,7 +70,7 @@ export function HandySeite() {
     <TabbedCollectionPage
       eyebrow="Einrichtung"
       title="Handy"
-      subtitle="Was aufs Handy kommt — und wie Grow OS aufs Handy kommt."
+      subtitle="Was aufs Handy kommt — und wie Cultivate Control aufs Handy kommt."
       kopf={<PlanKette aktiv="handy" />}
       tabs={[
         { key: 'push', label: 'Push', render: () => <MeldungenReiter /> },

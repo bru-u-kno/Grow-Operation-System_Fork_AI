@@ -13,15 +13,15 @@ namespace GrowDiary.Web.Api.Controllers;
 /// schalten für einen KI-Assistenten mit Schlüssel.
 /// </summary>
 /// <remarks>
-/// <para><b>Wozu.</b> Ein Assistent soll mit EINEM Connector (Grow MCP Fork AI) den
+/// <para><b>Wozu.</b> Ein Assistent soll mit EINEM Connector (Cultivate Control MCP) den
 /// Fork und Home Assistant bedienen, ohne dass ein eigener HA-MCP installiert sein
 /// muss. Der Weg führt durch den Fork, damit dieselben Stufen, Höchstwerte und
 /// dasselbe Prüfprotokoll gelten wie für jeden anderen Schlüsselweg
 /// (<c>docs/ki-zugriff.md</c>, „Home Assistant über den Fork").</para>
 ///
 /// <para><b>Jeder Weg verlangt einen Schlüssel</b> — auch die lesenden. Lesen aus
-/// dem Add-on-Netz ist in Grow OS sonst ohne Schlüssel erlaubt; hier hiesse das,
-/// dass jedes Nachbar-Add-on über Grow OS ALLE Zustände von Home Assistant
+/// dem Add-on-Netz ist in Cultivate Control sonst ohne Schlüssel erlaubt; hier hiesse das,
+/// dass jedes Nachbar-Add-on über Cultivate Control ALLE Zustände von Home Assistant
 /// abgreifen könnte, mit dem Token des Forks. Ohne Kontext: 401
 /// <c>ki_schluessel_fehlt</c>, wie <c>GET /api/ki-zugriff/ich</c>.</para>
 ///
@@ -310,7 +310,7 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
             ? null
             : StatusCode(StatusCodes.Status401Unauthorized, ApiErrorFactory.Create(
                 "ki_schluessel_fehlt",
-                "Home Assistant über Grow OS gibt es nur für einen KI-Assistenten mit Schlüssel: "
+                "Home Assistant über Cultivate Control gibt es nur für einen KI-Assistenten mit Schlüssel: "
                 + "Authorization: Bearer gok_… mitschicken.",
                 StatusCodes.Status401Unauthorized,
                 traceId: HttpContext?.TraceIdentifier));
@@ -322,7 +322,7 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
         return ValidationError("Der Dienstaufruf ist ungültig.");
     }
 
-    /// <summary>503, wenn Grow OS keine Verbindung zu Home Assistant eingerichtet hat.</summary>
+    /// <summary>503, wenn Cultivate Control keine Verbindung zu Home Assistant eingerichtet hat.</summary>
     /// <remarks>Im Testbetrieb (<see cref="DemoData.IsEnabled"/>) antwortet der Dienst selbst.</remarks>
     private ActionResult? NichtEingerichtet(out HomeAssistantSettings einstellungen)
     {
@@ -332,7 +332,7 @@ public sealed class KiHomeAssistantApiController : ApiControllerBase
         KiZugriffSperre.FehlercodeMerken(HttpContext, "ha_nicht_eingerichtet");
         return StatusCode(StatusCodes.Status503ServiceUnavailable, ApiErrorFactory.Create(
             "ha_nicht_eingerichtet",
-            "Grow OS hat keine Verbindung zu Home Assistant eingerichtet (Einstellungen → Home Assistant).",
+            "Cultivate Control hat keine Verbindung zu Home Assistant eingerichtet (Einstellungen → Home Assistant).",
             StatusCodes.Status503ServiceUnavailable,
             traceId: HttpContext?.TraceIdentifier));
     }

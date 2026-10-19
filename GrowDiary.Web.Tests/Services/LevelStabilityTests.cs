@@ -6,7 +6,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// Steht der Füllstand still? Der Kern des Kalibrier-Assistenten.
 /// </summary>
 /// <remarks>
-/// Der Nutzer soll füllen, nicht auf die Uhr schauen. Grow OS erkennt am
+/// Der Nutzer soll füllen, nicht auf die Uhr schauen. Cultivate Control erkennt am
 /// Stillstand des Werts, wann der Nullpunkt steht und wann „voll" erreicht sein
 /// könnte — und fragt dann nach, weil eine Füllpause für den Sensor genauso
 /// aussieht wie „fertig".

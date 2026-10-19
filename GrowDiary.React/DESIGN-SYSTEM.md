@@ -1,4 +1,4 @@
-# Grow OS — UI Design-System & Redesign-Briefing
+# Cultivate Control — UI Design-System & Redesign-Briefing
 
 > Stand: 2026-06-04. Bestandsaufnahme der aktuellen React-UI als Grundlage für einen
 > Redesign mit dem `frontend-design`-Skill. Beschreibt **Ist-Zustand**, nicht Soll.

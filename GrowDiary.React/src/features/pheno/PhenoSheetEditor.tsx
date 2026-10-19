@@ -174,7 +174,7 @@ export function PhenoSheetEditor({
       </Group>
 
       <Group title="Entscheidung" when="am Ende">
-        <V1Field label="Gesamtnote von Hand" hint="Leer lassen = Grow OS rechnet sie aus deinen Bewertungen.">
+        <V1Field label="Gesamtnote von Hand" hint="Leer lassen = Cultivate Control rechnet sie aus deinen Bewertungen.">
           <Dezimalfeld wert={draft.manualOverallScore} onWert={zahlFeld('manualOverallScore', 'Gesamtnote von Hand')} placeholder="—" />
         </V1Field>
         <V1Field label="Notizen" wide>

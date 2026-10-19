@@ -10,7 +10,7 @@ namespace GrowMcp.Tools;
 /// Fork AI (Paket C1, 18.10.2026): <c>steuerung</c> — der Zustand der Regelungen in Klartext.
 /// </summary>
 /// <remarks>
-/// Die Übersicht ist die der Seite „Steuerungen" (<c>GET /api/steuerung</c>), die Zeilen dort rechnet Grow OS selbst
+/// Die Übersicht ist die der Seite „Steuerungen" (<c>GET /api/steuerung</c>), die Zeilen dort rechnet Cultivate Control selbst
 /// — hier wird nichts nachgerechnet, nur vorgelesen. Ein Modul liefert Einstellungen, Live-Werte und Abweichungen
 /// (<c>GET /api/steuerung/{modul}</c>), dazu ein laufender Probelauf.
 /// </remarks>
@@ -30,7 +30,7 @@ public sealed partial class GrowTools
     private const int ModulTextHoechstens = 6_000;
 
     [McpServerTool(Name = "steuerung")]
-    [Description("Der Zustand aller Regelungen von Grow OS in Klartext (CO₂, Entfeuchter, Zusatz-Entfeuchter, Wasserkühler, Abluft, Zuluft, Licht) — wie die Seite „Steuerungen\". Mit modul (co2, zuluft, entfeuchter, entfeuchter-zusatz, chiller, licht) kommen Einstellungen, Live-Werte und Abweichungen dieses Moduls dazu. Ein laufender Probelauf steht immer dabei. Für „warum läuft der Entfeuchter gerade nicht?\".")]
+    [Description("Der Zustand aller Regelungen von Cultivate Control in Klartext (CO₂, Entfeuchter, Zusatz-Entfeuchter, Wasserkühler, Abluft, Zuluft, Licht) — wie die Seite „Steuerungen\". Mit modul (co2, zuluft, entfeuchter, entfeuchter-zusatz, chiller, licht) kommen Einstellungen, Live-Werte und Abweichungen dieses Moduls dazu. Ein laufender Probelauf steht immer dabei. Für „warum läuft der Entfeuchter gerade nicht?\".")]
     public Task<string> SteuerungAsync(
         [Description("Wahlweise ein Modul: co2, zuluft, entfeuchter, entfeuchter-zusatz, chiller oder licht")] string? modul = null,
         CancellationToken cancellationToken = default)
@@ -61,7 +61,7 @@ public sealed partial class GrowTools
 
         if (wurzel.TryGetProperty("haErreichbar", out var ha) && ha.ValueKind == JsonValueKind.False)
         {
-            text.AppendLine("ACHTUNG: Home Assistant ist für Grow OS gerade nicht erreichbar — die Werte unten können veraltet sein.");
+            text.AppendLine("ACHTUNG: Home Assistant ist für Cultivate Control gerade nicht erreichbar — die Werte unten können veraltet sein.");
         }
 
         if (wurzel.TryGetProperty("module", out var module) && module.ValueKind == JsonValueKind.Array)

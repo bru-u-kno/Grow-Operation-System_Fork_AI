@@ -124,7 +124,7 @@ public sealed record DoseResultDto(
     string Reason);
 
 /// <summary>
-/// Was Grow OS jetzt geben würde — und woraus es das schliesst.
+/// Was Cultivate Control jetzt geben würde — und woraus es das schliesst.
 /// </summary>
 /// <remarks>
 /// Die Herkunft steht bewusst mit drin. „3,4 ml" allein ist eine Zahl, der man

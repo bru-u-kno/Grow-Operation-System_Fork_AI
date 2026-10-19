@@ -9,7 +9,7 @@ namespace GrowDiary.Web.Api.Controllers;
 
 /// <summary>
 /// The tent's own dashboard arrangement, plus the live values for tiles that point at
-/// arbitrary Home Assistant entities — the ones Grow OS has no built-in metric for.
+/// arbitrary Home Assistant entities — the ones Cultivate Control has no built-in metric for.
 /// </summary>
 [ApiController]
 [Route("api/tents")]
@@ -114,7 +114,7 @@ public sealed class DashboardApiController : ApiControllerBase
     }
 
     /// <summary>
-    /// Current values for the layout's entity tiles. Grow OS's own metrics already come
+    /// Current values for the layout's entity tiles. Cultivate Control's own metrics already come
     /// with the live payload; this fills in the sensors it doesn't know about.
     /// </summary>
     [HttpGet("{tentId:int}/dashboard/values")]

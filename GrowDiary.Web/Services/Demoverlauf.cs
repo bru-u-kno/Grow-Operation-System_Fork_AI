@@ -70,7 +70,7 @@ public static class Demoverlauf
     /// <remarks>
     /// <para><b>12/12, weil der Testbestand in der Blüte steht.</b> Bis zum
     /// 24.08.2026 lief hier 18/6 — bei einem Grow, dessen Flip 35 Tage zurück
-    /// liegt. Das ist genau der Widerspruch, den Grow OS selbst als Fehler
+    /// liegt. Das ist genau der Widerspruch, den Cultivate Control selbst als Fehler
     /// meldet: <i>„Der Grow ist in der Blüte, das Licht läuft aber 18/6. Das
     /// verhindert die Blüte."</i> (<see cref="LightCycleLearner.Mismatch"/>).
     /// Aufgefallen ist es nie, weil der Testbestand keine Lichtflanken hat und

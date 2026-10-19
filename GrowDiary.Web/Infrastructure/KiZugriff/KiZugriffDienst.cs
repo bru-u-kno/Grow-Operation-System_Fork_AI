@@ -208,7 +208,7 @@ public sealed class KiZugriffDienst
     /// des Schlüssels.</para>
     ///
     /// <para><b>Die gesperrte Adresse trifft nie einen gültigen Schlüssel</b>
-    /// (Fork AI, A-005, 03.10.2026). Alle Anfragen über den Grow MCP und das
+    /// (Fork AI, A-005, 03.10.2026). Alle Anfragen über den Cultivate Control MCP und das
     /// HA-MCP kommen von EINER Container-Adresse. Zehn erfundene Schlüssel aus
     /// dem Heimnetz sperrten diese Adresse — und damit den echten Assistenten —
     /// für 15 Minuten. Deshalb wird während einer Sperre trotzdem geprüft (ein

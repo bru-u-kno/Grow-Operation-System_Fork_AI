@@ -14,7 +14,7 @@ type Zielwerte = { werte: Array<{ name: string; meldet: boolean; regel: { aktiv:
  * Oben der Stand der Grenzwerte (wie viele scharf sind, welche gerade melden),
  * darunter die bestehende Benachrichtigungsseite unverändert in ihrer Bedienung,
  * unten die Wächter, die Home Assistant selbst schickt — nur zur Ansicht, weil
- * sie gerade dann melden sollen, wenn Grow OS steht.
+ * sie gerade dann melden sollen, wenn Cultivate Control steht.
  */
 export function MeldungenReiter() {
   // `undefined` = lädt noch, `null` = Home Assistant hat nicht geantwortet.
@@ -78,7 +78,7 @@ export function MeldungenReiter() {
         </div>
         {waechter && waechter.length > 0 && (
           <p className="rc2-measurement-note">
-            Diese Wächter senden direkt aus Home Assistant, damit sie auch melden, wenn Grow OS gerade steht.
+            Diese Wächter senden direkt aus Home Assistant, damit sie auch melden, wenn Cultivate Control gerade steht.
             Ändern kannst du sie in Home Assistant unter Automationen.
           </p>
         )}

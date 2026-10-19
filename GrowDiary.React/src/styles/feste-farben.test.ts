@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 /**
  * Keine neue Farbe, die nur zu einem Thema passt.
  *
- * <b>Warum es diesen Test gibt.</b> Diese Falle ist in Grow OS VIERMAL
+ * <b>Warum es diesen Test gibt.</b> Diese Falle ist in Cultivate Control VIERMAL
  * zugeschnappt: jemand trägt eine Farbe fest ein, weil sie im dunklen Thema gut
  * aussieht, und im hellen steht dann dunkler Text auf dunklem Grund. Zuletzt im
  * Handy-Audit vom 18.08.2026 — die drei wichtigsten Eingabefelder des

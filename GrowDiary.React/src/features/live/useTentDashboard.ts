@@ -7,7 +7,7 @@ import type { DashboardLayout, EntityValue } from './dashboard-layout'
  * Home-Assistant-Entitäten zeigen.
  *
  * Die eigenen Messwerte kommen weiter aus dem Live-Payload — nur so behalten
- * sie Zielbereich und Ampelfarbe. Dieser Hook füllt auf, was Grow OS nicht
+ * sie Zielbereich und Ampelfarbe. Dieser Hook füllt auf, was Cultivate Control nicht
  * selbst misst.
  */
 export function useTentDashboard(tentId: number | null) {

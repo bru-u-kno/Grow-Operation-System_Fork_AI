@@ -19,7 +19,7 @@ namespace GrowDiary.Web.Api.Controllers;
 /// Dateiname entsteht nie aus dem, was die Anfrage schickt.</para>
 /// <para><b>Kamerafoto:</b> wie die Auto-Messung (<see cref="PhotoStorageService.SaveSnapshotAsync"/>), nur mit Motiv und
 /// Bildunterschrift. Die Kamera muss zum Zelt des Grows gehören (nie eine beliebige Entität), der Grow muss laufen.</para>
-/// <para>Gerufen vom Grow MCP Fork AI (<c>tagesbilder</c>, <c>kamera_foto_speichern</c>).</para>
+/// <para>Gerufen vom Cultivate Control MCP (<c>tagesbilder</c>, <c>kamera_foto_speichern</c>).</para>
 /// </remarks>
 [ApiController]
 [Route("api")]

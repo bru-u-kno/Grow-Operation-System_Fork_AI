@@ -60,6 +60,6 @@ test('Verbinden: vier Wege, die Anweisung trägt den echten Namen des Add-ons', 
   await expect(anweisung).not.toContainText('<Name des Add-ons')
   // Der Schlüssel selbst steht nie in einer Anleitung — nur der Platzhalter.
   await expect(anweisung).toContainText('Bearer gok_…')
-  // Prüfer 04.10.2026: dieser Weg geht an Grow OS vorbei — das muss dabeistehen.
+  // Prüfer 04.10.2026: dieser Weg geht an Cultivate Control vorbei — das muss dabeistehen.
   await expect(page.locator('[data-audit="ki-weg-claude-app-warnung"]')).toContainText('vollen Zugriff auf Home Assistant')
 })

@@ -382,7 +382,7 @@ public sealed class AgentContextBuilder
     public static string ToMarkdown(AgentContext context)
     {
         var text = new StringBuilder();
-        text.AppendLine($"# Grow OS — Lagebericht: {context.GrowName}");
+        text.AppendLine($"# Cultivate Control — Lagebericht: {context.GrowName}");
         text.AppendLine();
         text.AppendLine($"Stand: {context.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC");
         text.AppendLine($"Phase: {context.Stage}"
@@ -425,7 +425,7 @@ public sealed class AgentContextBuilder
 
         text.AppendLine("---");
         text.AppendLine();
-        text.AppendLine("Erzeugt von Grow OS. Die Zielwerte stammen entweder aus den Grenzwerten, die");
+        text.AppendLine("Erzeugt von Cultivate Control. Die Zielwerte stammen entweder aus den Grenzwerten, die");
         text.AppendLine("der Betreiber selbst eingetragen hat, oder aus dem hinterlegten Phasen-Profil —");
         text.AppendLine("die Spalte „Ziel kommt von“ sagt, welches. Ein selbst eingetragener Wert ist");
         text.AppendLine("eine bewusste Entscheidung und kein Vorschlag.");

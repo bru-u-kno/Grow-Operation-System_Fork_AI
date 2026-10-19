@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace GrowDiary.Web.Tests.Api;
 
 /// <summary>
-/// Nach dem Zurückspielen einer Sicherung startet Grow OS neu.
+/// Nach dem Zurückspielen einer Sicherung startet Cultivate Control neu.
 /// </summary>
 /// <remarks>
 /// <para><b>Der Anlass (offene Punkte 03.10.2026, B8).</b> Die Datenbank wird

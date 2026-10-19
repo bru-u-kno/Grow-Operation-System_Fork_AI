@@ -544,7 +544,7 @@ public sealed class KostenApiController : ApiControllerBase
 
         var artikel = _repo.GetArtikel().ToDictionary(a => a.Id);
         var zeitpunkt = ZuUtc(request.Zeitpunkt);
-        // Fork AI (Paket C1, 18.10.2026): Über einen KI-Schlüssel prüft Grow OS Zukunft und Doppelbuchung selbst — so gilt es
+        // Fork AI (Paket C1, 18.10.2026): Über einen KI-Schlüssel prüft Cultivate Control Zukunft und Doppelbuchung selbst — so gilt es
         // auch für fork_ausfuehren, nicht nur für das feste Werkzeug. Die Messseite bucht Zugaben erst NACH dem Speichern
         // der Messung und bietet den CO₂-Artikel noch an; dort hätte eine Absage eine halb gespeicherte Eingabe hinterlassen
         // (Prüfer 18.10.2026) — deshalb bleibt die Oberfläche hier, wie sie war (offener Punkt).

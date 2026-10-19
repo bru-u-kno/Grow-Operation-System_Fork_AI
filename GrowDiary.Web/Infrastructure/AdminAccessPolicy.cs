@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 namespace GrowDiary.Web.Infrastructure;
 
 /// <summary>
-/// Gates administrative and product API routes. Grow OS runs as a Home Assistant
+/// Gates administrative and product API routes. Cultivate Control runs as a Home Assistant
 /// add-on: the add-on port is ingress-only (never published to the network), so all
 /// real traffic arrives either from loopback or through the Home Assistant ingress
 /// proxy, which has already authenticated the user. Any other (direct, non-ingress
@@ -84,7 +84,7 @@ public static class AdminAccessPolicy
     private static readonly Dictionary<string, string> OffeneApiWege = new(StringComparer.OrdinalIgnoreCase)
     {
         ["/api/system/backend-health"] =
-            "Lebenszeichen mit Zählungen und Baukennung, ohne Inhalte — fragt Grow MCP "
+            "Lebenszeichen mit Zählungen und Baukennung, ohne Inhalte — fragt Cultivate Control MCP "
             + "und der Start-Check ab, bevor überhaupt klar ist, wie man hereinkommt.",
         ["/api/error"] =
             "Der Fehlerbehandler (UseExceptionHandler) — er antwortet nur auf eine "
@@ -124,7 +124,7 @@ public static class AdminAccessPolicy
     /// <remarks>
     /// Eine Sicherung ist die ganze SQLite-Datei; außerhalb des Add-on-Betriebs
     /// steht darin das HA-Token im Klartext, und den Dateinamen verrät das
-    /// Prüfprotokoll. Grow MCP braucht keinen dieser Wege.
+    /// Prüfprotokoll. Cultivate Control MCP braucht keinen dieser Wege.
     /// </remarks>
     public static bool IsAdminPath(PathString path)
         => ProtectedPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
@@ -135,7 +135,7 @@ public static class AdminAccessPolicy
     /// <remarks>
     /// Der Supervisor legt dafür eine eigene Docker-Brücke an; darin steckt nur,
     /// was der Betreiber selbst als Add-on installiert hat. Von aussen ist das
-    /// Netz nicht erreichbar — Grow OS veröffentlicht keinen Port.
+    /// Netz nicht erreichbar — Cultivate Control veröffentlicht keinen Port.
     /// Quelle: Home-Assistant-Dokumentation zur Add-on-Kommunikation.
     /// </remarks>
     private static readonly (IPAddress Netz, int Bits)[] AddonNetworks =
@@ -150,7 +150,7 @@ public static class AdminAccessPolicy
     /// </summary>
     /// <remarks>
     /// Dazu kommt ein dritter Weg: <b>lesende</b> Anfragen aus dem internen
-    /// Add-on-Netz. Ohne ihn könnte ein zweites Add-on — etwa Grow MCP —
+    /// Add-on-Netz. Ohne ihn könnte ein zweites Add-on — etwa Cultivate Control MCP —
     /// nichts abrufen, denn es ist weder Loopback noch Ingress. Bewusst nur
     /// lesend: mitlesen kann ein Nachbar-Add-on damit, schalten oder dosieren
     /// nicht; das Netz enthält nur selbst installierte Software.
@@ -171,7 +171,7 @@ public static class AdminAccessPolicy
     /// <para>Nur, wenn sie einen <c>gok_</c>-Schlüssel trägt <b>und</b> aus dem
     /// Add-on-Netz oder von Loopback kommt. Ein Schlüssel von irgendwo sonst
     /// wird nie geprüft — die Anfrage geht den Weg von heute und bekommt 403.
-    /// Sonst wäre der Schlüssel eine Tür ins Netz, das Grow OS nie
+    /// Sonst wäre der Schlüssel eine Tür ins Netz, das Cultivate Control nie
     /// veröffentlicht hat.</para>
     ///
     /// <para>Echter Ingress geht vor: dort sitzt ein Mensch, den Home Assistant

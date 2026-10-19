@@ -21,7 +21,7 @@ public sealed record DashboardLayoutDto(
     List<DashboardSectionDto>? Sections,
     /// <summary>
     /// True once the user arranged this tent themselves. False means these sections are
-    /// what Grow OS ships — the screen then draws its own built-in arrangement, which
+    /// what Cultivate Control ships — the screen then draws its own built-in arrangement, which
     /// knows things a stored layout cannot (which water-level unit actually reports).
     /// </summary>
     bool IsCustom = false);

@@ -59,7 +59,7 @@ function KurvenKacheln({ kurven, marken }: { kurven: TagebuchKurvenDto; marken: 
     <>
       {kurven.aufloesung === 'tag' && (
         <p className="tb-hinweis">
-          Nur Tageswerte: die Werte im 5-Minuten-Takt hebt Grow OS sieben Tage auf, danach bleiben Tiefst-, Mittel- und Höchstwert je Tag.
+          Nur Tageswerte: die Werte im 5-Minuten-Takt hebt Cultivate Control sieben Tage auf, danach bleiben Tiefst-, Mittel- und Höchstwert je Tag.
         </p>
       )}
       <div className="tb-kacheln">

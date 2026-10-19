@@ -184,7 +184,7 @@ public sealed class KiFunktionsverzeichnisTests : IClassFixture<KiZugriffApp>
 
         // Die Beschreibung kommt aus der Code-Doku, nicht aus dem Namen der Aktion.
         Assert.Equal("Was der anfragende Schlüssel darf — die erste Frage eines Assistenten.", Eintrag("GET", "/api/ki-zugriff/ich").Beschreibung);
-        Assert.StartsWith("Alle Funktionen von Grow OS unter /api", Eintrag("GET", "/api/ki-zugriff/funktionen").Beschreibung);
+        Assert.StartsWith("Alle Funktionen von Cultivate Control unter /api", Eintrag("GET", "/api/ki-zugriff/funktionen").Beschreibung);
     }
 
     [Fact]

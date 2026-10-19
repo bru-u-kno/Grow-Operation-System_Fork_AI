@@ -1,4 +1,4 @@
-# Grow OS · Was ich für die Screen-Entwürfe noch brauche
+# Cultivate Control · Was ich für die Screen-Entwürfe noch brauche
 
 Hallo,
 
@@ -9,7 +9,7 @@ das Theme lässt sich umschalten. Danke — die Analyse war präzise, besonders 
 Regel gegen `minmax(0,1fr)` neben einer festen Spalte. Genau daran lagen die
 verzogenen Boxen.
 
-Eine Sache fehlt: **`Grow OS Redesign.dc.html` war nicht im ZIP.** Das ZIP enthält
+Eine Sache fehlt: **`Cultivate Control Redesign.dc.html` war nicht im ZIP.** Das ZIP enthält
 `refactor/HANDOFF.md` und die 15 Code-Dateien, aber nicht den Entwurf, auf den die
 Screen-Zuordnungstabelle am Ende des Handoffs verweist.
 
@@ -17,7 +17,7 @@ Screen-Zuordnungstabelle am Ende des Handoffs verweist.
 
 ## 1. Was ich brauche
 
-**Am liebsten: die Datei selbst.** `Grow OS Redesign.dc.html` mit den Ansichten,
+**Am liebsten: die Datei selbst.** `Cultivate Control Redesign.dc.html` mit den Ansichten,
 die du in der Tabelle aufgeführt hast. Die Werte stehen bei dir inline im
 Quelltext — daraus lese ich Abstände, Größen und Hierarchie direkt ab, ohne zu
 raten.

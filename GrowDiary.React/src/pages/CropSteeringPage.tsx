@@ -482,13 +482,13 @@ export function CropSteeringPage() {
                   message={
                     'Nur nötig, wenn dein Kühler keinen Sollwert annimmt: häng ihn an die Steckdose '
                     + 'und stell ihn selbst fest ein — Faustregel etwa 15 °C, knapp unter deine '
-                    + 'Untergrenze. Grow OS schaltet dann nur den Strom. Bleibt die Steckdose hängen '
+                    + 'Untergrenze. Cultivate Control schaltet dann nur den Strom. Bleibt die Steckdose hängen '
                     + '(Add-on aus, Netz weg), stoppt dort sein eigener Thermostat. Tiefer stellen '
                     + 'hilft nicht: bei 5 °C wäre derselbe Fehler ein Wurzelschaden.'
                   } />
 
                 <V1Switch
-                  label="Kühler von Grow OS schalten lassen"
+                  label="Kühler von Cultivate Control schalten lassen"
                   checked={kuehler.enabled}
                   onChange={(an) => setKuehler({ ...kuehler, enabled: an })} />
 

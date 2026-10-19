@@ -265,7 +265,7 @@ public sealed class AlertEvaluationService
         return new Planband(ziele, rampenBoden, herkunft);
     }
 
-    private static string BuildTitle(Tent tent) => $"🌱 Grow OS · {tent.Name}";
+    private static string BuildTitle(Tent tent) => $"🌱 Cultivate Control · {tent.Name}";
 
     /// <param name="herkunft">
     /// Woher die Grenze stammt, wenn die Regel dem Plan folgt — z. B.

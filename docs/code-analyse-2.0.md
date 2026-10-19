@@ -49,7 +49,7 @@ Stellen begrüßt, die den Fall zu behandeln scheinen und es nicht tun.
 
 **Empfehlung:** entweder die Aufzählungen um ihre fehlenden Werte ergänzen und
 `IsHydro` echt ableiten — oder die toten Bedingungen entfernen und im Modell
-festhalten, dass Grow OS Hydro-only ist. Beides ist besser als der Schwebezustand.
+festhalten, dass Cultivate Control Hydro-only ist. Beides ist besser als der Schwebezustand.
 
 **Ungetestet bleibt** in jedem Fall, welche Kacheln bei welcher Konstellation
 erscheinen. Meine vier Composer-Tests prüfen Zielbereiche; der eine, der eine
@@ -244,7 +244,7 @@ Damit das Bild stimmt — geprüft und ohne Befund:
 
 - **1** — die drei konstanten Bedingungen (`IrrigationType`, `MediumType`,
   `IsHydro`). Entweder Erde wird eines Tages ergänzt, dann bekommen sie Inhalt,
-  oder Grow OS bleibt Hydro-only, dann können sie weg. Beides ist deine
+  oder Cultivate Control bleibt Hydro-only, dann können sie weg. Beides ist deine
   Entscheidung, nicht meine.
 - **7** — die drei Schweregrad-Vokabulare. Zusammenlegen berührt drei Modelle und
   ihre Tests; das gehört nicht in denselben Durchgang wie ein Release.

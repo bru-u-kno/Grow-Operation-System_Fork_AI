@@ -10,7 +10,7 @@ import { kiImBrowserAn } from './pflicht'
  * war — und die Seite selbst behält ihre alte Überschrift. Das Menü sagte
  * „Wasser", die Seite „Leitungswasser". Das Menü sagte „Eigener KI-Berater",
  * der Reiter daneben „Mappe für eigene KI" mit dem ausdrücklichen Kommentar,
- * dass in Grow OS keine KI steckt. Beim Umsortieren der Gruppen wäre es
+ * dass in Cultivate Control keine KI steckt. Beim Umsortieren der Gruppen wäre es
  * gerade wieder passiert: die Gruppe hieß plötzlich „Einrichtung", vierzehn
  * Seiten trugen weiter „Anlage" über ihrer Überschrift.
  *

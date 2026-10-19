@@ -71,7 +71,7 @@ Nicht committen:
 - Snapshots, Fotos und Uploads
 - echte Logs mit privaten Daten
 
-Grow OS laeuft als Home-Assistant-Add-on hinter dem Ingress-Proxy; Home Assistant uebernimmt Authentifizierung und Remote-Zugriff (Web/App). Der Add-on-Port ist ingress-only und wird nicht ins Netzwerk veroeffentlicht.
+Cultivate Control laeuft als Home-Assistant-Add-on hinter dem Ingress-Proxy; Home Assistant uebernimmt Authentifizierung und Remote-Zugriff (Web/App). Der Add-on-Port ist ingress-only und wird nicht ins Netzwerk veroeffentlicht.
 
 ## Offene Punkte
 

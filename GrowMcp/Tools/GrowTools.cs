@@ -9,22 +9,22 @@ using ModelContextProtocol.Server;
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Die Griffe, die ein Modell an Grow OS hat.
+/// Die Griffe, die ein Modell an Cultivate Control hat.
 /// </summary>
 /// <remarks>
 /// <para>Alle nur lesend, und alle gehen mit dem MCP-Schlüssel dieses Add-ons.
 /// Eintragen und Schalten stehen in <see cref="SchreibWerkzeuge"/> und
-/// <see cref="HaWerkzeuge"/> und brauchen einen Schlüssel aus Grow OS — die
-/// Sperren dafür sitzen in Grow OS, nicht hier.</para>
+/// <see cref="HaWerkzeuge"/> und brauchen einen Schlüssel aus Cultivate Control — die
+/// Sperren dafür sitzen in Cultivate Control, nicht hier.</para>
 ///
-/// <para>Zurückgegeben wird meist das JSON von Grow OS, unverändert. Das ist
+/// <para>Zurückgegeben wird meist das JSON von Cultivate Control, unverändert. Das ist
 /// ehrlicher als eine eigene Zusammenfassung — sie wäre eine zweite Stelle, an der
 /// sich Bedeutung verschieben kann.</para>
 /// </remarks>
 [McpServerToolType]
 public sealed partial class GrowTools(GrowOsReader reader)
 {
-    /// <summary>Die Messgrössen, die Grow OS kennt — für die Werkzeugbeschreibung.</summary>
+    /// <summary>Die Messgrössen, die Cultivate Control kennt — für die Werkzeugbeschreibung.</summary>
     private const string Messgroessen =
         "reservoir-ph, reservoir-ec, reservoir-temp, reservoir-level, reservoir-level-cm, " +
         "orp, dissolved-oxygen, temperature, humidity, vpd, co2, ppfd";
@@ -86,7 +86,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
         });
 
     [McpServerTool(Name = "trends")]
-    [Description("Was Grow OS selbst an Bewegung erkannt hat: Befunde je Messgrösse und eine Einschätzung, wie stabil der Grow läuft.")]
+    [Description("Was Cultivate Control selbst an Bewegung erkannt hat: Befunde je Messgrösse und eine Einschätzung, wie stabil der Grow läuft.")]
     public Task<string> TrendsAsync(
         [Description("Die Id des Grows")] int growId,
         CancellationToken cancellationToken = default)
@@ -98,7 +98,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
         });
 
     [McpServerTool(Name = "abweichungen")]
-    [Description("Wo der Grow von seinen Sollwerten abweicht, und welche Behandlungen Grow OS dazu vorschlägt.")]
+    [Description("Wo der Grow von seinen Sollwerten abweicht, und welche Behandlungen Cultivate Control dazu vorschlägt.")]
     public Task<string> AbweichungenAsync(
         [Description("Die Id des Grows")] int growId,
         CancellationToken cancellationToken = default)
@@ -175,7 +175,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
         });
 
     [McpServerTool(Name = "alarme")]
-    [Description("Was Grow OS als Problem führt: offene Risiko-Ereignisse zu diesem Grow und die Grenzwerte, die für sein Zelt eingestellt sind. Der Griff für „ist gerade etwas im Argen?\".")]
+    [Description("Was Cultivate Control als Problem führt: offene Risiko-Ereignisse zu diesem Grow und die Grenzwerte, die für sein Zelt eingestellt sind. Der Griff für „ist gerade etwas im Argen?\".")]
     public Task<string> AlarmeAsync(
         [Description("Die Id des Grows")] int growId,
         [Description("false, um auch bereits erledigte Risiko-Ereignisse zu sehen")] bool nurOffene = true,
@@ -216,7 +216,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
         });
 
     [McpServerTool(Name = "dosier_vorschlag")]
-    [Description("Was Grow OS für diese Pumpe gerade dosieren würde, samt Begründung und den Sperren, die dabei greifen. Rechnet nur — es wird nichts geschaltet. Pumpen-Id kommt aus dosierungen.")]
+    [Description("Was Cultivate Control für diese Pumpe gerade dosieren würde, samt Begründung und den Sperren, die dabei greifen. Rechnet nur — es wird nichts geschaltet. Pumpen-Id kommt aus dosierungen.")]
     public Task<string> DosierVorschlagAsync(
         [Description("Die Id der Pumpe aus dem Werkzeug dosierungen")] int pumpeId,
         CancellationToken cancellationToken = default)
@@ -313,7 +313,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
         => SicherAsync(() => reader.LesenAsync($"api/grows/{growId}/tasks", cancellationToken));
 
     [McpServerTool(Name = "wissen_liste")]
-    [Description("Das Fachwissen in Grow OS als Übersicht — die Kürzel, mit denen sich dann einzelne Einträge nachschlagen lassen. Bei sops und treatments kommen nur die Kopfdaten; den ganzen Eintrag holt wissen_nachschlagen.")]
+    [Description("Das Fachwissen in Cultivate Control als Übersicht — die Kürzel, mit denen sich dann einzelne Einträge nachschlagen lassen. Bei sops und treatments kommen nur die Kopfdaten; den ganzen Eintrag holt wissen_nachschlagen.")]
     public Task<string> WissenListeAsync(
         [Description("Eine von: sops, treatments, symptoms, pathogens, setpoints")] string art,
         CancellationToken cancellationToken = default)
@@ -355,7 +355,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
             }
             catch (GrowOsException)
             {
-                // „Kennt Grow OS nicht" hilft niemandem weiter. Abläufe und
+                // „Kennt Cultivate Control nicht" hilft niemandem weiter. Abläufe und
                 // Behandlungen sehen von aussen gleich aus — root-rot-treatment
                 // klingt wie eine Behandlung und ist ein Ablauf. Also nachsehen,
                 // ob es in der anderen Schublade liegt, und dorthin verweisen.
@@ -384,7 +384,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
     /// <remarks>
     /// base64 blaeht Bytes um rund ein Drittel auf, und die Antwort muss durch
     /// das Kontextfenster des Modells passen. 6 MB roh sind etwa 8 MB kodiert —
-    /// genug fuer jedes Handyfoto, das Grow OS ablegt, und weit genug von der
+    /// genug fuer jedes Handyfoto, das Cultivate Control ablegt, und weit genug von der
     /// Grenze entfernt, an der eine Antwort nur noch aus einem Bild besteht.
     /// </remarks>
     private const long MaxBildBytes = 6L * 1024 * 1024;
@@ -415,15 +415,15 @@ public sealed partial class GrowTools(GrowOsReader reader)
     /// Ein Foto so herausgeben, dass das Modell es wirklich ansehen kann.
     /// </summary>
     /// <remarks>
-    /// <para>Der Grund, warum es dieses Werkzeug gibt: Grow OS soll keine KI
+    /// <para>Der Grund, warum es dieses Werkzeug gibt: Cultivate Control soll keine KI
     /// enthalten — kein fremder Schlüssel, keine Bilder, die das Haus ungefragt
-    /// verlassen. Der Weg herum ist dieser: das Bild bleibt in Grow OS, und
+    /// verlassen. Der Weg herum ist dieser: das Bild bleibt in Cultivate Control, und
     /// wer ein Modell fragen will, holt es sich über seinen eigenen Zugang.
     /// Die Entscheidung, ein Foto einem Modell zu zeigen, trifft damit der
     /// Betreiber pro Bild, nicht eine Voreinstellung.</para>
     ///
     /// <para>Zurück kommen zwei Blöcke: das Bild und ein kurzer Text mit dem,
-    /// was Grow OS über die Aufnahme weiß. Ein Blatt ohne den Hinweis „Wurzel,
+    /// was Cultivate Control über die Aufnahme weiß. Ein Blatt ohne den Hinweis „Wurzel,
     /// vor 3 Tagen, Grow 4" ist nur ein Blatt.</para>
     /// </remarks>
     [McpServerTool(Name = "foto_ansehen")]
@@ -469,25 +469,25 @@ public sealed partial class GrowTools(GrowOsReader reader)
         {
             // Dieselbe Sperre wie in SicherAsync — dieses Werkzeug gibt ein Bild
             // zurück und kann sie deshalb nicht mitbenutzen. Ohne sie flog dem
-            // Klienten eine rohe .NET-Ausnahme entgegen, sobald Grow OS auf
+            // Klienten eine rohe .NET-Ausnahme entgegen, sobald Cultivate Control auf
             // `api/grows/{id}/photos` etwas anderes als eine Liste antwortet.
-            return [new TextContentBlock { Text = "Grow OS hat anders geantwortet als erwartet. Vermutlich passen die Fassungen von Grow OS und Grow MCP nicht zusammen — bitte beide aktualisieren." }];
+            return [new TextContentBlock { Text = "Cultivate Control hat anders geantwortet als erwartet. Vermutlich passen die Fassungen von Cultivate Control und Cultivate Control MCP nicht zusammen — bitte beide aktualisieren." }];
         }
     }
 
-    /// <summary>Was Grow OS über die Aufnahme weiss — der Satz neben dem Bild.</summary>
+    /// <summary>Was Cultivate Control über die Aufnahme weiss — der Satz neben dem Bild.</summary>
     /// <summary>
     /// Der Abrufpfad zu einer Bilddatei.
     /// </summary>
     /// <remarks>
-    /// <para>Grow OS legt den Pfad bereits vollstaendig ab — <c>/uploads/4/xyz.jpg</c>
+    /// <para>Cultivate Control legt den Pfad bereits vollstaendig ab — <c>/uploads/4/xyz.jpg</c>
     /// (siehe <c>PhotoStorageService</c>). Hier ist deshalb nur das fuehrende
     /// „/" zu entfernen, damit er an die Basisadresse passt.</para>
     ///
     /// <para>Beim ersten Wurf stand hier <c>$"uploads/{pfad.TrimStart('/')}"</c>,
     /// also <c>uploads/uploads/4/xyz.jpg</c>. Das Werkzeug hat damit nie ein
     /// Bild geliefert — und es faellt nicht als Fehler auf: der SPA-Fallback
-    /// von Grow OS beantwortet jeden Pfad ausserhalb von <c>/api</c> mit
+    /// von Cultivate Control beantwortet jeden Pfad ausserhalb von <c>/api</c> mit
     /// <c>index.html</c> und Status 200. Statt eines 404 kaeme also HTML
     /// zurueck, das sich als Bild ausgibt. Deshalb eine eigene Funktion mit
     /// eigenem Test.</para>
@@ -536,9 +536,9 @@ public sealed partial class GrowTools(GrowOsReader reader)
     /// Einen Teil holen, der auch fehlen darf.
     /// </summary>
     /// <remarks>
-    /// Kennt Grow OS den Weg nicht — kein Pheno Hunt, keine Grenzwerte
+    /// Kennt Cultivate Control den Weg nicht — kein Pheno Hunt, keine Grenzwerte
     /// eingestellt —, kommt <c>null</c> zurück und der Rest des Ergebnisses
-    /// bleibt stehen. Ist Grow OS dagegen gar nicht erreichbar, fliegt der Fehler
+    /// bleibt stehen. Ist Cultivate Control dagegen gar nicht erreichbar, fliegt der Fehler
     /// weiter: ein halbes Ergebnis, das aussieht wie ein ganzes, wäre schlimmer
     /// als gar keins.
     /// </remarks>
@@ -556,7 +556,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
 
     /// <summary>Das Zelt zu einem Grow — oder <c>null</c>, wenn keins zugeordnet ist.</summary>
     /// <remarks>
-    /// Vieles hängt in Grow OS am Zelt und nicht am Grow: Messreihen, Grenzwerte,
+    /// Vieles hängt in Cultivate Control am Zelt und nicht am Grow: Messreihen, Grenzwerte,
     /// Pumpen, Licht, Geräte. Das Modell soll davon nichts wissen müssen, es
     /// kennt nur den Grow.
     /// </remarks>
@@ -652,7 +652,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
     /// Erwartbare Fehler als Satz zurückgeben statt als Absturz.
     /// </summary>
     /// <remarks>
-    /// „Grow OS ist nicht erreichbar" ist eine Antwort, keine Panne — das Modell
+    /// „Cultivate Control ist nicht erreichbar" ist eine Antwort, keine Panne — das Modell
     /// kann sie weitergeben und der Mensch weiss, was zu tun ist. Alles andere
     /// fliegt weiter und wird zum Werkzeugfehler; Stillschweigen waere schlimmer.
     /// </remarks>
@@ -668,7 +668,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)
         {
-            // Antwortet Grow OS anders als erwartet, flog dem Klienten bisher
+            // Antwortet Cultivate Control anders als erwartet, flog dem Klienten bisher
             // eine rohe .NET-Ausnahme entgegen — Stapelverfolgung und alles.
             //
             // Aufgefallen beim Bau der Werkzeug-Zaehlung: `foto_ansehen` rief
@@ -678,7 +678,7 @@ public sealed partial class GrowTools(GrowOsReader reader)
             //
             // Ein Satz, den man lesen kann, ist hier mehr wert als ein
             // Fehlerbericht, mit dem der Nutzer nichts anfangen kann.
-            return "Grow OS hat anders geantwortet als erwartet. Vermutlich passen die Fassungen von Grow OS und Grow MCP nicht zusammen — bitte beide aktualisieren.";
+            return "Cultivate Control hat anders geantwortet als erwartet. Vermutlich passen die Fassungen von Cultivate Control und Cultivate Control MCP nicht zusammen — bitte beide aktualisieren.";
         }
     }
 

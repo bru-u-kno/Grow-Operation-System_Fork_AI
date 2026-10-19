@@ -2,14 +2,14 @@ using GrowDiary.Web.Infrastructure;
 
 namespace GrowDiary.Web.Services;
 
-/// <summary>Startet Grow OS neu — oder sagt, dass es das nicht kann.</summary>
+/// <summary>Startet Cultivate Control neu — oder sagt, dass es das nicht kann.</summary>
 public interface IAppNeustart
 {
     /// <summary>
     /// Plant einen Neustart in wenigen Sekunden.
     /// </summary>
     /// <returns>
-    /// <c>true</c>, wenn er geplant ist; <c>false</c>, wenn Grow OS nicht als
+    /// <c>true</c>, wenn er geplant ist; <c>false</c>, wenn Cultivate Control nicht als
     /// Add-on läuft und sich deshalb nicht selbst neu starten kann.
     /// </returns>
     bool Planen(string grund);
@@ -73,12 +73,12 @@ public sealed class SupervisorNeustart : IAppNeustart
                 using var antwort = await client.SendAsync(anfrage);
                 if (!antwort.IsSuccessStatusCode)
                 {
-                    _logger.LogError("Supervisor lehnte den Neustart ab ({Status}). Grow OS bitte von Hand neu starten — bis dahin gilt im Speicher der Stand vor dem Zurückspielen.", (int)antwort.StatusCode);
+                    _logger.LogError("Supervisor lehnte den Neustart ab ({Status}). Cultivate Control bitte von Hand neu starten — bis dahin gilt im Speicher der Stand vor dem Zurückspielen.", (int)antwort.StatusCode);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Neustart über den Supervisor gescheitert. Grow OS bitte von Hand neu starten.");
+                _logger.LogError(ex, "Neustart über den Supervisor gescheitert. Cultivate Control bitte von Hand neu starten.");
             }
         });
         return true;

@@ -9,7 +9,7 @@ using ModelContextProtocol.Server;
 
 namespace GrowMcp.Tests;
 
-/// <summary>Eine Anfrage, wie sie bei Grow OS ankam.</summary>
+/// <summary>Eine Anfrage, wie sie bei Cultivate Control ankam.</summary>
 internal sealed record Angekommen(string Methode, string Pfad, string? Authorization, string? Rumpf)
 {
     /// <summary>Der Pfad ohne Abfrageteil und ohne führenden Schrägstrich.</summary>
@@ -20,7 +20,7 @@ internal sealed record Angekommen(string Methode, string Pfad, string? Authoriza
 }
 
 /// <summary>
-/// Grow OS zum Mitschreiben: beantwortet jede Anfrage und merkt sich, was kam —
+/// Cultivate Control zum Mitschreiben: beantwortet jede Anfrage und merkt sich, was kam —
 /// samt Kopfzeile <c>Authorization</c> und Rumpf.
 /// </summary>
 internal sealed class ForkAttrappe : HttpMessageHandler
@@ -93,7 +93,7 @@ internal sealed class ForkAttrappe : HttpMessageHandler
         return Antwort("GET", weg, status, string.Empty);
     }
 
-    /// <summary>Eine Attrappe, die wie ein laufendes Grow OS mit einem Grow in der Blüte antwortet.</summary>
+    /// <summary>Eine Attrappe, die wie ein laufendes Cultivate Control mit einem Grow in der Blüte antwortet.</summary>
     public static ForkAttrappe MitGrow()
         => new ForkAttrappe()
             .Antwort("GET", @"api/grows/\d+", 200, """{"id":1,"tentId":1,"currentStage":"Flower","name":"Test"}""")
@@ -143,13 +143,13 @@ internal sealed class ForkAttrappe : HttpMessageHandler
          "anschaffungen":[]}
         """;
 
-    /// <summary>Fork AI (Paket C1): eine Pflanze wie <c>GET /api/plants/{id}</c> (Null-Felder fehlen wie bei Grow OS).</summary>
+    /// <summary>Fork AI (Paket C1): eine Pflanze wie <c>GET /api/plants/{id}</c> (Null-Felder fehlen wie bei Cultivate Control).</summary>
     public const string Pflanze = """
         {"id":2,"strainId":1,"growId":1,"siteIndex":2,"label":"Pflanze 2","plantRole":"Production","plantStatus":"Active",
          "startedAt":"2026-08-06T12:00:00+02:00","notes":"alt","strainName":"White Widow","createdAtUtc":"2026-10-18T14:31:05Z","updatedAtUtc":"2026-10-18T14:31:05Z"}
         """;
 
-    /// <summary>Ein Auszug aus <c>GET api/messgroessen</c> — so, wie Grow OS ihn liefert.</summary>
+    /// <summary>Ein Auszug aus <c>GET api/messgroessen</c> — so, wie Cultivate Control ihn liefert.</summary>
     public const string Katalog = """
         [{"metricType":"AirTemperature","metrikSchluessel":"temperature","etikett":"Lufttemp","meldeEtikett":"Lufttemp.","domains":["sensor"],"einheit":"°C"},
          {"metricType":"Humidity","metrikSchluessel":"humidity","etikett":"Luftfeuchte","meldeEtikett":null,"domains":["sensor"],"einheit":"%"},
@@ -178,10 +178,10 @@ internal sealed class FesterSchluessel(string? wert) : IForkSchluesselQuelle
 
 internal static class Werkzeugkasten
 {
-    /// <summary>Ein Schlüssel in der Form, die Grow OS ausgibt (gok_ + 43 Zeichen base64url).</summary>
+    /// <summary>Ein Schlüssel in der Form, die Cultivate Control ausgibt (gok_ + 43 Zeichen base64url).</summary>
     public const string ForkSchluessel = "gok_Abc123_-Abc123_-Abc123_-Abc123_-Abc123_";
 
-    /// <summary>So sieht der MCP-Schlüssel dieses Add-ons aus — er darf Grow OS nie erreichen.</summary>
+    /// <summary>So sieht der MCP-Schlüssel dieses Add-ons aus — er darf Cultivate Control nie erreichen.</summary>
     public const string McpSchluessel = "mcpXyz789_-mcpXyz789_-mcpXyz789_-mcpXyz789";
 
     private sealed class EinKlient(HttpMessageHandler handler) : IHttpClientFactory

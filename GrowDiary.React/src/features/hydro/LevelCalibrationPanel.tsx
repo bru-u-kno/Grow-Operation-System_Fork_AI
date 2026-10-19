@@ -5,7 +5,7 @@ import { zahlOderNull } from '../../zahlenfeld'
 import './level-calibration.css'
 
 /**
- * Der geführte Kalibrierlauf: Grow OS liest den Pegelsensor mit, während du füllst.
+ * Der geführte Kalibrierlauf: Cultivate Control liest den Pegelsensor mit, während du füllst.
  *
  * Der Ablauf kommt aus der Praxis, nicht aus dem Formular. Wer sein System
  * kalibriert, steht mit dem Schlauch daneben und liest an der Wasseruhr ab — er
@@ -144,7 +144,7 @@ export function LevelCalibrationPanel(
     return (
       <V1Card>
         <p className="lk-intro">
-          Grow OS liest den Wasserstand-Sensor mit, während du füllst, und erkennt Null- und Vollpunkt
+          Cultivate Control liest den Wasserstand-Sensor mit, während du füllst, und erkennt Null- und Vollpunkt
           selbst. Danach steht der Wasserstand überall in Litern — auf der Kachel, im Verlauf, in den
           Grenzwerten, und die Dosierung rechnet mit dem echten Volumen.
         </p>

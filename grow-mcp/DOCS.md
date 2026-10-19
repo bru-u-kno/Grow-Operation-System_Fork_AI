@@ -1,7 +1,7 @@
-# Grow MCP Fork AI — Home Assistant Add-on
+# Cultivate Control MCP — Home Assistant Add-on
 
 Gibt Claude auf deinem Rechner Zugriff auf deine Anlage. Nicht als fertigen
-Textblock wie bei der **Berater-Mappe**, die Grow OS zum Herunterladen anbietet,
+Textblock wie bei der **Berater-Mappe**, die Cultivate Control zum Herunterladen anbietet,
 sondern als Werkzeuge: Claude fragt gezielt nach, was es gerade braucht — den
 Lagebericht, den EC-Verlauf der letzten zwei Wochen, einen bestimmten Ablauf aus
 dem Fachwissen.
@@ -9,21 +9,21 @@ dem Fachwissen.
 Genau das kann die Mappe nicht. Sie hält den Stand von *jetzt* fest. „Wie hat
 sich mein pH die letzten 14 Tage bewegt?" beantwortet nur dieses Add-on.
 
-> **Fork AI.** Dieser MCP gehört zu **Grow OS Fork AI** und liest dessen Daten.
+> **Fork AI.** Dieser MCP gehört zu **Cultivate Control** und liest dessen Daten.
 > Er läuft neben dem Grow MCP des Originals: eigener Port **5080** (das Original
-> belegt 5079) und eigener Name beim Klienten, `grow-os-fork-ai`.
+> belegt 5079) und eigener Name beim Klienten, `cultivate-control`.
 
 ## Voraussetzungen
 
-- **Grow OS Fork AI** ist installiert und läuft.
+- **Cultivate Control** ist installiert und läuft.
 - Ein MCP-Klient auf einem Rechner in deinem Netz. Getestet mit **Claude Code**;
   alles, was MCP über HTTP spricht, funktioniert genauso.
 
 ## Installation
 
 1. **Einstellungen → Add-ons → Add-on-Store**, dieses Repository ist bereits
-   eingetragen, wenn du Grow OS von hier hast.
-2. **Grow MCP Fork AI** installieren und starten.
+   eingetragen, wenn du Cultivate Control von hier hast.
+2. **Cultivate Control MCP** installieren und starten.
 3. Auf der Info-Seite **„Im Seitenleisten-Menü anzeigen"** einschalten.
 4. Die Seite öffnen. Dort steht ein fertiger Befehl — kopieren und auf dem
    Rechner ausführen, auf dem Claude Code läuft. Fertig.
@@ -31,7 +31,7 @@ sich mein pH die letzten 14 Tage bewegt?" beantwortet nur dieses Add-on.
 Der Befehl sieht so aus:
 
 ```
-claude mcp add --transport http grow-os-fork-ai http://homeassistant.local:5080/mcp --header "Authorization: Bearer <dein-schlüssel>"
+claude mcp add --transport http cultivate-control http://homeassistant.local:5080/mcp --header "Authorization: Bearer <dein-schlüssel>"
 ```
 
 **Wenn du Home Assistant über eine Domain von aussen benutzt**, fragt die Seite
@@ -48,11 +48,11 @@ IP wie `192.168.1.50`, zu finden in Home Assistant unter *Einstellungen → Syst
 | `grows_auflisten` | Welche Grows laufen |
 | `lagebericht` | Der ganze Stand eines Grows als Text |
 | `messwert_verlauf` | pH, EC, Temperatur & Co. über Tage oder Wochen |
-| `trends` | Was Grow OS selbst an Bewegung erkannt hat |
+| `trends` | Was Cultivate Control selbst an Bewegung erkannt hat |
 | `abweichungen` | Wo es vom Sollwert weg läuft, mit Vorschlägen |
 | `alarme` | Offene Risiken und die eingestellten Grenzwerte |
 | `dosierungen` | Pumpen am Zelt und Protokoll der letzten Dosen |
-| `dosier_vorschlag` | Was Grow OS jetzt dosieren würde, und warum — oder warum nicht |
+| `dosier_vorschlag` | Was Cultivate Control jetzt dosieren würde, und warum — oder warum nicht |
 | `ablauf_fortschritt` | Welche Abläufe laufen und wie weit |
 | `licht` | Eingestellter Zyklus gegen tatsächliche Schaltzeiten |
 | `technik` | Geräte, anstehende Wartungen und Kalibrierungen |
@@ -67,9 +67,9 @@ IP wie `192.168.1.50`, zu finden in Home Assistant unter *Einstellungen → Syst
 ## Eintragen und Schalten
 
 Mit dem Schlüssel von der Einrichtungsseite liest Claude nur. Zum **Eintragen
-und Schalten** braucht es einen Schlüssel aus Grow OS selbst:
+und Schalten** braucht es einen Schlüssel aus Cultivate Control selbst:
 
-1. In Grow OS **Einrichtung → KI-Assistent → Zugriff & Schlüssel** öffnen, den
+1. In Cultivate Control **Einrichtung → KI-Assistent → Zugriff & Schlüssel** öffnen, den
    Hauptschalter einschalten und einen **neuen Schlüssel** anlegen. Dabei die
    Stufen anhaken, die der Assistent haben soll (siehe unten). Der Schlüssel
    beginnt mit `gok_` und wird nur einmal angezeigt.
@@ -77,19 +77,19 @@ und Schalten** braucht es einen Schlüssel aus Grow OS selbst:
    Schlüssel **ersetzen** — derselbe Connector, nur ein anderer Schlüssel:
 
    ```
-   claude mcp add --transport http grow-os-fork-ai http://homeassistant.local:5080/mcp --header "Authorization: Bearer gok_…"
+   claude mcp add --transport http cultivate-control http://homeassistant.local:5080/mcp --header "Authorization: Bearer gok_…"
    ```
 
-   Wer schon verbunden ist: `claude mcp remove grow-os-fork-ai`, dann neu
+   Wer schon verbunden ist: `claude mcp remove cultivate-control`, dann neu
    hinzufügen.
 
-Mit dem Fork-Schlüssel gehen weiter alle lesenden Werkzeuge. Der Grow MCP
-reicht den Schlüssel bei **jeder** Anfrage an Grow OS durch und entscheidet
+Mit dem Fork-Schlüssel gehen weiter alle lesenden Werkzeuge. Der Cultivate Control MCP
+reicht den Schlüssel bei **jeder** Anfrage an Cultivate Control durch und entscheidet
 selbst nichts: welche Stufe frei ist, wie viele ml eine Dosis höchstens haben
 darf, wie viele Schaltbefehle je Stunde gehen, ob der Schlüssel gesperrt ist —
-das prüft Grow OS. Sagt Grow OS Nein, bekommt Claude den Grund als Satz, etwa
+das prüft Cultivate Control. Sagt Cultivate Control Nein, bekommt Claude den Grund als Satz, etwa
 „Dafür fehlt die Freigabe für Stufe ‚Grow planen'". Jede schreibende Anfrage
-steht in Grow OS im Prüfprotokoll.
+steht in Cultivate Control im Prüfprotokoll.
 
 ### Die Stufen
 
@@ -105,11 +105,11 @@ Manche Dienste in Home Assistant gehen über einen Schlüssel **nie**, egal mit
 welcher Stufe — etwa Neustart (`homeassistant`), Add-ons (`hassio`),
 Sicherungen, Schlösser, Alarmanlage, Benachrichtigungen, `update`, `mqtt`,
 `downloader` und jedes `reload`. Die vollständige Liste mit Begründungen führt
-Grow OS.
+Cultivate Control.
 
 Claude ruft zuerst `zugriff_pruefen` auf: dort steht, welche Stufen frei sind,
 **wobei es vorher nachfragen soll** und welche Höchstwerte gelten. Die
-Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann Grow OS nur die
+Rückfrage ist eine Bitte an den Assistenten — durchsetzen kann Cultivate Control nur die
 Stufen.
 
 ### Zum Diktieren
@@ -126,7 +126,7 @@ Stufen.
 - „pH-Sonde kalibriert, 7,00 Referenz, vorher 7,12, nachher 7,01." → `technik`,
   dann `kalibrierung_eintragen`
 - „Grow 4 ist auf 12/12 geflippt." → `phase_bestaetigen` mit `bluete`
-- „Gib 2 ml pH-Minus." → `pumpe_dosieren`; Grow OS meldet, ob wirklich dosiert
+- „Gib 2 ml pH-Minus." → `pumpe_dosieren`; Cultivate Control meldet, ob wirklich dosiert
   wurde
 - „Licht auf Stufe 7." → `licht_schalten`
 - „Nenne den Raum Keller und stell das Zelt hinein." → `raum`, dann `raum_setzen` und
@@ -141,8 +141,8 @@ Stufen.
 - „Die Messung von eben war Unsinn, weg damit." → `messung_loeschen`; die Antwort nennt jeden Wert (einzelne Werte
   korrigiert `messung_aendern`)
 - „Melde erst ab 28 Grad." → `alarme`, dann `grenzwert_setzen` (Lufttemp., max, 28). Nur diese eine Grenze ändert sich,
-  der Rest ist per Prüfsumme belegt; ob die Zahl physikalisch möglich ist, prüft Grow OS
-- „Lichtplan auf 7 bis 19 Uhr." → `licht`, dann `lichtplan_setzen`. Das ändert den Lichtplan in Grow OS (Nachtabsenkung,
+  der Rest ist per Prüfsumme belegt; ob die Zahl physikalisch möglich ist, prüft Cultivate Control
+- „Lichtplan auf 7 bis 19 Uhr." → `licht`, dann `lichtplan_setzen`. Das ändert den Lichtplan in Cultivate Control (Nachtabsenkung,
   Lichteinbruch-Wächter, Auto-Messungen, Nachtgrenzen), nicht den Zeitplan am Controller
 
 ## Kamera, Kosten, Pflanzen, Regelungen
@@ -162,7 +162,7 @@ Stufen.
 
 Artikel und Sorten gehen per Name; passen mehrere, kommt die Auswahl zurück und nichts wird gebucht. Beträge
 über 500 € nennt die Antwort ausdrücklich, negative und Zeitpunkte in der Zukunft werden abgelehnt. Kosten
-**löschen** braucht in Grow OS die Stufe Verwaltung (mit Sicherung vorher).
+**löschen** braucht in Cultivate Control die Stufe Verwaltung (mit Sicherung vorher).
 
 - „Neue CO₂-Flasche, 10 Kilo für 38 Euro, die alte ist leer." → `nachfuellung_eintragen` mit `vorherigeLeer=true`
 - „Pflanze 2 ist ein Zwitter, die ist raus." → `pflanze_aendern` mit `status=raus`
@@ -172,35 +172,35 @@ Artikel und Sorten gehen per Name; passen mehrere, kommt die Auswahl zurück und
 
 ## Alles im Fork steuern: `fork_funktionen` und `fork_ausfuehren`
 
-Seit Grow OS Fork AI mit Funktionsverzeichnis lässt sich über den Grow MCP **jede** Funktion von Grow OS
-erreichen, nicht nur die festen Werkzeuge oben. Grow OS erzeugt dafür selbst ein Verzeichnis aus seinem
+Seit Cultivate Control mit Funktionsverzeichnis lässt sich über den Cultivate Control MCP **jede** Funktion von Cultivate Control
+erreichen, nicht nur die festen Werkzeuge oben. Cultivate Control erzeugt dafür selbst ein Verzeichnis aus seinem
 Code (`GET /api/ki-zugriff/funktionen`, je Methode und Weg ein Eintrag): Weg, Art, was ein Schlüssel dafür braucht,
 Sicherung vorher, Schaltbefehl, Beschreibung und erwartete Angaben. Neue Funktionen stehen automatisch
-darin; die Einstufung kommt aus derselben Regel, mit der Grow OS jede Anfrage prüft.
+darin; die Einstufung kommt aus derselben Regel, mit der Cultivate Control jede Anfrage prüft.
 
 | Werkzeug | Stufe | Wofür |
 | --- | --- | --- |
 | `fork_funktionen` | keine (geht auch mit dem MCP-Schlüssel) | Das Verzeichnis durchsuchen: `suche` („kosten nachfuellung"), `bereich`, `art`, `zugang`. Bei wenigen Treffern mit allen Feldern, sonst eine Zeile je Funktion oder die Bereiche. |
-| `fork_ausfuehren` | je Funktion, Grow OS prüft | Eine Funktion aus dem Verzeichnis aufrufen: `methode`, `pfad` (etwa `api/plants/7`), `query`, `body` (JSON). |
+| `fork_ausfuehren` | je Funktion, Cultivate Control prüft | Eine Funktion aus dem Verzeichnis aufrufen: `methode`, `pfad` (etwa `api/plants/7`), `query`, `body` (JSON). |
 
 Was `fork_ausfuehren` zusätzlich tut — es fügt keine Rechte hinzu, es verengt nur:
 
 - **Nur, was im Verzeichnis steht**, und nur Wege unter `api/` — kein `..`, keine Adresse, kein anderer Host,
-  keine kodierten Zeichen. Wege, die Grow OS als „nie über einen Schlüssel" führt, lehnt es ab, bevor es sie ruft.
+  keine kodierten Zeichen. Wege, die Cultivate Control als „nie über einen Schlüssel" führt, lehnt es ab, bevor es sie ruft.
 - **Vorher und nachher lesen:** Kennt das Verzeichnis einen GET auf denselben Weg, meldet die Antwort, was
   sich geändert hat („einstellungen.hystereseProzent: 2 → 3; 27 Werte unverändert"), und nennt ausdrücklich,
   was sich verändert hat, ohne im Rumpf zu stehen. Live-Werte, die sich schon zwischen zwei Lesungen davor
   bewegen, vergleicht es nicht. Vor einem Löschen liest es den Eintrag und nennt ihn in der Antwort.
-- **PUT ergänzen:** Grow OS ersetzt bei PUT meist das ganze Objekt. Fehlende Rumpffelder füllt das Werkzeug
+- **PUT ergänzen:** Cultivate Control ersetzt bei PUT meist das ganze Objekt. Fehlende Rumpffelder füllt das Werkzeug
   aus dem gelesenen Stand (aus dem Teil, in dem die meisten Rumpffelder stehen, etwa `einstellungen`), damit „nur
   die Hysterese ändern" nicht alles andere zurücksetzt; `ergaenzen=false` schickt nur den Rumpf. Fehlt im Rumpf eine
-  **Liste** (Sensoren, Kacheln …), bricht es ab: was Grow OS mit einer fehlenden Liste tut, ist je Weg verschieden.
+  **Liste** (Sensoren, Kacheln …), bricht es ab: was Cultivate Control mit einer fehlenden Liste tut, ist je Weg verschieden.
   Ist der Stand nicht lesbar oder passt er nicht zum Rumpf, geht kein halber PUT hinaus.
 - **Keine Dateien:** kein Hochladen, keine Bilder oder Sicherungsdateien in der Antwort (dafür `foto_ansehen`).
 
 **Was über einen Schlüssel nie geht** — egal mit welcher Stufe, auch nicht über `fork_ausfuehren`:
 Schlüsselverwaltung, KI-Hauptschalter, Sicherung zurückspielen oder herunterladen, Home-Assistant-Adresse
-und -Token ändern. Das bleibt dem Menschen in der Oberfläche von Grow OS. Maßgeblich ist, was Grow OS selbst
+und -Token ändern. Das bleibt dem Menschen in der Oberfläche von Cultivate Control. Maßgeblich ist, was Cultivate Control selbst
 als „nie" führt: `fork_funktionen` mit `zugang=nie`.
 
 Für Alltägliches bleiben die festen Werkzeuge der bessere Weg: sie prüfen mehr (Messfelder, Höchstwerte,
@@ -220,21 +220,21 @@ Prüfsummen) und antworten in Sätzen.
   Seite nicht erreichbar — sonst könnte sich jeder im Netz den Schlüssel
   abholen.
 - **Mit dem MCP-Schlüssel nur lesend.** Eintragen und Schalten gehen nur mit
-  einem Schlüssel aus Grow OS (siehe oben), und nur so weit, wie du es dort
+  einem Schlüssel aus Cultivate Control (siehe oben), und nur so weit, wie du es dort
   angehakt hast. Mit dem MCP-Schlüssel antworten diese Werkzeuge nur mit dem
-  Hinweis, wo es den richtigen Schlüssel gibt — Grow OS wird gar nicht gefragt.
-- **Der Fork-Schlüssel wird nicht gespeichert.** Der Grow MCP liest ihn bei
-  jeder Anfrage aus dem Kopf, reicht ihn an Grow OS weiter und vergisst ihn.
-  Gesperrt oder gelöscht wird er in Grow OS; das wirkt sofort.
+  Hinweis, wo es den richtigen Schlüssel gibt — Cultivate Control wird gar nicht gefragt.
+- **Der Fork-Schlüssel wird nicht gespeichert.** Der Cultivate Control MCP liest ihn bei
+  jeder Anfrage aus dem Kopf, reicht ihn an Cultivate Control weiter und vergisst ihn.
+  Gesperrt oder gelöscht wird er in Cultivate Control; das wirkt sofort.
 - **Neuen Schlüssel?** Datei `mcp-token` im Add-on-Speicher löschen und neu
   starten. Die alten Klienten müssen dann neu eingerichtet werden.
 
-## Wenn Grow OS nicht gefunden wird
+## Wenn Cultivate Control nicht gefunden wird
 
-Normalerweise findet der Server Grow OS von selbst, solange beide aus diesem
+Normalerweise findet der Server Cultivate Control von selbst, solange beide aus diesem
 Repository stammen. Sonst steht der Name in Home Assistant unter
-**Grow OS → Info → Hostname**; unter `grow_os_adresse` eintragen, mit Port:
+**Cultivate Control → Info → Hostname**; unter `grow_os_adresse` eintragen, mit Port:
 
 ```
-http://a1b2c3d4-grow-os-fork-ai:5076
+http://a1b2c3d4-cultivate-control:5076
 ```

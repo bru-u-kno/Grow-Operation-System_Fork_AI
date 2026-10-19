@@ -218,7 +218,7 @@ export function BestandAbschnitt({ modul, schaltet, bestand, neuLaden, children 
           <div className="st-feldzeile" key={b.entityId}>
             <span className="st-etikett">
               {b.zweck}
-              <small>Von Fork AI angelegt, aber in einer älteren Fassung. Neu anlegen ersetzt sie.</small>
+              <small>Von Cultivate Control angelegt, aber in einer älteren Fassung. Neu anlegen ersetzt sie.</small>
             </span>
           </div>
         ))}

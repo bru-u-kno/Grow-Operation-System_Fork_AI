@@ -211,7 +211,7 @@ public sealed class AdminAccessPolicyTests
     /// Ein Nachbar-Add-on darf lesen — und nur lesen.
     /// </summary>
     /// <remarks>
-    /// Ohne diesen Weg käme Grow MCP als zweites Add-on nicht an die Daten: es
+    /// Ohne diesen Weg käme Cultivate Control MCP als zweites Add-on nicht an die Daten: es
     /// ist weder Loopback noch Ingress. Die Beschränkung auf GET ist die
     /// eigentliche Zusage — mitlesen ja, schalten oder dosieren nie.
     /// </remarks>

@@ -119,7 +119,7 @@ public sealed class VerwaltungWerkzeugeTests
         var rumpf = Rumpf(put);
         Assert.Equal("haupt", rumpf["raumId"]!.GetValue<string>());
 
-        // Sensoren und Kameras gehen nicht mit: Grow OS ersetzt sonst die Sensor-Zeilen (neue Ids).
+        // Sensoren und Kameras gehen nicht mit: Cultivate Control ersetzt sonst die Sensor-Zeilen (neue Ids).
         foreach (var weg in new[] { "sensors", "cameras", "cameraEntityId", "id", "activeGrowCount" }) Assert.False(rumpf.ContainsKey(weg), weg);
 
         // Alles andere geht unverändert zurück.
@@ -210,7 +210,7 @@ public sealed class VerwaltungWerkzeugeTests
         var text = await Aufruf(fork, werkzeug, schluessel: null);
 
         Assert.Empty(fork.VonWerkzeugen);
-        Assert.Contains("Schlüssel aus Grow OS", text);
+        Assert.Contains("Schlüssel aus Cultivate Control", text);
     }
 
     [Theory]

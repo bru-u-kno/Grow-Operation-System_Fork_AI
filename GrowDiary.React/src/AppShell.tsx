@@ -111,9 +111,9 @@ export function AppShell({ children, counts }: Props) {
 
       <aside className="v1-desktop-nav" aria-label="Navigation" ref={navRef}>
         <div className="v1-brand">
-          <div className="v1-brand-mark">G</div>
+          <div className="v1-brand-mark">C</div>
           <div>
-            <strong>GROW OS</strong>
+            <strong>CULTIVATE CONTROL</strong>
             <span>RDWC · Home Assistant</span>
           </div>
         </div>
@@ -171,7 +171,7 @@ export function AppShell({ children, counts }: Props) {
 
         Links der Name — aber nur, wenn Home Assistant seinen eigenen nicht
         schon darueber setzt (siehe useHomeAssistantFrame). Vorher stand
-        „Grow OS Fork AI" in der HA-Leiste und „GROW OS" gleich darunter
+        „Cultivate Control" in der HA-Leiste und „CULTIVATE CONTROL" gleich darunter
         nochmal; zwei Namenszuege uebereinander kosten 58 px, die am Telefon
         dem Inhalt fehlen.
 
@@ -183,9 +183,9 @@ export function AppShell({ children, counts }: Props) {
       <header className="v1-mobile-topbar forkai-topbar">
         {frame.vollbild ? (
           <div className="forkai-titel">
-            <div className="v1-brand-mark" aria-hidden="true">G</div>
+            <div className="v1-brand-mark" aria-hidden="true">C</div>
             <div className="forkai-titel-text">
-              <strong>Grow OS Fork AI</strong>
+              <strong>Cultivate Control</strong>
               <span>{seitenName(location.pathname)}</span>
             </div>
           </div>
@@ -223,7 +223,7 @@ export function AppShell({ children, counts }: Props) {
         Die Hauptnavigation sitzt oben, nicht unten.
 
         Unten funktioniert sie im Home-Assistant-Ingress nicht: dort steckt
-        Grow OS in einem iframe, das hoeher ist als das, was auf dem Schirm
+        Cultivate Control in einem iframe, das hoeher ist als das, was auf dem Schirm
         Platz hat. `position: fixed; bottom: 0` klebt an der Unterkante DIESES
         iframes — und die liegt unterhalb des sichtbaren Bereichs.
 

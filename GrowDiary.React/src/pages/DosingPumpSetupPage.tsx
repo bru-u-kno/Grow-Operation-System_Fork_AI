@@ -302,7 +302,7 @@ function DosingPumpSetupPage() {
             label="Testbetrieb — schaltet nichts, es fließt nichts"
             checked={form.simulationMode}
             onChange={(checked) => patch({ simulationMode: checked })}
-            hint="Zum Durchspielen ohne Hardware: Grow OS rechnet, wartet die echte Laufzeit ab und protokolliert — schaltet aber keine Entität."
+            hint="Zum Durchspielen ohne Hardware: Cultivate Control rechnet, wartet die echte Laufzeit ab und protokolliert — schaltet aber keine Entität."
           />
           {form.simulationMode && (
             <p className="rc2-measurement-note" style={{ margin: '10px 0 0' }}>
@@ -318,7 +318,7 @@ function DosingPumpSetupPage() {
         <V1Card>
           <div className="dz-warn">
             <div>
-              <b>Grow OS schaltet ein und Sekunden später wieder aus.</b> Stürzt es genau dazwischen ab
+              <b>Cultivate Control schaltet ein und Sekunden später wieder aus.</b> Stürzt es genau dazwischen ab
               oder fällt der Rechner aus, läuft die Pumpe weiter — niemand ist da, der sie stoppt.
               Richte in Home Assistant eine Abschaltung ein, die diese Entität nach spätestens
               30 Sekunden von sich aus abwirft, und hake es hier ab.
@@ -373,7 +373,7 @@ function DosingPumpSetupPage() {
         <V1Card>
           <div className="dz-warn">
             <div>
-              <b>Eingeschaltet dosiert Grow OS ohne Rückfrage.</b> Es rechnet aus dem, was diese Pumpe
+              <b>Eingeschaltet dosiert Cultivate Control ohne Rückfrage.</b> Es rechnet aus dem, was diese Pumpe
               an früheren Dosen gelernt hat, und gibt jeweils den halben Weg zum Ziel. Alle Anschläge
               von oben gelten weiter — dazu drei, die nur hier greifen: ohne Abschaltung in Home
               Assistant bleibt sie gesperrt, gegen einen alten Messwert wird nicht dosiert, und eine

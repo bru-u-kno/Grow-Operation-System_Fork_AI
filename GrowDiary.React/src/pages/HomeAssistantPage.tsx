@@ -299,7 +299,7 @@ function HomeAssistantPage() {
               <section className="ls-panel">
                 <div className="ls-panel-head"><span className="ls-label">Aufs Handy</span></div>
                 <p className="ha-pair-text" style={{ margin: '0 0 10px' }}>
-                  Grow OS als Kachel auf den Startbildschirm des Handys — mit QR-Code und Anleitung.
+                  Cultivate Control als Kachel auf den Startbildschirm des Handys — mit QR-Code und Anleitung.
                 </p>
                 <Link to="/handy?tab=app" className="ls-btn is-small">Handy › App einrichten</Link>
               </section>

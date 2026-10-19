@@ -152,7 +152,7 @@ public sealed class NotificationServiceBehaviorTests : IDisposable
         SaveSettings(_ => { });
         var handler = OkHandler();
 
-        var sent = await Service(handler).SendAsync(NotificationCategory.SensorOffline, "🌱 Grow OS", "Sensor liefert keine Werte mehr: pH.");
+        var sent = await Service(handler).SendAsync(NotificationCategory.SensorOffline, "🌱 Cultivate Control", "Sensor liefert keine Werte mehr: pH.");
 
         Assert.True(sent);
         var request = Assert.Single(handler.Requests);

@@ -29,7 +29,7 @@ public sealed record Voraussetzung(
     string Titel, bool Erfuellt, string Text, string Fehlt, string Schluessel = "");
 
 /// <summary>
-/// Steuert Grow OS gerade wirklich — und wenn nicht, woran liegt es?
+/// Steuert Cultivate Control gerade wirklich — und wenn nicht, woran liegt es?
 /// </summary>
 /// <param name="RampeSchreibt">Ist alles eingerichtet, damit der Sollwert geschrieben wird?</param>
 /// <param name="KuehlerSchaltet">
@@ -141,7 +141,7 @@ public static class SteuerungsstandBauer
         {
             new("Kühler-Steuerung eingeschaltet", an,
                 an
-                    ? "Grow OS darf die Steckdose schalten."
+                    ? "Cultivate Control darf die Steckdose schalten."
                     : "Aus. Standard — etwas, das einen Kompressor taktet, schaltet sich nicht selbst ein.",
                 "die eingeschaltete Kühler-Steuerung",
                 KettenSchluessel.KuehlerSteuerung),

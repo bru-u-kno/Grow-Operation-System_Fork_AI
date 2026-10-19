@@ -15,7 +15,7 @@ namespace GrowMcp.Tests;
 /// </remarks>
 public sealed class KopfdatenTests
 {
-    /// <summary>Ein Ablauf, wie Grow OS ihn ausliefert — verkürzt, aber echt gebaut.</summary>
+    /// <summary>Ein Ablauf, wie Cultivate Control ihn ausliefert — verkürzt, aber echt gebaut.</summary>
     private const string Ablauf = """
         [{
           "name": "Wurzelfäule-Behandlung (14 Tage)",

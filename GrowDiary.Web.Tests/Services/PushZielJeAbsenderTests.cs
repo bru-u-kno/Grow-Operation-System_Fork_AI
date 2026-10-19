@@ -28,7 +28,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </remarks>
 public sealed class PushZielJeAbsenderTests : IDisposable
 {
-    private const string Slug = "d48160c2_grow_os_fork_ai";
+    private const string Slug = "00d580e3_cultivate_control";
 
     private readonly string _wurzel;
     private readonly AppPaths _pfade;
@@ -55,7 +55,7 @@ public sealed class PushZielJeAbsenderTests : IDisposable
         _zelt = _grows.CreateTent(new Tent { Name = "Bluetezelt", TentType = TentType.Production });
         Assert.NotEqual(1, _zelt.Id);
 
-        // Mit Supervisor-Token: nur dann kennt Grow OS seinen Slug und setzt ein Ziel.
+        // Mit Supervisor-Token: nur dann kennt Cultivate Control seinen Slug und setzt ein Ziel.
         _tokenVorher = Environment.GetEnvironmentVariable(HomeAssistantAddon.SupervisorTokenEnvironmentVariable);
         Environment.SetEnvironmentVariable(HomeAssistantAddon.SupervisorTokenEnvironmentVariable, "supervisor-token");
 

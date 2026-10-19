@@ -4,7 +4,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 /**
  * Einstellungen → System zeigt die Version des installierten Add-ons.
  *
- * <b>Der Anlass.</b> Die Zeile „Version“ nannte nur „Grow OS · Add-on“, nie eine Nummer (Sichtprüfung 18.10.2026). Für
+ * <b>Der Anlass.</b> Die Zeile „Version“ nannte nur „Cultivate Control · Add-on“, nie eine Nummer (Sichtprüfung 18.10.2026). Für
  * Fehlerberichte und Fremdinstallationen muss sichtbar sein, welcher Stand läuft. Die Nummer nennt der Supervisor
  * (`appVersion` in `/api/system/backend-health`); ohne Home Assistant steht dort null, und die Zeile sagt „unbekannt“.
  *
@@ -16,7 +16,7 @@ import { backendAntwortet, darfUeberspringen } from './pflicht'
 async function oeffneMitVersion(page: Page, appVersion: string | null) {
   await page.route('**/api/system/backend-health', (route) => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ appName: 'Grow OS', backendSchema: 'backend-core.v0.18-candidate', checkedAtUtc: new Date().toISOString(), appVersion }),
+    body: JSON.stringify({ appName: 'Cultivate Control', backendSchema: 'backend-core.v0.18-candidate', checkedAtUtc: new Date().toISOString(), appVersion }),
   }))
   await page.goto('/einstellungen', { waitUntil: 'networkidle' })
   return page.locator('.co-row', { hasText: /^Version/ })

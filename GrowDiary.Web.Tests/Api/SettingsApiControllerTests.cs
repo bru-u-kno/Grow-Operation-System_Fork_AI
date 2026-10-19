@@ -393,7 +393,7 @@ public sealed class SettingsApiControllerTests : IDisposable
     }
 
     /// <summary>
-    /// forkai.247 (Prüfer): Stehen aus altem Bestand zwei Zeilen derselben Messgröße da, ändert der Einzelweg die Zeile, die Grow OS
+    /// forkai.247 (Prüfer): Stehen aus altem Bestand zwei Zeilen derselben Messgröße da, ändert der Einzelweg die Zeile, die Cultivate Control
     /// liest (die letzte aktive), und legt die andere still — danach gilt genau eine. Lösen legt alle still.
     /// </summary>
     [Fact]

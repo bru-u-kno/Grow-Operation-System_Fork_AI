@@ -89,7 +89,7 @@ public static class Sprungerkennung
     /// EC: ab 5 % des Werts davor (mindestens 0,05 mS/cm).
     /// </summary>
     /// <remarks>
-    /// Faustregel Grow OS, aus der Mischungsrechnung: wer 1/20 des Beckens mit
+    /// Faustregel Cultivate Control, aus der Mischungsrechnung: wer 1/20 des Beckens mit
     /// Wasser auffüllt, verdünnt die Lösung um rund 5 %. Kleiner als das ist ein
     /// Nachfüllen nicht vom Tagesgang (±0,01) zu trennen. Nutzer-Fall: 0,13 bei
     /// 1,74 — das Siebenfache des Rauschens.
@@ -104,7 +104,7 @@ public static class Sprungerkennung
     /// bis <see cref="DeviationAnalyzerService.PhComfortMax"/>), also 0,2.
     /// </summary>
     /// <remarks>
-    /// Faustregel Grow OS: eine Stufe, die den pH mit einem Schlag um ein halbes
+    /// Faustregel Cultivate Control: eine Stufe, die den pH mit einem Schlag um ein halbes
     /// Zielband verschiebt, ist eine Zugabe (pH−, Dünger, frisches Wasser). SOP-RDWC-CAN-N1
     /// §2.1 nennt 0,1–0,4 je TAG als normale Schwankung — 0,2 in Minuten ist
     /// keine Schwankung mehr. Die Zahl steht nicht hier, sondern kommt vom Band.

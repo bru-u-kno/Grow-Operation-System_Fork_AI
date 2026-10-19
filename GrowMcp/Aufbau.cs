@@ -10,14 +10,14 @@ namespace GrowMcp;
 /// </summary>
 /// <remarks>
 /// Fork AI (A-004, 03.10.2026): Stand bis dahin direkt in <c>Program.cs</c>. Der
-/// Beleg, dass ein Fork-Schlüssel durch den ECHTEN MCP-Weg bis zu Grow OS
+/// Beleg, dass ein Fork-Schlüssel durch den ECHTEN MCP-Weg bis zu Cultivate Control
 /// kommt (<c>DurchreichenTests</c>), braucht dieselbe Tür und dieselben
 /// Werkzeuge wie der Betrieb. Ein nachgebauter Aufbau im Test belegte nur sich
 /// selbst.
 /// </remarks>
 public static class Aufbau
 {
-    /// <summary>Alle Dienste des Grow MCP eintragen.</summary>
+    /// <summary>Alle Dienste des Cultivate Control MCP eintragen.</summary>
     public static void Dienste(IServiceCollection dienste, McpEinstellungen einstellungen)
     {
         dienste.AddSingleton(einstellungen);
@@ -29,10 +29,10 @@ public static class Aufbau
         dienste.AddSingleton<IForkSchluesselQuelle, AnfrageSchluessel>();
 
         // Der eigene Slug steht in grow-mcp/config.yaml; aus ihm folgt der Name von
-        // Grow OS im internen Netz. Stand hier einmal der Slug eines anderen Add-ons,
-        // fand dieses hier ein Grow OS aus dem Store gar nicht — genau so ist es beim
+        // Cultivate Control im internen Netz. Stand hier einmal der Slug eines anderen Add-ons,
+        // fand dieses hier ein Cultivate Control aus dem Store gar nicht — genau so ist es beim
         // ersten Einsatz gescheitert.
-        dienste.AddGrowOsAccess(einstellungen.GrowOsAdresse, eigenerSlug: "grow_mcp");
+        dienste.AddGrowOsAccess(einstellungen.GrowOsAdresse, eigenerSlug: "cultivate_control_mcp");
 
         dienste.AddMcpServer()
             // Zustandslos: dieser Server haelt nichts zwischen zwei Aufrufen fest,
@@ -99,10 +99,10 @@ public static class Aufbau
     /// </summary>
     /// <remarks>
     /// <para>Zwei Schlüssel passen. Der MCP-Schlüssel dieses Add-ons (lesen) — er
-    /// wird hier geprüft. Und ein Schlüssel aus Grow OS (<c>gok_…</c>) — von dem
-    /// prüft dieses Add-on nur die Form, denn gültig ist er nur, wenn Grow OS ihn
+    /// wird hier geprüft. Und ein Schlüssel aus Cultivate Control (<c>gok_…</c>) — von dem
+    /// prüft dieses Add-on nur die Form, denn gültig ist er nur, wenn Cultivate Control ihn
     /// kennt. Ein erfundener <c>gok_</c> kommt also durch die Tür, aber an nichts
-    /// heran: Grow OS lehnt jede Anfrage damit ab, auch die lesenden, und zählt
+    /// heran: Cultivate Control lehnt jede Anfrage damit ab, auch die lesenden, und zählt
     /// den Fehlversuch.</para>
     /// </remarks>
     public static bool SchluesselPasst(string? mitgeschickt, Func<string?, bool> mcpSchluesselStimmt)

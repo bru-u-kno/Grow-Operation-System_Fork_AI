@@ -5,7 +5,7 @@ import { einblendungenAbwarten, zuKleineZiele } from './oberflaeche-messung'
  * Was man antippen kann, muss man auch treffen können.
  *
  * 44px ist die Größe, die Apple und Google unabhängig voneinander als Minimum
- * angeben. Grow OS läuft am Wandtablet und am Telefon im Gewächshaus, oft mit
+ * angeben. Cultivate Control läuft am Wandtablet und am Telefon im Gewächshaus, oft mit
  * feuchten Händen — hier ist das keine Formalie.
  *
  * Gemessen wird die *Trefferfläche*, nicht die Kastengröße — wie, steht in

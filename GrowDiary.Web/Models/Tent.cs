@@ -32,7 +32,7 @@ public sealed class Tent
     /// </remarks>
     public string? ChillerSwitchEntityId { get; set; }
 
-    /// <summary>Darf Grow OS den Kuehler selbst schalten?</summary>
+    /// <summary>Darf Cultivate Control den Kuehler selbst schalten?</summary>
     /// <remarks>
     /// Standard <b>aus</b>. Etwas, das einen Kompressor taktet, schaltet sich
     /// nicht von selbst ein, weil jemand ein Update eingespielt hat.

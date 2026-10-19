@@ -109,10 +109,10 @@ public sealed class SteuerungRechenwertAbsicherung
             Co2Rechenwerte.Stand.Aktuell => new(entityId, name, stand.ToString(), null, null, null, null, null),
             Co2Rechenwerte.Stand.Veraltet => new(entityId, name, stand.ToString(), alt!.Heute, alt.Danach, formel, neu, null),
             Co2Rechenwerte.Stand.Angepasst => new(entityId, name, stand.ToString(), null, null, formel, neu,
-                "Die Formel ist von Hand angepasst — Fork AI ersetzt sie nicht. Zum Vergleich steht die aktuelle Fassung daneben."),
+                "Die Formel ist von Hand angepasst — Cultivate Control ersetzt sie nicht. Zum Vergleich steht die aktuelle Fassung daneben."),
             Co2Rechenwerte.Stand.AndererFuehler => new(entityId, name, stand.ToString(), null, null, formel, neu,
                 $"Die Formel rechnet mit {Co2Rechenwerte.FuehlerInFormel(entityId, formel)}, unter „Rollen bearbeiten“ ist "
-                + $"{zuordnung.GetValueOrDefault("co2_sensor")} zugeordnet. Fork AI ändert sie nicht — welcher Fühler stimmt, "
+                + $"{zuordnung.GetValueOrDefault("co2_sensor")} zugeordnet. Cultivate Control ändert sie nicht — welcher Fühler stimmt, "
                 + "weißt du. Stimmt die Zuordnung nicht, danach hier noch einmal nachsehen."),
             _ => new(entityId, name, stand.ToString(), null, null, formel, null,
                 "Dafür muss unter „Rollen bearbeiten“ ein CO₂-Sensor zugeordnet sein."),
@@ -251,7 +251,7 @@ public sealed class SteuerungRechenwertAbsicherung
             && e.TryGetProperty("config_entry_id", out var k) && k.ValueKind == JsonValueKind.String
             ? k.GetString() : null;
         return string.IsNullOrWhiteSpace(id)
-            ? (null, "Der Rechenwert steht in der YAML-Konfiguration, nicht unter Helfer — Fork AI kann ihn dort nicht ändern.")
+            ? (null, "Der Rechenwert steht in der YAML-Konfiguration, nicht unter Helfer — Cultivate Control kann ihn dort nicht ändern.")
             : (id, null);
     }
 

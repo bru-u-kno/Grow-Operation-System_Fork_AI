@@ -46,7 +46,7 @@ public sealed class CalibrationReminderService
             return;
         }
 
-        await _notifications.SendAsync(NotificationCategory.Calibration, "🌱 Grow OS · Kalibrierung", message, cancellationToken);
+        await _notifications.SendAsync(NotificationCategory.Calibration, "🌱 Cultivate Control · Kalibrierung", message, cancellationToken);
     }
 
     private static string Describe(CalibrationEvent calibrationEvent)

@@ -55,7 +55,7 @@ public sealed record KuehlerUrteil(KuehlerSchaltung Schaltung, string Grund)
 ///
 /// <para><b>Woher die Idee kommt.</b> Ein Hailea-Kühler nimmt keinen Sollwert
 /// von außen; er hat seinen eigenen Thermostat und kein Bussystem. Damit war
-/// die Nachtabsenkung, die Grow OS seit beta.32 <i>plant</i>, nicht
+/// die Nachtabsenkung, die Cultivate Control seit beta.32 <i>plant</i>, nicht
 /// umzusetzen. Der Tester hat es umgedreht: den Kühler auf eine tiefe
 /// Untergrenze stellen — er regelt dann nicht mehr, sondern schaltet nur noch
 /// im Notfall ab — und ihn über eine smarte Steckdose ein- und ausschalten.

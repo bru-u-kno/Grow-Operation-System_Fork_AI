@@ -23,7 +23,7 @@ namespace GrowDiary.Web.Services;
 /// stoppt dort. Deshalb muss der auf eine Untergrenze gestellt sein — das ist
 /// die Bedingung, unter der diese Steuerung überhaupt verantwortbar ist, und
 /// sie steht so auch in der Oberfläche. Im Kopf von
-/// <see cref="NachtabsenkungWriter"/> steht die Gegenposition („Grow OS taktet
+/// <see cref="NachtabsenkungWriter"/> steht die Gegenposition („Cultivate Control taktet
 /// keinen Chiller"); sie galt, solange es diese Notabschaltung nicht gab.</para>
 /// </summary>
 public sealed class KuehlerWorker : BackgroundService

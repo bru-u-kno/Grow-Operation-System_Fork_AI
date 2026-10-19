@@ -9,9 +9,9 @@ namespace GrowMcp.Tests;
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026): Die Schreib-Werkzeuge schicken Feldnamen
-/// und Wege an Grow OS. „Bezeichner nie aus dem Kopf" (CLAUDE.md, Prüfung 3)
+/// und Wege an Cultivate Control. „Bezeichner nie aus dem Kopf" (CLAUDE.md, Prüfung 3)
 /// heisst hier: nicht gegen eine abgetippte Liste prüfen, sondern gegen die
-/// Typen, die Grow OS wirklich hat. Grow OS wird deshalb mitgebaut
+/// Typen, die Cultivate Control wirklich hat. Cultivate Control wird deshalb mitgebaut
 /// (<c>ReferenceOutputAssembly="false"</c> im Testprojekt) und hier in einen
 /// eigenen Ladekontext geladen.</para>
 ///
@@ -25,10 +25,10 @@ internal static class GrowOsBau
 
     public static Assembly Assembly => Geladen.Value;
 
-    /// <summary>Ein Typ aus Grow OS, etwa <c>GrowDiary.Web.Api.Contracts.MeasurementUpsertRequest</c>.</summary>
+    /// <summary>Ein Typ aus Cultivate Control, etwa <c>GrowDiary.Web.Api.Contracts.MeasurementUpsertRequest</c>.</summary>
     public static Type Typ(string vollerName)
         => Assembly.GetType(vollerName, throwOnError: false)
-           ?? throw new InvalidOperationException($"Grow OS hat keinen Typ {vollerName} (mehr).");
+           ?? throw new InvalidOperationException($"Cultivate Control hat keinen Typ {vollerName} (mehr).");
 
     private static Assembly Laden()
     {
@@ -44,13 +44,13 @@ internal static class GrowOsBau
         if (!File.Exists(pfad))
         {
             throw new InvalidOperationException(
-                $"{pfad} fehlt. Das Testprojekt baut Grow OS mit (ProjectReference ohne Referenz) — ist der Bau durchgelaufen?");
+                $"{pfad} fehlt. Das Testprojekt baut Cultivate Control mit (ProjectReference ohne Referenz) — ist der Bau durchgelaufen?");
         }
 
         return new Ladekontext(pfad).LoadFromAssemblyPath(pfad);
     }
 
-    /// <summary>Lädt Grow OS samt seiner Pakete aus dessen eigenem Ausgabeordner.</summary>
+    /// <summary>Lädt Cultivate Control samt seiner Pakete aus dessen eigenem Ausgabeordner.</summary>
     private sealed class Ladekontext(string pfad) : AssemblyLoadContext("grow-os-zum-nachsehen", isCollectible: false)
     {
         private readonly AssemblyDependencyResolver _aufloeser = new(pfad);
@@ -58,16 +58,16 @@ internal static class GrowOsBau
         protected override Assembly? Load(AssemblyName name)
         {
             // Rahmenwerk (System.*, Microsoft.AspNetCore.*) kommt aus dem
-            // gemeinsamen Kontext; nur was Grow OS selbst mitbringt, von dort.
+            // gemeinsamen Kontext; nur was Cultivate Control selbst mitbringt, von dort.
             var datei = _aufloeser.ResolveAssemblyToPath(name);
             return datei is null ? null : LoadFromAssemblyPath(datei);
         }
     }
 
-    /// <summary>Ein Weg, den ein Controller in Grow OS anbietet.</summary>
+    /// <summary>Ein Weg, den ein Controller in Cultivate Control anbietet.</summary>
     public sealed record Weg(string Methode, string Vorlage, Regex Muster, string Controller, string Aktion);
 
-    /// <summary>Alle Wege aller Controller in Grow OS — aus den Routing-Attributen gelesen.</summary>
+    /// <summary>Alle Wege aller Controller in Cultivate Control — aus den Routing-Attributen gelesen.</summary>
     public static IReadOnlyList<Weg> Wege()
     {
         var wege = new List<Weg>();

@@ -11,7 +11,7 @@ namespace GrowDiary.Web.Services;
 /// reagiert mit Rückwuchs in die Vegetation oder mit Zwitterblüten. Beides
 /// merkt man erst Wochen später, und dann ist die Ernte hin.</para>
 ///
-/// <para>Grow OS sieht die Einschaltflanke in dem Moment, in dem sie passiert —
+/// <para>Cultivate Control sieht die Einschaltflanke in dem Moment, in dem sie passiert —
 /// die Aufzeichnung gab es schon, nur hat sie niemand gelesen. Ein Push jetzt
 /// kann die Nacht noch retten; ein Blick ins Protokoll übermorgen nicht.</para>
 ///

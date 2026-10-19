@@ -35,7 +35,7 @@ public sealed class LoeschWerkzeugeTests
             """{"id":1,"growId":1,"title":"Gekeimt","body":"Keimung bestätigt","entryType":"GerminationConfirmed","occurredAtUtc":"2026-10-01T10:00:00Z"}""");
         var text = await Aufruf(fork, "journal_loeschen", new() { ["eintragId"] = 1 });
 
-        Assert.Contains("Das war ein Meilenstein (GerminationConfirmed), den Grow OS beim Bestätigen einer Phase selbst schreibt.", text);
+        Assert.Contains("Das war ein Meilenstein (GerminationConfirmed), den Cultivate Control beim Bestätigen einer Phase selbst schreibt.", text);
         Assert.Contains("Als Notiz: journal_eintragen mit growId 1, zeitpunkt ", text);
         Assert.Contains(", art Notiz, titel „Gekeimt\", text wie oben.", text);
         Assert.DoesNotContain("art GerminationConfirmed", text);
@@ -85,7 +85,7 @@ public sealed class LoeschWerkzeugeTests
             .Antwort("GET", @"api/measurements/\d+", 200, """{"id":1,"growId":1,"takenAt":"2026-10-01T08:00:00","stage":"Flower"}""");
         var text = await Aufruf(fork, werkzeug, new() { [parameter] = 8 });
 
-        Assert.StartsWith("Grow OS hat anders geantwortet als erwartet", text);
+        Assert.StartsWith("Cultivate Control hat anders geantwortet als erwartet", text);
         Assert.DoesNotContain(fork.VonWerkzeugen, a => a.Methode == "DELETE");
     }
 

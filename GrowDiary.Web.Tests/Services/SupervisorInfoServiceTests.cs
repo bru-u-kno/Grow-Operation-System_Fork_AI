@@ -20,7 +20,7 @@ public sealed class SupervisorInfoServiceTests
     public void ReadsTheSlugFromTheSupervisorEnvelope()
     {
         // Der Supervisor antwortet immer in { result, data }.
-        using var document = Json("""{"result":"ok","data":{"slug":"a0d7b954_grow_os","name":"Grow OS"}}""");
+        using var document = Json("""{"result":"ok","data":{"slug":"a0d7b954_grow_os","name":"Cultivate Control"}}""");
 
         Assert.Equal("a0d7b954_grow_os", SupervisorInfoService.ReadSlug(document));
     }
@@ -37,7 +37,7 @@ public sealed class SupervisorInfoServiceTests
     public void ReadsTheInstalledVersionFromTheSupervisorEnvelope()
     {
         // Einstellungen → System zeigt diese Zahl; sie muss die des installierten Add-ons sein, nicht die des Quelltexts.
-        using var document = Json("""{"result":"ok","data":{"slug":"d48160c2_grow_os_fork_ai","version":"2.0.0-forkai.246"}}""");
+        using var document = Json("""{"result":"ok","data":{"slug":"00d580e3_cultivate_control","version":"2.0.0-forkai.246"}}""");
 
         Assert.Equal("2.0.0-forkai.246", SupervisorInfoService.ReadVersion(document));
     }
@@ -81,14 +81,14 @@ public sealed class SupervisorInfoServiceTests
     }
 
     [Theory]
-    [InlineData("aufgaben", "/app/d48160c2_grow_os_fork_ai/aufgaben")]
-    [InlineData("/sensoren", "/app/d48160c2_grow_os_fork_ai/sensoren")]
-    [InlineData("zelte/3", "/app/d48160c2_grow_os_fork_ai/zelte/3")]
-    [InlineData("", "/app/d48160c2_grow_os_fork_ai")]
-    [InlineData(null, "/app/d48160c2_grow_os_fork_ai")]
+    [InlineData("aufgaben", "/app/00d580e3_cultivate_control/aufgaben")]
+    [InlineData("/sensoren", "/app/00d580e3_cultivate_control/sensoren")]
+    [InlineData("zelte/3", "/app/00d580e3_cultivate_control/zelte/3")]
+    [InlineData("", "/app/00d580e3_cultivate_control")]
+    [InlineData(null, "/app/00d580e3_cultivate_control")]
     public void ASeiteHangsBehindTheSlug(string? seite, string erwartet)
     {
-        Assert.Equal(erwartet, SupervisorInfoService.PanelPath("d48160c2_grow_os_fork_ai", seite));
+        Assert.Equal(erwartet, SupervisorInfoService.PanelPath("00d580e3_cultivate_control", seite));
     }
 
     [Theory]

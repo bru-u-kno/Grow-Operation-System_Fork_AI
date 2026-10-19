@@ -51,12 +51,12 @@ public static class Tueren
     /// <remarks>
     /// <para>Quelle: Home-Assistant-Entwicklerdoku „Presenting your app → Ingress":
     /// ein Add-on soll Ingress-Anfragen nur von 172.30.32.2 annehmen. Dieselbe
-    /// Adresse prüft Grow OS in <c>AdminAccessPolicy</c>.</para>
+    /// Adresse prüft Cultivate Control in <c>AdminAccessPolicy</c>.</para>
     ///
     /// <para><b>Warum (Sicherheitsprüfung 02.10.2026).</b> Kestrel lauscht auf allen
     /// Adressen, auch am Ingress-Port. Nach draussen ist der zwar zu — im internen
     /// Add-on-Netz (172.30.32.0/23) aber nicht. Jedes andere Add-on konnte
-    /// <c>http://&lt;grow_mcp&gt;:5078/</c> abrufen und den Schlüssel von der
+    /// <c>http://&lt;cultivate_control_mcp&gt;:5078/</c> abrufen und den Schlüssel von der
     /// Einrichtungsseite ablesen. Nur IPv4: eine IPv6 im Add-on-Netz vergibt
     /// Docker frei, sie könnte einem anderen Container gehören.</para>
     /// </remarks>

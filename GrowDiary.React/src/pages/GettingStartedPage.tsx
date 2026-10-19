@@ -12,7 +12,7 @@ function GettingStartedPage() {
           <V1Card>
             <span className="v1-card-kicker">Schritt 1</span>
             <h2>Sensoren verbinden</h2>
-            <p>Grow OS ist als Add-on schon mit Home Assistant verbunden. Ordne beim Zelt deine HA-Sensoren aus dem Dropdown zu — pH, EC, Klima, Kamera und mehr. Kein Token, kein Abtippen.</p>
+            <p>Cultivate Control ist als Add-on schon mit Home Assistant verbunden. Ordne beim Zelt deine HA-Sensoren aus dem Dropdown zu — pH, EC, Klima, Kamera und mehr. Kein Token, kein Abtippen.</p>
             <V1LinkButton to="/home-assistant" variant="primary">Home Assistant öffnen</V1LinkButton>
           </V1Card>
           <V1Card>
@@ -41,7 +41,7 @@ function GettingStartedPage() {
           <V1Card>
             <span className="v1-card-kicker">Im Grow · Tab „Diagnose"</span>
             <h2>Diagnose & SOP-Vorschläge</h2>
-            <p>Grow OS erkennt Abweichungen, ordnet sie Symptomen zu und schlägt passende Behandlungen und SOPs vor — direkt im Grow unter <strong>Diagnose</strong>.</p>
+            <p>Cultivate Control erkennt Abweichungen, ordnet sie Symptomen zu und schlägt passende Behandlungen und SOPs vor — direkt im Grow unter <strong>Diagnose</strong>.</p>
             <V1LinkButton to="/grows">Zu den Grows</V1LinkButton>
           </V1Card>
           <V1Card>
@@ -59,7 +59,7 @@ function GettingStartedPage() {
           <V1Card>
             <span className="v1-card-kicker">Sensoren</span>
             <h2>Kalibrier-Erinnerung</h2>
-            <p>Pro Sonde ein Kalibrier-Intervall setzen — Grow OS erinnert dich rechtzeitig ans Nachkalibrieren.</p>
+            <p>Pro Sonde ein Kalibrier-Intervall setzen — Cultivate Control erinnert dich rechtzeitig ans Nachkalibrieren.</p>
             <V1LinkButton to="/hardware">Sensoren öffnen</V1LinkButton>
           </V1Card>
           <V1Card>

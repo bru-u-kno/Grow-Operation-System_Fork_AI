@@ -90,7 +90,7 @@ public sealed class DigestService
         }
 
         var message = BuildMessage(tents, settings.DigestDetailed);
-        return await _notifications.SendDigestAsync("🌱 Grow OS · Tagesüberblick", message, cancellationToken);
+        return await _notifications.SendDigestAsync("🌱 Cultivate Control · Tagesüberblick", message, cancellationToken);
     }
 
     private static IReadOnlyList<(string, string)> ExtractMetrics(IReadOnlyDictionary<string, HomeAssistantState> states)

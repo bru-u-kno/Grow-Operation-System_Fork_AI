@@ -83,13 +83,13 @@ export function MappeReiter() {
         <V1Card>
           <p className="ab-text">
             Die Mappe ist ein ZIP mit neun Textdateien. Darin: der aktuelle Stand deines Grows und
-            das komplette Fachwissen von Grow OS — Abläufe, Behandlungen samt Dosierung, Symptome,
+            das komplette Fachwissen von Cultivate Control — Abläufe, Behandlungen samt Dosierung, Symptome,
             Regeln und Sollwerte. Hängst du diese Dateien bei ChatGPT, Claude oder einem lokalen
             Modell an, antwortet der Assistent auf Grundlage dieses Materials statt aus dem
             Internet.
           </p>
           <p className="ab-text">
-            Du brauchst dafür keinen Schlüssel in Grow OS zu hinterlegen, und Grow OS verschickt
+            Du brauchst dafür keinen Schlüssel in Cultivate Control zu hinterlegen, und Cultivate Control verschickt
             nichts. Der Assistent kann nichts schalten — Dosierung und Automatik laufen weiter nur
             hier.
           </p>

@@ -6,13 +6,13 @@ using GrowMcp.Tools;
 namespace GrowMcp.Tests;
 
 /// <summary>
-/// Jeder Weg, den ein Werkzeug bei Grow OS aufruft, steht dort an einem Controller.
+/// Jeder Weg, den ein Werkzeug bei Cultivate Control aufruft, steht dort an einem Controller.
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026): „Bezeichner nie aus dem Kopf" — auch nicht
 /// Routen. Alle Werkzeuge laufen gegen die Attrappe; jeder Weg, der dabei
 /// angefragt wird, muss in der gebauten <c>GrowDiary.Web.dll</c> mit derselben
-/// Methode als Route stehen. Ein erfundener Weg gäbe in Grow OS 404 — und das
+/// Methode als Route stehen. Ein erfundener Weg gäbe in Cultivate Control 404 — und das
 /// Werkzeug wäre tot, ohne dass ein anderer Test es merkt.</para>
 /// </remarks>
 public sealed class ForkWegeTests
@@ -21,7 +21,7 @@ public sealed class ForkWegeTests
     /// Wege aus einem Vertrag, die es in diesem Stand noch nicht gibt.
     /// </summary>
     /// <remarks>
-    /// Gilt NUR, solange Grow OS unter diesem Vorsatz gar keinen Weg hat. Sobald
+    /// Gilt NUR, solange Cultivate Control unter diesem Vorsatz gar keinen Weg hat. Sobald
     /// es einen gibt, wird auch hier verlangt, dass jeder angefragte Weg passt —
     /// die Ausnahme erlischt von selbst, statt still einen Tippfehler zu decken.
     /// </remarks>
@@ -60,7 +60,7 @@ public sealed class ForkWegeTests
     public void Die_Wege_von_Grow_OS_sind_lesbar()
     {
         var wege = GrowOsBau.Wege();
-        Assert.True(wege.Count >= 150, $"Nur {wege.Count} Wege in Grow OS gefunden — die Reflexion greift ins Leere.");
+        Assert.True(wege.Count >= 150, $"Nur {wege.Count} Wege in Cultivate Control gefunden — die Reflexion greift ins Leere.");
         // Selbsttest gegen bekannte Wege: Vorsatz am Controller, absolute Route an der Aktion.
         Assert.Contains(wege, w => w is { Methode: "POST", Vorlage: "api/grows/{growId:int}/measurements" });
         Assert.Contains(wege, w => w is { Methode: "GET", Vorlage: "api/ki-zugriff/ich" });
@@ -71,7 +71,7 @@ public sealed class ForkWegeTests
     {
         var wege = GrowOsBau.Wege();
         var anfragen = await AlleAnfragenAsync();
-        Assert.True(anfragen.Count(a => a.Methode != "GET") >= 15, "Zu wenige schreibende Anfragen — laufen die Werkzeuge bis Grow OS durch?");
+        Assert.True(anfragen.Count(a => a.Methode != "GET") >= 15, "Zu wenige schreibende Anfragen — laufen die Werkzeuge bis Cultivate Control durch?");
 
         var fehlend = new List<string>();
         foreach (var anfrage in anfragen.DistinctBy(a => (a.Methode, a.Weg)))
@@ -86,7 +86,7 @@ public sealed class ForkWegeTests
             fehlend.Add($"{anfrage.Methode} {anfrage.Weg}");
         }
 
-        Assert.True(fehlend.Count == 0, "Diese Wege gibt es in Grow OS nicht: " + string.Join("; ", fehlend));
+        Assert.True(fehlend.Count == 0, "Diese Wege gibt es in Cultivate Control nicht: " + string.Join("; ", fehlend));
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class ForkWegeTests
     [Fact]
     public void Die_Schritte_von_phase_bestaetigen_sind_alle_Bestaetigungen_von_Grow_OS()
     {
-        // Andersherum: kommt in Grow OS eine Bestätigung dazu, soll sie hier nicht fehlen.
+        // Andersherum: kommt in Cultivate Control eine Bestätigung dazu, soll sie hier nicht fehlen.
         var aktionen = GrowOsBau.Wege()
             .Where(w => w.Methode == "POST" && w.Vorlage.StartsWith("api/grows/{id:int}/actions/", StringComparison.Ordinal))
             .Select(w => w.Vorlage["api/grows/{id:int}/actions/".Length..])
@@ -120,7 +120,7 @@ public sealed class ForkWegeTests
             });
         var rumpf = Assert.Single(fork.VonWerkzeugen, a => a.Methode == "POST").Rumpf!;
 
-        // Gibt es den Vertrag in Grow OS schon, wird gegen ihn gelesen — streng.
+        // Gibt es den Vertrag in Cultivate Control schon, wird gegen ihn gelesen — streng.
         // Sonst gegen die Felder aus dem Auftrag (NochNichtGebaut).
         var typ = GrowOsBau.Assembly.GetType("GrowDiary.Web.Api.Contracts.KiHaDienstRequest");
         if (typ is not null)

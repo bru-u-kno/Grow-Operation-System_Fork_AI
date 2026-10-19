@@ -11,14 +11,14 @@ namespace GrowMcp.Tools;
 /// Fork AI (Paket C1, 18.10.2026): <c>kamera_bild</c> — das Livebild der Zelt-Kamera als Bild.
 /// </summary>
 /// <remarks>
-/// Derselbe Weg wie die Oberfläche (<c>GET /api/live/tents/{id}/camera</c>): Grow OS holt das Bild über seine eigene
+/// Derselbe Weg wie die Oberfläche (<c>GET /api/live/tents/{id}/camera</c>): Cultivate Control holt das Bild über seine eigene
 /// Verbindung zu Home Assistant und fällt auf das letzte gültige Bild zurück, wenn gerade keines kommt. Ob es frisch
 /// ist, steht in den Kopfzeilen (<c>X-Camera-Live</c>, <c>X-Camera-Captured-At</c>) — und im Text neben dem Bild.
 /// </remarks>
 public sealed partial class GrowTools
 {
     [McpServerTool(Name = "kamera_bild")]
-    [Description("Holt das aktuelle Livebild der Zelt-Kamera eines Grows als Bild, damit du mitschauen kannst („wie sieht das Zelt gerade aus?\"). Ohne kamera die erste Kamera des Zelts; eine andere nur, wenn sie dem Zelt zugeordnet ist. Kommt gerade kein frisches Bild, liefert Grow OS das letzte gültige und sagt, von wann. Welche Kameras das Zelt hat und ältere Tage: tagesbilder.")]
+    [Description("Holt das aktuelle Livebild der Zelt-Kamera eines Grows als Bild, damit du mitschauen kannst („wie sieht das Zelt gerade aus?\"). Ohne kamera die erste Kamera des Zelts; eine andere nur, wenn sie dem Zelt zugeordnet ist. Kommt gerade kein frisches Bild, liefert Cultivate Control das letzte gültige und sagt, von wann. Welche Kameras das Zelt hat und ältere Tage: tagesbilder.")]
     public async Task<IEnumerable<ContentBlock>> KameraBildAsync(
         [Description("Die Id des Grows (aus grows_auflisten) — das Bild kommt von der Kamera seines Zelts")] int growId,
         [Description("Wahlweise die Entity der Kamera (etwa camera.zelt_oben), wenn das Zelt mehrere hat")] string? kamera = null,
@@ -51,7 +51,7 @@ public sealed partial class GrowTools
     }
 
     [McpServerTool(Name = "tagesbilder")]
-    [Description("Die täglichen Kamerabilder eines Zelts (Grow OS speichert einmal am Tag ab 12 Uhr eines der ersten Kamera): ohne datum die Liste der vorhandenen Tage und die Kameras des Zelts, mit datum (2026-10-12 oder 12.10.2026) das Bild dieses Tages zum Ansehen — „wie sah das Zelt letzten Sonntag aus?\".")]
+    [Description("Die täglichen Kamerabilder eines Zelts (Cultivate Control speichert einmal am Tag ab 12 Uhr eines der ersten Kamera): ohne datum die Liste der vorhandenen Tage und die Kameras des Zelts, mit datum (2026-10-12 oder 12.10.2026) das Bild dieses Tages zum Ansehen — „wie sah das Zelt letzten Sonntag aus?\".")]
     public async Task<IEnumerable<ContentBlock>> TagesbilderAsync(
         [Description("Die Id des Grows — die Bilder kommen vom Zelt dieses Grows")] int growId,
         [Description("Wahlweise ein Tag: 2026-10-12 oder 12.10.2026")] string? datum = null,
@@ -130,7 +130,7 @@ public sealed partial class GrowTools
         }
         else if (!live)
         {
-            teile.Add("ob das Bild frisch ist, sagt Grow OS nicht");
+            teile.Add("ob das Bild frisch ist, sagt Cultivate Control nicht");
         }
 
         return string.Join(", ", teile) + ".";

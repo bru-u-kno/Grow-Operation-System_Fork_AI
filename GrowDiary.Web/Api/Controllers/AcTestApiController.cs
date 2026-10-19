@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Api.Controllers;
 /// </summary>
 /// <remarks>
 /// Siehe <see cref="AcTest"/> für das Warum. Kurz: es geht um die Frage, ob
-/// Grow OS die Zentrale sein kann, von der aus der ganze Grow läuft — und die
+/// Cultivate Control die Zentrale sein kann, von der aus der ganze Grow läuft — und die
 /// beantwortet ein Nutzer, kein Entwurf.
 /// <para>Fork AI (A-003, 03.10.2026): Stufe und Zeitplan gehen sofort an den
 /// Port — „Geräte schalten". Die Geräteliste eintragen schaltet nichts und ist

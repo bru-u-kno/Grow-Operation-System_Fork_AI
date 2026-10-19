@@ -2,7 +2,7 @@ namespace GrowDiary.Web.Models;
 
 /// <summary>
 /// A user-defined threshold on a tent's live sensor metric. When the current value
-/// crosses below <see cref="MinValue"/> or above <see cref="MaxValue"/>, Grow OS sends a
+/// crosses below <see cref="MinValue"/> or above <see cref="MaxValue"/>, Cultivate Control sends a
 /// push notification through a Home Assistant <c>notify</c> service. Evaluation is
 /// edge-triggered (one alert per breach) with a cooldown to avoid flapping spam.
 /// </summary>

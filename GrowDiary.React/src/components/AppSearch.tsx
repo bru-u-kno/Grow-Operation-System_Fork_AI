@@ -121,7 +121,7 @@ export function AppSearch({ pages, onNavigate }: { pages: SearchablePage[]; onNa
         className="app-search-input"
         value={query}
         placeholder={zeigtTastenkuerzel() ? 'Suchen … (Strg+K)' : 'Suchen …'}
-        aria-label="In Grow OS suchen"
+        aria-label="In Cultivate Control suchen"
         onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true) }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}

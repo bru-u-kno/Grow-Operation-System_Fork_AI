@@ -7,7 +7,7 @@
  *
  * **Warum das mehr ist als eine Bequemlichkeit.** Am Handy gibt es kein Hover.
  * Ein Diagramm, das seine Zahlen nur beim Überfahren mit der Maus zeigt, ist
- * auf dem Telefon stumm — und Grow OS wird überwiegend am Telefon benutzt.
+ * auf dem Telefon stumm — und Cultivate Control wird überwiegend am Telefon benutzt.
  *
  * Die Rechnung steht hier und nicht im Bauteil, damit sie ohne Browser prüfbar
  * ist: ein Diagramm, das man nur ansehen kann, lässt sich nur ansehen.

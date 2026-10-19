@@ -3,7 +3,7 @@ using GrowMcp;
 namespace GrowMcp.Tests;
 
 /// <summary>
-/// Fork AI (02.10.2026): der Grow MCP des Forks ist wirklich der des Forks.
+/// Fork AI (02.10.2026): der Cultivate Control MCP des Forks ist wirklich der des Forks.
 /// </summary>
 /// <remarks>
 /// <para><b>Der Anlass.</b> Bis 0.1.8 stand in <c>grow-mcp/config.yaml</c> das

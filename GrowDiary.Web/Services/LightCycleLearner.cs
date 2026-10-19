@@ -30,7 +30,7 @@ public sealed record LearnedCycle(double HoursOn, TimeOnly OnAt, TimeOnly OffAt,
 /// Liest den Lichtzyklus aus den beobachteten Schaltvorgängen.
 /// </summary>
 /// <remarks>
-/// <para>Grow OS zeichnet jede An/Aus-Flanke des Licht-Sensors ohnehin auf. Daraus
+/// <para>Cultivate Control zeichnet jede An/Aus-Flanke des Licht-Sensors ohnehin auf. Daraus
 /// ergibt sich der Zyklus von selbst — niemand muss ihn eintragen, und niemand
 /// muss ihn pflegen, wenn er sich ändert.</para>
 ///
@@ -97,7 +97,7 @@ public static class LightCycleLearner
     /// Der eigentliche Nutzen des Lernens. Zwei Fälle aus der Praxis:
     /// <list type="bullet">
     /// <item>Licht läuft 12/12, der Grow steht auf Veg — der Flip ist passiert,
-    /// nur nicht eingetragen. Ohne Eintrag rechnet Grow OS mit Veg-Zielen
+    /// nur nicht eingetragen. Ohne Eintrag rechnet Cultivate Control mit Veg-Zielen
     /// weiter, und die sind in der Blüte zu scharf.</item>
     /// <item>Licht läuft 18/6, der Grow steht auf Blüte — dann stimmt etwas am
     /// Controller nicht, und das kostet die Ernte.</item>
@@ -115,7 +115,7 @@ public static class LightCycleLearner
         if (inVeg && cycle.LooksLikeFlower)
         {
             return $"Das Licht läuft {cycle.Label}, der Grow steht aber noch auf {StageLabel(stage)}. "
-                 + "Wenn du geflippt hast, trag den Flip ein — sonst rechnet Grow OS weiter mit Veg-Zielen.";
+                 + "Wenn du geflippt hast, trag den Flip ein — sonst rechnet Cultivate Control weiter mit Veg-Zielen.";
         }
 
         if (inBluete && cycle.LooksLikeVeg)

@@ -394,7 +394,7 @@ function LiveDashboardPage() {
         <header className="ls-head">
           <div className="ls-head-title">
             <div className="ls-eyebrow">Jetzt / Live</div>
-            <h1>Willkommen bei Grow OS</h1>
+            <h1>Willkommen bei Cultivate Control</h1>
             <div className="ls-head-parts">Drei Schritte bis zum ersten Messwert, dann die Steuerungen.</div>
           </div>
         </header>

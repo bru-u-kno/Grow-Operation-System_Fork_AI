@@ -1,20 +1,20 @@
-# Grow OS — the RDWC/DWC grow add-on for Home Assistant
+# Cultivate Control — the RDWC/DWC grow add-on for Home Assistant
 
-> **Fork AI:** Dies ist ein Ableger von Grow OS (Nerdstreak). Was hier gegenüber dem Original neu ist, steht in [FORK.md](FORK.md).
+> **Herkunft:** Cultivate Control ist die Weiterentwicklung eines Open-Source-Projekts (MIT). Was gegenüber dem Ursprung neu ist, steht in [FORK.md](FORK.md).
 
 **English** · [Deutsch](README.de.md)
 
-**Turn your Home Assistant sensors into a real grow-management cockpit.** Grow OS is a
+**Turn your Home Assistant sensors into a real grow-management cockpit.** Cultivate Control is a
 free, local-first Home Assistant add-on for hydroponic (RDWC/DWC) growers: a live
 instrument dashboard, grow documentation, SOPs, hardware & maintenance tracking,
 sensor-driven diagnosis, and risk alerts — all running inside Home Assistant, all on
 your own hardware. No cloud, no account, no SaaS.
 
 <p align="center">
-  <img src="docs/images/live-dashboard-desktop.png" alt="Grow OS live dashboard" width="100%">
+  <img src="docs/images/live-dashboard-desktop.png" alt="Cultivate Control live dashboard" width="100%">
 </p>
 
-## Why Grow OS
+## Why Cultivate Control
 
 - **Home Assistant native.** It reads your existing HA entities, so *any* sensor HA
   supports works — pH, EC, water temp, DO, ORP, CO₂, PPFD, tent climate, cameras. No
@@ -49,7 +49,7 @@ your own hardware. No cloud, no account, no SaaS.
   trigger, e.g. *30 min after lights-on*.
 - 🩺 **Diagnosis & risk tracking** — deviations become symptoms with likely causes and
   linked treatments/SOPs; power/pump/DO emergencies get guided recovery SOPs.
-- 🐕 **Watchdog** — tells you when Grow OS itself has gone quiet, per tent, so a tent
+- 🐕 **Watchdog** — tells you when Cultivate Control itself has gone quiet, per tent, so a tent
   that stopped reporting can't hide behind one that still does.
 - 📚 **Knowledge base** — searchable guides, SOPs, treatments, symptoms, pathogens,
   target values and nutrient programs.
@@ -58,7 +58,7 @@ your own hardware. No cloud, no account, no SaaS.
 - 📱 **Mobile-friendly** — works right inside the Home Assistant app.
 
 <p align="center">
-  <img src="docs/images/live-dashboard-mobile.png" alt="Grow OS on mobile" width="260">
+  <img src="docs/images/live-dashboard-mobile.png" alt="Cultivate Control on mobile" width="260">
 </p>
 
 ## Screenshots
@@ -81,17 +81,17 @@ Assistant Container/Core).
 
 > 🍓 **Starting from scratch?** If you don't have Home Assistant yet, the
 > [step-by-step Raspberry Pi guide](docs/pi-setup.md) (German) takes you from a blank
-> SD card to Grow OS running — no prior experience needed.
+> SD card to Cultivate Control running — no prior experience needed.
 
 1. In Home Assistant: **Settings → Add-ons → Add-on Store**.
 2. Top-right **⋮ → Repositories**, and add:
 
    ```
-   https://github.com/Nerdstreak/Grow-Operation-System
+   https://github.com/bru-u-kno/cultivate-control
    ```
 
-3. **Grow OS** appears in the store → **Install** → **Start**.
-4. On the add-on's **Info** page, enable **"Show in sidebar"** so Grow OS appears in
+3. **Cultivate Control** appears in the store → **Install** → **Start**.
+4. On the add-on's **Info** page, enable **"Show in sidebar"** so Cultivate Control appears in
    the Home Assistant sidebar (🌱).
 5. Open it from the sidebar. It's already connected to Home Assistant — just pick your
    sensors from the dropdown.

@@ -10,7 +10,7 @@ namespace GrowMcp.Tests;
 /// Fork AI (forkai.247): <c>sensoren</c> und <c>sensor_zuordnen</c>.
 /// </summary>
 /// <remarks>
-/// Die Attrappe verhält sich wie Grow OS: <c>PUT …/sensors/{metricType}</c> ändert die eine Zeile an Ort und Stelle (Id bleibt) oder
+/// Die Attrappe verhält sich wie Cultivate Control: <c>PUT …/sensors/{metricType}</c> ändert die eine Zeile an Ort und Stelle (Id bleibt) oder
 /// legt sie an. Die Variante <c>ersetztAlles</c> spielt den Fehler nach, vor dem der Vorher/Nachher-Vergleich schützen soll — einen
 /// Server, der dabei alle Zeilen neu anlegt (neue Ids), wie es der Zelt-Endpunkt mit <c>sensors</c> tut.
 /// </remarks>
@@ -34,7 +34,7 @@ public sealed class SensorWerkzeugeTests
             Zeile(33, "ReservoirPh", "", false),
             Zeile(34, "PumpCirculation", "sensor.pumpe_leistung", true),
         };
-        // Altbestand: eine zweite Luftfeuchte-Zeile mit höherer Id — die liest Grow OS.
+        // Altbestand: eine zweite Luftfeuchte-Zeile mit höherer Id — die liest Cultivate Control.
         if (doppelt) sensoren.Add(Zeile(35, "Humidity", "sensor.zelt_rlf_2", true));
         var naechsteId = 40;
 
@@ -47,7 +47,7 @@ public sealed class SensorWerkzeugeTests
             .Antwort("GET", "api/settings/tents/1", _ => (200, Zelt()))
             .Antwort("GET", "api/ki-ha/zustaende", a =>
             {
-                // Wie Grow OS: suche filtert auf Teilstück der Id, domain auf die Domain.
+                // Wie Cultivate Control: suche filtert auf Teilstück der Id, domain auf die Domain.
                 var abfrage = System.Web.HttpUtility.ParseQueryString(new Uri("http://x/" + a.Pfad.TrimStart('/')).Query);
                 var liste = JsonNode.Parse(HaStaende)!.AsArray().Where(e =>
                     (abfrage["suche"] is not { } suche || e!["entityId"]!.GetValue<string>().Contains(suche, StringComparison.OrdinalIgnoreCase))
@@ -62,7 +62,7 @@ public sealed class SensorWerkzeugeTests
                 {
                     for (var i = 0; i < sensoren.Count; i++) sensoren[i]["id"] = naechsteId++;
                 }
-                // Wie Grow OS: die wirksame Zeile (letzte aktive) ändern, weitere derselben Messgröße stilllegen.
+                // Wie Cultivate Control: die wirksame Zeile (letzte aktive) ändern, weitere derselben Messgröße stilllegen.
                 var eigene = sensoren.Where(z => z["metricType"]!.GetValue<string>() == messgroesse).OrderBy(z => z["id"]!.GetValue<int>()).ToList();
                 var zeile = eigene.LastOrDefault(z => z["isActive"]!.GetValue<bool>()) ?? eigene.FirstOrDefault();
                 foreach (var andere in eigene.Where(z => z != zeile)) { andere["haEntityId"] = ""; andere["isActive"] = false; }
@@ -114,11 +114,11 @@ public sealed class SensorWerkzeugeTests
     [Fact]
     public async Task sensoren_sagt_einmal_wenn_Home_Assistant_nicht_antwortet()
     {
-        var fork = Fork().Antwort("GET", "api/ki-ha/zustaende", 503, """{"code":"ha_nicht_eingerichtet","message":"Home Assistant ist in Grow OS nicht eingerichtet."}""");
+        var fork = Fork().Antwort("GET", "api/ki-ha/zustaende", 503, """{"code":"ha_nicht_eingerichtet","message":"Home Assistant ist in Cultivate Control nicht eingerichtet."}""");
         var text = await Aufruf(fork, "sensoren", new() { ["zeltId"] = 1 });
 
         Assert.Contains("Lufttemp: sensor.zelt_t, aktiv", text);
-        Assert.Contains("Werte aus Home Assistant: nicht lesbar — Nicht ausgeführt (Home Assistant lesen): Home Assistant ist in Grow OS nicht eingerichtet.", text);
+        Assert.Contains("Werte aus Home Assistant: nicht lesbar — Nicht ausgeführt (Home Assistant lesen): Home Assistant ist in Cultivate Control nicht eingerichtet.", text);
         Assert.Single(fork.VonWerkzeugen, a => a.Weg == "api/ki-ha/zustaende");
     }
 
@@ -135,7 +135,7 @@ public sealed class SensorWerkzeugeTests
         Assert.Equal("""{"haEntityId":"sensor.controller_temperatur"}""", put.Rumpf);
         Assert.Equal(
             "Außen Temp. an Zelt 1 „Zelt-RDWC\": vorher keine Zuordnung, jetzt sensor.controller_temperatur (gerade 20,9 °C; neue Sensor-Id 40). "
-            + "Die übrigen 4 Zuordnungen sind unverändert (Ids gleich, vorher und nachher verglichen). Grow OS liest den Wert ab dem nächsten Messtakt.",
+            + "Die übrigen 4 Zuordnungen sind unverändert (Ids gleich, vorher und nachher verglichen). Cultivate Control liest den Wert ab dem nächsten Messtakt.",
             text);
     }
 
@@ -150,7 +150,7 @@ public sealed class SensorWerkzeugeTests
     [Fact]
     public async Task Verteilt_der_Fork_neue_Ids_wird_das_gemeldet()
     {
-        // Bissnachweis für den Vergleich: so sähe es aus, wenn Grow OS doch alle Zeilen ersetzte.
+        // Bissnachweis für den Vergleich: so sähe es aus, wenn Cultivate Control doch alle Zeilen ersetzte.
         var text = await Aufruf(Fork(ersetztAlles: true), "sensor_zuordnen", Zuordnen("Außen Temp.", "sensor.controller_temperatur"));
         Assert.Contains("ACHTUNG: Bei anderen Zuordnungen hat sich etwas verändert: Sensor-Id 31 (AirTemperature) fehlt", text);
         Assert.DoesNotContain("unverändert", text);
@@ -239,10 +239,10 @@ public sealed class SensorWerkzeugeTests
     [Fact]
     public async Task Bleibt_nach_dem_Loesen_eine_Zeile_aktiv_wird_das_gemeldet()
     {
-        // Gegenprobe zum Fall darüber: ein Grow OS, das die zweite Zeile nicht stilllegt (Prüfer forkai.247).
+        // Gegenprobe zum Fall darüber: ein Cultivate Control, das die zweite Zeile nicht stilllegt (Prüfer forkai.247).
         var fork = Fork(doppelt: true).Antwort("PUT", @"api/settings/tents/1/sensors/\w+", 200, "{}");
         var text = await Aufruf(fork, "sensor_zuordnen", Zuordnen("Luftfeuchte", "keine"));
-        Assert.StartsWith("ACHTUNG: Grow OS hat gespeichert, aber Luftfeuchte ist danach noch zugeordnet.", text);
+        Assert.StartsWith("ACHTUNG: Cultivate Control hat gespeichert, aber Luftfeuchte ist danach noch zugeordnet.", text);
     }
 
     /// <summary>
@@ -286,7 +286,7 @@ public sealed class SensorWerkzeugeTests
     [Fact]
     public void Der_Weg_nennt_die_Messgroesse_mit_dem_Namen_den_Grow_OS_liest()
     {
-        // Der Katalog der Attrappe nennt nur Namen, die das Enum in Grow OS wirklich hat.
+        // Der Katalog der Attrappe nennt nur Namen, die das Enum in Cultivate Control wirklich hat.
         var enumWerte = Enum.GetNames(GrowOsBau.Typ("GrowDiary.Web.Models.SensorMetricType"));
         var katalog = JsonNode.Parse(ForkAttrappe.Katalog)!.AsArray().Select(e => e!["metricType"]!.GetValue<string>()).ToList();
         Assert.True(katalog.Count >= 10);

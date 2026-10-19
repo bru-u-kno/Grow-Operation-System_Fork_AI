@@ -7,7 +7,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// Den Lichtzyklus aus den beobachteten Schaltvorgängen lesen.
 /// </summary>
 /// <remarks>
-/// Grow OS zeichnet jede An/Aus-Flanke ohnehin auf — daraus ergibt sich der
+/// Cultivate Control zeichnet jede An/Aus-Flanke ohnehin auf — daraus ergibt sich der
 /// Zyklus von selbst. Beobachtete Flanken sind dabei die bessere Uhr als jeder
 /// eingetragene Plan: eine falsche Zeitzone geht daneben, ein gemessener
 /// Einschaltzeitpunkt nie.

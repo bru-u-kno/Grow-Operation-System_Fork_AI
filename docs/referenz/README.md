@@ -4,7 +4,7 @@
 > derselben Reihenfolge: **Wo in der App · Was es tut · Die Zahlen und woher sie
 > kommen · Was es bewusst NICHT tut · Im Code · Fallen.**
 
-Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
+Stand 2026-08-20 · Cultivate Control 2.0.0-beta.52 · Cultivate Control MCP 0.1.8
 
 ## Wenn du wissen willst …
 
@@ -53,7 +53,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | Warum „gesendet" nicht „angekommen" heißt, wenn ein Gerät hinter einer Hersteller-Wolke hängt | [home-assistant-und-automatik.md](home-assistant-und-automatik.md) |
 | In welcher Reihenfolge die Aufgabenseite sortiert und woher jede Zeile kommt | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
 | Warum überhaupt keine Erinnerungen mehr kommen | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
-| Was eine eigene KI von Grow OS lesen darf — und warum sie nichts schalten kann | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
+| Was eine eigene KI von Cultivate Control lesen darf — und warum sie nichts schalten kann | [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) |
 
 ## Die vierzehn Seiten
 
@@ -68,7 +68,7 @@ Stand 2026-08-20 · Grow OS 2.0.0-beta.52 · Grow MCP 0.1.8
 | [ernte-trocknen-aushaerten.md](ernte-trocknen-aushaerten.md) | Ernte-Formular, Trocknungsfenster, Glas und Lüft-Rhythmus, Archiv und Kosten |
 | [zelte-hydro-wasser.md](zelte-hydro-wasser.md) | Die Anlage: Zelte, Hydro-Systeme, eTape-Kalibrierung, Wasserprofil |
 | [home-assistant-und-automatik.md](home-assistant-und-automatik.md) | Anbindung, Entitäts-Zuordnung, Grenzwerte, Push, die fünf Hintergrunddienste |
-| [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) | Aufgabenseite, Journal und Fotos, Grow MCP, Mappe für eigene KI |
+| [aufgaben-journal-mcp.md](aufgaben-journal-mcp.md) | Aufgabenseite, Journal und Fotos, Cultivate Control MCP, Mappe für eigene KI |
 | [ki-assistent.md](ki-assistent.md) | Fork AI: die eine Stelle für die eigene KI — Verbinden über das eigene Konto, Zugriff & Schlüssel, Mappe |
 | [kosten.md](kosten.md) | Fork AI: Strom aus HA-Zählerständen je Grow und Phase, Verbrauchsartikel mit Nachfüllungen, Laufzeit-Prognose, Kosten je Tag/Pflanze |
 | [entfeuchtung.md](entfeuchtung.md) | Fork AI: Entfeuchter und Zusatz-Entfeuchter — drei Reiter, Stufen, Ziel mit Band und Herkunft, Regelgröße Luftfeuchte/VPD, Höchsttemperatur |

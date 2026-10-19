@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * Die erste Minute mit Grow OS.
+ * Die erste Minute mit Cultivate Control.
  *
  * Eine frische Installation hat kein Zelt, keinen Grow, keine Sensoren — die
  * Live-Seite hatte dafür keinen eigenen Zustand und zeigte ein leeres Cockpit,

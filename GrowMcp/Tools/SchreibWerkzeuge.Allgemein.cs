@@ -8,13 +8,13 @@ using ModelContextProtocol.Server;
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Fork AI (Paket D, 18.10.2026): <c>fork_ausfuehren</c> — jede Funktion von Grow OS über einen Schlüssel.
+/// Fork AI (Paket D, 18.10.2026): <c>fork_ausfuehren</c> — jede Funktion von Cultivate Control über einen Schlüssel.
 /// </summary>
 /// <remarks>
-/// <para><b>Grundsatz seit 18.10.2026:</b> Über den Grow MCP lässt sich alles im Fork steuern. Gesperrt bleiben nur
-/// die Wege, die Grow OS selbst als „nie über einen Schlüssel" führt (Schlüsselverwaltung, KI-Hauptschalter, Sicherung
+/// <para><b>Grundsatz seit 18.10.2026:</b> Über den Cultivate Control MCP lässt sich alles im Fork steuern. Gesperrt bleiben nur
+/// die Wege, die Cultivate Control selbst als „nie über einen Schlüssel" führt (Schlüsselverwaltung, KI-Hauptschalter, Sicherung
 /// zurückspielen/herunterladen, Home-Assistant-Adresse und -Token).</para>
-/// <para><b>Hier werden keine Rechte hinzugefügt.</b> Stufe, Höchstwerte, Sicherung vorher und Protokoll prüft Grow OS
+/// <para><b>Hier werden keine Rechte hinzugefügt.</b> Stufe, Höchstwerte, Sicherung vorher und Protokoll prüft Cultivate Control
 /// bei jeder Anfrage. Dieses Werkzeug verengt nur: Es ruft nichts, was nicht im Funktionsverzeichnis steht, lehnt
 /// „nie"-Wege ab, bevor es sie ruft, nimmt nur Pfade unter <c>api/</c> an (kein <c>..</c>, keine Adresse, kein anderer
 /// Host) und gibt keine Dateien weiter, weder hinauf noch herunter.</para>
@@ -23,7 +23,7 @@ namespace GrowMcp.Tools;
 /// </remarks>
 public sealed partial class SchreibWerkzeuge
 {
-    /// <summary>So viel Text nimmt das Werkzeug von Grow OS an (danach wird abgeschnitten).</summary>
+    /// <summary>So viel Text nimmt das Werkzeug von Cultivate Control an (danach wird abgeschnitten).</summary>
     internal const int AntwortBytesHoechstens = 512 * 1024;
 
     private const int LeseAntwortHoechstens = 20_000;
@@ -31,12 +31,12 @@ public sealed partial class SchreibWerkzeuge
     private const int AenderungenHoechstens = 25;
 
     [McpServerTool(Name = "fork_ausfuehren")]
-    [Description("Führt EINE Funktion von Grow OS aus — jede, die im Funktionsverzeichnis steht (erst fork_funktionen fragen: Weg, Stufe, Felder). "
+    [Description("Führt EINE Funktion von Cultivate Control aus — jede, die im Funktionsverzeichnis steht (erst fork_funktionen fragen: Weg, Stufe, Felder). "
                  + "methode GET/POST/PUT/PATCH/DELETE, pfad relativ wie im Verzeichnis mit eingesetzten Werten (api/plants/7), query als „a=1&b=2\", body als JSON-Text. "
-                 + "Ob die Stufe reicht, prüft Grow OS (Stufe je Funktion, siehe zugriff_pruefen); Höchstwerte, Sicherung vorher und Prüfprotokoll gelten wie überall. "
+                 + "Ob die Stufe reicht, prüft Cultivate Control (Stufe je Funktion, siehe zugriff_pruefen); Höchstwerte, Sicherung vorher und Prüfprotokoll gelten wie überall. "
                  + "Bei Änderungen wird vorher und nachher gelesen und gemeldet, was sich geändert hat; beim Löschen steht das Gelöschte in der Antwort. "
-                 + "PUT ersetzt bei Grow OS meist das ganze Objekt: fehlende Rumpffelder ergänzt das Werkzeug aus dem gelesenen Stand (ergaenzen). "
-                 + "Was Grow OS als „nie über einen Schlüssel\" führt (fork_funktionen mit zugang=nie), lehnt das Werkzeug ab, ohne es zu rufen. Keine Datei-Uploads, keine Bilder (dafür kamera_bild, tagesbilder, foto_ansehen). "
+                 + "PUT ersetzt bei Cultivate Control meist das ganze Objekt: fehlende Rumpffelder ergänzt das Werkzeug aus dem gelesenen Stand (ergaenzen). "
+                 + "Was Cultivate Control als „nie über einen Schlüssel\" führt (fork_funktionen mit zugang=nie), lehnt das Werkzeug ab, ohne es zu rufen. Keine Datei-Uploads, keine Bilder (dafür kamera_bild, tagesbilder, foto_ansehen). "
                  + "Für Alltägliches die festen Werkzeuge nehmen (messung_eintragen, journal_eintragen, licht_schalten, pumpe_dosieren …) — sie prüfen mehr. Vor Änderungen die Rückfrage-Regel aus zugriff_pruefen beachten.")]
     [BrauchtForkSchluessel]
     public async Task<string> ForkAusfuehrenAsync(
@@ -49,7 +49,7 @@ public sealed partial class SchreibWerkzeuge
     {
         if (!reader.HatForkSchluessel) return ForkFehler.SchluesselNoetig;
 
-        // 1. Form: Methode, Pfad, Abfrage, Rumpf — bevor Grow OS überhaupt gefragt wird.
+        // 1. Form: Methode, Pfad, Abfrage, Rumpf — bevor Cultivate Control überhaupt gefragt wird.
         var art = (methode ?? string.Empty).Trim().ToUpperInvariant();
         if (!Funktionsverzeichnis.Methoden.Contains(art)) return $"Nicht ausgeführt: „{methode}\" ist keine Methode. Möglich: GET, POST, PUT, PATCH, DELETE.";
 
@@ -81,14 +81,14 @@ public sealed partial class SchreibWerkzeuge
         if (funktion is null)
         {
             var andere = verzeichnis.Where(f => Funktionsverzeichnis.Zuordnen([f], f.Methode, weg) is not null).Select(f => f.Methode).Distinct().ToList();
-            return $"Nicht ausgeführt: {art} /{weg} steht nicht im Funktionsverzeichnis von Grow OS."
+            return $"Nicht ausgeführt: {art} /{weg} steht nicht im Funktionsverzeichnis von Cultivate Control."
                    + (andere.Count > 0 ? $" Auf diesem Weg gibt es: {string.Join(", ", andere)}." : " Mit fork_funktionen suchen.");
         }
 
         var name = $"{art} /{weg}";
         if (funktion.Zugang == "nie")
         {
-            return $"Nicht ausgeführt: {funktion.Methode} {funktion.Pfad} ist über einen KI-Assistenten nie erreichbar — {(funktion.NieGrund ?? "so in Grow OS festgelegt").TrimEnd('.')}. Das bleibt dem Menschen in der Oberfläche von Grow OS.";
+            return $"Nicht ausgeführt: {funktion.Methode} {funktion.Pfad} ist über einen KI-Assistenten nie erreichbar — {(funktion.NieGrund ?? "so in Cultivate Control festgelegt").TrimEnd('.')}. Das bleibt dem Menschen in der Oberfläche von Cultivate Control.";
         }
         if (funktion.Zugang == "nicht-eingestuft" && art != "GET")
         {
@@ -103,7 +103,7 @@ public sealed partial class SchreibWerkzeuge
             return $"Nicht ausgeführt: {funktion.Methode} {funktion.Pfad} liefert eine Datei oder ein Bild, kein JSON. Bilder: kamera_bild (Livebild), tagesbilder, foto_ansehen.";
         }
 
-        // Ein Feld, das Grow OS nicht kennt, ignoriert es still und nimmt seine Vorgabe — ein Tippfehler („preisEur" statt
+        // Ein Feld, das Cultivate Control nicht kennt, ignoriert es still und nimmt seine Vorgabe — ein Tippfehler („preisEur" statt
         // „einzelpreisEur") würde so 0 € speichern. Deshalb vorher ablehnen (an der Demo am 18.10.2026 so passiert).
         if (rumpf is JsonObject gesendeteFelder && funktion.RumpfFelder.Count > 0)
         {
@@ -113,7 +113,7 @@ public sealed partial class SchreibWerkzeuge
             if (unbekannt.Count > 0)
             {
                 return $"Nicht ausgeführt: {string.Join(", ", unbekannt)} {(unbekannt.Count == 1 ? "ist kein Feld" : "sind keine Felder")} von {funktion.RumpfTyp}. "
-                       + "Grow OS würde das still übergehen. Felder: " + string.Join(", ", funktion.RumpfFelder.Select(f => $"{f.Name} ({f.Typ})")) + ".";
+                       + "Cultivate Control würde das still übergehen. Felder: " + string.Join(", ", funktion.RumpfFelder.Select(f => $"{f.Name} ({f.Typ})")) + ".";
             }
         }
 
@@ -125,7 +125,7 @@ public sealed partial class SchreibWerkzeuge
             var gelesen = await BegrenztAsync(HttpMethod.Get, ziel, null, cancellationToken);
             if (gelesen.Fehler is { } gf) return gf;
             var a = gelesen.Antwort!;
-            if (!a.IstText) return $"Grow OS antwortet auf {name} mit einer Datei ({a.MedienTyp}) — die gebe ich nicht weiter. Bilder: kamera_bild, tagesbilder, foto_ansehen.";
+            if (!a.IstText) return $"Cultivate Control antwortet auf {name} mit einer Datei ({a.MedienTyp}) — die gebe ich nicht weiter. Bilder: kamera_bild, tagesbilder, foto_ansehen.";
             if (!a.Erfolg) return ForkFehler.Text(a.Status, a.Text, name);
             var lesetext = a.Gekuerzt ? a.Text + Environment.NewLine + "… (Antwort größer als erlaubt, abgeschnitten)" : a.Text;
             return Funktionsverzeichnis.Kuerzen(lesetext, LeseAntwortHoechstens, "Mit query eingrenzen oder ein festes Werkzeug nehmen.");
@@ -163,11 +163,11 @@ public sealed partial class SchreibWerkzeuge
             var fehlen = funktion.RumpfFelder.Where(f => !teil.Any(p => string.Equals(p.Key, f.Name, StringComparison.OrdinalIgnoreCase))).ToList();
             if (fehlen.Count > 0)
             {
-                // PUT ersetzt bei Grow OS meist das Ganze: ohne gelesenen Stand würde ein halber Rumpf den Rest zurücksetzen.
+                // PUT ersetzt bei Cultivate Control meist das Ganze: ohne gelesenen Stand würde ein halber Rumpf den Rest zurücksetzen.
                 if (leseWeg is null)
                 {
-                    return $"Nicht ausgeführt: PUT ersetzt bei Grow OS meist das ganze Objekt, und auf diesem Weg gibt es keinen Lese-Weg, aus dem ich die fehlenden Felder ergänzen könnte ({string.Join(", ", fehlen.Select(f => f.Name))}). "
-                           + "Entweder alle Felder schicken oder ergaenzen=false — dann setzt Grow OS die fehlenden auf seine Vorgabe.";
+                    return $"Nicht ausgeführt: PUT ersetzt bei Cultivate Control meist das ganze Objekt, und auf diesem Weg gibt es keinen Lese-Weg, aus dem ich die fehlenden Felder ergänzen könnte ({string.Join(", ", fehlen.Select(f => f.Name))}). "
+                           + "Entweder alle Felder schicken oder ergaenzen=false — dann setzt Cultivate Control die fehlenden auf seine Vorgabe.";
                 }
                 if (vorher is null)
                 {
@@ -178,14 +178,14 @@ public sealed partial class SchreibWerkzeuge
                     return $"Nicht ausgeführt: Der gelesene Stand ({funktion.Pfad}) ist eine Liste, kein Objekt — daraus lässt sich der Rumpf nicht ergänzen. Bitte alle Felder selbst schicken.";
                 }
 
-                // Listen behandelt Grow OS je Weg verschieden: fehlt sie, bleibt sie mal unverändert (Sensoren eines Zelts),
+                // Listen behandelt Cultivate Control je Weg verschieden: fehlt sie, bleibt sie mal unverändert (Sensoren eines Zelts),
                 // mal wird sie leer (Kacheln des Dashboards — Prüfer 18.10.2026). Nicht belegt → nicht raten, sondern abbrechen.
                 var listen = fehlen.Where(f => f.Typ.StartsWith("Liste", StringComparison.Ordinal) || f.Typ.StartsWith("Zuordnung", StringComparison.Ordinal)).ToList();
                 if (listen.Count > 0)
                 {
                     return $"Nicht ausgeführt: Im Rumpf fehlt {(listen.Count == 1 ? "die Liste" : "die Listen")} {string.Join(", ", listen.Select(f => f.Name))}. "
-                           + "Was Grow OS mit einer fehlenden Liste tut, ist je Weg verschieden (manchmal wird sie leer). Bitte die Liste aus dem gelesenen Stand mitschicken "
-                           + "— oder ergaenzen=false, wenn sicher ist, dass Grow OS sie ohne Angabe unverändert lässt.";
+                           + "Was Cultivate Control mit einer fehlenden Liste tut, ist je Weg verschieden (manchmal wird sie leer). Bitte die Liste aus dem gelesenen Stand mitschicken "
+                           + "— oder ergaenzen=false, wenn sicher ist, dass Cultivate Control sie ohne Angabe unverändert lässt.";
                 }
 
                 // Die Quelle ist EIN Objekt — der gelesene Stand selbst oder ein Teil davon (etwa „einstellungen"), je
@@ -207,14 +207,14 @@ public sealed partial class SchreibWerkzeuge
                     }
                     else if (feld.Typ.EndsWith('?') || feld.Typ == "Text")
                     {
-                        // Grow OS lässt leere Felder in der Antwort weg — fehlt es in der Quelle, war es leer.
+                        // Cultivate Control lässt leere Felder in der Antwort weg — fehlt es in der Quelle, war es leer.
                         teil[feld.Name] = null;
                         alsLeer.Add(feld.Name);
                     }
                     else
                     {
                         // Darf nicht leer sein und steht nicht im Stand (etwa ein Schalter wie „Schlauch jetzt gewechselt"):
-                        // weglassen, Grow OS nimmt seine Vorgabe — der Vergleich danach zeigt, ob sich dadurch etwas bewegt.
+                        // weglassen, Cultivate Control nimmt seine Vorgabe — der Vergleich danach zeigt, ob sich dadurch etwas bewegt.
                         nichtErgaenzt.Add(feld.Name);
                     }
                 }
@@ -229,12 +229,12 @@ public sealed partial class SchreibWerkzeuge
 
         var text = new StringBuilder();
         text.Append($"Ausgeführt: {name} → {antwort.Status}.");
-        if (funktion.SicherungVorher) text.Append(" Grow OS hat vorher eine Sicherung angelegt.");
+        if (funktion.SicherungVorher) text.Append(" Cultivate Control hat vorher eine Sicherung angelegt.");
         if (funktion.Schaltbefehl) text.Append(" Zählt als Schaltbefehl.");
         text.AppendLine();
         if (ergaenzt.Count > 0) text.AppendLine($"Aus dem gelesenen Stand ergänzt ({ergaenzt.Count}): {string.Join(", ", ergaenzt)}.");
         if (alsLeer.Count > 0) text.AppendLine($"Im gelesenen Stand leer, deshalb leer mitgeschickt: {string.Join(", ", alsLeer)}.");
-        if (nichtErgaenzt.Count > 0) text.AppendLine($"Nicht im gelesenen Stand und nicht leer erlaubt, deshalb weggelassen (Grow OS nimmt seine Vorgabe): {string.Join(", ", nichtErgaenzt)}.");
+        if (nichtErgaenzt.Count > 0) text.AppendLine($"Nicht im gelesenen Stand und nicht leer erlaubt, deshalb weggelassen (Cultivate Control nimmt seine Vorgabe): {string.Join(", ", nichtErgaenzt)}.");
 
         if (art == "DELETE")
         {
@@ -265,11 +265,11 @@ public sealed partial class SchreibWerkzeuge
 
         if (!antwort.IstText)
         {
-            text.Append($"Grow OS hat mit einer Datei geantwortet ({antwort.MedienTyp}) — nicht weitergegeben.");
+            text.Append($"Cultivate Control hat mit einer Datei geantwortet ({antwort.MedienTyp}) — nicht weitergegeben.");
         }
         else if (!string.IsNullOrWhiteSpace(antwort.Text))
         {
-            text.AppendLine("Antwort von Grow OS:");
+            text.AppendLine("Antwort von Cultivate Control:");
             text.Append(Funktionsverzeichnis.Kuerzen(antwort.Text, SchreibAntwortHoechstens, "Den ganzen Stand mit GET lesen."));
         }
 
@@ -308,7 +308,7 @@ public sealed partial class SchreibWerkzeuge
                 => gesendet.TryGetValue(Letzter(a.Pfad), out var wert)
                    && (wert is JsonObject or JsonArray
                        || (wert?.ToJsonString() ?? "null") == (a.Neu ?? "(fehlt)")
-                       // Grow OS lässt leere Felder in der Antwort weg: ein gesendetes null kommt als „fehlt" zurück.
+                       // Cultivate Control lässt leere Felder in der Antwort weg: ein gesendetes null kommt als „fehlt" zurück.
                        || (wert is null && (a.Neu is null || a.Neu == "null")));
             var gewollt = geaendert.Where(Gewollt).ToList();
             var sonst = geaendert.Except(gewollt).ToList();
@@ -425,11 +425,11 @@ public sealed partial class SchreibWerkzeuge
         }
         catch (HttpRequestException)
         {
-            return new Ergebnis(null, "Grow OS ist gerade nicht erreichbar. Es wurde nichts ausgeführt.");
+            return new Ergebnis(null, "Cultivate Control ist gerade nicht erreichbar. Es wurde nichts ausgeführt.");
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new Ergebnis(null, "Grow OS hat nicht rechtzeitig geantwortet. Ob der Befehl ankam, ist offen — vor einem zweiten Versuch mit GET nachsehen.");
+            return new Ergebnis(null, "Cultivate Control hat nicht rechtzeitig geantwortet. Ob der Befehl ankam, ist offen — vor einem zweiten Versuch mit GET nachsehen.");
         }
     }
 }

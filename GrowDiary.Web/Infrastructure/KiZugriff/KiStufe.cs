@@ -59,7 +59,7 @@ public sealed class KeinKiZugriffAttribute(string grund) : Attribute
 }
 
 /// <summary>
-/// Bevor ein Schlüssel diese Aktion ausführt, legt Grow OS eine Sicherung an.
+/// Bevor ein Schlüssel diese Aktion ausführt, legt Cultivate Control eine Sicherung an.
 /// </summary>
 /// <remarks>
 /// Für alles, was sich nicht von Hand zurückdrehen lässt: Sicherung

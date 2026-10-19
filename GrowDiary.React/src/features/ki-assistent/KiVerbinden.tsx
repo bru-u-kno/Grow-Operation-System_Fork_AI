@@ -11,7 +11,7 @@ import './ki-assistent.css'
  *
  * Der Nutzer: „Die meisten Endanwender haben keinen API-Schlüssel, sondern den
  * kostenlosen Plan oder ein Abo." Deshalb führt jeder Weg hier über das
- * EIGENE Konto des Bedieners bei Claude oder ChatGPT — Grow OS bekommt keine
+ * EIGENE Konto des Bedieners bei Claude oder ChatGPT — Cultivate Control bekommt keine
  * Zugangsdaten und ruft selbst keine KI auf. Umgekehrt bekommt der Assistent
  * einen Schlüssel von hier (Reiter „Zugriff & Schlüssel").
  *
@@ -36,7 +36,7 @@ export function KiVerbinden() {
 
   const addon = slug ?? '<Name des Add-ons aus Einstellungen → Add-ons>'
   const projektText = [
-    `Grow OS Fork AI läuft bei mir als Home-Assistant-Add-on „${addon}“.`,
+    `Cultivate Control läuft bei mir als Home-Assistant-Add-on „${addon}“.`,
     'Lies und schreibe es über das Werkzeug ha_manage_app im Proxy-Modus auf dieses Add-on.',
     'Gib bei jeder Anfrage die Kopfzeile „Authorization: Bearer gok_…“ mit (mein Schlüssel).',
     'Ruf zuerst GET /api/ki-zugriff/ich auf: „stufen“ ist, was du darfst; bei „rueckfrageBei“ fragst du mich vorher.',
@@ -50,11 +50,11 @@ export function KiVerbinden() {
           <p className="ab-text">
             Willst du mit einem Assistenten über deine Anlage sprechen oder ihm Messwerte diktieren, nutzt
             er <b>dein eigenes Konto</b> bei Claude oder ChatGPT.
-            Grow OS bekommt dafür keine Zugangsdaten und ruft selbst keine KI auf. Es kostet also nichts
+            Cultivate Control bekommt dafür keine Zugangsdaten und ruft selbst keine KI auf. Es kostet also nichts
             zusätzlich, und einen API-Schlüssel brauchst du nicht.
           </p>
           <p className="ab-text">
-            Umgekehrt bekommt dein Assistent einen <b>Schlüssel von hier</b>. Was er damit <b>in Grow OS</b> darf
+            Umgekehrt bekommt dein Assistent einen <b>Schlüssel von hier</b>. Was er damit <b>in Cultivate Control</b> darf
             — eintragen, planen, schalten — legst du unter <Link to="/ki?tab=zugriff">Zugriff &amp; Schlüssel</Link>{' '}
             fest. Ab Werk ist alles aus, jede Änderung über den Schlüssel steht im Protokoll, und Sperren wirkt
             sofort.
@@ -71,7 +71,7 @@ export function KiVerbinden() {
             plan="kostenlos oder Abo"
           >
             <p className="ab-text">
-              Die Claude-App spricht über einen <b>Connector</b> mit Home Assistant und darüber mit Grow OS.
+              Die Claude-App spricht über einen <b>Connector</b> mit Home Assistant und darüber mit Cultivate Control.
               Connectors laufen über die Server von Anthropic — dein Home Assistant muss dafür von außen
               erreichbar sein, etwa über Home Assistant Cloud. Im kostenlosen Plan ist ein eigener Connector
               erlaubt; einer genügt.
@@ -94,11 +94,11 @@ export function KiVerbinden() {
               hier — das wirkt bei der nächsten Anfrage.
             </p>
             <div className="kv-warnung" role="note" data-audit="ki-weg-claude-app-warnung">
-              <strong>Wichtig: Dieser Connector geht an Grow OS vorbei.</strong>
+              <strong>Wichtig: Dieser Connector geht an Cultivate Control vorbei.</strong>
               <p>
                 Der Home Assistant MCP Server hat selbst <b>vollen Zugriff auf Home Assistant</b> — Geräte,
                 Automationen, Add-ons, Sicherungen, Neustart. Stufen, Höchstwerte und Protokoll von hier gelten
-                nur für das, was der Assistent <b>über Grow OS</b> tut, nicht für das, was er über diesen
+                nur für das, was der Assistent <b>über Cultivate Control</b> tut, nicht für das, was er über diesen
                 Connector direkt in Home Assistant tut.
               </p>
               <p>
@@ -116,12 +116,12 @@ export function KiVerbinden() {
             plan="Abo"
           >
             <p className="ab-text">
-              Claude Code verbindet sich direkt mit dem Add-on <b>Grow MCP Fork AI</b> — ohne Umweg über das
-              Internet. Der Grow MCP bringt fertige Werkzeuge mit: Lagebericht, Verläufe, Messung eintragen,
+              Claude Code verbindet sich direkt mit dem Add-on <b>Cultivate Control MCP</b> — ohne Umweg über das
+              Internet. Der Cultivate Control MCP bringt fertige Werkzeuge mit: Lagebericht, Verläufe, Messung eintragen,
               Journal, Dosieren, Licht.
             </p>
             <ol className="ab-schritte">
-              <li>Das Add-on <b>Grow MCP Fork AI</b> installieren, starten und „Im Seitenleisten-Menü
+              <li>Das Add-on <b>Cultivate Control MCP</b> installieren, starten und „Im Seitenleisten-Menü
                 anzeigen“ einschalten.</li>
               <li>Seine Seite öffnen: Dort steht der fertige Befehl mit der richtigen Adresse.</li>
               <li>Im Befehl den Schlüssel hinter <code>Bearer</code> durch deinen <code>gok_…</code>-Schlüssel
@@ -129,7 +129,7 @@ export function KiVerbinden() {
                 freigegeben hast.</li>
             </ol>
             <Kopierfeld
-              text={'claude mcp add --transport http grow-os-fork-ai http://<adresse>:5080/mcp --header "Authorization: Bearer gok_…"'}
+              text={'claude mcp add --transport http cultivate-control http://<adresse>:5080/mcp --header "Authorization: Bearer gok_…"'}
               knopf="Befehl kopieren"
               audit="ki-weg-claude-code-text"
             />
@@ -159,7 +159,7 @@ export function KiVerbinden() {
             plan="jeder Plan"
           >
             <p className="ab-text">
-              Die Mappe packt den Stand deines Grows und das Fachwissen von Grow OS in eine Datei, die du in
+              Die Mappe packt den Stand deines Grows und das Fachwissen von Cultivate Control in eine Datei, die du in
               jeden Chat hochlädst — auch im kostenlosen Plan. Sie hält den Stand von jetzt fest; eintragen oder
               schalten kann der Assistent damit nicht.
             </p>
@@ -173,7 +173,7 @@ export function KiVerbinden() {
       <V1Section title="Was ein Grow-OS-Schlüssel nie kann">
         <V1Card>
           <p className="ab-text">
-            Das gilt für alles, was über Grow OS läuft — auch über den Grow MCP Fork AI. Ein Connector, der
+            Das gilt für alles, was über Cultivate Control läuft — auch über den Cultivate Control MCP. Ein Connector, der
             selbst an Home Assistant geht (wie der Home Assistant MCP Server), hat eigene Rechte.
           </p>
           <ul className="ab-schritte">

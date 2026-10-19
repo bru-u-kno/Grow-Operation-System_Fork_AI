@@ -15,7 +15,7 @@ namespace GrowDiary.Web.Infrastructure.KiZugriff;
 /// </remarks>
 /// <param name="Rueckfrage">
 /// Fork AI (A-005, 03.10.2026): Bei diesen Stufen soll der Assistent vorher
-/// fragen — eine Bitte, durchsetzen kann Grow OS nur <paramref name="Stufen"/>.
+/// fragen — eine Bitte, durchsetzen kann Cultivate Control nur <paramref name="Stufen"/>.
 /// </param>
 public sealed record KiZugriffKontext(
     int SchluesselId,

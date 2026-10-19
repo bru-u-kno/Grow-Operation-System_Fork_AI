@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace GrowMcp.Tests;
 
 /// <summary>
-/// Der Fork-Schlüssel kommt durch den ECHTEN MCP-Weg bis zu Grow OS — und der MCP-Schlüssel nie.
+/// Der Fork-Schlüssel kommt durch den ECHTEN MCP-Weg bis zu Cultivate Control — und der MCP-Schlüssel nie.
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026): Ob ein Werkzeug den Schlüssel der Anfrage
@@ -20,7 +20,7 @@ namespace GrowMcp.Tests;
 /// Werkzeug im Kontext der HTTP-Anfrage auf, oder in einem eigenen? Ein Test,
 /// der die Werkzeuge direkt aufruft, kann das nicht zeigen. Deshalb läuft hier
 /// der ganze Weg: Tür (<see cref="Aufbau.Wege"/>), MCP-Schnittstelle,
-/// Werkzeug, <see cref="GrowOsReader"/> — gegen eine Attrappe von Grow OS, die
+/// Werkzeug, <see cref="GrowOsReader"/> — gegen eine Attrappe von Cultivate Control, die
 /// mitschreibt, was ankommt.</para>
 /// </remarks>
 public sealed class DurchreichenTests : IAsyncLifetime
@@ -36,7 +36,7 @@ public sealed class DurchreichenTests : IAsyncLifetime
         bau.WebHost.UseTestServer();
         Aufbau.Dienste(bau.Services, new McpEinstellungen { GrowOsAdresse = "http://grow-os.test:5076" });
 
-        // Grow OS ist die Attrappe — für den Leser und für das Anklopfen der Suche.
+        // Cultivate Control ist die Attrappe — für den Leser und für das Anklopfen der Suche.
         bau.Services.AddHttpClient<GrowOsReader>().ConfigurePrimaryHttpMessageHandler(() => _fork);
         bau.Services.AddHttpClient(GrowOsDiscovery.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => _fork);
 
@@ -127,13 +127,13 @@ public sealed class DurchreichenTests : IAsyncLifetime
     [Fact]
     public async Task Der_MCP_Schluessel_verlaesst_das_Add_on_nie()
     {
-        // Lesen geht, und Grow OS sieht dabei KEINEN Schlüssel.
+        // Lesen geht, und Cultivate Control sieht dabei KEINEN Schlüssel.
         var (status, _) = await AufrufenAsync(_mcpSchluessel, "grows_auflisten", new { });
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.NotEmpty(_fork.VonWerkzeugen);
         Assert.All(_fork.Anfragen, a => Assert.Null(a.Authorization));
 
-        // Eintragen geht nicht — und Grow OS wird gar nicht erst gefragt.
+        // Eintragen geht nicht — und Cultivate Control wird gar nicht erst gefragt.
         var vorher = _fork.Anfragen.Count;
         var (_, text) = await AufrufenAsync(_mcpSchluessel, "messung_eintragen", new { growId = 1, ph = 5.8 });
         Assert.Contains("Einrichtung → KI-Assistent → Zugriff & Schlüssel", text);

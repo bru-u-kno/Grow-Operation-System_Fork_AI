@@ -44,7 +44,7 @@ public sealed record StabilityAssessment(
 /// The SOP does not diagnose from one value. It lays out a table and asks you to read five
 /// signals together — how fast the pH moved, what the EC did meanwhile, the dissolved
 /// oxygen, the ORP, and the look of the water — because the same pH movement means "the
-/// plant is feeding" in one combination and "biofilm" in another. Grow OS checked each of
+/// plant is feeding" in one combination and "biofilm" in another. Cultivate Control checked each of
 /// those separately and could therefore never reach the SOP's conclusion.
 ///
 /// The water surface has no sensor, so it comes back as a question instead of being

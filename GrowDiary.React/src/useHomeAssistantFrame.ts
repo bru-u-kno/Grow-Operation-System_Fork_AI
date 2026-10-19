@@ -1,9 +1,9 @@
 /* src/useHomeAssistantFrame.ts — Fork AI
-   Zwei Fragen an den Rahmen, in dem Grow OS gerade läuft:
+   Zwei Fragen an den Rahmen, in dem Cultivate Control gerade läuft:
    zeichnet Home Assistant seine eigene Kopfleiste über uns, und kommen wir
    von hier aus dorthin zurück?
 
-   Hintergrund: Grow OS ist ein Add-on und läuft im Ingress von Home Assistant,
+   Hintergrund: Cultivate Control ist ein Add-on und läuft im Ingress von Home Assistant,
    also in einem iframe. Darüber liegt normalerweise die HA-Kopfleiste mit dem
    Menü-Zeichen. Ein Add-on kann die nicht entfernen — das kann nur die
    HACS-Integration „Ingress“ (lovelylain/hass_ingress) mit `ui_mode: normal`,

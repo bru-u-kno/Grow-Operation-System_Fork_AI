@@ -14,16 +14,16 @@ namespace GrowMcp.Tools;
 /// Eine Meldegrenze und die Schaltzeiten des Lichtplans ändern (forkai.247, Stufe Grow planen).
 /// </summary>
 /// <remarks>
-/// <para>Beide Wege in Grow OS ersetzen beim Speichern das GANZE Gebilde: <c>PUT api/alerts/tents/{id}</c> alle Regeln des Zelts,
+/// <para>Beide Wege in Cultivate Control ersetzen beim Speichern das GANZE Gebilde: <c>PUT api/alerts/tents/{id}</c> alle Regeln des Zelts,
 /// <c>PUT api/light-schedules/{id}</c> den ganzen Plan. Deshalb wie bei <c>zelt_aufstellraum_setzen</c>: Ist-Stand lesen, genau
 /// ein Feld ändern, zurückschicken, danach neu lesen und alles andere per Prüfsumme als gleich belegen.</para>
 /// <para><b>Keine eigenen Grenzen.</b> Ob eine Meldegrenze physikalisch möglich ist, ob Unter- und Obergrenze vertauscht sind,
-/// ob An- und Aus-Zeit gleich sind — das prüft Grow OS beim Speichern selbst (<c>MeasurementSanityService.PhysikGrenze</c>,
+/// ob An- und Aus-Zeit gleich sind — das prüft Cultivate Control beim Speichern selbst (<c>MeasurementSanityService.PhysikGrenze</c>,
 /// <c>LightSchedulesApiController.Validate</c>) und antwortet mit einem deutschen Satz. Der kommt unverändert zurück.</para>
 /// </remarks>
 public sealed partial class SchreibWerkzeuge
 {
-    /// <summary>Die vier Grenzen einer Regel: Feld in Grow OS, Anzeige, und wie man sie sagt.</summary>
+    /// <summary>Die vier Grenzen einer Regel: Feld in Cultivate Control, Anzeige, und wie man sie sagt.</summary>
     public static IReadOnlyList<(string Feld, string Anzeige, string[] Woerter)> Grenzen { get; } =
     [
         ("minValue", "min.", ["min", "minimum", "unten", "untergrenze", "untere", "unter"]),
@@ -35,7 +35,7 @@ public sealed partial class SchreibWerkzeuge
     // ------------------------------------------------------------------ grenzwert_setzen
 
     [McpServerTool(Name = "grenzwert_setzen")]
-    [Description($"Ändert GENAU EINE Meldegrenze eines Zelts — etwa Lufttemp. max. oder pH min. — auf eine feste Zahl. Alle anderen Grenzen und Einstellungen bleiben; das wird nach dem Speichern per Prüfsumme belegt. Ob die Zahl physikalisch möglich ist und nicht über der Obergrenze liegt, prüft Grow OS selbst. Folgt die Regel dem Wochenplan, ändert das Werkzeug nichts. Die Grenzen stehen in alarme. {StufeGrowPlanen}")]
+    [Description($"Ändert GENAU EINE Meldegrenze eines Zelts — etwa Lufttemp. max. oder pH min. — auf eine feste Zahl. Alle anderen Grenzen und Einstellungen bleiben; das wird nach dem Speichern per Prüfsumme belegt. Ob die Zahl physikalisch möglich ist und nicht über der Obergrenze liegt, prüft Cultivate Control selbst. Folgt die Regel dem Wochenplan, ändert das Werkzeug nichts. Die Grenzen stehen in alarme. {StufeGrowPlanen}")]
     [BrauchtForkSchluessel(Stufen.GrowPlanen)]
     public async Task<string> GrenzwertSetzenAsync(
         [Description("Die Id des Zelts")] int zeltId,
@@ -92,7 +92,7 @@ public sealed partial class SchreibWerkzeuge
             if (string.Equals(regel["quelle"]?.GetValue<string>(), "Plan", StringComparison.OrdinalIgnoreCase))
             {
                 return $"Nichts geändert: Die Meldegrenzen für {groesse?.MeldeEtikett ?? groesse?.Etikett ?? schluessel} an Zelt {zeltId} folgen dem Wochenplan und haben keine eigene Zahl. "
-                       + "Auf feste Grenzen umstellen geht in Grow OS auf der Seite Grenzwerte.";
+                       + "Auf feste Grenzen umstellen geht in Cultivate Control auf der Seite Grenzwerte.";
             }
             alt = regel[welche.Feld]?.GetValue<double>();
             if (alt == wert) return $"Nichts geändert: {name} an Zelt {zeltId} steht schon auf {Zahl(wert)}{einheit}.";
@@ -100,14 +100,14 @@ public sealed partial class SchreibWerkzeuge
         }
         else if (welche.Feld is "nightMinValue" or "nightMaxValue")
         {
-            // Grow OS verwirft beim Speichern jede feste Regel ohne Tag-Grenze (AlertsApiController.SaveForTent) — eine Regel nur
+            // Cultivate Control verwirft beim Speichern jede feste Regel ohne Tag-Grenze (AlertsApiController.SaveForTent) — eine Regel nur
             // mit Nachtgrenze käme nie an (Prüfer forkai.247).
             return $"Nichts geändert: Für {groesse?.MeldeEtikett ?? groesse?.Etikett ?? schluessel} an Zelt {zeltId} gibt es noch keine Meldegrenze. "
                    + "Eine Nachtgrenze gilt nur zusammen mit einer Tag-Grenze — zuerst min oder max setzen.";
         }
         else
         {
-            // Noch keine Regel: eine neue mit genau dieser Grenze, an und mit den Vorgaben von Grow OS (Abstand 30 min).
+            // Noch keine Regel: eine neue mit genau dieser Grenze, an und mit den Vorgaben von Cultivate Control (Abstand 30 min).
             neu.Add(new JsonObject
             {
                 ["metricKey"] = schluessel, ["minValue"] = null, ["maxValue"] = null, ["notifyService"] = "",
@@ -142,13 +142,13 @@ public sealed partial class SchreibWerkzeuge
             return $"ACHTUNG: Beim Speichern von {name} an Zelt {zeltId} hat sich mehr verändert als diese eine Grenze (oder sie steht nicht auf {Zahl(wert)}). "
                    + (rueck.Antwort is { Erfolg: true }
                        ? "Der vorherige Stand wurde zurückgeschrieben; bitte mit alarme nachsehen."
-                       : "Das Zurückschreiben ist NICHT gelungen — bitte sofort in Grow OS auf der Seite Grenzwerte nachsehen.");
+                       : "Das Zurückschreiben ist NICHT gelungen — bitte sofort in Cultivate Control auf der Seite Grenzwerte nachsehen.");
         }
 
         return $"{name} an Zelt {zeltId}: vorher {(alt is { } a ? Zahl(a) + einheit : index is null ? "keine Regel" : "keine Grenze")}, jetzt {Zahl(wert)}{einheit}"
                + (index is null ? " (neue Regel, Meldungen an, Abstand 30 Minuten)" : "")
                + $". Alle anderen Grenzen und Einstellungen sind unverändert (Prüfsumme {summeNachher} vorher und nachher gleich, {nachher.Count} Regeln). "
-               + "Grow OS prüft die neue Grenze gleich beim Speichern gegen den aktuellen Wert, sofern Home Assistant erreichbar ist.";
+               + "Cultivate Control prüft die neue Grenze gleich beim Speichern gegen den aktuellen Wert, sofern Home Assistant erreichbar ist.";
     }
 
     /// <summary>Prüfsumme über alle Regeln — ohne das eine geänderte Feld; eine eben angelegte Regel zählt gar nicht mit.</summary>
@@ -175,7 +175,7 @@ public sealed partial class SchreibWerkzeuge
     // ------------------------------------------------------------------ lichtplan_setzen
 
     [McpServerTool(Name = "lichtplan_setzen")]
-    [Description($"Ändert die Schaltzeiten (an, aus) des Lichtplans eines Zelts — nur die Zeiten; Name, aktiv, Quelle und Zeitzone bleiben, per Prüfsumme belegt. Die Zeiten sind Uhrzeiten im Zelt (Zeitzone des Plans, sonst die von Home Assistant), etwa 07:00 und 19:00. Grow OS schreibt sie NICHT nach Home Assistant und nicht an den Controller: der Plan steuert in Grow OS Nachtabsenkung, Lichteinbruch-Wächter, Auto-Messungen und die Nachtgrenzen der Meldungen. Das Licht selbst schaltet licht_schalten. Ohne planId gilt der aktive Plan. Der jetzige Plan steht in licht. {StufeGrowPlanen}")]
+    [Description($"Ändert die Schaltzeiten (an, aus) des Lichtplans eines Zelts — nur die Zeiten; Name, aktiv, Quelle und Zeitzone bleiben, per Prüfsumme belegt. Die Zeiten sind Uhrzeiten im Zelt (Zeitzone des Plans, sonst die von Home Assistant), etwa 07:00 und 19:00. Cultivate Control schreibt sie NICHT nach Home Assistant und nicht an den Controller: der Plan steuert in Cultivate Control Nachtabsenkung, Lichteinbruch-Wächter, Auto-Messungen und die Nachtgrenzen der Meldungen. Das Licht selbst schaltet licht_schalten. Ohne planId gilt der aktive Plan. Der jetzige Plan steht in licht. {StufeGrowPlanen}")]
     [BrauchtForkSchluessel(Stufen.GrowPlanen)]
     public async Task<string> LichtplanSetzenAsync(
         [Description("Die Id des Zelts")] int zeltId,
@@ -199,8 +199,8 @@ public sealed partial class SchreibWerkzeuge
         try
         {
             var plaene = (JsonNode.Parse(liste.Antwort.Text) as JsonArray ?? throw new JsonException()).OfType<JsonObject>().ToList();
-            if (plaene.Count == 0) return $"Nichts geändert: Zelt {zeltId} hat keinen Lichtplan. Anlegen geht in Grow OS am Zelt unter Lichtplan.";
-            // Dieselbe Wahl wie Grow OS (GetActiveLightScheduleForTent): aktiv, zuletzt geändert, dann die höchste Id.
+            if (plaene.Count == 0) return $"Nichts geändert: Zelt {zeltId} hat keinen Lichtplan. Anlegen geht in Cultivate Control am Zelt unter Lichtplan.";
+            // Dieselbe Wahl wie Cultivate Control (GetActiveLightScheduleForTent): aktiv, zuletzt geändert, dann die höchste Id.
             plan = planId is { } gewuenscht
                 ? plaene.FirstOrDefault(p => p["id"]?.GetValue<int>() == gewuenscht)
                 : plaene.Where(p => p["isActive"]?.GetValue<bool>() == true)
@@ -225,7 +225,7 @@ public sealed partial class SchreibWerkzeuge
         var altAus = plan["lightsOffTime"]?.GetValue<string>();
         if (altAn == ein && altAus == ende) return $"Nichts geändert: Der Lichtplan „{name}\" (Id {id}) läuft schon {ein}–{ende}.";
 
-        // Grow OS ersetzt beim Speichern den ganzen Plan: alles aus dem Ist-Stand, nur die beiden Zeiten neu.
+        // Cultivate Control ersetzt beim Speichern den ganzen Plan: alles aus dem Ist-Stand, nur die beiden Zeiten neu.
         var rumpf = new JsonObject
         {
             ["name"] = name,
@@ -260,13 +260,13 @@ public sealed partial class SchreibWerkzeuge
             zurueck["lightsOffTime"] = altAus;
             var rueck = await SendenAsync(HttpMethod.Put, $"api/light-schedules/{id}", zurueck, cancellationToken);
             return $"ACHTUNG: Beim Speichern des Lichtplans „{name}\" (Id {id}) hat sich mehr verändert als die Zeiten (oder sie stehen nicht auf {ein}–{ende}). "
-                   + (rueck.Antwort is { Erfolg: true } ? "Die alten Zeiten wurden zurückgeschrieben; bitte mit licht nachsehen." : "Das Zurückschreiben ist NICHT gelungen — bitte sofort in Grow OS nachsehen.");
+                   + (rueck.Antwort is { Erfolg: true } ? "Die alten Zeiten wurden zurückgeschrieben; bitte mit licht nachsehen." : "Das Zurückschreiben ist NICHT gelungen — bitte sofort in Cultivate Control nachsehen.");
         }
 
         var zone = plan["timeZoneId"]?.GetValue<string>() is { Length: > 0 } z ? $"Zeitzone des Plans: {z}" : "der Plan hat keine eigene Zeitzone, es gilt die von Home Assistant";
         return $"Lichtplan „{name}\" (Id {id}) an Zelt {zeltId}: vorher {altAn}–{altAus} ({Lichtstunden(altAn, altAus)}), jetzt {ein}–{ende} ({Lichtstunden(ein, ende)}). "
                + $"Die Zeiten gelten als Uhrzeit im Zelt ({zone}). Name, aktiv, Quelle und Zeitzone sind unverändert (Prüfsumme {summeNachher} vorher und nachher gleich). "
-               + "Nach Home Assistant oder an den Controller schreibt Grow OS diese Zeiten nicht — was das Licht tatsächlich schaltet, bleibt, wie es ist.";
+               + "Nach Home Assistant oder an den Controller schreibt Cultivate Control diese Zeiten nicht — was das Licht tatsächlich schaltet, bleibt, wie es ist.";
     }
 
     /// <summary>Prüfsumme über den Plan ohne die beiden Zeiten und ohne den Änderungszeitpunkt.</summary>

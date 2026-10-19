@@ -34,7 +34,7 @@ public sealed class IngressPfadInDerStartseiteTests
         var datei = Path.Combine(wurzel, "index.html");
         if (!File.Exists(datei))
         {
-            File.WriteAllText(datei, "<!doctype html><html><head><title>Grow OS</title></head><body></body></html>");
+            File.WriteAllText(datei, "<!doctype html><html><head><title>Cultivate Control</title></head><body></body></html>");
         }
     }
 

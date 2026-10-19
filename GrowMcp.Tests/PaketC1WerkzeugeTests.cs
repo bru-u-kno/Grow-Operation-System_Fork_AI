@@ -114,7 +114,7 @@ public sealed class PaketC1WerkzeugeTests
         var fork = ForkAttrappe.MitGrow();
         var text = await Aufruf(fork, "verbrauch_buchen", new() { ["growId"] = 1, ["artikel"] = "ph minus", ["menge"] = 20.0 });
 
-        Assert.Equal("Gebucht: 20 ml pH-Minus auf Grow 1. Was es kostet, rechnet Grow OS (Werkzeug kosten).", text);
+        Assert.Equal("Gebucht: 20 ml pH-Minus auf Grow 1. Was es kostet, rechnet Cultivate Control (Werkzeug kosten).", text);
         var post = Rumpf(Assert.Single(Schreibend(fork)));
         Assert.Equal(1, post["growId"]!.GetValue<int>());
         Assert.Equal(2, post["zeilen"]![0]!["artikelId"]!.GetValue<int>());
@@ -181,7 +181,7 @@ public sealed class PaketC1WerkzeugeTests
     [Fact]
     public async Task Eine_rueckdatierte_Fuellung_schliesst_die_spaetere_nicht()
     {
-        // Grow OS schließt nur Füllungen VOR der neuen — die offene ist vom 02.09.2026.
+        // Cultivate Control schließt nur Füllungen VOR der neuen — die offene ist vom 02.09.2026.
         var fork = ForkAttrappe.MitGrow();
         var text = await Aufruf(fork, "nachfuellung_eintragen",
             new() { ["artikel"] = "CO2", ["menge"] = 10.0, ["vorherigeLeer"] = true, ["zeitpunkt"] = "2026-09-01T10:00" });
@@ -215,7 +215,7 @@ public sealed class PaketC1WerkzeugeTests
 
     // ------------------------------------------------------------------ pflanze_aendern
 
-    /// <summary>Eine Pflanze, deren PUT wie Grow OS das Ganze ersetzt — wahlweise mit einer Nebenwirkung.</summary>
+    /// <summary>Eine Pflanze, deren PUT wie Cultivate Control das Ganze ersetzt — wahlweise mit einer Nebenwirkung.</summary>
     private static ForkAttrappe PflanzenFork(string pflanze = ForkAttrappe.Pflanze, bool verliertNotiz = false)
     {
         var stand = JsonNode.Parse(pflanze)!.AsObject();

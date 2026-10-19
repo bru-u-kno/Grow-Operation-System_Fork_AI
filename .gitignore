@@ -33,7 +33,7 @@ release/
 docker-data/
 GrowDiary.Web/wwwroot/index.html
 GrowDiary.Web/wwwroot/assets/
-# Grow OS runtime / local data
+# Cultivate Control runtime / local data
 GrowDiary.Web/App_Data_backup/
 # ASP.NET local crypto/session keys
 **/DataProtectionKeys/

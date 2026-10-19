@@ -9,7 +9,7 @@ namespace GrowMcp.Tests;
 /// Fork AI (forkai.247): <c>grenzwert_setzen</c> und <c>lichtplan_setzen</c> — genau ein Feld, der Rest per Prüfsumme belegt.
 /// </summary>
 /// <remarks>
-/// Die Attrappen verhalten sich wie Grow OS: das PUT ersetzt alles mit dem, was kommt. Die Varianten <c>verfaelscht</c> spielen einen
+/// Die Attrappen verhalten sich wie Cultivate Control: das PUT ersetzt alles mit dem, was kommt. Die Varianten <c>verfaelscht</c> spielen einen
 /// Server nach, der dabei noch etwas anderes ändert — davor soll die Prüfsumme schützen (und zurückschreiben).
 /// </remarks>
 public sealed class PlanWerkzeugeTests
@@ -101,7 +101,7 @@ public sealed class PlanWerkzeugeTests
     [InlineData("Lufttemp.", "max", 30, "steht schon auf 30 °C")]
     [InlineData("Lufttemp.", "irgendwo", 30, "„irgendwo\" ist keine Grenze")]
     [InlineData("Aussenluft", "max", 30, "Messgröße „Aussenluft\" gibt es nicht")]
-    // Grow OS verwirft eine feste Regel ohne Tag-Grenze still (Prüfer forkai.247).
+    // Cultivate Control verwirft eine feste Regel ohne Tag-Grenze still (Prüfer forkai.247).
     [InlineData("Außen Temp.", "nacht max", 22, "Eine Nachtgrenze gilt nur zusammen mit einer Tag-Grenze")]
     public async Task Was_nicht_geht_aendert_nichts(string messgroesse, string grenze, double wert, string erwartet)
     {
@@ -188,7 +188,7 @@ public sealed class PlanWerkzeugeTests
 
         Assert.StartsWith("Lichtplan „Blüte 12/12\" (Id 3) an Zelt 1: vorher 06:00–18:00 (12 h Licht), jetzt 07:00–19:00 (12 h Licht). "
                           + "Die Zeiten gelten als Uhrzeit im Zelt (Zeitzone des Plans: Europe/Berlin). Name, aktiv, Quelle und Zeitzone sind unverändert (Prüfsumme ", text);
-        Assert.EndsWith("Nach Home Assistant oder an den Controller schreibt Grow OS diese Zeiten nicht — was das Licht tatsächlich schaltet, bleibt, wie es ist.", text);
+        Assert.EndsWith("Nach Home Assistant oder an den Controller schreibt Cultivate Control diese Zeiten nicht — was das Licht tatsächlich schaltet, bleibt, wie es ist.", text);
     }
 
     [Fact]

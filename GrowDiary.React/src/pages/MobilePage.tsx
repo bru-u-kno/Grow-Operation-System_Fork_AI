@@ -6,7 +6,7 @@ import { QrCode } from '../features/mobile/QrCode'
 import '../features/mobile/mobile.css'
 
 /**
- * Grow OS auf den Startbildschirm des Handys.
+ * Cultivate Control auf den Startbildschirm des Handys.
  *
  * Der Weg, der naheliegt, ist der falsche: die Adresse aus der Adresszeile
  * kopieren. Sie enthält ein Ingress-Token, das pro Anfrage wechselt — das
@@ -15,7 +15,7 @@ import '../features/mobile/mobile.css'
  * erfragt der Server beim Supervisor (SupervisorInfoService.PanelPath).
  *
  * Was diese Seite ehrlicherweise NICHT liefert: eine App ohne Home-Assistant-
- * Rahmen. Grow OS läuft ausschliesslich hinter dem Ingress, und dort gehört die
+ * Rahmen. Cultivate Control läuft ausschliesslich hinter dem Ingress, und dort gehört die
  * äussere Seite Home Assistant. Das steht unten auch so da.
  *
  * Fork AI (forkai.133): kein eigener Menüpunkt mehr, sondern der Reiter
@@ -79,7 +79,7 @@ export function AppEinrichten() {
       {loading ? <V1Skeleton rows={3} label="Lade Panel-Pfad" /> : !access?.available ? (
         <V1Alert
           tone="neutral"
-          message={access?.reason ?? 'Grow OS läuft hier nicht als Home-Assistant-Add-on.'} />
+          message={access?.reason ?? 'Cultivate Control läuft hier nicht als Home-Assistant-Add-on.'} />
       ) : (
         <>
           <V1Section title="Scannen — mit der Kamera des Handys">
@@ -124,18 +124,18 @@ export function AppEinrichten() {
 
           <V1Section title="Warum nicht einfach die Adresse aus der Adresszeile">
             <p className="mo-note">
-              Weil sie nicht hält. Grow OS wird über den Ingress von Home Assistant ausgeliefert, und
+              Weil sie nicht hält. Cultivate Control wird über den Ingress von Home Assistant ausgeliefert, und
               dieser Pfad trägt ein Token, das sich bei jeder Anfrage ändert. Als Lesezeichen abgelegt
               führt er morgen ins Leere. Der Code oben zeigt stattdessen auf{' '}
               <code>{access.panelPath}</code> — dieselbe Adresse, die Home Assistant bei „Web-UI
-              öffnen" benutzt. Die bleibt, auch wenn Grow OS nicht in der Seitenleiste steht.
+              öffnen" benutzt. Die bleibt, auch wenn Cultivate Control nicht in der Seitenleiste steht.
             </p>
             <p className="mo-note">
-              Was dabei bleibt: der schmale Rahmen von Home Assistant um Grow OS herum, und das Icon
+              Was dabei bleibt: der schmale Rahmen von Home Assistant um Cultivate Control herum, und das Icon
               auf dem Startbildschirm gehört Home Assistant, nicht uns. Beides liegt daran, dass die
               äussere Seite Home Assistant gehört — und dass Home Assistant die Anmeldung besitzt.
               Eine eigene Kachel ohne diesen Rahmen ginge nur mit einem eigenen Port, und dann bräuchte
-              Grow OS eine eigene Anmeldung.
+              Cultivate Control eine eigene Anmeldung.
             </p>
           </V1Section>
         </>

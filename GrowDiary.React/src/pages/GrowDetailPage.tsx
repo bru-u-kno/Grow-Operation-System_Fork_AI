@@ -170,7 +170,7 @@ function GrowDetailPage() {
           <Link className="gd-tab" to={`/sops${scope}`}>SOPs</Link>
           <Link className="gd-tab" to={`/journal${scope}`}>Journal & Fotos</Link>
           <Link className="gd-tab" to={`/regeln${scope}&tab=automatik`}>Automatik</Link>
-          {/* Nicht „KI-Berater": in Grow OS steckt keine KI. Der Reiter fuehrt
+          {/* Nicht „KI-Berater": in Cultivate Control steckt keine KI. Der Reiter fuehrt
               zur Mappe, die man einem EIGENEN Agenten vorlegt — der Name muss
               das sagen, sonst sucht man eine Funktion, die es nicht gibt. */}
           {kiAktiv && <Link className="gd-tab" to={`/ki${scope}&tab=mappe`}>Mappe für eigene KI</Link>}

@@ -1,14 +1,14 @@
 namespace GrowMcp.Tools;
 
 /// <summary>
-/// Die Stufen des Zugriffs für KI-Assistenten, wie Grow OS sie nennt.
+/// Die Stufen des Zugriffs für KI-Assistenten, wie Cultivate Control sie nennt.
 /// </summary>
 /// <remarks>
 /// <para>Über die Leitung gehen die Namen aus <c>KiStufe</c> („GrowPlanen"),
 /// in der Oberfläche stehen die Anzeigenamen („Grow planen",
 /// <c>KiZugriffDienst.Anzeigename</c>). Beide stehen hier, weil die
 /// Werkzeugbeschreibungen sie als Konstanten brauchen — und
-/// <c>ForkWegeTests</c> hält sie per Reflexion gegen das Enum in Grow OS.</para>
+/// <c>ForkWegeTests</c> hält sie per Reflexion gegen das Enum in Cultivate Control.</para>
 ///
 /// <para>Die Reihenfolge ist die der Bits (1, 2, 4, 8). An ihr hängt „Rückfrage
 /// ab Stufe …": ab Grow planen heisst Grow planen und alles danach.</para>
@@ -55,16 +55,16 @@ public static class Stufen
 /// </summary>
 /// <remarks>
 /// <para>Mit dem MCP-Schlüssel antwortet es mit dem Hinweis, wo es den Schlüssel
-/// gibt, und fragt Grow OS gar nicht erst. <c>SchreibWerkzeugeTests</c> zählt über
+/// gibt, und fragt Cultivate Control gar nicht erst. <c>SchreibWerkzeugeTests</c> zählt über
 /// alle Werkzeuge mit diesem Merkmal und verlangt genau das.</para>
 ///
-/// <para><see cref="Stufe"/> ist die Stufe, die Grow OS verlangt — nur zur
-/// Beschreibung; entschieden wird in Grow OS. <c>null</c> heisst: lesend, ein
+/// <para><see cref="Stufe"/> ist die Stufe, die Cultivate Control verlangt — nur zur
+/// Beschreibung; entschieden wird in Cultivate Control. <c>null</c> heisst: lesend, ein
 /// gültiger Schlüssel genügt.</para>
 ///
 /// <para><see cref="NurLesen"/> (forkai.247): Das Werkzeug liest nur, braucht dafür
 /// aber eine Stufe — <c>sensoren</c> liest die Zelt-Einstellungen, und die liegen
-/// in Grow OS hinter „Verwaltung". Die Zählungen der schreibenden Werkzeuge
+/// in Cultivate Control hinter „Verwaltung". Die Zählungen der schreibenden Werkzeuge
 /// lassen es aus.</para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
@@ -83,8 +83,8 @@ public sealed class BrauchtForkSchluesselAttribute(string? stufe = null) : Attri
 /// </summary>
 /// <remarks>
 /// Ohne ihn füllte die Zählung jeden Text mit „test" — und ein Werkzeug mit
-/// fester Auswahl („keimung", „veg" …) wiese das ab, bevor es Grow OS je fragt.
-/// Die Zählung sähe dann nie, ob der Weg nach Grow OS überhaupt stimmt.
+/// fester Auswahl („keimung", „veg" …) wiese das ab, bevor es Cultivate Control je fragt.
+/// Die Zählung sähe dann nie, ob der Weg nach Cultivate Control überhaupt stimmt.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Parameter)]
 public sealed class BeispielAttribute(string wert) : Attribute

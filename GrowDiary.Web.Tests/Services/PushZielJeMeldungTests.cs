@@ -19,7 +19,7 @@ namespace GrowDiary.Web.Tests.Services;
 /// </remarks>
 public sealed class PushZielJeMeldungTests : IDisposable
 {
-    private const string Slug = "d48160c2_grow_os_fork_ai";
+    private const string Slug = "00d580e3_cultivate_control";
 
     private readonly string _contentRoot;
     private readonly AppPaths _paths;
@@ -39,7 +39,7 @@ public sealed class PushZielJeMeldungTests : IDisposable
         _notificationSettings = new NotificationSettingsRepository(_paths);
         _growRepository = new GrowRepository(_paths);
 
-        // Mit Supervisor-Token: nur dann kennt Grow OS seinen Slug und setzt ein Ziel.
+        // Mit Supervisor-Token: nur dann kennt Cultivate Control seinen Slug und setzt ein Ziel.
         _savedSupervisorToken = Environment.GetEnvironmentVariable(HomeAssistantAddon.SupervisorTokenEnvironmentVariable);
         Environment.SetEnvironmentVariable(HomeAssistantAddon.SupervisorTokenEnvironmentVariable, "supervisor-token");
 
@@ -86,7 +86,7 @@ public sealed class PushZielJeMeldungTests : IDisposable
     [Fact]
     public async Task Mit_Ingress_Panel_fuehrt_der_Tipp_dorthin_ohne_HA_Kopfleiste()
     {
-        // Der Nutzer öffnet Grow OS am Handy über dieses Panel (05.10.2026); /app/<slug>
+        // Der Nutzer öffnet Cultivate Control am Handy über dieses Panel (05.10.2026); /app/<slug>
         // zeigt die weiße HA-Leiste darüber.
         var handler = Handler();
         var alarme = new AlertEvaluationService(_rules, Benachrichtigung(handler, IngressPanel(vorhanden: true)), NullLogger<AlertEvaluationService>.Instance);

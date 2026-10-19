@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace GrowDiary.Web.Api.Contracts;
 
 // Fork AI (A-003 Etappe B, 03.10.2026): Verträge für „Home Assistant über den Fork".
-// Gerufen vom Grow MCP Fork AI mit einem Schlüssel (Authorization: Bearer gok_…);
+// Gerufen vom Cultivate Control MCP mit einem Schlüssel (Authorization: Bearer gok_…);
 // ohne Schlüssel antwortet jeder Weg 401 ki_schluessel_fehlt. Über die Leitung
 // in camelCase wie alle anderen Verträge (Program.cs, AddJsonOptions).
 

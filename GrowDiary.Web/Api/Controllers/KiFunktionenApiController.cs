@@ -12,7 +12,7 @@ namespace GrowDiary.Web.Api.Controllers;
 /// Der Weg liegt nicht unter <c>/api/settings</c> (kein Verwaltungsweg): lesen darf jeder gültige Schlüssel, und
 /// aus dem Add-on-Netz ohne Schlüssel geht er wie jeder lesende Weg. Darin steht nichts Geheimes — nur, welche
 /// Funktionen es gibt und wie sie eingestuft sind.</para>
-/// <para>Gerufen vom Grow MCP Fork AI (<c>fork_funktionen</c>, <c>fork_ausfuehren</c>).</para>
+/// <para>Gerufen vom Cultivate Control MCP (<c>fork_funktionen</c>, <c>fork_ausfuehren</c>).</para>
 /// </remarks>
 [ApiController]
 [Route("api/ki-zugriff/funktionen")]
@@ -24,7 +24,7 @@ public sealed class KiFunktionenApiController : ApiControllerBase
 
     public KiFunktionenApiController(KiFunktionsverzeichnis verzeichnis) => _verzeichnis = verzeichnis;
 
-    /// <summary>Alle Funktionen von Grow OS unter /api: Weg, Einstufung für Schlüssel, Beschreibung und erwartete Angaben.</summary>
+    /// <summary>Alle Funktionen von Cultivate Control unter /api: Weg, Einstufung für Schlüssel, Beschreibung und erwartete Angaben.</summary>
     [HttpGet("")]
     [ProducesResponseType(typeof(KiFunktionenDto), StatusCodes.Status200OK)]
     public ActionResult<KiFunktionenDto> Verzeichnis() => Ok(_verzeichnis.Lesen());

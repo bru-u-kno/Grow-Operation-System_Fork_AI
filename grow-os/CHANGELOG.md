@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.254
+
+**Neuer Name: Cultivate Control.** Aus „Grow OS Fork AI“ wird „Cultivate Control“. Funktionen und Daten bleiben gleich, geändert haben sich Name, Kennung und Adresse.
+
+- **Was sich ändert:** Der Name steht jetzt überall, wo man ihn sieht (Add-on-Titel, Titelzeile, Hinweise, Push-Meldungen, Anleitungen). Das Add-on hat eine neue Kennung (`cultivate_control`), das Repository liegt unter `bru-u-kno/cultivate-control`, das Image unter `ghcr.io/bru-u-kno/cultivate-control`.
+- **Wichtig beim Umstieg:** Home Assistant sieht darin ein **neues** Add-on neben dem alten „Grow OS Fork AI“. Die Daten bleiben beim alten Add-on. Dort unter System eine Sicherung anlegen, im neuen Add-on einspielen, danach das alte entfernen. Der Server des KI-Zugangs heißt jetzt `cultivate-control`; wer Claude Code verbunden hat, trägt ihn neu ein.
+- **Versionsnummer:** Neue Nummern lauten `2.0.0-cc.N` (vorher `2.0.0-forkai.N`). Die Zählung läuft weiter.
+- **Bleibt:** Die Automationen, die das Add-on in Home Assistant anlegt, behalten ihren Namen „Fork AI: …“ im Titel. Daran erkennt das Add-on seine eigenen Automationen; ein anderer Name würde sie als fremde behandeln.
+
 ## 2.0.0-forkai.253
 
 **Fork AI.** Die Zuluft-Seite zählt ihre Geräte wieder richtig: Statt „Geräte 10 / 8“ steht dort „Geräte 10 / 10“.

@@ -1,6 +1,6 @@
 # Dosierung, Addback und Wasserwechsel
 
-> Wie Grow OS Nährlösung korrigiert: Pumpen schalten, Mengen rechnen, und alles
+> Wie Cultivate Control Nährlösung korrigiert: Pumpen schalten, Mengen rechnen, und alles
 > protokollieren, was ins Becken gegangen ist.
 
 ## Wo in der App
@@ -20,7 +20,7 @@
 
 ## Was es tut
 
-**Pumpen.** Grow OS hat keine Anschlüsse; es schaltet eine Home-Assistant-Entität
+**Pumpen.** Cultivate Control hat keine Anschlüsse; es schaltet eine Home-Assistant-Entität
 (`DosingPump.HaEntityId`, meist ein `switch`). Aus Millilitern wird Laufzeit über
 die kalibrierte Fördermenge — ohne sie verweigert der Dienst die Dosis. Kalibriert
 wird per Lauf in den Messbecher: abgelesene Menge durch Laufzeit ergibt ml/min
@@ -43,7 +43,7 @@ beide konzentriert zusammenkommen. Also: A läuft, Trennzeit, dann B — als
 
 **Addback.** `AddbackCalculator.Calculate` löst
 `Liter = V · (Ziel − Ist) / (Stock − Ziel)`. Liegt der Ist-EC schon auf Ziel, ist
-nichts zu tun. Gemischt wird von Hand nach SOP `nutrient-addback`; Grow OS rechnet
+nichts zu tun. Gemischt wird von Hand nach SOP `nutrient-addback`; Cultivate Control rechnet
 und protokolliert.
 
 **Nachfüllen als ein Vorgang (A-006, Etappe 3).** Wie der Wasserwechsel: ein

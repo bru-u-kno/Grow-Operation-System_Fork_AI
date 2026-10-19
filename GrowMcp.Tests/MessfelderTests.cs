@@ -7,7 +7,7 @@ using GrowOsAccess;
 namespace GrowMcp.Tests;
 
 /// <summary>
-/// Was die Schreib-Werkzeuge schicken, gegen die ECHTEN Typen von Grow OS.
+/// Was die Schreib-Werkzeuge schicken, gegen die ECHTEN Typen von Cultivate Control.
 /// </summary>
 /// <remarks>
 /// <para>Fork AI (A-004, 03.10.2026). Keine abgetippte Liste: die Typen kommen
@@ -21,11 +21,11 @@ public sealed class MessfelderTests
     private const string Vertraege = "GrowDiary.Web.Api.Contracts.";
     private const string Modelle = "GrowDiary.Web.Models.";
 
-    /// <summary>So liest ASP.NET in Grow OS einen Rumpf (Program.cs: Web-Vorgaben, Enums als Text).</summary>
+    /// <summary>So liest ASP.NET in Cultivate Control einen Rumpf (Program.cs: Web-Vorgaben, Enums als Text).</summary>
     private static readonly JsonSerializerOptions WieGrowOs = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() },
-        // Strenger als Grow OS: ein Feld, das der Typ nicht kennt, ist hier ein Fehler.
+        // Strenger als Cultivate Control: ein Feld, das der Typ nicht kennt, ist hier ein Fehler.
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     };
 
@@ -35,7 +35,7 @@ public sealed class MessfelderTests
     private static readonly Dictionary<string, string> Ausnahmen = new()
     {
         ["Source"] = "Bleibt auf der Vorgabe Manual: diktiert ist von Hand gemessen. HomeAssistant/Imported/Derived "
-                     + "setzt Grow OS selbst, ein Assistent soll keine Herkunft vortäuschen.",
+                     + "setzt Cultivate Control selbst, ein Assistent soll keine Herkunft vortäuschen.",
     };
 
     /// <summary>Jedes Werkzeug-Argument mit einem eigenen, wiedererkennbaren Wert.</summary>
@@ -72,7 +72,7 @@ public sealed class MessfelderTests
         var typ = GrowOsBau.Typ(Vertraege + "MeasurementUpsertRequest");
         var rumpf = await RumpfAsync();
 
-        // Wirft bei jedem Feld, das Grow OS nicht kennt.
+        // Wirft bei jedem Feld, das Cultivate Control nicht kennt.
         var gelesen = JsonSerializer.Deserialize(rumpf, typ, WieGrowOs);
         Assert.NotNull(gelesen);
 
@@ -181,7 +181,7 @@ public sealed class MessfelderTests
         var angeboten = SchreibWerkzeuge.JournalArten.Select(a => a.Wert).ToList();
         Assert.All(angeboten, art => Assert.Contains(art, alle));
 
-        // Die Meilensteine schreibt Grow OS selbst, wenn phase_bestaetigen sie bestätigt.
+        // Die Meilensteine schreibt Cultivate Control selbst, wenn phase_bestaetigen sie bestätigt.
         var meilensteine = new[] { "GerminationConfirmed", "CloneRooted", "VegStarted", "FlipToFlower", "FinishStarted" };
         Assert.All(meilensteine, art => Assert.Contains(art, alle));
         Assert.Equal(alle.OrderBy(n => n), angeboten.Concat(meilensteine).OrderBy(n => n));

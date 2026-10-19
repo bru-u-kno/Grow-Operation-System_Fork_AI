@@ -30,7 +30,7 @@ public static class Einrichtungsseite
     /// gebaut hätte.
     /// </remarks>
     /// <remarks>
-    /// Fork AI (02.10.2026): der Server heißt beim Klienten „grow-os-fork-ai",
+    /// Fork AI (02.10.2026): der Server heißt beim Klienten „cultivate-control",
     /// nicht „grow-os" — wer auch den Grow MCP des Originals eingerichtet hat,
     /// bekäme sonst zwei Einträge mit demselben Namen.
     /// </remarks>
@@ -39,7 +39,7 @@ public static class Einrichtungsseite
          + $"--header \"Authorization: Bearer {token}\"";
 
     /// <summary>Unter diesem Namen trägt sich der Server beim Klienten ein.</summary>
-    public const string KlientenName = "grow-os-fork-ai";
+    public const string KlientenName = "cultivate-control";
 
     public static async Task<IResult> RendernAsync(
         HttpRequest anfrage, TokenSpeicher speicher, GrowOsDiscovery suche, CancellationToken cancellationToken)
@@ -58,7 +58,7 @@ public static class Einrichtungsseite
 
         var zustand = verbindung.Erreichbar ? "gut" : "schlecht";
 
-        // Solange Grow OS nicht antwortet, ist der Verbindungsbefehl eine Falle:
+        // Solange Cultivate Control nicht antwortet, ist der Verbindungsbefehl eine Falle:
         // er funktioniert, aber jedes Werkzeug laeuft danach ins Leere. Also erst
         // sagen, was fehlt.
         var adressKarte = hostTaugt
@@ -93,13 +93,13 @@ public static class Einrichtungsseite
             : """
               <section>
                 <h2>So verbindest du dich</h2>
-                <p>Erst muss Grow OS erreichbar sein — sonst verbindet sich Claude zwar,
+                <p>Erst muss Cultivate Control erreichbar sein — sonst verbindet sich Claude zwar,
                    aber jede Frage läuft ins Leere. Prüf der Reihe nach:</p>
                 <ul>
-                  <li>Läuft das Add-on <strong>Grow OS</strong>?</li>
+                  <li>Läuft das Add-on <strong>Cultivate Control</strong>?</li>
                   <li>Ist es mindestens <strong>2.0.0-beta.24</strong>? Erst ab da lässt es
                       andere Add-ons mitlesen.</li>
-                  <li>Sonst: Adresse aus <em>Grow OS → Info → Hostname</em> oben unter
+                  <li>Sonst: Adresse aus <em>Cultivate Control → Info → Hostname</em> oben unter
                       <code>grow_os_adresse</code> eintragen, mit <code>:5076</code> am Ende.</li>
                 </ul>
                 <p>Danach diese Seite neu laden — dann steht der Befehl hier.</p>
@@ -112,7 +112,7 @@ public static class Einrichtungsseite
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Grow MCP Fork AI</title>
+              <title>Cultivate Control MCP</title>
               <style>
                 :root {
                   color-scheme: light dark;
@@ -166,11 +166,11 @@ public static class Einrichtungsseite
             </head>
             <body>
             <main>
-              <h1>Grow MCP Fork AI</h1>
+              <h1>Cultivate Control MCP</h1>
               <p class="lead">Verbindet Claude auf deinem Rechner mit deiner Anlage.</p>
 
               <section>
-                <h2>Verbindung zu Grow OS</h2>
+                <h2>Verbindung zu Cultivate Control</h2>
                 <p class="zustand {{zustand}}">{{WebUtility.HtmlEncode(verbindung.Meldung)}}</p>
               </section>
 
@@ -181,7 +181,7 @@ public static class Einrichtungsseite
                 <ul>
                   <li>Der Schlüssel steht im Befehl. Gib ihn nicht weiter — wer ihn hat, kann deine Grow-Daten lesen.</li>
                   <li>Erreichbar ist das nur in deinem eigenen Netz. Aus dem Internet kommt niemand hier an.</li>
-                  <li>Mit diesem Schlüssel wird nur gelesen. Zum Eintragen und Schalten in Grow OS unter <em>Einrichtung → KI-Assistent → Zugriff &amp; Schlüssel</em> einen Schlüssel anlegen und ihn im Befehl statt dieses Schlüssels einsetzen. Was er darf, legst du dort fest.</li>
+                  <li>Mit diesem Schlüssel wird nur gelesen. Zum Eintragen und Schalten in Cultivate Control unter <em>Einrichtung → KI-Assistent → Zugriff &amp; Schlüssel</em> einen Schlüssel anlegen und ihn im Befehl statt dieses Schlüssels einsetzen. Was er darf, legst du dort fest.</li>
                   <li>Neuen Schlüssel gewünscht? Datei <code>mcp-token</code> im Add-on-Speicher löschen und neu starten.</li>
                 </ul>
               </section>

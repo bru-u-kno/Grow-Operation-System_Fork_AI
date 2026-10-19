@@ -7,14 +7,14 @@ namespace GrowDiary.Web.Services;
 /// Schreibt den Wochenwert der Nachtabsenkung nach Home Assistant.
 /// </summary>
 /// <remarks>
-/// <para><b>Grow OS plant, Home Assistant regelt.</b> Hier wird ein Sollwert
+/// <para><b>Cultivate Control plant, Home Assistant regelt.</b> Hier wird ein Sollwert
 /// gesetzt — zweimal am Tag, bei Licht an und bei Licht aus. Die Regelschleife
-/// mit ihrer Hysterese bleibt dort, wo Fühler und Relais sitzen. Grow OS taktet
+/// mit ihrer Hysterese bleibt dort, wo Fühler und Relais sitzen. Cultivate Control taktet
 /// keinen Chiller.</para>
 ///
 /// <para><b>Warum das die sichere Aufteilung ist:</b> stürzt dieses Add-on ab
 /// oder läuft ein Update, behält Home Assistant den zuletzt geschriebenen
-/// Sollwert. Die Rampe pausiert, mehr passiert nicht. Wäre Grow OS der Regler,
+/// Sollwert. Die Rampe pausiert, mehr passiert nicht. Wäre Cultivate Control der Regler,
 /// könnte derselbe Absturz den Chiller dauerhaft an oder aus lassen — genau die
 /// Klasse Fehler, gegen die beim Dosieren der Totmann steht.</para>
 ///

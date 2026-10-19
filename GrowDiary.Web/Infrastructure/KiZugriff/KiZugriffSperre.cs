@@ -32,7 +32,7 @@ public sealed record KiEntscheidung(
 /// <param name="Stufe">Die Stufe der schreibenden Aktion (Bits); <see cref="KiStufe.Keine"/> beim Lesen und bei fehlender Einstufung.</param>
 /// <param name="NieGrund">Gesetzt, wenn die Aktion über einen Schlüssel nie erreichbar ist (<see cref="KeinKiZugriffAttribute"/>).</param>
 /// <param name="Schaltbefehl">Zählt ins Stundenfenster der Schaltbefehle.</param>
-/// <param name="SicherungVorher">Grow OS legt vorher eine Sicherung an.</param>
+/// <param name="SicherungVorher">Cultivate Control legt vorher eine Sicherung an.</param>
 public sealed record KiEinstufung(
     bool Lesend,
     bool Verwaltungsweg,
@@ -99,7 +99,7 @@ public static class KiZugriffSperre
                 context.Response.Headers.RetryAfter = ((int)KiZugriffDienst.SperrDauer.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
                 // Fork AI (A-005): ein gültiger Schlüssel kommt hier nie an — Begründung an KiZugriffDienst.Pruefen.
                 await FehlerSchreiben(context, StatusCodes.Status429TooManyRequests, "ki_zu_viele_versuche",
-                    "Zu viele ungültige Schlüssel von dieser Adresse. Grow OS weist von hier "
+                    "Zu viele ungültige Schlüssel von dieser Adresse. Cultivate Control weist von hier "
                     + $"{KiZugriffDienst.SperrDauer.TotalMinutes:0} Minuten lang jeden ungültigen Schlüssel ab; ein gültiger kommt weiter durch.");
                 return;
 
@@ -108,7 +108,7 @@ public static class KiZugriffSperre
                 Protokollieren(context, KiProtokollArt.ZugriffAus, $"Schlüssel abgewiesen, Zugriff für KI-Assistenten ist aus: {context.Request.Method} {context.Request.Path}", "warning", false,
                     anfrage: new KiAnfrage(null, StatusCodes.Status403Forbidden, "ki_zugriff_aus"));
                 await FehlerSchreiben(context, StatusCodes.Status403Forbidden, "ki_zugriff_aus",
-                    "Der Zugriff für KI-Assistenten ist in Grow OS ausgeschaltet "
+                    "Der Zugriff für KI-Assistenten ist in Cultivate Control ausgeschaltet "
                     + "(Einrichtung → KI-Assistent → Zugriff & Schlüssel).");
                 return;
 
@@ -130,7 +130,7 @@ public static class KiZugriffSperre
                 context.Response.Headers.WWWAuthenticate = "Bearer";
                 await FehlerSchreiben(context, StatusCodes.Status401Unauthorized, "ki_schluessel_ungueltig",
                     ergebnis.Ergebnis == KiPruefung.Gesperrt
-                        ? "Dieser Schlüssel ist gesperrt. Der Betreiber kann in Grow OS einen neuen anlegen."
+                        ? "Dieser Schlüssel ist gesperrt. Der Betreiber kann in Cultivate Control einen neuen anlegen."
                         : "Der Schlüssel ist ungültig.");
                 return;
         }
@@ -191,7 +191,7 @@ public static class KiZugriffSperre
         {
             await FehlerSchreiben(context, StatusCodes.Status429TooManyRequests, "ki_hoechstwert",
                 $"Höchstwert erreicht: über KI-Assistenten sind höchstens {kontext.Hoechstwerte.MaxSchaltbefehleJeStunde} "
-                + "Schalt- und Dosierbefehle je Stunde erlaubt. Der Betreiber kann den Wert in Grow OS ändern.");
+                + "Schalt- und Dosierbefehle je Stunde erlaubt. Der Betreiber kann den Wert in Cultivate Control ändern.");
             return;
         }
 
@@ -202,7 +202,7 @@ public static class KiZugriffSperre
             if (datei is null)
             {
                 await FehlerSchreiben(context, StatusCodes.Status503ServiceUnavailable, "ki_sicherung_fehlgeschlagen",
-                    "Vor dieser Aktion legt Grow OS eine Sicherung an, und das ist gerade nicht gelungen. "
+                    "Vor dieser Aktion legt Cultivate Control eine Sicherung an, und das ist gerade nicht gelungen. "
                     + "Es wurde nichts ausgeführt.");
                 return;
             }
@@ -313,7 +313,7 @@ public static class KiZugriffSperre
     public static KiEntscheidung StufeFehlt(KiStufe stufe)
         => KiEntscheidung.Verboten("ki_stufe_fehlt",
             $"Dafür fehlt die Freigabe für Stufe „{KiZugriffDienst.Anzeigename(stufe)}“. "
-            + "Der Betreiber kann sie in Grow OS für diesen Schlüssel anhaken.");
+            + "Der Betreiber kann sie in Cultivate Control für diesen Schlüssel anhaken.");
 
     /// <summary>
     /// Der SPA-Fallback aus <c>Program.cs</c> (<c>MapFallback</c>): er beantwortet

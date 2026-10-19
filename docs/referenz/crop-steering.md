@@ -1,7 +1,7 @@
 # Crop Steering: Wassertemperatur, Nachtabsenkung, Kühler
 
 > Im RDWC gibt es keine Trockenphase — gesteuert wird über die Wassertemperatur:
-> je Blütewoche ein Grad kältere Nacht, und seit beta.52 schaltet Grow OS den
+> je Blütewoche ein Grad kältere Nacht, und seit beta.52 schaltet Cultivate Control den
 > Kühler dafür selbst.
 
 ## Wo in der App

@@ -63,7 +63,7 @@ public static class AnlagenWatchService
     /// über etwas, das gar nicht existiert.
     /// </remarks>
     /// <param name="kuehlerAbsichtlichAus">
-    /// Hat GROW OS den Kuehler gerade selbst abgeschaltet, weil das Wasser kalt
+    /// Hat CULTIVATE CONTROL den Kuehler gerade selbst abgeschaltet, weil das Wasser kalt
     /// genug ist? Dann ist „aus" kein Ausfall, sondern der Regler bei der
     /// Arbeit — und eine Stoerungsmeldung waere die App, die sich selbst
     /// anzeigt. Seit es die Kuehler-Steuerung gibt, muss diese Seite mitgeteilt
@@ -114,7 +114,7 @@ public static class AnlagenWatchService
         {
             befunde.Add(new AnlagenBefund("chiller", "Kühler", "ok",
                 "Der Kühler ist aus — die Steuerung hat ihn abgeschaltet, das Wasser ist kalt genug.",
-                "Kühler-Steuerung von Grow OS."));
+                "Kühler-Steuerung von Cultivate Control."));
             return;
         }
 

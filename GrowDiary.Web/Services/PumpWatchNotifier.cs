@@ -115,7 +115,7 @@ public sealed class PumpWatchNotifier
             var text = string.Join(" ", schlimm.Select(b => b.Meldung));
             var gesendet = await _notifications.SendAsync(
                 NotificationCategory.System,
-                kritisch ? $"🌱 Grow OS · Pumpe steht ({tent.Name})" : $"🌱 Grow OS · Pumpe prüfen ({tent.Name})",
+                kritisch ? $"🌱 Cultivate Control · Pumpe steht ({tent.Name})" : $"🌱 Cultivate Control · Pumpe prüfen ({tent.Name})",
                 text,
                 cancellationToken);
 
@@ -143,7 +143,7 @@ public sealed class PumpWatchNotifier
         {
             await _notifications.SendAsync(
                 NotificationCategory.System,
-                $"🌱 Grow OS · Entwarnung ({tent.Name})",
+                $"🌱 Cultivate Control · Entwarnung ({tent.Name})",
                 "Die Pumpen laufen wieder.",
                 cancellationToken);
             _heartbeat.SetMeldung(tent.Id, BereichPumpe, null);
@@ -233,7 +233,7 @@ public sealed class PumpWatchNotifier
                wieder etwas. Der Kuehler steht, aufs Telefon kommt nichts. */
             var gesendet = await _notifications.SendAsync(
                 NotificationCategory.System,
-                $"🌱 Grow OS · {befund.Name} ({tent.Name})",
+                $"🌱 Cultivate Control · {befund.Name} ({tent.Name})",
                 befund.Meldung,
                 cancellationToken);
 

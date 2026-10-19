@@ -13,7 +13,7 @@ import { zahlOderNull } from '../zahlenfeld'
  *
  * Jede Dosis wird hier ausgelöst, weil jemand gedrückt hat. Die Automatik
  * kommt erst, wenn Rechnung und Anschläge sich an echten Zelten bewährt haben.
- * Bis dahin ist das hier die ehrlichste Fassung: Grow OS rechnet und schaltet,
+ * Bis dahin ist das hier die ehrlichste Fassung: Cultivate Control rechnet und schaltet,
  * die Entscheidung bleibt beim Menschen.
  */
 
@@ -276,7 +276,7 @@ function DosingPage() {
     <V1Page
       eyebrow="Betrieb"
       title="Dosierung"
-      subtitle="Grow OS schaltet deine Peristaltikpumpen über Home Assistant. Noch dosiert nichts von allein — jede Dosis löst du hier aus."
+      subtitle="Cultivate Control schaltet deine Peristaltikpumpen über Home Assistant. Noch dosiert nichts von allein — jede Dosis löst du hier aus."
       action={pumps.length > 0
         ? <V1Button variant="danger" onClick={() => void allesStoppen()}>Alles stoppen</V1Button>
         : undefined}
@@ -420,9 +420,9 @@ function DosingPage() {
                   Handschuhe und Schutzbrille, Säure ins Wasser und nie umgekehrt, und pH-Plus und
                   pH-Minus niemals im selben Behälter.
                   <br /><br />
-                  <b>Grow OS schaltet ein und wieder aus.</b> Stürzt es genau dazwischen ab, läuft die
+                  <b>Cultivate Control schaltet ein und wieder aus.</b> Stürzt es genau dazwischen ab, läuft die
                   Pumpe weiter. Richte deshalb in Home Assistant eine Abschaltung ein, die die Pumpe
-                  nach spätestens 30 Sekunden von sich aus abwirft. Beim Start wirft Grow OS jede
+                  nach spätestens 30 Sekunden von sich aus abwirft. Beim Start wirft Cultivate Control jede
                   eingerichtete Pumpe einmal aus — falls sie vom letzten Mal noch lief.
                 </div>
               </div>

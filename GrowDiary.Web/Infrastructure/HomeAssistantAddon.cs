@@ -5,7 +5,7 @@ namespace GrowDiary.Web.Infrastructure;
 /// <summary>
 /// Detects and describes the Home Assistant add-on runtime.
 ///
-/// When Grow OS runs as a Home Assistant add-on, the Supervisor injects a
+/// When Cultivate Control runs as a Home Assistant add-on, the Supervisor injects a
 /// <c>SUPERVISOR_TOKEN</c> and proxies the Home Assistant core API at
 /// <c>http://supervisor/core</c>. That means the HA connection needs no manual
 /// setup at all — no URL, no long-lived access token. This helper turns that
@@ -30,7 +30,7 @@ public static class HomeAssistantAddon
         }
     }
 
-    /// <summary>True when Grow OS is running inside a Home Assistant add-on.</summary>
+    /// <summary>True when Cultivate Control is running inside a Home Assistant add-on.</summary>
     public static bool IsRunningAsAddon => SupervisorToken is not null;
 
     /// <summary>

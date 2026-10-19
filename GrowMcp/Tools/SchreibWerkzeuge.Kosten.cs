@@ -51,7 +51,7 @@ public sealed partial class SchreibWerkzeuge
         var name = Text(a, "name") ?? $"Artikel {artikelId}";
         var einheit = Text(a, "einheit") ?? string.Empty;
 
-        // Doppelbuchung verhindern: den Artikel der CO₂-Steuerung bucht Grow OS selbst (Co2SteuerungService).
+        // Doppelbuchung verhindern: den Artikel der CO₂-Steuerung bucht Cultivate Control selbst (Co2SteuerungService).
         var co2 = await SendenAsync(HttpMethod.Get, "api/steuerung/co2", null, cancellationToken);
         if (co2.Fehler is { } cf) return cf;
         if (!co2.Antwort!.Erfolg) return ForkFehler.Text(co2.Antwort.Status, co2.Antwort.Text, "CO₂-Einstellungen lesen");
@@ -67,9 +67,9 @@ public sealed partial class SchreibWerkzeuge
         if (utc is not null) rumpf["zeitpunkt"] = utc;
 
         return await SchreibenAsync(HttpMethod.Post, "api/kosten/verbrauch", rumpf, "Verbrauch buchen",
-            // Kein Eurobetrag hier: den bewertet Grow OS selbst (Preis der Füllung vor Artikelpreis, VerbrauchsansichtService) —
+            // Kein Eurobetrag hier: den bewertet Cultivate Control selbst (Preis der Füllung vor Artikelpreis, VerbrauchsansichtService) —
             // eine eigene Rechnung wäre eine zweite Wahrheit (Prüfer 18.10.2026). Die Kosten zeigt danach das Werkzeug kosten.
-            _ => $"Gebucht: {menge.ToString("0.##", De)} {einheit} {name} auf Grow {growId}. Was es kostet, rechnet Grow OS (Werkzeug kosten).",
+            _ => $"Gebucht: {menge.ToString("0.##", De)} {einheit} {name} auf Grow {growId}. Was es kostet, rechnet Cultivate Control (Werkzeug kosten).",
             cancellationToken, mitRumpf: false);
     }
 
@@ -108,7 +108,7 @@ public sealed partial class SchreibWerkzeuge
             ? offenUtc
             : (DateTime?)null;
         var offenSeit = offen?.ToLocalTime().ToString("dd.MM.yyyy", De);
-        // Grow OS schließt nur Füllungen, die VOR der neuen liegen (KostenApiController.CreateNachfuellung).
+        // Cultivate Control schließt nur Füllungen, die VOR der neuen liegen (KostenApiController.CreateNachfuellung).
         var neuUtc = utc is null ? DateTime.UtcNow : DateTime.Parse(utc, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
         var wirdGeschlossen = vorherigeLeer && offen is { } o && o < neuUtc;
 
@@ -117,7 +117,7 @@ public sealed partial class SchreibWerkzeuge
             ["artikelId"] = artikelId,
             ["menge"] = menge,
             ["ohneGrow"] = ohneGrow,
-            // Ausdrücklich — Grow OS nimmt ohne Angabe „true".
+            // Ausdrücklich — Cultivate Control nimmt ohne Angabe „true".
             ["vorherigeLeer"] = vorherigeLeer,
         };
         if (kostenEur is not null) rumpf["kostenEur"] = kostenEur;

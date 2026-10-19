@@ -5,7 +5,7 @@ namespace GrowDiary.Web.Services;
 /// </summary>
 /// <remarks>
 /// <para>Ein eTape (oder jeder andere Pegelsensor) liefert Zentimeter. Für alles,
-/// worauf es ankommt, braucht Grow OS aber Liter: die Dosis skaliert mit dem
+/// worauf es ankommt, braucht Cultivate Control aber Liter: die Dosis skaliert mit dem
 /// Volumen, „noch 12 L" sagt mehr als „noch 22 cm", und Nachfüll-Grenzen setzt
 /// man in Litern.</para>
 ///
