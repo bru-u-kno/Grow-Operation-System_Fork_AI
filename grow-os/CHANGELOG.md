@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.263
+
+**Raum, Stufe 2: „Außen“ heißt jetzt wie der Raum.** Die drei Messwerte „Außen Temp./RLF/VPD“ sind die Luft um das Zelt, nicht die von draußen. Steht ein Zelt in einem Raum (Geräte → Räume), kommen sie jetzt von dessen Fühlern und heißen „{Raumname} Temp./RLF/VPD“, zum Beispiel „Keller Temp.“.
+
+- **Eine Zuordnung statt zwei:** Der Raum hat seine beiden Fühler (Temperatur, Feuchte) schon für die Zuluft. Dieselben liefern jetzt auch die Raumluft-Werte des Zeltes; wer beide Fühler am Raum eingetragen hat, muss am Zelt nichts mehr zuordnen. Die drei „Außen“-Zeilen am Zelt (Home Assistant → Sensor-Mapping) entfallen dann; an ihrer Stelle steht eine Zeile mit den Werten und dem Verweis auf Geräte → Räume.
+- **VPD gerechnet:** Der Raum hat keinen dritten Fühler; die VPD rechnet die App aus Raumtemperatur und -feuchte (Blatt = Luft). Beim Controller-Fühler ergibt das denselben Wert wie dessen eigene VPD (18,7 °C und 65,8 % → 0,74 kPa).
+- **Neue Namen überall:** Live-Kacheln, Verlauf, Meldegrenzen und Meldungen, der Layout-Editor und der Kontext für den KI-Assistenten nennen den Raum statt „Außen“. Die Schlüssel (`outside-*`) und der bisherige Verlauf bleiben; es geht nichts verloren.
+- **Nichts wird gelöscht:** Die eigenen Außen-Zeilen eines Zeltes bleiben gespeichert. Steht das Zelt in keinem Raum oder fehlt dem Raum ein Fühler, gelten sie wie bisher und heißen weiter „Außen“.
+- **Prüfungen:** Einheitentests für Formel, Zuordnung und Beschriftung; ein Test mit gefälschtem Home Assistant (Raumwerte gelesen, eigene Zeilen nicht abgefragt, VPD gerechnet); ein Browser-Test, der den Raum anlegt, Zuordnung und Verlauf liest, das Zelt wieder herausnimmt und alles zurücksetzt.
+
 ## 2.0.0-cc.261
 
 **Ein richtiges Logo.** Cultivate Control hat jetzt eine Wortmarke zum Symbol: „CULTIVATE / CONTROL“ in Versalien neben dem Regelkreis mit Keimling. Funktionen unverändert.
