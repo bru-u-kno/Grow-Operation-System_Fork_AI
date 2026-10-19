@@ -13,7 +13,7 @@
 - **Auf GitHub:** Die README zeigt das Logo in einer hellen und einer dunklen Fassung, je nach Darstellung der Seite.
 - **Eigene Zeichnung:** Die Wortmarke ist in der Schrift Archivo (SIL OFL 1.1) gesetzt und als Pfade eingebettet; Lizenzhinweise stehen unverändert in `THIRD-PARTY-NOTICES.md`.
 
-## 2.0.0-cc.261
+## 2.0.0-cc.262
 
 **Hilfe „Ohne HA-Titelleiste“.** Wer Cultivate Control im Home-Assistant-Add-on nutzt, sieht oben die Titelleiste von Home Assistant. Sie lässt sich nur mit einem eigenen Panel loswerden; die App erklärt jetzt, wie.
 
