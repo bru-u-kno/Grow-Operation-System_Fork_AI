@@ -5,6 +5,16 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.259
+
+**Fotos und Kamerabilder lassen sich mitsichern.** Unter Einstellungen → Daten gibt es beim Sichern den Haken „Fotos und Kamerabilder mitsichern“. Damit kommen die Bilder beim Zurückspielen mit, auch bei einem Umzug auf ein neues Add-on.
+
+- **Was war:** Eine Sicherung enthielt nur die Datenbank und die Wissensbasis. Fotos (Uploads) und die täglichen Kamerabilder blieben zurück: Die Einträge dazu waren nach einem Umzug da, die Dateien fehlten.
+- **Jetzt:** Der Haken steht vor „Jetzt sichern“, standardmäßig **aus**, und zeigt vorher, wie viele Dateien und wie groß sie zusammen sind. Die Prüfung beim Zurückspielen nennt die Bilder in der Sicherung („3 Dateien, 2,3 MB“) oder sagt „nicht enthalten“. Beim Zurückspielen werden die vorhandenen Bilder durch die aus der Sicherung ersetzt; vorher sichert die App den jetzigen Stand automatisch, mit seinen Bildern. Scheitert etwas, kommen die alten Bilder wieder an ihren Platz.
+- **Grenzen:** Hochladen geht bis 4 GB (gepackt, vorher 500 MB). Home Assistant kann selbst eine kleinere Grenze für große Dateien setzen; geht das Hochladen einer großen Sicherung nicht, hilft eine Sicherung ohne Bilder. Bilder sind schon gepackt und werden nicht noch einmal komprimiert.
+- **Schutz:** Nur Bilddateien (jpg, jpeg, png, webp, gif, heic) kommen mit und werden zurückgespielt; eine andere Datei oder ein unsicherer Pfad macht die Sicherung nicht einspielbar. Ältere Sicherungen ohne Bilder laufen weiter wie bisher.
+- **Prüfungen:** Backend-Tests für Sichern mit und ohne Haken, nur Bilddateien, Größenanzeige, Prüfung (auch ein Bildname mit „token“ blockiert nicht), unsichere Pfade, Nicht-Bilder, und den Rundweg mit Rückfall-Sicherung; Einheitentests; ein Browser-Test für den Haken. Am gebauten Stand mit echten Dateien durchgespielt.
+
 ## 2.0.0-cc.258
 
 **Sicherung zurückspielen sagt, was nicht mitkommt.** Beim Umzug auf ein neues Add-on fehlten danach der Zugriff für KI-Assistenten und der Schlüssel; die App hatte nirgends gesagt, dass das so gewollt ist.

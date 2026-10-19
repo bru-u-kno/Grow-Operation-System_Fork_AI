@@ -43,6 +43,8 @@ test('Sicherung hochladen, Prüfung lesen und zurückspielen', async ({ page, re
   await expect(pruefung.locator('li', { hasText: 'Datenbank enthalten' })).toContainText('ja')
   await expect(pruefung.locator('li', { hasText: 'Datenbank-Stand passt zur App' })).toContainText('ja')
   await expect(pruefung.locator('li', { hasText: 'Zugangsdaten und unsichere Pfade' })).toContainText('keine')
+  // Ohne Haken beim Sichern sind keine Bilder dabei — die Zeile sagt es, statt zu schweigen.
+  await expect(pruefung.locator('li', { hasText: 'Fotos und Kamerabilder' })).toContainText('nicht enthalten')
 
   const zurueck = blatt.getByRole('button', { name: 'Jetzt zurückspielen' })
   await expect(zurueck).toBeEnabled()
@@ -66,4 +68,19 @@ test('eine Datei, die keine Sicherung ist, wird abgewiesen und nichts wird freig
   await expect(blatt).toContainText('keine gültige Sicherung')
   await expect(blatt.locator('[data-audit="sicherung-pruefung"]')).toHaveCount(0)
   await expect(blatt.getByRole('button', { name: 'Jetzt zurückspielen' })).toBeDisabled()
+})
+
+test('mit dem Haken „Fotos und Kamerabilder mitsichern“ geht die Sicherung mit Bildern los', async ({ page, request }) => {
+  darfUeberspringen(!(await backendAntwortet(request)), KEIN_BACKEND)
+
+  await page.goto('/einstellungen', { waitUntil: 'networkidle' })
+  const zeile = page.locator('[data-audit="sicherung-bilder"]')
+  await expect(zeile).toContainText('Fotos und Kamerabilder mitsichern')
+  await expect(zeile).toContainText('Standard: aus')
+  await expect(zeile.locator('input[type=checkbox]')).not.toBeChecked()
+
+  await zeile.locator('input[type=checkbox]').check()
+  const anfrage = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/system/backup?bilder=true'))
+  await page.getByRole('button', { name: 'Jetzt sichern' }).click()
+  await anfrage
 })

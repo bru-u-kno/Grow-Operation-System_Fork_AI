@@ -288,6 +288,94 @@ public sealed partial class SystemApiController
     }
 
 
+    /// <summary>Die Namen der Bilddateien, die in eine Sicherung mit Bildern dürfen.</summary>
+    private static readonly string[] BackupMediaExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic"];
+
+    private const string BackupUploadsPrefix = "App_Data/uploads/";
+    private const string BackupSnapshotsPrefix = "App_Data/snapshots/";
+
+    private static bool IsBackupMediaEntry(string entryName)
+        => entryName.StartsWith(BackupUploadsPrefix, StringComparison.OrdinalIgnoreCase)
+           || entryName.StartsWith(BackupSnapshotsPrefix, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAllowedBackupMediaName(string entryName)
+        => BackupMediaExtensions.Contains(Path.GetExtension(entryName), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Alle Fotos (Uploads) und Kamerabilder (Tagesbilder) dieser Installation mit ihrem Namen in der Sicherung.</summary>
+    private IEnumerable<(string Path, string Entry, long Length)> BackupMediaFiles()
+    {
+        foreach (var (root, prefix) in new[] { (_paths.UploadRootPath, BackupUploadsPrefix), (_paths.SnapshotsPath, BackupSnapshotsPrefix) })
+        {
+            if (!Directory.Exists(root))
+            {
+                continue;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                var relative = System.IO.Path.GetRelativePath(root, file).Replace(System.IO.Path.DirectorySeparatorChar, '/');
+                var entry = prefix + relative;
+                if (IsAllowedBackupMediaName(entry))
+                {
+                    yield return (file, entry, new FileInfo(file).Length);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Die Sicherung entpacken: Bilder in den Zwischenordner im Datenverzeichnis (gleiches Laufwerk wie das Ziel,
+    /// damit sie verschoben statt noch einmal kopiert werden), alles andere in den Temp-Ordner.
+    /// </summary>
+    private static void ExtractBackup(string archivePath, string tempRoot, string stagingRoot)
+    {
+        using var archive = ZipFile.OpenRead(archivePath);
+        var tempFull = System.IO.Path.GetFullPath(tempRoot) + System.IO.Path.DirectorySeparatorChar;
+        var stagingFull = System.IO.Path.GetFullPath(stagingRoot) + System.IO.Path.DirectorySeparatorChar;
+        foreach (var entry in archive.Entries)
+        {
+            if (string.IsNullOrEmpty(entry.Name))
+            {
+                continue;
+            }
+
+            var name = entry.FullName.Replace('\\', '/');
+            string destination;
+            string root;
+            if (IsBackupMediaEntry(name))
+            {
+                root = stagingFull;
+                destination = System.IO.Path.GetFullPath(System.IO.Path.Combine(stagingRoot, name["App_Data/".Length..]));
+            }
+            else
+            {
+                root = tempFull;
+                destination = System.IO.Path.GetFullPath(System.IO.Path.Combine(tempRoot, name));
+            }
+
+            if (!destination.StartsWith(root, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Backup enthaelt einen unsicheren Pfad: " + name);
+            }
+
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destination)!);
+            entry.ExtractToFile(destination, overwrite: true);
+        }
+    }
+
+    private static void RestoreDirectoryByMove(string sourceDirectory, string targetDirectory, string rollbackRoot, string rollbackName)
+    {
+        var rollbackDirectory = System.IO.Path.Combine(rollbackRoot, rollbackName);
+        if (Directory.Exists(targetDirectory))
+        {
+            Directory.Move(targetDirectory, rollbackDirectory);
+        }
+
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(targetDirectory)!);
+        Directory.Move(sourceDirectory, targetDirectory);
+    }
+
+
     private static void RestoreRollbackFiles(string rollbackRoot)
     {
         if (!Directory.Exists(rollbackRoot))
@@ -316,6 +404,18 @@ public sealed partial class SystemApiController
         {
             DeleteDirectoryBestEffort(knowledgePath);
             Directory.Move(rollbackKnowledge, knowledgePath);
+        }
+
+        // Fotos und Kamerabilder: lagen sie vor dem Zurückspielen woanders, kommen sie wieder an ihren Platz.
+        foreach (var name in new[] { "uploads", "snapshots" })
+        {
+            var rollbackMedia = Path.Combine(rollbackRoot, name);
+            if (Directory.Exists(rollbackMedia))
+            {
+                var mediaPath = Path.Combine(appDataRoot, name);
+                DeleteDirectoryBestEffort(mediaPath);
+                Directory.Move(rollbackMedia, mediaPath);
+            }
         }
     }
 

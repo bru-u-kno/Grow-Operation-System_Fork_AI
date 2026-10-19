@@ -140,7 +140,14 @@ public sealed record BackupManifestDto(
     bool ExcludesDataProtectionKeys,
     bool ExcludesUploads,
     bool RestoreSupported,
-    string DownloadUrl);
+    string DownloadUrl,
+    // Fotos und Kamerabilder (Cultivate Control, 19.10.2026): nur mit dem Haken „mitsichern“.
+    bool IncludesMedia = false,
+    int MediaFileCount = 0,
+    long MediaBytes = 0);
+
+/// <summary>Wie viele Fotos und Kamerabilder es gibt und wie groß sie zusammen sind — für die Anzeige vor dem Sichern.</summary>
+public sealed record BackupMediaSizeDto(int FileCount, long Bytes);
 
 public sealed record BackendReleaseReadinessDto(
     string Status,
@@ -199,7 +206,10 @@ public sealed record BackupRestorePlanDto(
     string CurrentSchemaVersion,
     IReadOnlyList<BackupRestorePlanFileDto> Files,
     IReadOnlyList<string> Blockers,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    bool MediaIncluded = false,
+    int MediaFileCount = 0,
+    long MediaBytes = 0);
 
 public sealed record BackupRestorePlanFileDto(
     string EntryName,

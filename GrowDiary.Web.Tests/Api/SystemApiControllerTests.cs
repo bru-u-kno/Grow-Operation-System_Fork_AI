@@ -435,6 +435,143 @@ public sealed class SystemApiControllerTests : IDisposable
         Assert.NotNull(System.Reflection.CustomAttributeExtensions.GetCustomAttribute<GrowDiary.Web.Infrastructure.KiZugriff.KeinKiZugriffAttribute>(methode, inherit: true));
     }
 
+    private string BildDatei(string wurzel, string relativ, byte[] inhalt)
+    {
+        var pfad = Path.Combine(wurzel, relativ.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(pfad)!);
+        File.WriteAllBytes(pfad, inhalt);
+        return pfad;
+    }
+
+    private HashSet<string> ZipEintraege(string dateiname)
+    {
+        using var archiv = ZipFile.OpenRead(Path.Combine(_paths.BackupsPath, dateiname));
+        return archiv.Entries.Select(e => e.FullName.Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CreateBackup_OhneHakenEnthaeltKeineBilder()
+    {
+        BildDatei(_paths.UploadRootPath, "1/foto.jpg", [1, 2, 3]);
+
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+
+        Assert.False(manifest.IncludesMedia);
+        Assert.True(manifest.ExcludesUploads);
+        Assert.DoesNotContain(ZipEintraege(manifest.FileName), e => e.StartsWith("App_Data/uploads/") || e.StartsWith("App_Data/snapshots/"));
+    }
+
+    [Fact]
+    public void CreateBackup_MitHakenEnthaeltFotosUndKamerabilderNurAlsBilder()
+    {
+        BildDatei(_paths.UploadRootPath, "1/foto.jpg", [1, 2, 3]);
+        BildDatei(_paths.SnapshotsPath, "1/2026-07-25.jpg", [4, 5]);
+        BildDatei(_paths.UploadRootPath, "1/notiz.txt", [9]);
+
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup(bilder: true).Result).Value);
+
+        Assert.True(manifest.IncludesMedia);
+        Assert.False(manifest.ExcludesUploads);
+        Assert.Equal(2, manifest.MediaFileCount);
+        Assert.Equal(5, manifest.MediaBytes);
+        var eintraege = ZipEintraege(manifest.FileName);
+        Assert.Contains("App_Data/uploads/1/foto.jpg", eintraege);
+        Assert.Contains("App_Data/snapshots/1/2026-07-25.jpg", eintraege);
+        Assert.DoesNotContain("App_Data/uploads/1/notiz.txt", eintraege);
+    }
+
+    [Fact]
+    public void BackupMediaSize_ZaehltDieBilderDieMitkaemen()
+    {
+        BildDatei(_paths.UploadRootPath, "1/a.jpg", new byte[100]);
+        BildDatei(_paths.SnapshotsPath, "1/b.png", new byte[20]);
+        BildDatei(_paths.UploadRootPath, "1/c.txt", new byte[999]);
+
+        var dto = Assert.IsType<BackupMediaSizeDto>(Assert.IsType<OkObjectResult>(_controller.BackupMediaSize().Result).Value);
+
+        Assert.Equal(2, dto.FileCount);
+        Assert.Equal(120, dto.Bytes);
+    }
+
+    [Fact]
+    public void RestorePlan_ZeigtDieBilderUndBlockiertNichtWeilEinNameToken_heisst()
+    {
+        BildDatei(_paths.UploadRootPath, "1/token.jpg", [1, 2, 3]);
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup(bilder: true).Result).Value);
+
+        var plan = Assert.IsType<BackupRestorePlanDto>(Assert.IsType<OkObjectResult>(_controller.RestorePlan(manifest.FileName).Result).Value);
+
+        Assert.True(plan.MediaIncluded);
+        Assert.Equal(1, plan.MediaFileCount);
+        Assert.True(plan.RestoreSupported, string.Join(" | ", plan.Blockers));
+        Assert.Contains(plan.Warnings, w => w.Contains("Fotos und Kamerabilder"));
+        Assert.DoesNotContain(plan.Files, f => f.EntryName.StartsWith("App_Data/uploads/"));
+    }
+
+    [Fact]
+    public void RestorePlan_BlockiertEineDateiDieKeinBildIstUndEinenUnsicherenPfad()
+    {
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup(bilder: true).Result).Value);
+        var pfad = Path.Combine(_paths.BackupsPath, manifest.FileName);
+        using (var archiv = ZipFile.Open(pfad, ZipArchiveMode.Update))
+        {
+            using var w = new StreamWriter(archiv.CreateEntry("App_Data/uploads/1/programm.exe").Open());
+            w.Write("MZ");
+        }
+
+        var nichtBild = Assert.IsType<BackupRestorePlanDto>(Assert.IsType<OkObjectResult>(_controller.RestorePlan(manifest.FileName).Result).Value);
+        Assert.False(nichtBild.RestoreSupported);
+        Assert.Contains(nichtBild.Blockers, b => b.Contains("keine Bilder"));
+
+        using (var archiv = ZipFile.Open(pfad, ZipArchiveMode.Update))
+        {
+            archiv.GetEntry("App_Data/uploads/1/programm.exe")!.Delete();
+            using var w = new StreamWriter(archiv.CreateEntry("App_Data/uploads/../ausbruch.jpg").Open());
+            w.Write("x");
+        }
+
+        var unsicher = Assert.IsType<BackupRestorePlanDto>(Assert.IsType<OkObjectResult>(_controller.RestorePlan(manifest.FileName).Result).Value);
+        Assert.False(unsicher.RestoreSupported);
+        Assert.Contains(unsicher.Blockers, b => b.Contains("unsichere Pfade"));
+    }
+
+    [Fact]
+    public void RestoreBackup_SpieltBilderZurueckErsetztDenBestandUndSichertDenAltenStandMit()
+    {
+        var foto = BildDatei(_paths.UploadRootPath, "1/foto.jpg", [1, 2, 3]);
+        var tagesbild = BildDatei(_paths.SnapshotsPath, "1/2026-07-25.jpg", [4, 5]);
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup(bilder: true).Result).Value);
+
+        // Danach: ein Bild ist weg, ein anderes ist neu, ein drittes verändert.
+        File.Delete(tagesbild);
+        File.WriteAllBytes(foto, [9, 9, 9, 9]);
+        var neu = BildDatei(_paths.UploadRootPath, "1/neu.jpg", [7]);
+
+        var antwort = _controller.RestoreBackup(manifest.FileName);
+
+        var ergebnis = Assert.IsType<BackupRestoreResultDto>(Assert.IsType<OkObjectResult>(antwort.Result).Value);
+        Assert.Equal([1, 2, 3], File.ReadAllBytes(foto));
+        Assert.Equal([4, 5], File.ReadAllBytes(tagesbild));
+        Assert.False(File.Exists(neu));
+        Assert.Contains(ergebnis.Warnings, w => w.Contains("2 Fotos und Kamerabilder zurückgespielt"));
+        // Die Rückfall-Sicherung enthält die Bilder von vor dem Zurückspielen, auch das neue.
+        var rueckfall = ZipEintraege(ergebnis.SafetyBackupFileName);
+        Assert.Contains("App_Data/uploads/1/neu.jpg", rueckfall);
+        Assert.Empty(Directory.GetDirectories(_paths.DataRootPath, "restore-staging-*"));
+        Assert.Empty(Directory.GetDirectories(_paths.DataRootPath, "restore-rollback-*"));
+    }
+
+    [Fact]
+    public void RestoreBackup_OhneBilderLaesstDieVorhandenenBilderStehen()
+    {
+        var manifest = Assert.IsType<BackupManifestDto>(Assert.IsType<CreatedResult>(_controller.CreateBackup().Result).Value);
+        var foto = BildDatei(_paths.UploadRootPath, "1/foto.jpg", [1, 2, 3]);
+
+        Assert.IsType<OkObjectResult>(_controller.RestoreBackup(manifest.FileName).Result);
+
+        Assert.Equal([1, 2, 3], File.ReadAllBytes(foto));
+    }
+
     [Fact]
     public void ValidateBackup_RejectsUnsafeFileNames()
     {

@@ -9,6 +9,7 @@ import { useNavBar } from '../useNavBar'
 import { useKiAktiv } from '../ki-aktiv'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
 import { SicherungZurueckspielen } from '../features/sicherung/SicherungZurueckspielen'
+import { groesse, MAX_SICHERUNG_BYTES } from '../features/sicherung/sicherung-logik'
 import { unlesbarMeldung, unlesbareFelder, zahlOderNull } from '../zahlenfeld'
 
 type ImportPreview = { ok: boolean; title: string; details: string[] }
@@ -23,6 +24,8 @@ type BackendHealth = { appName: string; backendSchema: string; appVersion?: stri
 function SettingsPage() {
   const { theme, toggle } = useTheme()
   const [sicherungOffen, setSicherungOffen] = useState(false)
+  const [bilderMitsichern, setBilderMitsichern] = useState(false)
+  const [bildGroesse, setBildGroesse] = useState<{ fileCount: number; bytes: number } | null>(null)
   const { dashboardPath, saveDashboardPath } = useNavBar()
   // Abgeleitet statt gespiegelt: `null` heisst „noch nichts getippt“, dann
   // zeigt das Feld den gespeicherten Wert. So springt es waehrend des Tippens
@@ -70,6 +73,8 @@ function SettingsPage() {
         }
         const companion = await apiFetch<{ level: 'full' | 'important' | 'expert' }>('/api/companion/settings', { signal: controller.signal }).catch(() => null)
         if (!controller.signal.aborted && companion) setBegleitung(companion.level)
+        const bilder = await apiFetch<{ fileCount: number; bytes: number }>('/api/system/backup/media-size', { signal: controller.signal }).catch(() => null)
+        if (!controller.signal.aborted && bilder) setBildGroesse(bilder)
         const pumpe = await apiFetch<{ minutes: number }>('/api/pump-watch/grace', { signal: controller.signal }).catch(() => null)
         if (!controller.signal.aborted && pumpe) setPumpSchonfrist(String(pumpe.minutes))
         if (controller.signal.aborted) return
@@ -90,7 +95,7 @@ function SettingsPage() {
     setError(null)
     setMessage(null)
     try {
-      const initialResponse = await fetch(resolveUrl('/api/system/backup'), { method: 'POST' })
+      const initialResponse = await fetch(resolveUrl(bilderMitsichern ? '/api/system/backup?bilder=true' : '/api/system/backup'), { method: 'POST' })
       if (!initialResponse.ok) throw new Error(`Backup konnte nicht erstellt werden (${initialResponse.status})`)
 
       const initialContentType = initialResponse.headers.get('content-type') ?? ''
@@ -349,7 +354,21 @@ function SettingsPage() {
             <div className="co-row">
               <div style={{ minWidth: 0 }}>
                 <div className="co-row-title">Backup</div>
-                <div className="co-row-sub">läuft über Home-Assistant-Backups mit · Fotos und Kamerabilder sind nicht dabei</div>
+                <div className="co-row-sub">läuft über Home-Assistant-Backups mit{bilderMitsichern ? '' : ' · Fotos und Kamerabilder sind nicht dabei'}</div>
+                <label className="st-bilder" data-audit="sicherung-bilder">
+                  <input type="checkbox" checked={bilderMitsichern} onChange={(event) => setBilderMitsichern(event.target.checked)} />
+                  <span>
+                    <b>Fotos und Kamerabilder mitsichern</b>
+                    <small>
+                      {bildGroesse == null
+                        ? 'Standard: aus.'
+                        : bildGroesse.fileCount === 0
+                          ? 'Es gibt noch keine Bilder. Standard: aus.'
+                          : `Etwa ${groesse(bildGroesse.bytes)} zusätzlich (${bildGroesse.fileCount} Dateien). Standard: aus.`}
+                      {bildGroesse != null && bildGroesse.bytes > MAX_SICHERUNG_BYTES ? ' Zu groß, um sie über die App wieder einzuspielen (Grenze 4 GB).' : ''}
+                    </small>
+                  </span>
+                </label>
               </div>
               <div className="co-row-end">
                 <button type="button" className="ls-btn is-small" onClick={() => void createFullBackup()}>Jetzt sichern</button>

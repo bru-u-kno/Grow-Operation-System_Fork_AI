@@ -105,7 +105,7 @@ export function SicherungZurueckspielen({ open, onClose }: { open: boolean; onCl
               : 'Bitte starte die App neu, damit alles aus der Sicherung gilt.'}
           />
           <p className="v1-muted">Der Stand davor liegt als Sicherung bereit: <b>{ergebnis.safetyBackupFileName}</b></p>
-          <p className="v1-muted">Noch zu tun nach einem Umzug: den Zugriff für KI-Assistenten unter KI-Assistent → Zugriff &amp; Schlüssel einschalten und einen neuen Schlüssel anlegen. Fotos und Kamerabilder kommen nicht mit.</p>
+          <p className="v1-muted">Noch zu tun nach einem Umzug: den Zugriff für KI-Assistenten unter KI-Assistent → Zugriff &amp; Schlüssel einschalten und einen neuen Schlüssel anlegen. Fotos und Kamerabilder sind nur dabei, wenn die Sicherung sie enthielt.</p>
           {ergebnis.warnings.map((warnung) => <p key={warnung} className="v1-muted">{warnung}</p>)}
         </div>
       ) : (
@@ -117,7 +117,7 @@ export function SicherungZurueckspielen({ open, onClose }: { open: boolean; onCl
           <V1Alert
             tone="warn"
             title="Was nicht mitkommt"
-            message="Der Zugriff für KI-Assistenten (Schalter und Schlüssel) bleibt so, wie er in dieser Installation ist. Das ist Absicht: Ein gelöschter oder verratener Schlüssel soll nicht über eine alte Sicherung wieder gültig werden. Nach einem Umzug schaltest du den Zugriff unter KI-Assistent → Zugriff & Schlüssel neu ein und legst einen neuen Schlüssel an. Fotos und Kamerabilder sind nicht in der Sicherung."
+            message="Der Zugriff für KI-Assistenten (Schalter und Schlüssel) bleibt so, wie er in dieser Installation ist. Das ist Absicht: Ein gelöschter oder verratener Schlüssel soll nicht über eine alte Sicherung wieder gültig werden. Nach einem Umzug schaltest du den Zugriff unter KI-Assistent → Zugriff & Schlüssel neu ein und legst einen neuen Schlüssel an. Fotos und Kamerabilder kommen nur mit, wenn die Sicherung mit dem Haken „Fotos und Kamerabilder mitsichern“ erstellt wurde."
           />
           <FileInput accept=".zip,application/zip" disabled={arbeitet} fileNames={dateiName ? [dateiName] : []} onFiles={(dateien) => void dateiGewaehlt(dateien[0] ?? null)} />
           {arbeitet && !plan && <p className="v1-muted">Wird hochgeladen und geprüft …</p>}
@@ -128,14 +128,16 @@ export function SicherungZurueckspielen({ open, onClose }: { open: boolean; onCl
                 {pruefzeilen(plan).map((zeile) => (
                   <li key={zeile.text}>
                     <span>{zeile.text}</span>
-                    <b className={zeile.gut ? 'is-gut' : 'is-schlecht'}>{zeile.wert}</b>
+                    <b className={zeile.neutral ? 'is-neutral' : zeile.gut ? 'is-gut' : 'is-schlecht'}>{zeile.wert}</b>
                   </li>
                 ))}
                 <li><span>Der jetzige Stand wird ersetzt</span><b className="is-schlecht">{plan.wouldOverwriteExistingDatabase ? 'ja' : 'nein'}</b></li>
               </ul>
               {sperrGruende(plan).map((grund) => <V1Alert key={grund} tone="critical" message={grund} />)}
               {zurueckspielenFrei(plan) && (
-                <V1Alert tone="warn" message="Vor dem Zurückspielen sichert die App den jetzigen Stand automatisch. So kannst du zurück." />
+                <V1Alert tone="warn" message={plan.mediaIncluded
+                  ? 'Vor dem Zurückspielen sichert die App den jetzigen Stand automatisch, mit Fotos und Kamerabildern. Die vorhandenen Bilder werden durch die aus der Sicherung ersetzt.'
+                  : 'Vor dem Zurückspielen sichert die App den jetzigen Stand automatisch. So kannst du zurück. Die vorhandenen Bilder bleiben unberührt.'} />
               )}
             </div>
           )}

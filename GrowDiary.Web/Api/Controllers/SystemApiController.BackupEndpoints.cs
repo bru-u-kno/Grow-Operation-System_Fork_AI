@@ -115,6 +115,9 @@ public sealed partial class SystemApiController
         bool containsKeys;
         bool containsUploads;
         bool hasUnsafeEntries;
+        var mediaCount = 0;
+        long mediaBytes = 0;
+        var mediaNotImages = false;
 
         using (var archive = ZipFile.OpenRead(backupPath))
         {
@@ -129,11 +132,28 @@ public sealed partial class SystemApiController
             containsWal = normalizedEntries.Contains("App_Data/grow-diary.db-wal", StringComparer.OrdinalIgnoreCase);
             containsShm = normalizedEntries.Contains("App_Data/grow-diary.db-shm", StringComparer.OrdinalIgnoreCase);
             containsKnowledge = normalizedEntries.Any(entry => entry.StartsWith("App_Data/knowledge/", StringComparison.OrdinalIgnoreCase));
-            containsSecrets = normalizedEntries.Any(entry =>
+            // Bilder (Fotos und Kamerabilder) werden eigens gezählt und geprüft; ihre Dateinamen sagen nichts über Geheimnisse.
+            containsSecrets = normalizedEntries.Where(entry => !IsBackupMediaEntry(entry)).Any(entry =>
                 entry.Equals("App_Data/ha-config.json", StringComparison.OrdinalIgnoreCase)
                 || entry.Contains("token", StringComparison.OrdinalIgnoreCase)
                 || entry.Contains("secret", StringComparison.OrdinalIgnoreCase));
             containsKeys = normalizedEntries.Any(entry => entry.StartsWith("App_Data/DataProtectionKeys/", StringComparison.OrdinalIgnoreCase));
+            foreach (var entry in entries)
+            {
+                var mediaName = entry.FullName.Replace('\\', '/');
+                if (!IsBackupMediaEntry(mediaName))
+                {
+                    continue;
+                }
+
+                mediaCount++;
+                mediaBytes += entry.Length;
+                if (!IsAllowedBackupMediaName(mediaName))
+                {
+                    mediaNotImages = true;
+                }
+            }
+
             containsUploads = normalizedEntries.Any(entry => entry.StartsWith("wwwroot/uploads/", StringComparison.OrdinalIgnoreCase));
             hasUnsafeEntries = normalizedEntries.Any(IsUnsafeZipEntryName);
 
@@ -160,7 +180,7 @@ public sealed partial class SystemApiController
             }
         }
 
-        var backupValid = containsDatabase && !containsSecrets && !containsKeys && !containsUploads && !hasUnsafeEntries;
+        var backupValid = containsDatabase && !containsSecrets && !containsKeys && !containsUploads && !hasUnsafeEntries && !mediaNotImages;
         var schemaCompatible = containsDatabase
             && !string.IsNullOrWhiteSpace(backupSchemaVersion)
             && string.Equals(backupSchemaVersion, DatabaseInitializer.CurrentSchemaVersion, StringComparison.Ordinal);
@@ -185,6 +205,14 @@ public sealed partial class SystemApiController
         {
             blockers.Add("Backup enthaelt unsichere Pfade.");
         }
+        if (mediaNotImages)
+        {
+            blockers.Add("Backup enthaelt bei den Fotos und Kamerabildern Dateien, die keine Bilder sind.");
+        }
+        if (mediaCount > 0)
+        {
+            warnings.Add("Die Fotos und Kamerabilder in dieser Installation werden durch die aus der Sicherung ersetzt.");
+        }
         if (containsDatabase && !schemaCompatible)
         {
             blockers.Add("Backup-Schema ist nicht mit der aktuellen Backend-Version kompatibel.");
@@ -207,7 +235,10 @@ public sealed partial class SystemApiController
             CurrentSchemaVersion: DatabaseInitializer.CurrentSchemaVersion,
             Files: files,
             Blockers: blockers,
-            Warnings: warnings);
+            Warnings: warnings,
+            MediaIncluded: mediaCount > 0,
+            MediaFileCount: mediaCount,
+            MediaBytes: mediaBytes);
 
         LogSystemAudit("backup", "restore-plan-created", blockers.Count == 0 ? "Restore-Plan erfolgreich erstellt." : "Restore-Plan mit Blockern erstellt.", blockers.Count == 0, relatedFileName: fileName, severity: blockers.Count == 0 ? "info" : "warning");
         return Ok(dto);
@@ -216,7 +247,7 @@ public sealed partial class SystemApiController
 
     [HttpPost("backup")]
     [ProducesResponseType(typeof(BackupManifestDto), StatusCodes.Status201Created)]
-    public ActionResult<BackupManifestDto> CreateBackup()
+    public ActionResult<BackupManifestDto> CreateBackup([FromQuery] bool bilder = false)
     {
         var backupRoot = _paths.BackupsPath;
         Directory.CreateDirectory(backupRoot);
@@ -228,6 +259,8 @@ public sealed partial class SystemApiController
             System.IO.File.Delete(backupPath);
         }
 
+        var mediaCount = 0;
+        long mediaBytes = 0;
         using (var archive = ZipFile.Open(backupPath, ZipArchiveMode.Create))
         {
             AddIfExists(archive, _paths.DatabasePath, "App_Data/grow-diary.db");
@@ -241,6 +274,18 @@ public sealed partial class SystemApiController
                 {
                     var relative = Path.GetRelativePath(knowledgeRoot, file).Replace(Path.DirectorySeparatorChar, '/');
                     archive.CreateEntryFromFile(file, $"App_Data/knowledge/{relative}");
+                }
+            }
+
+            // Fotos und Kamerabilder nur auf Wunsch (Haken „mitsichern“): sie machen die Datei groß. JPEG und Co.
+            // sind schon gepackt, deshalb ohne weitere Komprimierung, das spart Zeit.
+            if (bilder)
+            {
+                foreach (var (path, entry, length) in BackupMediaFiles())
+                {
+                    archive.CreateEntryFromFile(path, entry, CompressionLevel.NoCompression);
+                    mediaCount++;
+                    mediaBytes += length;
                 }
             }
         }
@@ -258,21 +303,36 @@ public sealed partial class SystemApiController
             ExcludesSecrets: true,
             ExcludesHomeAssistantConfig: true,
             ExcludesDataProtectionKeys: true,
-            ExcludesUploads: true,
+            ExcludesUploads: !bilder,
             RestoreSupported: true,
-            DownloadUrl: downloadUrl);
+            DownloadUrl: downloadUrl,
+            IncludesMedia: bilder,
+            MediaFileCount: mediaCount,
+            MediaBytes: mediaBytes);
 
-        LogSystemAudit("backup", "backup-created", $"Backup {fileName} erstellt.", true, relatedFileName: fileName);
+        LogSystemAudit("backup", "backup-created", bilder ? $"Backup {fileName} mit {mediaCount} Bildern erstellt." : $"Backup {fileName} erstellt.", true, relatedFileName: fileName);
         return Created(downloadUrl, manifest);
     }
 
 
 
-    /// <summary>Größte erlaubte Sicherung, gepackt. Die Sicherung der App (Datenbank und Wissensbasis) ist weit kleiner.</summary>
-    private const long MaxBackupUploadBytes = 500L * 1024 * 1024;
+    /// <summary>Wie viele Fotos und Kamerabilder es gibt und wie groß sie zusammen sind — die Zahl hinter dem Haken „mitsichern“.</summary>
+    [HttpGet("backup/media-size")]
+    [ProducesResponseType(typeof(BackupMediaSizeDto), StatusCodes.Status200OK)]
+    public ActionResult<BackupMediaSizeDto> BackupMediaSize()
+    {
+        var files = BackupMediaFiles().ToList();
+        return Ok(new BackupMediaSizeDto(files.Count, files.Sum(file => file.Length)));
+    }
+
+    /// <summary>
+    /// Größte erlaubte Sicherung, gepackt. Mit Bildern wird sie groß; Bilder sind schon gepackt, die Grenze gilt also
+    /// praktisch für Fotos und Kamerabilder zusammen. Davor kann Home Assistant selbst eine kleinere Grenze setzen.
+    /// </summary>
+    private const long MaxBackupUploadBytes = 4L * 1024 * 1024 * 1024;
 
     /// <summary>Größte erlaubte Gesamtgröße nach dem Entpacken — Schutz vor Zip-Bomben.</summary>
-    private const long MaxBackupUnpackedBytes = 2L * 1024 * 1024 * 1024;
+    private const long MaxBackupUnpackedBytes = 8L * 1024 * 1024 * 1024;
 
     /// <summary>
     /// Eine Sicherung hochladen, die auf einer anderen Installation entstanden ist (Umzug,
@@ -305,7 +365,7 @@ public sealed partial class SystemApiController
 
         if (file.Length > MaxBackupUploadBytes)
         {
-            return BadRequestError("backup_upload_too_large", "Die Sicherung ist größer als 500 MB.");
+            return BadRequestError("backup_upload_too_large", "Die Sicherung ist größer als 4 GB. Sichere ohne Fotos und Kamerabilder.");
         }
 
         var backupRoot = _paths.BackupsPath;
@@ -334,7 +394,7 @@ public sealed partial class SystemApiController
                 if (archive.Entries.Sum(entry => entry.Length) > MaxBackupUnpackedBytes)
                 {
                     System.IO.File.Delete(tempPath);
-                    return BadRequestError("backup_upload_too_large", "Die Sicherung ist entpackt größer als 2 GB.");
+                    return BadRequestError("backup_upload_too_large", "Die Sicherung ist entpackt größer als 8 GB.");
                 }
             }
             catch (InvalidDataException)
@@ -423,7 +483,8 @@ public sealed partial class SystemApiController
         }
 
         BackupManifestDto safetyBackup;
-        var safetyBackupResult = CreateBackup();
+        // Ersetzt das Zurückspielen auch die Bilder, gehört der jetzige Bestand mit in die Rückfall-Sicherung.
+        var safetyBackupResult = CreateBackup(bilder: plan.MediaIncluded);
         if (safetyBackupResult.Result is CreatedResult created && created.Value is BackupManifestDto manifest)
         {
             safetyBackup = manifest;
@@ -439,6 +500,7 @@ public sealed partial class SystemApiController
         var restoreId = Guid.NewGuid().ToString("N");
         var tempRoot = Path.Combine(Path.GetTempPath(), "GrowOSRestore_" + restoreId);
         var rollbackRoot = Path.Combine(_paths.DataRootPath, "restore-rollback-" + restoreId);
+        var stagingRoot = Path.Combine(_paths.DataRootPath, "restore-staging-" + restoreId);
         var restoredKnowledgeFiles = new List<string>();
         // Die Hinweise des Plans gelten dem Trockenlauf — im Ergebnis eines echten
         // Zurückspielens stand sonst „Es wurden keine Dateien geaendert" (Prüfer, 03.10.2026).
@@ -453,7 +515,8 @@ public sealed partial class SystemApiController
 
             Directory.CreateDirectory(tempRoot);
             Directory.CreateDirectory(rollbackRoot);
-            ZipFile.ExtractToDirectory(backupPath, tempRoot);
+            Directory.CreateDirectory(stagingRoot);
+            ExtractBackup(backupPath, tempRoot, stagingRoot);
 
             var extractedDb = Path.Combine(tempRoot, "App_Data", "grow-diary.db");
             var extractedWal = extractedDb + "-wal";
@@ -486,6 +549,24 @@ public sealed partial class SystemApiController
                     Directory.EnumerateFiles(extractedKnowledgeRoot, "*", SearchOption.AllDirectories)
                         .Select(file => "App_Data/knowledge/" + Path.GetRelativePath(extractedKnowledgeRoot, file).Replace(Path.DirectorySeparatorChar, '/'))
                         .OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+            }
+
+            // Fotos und Kamerabilder: nur, wenn die Sicherung welche enthält. Sie werden verschoben statt kopiert
+            // (der Zwischenordner liegt im Datenverzeichnis); die vorigen kommen in die Rückfall-Kopie.
+            var mediaRestored = false;
+            foreach (var (name, target) in new[] { ("uploads", _paths.UploadRootPath), ("snapshots", _paths.SnapshotsPath) })
+            {
+                var staged = Path.Combine(stagingRoot, name);
+                if (Directory.Exists(staged))
+                {
+                    RestoreDirectoryByMove(staged, target, rollbackRoot, name);
+                    mediaRestored = true;
+                }
+            }
+
+            if (mediaRestored)
+            {
+                warnings.Add($"{plan.MediaFileCount} Fotos und Kamerabilder zurückgespielt.");
             }
 
             /* Fork AI (02.10.2026): die Schema-Ergänzungen SOFORT, nicht erst beim
@@ -559,6 +640,7 @@ public sealed partial class SystemApiController
             // Neustart, wenn das Backup aus einer Fassung ohne sie stammt.
             EigenesSchema.Vergessen(_paths.DatabasePath);
             DeleteDirectoryBestEffort(tempRoot);
+            DeleteDirectoryBestEffort(stagingRoot);
             DeleteDirectoryBestEffort(rollbackRoot);
         }
     }

@@ -264,6 +264,11 @@
   .st-pruefung li:first-child { border-top: 0; }
   .st-pruefung .is-gut { color: var(--accent-text); }
   .st-pruefung .is-schlecht { color: var(--danger-text); }
+  .st-pruefung .is-neutral { color: var(--muted); }
+
+  .st-bilder { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; cursor: pointer; }
+  .st-bilder input { margin-top: 4px; }
+  .st-bilder small { display: block; color: var(--muted); }
 
   /* Rueckverweis auf den Grow, aus dem man kam. */
   /* DREI Klassen. `.ls-btn.is-small` traegt `margin-left: auto` und hat
