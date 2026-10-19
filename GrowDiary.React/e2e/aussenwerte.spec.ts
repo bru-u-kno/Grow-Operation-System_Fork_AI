@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { backendAntwortet, darfUeberspringen } from './pflicht'
+import { gibSchloss, nimmSchloss } from './schloss'
 
 /**
  * Die Außenwerte — die Luft um das Zelt, z. B. der eingebaute Fühler eines
@@ -23,6 +24,10 @@ const AUSSEN = [
 ] as const
 
 test.describe('Außenwerte', () => {
+  // `raumwerte.spec.ts` legt zeitweise einen Raum an — dann hießen die Karten anders. Nacheinander, nicht nebeneinander.
+  test.beforeEach(async () => { await nimmSchloss() })
+  test.afterEach(() => { gibSchloss() })
+
   test('stehen im Verlauf als Karten und blenden ihre Kurve ein und aus — zweimal (390 px)', async ({ page, request }) => {
     darfUeberspringen(!(await backendAntwortet(request)), 'Kein Backend — die Außenwerte brauchen die laufende App mit Demobestand.')
     await page.setViewportSize({ width: 390, height: 900 })

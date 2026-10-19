@@ -389,11 +389,16 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
         var tents = repository.GetTents();
         foreach (var tent in tents)
         {
-            var metricKeys = tent.Sensors
+            var raum = scope.ServiceProvider.GetRequiredService<RaumService>();
+            var metricKeys = raum.WirksameSensoren(tent)
                 .Where(sensor => sensor.IsActive && !string.IsNullOrWhiteSpace(sensor.HaEntityId))
                 .Select(sensor => TentSensorMetricKeyMap.Resolve(sensor.MetricType))
                 .Distinct()
                 .ToList();
+
+            // Die Raum-VPD wird gerechnet und hat keine Zeile; ihre Tageswerte gehören trotzdem dazu.
+            var raumVpd = TentSensorMetricKeyMap.Resolve(SensorMetricType.OutsideVpd);
+            if (raum.FuehlerFuer(tent) is not null && !metricKeys.Contains(raumVpd)) metricKeys.Add(raumVpd);
 
             if (metricKeys.Count == 0)
             {

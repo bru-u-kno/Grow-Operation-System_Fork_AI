@@ -591,7 +591,15 @@ export type EntfeuchterZusatzAenderung = Partial<Omit<EntfeuchterZusatzEinstellu
 export type EntfeuchterName = { anzeigename: string; vorgabe: string }
 
 /** forkai.241: Der Raum — Name, Vorgabe und die Zelte darin (GET/PUT /api/steuerung/raum). */
-export type RaumStand = { id: string; name: string; vorgabe: string; zelte: Array<{ id: number; name: string }> }
+export type RaumStand = {
+  id: string
+  name: string
+  vorgabe: string
+  zelte: Array<{ id: number; name: string }>
+  /** cc.263: true, wenn „{Raumname} Temp./RLF/VPD“ aus den Raum-Fühlern kommt (ein Zelt steht im Raum, beide Fühler sind zugeordnet). */
+  aussenWerte?: boolean
+  fuehler?: { tempEntityId: string; rhEntityId: string } | null
+}
 
 export type EntfeuchterNamen = { fuehrung: EntfeuchterName; zusatz: EntfeuchterName }
 
