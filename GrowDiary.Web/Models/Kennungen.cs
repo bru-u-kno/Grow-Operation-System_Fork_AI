@@ -87,6 +87,19 @@ public static class Kennungen
         new("automation", "co2_licht_aus_sicherung", "co2_dosierung_licht_aus_sicherung_rdwc_port_5", "CO2 Licht-aus Sicherung", "CO2 Licht-aus Sicherung")
     };
 
+    /// <summary>
+    /// Cultivate Control (2.0.0-cc.255): Objekte, die der Fork erst NACH der Umstellung der Kennungen (forkai.217) eingeführt hat.
+    /// Es gibt sie nur im neuen Namensraum — sie haben keine alte Kennung, und im <see cref="KennungsRaum.Bestand"/> heißen sie genauso.
+    /// Ein neues Objekt bekommt auch in einer Anlage mit alten Kennungen einen neutralen Namen und keine fremde Marke.
+    /// Nicht in <see cref="Tabelle"/>, weil nichts umzubenennen ist; die Prüfungen „im Bestand bleibt keine neue Kennung stehen“
+    /// nehmen genau diese aus.
+    /// </summary>
+    public static IReadOnlySet<string> NurNeu { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        NachtUebergang.DauerId,
+        NachtUebergang.LichtAusSeitId,
+    };
+
     private static readonly IReadOnlyDictionary<string, Altkennung> NachNeuerId =
         Tabelle.ToDictionary(a => a.NeueId, StringComparer.Ordinal);
 

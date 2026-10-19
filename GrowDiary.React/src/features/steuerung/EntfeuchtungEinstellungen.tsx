@@ -235,7 +235,7 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
           {ueberCo2 && (
             <V1Alert tone="warn" message={`Liegt über der CO₂-Grenze von ${zahl(co2Grenze)}\u00a0°C — dann steigt der Entfeuchter erst nach der CO₂-Klimasperre aus.`} />
           )}
-          <p className="st-hinweis">Kein Pflanzenziel, sondern Geräteschutz: Entfeuchter geben selbst Wärme ab. Die Höchsttemperatur gilt für {z ? 'alle Entfeuchter' : 'den Entfeuchter'}, getrennt für Tag und Nacht.</p>
+          <p className="st-hinweis">Kein Pflanzenziel, sondern Geräteschutz: Entfeuchter geben selbst Wärme ab. Die Höchsttemperatur gilt für {z ? 'alle Entfeuchter' : 'den Entfeuchter'}, getrennt für Tag und Nacht.{he.nachtUebergangMin > 0 && tagMax > nachtMax ? ` Nach Licht-aus sinkt sie in ${he.nachtUebergangMin}\u00a0Minuten vom Tag- auf den Nachtwert.` : ''}</p>
         </V1Card>
       </Klappkachel>
 
@@ -371,6 +371,8 @@ export function EinstellungenTab({ h, z, haupt, zusatz, zielwerte }: Ctx & { zie
           )}
           <Zahl label={`Wartezeit bei trockener Außenluft (${haupt})`} hinweis="Trocknet die Zuluft gerade, wartet er stattdessen so lange. Nie kürzer als „Einschalten nach“." einheit="min" wert={he.wartezeitAussenluftMin} min={0} max={120} schritt={1}
             onChange={(v) => h.setz('wartezeitAussenluftMin', Math.round(v))} fehler={h.feldFehler.WartezeitAussenluftMin} />
+          <Zahl label="Nacht-Übergang (Min.)" hinweis="So lange sinkt die Höchsttemperatur nach Licht-aus langsam vom Tag- auf den Nachtwert, statt sofort zu springen. Das Zelt ist kurz nach Licht-aus noch warm; so bleiben die Entfeuchter nicht nur deshalb aus. 0 = sofort, wie früher." einheit="min" wert={he.nachtUebergangMin} min={0} max={240} schritt={5}
+            onChange={(v) => h.setz('nachtUebergangMin', Math.round(v))} fehler={h.feldFehler.NachtUebergangMin} />
           {z && ze && vpd && (
             <Zahl label={`VPD-Abstand (${zusatz})`} hinweis="Nur bei VPD-Regelung: Abstand in kPa rechts und links vom Plan-Ziel." einheit="kPa" wert={ze.vpdHystereseKpa} min={0.05} max={0.6} schritt={0.05}
               onChange={(v) => z.setzEinzel('vpdHystereseKpa', v)} fehler={fehlerZu(z.feldFehler, 'vpdHystereseKpa')} />

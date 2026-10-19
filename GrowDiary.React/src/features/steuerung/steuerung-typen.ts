@@ -412,6 +412,8 @@ export type EntfeuchterEinstellungen = {
   tempMaxNachtModus: TempMaxModus
   tempMaxNachtAbstandK: number
   tempMaxNachtFestC: number
+  /** Cultivate Control: Minuten nach Licht-aus, in denen die Höchsttemperatur vom Tag- auf den Nachtwert sinkt; 0 = sofort. */
+  nachtUebergangMin: number
   feuchteEinTag: number
   feuchteAusTag: number
   feuchteEinNacht: number

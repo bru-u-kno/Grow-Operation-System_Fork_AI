@@ -52,7 +52,7 @@ export const LIVE: Json = {
  * AUS ist je EIN minus Abstand.
  */
 export const HAUPT_EINSTELLUNGEN: Json = {
-  vpdRegelung: true, hystereseProzent: 4, mindestlaufzeitMin: 20, einschaltverzoegerungMin: 2, wartezeitAussenluftMin: 25,
+  vpdRegelung: true, hystereseProzent: 4, mindestlaufzeitMin: 20, einschaltverzoegerungMin: 2, wartezeitAussenluftMin: 25, nachtUebergangMin: 90,
   tagbetriebErlauben: true, automatikAktiv: true,
   tempMaxTagModus: 'fest', tempMaxTagAbstandK: 6.5, tempMaxTagFestC: 26.5,
   tempMaxNachtModus: 'fest', tempMaxNachtAbstandK: 9, tempMaxNachtFestC: 25,
@@ -94,7 +94,7 @@ export const MODULE = {
  * Zusatz Mindestlauf 15, Zuschalten nach 2, Mindestpause 5, Hilfe „eigene". Nacht, Flush, 55,7 % rF bei 21 °C.
  */
 export const BRU_HAUPT_EINSTELLUNGEN: Json = {
-  vpdRegelung: false, hystereseProzent: 4, mindestlaufzeitMin: 20, einschaltverzoegerungMin: 2, wartezeitAussenluftMin: 5,
+  vpdRegelung: false, hystereseProzent: 4, mindestlaufzeitMin: 20, einschaltverzoegerungMin: 2, wartezeitAussenluftMin: 5, nachtUebergangMin: 90,
   tagbetriebErlauben: true, automatikAktiv: true,
   tempMaxTagModus: 'fest', tempMaxTagAbstandK: 5, tempMaxTagFestC: 23,
   tempMaxNachtModus: 'fest', tempMaxNachtAbstandK: 5, tempMaxNachtFestC: 23,

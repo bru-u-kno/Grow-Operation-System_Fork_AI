@@ -5,6 +5,20 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.256
+
+**Cultivate Control.** Nach Licht-aus sinkt die Höchsttemperatur der Entfeuchter nicht mehr sprunghaft, sondern gleitet in einer einstellbaren Zeit vom Tag- auf den Nachtwert.
+
+- **Was war:** Im Moment des Licht-aus sprang die Höchsttemperatur vom Tag- auf den Nachtwert (Beispiel: 24 → 22 °C). Das Zelt ist dann noch warm und kühlt erst nach und nach ab; Haupt- und Zusatz-Entfeuchter gingen sofort aus und blieben es, bis das Zelt unter dem Nachtwert lag. An drei Abenden waren beide zusammen 88, 44 und 3 Minuten aus. Die Feuchte war währenddessen nicht das Problem.
+- **Jetzt:** Die Grenze sinkt nach Licht-aus gleichmäßig über die eingestellte Dauer, danach gilt der Nachtwert die ganze Nacht. Bei Tag 24 °C, Nacht 22 °C und 90 Minuten: nach 30 Minuten 23,3 °C, nach 45 Minuten 23,0 °C, nach 90 Minuten 22,0 °C. Sie liegt nie über dem Tageswert und nie unter dem Nachtwert. Das gilt für alle Entfeuchter, auch wenn der Nachtwert aus dem Plan kommt.
+- **Neue Einstellung:** „Nacht-Übergang (Min.)“ unter „Erweitert“ der Entfeuchtungs-Einstellungen. Voreinstellung 90, 0 bis 240; **0 = sofort, genau wie bisher**. Die Kachel „Höchsttemperatur“ nennt die Dauer.
+- **Wie es gerechnet wird:** Der Rechenwert „Temp Max aktiv“ liest die Dauer und den Zeitpunkt des Licht-aus. Den Zeitpunkt schreibt eine kleine Automation („Entfeuchter Licht-aus Merker“) nur beim echten Wechsel des Lichts von an auf aus; Aussetzer des Licht-Sensors (kurz „nicht verfügbar“) zählen nicht, sonst finge der Übergang mitten in der Nacht von vorn an. Fehlt einer der drei Bausteine, gilt sofort der Nachtwert, also das Verhalten von vorher.
+- **Neue Anlagen:** Dauer-Helfer, Zeitstempel-Helfer, Automation und der neue Rechenwert werden bei der Einrichtung angelegt (Helfer, Rechenwerte, Automationen).
+- **Vorhandene Anlagen:** „Rechenwerte anlegen“ zieht den vorhandenen Rechenwert „Temp Max aktiv“ nach: Es wird nur der Nachtzweig getauscht, alles andere (eigener Licht-Sensor, Einheit, Verfügbarkeit) bleibt. Ein zweiter Lauf findet nichts mehr; ein von Hand umgebauter Rechenwert bleibt unberührt. Die neuen Helfer und die Automation legen „Helfer anlegen“ und „Automationen anlegen“ an; bestehende Einstellungen werden dabei nicht verändert.
+- **Namen:** Die neuen Objekte heißen in allen Anlagen gleich (`fork_entfeuchter_nacht_uebergang`, `fork_entfeuchter_licht_aus_seit`, `entfeuchter_licht_aus_merker`); auch in Anlagen mit den alten Kennungen bekommen sie keine fremde Marke.
+- **Geprüft:** 42 neue Backend-Fälle (Verlauf über die Zeit, Dauer 0, Spanne über Mitternacht, Nachtwert aus dem Plan, Katalog, Nachzug mit neuen und alten Kennungen, Einstellung) und ein Oberflächenfall. Die Jinja-Fassung des Rechenwerts wurde in Home Assistant mit 14 Zeit- und Fehlerfällen durchgerechnet. Gegenprobe: Rechnung, Dauer-Bedingung, Auslöser und Alt-Textstück jeweils absichtlich verfälscht, die Fälle wurden rot.
+- **Offen:** Der Übergang gilt für die Höchsttemperatur der Entfeuchter, nicht für andere Steuerungen mit Tag- und Nachtwerten.
+
 ## 2.0.0-cc.255
 
 **Cultivate Control.** Das Commit-Tor für die Entwicklung ist deutlich schneller geworden; die Prüfungen selbst sind dieselben geblieben. Die App ändert sich dadurch nicht.

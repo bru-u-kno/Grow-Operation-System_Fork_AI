@@ -60,7 +60,11 @@ public sealed class SteuerungRechenwertService
     /// Die Automation, die den Merker führt. Läuft sie nicht, friert der Merker ein und hielte den
     /// Rechenwert im Haltebereich falsch — dann wird nicht getauscht.
     /// </param>
-    public sealed record Nachzug(string EntityId, string Name, string Alt, string Neu, string? Merker = null, string? Abgleich = null);
+    public sealed record Nachzug(string EntityId, string Name, string Alt, string Neu, string? Merker = null, string? Abgleich = null)
+    {
+        /// <summary>Die Entity-ID in diesem Namensraum (im Bestand die alte Kennung; sonst unverändert).</summary>
+        public string Kennung => Kennungen.Id(EntityId);
+    }
 
     /// <summary>
     /// Die Änderungen, die vorhandene Rechenwerte nachgezogen bekommen.
@@ -100,6 +104,14 @@ public sealed class SteuerungRechenwertService
             "Zuluft Bedarf",
             "d < s - 0.5 or",
             "d < s - (states('input_number.zuluft_abschalt_abstand') | float(0.5)) or"),
+        // Cultivate Control (2.0.0-cc.255): Die Höchsttemperatur gleitet nach Licht-aus vom Tag- auf den Nachtwert. Die Entity-ID
+        // und der Titel stehen im neuen Namensraum da; im Bestand (Kennungen.Id/Name) werden sie zu den alten. Fehlen die Helfer
+        // (Dauer, Zeitstempel, Merker-Automation), rechnet das neue Stück mit seinen Vorgaben weiter und verhält sich wie das alte.
+        new Nachzug(
+            "sensor.fork_entfeuchter_temp_max_aktiv",
+            "Fork Entfeuchter Temp Max aktiv",
+            NachtUebergang.Alt,
+            NachtUebergang.Neu),
     };
 
     /// <summary>Wie es einem Nachzug ergangen ist.</summary>
@@ -211,7 +223,8 @@ public sealed class SteuerungRechenwertService
     {
         var ergebnisse = new List<NachzugErgebnis>();
         var gehoert = SteuerungBauteile.FuerModul(modul).Select(b => b.EntityId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var offen = Nachzuege.Where(n => gehoert.Contains(n.EntityId)).ToList();
+        // Die Nachzüge nennen Kennung und Titel im neuen Namensraum; im Bestand heißen sie anders (Kennungen).
+        var offen = Nachzuege.Where(n => gehoert.Contains(Kennungen.Id(n.EntityId))).ToList();
         if (offen.Count == 0) return ergebnisse;
 
         using var client = _ha.CreateClient(settings, _ha.Dienstfrist);
@@ -221,25 +234,25 @@ public sealed class SteuerungRechenwertService
             using var antwort = await client.GetAsync("api/config/config_entries/entry?domain=template", ct);
             if (!antwort.IsSuccessStatusCode)
             {
-                return offen.Select(n => new NachzugErgebnis(n.EntityId, "fehler", $"Eintragsliste nicht lesbar ({(int)antwort.StatusCode}).")).ToList();
+                return offen.Select(n => new NachzugErgebnis(n.Kennung, "fehler", $"Eintragsliste nicht lesbar ({(int)antwort.StatusCode}).")).ToList();
             }
 
             eintraege = await antwort.Content.ReadFromJsonAsync<JsonElement>(ct);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return offen.Select(n => new NachzugErgebnis(n.EntityId, "fehler", ex.Message)).ToList();
+            return offen.Select(n => new NachzugErgebnis(n.Kennung, "fehler", ex.Message)).ToList();
         }
 
         foreach (var n in offen)
         {
             var eintrag = eintraege.ValueKind == JsonValueKind.Array
-                ? eintraege.EnumerateArray().FirstOrDefault(e => Text(e, "title") == n.Name)
+                ? eintraege.EnumerateArray().FirstOrDefault(e => Text(e, "title") == Kennungen.Name(n.EntityId, n.Name, Kennungen.Raum))
                 : default;
             var kennung = eintrag.ValueKind == JsonValueKind.Object ? Text(eintrag, "entry_id") : null;
             if (kennung is null)
             {
-                ergebnisse.Add(new NachzugErgebnis(n.EntityId, "nicht_gefunden", $"Kein Eintrag mit dem Titel '{n.Name}'."));
+                ergebnisse.Add(new NachzugErgebnis(Kennungen.Id(n.EntityId), "nicht_gefunden", $"Kein Eintrag mit dem Titel '{Kennungen.Name(n.EntityId, n.Name, Kennungen.Raum)}'."));
                 continue;
             }
 
@@ -258,7 +271,7 @@ public sealed class SteuerungRechenwertService
             var start = await client.PostAsJsonAsync("api/config/config_entries/options/flow", new { handler = eintrag }, ct);
             if (!start.IsSuccessStatusCode)
             {
-                return new NachzugErgebnis(n.EntityId, "fehler", $"Optionsdialog liess sich nicht oeffnen ({(int)start.StatusCode}).");
+                return new NachzugErgebnis(n.Kennung, "fehler", $"Optionsdialog liess sich nicht oeffnen ({(int)start.StatusCode}).");
             }
 
             var formular = await start.Content.ReadFromJsonAsync<JsonElement>(ct);
@@ -267,7 +280,7 @@ public sealed class SteuerungRechenwertService
             if (felder is null)
             {
                 await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
-                return new NachzugErgebnis(n.EntityId, stand, stand == "aktuell" ? null : "Das alte Textstück steht nicht in der Vorlage.");
+                return new NachzugErgebnis(n.Kennung, stand, stand == "aktuell" ? null : "Das alte Textstück steht nicht in der Vorlage.");
             }
 
             // Fork AI (forkai.234): Liest das neue Textstück einen Merker, muss er da sein und stimmen,
@@ -279,8 +292,8 @@ public sealed class SteuerungRechenwertService
                 if (!bereit)
                 {
                     await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
-                    _log.LogWarning("Rechenwert {EntityId} nicht nachgezogen, weil er wartet: {Hinweis}", n.EntityId, hinweis);
-                    return new NachzugErgebnis(n.EntityId, "wartet", hinweis);
+                    _log.LogWarning("Rechenwert {EntityId} nicht nachgezogen, weil er wartet: {Hinweis}", n.Kennung, hinweis);
+                    return new NachzugErgebnis(n.Kennung, "wartet", hinweis);
                 }
             }
 
@@ -290,16 +303,16 @@ public sealed class SteuerungRechenwertService
             {
                 await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
                 var grund = antwort.ValueKind == JsonValueKind.Object && antwort.TryGetProperty("errors", out var f) ? f.ToString() : Text(antwort, "type");
-                return new NachzugErgebnis(n.EntityId, "fehler", $"Abgelehnt: {grund}");
+                return new NachzugErgebnis(n.Kennung, "fehler", $"Abgelehnt: {grund}");
             }
 
-            _log.LogInformation("Rechenwert nachgezogen: {EntityId}", n.EntityId);
-            return new NachzugErgebnis(n.EntityId, "angepasst", null);
+            _log.LogInformation("Rechenwert nachgezogen: {EntityId}", n.Kennung);
+            return new NachzugErgebnis(n.Kennung, "angepasst", null);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             if (dialog is not null) await SchliessenAsync(client, "api/config/config_entries/options/flow", dialog, ct);
-            return new NachzugErgebnis(n.EntityId, "fehler", ex.Message);
+            return new NachzugErgebnis(n.Kennung, "fehler", ex.Message);
         }
     }
 
@@ -342,7 +355,7 @@ public sealed class SteuerungRechenwertService
     private async Task<(bool Bereit, string? Hinweis)> MerkerBereitMachenAsync(
         HomeAssistantSettings settings, Nachzug n, CancellationToken ct)
     {
-        var rechenwert = (await _ha.GetEntityStateAsync(settings, n.EntityId, ct))?.State;
+        var rechenwert = (await _ha.GetEntityStateAsync(settings, n.Kennung, ct))?.State;
         var merker = (await _ha.GetEntityStateAsync(settings, n.Merker!, ct))?.State;
         var schritt = MerkerEntscheiden(rechenwert, merker);
         if (schritt != MerkerSchritt.MerkerFehlt && n.Abgleich is not null)
@@ -358,7 +371,7 @@ public sealed class SteuerungRechenwertService
             case MerkerSchritt.MerkerFehlt:
                 return (false, $"Der Merker {n.Merker} fehlt oder ist nicht lesbar (Home Assistant antwortet nicht?) — zuerst die Helfer anlegen.");
             case MerkerSchritt.ZustandUnklar:
-                return (false, $"{n.EntityId} ist gerade weder an noch aus ({rechenwert ?? "unbekannt"}) — es gibt keinen Zustand für den Merker. Später noch einmal.");
+                return (false, $"{n.Kennung} ist gerade weder an noch aus ({rechenwert ?? "unbekannt"}) — es gibt keinen Zustand für den Merker. Später noch einmal.");
             case MerkerSchritt.Passt:
                 return (true, null);
         }
@@ -418,15 +431,19 @@ public sealed class SteuerungRechenwertService
         if (felder.TryGetValue("state", out var s) && s is JsonElement { ValueKind: JsonValueKind.String } je) state = je.GetString();
         if (state is null) return null;
 
-        if (state.Contains(n.Neu, StringComparison.Ordinal))
+        // Die Textstücke nennen Entity-IDs im neuen Namensraum; im Bestand stehen dort die alten.
+        var alt = Kennungen.Uebersetzen(n.Alt, Kennungen.Raum);
+        var neu = Kennungen.Uebersetzen(n.Neu, Kennungen.Raum);
+
+        if (state.Contains(neu, StringComparison.Ordinal))
         {
             stand = "aktuell";
             return null;
         }
 
-        if (!state.Contains(n.Alt, StringComparison.Ordinal)) return null;
+        if (!state.Contains(alt, StringComparison.Ordinal)) return null;
 
-        felder["state"] = state.Replace(n.Alt, n.Neu, StringComparison.Ordinal);
+        felder["state"] = state.Replace(alt, neu, StringComparison.Ordinal);
         if (zusatz.Count > 0) felder["additional_options"] = zusatz;
         stand = "angepasst";
         return felder;

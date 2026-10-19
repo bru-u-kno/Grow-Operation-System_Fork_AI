@@ -543,6 +543,15 @@ public static class SteuerungBauteile
             "Darüber geht er tagsüber aus.", Min: 15, Max: 35, Schritt: 0.5, Einheit: "°C"),
         new(Entfeuchter, "input_number.fork_entfeuchter_temp_max_nacht", "Fork Entfeuchter Temp max Nacht", BauteilArt.Zahl,
             "Darüber geht er nachts aus.", Min: 15, Max: 35, Schritt: 0.5, Einheit: "°C"),
+        // Cultivate Control (2.0.0-cc.255): Nach Licht-aus gleitet die Höchsttemperatur in dieser Dauer vom Tag- auf den Nachtwert.
+        // Pflicht: false — fehlen die drei Bauteile, springt die Grenze wie früher; der Rechenwert rechnet dann mit seinen Vorgaben.
+        new(Entfeuchter, NachtUebergang.DauerId, "Fork Entfeuchter Nacht Uebergang", BauteilArt.Zahl,
+            "So lange sinkt die Höchsttemperatur nach Licht-aus vom Tag- auf den Nachtwert. 0 = sofort.",
+            Pflicht: false, OhneDas: "Ohne ihn springt die Höchsttemperatur beim Licht-aus sofort auf den Nachtwert.",
+            Min: 0, Max: NachtUebergang.Hoechstens, Schritt: 5, Einheit: "min"),
+        new(Entfeuchter, NachtUebergang.LichtAusSeitId, "Fork Entfeuchter Licht aus seit", BauteilArt.Zeitpunkt,
+            "Wann das Licht zuletzt ausging — die Uhr für den sanften Übergang. Zeitstempel statt last_changed: der Licht-Sensor meldet bei Aussetzern kurz „nicht verfügbar“.",
+            Pflicht: false, OhneDas: "Ohne ihn springt die Höchsttemperatur beim Licht-aus sofort auf den Nachtwert."),
         new(Entfeuchter, "input_number.fork_entfeuchter_feuchte_ein_tag", "Fork Entfeuchter Feuchte EIN Tag", BauteilArt.Zahl,
             "Rückfallebene ohne VPD-Regelung.", Min: 30, Max: 90, Schritt: 1, Einheit: "%"),
         new(Entfeuchter, "input_number.fork_entfeuchter_feuchte_aus_tag", "Fork Entfeuchter Feuchte AUS Tag", BauteilArt.Zahl,
@@ -578,9 +587,9 @@ public static class SteuerungBauteile
             Einheit: "%", Zustandsklasse: "measurement",
             Vorlage: "{% set led = states('[[licht_zustand]]') %}{% set t = states('[[zelt_temp]]') | float(0) %}{% set hyst = states('input_number.fork_entfeuchter_hysterese') | float(4) %}{% set deckel = states('input_number.co2_rh_obergrenze') | float(100) - states('input_number.co2_klima_hysterese') | float(0) %}{% set fest_ein = states('input_number.fork_entfeuchter_feuchte_ein_tag') | float(60) if led == 'on' else states('input_number.fork_entfeuchter_feuchte_ein_nacht') | float(62) %}{% set fest_aus = states('input_number.fork_entfeuchter_feuchte_aus_tag') | float(57) if led == 'on' else states('input_number.fork_entfeuchter_feuchte_aus_nacht') | float(60) %}{% if is_state('input_boolean.fork_entfeuchter_vpd_regelung','on') and t > 5 %}{% set off = states('input_number.vpd_blatt_offset') | float(-1.0) %}{% set svl = 0.61078 * (e ** (17.27 * t / (t + 237.3))) %}{% set svb = 0.61078 * (e ** (17.27 * (t + off) / (t + off + 237.3))) %}{% set ein_roh = [ [ ((svb - (states('input_number.vpd_ziel_unten') | float(1.2))) / svl * 100), 45 ] | max, 85 ] | min %}{% set ein = [ein_roh, deckel] | min %}{% set aus = ((svb - (states('input_number.vpd_ziel_abschaltung') | float(1.3))) / svl * 100) %}{{ [ [ aus, ein - hyst ] | min, 35 ] | max | round(1) }}{% elif led in ['on','off'] %}{{ [ fest_aus, [fest_ein, deckel] | min - hyst ] | min | round(1) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.fork_entfeuchter_feuchte_aus_nacht') | float(60) }}{% endif %}"),
         new(Entfeuchter, "sensor.fork_entfeuchter_temp_max_aktiv", "Fork Entfeuchter Temp Max aktiv", BauteilArt.RechenSensor,
-            "Die gerade gültige Höchsttemperatur — Tag- oder Nachtwert, je nach Licht.",
+            "Die gerade gültige Höchsttemperatur — der Tagwert, nach Licht-aus gleitend der Nachtwert, danach der Nachtwert.",
             Einheit: "°C", Zustandsklasse: "measurement",
-            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% if led == 'on' %}{{ states('input_number.fork_entfeuchter_temp_max_tag') | float(28.5) }}{% elif led == 'off' %}{{ states('input_number.fork_entfeuchter_temp_max_nacht') | float(30) }}{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.fork_entfeuchter_temp_max_nacht') | float(30) }}{% endif %}"),
+            Vorlage: "{% set led = states('[[licht_zustand]]') %}{% if led == 'on' %}{{ states('input_number.fork_entfeuchter_temp_max_tag') | float(28.5) }}" + NachtUebergang.Neu + "{% else %}{{ this.state if this is defined and this.state not in ['unknown','unavailable'] else states('input_number.fork_entfeuchter_temp_max_nacht') | float(30) }}{% endif %}"),
         new(Entfeuchter, "binary_sensor.fork_entfeuchter_feuchte_ueber_ein", "Fork Entfeuchter Feuchte ueber EIN", BauteilArt.RechenSchalter,
             "An, solange die Zeltfeuchte über der Einschaltschwelle liegt. Die Regelung misst daran, wie lange schon.",
             Vorlage: "{{ states('[[zelt_rh]]') | float(0) > states('sensor.fork_entfeuchter_feuchte_ein_aktiv') | float(100) }}"),
@@ -588,6 +597,11 @@ public static class SteuerungBauteile
         new(Entfeuchter, "automation.entfeuchter_regelung_tag_nacht", "Entfeuchter Regelung Tag/Nacht", BauteilArt.Automation,
             "Schaltet den Entfeuchter nach Feuchte, Temperatur und Außenluft.",
             VorlagenDatei: "regelung", Probelauf: ProbelaufRolle.Pausieren),
+
+        new(Entfeuchter, "automation.entfeuchter_licht_aus_merker", "Entfeuchter Licht-aus Merker", BauteilArt.Automation,
+            "Schreibt beim Licht-aus die Uhrzeit in den Zeitstempel-Helfer — davon hängt der sanfte Übergang der Höchsttemperatur ab.",
+            Pflicht: false, OhneDas: "Ohne sie springt die Höchsttemperatur beim Licht-aus sofort auf den Nachtwert.",
+            VorlagenDatei: "licht_aus_merker", Probelauf: ProbelaufRolle.Laufenlassen),
 
         // ====================================================================
         // Zusatz-Entfeuchter — Fork AI (A-009). Ein zweiter Entfeuchter an einer
