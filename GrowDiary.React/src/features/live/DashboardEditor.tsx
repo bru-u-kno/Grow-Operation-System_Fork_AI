@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiFetch } from '../../api'
 import {
   KNOWN_METRICS,
+  metrikEtikett,
   addSection,
   addTile,
   chartTile,
@@ -9,6 +10,7 @@ import {
   metricTile,
   type DashboardLayout,
 } from './dashboard-layout'
+import type { RaumStand } from '../steuerung/steuerung-typen'
 import { VERLAUFS_METRIKEN } from './useTentSparklines'
 import { BandTitel, type BandKlappe } from './Einklappen'
 import { classNames } from '../../utils'
@@ -95,11 +97,15 @@ function AddTileDialog({
   const [query, setQuery] = useState('')
   const [sectionId, setSectionId] = useState(layout.sections[0]?.id ?? '')
   const [loading, setLoading] = useState(true)
+  // cc.263: Kommen die Raumluft-Werte vom Raum, heißen sie „{Raumname} Temp./RLF/VPD“ (der Verlauf bekommt das vom Backend).
+  const [raumName, setRaumName] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
     async function load() {
       try {
+        const raum = await apiFetch<RaumStand>('/api/steuerung/raum', { signal: controller.signal }).catch(() => null)
+        if (!controller.signal.aborted && raum?.aussenWerte) setRaumName(raum.name)
         const list = await apiFetch<HaEntity[]>('/api/home-assistant/entities', { signal: controller.signal })
         if (!controller.signal.aborted) setEntities(list)
       } catch {
@@ -114,8 +120,10 @@ function AddTileDialog({
 
   const suche = query.trim().toLowerCase()
   const metriken = useMemo(
-    () => KNOWN_METRICS.filter((metric) => !suche || metric.label.toLowerCase().includes(suche) || metric.key.includes(suche)),
-    [suche],
+    () => KNOWN_METRICS
+      .map((metric) => ({ ...metric, label: metrikEtikett(metric.key, metric.label, raumName) }))
+      .filter((metric) => !suche || metric.label.toLowerCase().includes(suche) || metric.key.includes(suche)),
+    [suche, raumName],
   )
   const sensoren = useMemo(
     () => entities
@@ -228,7 +236,7 @@ function AddTileDialog({
             <>
               <div className="ls-dialog-cap">Cultivate Control kennt</div>
               {metriken.map((metric) => (
-                <button key={metric.key} type="button" className="ls-pick" onClick={() => onAdd(sectionId, metricTile(metric.key, metric.label))}>
+                <button key={metric.key} type="button" className="ls-pick" onClick={() => onAdd(sectionId, metricTile(metric.key, metric.key.startsWith('outside-') ? null : metric.label))}>
                   <span className="dot" />
                   <span className="ls-pick-text">{metric.label}</span>
                 </button>

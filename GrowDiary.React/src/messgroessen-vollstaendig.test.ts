@@ -137,7 +137,10 @@ describe('Verlauf: Platz, Name und Farbe je Messgröße', () => {
     const aussen = KNOWN_METRICS.filter((m) => m.key.startsWith('outside-'))
     expect(aussen).toHaveLength(3)
     for (const { key, label } of aussen) {
-      expect(code, `${key}: Backend nennt es anders als „${label}"`).toContain(`"${key}" => ("${label}",`)
+      // Seit cc.263 steht vorn der Raumname (`AussenBeschriftung.Vorsatz()`, ohne Raum „Außen“); hinten das Etikett.
+      const hinten = label.replace(/^Außen /, '')
+      expect(code, `${key}: Backend nennt es anders als „${label}"`)
+        .toContain(`"${key}" => ($"{AussenBeschriftung.Vorsatz()} ${hinten}",`)
     }
   })
 })

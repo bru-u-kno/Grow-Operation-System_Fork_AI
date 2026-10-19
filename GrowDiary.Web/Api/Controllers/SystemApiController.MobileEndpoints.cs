@@ -21,16 +21,26 @@ public sealed partial class SystemApiController
     /// </remarks>
     [HttpGet("mobile-access")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> MobileAccess([FromServices] SupervisorInfoService supervisor, CancellationToken cancellationToken)
+    public async Task<IActionResult> MobileAccess(
+        [FromServices] SupervisorInfoService supervisor,
+        [FromServices] IngressPanelService? ingressPanele,
+        CancellationToken cancellationToken)
     {
         var slug = await supervisor.GetAddonSlugAsync(cancellationToken);
         var panelPath = SupervisorInfoService.PanelPath(slug);
+
+        // Gibt es für diese App schon ein Ingress-Panel ohne HA-Titelleiste (hass_ingress, ui_mode normal)?
+        // Dieselbe Abfrage, mit der die Push-Meldungen ihren Link wählen; die Antwort ist zehn Minuten gemerkt.
+        // Die Oberfläche zeigt damit die Hilfe „Ohne HA-Titelleiste“ passend zum Stand.
+        var ingressPanel = await IngressPanelService.PanelOderNullAsync(
+            ingressPanele, _repository.GetEffectiveHomeAssistantSettings(), slug, cancellationToken);
 
         return Ok(new
         {
             available = panelPath is not null,
             slug,
             panelPath,
+            ingressPanel,
             reason = panelPath is null
                 ? "Cultivate Control läuft hier nicht als Home-Assistant-Add-on — es gibt keinen Panel-Pfad, auf den ein Handy zeigen könnte."
                 : null,

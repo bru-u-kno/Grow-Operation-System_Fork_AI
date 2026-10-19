@@ -14,6 +14,7 @@ public sealed class HomeAssistantService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly HydroSetupRepository? _hydroSetups;
     private readonly ILogger<HomeAssistantService> _logger;
+    private readonly RaumService? _raum;
     private long _circuitOpenUntilTicks;
 
     /// <summary>Frist für lesende Abrufe — Zustände, Entitätenliste, Kamerabild.</summary>
@@ -41,10 +42,12 @@ public sealed class HomeAssistantService
     public HomeAssistantService(
         IHttpClientFactory httpClientFactory,
         ILogger<HomeAssistantService> logger,
-        HydroSetupRepository? hydroSetups = null)
+        HydroSetupRepository? hydroSetups = null,
+        RaumService? raum = null)
     {
         _httpClientFactory = httpClientFactory;
         _hydroSetups = hydroSetups;
+        _raum = raum;
         _logger = logger;
     }
 
@@ -84,7 +87,11 @@ public sealed class HomeAssistantService
             return DemoZustaende(tent, DateTime.UtcNow);
         }
 
-        if (!settings.IsConfigured || tent.Sensors.Count == 0)
+        // Steht das Zelt im Raum und hat der Raum beide Fühler, kommen „{Raumname} Temp./RLF/VPD" von dort (RaumLuft).
+        var raumFuehler = _raum?.FuehlerFuer(tent);
+        var zuordnung = RaumLuft.Wirksam(tent, raumFuehler);
+
+        if (!settings.IsConfigured || zuordnung.Count == 0)
         {
             return new Dictionary<string, HomeAssistantState>();
         }
@@ -94,7 +101,7 @@ public sealed class HomeAssistantService
             return new Dictionary<string, HomeAssistantState>();
         }
 
-        var sensors = tent.Sensors
+        var sensors = zuordnung
             .Where(sensor => sensor.IsActive && !string.IsNullOrWhiteSpace(sensor.HaEntityId))
             .GroupBy(sensor => TentSensorMetricKeyMap.Resolve(sensor.MetricType))
             .Select(group => group.Last())
@@ -126,6 +133,8 @@ public sealed class HomeAssistantService
             // „cm-Sensor" kennen. Genau daran scheiterte der Volumenfaktor
             // vorher: er las nur `reservoir-level` in Litern.
             AddLitersFromCentimeters(states, tent);
+
+            if (raumFuehler is not null) RaumLuft.VpdErgaenzen(states);
 
             // Ebenfalls an der Quelle: meldet die Wassersonde pH 0 und EC 0
             // zugleich, ist das ein Platzhalter der Integration und kein

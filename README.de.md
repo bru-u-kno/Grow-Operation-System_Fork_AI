@@ -87,6 +87,12 @@ gibt es keine Add-ons).
 Updates sind ein sauberer Ein-Klick-Pull aus Home Assistant; deine Daten bleiben
 erhalten.
 
+**Optional — die Titelleiste von Home Assistant ausblenden.** Home Assistant zeichnet über jedes Add-on seine eigene Leiste,
+und ein Add-on kann sie nicht abschalten. Am Handy kostet sie Platz, aber alles funktioniert auch mit ihr. Wer sie loswerden
+will, bekommt Hilfe in der App: **Handy → App einrichten** öffnen und der Karte „Ohne HA-Titelleiste“ folgen. Sie zeigt die drei
+Schritte (HACS-Integration *Ingress* installieren, einen Block in die `configuration.yaml` einfügen, neu starten) mit dem Block
+schon für deine Installation ausgefüllt. Die App ändert selbst nichts an deiner Konfiguration.
+
 ## Dokumentation
 
 Die Doku liegt unter [docs/](docs/):

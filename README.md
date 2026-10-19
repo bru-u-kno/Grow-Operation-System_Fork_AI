@@ -100,6 +100,12 @@ Assistant Container/Core).
 
 Updates are a clean, one-click pull from Home Assistant; your data is preserved.
 
+**Optional — hide Home Assistant's title bar.** Home Assistant draws its own bar above every add-on, and an add-on cannot
+switch it off. It costs space on a phone, but everything works with it. If you want it gone, the app helps you: open
+**Phone → Set up app** and follow the card "Without the HA title bar". It shows the three steps (install the HACS
+integration *Ingress*, add one block to `configuration.yaml`, restart) with the block already filled in for your
+installation. The app changes nothing in your configuration itself.
+
 ## Documentation
 
 The docs live under [docs/](docs/) (currently in German):

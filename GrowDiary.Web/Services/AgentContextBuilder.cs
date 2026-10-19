@@ -244,8 +244,12 @@ public sealed class AgentContextBuilder
             // „ORP: — (kein Ziel)" traegt nichts bei und kostet Aufmerksamkeit.
             if (reading is null && min is null && max is null) continue;
 
+            // Kommen die Raumluft-Werte vom Raum, steht sein Name dabei (cc.263): „Raumluft „Keller“ außerhalb des Zelts“.
+            var anzeige = key.StartsWith("outside-", StringComparison.Ordinal) && AussenBeschriftung.Raumname() is { } raumName
+                ? label.Replace("Raumluft außerhalb des Zelts", $"Raumluft „{raumName}“ außerhalb des Zelts", StringComparison.Ordinal)
+                : label;
             lines.Add(new AgentMetricLine(
-                label, key, reading?.Value, unit ?? reading?.Unit, min, max, source,
+                anzeige, key, reading?.Value, unit ?? reading?.Unit, min, max, source,
                 reading is { } r ? (int)(nowUtc - r.CapturedAtUtc).TotalMinutes : null,
                 Verdict(reading?.Value, min, max)));
         }

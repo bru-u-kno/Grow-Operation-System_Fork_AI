@@ -43,6 +43,22 @@ Damit Cultivate Control in der **Seitenleiste** auftaucht, auf der **Info**-Seit
 Schalter **„In Seitenleiste anzeigen"** aktivieren. Danach erscheint das Symbol 🌱 in
 der linken Leiste.
 
+## Optional — die Titelleiste von Home Assistant ausblenden
+
+Über jedem Add-on zeichnet Home Assistant seine eigene Titelleiste (Menü-Symbol und Name). Ein Add-on kann sie nicht abschalten.
+Am Handy kostet sie Platz; **alles funktioniert aber auch mit ihr**, dieser Schritt ist freiwillig.
+
+Wer sie loswerden will, richtet einmal ein eigenes Panel ein. Die App führt dich dabei: Öffne **Handy → App einrichten**. Steht dort
+die Karte **„Ohne HA-Titelleiste“**, folge den drei Schritten:
+
+1. In HACS die Integration **Ingress** ([`lovelylain/hass_ingress`](https://github.com/lovelylain/hass_ingress)) herunterladen und Home Assistant neu starten.
+2. Den Block aus der Karte in die `configuration.yaml` einfügen. Die Kennung deiner Installation steht schon darin. Hast du
+   unter `ingress:` bereits einen Eintrag für diese App, änderst du nur seine Zeile `url:`.
+3. Home Assistant neu starten. Es erscheint ein Eintrag „Cultivate Control“ in der Seitenleiste, ohne Titelleiste. Den normalen
+   Eintrag des Add-ons kannst du dann auf der Add-on-Seite unter „In der Seitenleiste anzeigen“ ausschalten.
+
+Die App schreibt nichts in deine Konfiguration und installiert nichts; sie zeigt nur den fertigen Text.
+
 ## Schritt 4 — Öffnen und Sensoren wählen
 
 Cultivate Control ist **sofort mit Home Assistant verbunden** — keine URL, kein Token. Beim

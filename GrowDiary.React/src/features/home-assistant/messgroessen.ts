@@ -113,3 +113,19 @@ export function entityOptionLabel(entity: HomeAssistantEntity): string {
   if (entity.state == null || entity.state === '') return name
   return `${name} — ${haWert(entity.state, entity.unitOfMeasurement)}`
 }
+
+/**
+ * cc.263 (Raum, Stufe 2): Steht ein Zelt im Raum und hat der Raum beide Fühler, kommen „{Raumname} Temp./RLF/VPD“ vom Raum —
+ * die drei eigenen Zeilen des Zelts entfallen dann (gespeichert bleiben sie, falls das Zelt den Raum verlässt).
+ */
+export const RAUMWERTE_METRIKEN: SensorMetricType[] = ['OutsideTemperature', 'OutsideHumidity', 'OutsideVpd']
+
+/**
+ * Dampfdruckdefizit in kPa aus Lufttemperatur (°C) und Feuchte (%), Blatt = Luft. Dieselbe Formel wie `RaumLuft.Vpd` im Backend
+ * (`RaumLuftTests` und `messgroessen.test.ts` halten die gleichen Zahlen fest); hier nur für die Anzeige der Raumwerte-Zeile.
+ */
+export function vpdKpa(tempC: number, rhProzent: number): number | null {
+  if (!Number.isFinite(tempC) || !Number.isFinite(rhProzent) || rhProzent < 0 || rhProzent > 100 || tempC < -40 || tempC > 80) return null
+  const saettigung = 0.6108 * Math.exp((17.27 * tempC) / (tempC + 237.3))
+  return Math.round(saettigung * (1 - rhProzent / 100) * 100) / 100
+}

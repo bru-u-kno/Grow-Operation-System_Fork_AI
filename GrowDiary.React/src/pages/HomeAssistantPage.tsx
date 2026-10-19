@@ -9,7 +9,9 @@ import type { V1Option } from '../components/V1Select'
 import { toNullableString } from '../components/v1-utils'
 import { resolveUrl } from '../base'
 import { haWert } from '../utils'
-import { definitions, entityOptionLabel, groups, messgroessenOptionen } from '../features/home-assistant/messgroessen'
+import { maschinenZahl } from '../zahlenfeld'
+import { definitions, entityOptionLabel, groups, messgroessenOptionen, RAUMWERTE_METRIKEN, vpdKpa } from '../features/home-assistant/messgroessen'
+import type { RaumStand } from '../features/steuerung/steuerung-typen'
 import { vorbereiten } from '../features/geraete/entitaets-passung'
 import type { EntityDefinition } from '../features/home-assistant/messgroessen'
 import '../features/home-assistant/home-assistant.css'
@@ -29,6 +31,7 @@ function HomeAssistantPage() {
   const [entities, setEntities] = useState<HomeAssistantEntity[]>([])
   const [entitiesLoadedAt, setEntitiesLoadedAt] = useState<Date | null>(null)
   const [tents, setTents] = useState<TentDto[]>([])
+  const [raum, setRaum] = useState<RaumStand | null>(null)
   const [drafts, setDrafts] = useState<Record<number, TentMappingDraft>>({})
   const [selectedTentId, setSelectedTentId] = useState<number | null>(null)
   const [activeGroup, setActiveGroup] = useState<GroupKey>('tent')
@@ -53,6 +56,10 @@ function HomeAssistantPage() {
         setDrafts(Object.fromEntries(sorted.map((tent) => [tent.id, createTentDraft(tent)])))
         setSelectedTentId((current) => current ?? sorted[0]?.id ?? null)
 
+        // cc.263: Steht ein Zelt im Raum, kommen dessen drei Raumluft-Werte vom Raum — die Zeilen entfallen dann am Zelt.
+        const raumStand = await apiFetch<RaumStand>('/api/steuerung/raum', { signal: controller.signal }).catch(() => null)
+        if (!controller.signal.aborted) setRaum(raumStand)
+
         // Best-effort: load live entities so the mapping can use a dropdown.
         // Returns [] when Home Assistant is unreachable or not configured.
         const entityList = await apiFetch<HomeAssistantEntity[]>('/api/home-assistant/entities', { signal: controller.signal }).catch(() => [])
@@ -74,6 +81,8 @@ function HomeAssistantPage() {
   const selectedTent = useMemo(() => tents.find((tent) => tent.id === selectedTentId) ?? tents[0] ?? null, [selectedTentId, tents])
   const selectedDraft = selectedTent ? drafts[selectedTent.id] : null
   const mappedCount = selectedDraft ? selectedDraft.sensors.filter((sensor) => sensor.haEntityId.trim()).length : 0
+  // Die Raumluft-Werte des gewählten Zelts kommen vom Raum (Zelt steht darin, beide Raum-Fühler gesetzt).
+  const raumWerte = selectedTent?.raumId && raum?.aussenWerte && raum.fuehler ? raum : null
   const cameraCount = selectedDraft ? selectedDraft.cameras.filter((camera) => camera.trim()).length : 0
   const connected = ha.isManagedByAddon || ha.enabled
   // Prefer camera.* entities but fall back to the full list so the picker is never
@@ -217,7 +226,7 @@ function HomeAssistantPage() {
                   ))}
                 </div>
 
-                {definitions.filter((definition) => definition.group === activeGroup).map((definition) => {
+                {definitions.filter((definition) => definition.group === activeGroup && !(raumWerte && RAUMWERTE_METRIKEN.includes(definition.metricType))).map((definition) => {
                   const sensor = selectedDraft.sensors.find((item) => item.metricType === definition.metricType) ?? createSensorDraft(definition)
                   const live = liveValue(sensor.haEntityId)
                   const auswahl = messgroessenOptionen(vorbereitet, definition)
@@ -248,6 +257,29 @@ function HomeAssistantPage() {
                     </div>
                   )
                 })}
+
+                {activeGroup === 'tent' && raumWerte?.fuehler && (() => {
+                  const temp = entities.find((item) => item.entityId === raumWerte.fuehler?.tempEntityId.trim())
+                  const rh = entities.find((item) => item.entityId === raumWerte.fuehler?.rhEntityId.trim())
+                  const t = maschinenZahl(temp?.state) ?? NaN
+                  const f = maschinenZahl(rh?.state) ?? NaN
+                  const vpd = Number.isFinite(t) && Number.isFinite(f) ? vpdKpa(t, f) : null
+                  const werte = [temp ? haWert(temp.state, temp.unitOfMeasurement) : null, rh ? haWert(rh.state, rh.unitOfMeasurement) : null, vpd != null ? haWert(String(vpd), 'kPa') : null]
+                  return (
+                    <div className="co-row" data-audit="ha-raumwerte-row">
+                      <span className="ha-metric">{raumWerte.name} Temp. / RLF / VPD</span>
+                      <div className="v1-field v1-select">
+                        <span>Raumwerte</span>
+                        <button type="button" className="v1-select-feld" disabled aria-label={`${raumWerte.name} Temp., RLF und VPD kommen vom Raum`}>
+                          <span>Vom Raum „{raumWerte.name}“ · <Link to="/geraete?reiter=raeume">Geräte › Räume</Link></span>
+                        </button>
+                      </div>
+                      {werte.every((w) => w != null)
+                        ? <span className="co-row-value is-good">{werte.join(' · ')}</span>
+                        : <span className="co-row-value is-faint">kein Wert</span>}
+                    </div>
+                  )
+                })()}
 
                 {activeGroup === 'tent' && (
                   <>

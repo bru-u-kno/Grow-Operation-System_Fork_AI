@@ -34,6 +34,18 @@ export type DashboardLayout = {
 }
 
 /** Die Werte, die Cultivate Control selbst kennt — im Dialog beim Namen genannt, nicht als Schlüssel. */
+/**
+ * Das Etikett einer Messgröße — mit dem Raumnamen statt „Außen“, sobald die Raumluft-Werte vom Raum kommen (cc.263).
+ * `raumName` ist `null`, solange kein Zelt im Raum steht oder der Raum seine Fühler nicht hat.
+ */
+export function metrikEtikett(key: string, etikett: string, raumName: string | null): string {
+  if (!raumName) return etikett
+  if (key === 'outside-temperature') return `${raumName} Temp.`
+  if (key === 'outside-humidity') return `${raumName} RLF`
+  if (key === 'outside-vpd') return `${raumName} VPD`
+  return etikett
+}
+
 export const KNOWN_METRICS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'temperature', label: 'Temperatur' },
   { key: 'humidity', label: 'Luftfeuchte' },

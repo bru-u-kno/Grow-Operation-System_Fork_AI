@@ -234,6 +234,7 @@ app.Services.GetRequiredService<DatabaseInitializer>().Initialize();
 // Fork AI (forkai.217): In welchem Namensraum heißen die Objekte des Forks in Home Assistant? Einmal entscheiden,
 // bevor ein Dienst eine Kennung benutzt.
 KennungsRaumWahl.BeimStart(app.Services.GetRequiredService<SteuerungRepository>(), app.Logger);
+AussenBeschriftung.Quelle = app.Services.GetRequiredService<RaumService>().AussenBeschriftungsName; // cc.263: „Keller Temp." statt „Außen Temp."
 
 // Gespeicherte Nullbilder der Wassersonde (pH 0 und EC 0 im selben Augenblick)
 // aus den Rohwerten nehmen und die betroffenen Tageswerte neu rechnen. Die

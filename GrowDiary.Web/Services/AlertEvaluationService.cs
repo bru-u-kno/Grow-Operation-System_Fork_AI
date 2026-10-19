@@ -323,9 +323,10 @@ public sealed class AlertEvaluationService
         "ppfd" => ("PPFD", " µmol/m²/s"),
         // Die Luft um das Zelt (z. B. der Sensor am Controller), nicht die von
         // draußen — „Außen" wie in der App des AC-Infinity-Controllers.
-        "outside-temperature" => ("Außen Temp.", " °C"),
-        "outside-humidity" => ("Außen RLF", " %"),
-        "outside-vpd" => ("Außen VPD", " kPa"),
+        // Steht ein Zelt im Raum und hat der Raum beide Fühler, heißen sie nach dem Raum („Keller Temp.", cc.263).
+        "outside-temperature" => ($"{AussenBeschriftung.Vorsatz()} Temp.", " °C"),
+        "outside-humidity" => ($"{AussenBeschriftung.Vorsatz()} RLF", " %"),
+        "outside-vpd" => ($"{AussenBeschriftung.Vorsatz()} VPD", " kPa"),
         "power" => ("Strom", " W"),
         _ => (metricKey, ""),
     };

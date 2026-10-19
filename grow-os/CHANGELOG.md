@@ -5,9 +5,19 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
-## 2.0.0-cc.262
+## 2.0.0-cc.264
 
 **Logo auf dunklem Grund besser lesbar.** In der dunklen Fassung (Add-on-Logo in Home Assistant, README auf GitHub im dunklen Design) hebt sich das Symbol-Quadrat jetzt von der Fläche ab: etwas hellere Platte mit feinem grünem Rand. Im Logo für Home Assistant war das Quadrat außerdem fälschlich ganz schwarz gefüllt; das ist behoben. Funktionen unverändert.
+
+## 2.0.0-cc.263
+
+**Raum, Stufe 2: „Außen“ heißt jetzt wie der Raum.** Die drei Messwerte „Außen Temp./RLF/VPD“ sind die Luft um das Zelt, nicht die von draußen. Steht ein Zelt in einem Raum (Geräte → Räume), kommen sie jetzt von dessen Fühlern und heißen „{Raumname} Temp./RLF/VPD“, zum Beispiel „Keller Temp.“.
+
+- **Eine Zuordnung statt zwei:** Der Raum hat seine beiden Fühler (Temperatur, Feuchte) schon für die Zuluft. Dieselben liefern jetzt auch die Raumluft-Werte des Zeltes; wer beide Fühler am Raum eingetragen hat, muss am Zelt nichts mehr zuordnen. Die drei „Außen“-Zeilen am Zelt (Home Assistant → Sensor-Mapping) entfallen dann; an ihrer Stelle steht eine Zeile mit den Werten und dem Verweis auf Geräte → Räume.
+- **VPD gerechnet:** Der Raum hat keinen dritten Fühler; die VPD rechnet die App aus Raumtemperatur und -feuchte (Blatt = Luft). Beim Controller-Fühler ergibt das denselben Wert wie dessen eigene VPD (18,7 °C und 65,8 % → 0,74 kPa).
+- **Neue Namen überall:** Live-Kacheln, Verlauf, Meldegrenzen und Meldungen, der Layout-Editor und der Kontext für den KI-Assistenten nennen den Raum statt „Außen“. Die Schlüssel (`outside-*`) und der bisherige Verlauf bleiben; es geht nichts verloren.
+- **Nichts wird gelöscht:** Die eigenen Außen-Zeilen eines Zeltes bleiben gespeichert. Steht das Zelt in keinem Raum oder fehlt dem Raum ein Fühler, gelten sie wie bisher und heißen weiter „Außen“.
+- **Prüfungen:** Einheitentests für Formel, Zuordnung und Beschriftung; ein Test mit gefälschtem Home Assistant (Raumwerte gelesen, eigene Zeilen nicht abgefragt, VPD gerechnet); ein Browser-Test, der den Raum anlegt, Zuordnung und Verlauf liest, das Zelt wieder herausnimmt und alles zurücksetzt.
 
 ## 2.0.0-cc.261
 
@@ -16,6 +26,16 @@
 - **In Home Assistant:** Das Logo auf der Add-on-Seite und im Store zeigt Symbol und Namen statt nur des Symbols (bei Cultivate Control MCP ab dessen nächster Version).
 - **Auf GitHub:** Die README zeigt das Logo in einer hellen und einer dunklen Fassung, je nach Darstellung der Seite.
 - **Eigene Zeichnung:** Die Wortmarke ist in der Schrift Archivo (SIL OFL 1.1) gesetzt und als Pfade eingebettet; Lizenzhinweise stehen unverändert in `THIRD-PARTY-NOTICES.md`.
+
+## 2.0.0-cc.262
+
+**Hilfe „Ohne HA-Titelleiste“.** Wer Cultivate Control im Home-Assistant-Add-on nutzt, sieht oben die Titelleiste von Home Assistant. Sie lässt sich nur mit einem eigenen Panel loswerden; die App erklärt jetzt, wie.
+
+- **Was war:** Wie man die Leiste ausblendet, stand nur in der Entwickler-Doku (`FORK.md`). Wer den Fork neu installierte, musste es erraten, samt der Kennung des Add-ons für die `configuration.yaml`.
+- **Jetzt:** Unter Handy → App einrichten erscheint die Karte „Ohne HA-Titelleiste“, wenn die App die Leiste erkennt. Sie zeigt drei Schritte (Integration Ingress installieren, Block in die `configuration.yaml`, neu starten) und den Block **mit der Kennung dieser Installation schon eingesetzt**, dazu einen Kopieren-Knopf. Gibt es für die App schon ein Panel ohne Leiste, sagt die Karte, wo man es öffnet, oder bestätigt mit einer Zeile, dass alles eingerichtet ist. Ohne Home-Assistant-Rahmen erscheint nichts.
+- **Anleitungen:** README (englisch und deutsch) und die Installationsanleitung haben dazu einen Abschnitt „Optional: Titelleiste ausblenden“. Es funktioniert auch ohne.
+- **Bleibt:** Die App schreibt nichts in die `configuration.yaml` und installiert nichts.
+- **Prüfungen:** Einheitentests für die Auswahl der Karte und den Block; Backend-Tests für die Auskunft über das Panel; ein Browser-Test im nachgestellten Home-Assistant-Rahmen.
 
 ## 2.0.0-cc.260
 
