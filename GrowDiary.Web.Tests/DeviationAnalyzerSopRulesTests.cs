@@ -158,7 +158,7 @@ public sealed class DeviationAnalyzerSopRulesTests : IDisposable
             d => d.StableKey == "hydro.do");
 
         Assert.Equal(DeviationSeverity.Critical, deviation.Severity);
-        Assert.Contains("Wurzelfaeule", deviation.RecommendationHint ?? string.Empty);
+        Assert.Contains("Wurzelfäule", deviation.RecommendationHint ?? string.Empty);
     }
 
     [Fact]
@@ -242,6 +242,62 @@ public sealed class DeviationAnalyzerSopRulesTests : IDisposable
         var deviations = _service.Analyze(grow, new List<Measurement> { measurement });
 
         Assert.DoesNotContain(deviations, d => d.StableKey == "hydro.ec");
+    }
+
+    // --- Sichtbare Texte: echte Umlaute, keine Spanne ohne Breite (forkai.251) ---
+
+    /// <summary>
+    /// Die Diagnose schrieb „ueber“, „ausserhalb“, „pruefen“, „Kuehlung“ — mitten in
+    /// einem Programm, dessen übrige Oberfläche echte Umlaute zeigt. Geprüft wird, was
+    /// der Nutzer liest: die Meldungen und Hinweise aus möglichst vielen Zweigen.
+    /// </summary>
+    [Fact]
+    public void AlleMeldungenUndHinweise_SchreibenEchteUmlaute_UndKeineSpanneOhneBreite()
+    {
+        var jetzt = DateTime.Now;
+        var szenarien = new List<Measurement>[]
+        {
+            new() { At(jetzt, ph: 7.4) },
+            new() { At(jetzt, ph: 5.0) },
+            new() { At(jetzt, ph: 6.3), At(jetzt.AddHours(-14), ph: 5.8) },
+            new() { At(jetzt, ec: 3.5) },
+            new() { At(jetzt, ec: 1.0), At(jetzt.AddHours(-6), ec: 1.5) },
+            new() { At(jetzt, doMgL: 5.0) },
+            new() { At(jetzt, doMgL: 6.2) },
+            new() { new Measurement { Id = 1, Stage = GrowStage.Flower, TakenAt = jetzt, ReservoirWaterTempC = 31.0 } },
+            new() { new Measurement { Id = 2, Stage = GrowStage.Flower, TakenAt = jetzt, OrpMv = 180 } },
+            new() { new Measurement { Id = 3, Stage = GrowStage.Flower, TakenAt = jetzt, PpfdMol = 1800 } },
+            new() { new Measurement { Id = 4, Stage = GrowStage.Flower, TakenAt = jetzt, Co2Ppm = 2000 } },
+            new() { new Measurement { Id = 5, Stage = GrowStage.Flower, TakenAt = jetzt, AirTemperatureC = 24, HumidityPercent = 75 } },
+            new() { new Measurement { Id = 6, Stage = GrowStage.Flower, TakenAt = jetzt, AirTemperatureC = 32, HumidityPercent = 35 } },
+        };
+
+        var texte = new List<string>();
+        foreach (var szenario in szenarien)
+        {
+            foreach (var abweichung in _service.Analyze(Grow(), szenario))
+            {
+                texte.Add(abweichung.Message);
+                if (abweichung.RecommendationHint is { } hinweis)
+                {
+                    texte.Add(hinweis);
+                }
+            }
+        }
+
+        // Mengenwächter: ohne ihn wäre die Prüfung bei einer leeren Grundmenge grün.
+        Assert.True(texte.Count >= 15, $"Nur {texte.Count} Texte gesehen — die Szenarien erzeugen zu wenig Abweichungen.");
+
+        var ascii = new System.Text.RegularExpressions.Regex(
+            @"(?i)\b(ueber\w*|ausserhalb|pruef\w*|gegenpruef\w*|kuehl\w*|naehr\w*|lueft\w*|belueft\w*|umwaelz\w*|geloest\w*|\w*faeule|bestaetig\w*|erhoeht\w*|spuel\w*|\w+aktivitaet|vertraegt|koennen|\w+intensitaet|waehrend|fuer)\b");
+        foreach (var text in texte)
+        {
+            Assert.DoesNotMatch(ascii, text);
+            Assert.DoesNotMatch(@"(\d+,\d+)-\1(?!\d)", text);
+        }
+
+        // Und es kommen wirklich Umlaute vor (nicht nur die ASCII-Wörter fehlen).
+        Assert.Contains(texte, t => t.Contains("prüfen") || t.Contains("über") || t.Contains("außerhalb"));
     }
 
     public void Dispose()

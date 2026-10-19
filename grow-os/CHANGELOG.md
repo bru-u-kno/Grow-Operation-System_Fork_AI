@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-forkai.251
+
+**Fork AI.** Die Diagnose schreibt wie der Rest der Oberfläche, und zwei Prüfungen, die bisher nur einmal von Hand gemacht oder umgangen werden konnten, laufen jetzt fest mit.
+
+- **Diagnose mit echten Umlauten.** Meldungen und Hinweise der Diagnose („Reservoir-pH liegt über dem Handlungsbereich …“, „Wassertemperatur und Kühlung prüfen.“, „Gelöster Sauerstoff …“, „Wurzelfäule …“) standen bis jetzt mit „ue/ae/oe“ da („ueber“, „ausserhalb“, „pruefen“, „Kuehlung“, „Naehrstoff…“). Dasselbe galt für die Hinweise bei zu hohem oder zu niedrigem Wert (Messwert-Prüfung, Grenzen der Sollwert-Profile, Zeitpunkt außerhalb des Laufs). Neue Meldungen sind richtig geschrieben; schon gespeicherte bleiben, wie sie waren.
+- **Ziel ohne Breite ist ein Wert.** Aus „Blatt-VPD 1,35 kPa liegt unter dem Zielbereich 1,4-1,4“ wird „… Zielbereich 1,4“ (ebenso beim pH-Handlungsbereich, beim Anmisch-Hinweis und beim ORP-Arbeitsbereich). Verglichen wird der geschriebene Text: 1,35 und 1,44 stehen mit einer Nachkommastelle beide als „1,4“ da. Die Regel steht an einer Stelle (`Zielspanne`) und gilt für den Lagebericht genauso wie für die Diagnose; das Frontend macht es seit forkai.250 ebenso.
+- **Datenschutz-Test sieht neue Dateien.** `git grep` durchsuchte nur versionierte Dateien; das Commit-Tor läuft aber vor `git add`, und so kam am 17.10. ein Vorname aus übernommenem Archivtext erst in der CI ans Licht. Der Test sucht jetzt auch in neuen, noch nicht vorgemerkten Dateien (`--untracked`) und hat einen Selbsttest, der genau das mit einer Wegwerf-Datei belegt.
+- **Fester E2E-Fall „Raumname im Rechenweg der Zuluft“.** Bisher war nur einmal von Hand an der Demo-App gesehen worden, dass der Rechenweg den Raum beim Namen nennt (forkai.241). Jetzt setzt ein Fall den Namen über die Schnittstelle, öffnet den Rechenweg und prüft, dass das Glied so heißt – und nicht „Keller“; ohne eigenen Namen steht „Aufstellraum“. Gegenprobe: mit fest eingebautem „Keller“ wird er rot.
+
 ## 2.0.0-forkai.250
 
 **Fork AI.** Sichtprüfung im dunklen Thema und bei doppelter Systemschrift: ein Textfehler und mehrere abgeschnittene oder

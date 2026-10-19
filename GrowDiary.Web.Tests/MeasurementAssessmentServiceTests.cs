@@ -117,7 +117,7 @@ public sealed class MeasurementAssessmentServiceTests : IDisposable
         Assert.Equal(1, bericht.ExcludedCount);
         Assert.Equal(1, bericht.CheckedValueCount);
         var zukunft = bericht.Measurements.Single(m => m.Excluded);
-        Assert.Contains("ausserhalb des Laufs", zukunft.ExcludedReason);
+        Assert.Contains("außerhalb des Laufs", zukunft.ExcludedReason);
         Assert.Empty(zukunft.Metrics);
     }
 

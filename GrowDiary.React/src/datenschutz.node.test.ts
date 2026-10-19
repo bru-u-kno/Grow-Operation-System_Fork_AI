@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { rmSync, writeFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -11,7 +12,11 @@ import { describe, expect, it } from 'vitest'
  * in ein fremdes Repo. Dieser Test verhindert, dass es zurückkommt.
  *
  * Gesucht wird in allen versionierten Dateien (`git grep`), nicht in einer Liste
- * von Ordnern, die jemand pflegen müsste. Der GitHub-Name im Pfad der Add-on-
+ * von Ordnern, die jemand pflegen müsste. Mit `--untracked` auch in neuen, noch nicht
+ * vorgemerkten Dateien: Am 17.10.2026 (forkai.240) kam ein Vorname aus übernommenem
+ * Archivtext durch das Commit-Tor, weil das Tor vor `git add` läuft und `git grep`
+ * ohne diesen Schalter nur versionierte Dateien sieht — erst die CI fand ihn.
+ * Ignorierte Dateien (`node_modules`, Bauordner) bleiben außen vor. Der GitHub-Name im Pfad der Add-on-
  * Adresse (`bru-u-kno`) ist Kleinschreibung mit Bindestrichen und trifft nicht.
  * Was als Beispiel gebraucht wird, nimmt Beispielwerte: `mobile_app_pixel_7`,
  * `smarthome.example.org`, `192.168.1.x`, „der Nutzer".
@@ -32,7 +37,7 @@ function suche(muster: string): string[] {
   try {
     const ausgabe = execFileSync(
       'git',
-      ['grep', '-I', '-n', '-E', muster, '--', '.', ':!*package-lock.json', ':!GrowDiary.React/src/datenschutz.node.test.ts'],
+      ['grep', '--untracked', '-I', '-n', '-E', muster, '--', '.', ':!*package-lock.json', ':!GrowDiary.React/src/datenschutz.node.test.ts'],
       { cwd: new URL('../..', import.meta.url), encoding: 'utf8' },
     )
     return ausgabe.split('\n').filter(Boolean)
@@ -48,6 +53,19 @@ const gitDa = (() => {
 })()
 
 describe.skipIf(!gitDa)('Datenschutz im öffentlichen Repo', () => {
+  it('sieht auch eine neue, noch nicht versionierte Datei (Selbsttest)', () => {
+    // Beweist, dass die Suche ihre Grundmenge wirklich einschließt: ohne `--untracked`
+    // bliebe diese Datei unsichtbar und der Test wäre rot.
+    const datei = new URL(`../../datenschutz-selbsttest-${process.pid}.tmp`, import.meta.url)
+    writeFileSync(datei, `${VORNAME} wohnt unter 192.168.178.1\n`)
+    try {
+      const treffer = suche(`\\b${VORNAME}\\b`).filter((zeile) => zeile.includes('datenschutz-selbsttest-'))
+      expect(treffer.length).toBeGreaterThanOrEqual(1)
+    } finally {
+      rmSync(datei, { force: true })
+    }
+  })
+
   for (const { muster, grund } of VERBOTEN) {
     it(`kein Treffer für ${muster} (${grund})`, () => {
       expect(suche(muster)).toEqual([])
