@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.261
+
+**Ein richtiges Logo.** Cultivate Control hat jetzt eine Wortmarke zum Symbol: „CULTIVATE / CONTROL“ in Versalien neben dem Regelkreis mit Keimling. Funktionen unverändert.
+
+- **In Home Assistant:** Das Logo auf der Add-on-Seite und im Store zeigt Symbol und Namen statt nur des Symbols (bei Cultivate Control MCP ab dessen nächster Version).
+- **Auf GitHub:** Die README zeigt das Logo in einer hellen und einer dunklen Fassung, je nach Darstellung der Seite.
+- **Eigene Zeichnung:** Die Wortmarke ist in der Schrift Archivo (SIL OFL 1.1) gesetzt und als Pfade eingebettet; Lizenzhinweise stehen unverändert in `THIRD-PARTY-NOTICES.md`.
+
 ## 2.0.0-cc.260
 
 **Eigenes Symbol, Lizenzhinweise und neue Anleitungsbilder.** Cultivate Control hat ein eigenes Symbol, die Drittlizenzen sind vollständig dokumentiert, und die Anleitung zeigt die heutige Oberfläche.

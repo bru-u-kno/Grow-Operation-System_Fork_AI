@@ -1,4 +1,4 @@
-<p align="center"><img src="GrowDiary.Web/wwwroot/images/logo.svg" width="96" alt="Cultivate Control"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo/cultivate-control-dunkel.svg"><img src="docs/logo/cultivate-control-hell.svg" width="360" alt="Cultivate Control"></picture></p>
 
 # Cultivate Control — das RDWC/DWC-Grow-Add-on für Home Assistant
 
