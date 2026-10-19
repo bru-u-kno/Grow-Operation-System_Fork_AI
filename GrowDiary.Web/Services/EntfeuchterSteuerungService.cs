@@ -49,6 +49,7 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
         public static string Tagbetrieb => Kennungen.Id("input_boolean.fork_entfeuchter_tagbetrieb_erlauben");
         public static string TempMaxTag => Kennungen.Id("input_number.fork_entfeuchter_temp_max_tag");
         public static string TempMaxNacht => Kennungen.Id("input_number.fork_entfeuchter_temp_max_nacht");
+        public static string NachtUebergang => Kennungen.Id(Models.NachtUebergang.DauerId);
         public static string FeuchteEinTag => Kennungen.Id("input_number.fork_entfeuchter_feuchte_ein_tag");
         public static string FeuchteAusTag => Kennungen.Id("input_number.fork_entfeuchter_feuchte_aus_tag");
         public static string FeuchteEinNacht => Kennungen.Id("input_number.fork_entfeuchter_feuchte_ein_nacht");
@@ -62,7 +63,7 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
         public static IReadOnlyList<string> Startwerte =>
         [
             VpdRegelung, Hysterese, Mindestlaufzeit, Einschaltverzoegerung, WartezeitAussenluft, Tagbetrieb,
-            TempMaxTag, TempMaxNacht, FeuchteEinTag, FeuchteAusTag, FeuchteEinNacht, FeuchteAusNacht,
+            TempMaxTag, TempMaxNacht, NachtUebergang, FeuchteEinTag, FeuchteAusTag, FeuchteEinNacht, FeuchteAusNacht,
         ];
 
         // Nur gelesen — gepflegt woanders.
@@ -155,6 +156,7 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
         if (An(Entitaeten.Tagbetrieb) is { } tb) e.TagbetriebErlauben = tb;
         if (Zahl(Entitaeten.TempMaxTag) is { } tt) e.TempMaxTagFestC = tt;
         if (Zahl(Entitaeten.TempMaxNacht) is { } tn) e.TempMaxNachtFestC = tn;
+        if (Zahl(Entitaeten.NachtUebergang) is { } nu) e.NachtUebergangMin = (int)Math.Round(nu);
         if (Zahl(Entitaeten.FeuchteEinTag) is { } fet) e.FeuchteEinTag = fet;
         if (Zahl(Entitaeten.FeuchteAusTag) is { } fat) e.FeuchteAusTag = fat;
         if (Zahl(Entitaeten.FeuchteEinNacht) is { } fen) e.FeuchteEinNacht = fen;
@@ -198,6 +200,7 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
 
         PruefeTempMax(f, nameof(e.TempMaxTagModus), e.TempMaxTagModus, nameof(e.TempMaxTagAbstandK), e.TempMaxTagAbstandK, nameof(e.TempMaxTagFestC), e.TempMaxTagFestC);
         PruefeTempMax(f, nameof(e.TempMaxNachtModus), e.TempMaxNachtModus, nameof(e.TempMaxNachtAbstandK), e.TempMaxNachtAbstandK, nameof(e.TempMaxNachtFestC), e.TempMaxNachtFestC);
+        if (e.NachtUebergangMin is < 0 or > Models.NachtUebergang.Hoechstens) f[nameof(e.NachtUebergangMin)] = $"Nacht-Übergang: 0 bis {Models.NachtUebergang.Hoechstens} Minuten (0 = sofort).";
 
         if (e.ArbeitsbereichQuelle is not (ArbeitsbereichQuellen.Plan or ArbeitsbereichQuellen.Fest)) f[nameof(e.ArbeitsbereichQuelle)] = "Arbeitsbereich: „plan“ oder „fest“.";
         if (e.VorlaufProzent is < 0 or > 20) f[nameof(e.VorlaufProzent)] = "Vorlauf unter der Plan-Obergrenze: 0 bis 20 %.";
@@ -318,6 +321,7 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
             (Entitaeten.WartezeitAussenluft, e.WartezeitAussenluftMin),
             (Entitaeten.TempMaxTag, TempMaxFuer(Entitaeten.TempMaxTag, e.TempMaxTagModus, e.TempMaxTagAbstandK, e.TempMaxTagFestC, plan?.LuftTagC)),
             (Entitaeten.TempMaxNacht, TempMaxFuer(Entitaeten.TempMaxNacht, e.TempMaxNachtModus, e.TempMaxNachtAbstandK, e.TempMaxNachtFestC, plan?.LuftNachtC)),
+            (Entitaeten.NachtUebergang, e.NachtUebergangMin),
             (Entitaeten.FeuchteEinTag, bereich?.EinTag ?? e.FeuchteEinTag),
             (Entitaeten.FeuchteAusTag, bereich?.AusTag ?? e.FeuchteAusTag),
             (Entitaeten.FeuchteEinNacht, bereich?.EinNacht ?? e.FeuchteEinNacht),
@@ -340,6 +344,7 @@ public sealed class EntfeuchterSteuerungService : IStartwertDienst
         ("input_number.fork_entfeuchter_wartezeit_aussenluft", "Wartezeit bei Außenluft", "min"),
         ("input_number.fork_entfeuchter_temp_max_tag", "Höchsttemperatur Tag", "°C"),
         ("input_number.fork_entfeuchter_temp_max_nacht", "Höchsttemperatur Nacht", "°C"),
+        (Models.NachtUebergang.DauerId, "Nacht-Übergang", "min"),
         ("input_number.fork_entfeuchter_feuchte_ein_tag", "Feuchte EIN · Tag", "%"),
         ("input_number.fork_entfeuchter_feuchte_aus_tag", "Feuchte AUS · Tag", "%"),
         ("input_number.fork_entfeuchter_feuchte_ein_nacht", "Feuchte EIN · Nacht", "%"),

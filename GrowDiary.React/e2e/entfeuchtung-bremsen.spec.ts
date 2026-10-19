@@ -84,7 +84,7 @@ test('Überblick: nachts gilt die Nacht-Obergrenze des Plans als Ziel', async ({
 
 test('Einstellungen: Tag und Nacht stehen getrennt da, jeweils aus der eigenen Plan-Obergrenze — zweimal', async ({ page }) => {
   const haupt = {
-    vpdRegelung: false, hystereseProzent: 2, mindestlaufzeitMin: 10, einschaltverzoegerungMin: 1, wartezeitAussenluftMin: 5,
+    vpdRegelung: false, hystereseProzent: 2, mindestlaufzeitMin: 10, einschaltverzoegerungMin: 1, wartezeitAussenluftMin: 5, nachtUebergangMin: 90,
     tagbetriebErlauben: true, automatikAktiv: true, arbeitsbereichQuelle: 'plan', vorlaufProzent: 5,
     tempMaxTagModus: 'plan', tempMaxTagAbstandK: 5, tempMaxTagFestC: 23, tempMaxNachtModus: 'plan', tempMaxNachtAbstandK: 6, tempMaxNachtFestC: 23,
     feuchteEinTag: 48, feuchteAusTag: 46, feuchteEinNacht: 45, feuchteAusNacht: 43,

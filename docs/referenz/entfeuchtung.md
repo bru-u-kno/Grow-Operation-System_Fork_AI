@@ -64,7 +64,7 @@ Fehlt der Grenzwert, bleibt die Untergrenze leer, und das Band ist so einseitig 
 | **Wie reagieren die Entfeuchter?** | Ruhig · Normal · Schnell — setzt Abstand EIN→AUS, „Einschalten nach" und die Mindestlaufzeit auf einmal; die Tabelle zeigt, was jede Stufe setzt. „Eigene Werte", wenn die Einzelwerte zu keiner Stufe passen. |
 | **Zusatz-Entfeuchter · Hilfsstärke** | aus · sparsam · normal · kräftig — setzt auch „Zuschalten nach", Mindestpause, „früher aus" und „wieder an" des Zusatzes. |
 | **Meldungen aufs Handy** | Nur zum Lesen: die Grenzwerte mit ihrer Herkunft und der Schalter „zieht nichts"; Links zu Grenzwerte und Handy. |
-| **Erweitert** | Die Einzelwerte (Abstand, Einschalten nach, Mindestlaufzeit, Wartezeit bei trockener Außenluft; beim Zusatz Mindestlaufzeit, Zuschalten nach, Mindestpause, früher aus, wieder an, bei VPD der VPD-Abstand; die Zahlen der Meldung „zieht nichts") und die Schalter: Einschalt-Schwelle für Tag und Nacht getrennt, Zusatz läuft nachts durch, Nach VPD regeln, Meldung „zieht nichts". Jeder früher einstellbare Wert steht hier. |
+| **Erweitert** | Die Einzelwerte (Abstand, Einschalten nach, Mindestlaufzeit, Wartezeit bei trockener Außenluft, **Nacht-Übergang**; beim Zusatz Mindestlaufzeit, Zuschalten nach, Mindestpause, früher aus, wieder an, bei VPD der VPD-Abstand; die Zahlen der Meldung „zieht nichts") und die Schalter: Einschalt-Schwelle für Tag und Nacht getrennt, Zusatz läuft nachts durch, Nach VPD regeln, Meldung „zieht nichts". Jeder früher einstellbare Wert steht hier. |
 
 ### Die Stufen
 
@@ -138,6 +138,14 @@ prüfung ist noch nicht gebaut.
 - **Höchsttemperatur:** Plan-Luft + Abstand oder fester Wert (Einstellungen) — dieselbe Zahl für alle Entfeuchter.
 - **EIN/AUS-Schwellen, VPD-Ziel, Plan-Werte:** aus dem Plan und den Helfern in Home Assistant; der Fork zeigt sie und schreibt die festen Werte.
 - **Wartezeit bei trockener Außenluft:** unter „Erweitert"; sie wächst mit „Einschalten nach" mit, weil das Backend sie nie kürzer zulässt.
+- **Nacht-Übergang (Min.):** unter „Erweitert" (Voreinstellung 90, 0 bis 240, 0 = sofort wie früher). Nach Licht-aus sinkt die Höchsttemperatur
+  gleichmäßig vom Tag- auf den Nachtwert, statt im selben Moment zu springen. Hintergrund: Das Zelt ist kurz nach Licht-aus noch warm; bei einem
+  Sprung (z. B. 24 → 22 °C) gehen alle Entfeuchter sofort aus und bleiben es, bis das Zelt unter dem Nachtwert liegt. Die Grenze liegt nie über
+  dem Tagwert und nie unter dem Nachtwert; nach der eingestellten Zeit gilt der Nachtwert die ganze Nacht. Gerechnet vom Rechenwert „Temp Max
+  aktiv" aus dem Helfer `input_number.fork_entfeuchter_nacht_uebergang` und dem Zeitstempel `input_datetime.fork_entfeuchter_licht_aus_seit`,
+  den die Automation „Entfeuchter Licht-aus Merker" beim Wechsel des Lichts von an auf aus schreibt (nicht `last_changed`: der Licht-Sensor
+  meldet bei Aussetzern kurz „nicht verfügbar"). Fehlt einer der drei Bausteine, gilt sofort der Nachtwert. Vorhandene Anlagen bekommen den
+  neuen Rechenwert über „Rechenwerte anlegen" (Nachzug), die Helfer und die Automation über „Helfer anlegen" und „Automationen anlegen".
 
 ## Was es bewusst NICHT tut
 

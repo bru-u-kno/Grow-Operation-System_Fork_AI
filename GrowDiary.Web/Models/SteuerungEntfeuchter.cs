@@ -63,6 +63,12 @@ public sealed class EntfeuchterEinstellungen
     public double TempMaxNachtAbstandK { get; set; } = 5;
     public double TempMaxNachtFestC { get; set; } = 25;
 
+    /// <summary>
+    /// Cultivate Control (2.0.0-cc.255): So viele Minuten nach Licht-aus sinkt die Höchsttemperatur gleichmäßig vom Tag- auf
+    /// den Nachtwert. 0 = sofort, wie früher (<see cref="NachtUebergang"/>). Gilt für alle Entfeuchter.
+    /// </summary>
+    public int NachtUebergangMin { get; set; } = NachtUebergang.Standard;
+
     // --- Rückfallebene: feste Feuchte-Schwellen -------------------------------
 
     /// <summary>Gilt nur ohne VPD-Regelung (oder ohne VPD-Werte). Auch hier deckelt die Plan-Feuchte.</summary>

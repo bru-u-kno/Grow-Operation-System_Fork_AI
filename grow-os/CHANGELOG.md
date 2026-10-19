@@ -7,19 +7,37 @@
 
 ## 2.0.0-cc.257
 
-**„Jetzt sichern“ geht wieder.** Der Knopf unter Einstellungen → Daten meldete in Home Assistant „Backup konnte nicht erstellt werden (404)“.
+**Sicherung zurückspielen — und „Jetzt sichern“ geht wieder.** Unter Einstellungen → Daten gibt es neben „Jetzt sichern“ den Knopf „Zurückspielen …“. Damit lässt sich eine Sicherung, die auf einer anderen Installation entstanden ist, hochladen, prüfen und einspielen. So zieht man auf ein neues Add-on um, ohne den Datenordner von Hand zu kopieren. Und „Jetzt sichern“ selbst funktioniert in Home Assistant wieder.
 
-- **Was war:** Der Knopf rief die Adresse der Sicherung ohne den Pfad auf, unter dem Home Assistant die App ausliefert, und traf damit Home Assistant selbst. Das fiel nur im Add-on auf, nicht in der Entwicklung oder in den Tests. Dasselbe galt für „Löschen“ bei einem Hydro-Aufbau.
-- **Jetzt:** Beide Aufrufe laufen über den Basispfad der App. Eine neue Prüfung liest den Quelltext und schlägt an, sobald irgendwo wieder ein API-Aufruf mit absolutem Pfad steht; sie wurde mit dem alten Fehler gegengeprüft und wird dann rot.
+- **Was war (Zurückspielen):** Die App konnte Sicherungen erzeugen und herunterladen, aber nicht wieder einlesen. Der Server dafür (Prüfung und Zurückspielen) existierte schon, hatte aber keinen Knopf, und hochladen ging gar nicht. Wer das Add-on wechselte, ließ seine Daten zurück.
+- **Jetzt:** Datei auswählen, die App lädt sie hoch und prüft sie (enthält sie die Datenbank, passt der Datenbank-Stand zur App, stehen keine Zugangsdaten oder unsichere Pfade darin). Erst dann wird „Jetzt zurückspielen“ frei. Vorher sichert die App den jetzigen Stand selbst, danach startet sie neu.
+- **Schutz:** Hochladen und Zurückspielen gehen nur von Hand, nicht über einen KI-Schlüssel — ein Assistent kann keine fremde Datenbank einschleusen. Erlaubt sind nur Zip-Dateien bis 500 MB (entpackt bis 2 GB); eine Datei ohne Datenbank oder mit kaputtem Zip wird abgewiesen, ohne etwas zu hinterlassen.
+- **Was war („Jetzt sichern“):** Der Knopf meldete in Home Assistant „Backup konnte nicht erstellt werden (404)“. Er rief die Adresse der Sicherung ohne den Pfad auf, unter dem Home Assistant die App ausliefert, und traf damit Home Assistant selbst. Das fiel nur im Add-on auf, nicht in der Entwicklung oder in den Tests. Dasselbe galt für „Löschen“ bei einem Hydro-Aufbau.
+- **Jetzt („Jetzt sichern“):** Beide Aufrufe laufen über den Basispfad der App. Eine neue Prüfung liest den Quelltext und schlägt an, sobald irgendwo wieder ein API-Aufruf mit absolutem Pfad steht; sie wurde mit dem alten Fehler gegengeprüft und wird dann rot.
+- **Prüfungen:** Backend-Tests für gültige und ungültige Dateien, die Sperre für KI-Schlüssel und den Rundweg Sichern → Hochladen → Prüfen → Zurückspielen; ein Browser-Test, der den Weg an der Oberfläche durchspielt.
+
+## 2.0.0-cc.256
+
+**Cultivate Control.** Nach Licht-aus sinkt die Höchsttemperatur der Entfeuchter nicht mehr sprunghaft, sondern gleitet in einer einstellbaren Zeit vom Tag- auf den Nachtwert.
+
+- **Was war:** Im Moment des Licht-aus sprang die Höchsttemperatur vom Tag- auf den Nachtwert (Beispiel: 24 → 22 °C). Das Zelt ist dann noch warm und kühlt erst nach und nach ab; Haupt- und Zusatz-Entfeuchter gingen sofort aus und blieben es, bis das Zelt unter dem Nachtwert lag. An drei Abenden waren beide zusammen 88, 44 und 3 Minuten aus. Die Feuchte war währenddessen nicht das Problem.
+- **Jetzt:** Die Grenze sinkt nach Licht-aus gleichmäßig über die eingestellte Dauer, danach gilt der Nachtwert die ganze Nacht. Bei Tag 24 °C, Nacht 22 °C und 90 Minuten: nach 30 Minuten 23,3 °C, nach 45 Minuten 23,0 °C, nach 90 Minuten 22,0 °C. Sie liegt nie über dem Tageswert und nie unter dem Nachtwert. Das gilt für alle Entfeuchter, auch wenn der Nachtwert aus dem Plan kommt.
+- **Neue Einstellung:** „Nacht-Übergang (Min.)“ unter „Erweitert“ der Entfeuchtungs-Einstellungen. Voreinstellung 90, 0 bis 240; **0 = sofort, genau wie bisher**. Die Kachel „Höchsttemperatur“ nennt die Dauer.
+- **Wie es gerechnet wird:** Der Rechenwert „Temp Max aktiv“ liest die Dauer und den Zeitpunkt des Licht-aus. Den Zeitpunkt schreibt eine kleine Automation („Entfeuchter Licht-aus Merker“) nur beim echten Wechsel des Lichts von an auf aus; Aussetzer des Licht-Sensors (kurz „nicht verfügbar“) zählen nicht, sonst finge der Übergang mitten in der Nacht von vorn an. Fehlt einer der drei Bausteine, gilt sofort der Nachtwert, also das Verhalten von vorher.
+- **Neue Anlagen:** Dauer-Helfer, Zeitstempel-Helfer, Automation und der neue Rechenwert werden bei der Einrichtung angelegt (Helfer, Rechenwerte, Automationen).
+- **Vorhandene Anlagen:** „Rechenwerte anlegen“ zieht den vorhandenen Rechenwert „Temp Max aktiv“ nach: Es wird nur der Nachtzweig getauscht, alles andere (eigener Licht-Sensor, Einheit, Verfügbarkeit) bleibt. Ein zweiter Lauf findet nichts mehr; ein von Hand umgebauter Rechenwert bleibt unberührt. Die neuen Helfer und die Automation legen „Helfer anlegen“ und „Automationen anlegen“ an; bestehende Einstellungen werden dabei nicht verändert.
+- **Namen:** Die neuen Objekte heißen in allen Anlagen gleich (`fork_entfeuchter_nacht_uebergang`, `fork_entfeuchter_licht_aus_seit`, `entfeuchter_licht_aus_merker`); auch in Anlagen mit den alten Kennungen bekommen sie keine fremde Marke.
+- **Geprüft:** 42 neue Backend-Fälle (Verlauf über die Zeit, Dauer 0, Spanne über Mitternacht, Nachtwert aus dem Plan, Katalog, Nachzug mit neuen und alten Kennungen, Einstellung) und ein Oberflächenfall. Die Jinja-Fassung des Rechenwerts wurde in Home Assistant mit 14 Zeit- und Fehlerfällen durchgerechnet. Gegenprobe: Rechnung, Dauer-Bedingung, Auslöser und Alt-Textstück jeweils absichtlich verfälscht, die Fälle wurden rot.
+- **Offen:** Der Übergang gilt für die Höchsttemperatur der Entfeuchter, nicht für andere Steuerungen mit Tag- und Nachtwerten.
 
 ## 2.0.0-cc.255
 
-**Sicherung zurückspielen.** Unter Einstellungen → Daten gibt es neben „Jetzt sichern“ den Knopf „Zurückspielen …“. Damit lässt sich eine Sicherung, die auf einer anderen Installation entstanden ist, hochladen, prüfen und einspielen. So zieht man auf ein neues Add-on um, ohne den Datenordner von Hand zu kopieren.
+**Cultivate Control.** Das Commit-Tor für die Entwicklung ist deutlich schneller geworden; die Prüfungen selbst sind dieselben geblieben. Die App ändert sich dadurch nicht.
 
-- **Was war:** Die App konnte Sicherungen erzeugen und herunterladen, aber nicht wieder einlesen. Der Server dafür (Prüfung und Zurückspielen) existierte schon, hatte aber keinen Knopf, und hochladen ging gar nicht. Wer das Add-on wechselte, ließ seine Daten zurück.
-- **Jetzt:** Datei auswählen, die App lädt sie hoch und prüft sie (enthält sie die Datenbank, passt der Datenbank-Stand zur App, stehen keine Zugangsdaten oder unsicheren Pfade darin). Erst dann wird „Jetzt zurückspielen“ frei. Vorher sichert die App den jetzigen Stand selbst, danach startet sie neu.
-- **Schutz:** Hochladen und Zurückspielen gehen nur von Hand, nicht über einen KI-Schlüssel — ein Assistent kann keine fremde Datenbank einschleusen. Erlaubt sind nur Zip-Dateien bis 500 MB (entpackt bis 2 GB); eine Datei ohne Datenbank oder mit kaputtem Zip wird abgewiesen, ohne etwas zu hinterlassen.
-- **Prüfungen:** Backend-Tests für gültige und ungültige Dateien, die Sperre für KI-Schlüssel und den Rundweg Sichern → Hochladen → Prüfen → Zurückspielen; ein Browser-Test, der den Weg an der Oberfläche durchspielt.
+- **Was war:** Vor jedem Commit lief das Tor nacheinander durch: Backend-Tests (rund 4 Minuten, die Maschine wartete dabei überwiegend), dann Typen, Lint und Frontend-Tests. Ein Commit mit Backend-Änderung brauchte gut 5 Minuten, ein zweiter Versuch mit unverändertem Inhalt noch einmal dasselbe.
+- **Jetzt:** Die drei Backend-Teile laufen gleichzeitig (dieselben Filter und Mindestzahlen wie in der CI), ebenso Typprüfung, Lint und Frontend-Tests. Ein grünes Ergebnis wird je Inhalt des Arbeitsbaums gemerkt (höchstens 6 Stunden, nie bei Rot, ungültig sobald sich das Tor selbst ändert). Fällt ein Backend-Teil durch, läuft er einmal einzeln wieder; war es nur die Gleichzeitigkeit, steht eine deutliche Warnung im Ergebnis. Jede Dauer steht in einer lokalen Datei im Git-Verzeichnis.
+- **Gemessen:** Commit mit Backend-Änderung etwa 345 s → 138 s (bei hoher Last der Maschine), nur Frontend 80 s → 46–66 s, gleicher Inhalt erneut 1 s.
+- **Prüfungen:** Fehler eingebaut, das Tor wurde jedes Mal rot und der Commit unterblieb: Typfehler, Lint-Verstoß, roter Frontend-Test, Datenschutz-Verstoß in einer unversionierten Datei, roter Test in jedem der drei Backend-Teile, Bau-Fehler, zu niedrige Testzahl (Mengenwächter). Ein rotes Ergebnis wurde bei der Wiederholung nicht aus dem Zwischenspeicher bedient.
 
 ## 2.0.0-cc.254
 

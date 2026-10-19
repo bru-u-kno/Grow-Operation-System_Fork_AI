@@ -1,0 +1,23 @@
+{
+  "alias": "Entfeuchter Licht-aus Merker",
+  "description": "Schreibt beim Licht-aus (Rolle licht_zustand wechselt von an auf aus) die aktuelle Uhrzeit in den Zeitstempel input_datetime.fork_entfeuchter_licht_aus_seit. Von dort rechnet sensor.fork_entfeuchter_temp_max_aktiv, wie weit die Hoechsttemperatur auf dem Weg vom Tag- zum Nachtwert ist (Helfer input_number.fork_entfeuchter_nacht_uebergang). Reagiert absichtlich nur auf den echten Wechsel von an auf aus und nicht auf Aussetzer des Sensors (nicht verfuegbar, unbekannt): sonst begaenne der Uebergang mitten in der Nacht von vorn. Ausschalten dieser Automation heisst: Die Hoechsttemperatur springt beim Licht-aus sofort auf den Nachtwert. Angelegt von Cultivate Control - Herkunft: fork-ai/entfeuchter/licht_aus_merker/1.",
+  "mode": "single",
+  "max_exceeded": "silent",
+  "triggers": [
+    {
+      "trigger": "state",
+      "entity_id": "[[licht_zustand]]",
+      "from": "on",
+      "to": "off",
+      "id": "licht_aus"
+    }
+  ],
+  "conditions": [],
+  "actions": [
+    {
+      "action": "input_datetime.set_datetime",
+      "target": { "entity_id": "input_datetime.fork_entfeuchter_licht_aus_seit" },
+      "data": { "datetime": "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" }
+    }
+  ]
+}

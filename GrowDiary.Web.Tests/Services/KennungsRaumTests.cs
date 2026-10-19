@@ -79,7 +79,10 @@ public class KennungsRaumTests
         var bestand = SteuerungBauteile.FuerRaum(KennungsRaum.Bestand);
 
         Assert.Equal(neu.Count, bestand.Count);
-        Assert.Empty(bestand.Where(b => b.EntityId.Contains("fork_entfeuchter_", StringComparison.Ordinal)));
+        // Objekte, die es erst seit der Umstellung gibt (Kennungen.NurNeu), heißen in beiden Räumen gleich.
+        Assert.Empty(bestand.Where(b => b.EntityId.Contains("fork_entfeuchter_", StringComparison.Ordinal) && !Kennungen.NurNeu.Contains(b.EntityId)));
+        Assert.All(Kennungen.NurNeu, id => Assert.Contains(neu, b => b.EntityId == id));
+        Assert.All(Kennungen.NurNeu, id => Assert.DoesNotContain(Kennungen.Tabelle, t => t.NeueId == id));
         Assert.Equal(bestand.Count, bestand.Select(b => b.EntityId).Distinct().Count());
         Assert.Equal(neu.Count, neu.Select(b => b.EntityId).Distinct().Count());
     }
@@ -132,7 +135,9 @@ public class KennungsRaumTests
             var bestand = Kennungen.Uebersetzen(neu, KennungsRaum.Bestand);
 
             Assert.Equal(neu, Kennungen.Uebersetzen(neu, KennungsRaum.Neu));
-            Assert.DoesNotContain("fork_entfeuchter_", bestand, StringComparison.Ordinal);
+            // Ohne die Objekte, die nur im neuen Namensraum existieren (Kennungen.NurNeu): sie bleiben stehen.
+            var ohneNeues = Kennungen.NurNeu.Aggregate(bestand, (t, id) => t.Replace(id, "", StringComparison.Ordinal));
+            Assert.DoesNotContain("fork_entfeuchter_", ohneNeues, StringComparison.Ordinal);
             foreach (Match m in Regex.Matches(bestand, @"(?:input_number|input_boolean|sensor|binary_sensor)\.(?:trotec_[a-z0-9_]+)"))
             {
                 Assert.Contains(m.Value, AlterStand);
@@ -162,9 +167,9 @@ public class KennungsRaumTests
         };
 
         var bestand = SteuerungBauteile.AutomationFinden(
-            SteuerungBauteile.FuerRaum(KennungsRaum.Bestand).Single(b => b.Modul == "entfeuchter" && b.Art == BauteilArt.Automation), vorhanden);
+            SteuerungBauteile.FuerRaum(KennungsRaum.Bestand).Single(b => b.Modul == "entfeuchter" && b.VorlagenDatei == "regelung"), vorhanden);
         var neu = SteuerungBauteile.AutomationFinden(
-            SteuerungBauteile.FuerRaum(KennungsRaum.Neu).Single(b => b.Modul == "entfeuchter" && b.Art == BauteilArt.Automation),
+            SteuerungBauteile.FuerRaum(KennungsRaum.Neu).Single(b => b.Modul == "entfeuchter" && b.VorlagenDatei == "regelung"),
             new[] { new HomeAssistantEntity { EntityId = angelegt, KonfigKennung = "fork_ai_entfeuchter_regelung" } });
 
         Assert.Equal([handgebaut, "automation.irgendwie_anders"], bestand);

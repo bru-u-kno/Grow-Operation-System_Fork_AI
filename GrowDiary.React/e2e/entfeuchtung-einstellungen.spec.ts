@@ -578,3 +578,37 @@ test('Überblick: bei „Aus dem Plan" nennt „Woher kommt das?" die Quelle der
   await kopf.click()
   await expect(page.getByText('aus dem Plan (Obergrenze 54 % minus Vorlauf 4 %)')).toBeVisible()
 })
+
+// ------------------------------------------------------------------ Nacht-Übergang (Cultivate Control, 2.0.0-cc.255)
+
+test('Nacht-Übergang: Feld unter „Erweitert" mit Voreinstellung 90, Einheit und Hilfetext; Speichern schickt den Wert — zweimal, auch 0', async ({ page }) => {
+  // Tag 26,5 °C, Nacht 25 °C: es gibt etwas zu gleiten, deshalb nennt die Höchsttemperatur-Kachel den Übergang.
+  const stand = await backendVorgeben(page)
+  await seiteOeffnen(page)
+  await reiterWahl(page, 'Einstellungen')
+  await expect(page.locator('.st-kk', { hasText: 'Höchsttemperatur · darüber gehen alle aus' }).getByText('Nach Licht-aus sinkt sie in 90 Minuten vom Tag- auf den Nachtwert.')).toBeVisible()
+
+  await aufklappen(page, /Erweitert/)
+  const feld = page.getByLabel('Nacht-Übergang (Min.)', { exact: true })
+  await expect(feld).toHaveValue('90')
+  const zeile = page.locator('.st-feldzeile', { has: feld })
+  await expect(zeile.getByText('min', { exact: true })).toBeVisible()
+  await expect(zeile).toContainText('vom Tag- auf den Nachtwert')
+  await expect(zeile).toContainText('0 = sofort')
+
+  // Durchgang 1: 60 Minuten.
+  await feld.fill('60')
+  await speichern(page).click()
+  await gespeichert(page)
+  expect(stand.hauptPuts[0]).toMatchObject({ nachtUebergangMin: 60 })
+  await expect(page.locator('.st-kk', { hasText: 'Höchsttemperatur · darüber gehen alle aus' }).getByText('in 60 Minuten vom Tag- auf den Nachtwert')).toBeVisible()
+
+  // Durchgang 2, ohne Neuladen: 0 = sofort — der Hinweis in der Höchsttemperatur-Kachel verschwindet.
+  await feld.fill('0')
+  await speichern(page).click()
+  await gespeichert(page)
+  expect(stand.hauptPuts[1]).toMatchObject({ nachtUebergangMin: 0 })
+  await expect(page.locator('.st-kk', { hasText: 'Höchsttemperatur · darüber gehen alle aus' }).getByText('vom Tag- auf den Nachtwert')).toHaveCount(0)
+  // Die anderen Werte bleiben unberührt: der Hauptentfeuchter schickt alle Felder, und das neue ist eines davon.
+  expect(Object.keys(stand.hauptPuts[1]).sort()).toEqual(Object.keys(HAUPT_EINSTELLUNGEN).sort())
+})
