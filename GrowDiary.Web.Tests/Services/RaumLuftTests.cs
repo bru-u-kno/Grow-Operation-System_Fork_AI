@@ -31,7 +31,7 @@ public sealed class RaumLuftTests : IDisposable
 
     public void Dispose()
     {
-        AussenBeschriftung.Quelle = null;
+        AussenBeschriftung.NurImAblauf(null);
         try { Directory.Delete(_wurzel, recursive: true); } catch (IOException) { }
     }
 
@@ -141,7 +141,7 @@ public sealed class RaumLuftTests : IDisposable
     [Fact]
     public void Die_Beschriftung_heisst_nach_dem_Raum_solange_ein_Zelt_drin_steht_und_beide_Fuehler_da_sind()
     {
-        AussenBeschriftung.Quelle = _raum.AussenBeschriftungsName;
+        AussenBeschriftung.NurImAblauf(_raum.AussenBeschriftungsName);
         Assert.Equal("Außen Temp.", AlertEvaluationService.MetricDisplay("outside-temperature").Label);
 
         _raum.NameSpeichern("Keller");

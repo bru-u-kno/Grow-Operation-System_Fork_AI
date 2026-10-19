@@ -70,8 +70,18 @@ public static class RaumLuft
 /// </summary>
 public static class AussenBeschriftung
 {
+    /// <summary>Die Quelle der Anwendung, von <c>Program</c> beim Start gesetzt.</summary>
     public static Func<string?>? Quelle { get; set; }
 
+    // Nur für Tests: gilt allein im eigenen Ablauf des Tests. Eine globale Änderung würde parallel laufende Tests färben.
+    private static readonly AsyncLocal<Func<string?>?> Lokal = new();
+
+    /// <summary>Überschreibt die Quelle im aktuellen Ablauf (Test); <c>null</c> hebt es auf.</summary>
+    public static void NurImAblauf(Func<string?>? quelle) => Lokal.Value = quelle;
+
     /// <summary>„Keller Temp." statt „Außen Temp.", solange die Raumwerte vom Raum kommen.</summary>
-    public static string Vorsatz() => Quelle?.Invoke() is { Length: > 0 } name ? name : "Außen";
+    public static string Vorsatz() => (Lokal.Value ?? Quelle)?.Invoke() is { Length: > 0 } name ? name : "Außen";
+
+    /// <summary>Der Raumname für die Beschriftung, oder <c>null</c>, wenn „Außen" gilt.</summary>
+    public static string? Raumname() => (Lokal.Value ?? Quelle)?.Invoke() is { Length: > 0 } name ? name : null;
 }
