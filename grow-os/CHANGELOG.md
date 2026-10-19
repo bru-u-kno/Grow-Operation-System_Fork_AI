@@ -13,6 +13,16 @@
 - **Auf GitHub:** Die README zeigt das Logo in einer hellen und einer dunklen Fassung, je nach Darstellung der Seite.
 - **Eigene Zeichnung:** Die Wortmarke ist in der Schrift Archivo (SIL OFL 1.1) gesetzt und als Pfade eingebettet; Lizenzhinweise stehen unverändert in `THIRD-PARTY-NOTICES.md`.
 
+## 2.0.0-cc.261
+
+**Hilfe „Ohne HA-Titelleiste“.** Wer Cultivate Control im Home-Assistant-Add-on nutzt, sieht oben die Titelleiste von Home Assistant. Sie lässt sich nur mit einem eigenen Panel loswerden; die App erklärt jetzt, wie.
+
+- **Was war:** Wie man die Leiste ausblendet, stand nur in der Entwickler-Doku (`FORK.md`). Wer den Fork neu installierte, musste es erraten, samt der Kennung des Add-ons für die `configuration.yaml`.
+- **Jetzt:** Unter Handy → App einrichten erscheint die Karte „Ohne HA-Titelleiste“, wenn die App die Leiste erkennt. Sie zeigt drei Schritte (Integration Ingress installieren, Block in die `configuration.yaml`, neu starten) und den Block **mit der Kennung dieser Installation schon eingesetzt**, dazu einen Kopieren-Knopf. Gibt es für die App schon ein Panel ohne Leiste, sagt die Karte, wo man es öffnet, oder bestätigt mit einer Zeile, dass alles eingerichtet ist. Ohne Home-Assistant-Rahmen erscheint nichts.
+- **Anleitungen:** README (englisch und deutsch) und die Installationsanleitung haben dazu einen Abschnitt „Optional: Titelleiste ausblenden“. Es funktioniert auch ohne.
+- **Bleibt:** Die App schreibt nichts in die `configuration.yaml` und installiert nichts.
+- **Prüfungen:** Einheitentests für die Auswahl der Karte und den Block; Backend-Tests für die Auskunft über das Panel; ein Browser-Test im nachgestellten Home-Assistant-Rahmen.
+
 ## 2.0.0-cc.260
 
 **Eigenes Symbol, Lizenzhinweise und neue Anleitungsbilder.** Cultivate Control hat ein eigenes Symbol, die Drittlizenzen sind vollständig dokumentiert, und die Anleitung zeigt die heutige Oberfläche.

@@ -3,6 +3,7 @@ import { apiFetch } from '../api'
 import { V1Alert, V1Button, V1Field, V1Section, V1Skeleton } from '../components/v1'
 import { buildPanelUrl, judgeHost } from '../features/mobile/mobile-link'
 import { QrCode } from '../features/mobile/QrCode'
+import { TitelleisteHilfe } from '../features/mobile/TitelleisteHilfe'
 import '../features/mobile/mobile.css'
 
 /**
@@ -26,6 +27,8 @@ type MobileAccess = {
   available: boolean
   slug: string | null
   panelPath: string | null
+  /** Ingress-Panel ohne HA-Titelleiste für diese App (hass_ingress), oder null. */
+  ingressPanel?: string | null
   reason: string | null
 }
 
@@ -82,6 +85,8 @@ export function AppEinrichten() {
           message={access?.reason ?? 'Cultivate Control läuft hier nicht als Home-Assistant-Add-on.'} />
       ) : (
         <>
+          <TitelleisteHilfe slug={access.slug} panel={access.ingressPanel} />
+
           <V1Section title="Scannen — mit der Kamera des Handys">
             <div className="mo-scan">
               <div className="mo-qr">

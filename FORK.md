@@ -188,6 +188,9 @@ der HA-Kopfleiste mit dem Menü-Zeichen. **Ein Add-on kann diese Leiste nicht
 entfernen** — sie gehört Home Assistant, nicht uns. Am Telefon kostet sie
 zusammen mit der eigenen Titelzeile spürbar Platz.
 
+Die App führt dabei: Unter **Handy → App einrichten** steht die Karte „Ohne HA-Titelleiste“ mit denselben Schritten und dem
+fertigen Block samt der Kennung dieser Installation (sie erscheint nur, wenn die App die Leiste erkennt). Von Hand geht es so:
+
 Wer sie loswerden will, installiert die HACS-Integration
 [**Ingress**](https://github.com/lovelylain/hass_ingress) (`lovelylain/hass_ingress`)
 und trägt in `configuration.yaml` ein:

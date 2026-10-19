@@ -103,6 +103,14 @@ public sealed class IngressPanelService
         }
     }
 
+    /// <summary>
+    /// Das Panel für die Antwort von <c>mobile-access</c>: null, wenn die App nicht als Add-on läuft (kein Slug) oder
+    /// es den Dienst nicht gibt — dann wird Home Assistant gar nicht erst gefragt.
+    /// </summary>
+    public static async Task<string?> PanelOderNullAsync(
+        IngressPanelService? dienst, HomeAssistantSettings settings, string? slug, CancellationToken ct)
+        => dienst is null || string.IsNullOrWhiteSpace(slug) ? null : await dienst.PanelAsync(settings, slug, ct);
+
     private (string Slug, string? Panel, DateTimeOffset Bis)? Gemerkt(string slug) =>
         _gemerkt is { } g && g.Slug == slug && g.Bis > _zeit.GetUtcNow() ? g : null;
 
