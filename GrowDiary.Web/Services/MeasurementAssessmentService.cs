@@ -194,7 +194,7 @@ public sealed class MeasurementAssessmentService
                 zeilen.Add(new MeasurementAssessment(
                     messung.Id, messung.TakenAt, messung.Stage, gerechnet, messung.Source,
                     true,
-                    $"Zeitpunkt liegt ausserhalb des Laufs ({messung.TakenAt:dd.MM.yyyy}) — fliesst nicht in die Bilanz ein.",
+                    $"Zeitpunkt liegt außerhalb des Laufs ({messung.TakenAt:dd.MM.yyyy}) — fließt nicht in die Bilanz ein.",
                     Array.Empty<MetricAssessment>()));
                 continue;
             }
@@ -413,7 +413,7 @@ public sealed class MeasurementAssessmentService
             var moeglich = MeasurementSanityService.IstPhysikalischMoeglich(metrik, v);
             var notiz = moeglich
                 ? grund
-                : $"Physikalisch nicht möglich ({MeasurementSanityService.PhysikalischeGrenzen[metrik].Min:0}–{MeasurementSanityService.PhysikalischeGrenzen[metrik].Max:0} {einheit}) — fliesst nicht in die Bilanz ein.";
+                : $"Physikalisch nicht möglich ({MeasurementSanityService.PhysikalischeGrenzen[metrik].Min:0}–{MeasurementSanityService.PhysikalischeGrenzen[metrik].Max:0} {einheit}) — fließt nicht in die Bilanz ein.";
             raus.Add(new MetricAssessment(metrik, label, v, einheit, null, null,
                 moeglich ? AssessmentVerdict.NoTarget : AssessmentVerdict.Impossible, notiz));
         }
@@ -425,7 +425,7 @@ public sealed class MeasurementAssessmentService
         {
             var grenzen = MeasurementSanityService.PhysikalischeGrenzen[metric];
             return new MetricAssessment(metric, label, wert, einheit, null, null, AssessmentVerdict.Impossible,
-                $"Physikalisch nicht möglich ({grenzen.Min:0}–{grenzen.Max:0}{(einheit.Length > 0 ? " " + einheit : string.Empty)}) — fliesst nicht in die Bilanz ein.");
+                $"Physikalisch nicht möglich ({grenzen.Min:0}–{grenzen.Max:0}{(einheit.Length > 0 ? " " + einheit : string.Empty)}) — fließt nicht in die Bilanz ein.");
         }
 
         var urteil = wert < min ? AssessmentVerdict.Below

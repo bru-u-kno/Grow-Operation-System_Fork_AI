@@ -413,15 +413,8 @@ public sealed class AgentContextBuilder
         {
             var wert = line.Value is { } v ? $"{v.ToString("0.##", Deutsch)}{(line.Unit is null ? "" : " " + line.Unit)}" : "—";
             var alter = line.AgeMinutes is { } m ? $"{m} min" : "—";
-            var ziel = (line.TargetMin, line.TargetMax) switch
-            {
-                // Ein Ziel ohne Spanne („5,8–5,8“) ist ein einzelner Wert.
-                ({ } min, { } max) when min == max => min.ToString("0.##", Deutsch),
-                ({ } min, { } max) => $"{min.ToString("0.##", Deutsch)}–{max.ToString("0.##", Deutsch)}",
-                ({ } min, null) => $"ab {min.ToString("0.##", Deutsch)}",
-                (null, { } max) => $"bis {max.ToString("0.##", Deutsch)}",
-                _ => "—",
-            };
+            // Ein Ziel ohne Spanne („5,8–5,8“) ist ein einzelner Wert — Zielspanne.Text.
+            var ziel = Zielspanne.Text(line.TargetMin, line.TargetMax, "0.##", "–", Deutsch);
             text.AppendLine($"| {line.Label} | {wert} | {alter} | {ziel} | {line.TargetSource} | {line.Verdict} |");
         }
         text.AppendLine();

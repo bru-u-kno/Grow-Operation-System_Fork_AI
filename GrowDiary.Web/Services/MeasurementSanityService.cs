@@ -100,7 +100,7 @@ public sealed class MeasurementSanityService
     public static string PhysikMeldung(string groesse, string bezeichnung)
     {
         var g = PhysikalischeGrenzen[groesse];
-        return $"{bezeichnung} liegt ausserhalb dessen, was physikalisch vorkommen kann ({g.Min:0}–{g.Max:0}). Bitte Messgerät oder Einheit prüfen.";
+        return $"{bezeichnung} liegt außerhalb dessen, was physikalisch vorkommen kann ({g.Min:0}–{g.Max:0}). Bitte Messgerät oder Einheit prüfen.";
     }
 
     /// <summary>Ist dieser Wert fuer diese Groesse ueberhaupt moeglich?</summary>

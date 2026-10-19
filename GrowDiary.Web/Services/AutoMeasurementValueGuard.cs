@@ -104,7 +104,7 @@ public sealed class AutoMeasurementValueGuard
 
         if (rejectMax.HasValue && value > rejectMax.Value)
         {
-            return Reject(field, value, $"Wert liegt ueber dem Hard-Limit {Format(rejectMax.Value)}.");
+            return Reject(field, value, $"Wert liegt über dem Hard-Limit {Format(rejectMax.Value)}.");
         }
 
         if (warningMin.HasValue && value < warningMin.Value)
@@ -114,7 +114,7 @@ public sealed class AutoMeasurementValueGuard
 
         if (warningMax.HasValue && value > warningMax.Value)
         {
-            return Warning(field, value, $"Wert liegt ueber dem Warnbereich {Format(warningMax.Value)}.");
+            return Warning(field, value, $"Wert liegt über dem Warnbereich {Format(warningMax.Value)}.");
         }
 
         return Valid();

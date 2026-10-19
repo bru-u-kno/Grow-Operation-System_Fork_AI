@@ -253,7 +253,7 @@ public sealed class DeviationAnalyzerService
         var predicate = new Func<double, bool>(value => value < actionMin || value > actionMax || value < PhCriticalMin || value > PhCriticalMax);
         var participants = Consecutive(sorted, measurement => measurement.ReservoirPh, predicate);
         var tooHigh = actual > actionMax;
-        var mixHint = targets is not null ? $" Anmischen auf {targets.PhMin:0.0}-{targets.PhMax:0.0}." : string.Empty;
+        var mixHint = targets is not null ? $" Anmischen auf {Zielspanne.Text(targets.PhMin, targets.PhMax, "0.0")}." : string.Empty;
 
         result.Add(CreateDeviation(
             grow,
@@ -265,9 +265,9 @@ public sealed class DeviationAnalyzerService
             "pH",
             critical ? DeviationSeverity.Critical : DeviationSeverity.Warning,
             tooHigh
-                ? $"Reservoir-pH {actual:0.00} liegt ueber dem Handlungsbereich {actionMin:0.0}-{actionMax:0.0}."
-                : $"Reservoir-pH {actual:0.00} liegt unter dem Handlungsbereich {actionMin:0.0}-{actionMax:0.0}.",
-            (tooHigh ? "pH-Down pruefen." : "pH-Up pruefen.") + mixHint,
+                ? $"Reservoir-pH {actual:0.00} liegt über dem Handlungsbereich {Zielspanne.Text(actionMin, actionMax, "0.0")}."
+                : $"Reservoir-pH {actual:0.00} liegt unter dem Handlungsbereich {Zielspanne.Text(actionMin, actionMax, "0.0")}.",
+            (tooHigh ? "pH-Down prüfen." : "pH-Up prüfen.") + mixHint,
             tooHigh ? "ph-too-high" : "ph-too-low",
             participants));
     }
@@ -304,7 +304,7 @@ public sealed class DeviationAnalyzerService
             message = diff > 0
                 ? $"Reservoir-EC ist um {diff:+0.00;-0.00} mS/cm gestiegen."
                 : $"Reservoir-EC ist um {diff:+0.00;-0.00} mS/cm gefallen.";
-            hint = diff > 0 ? "Verdunstung/Addback pruefen." : "Naehrstoffaufnahme/Addback pruefen.";
+            hint = diff > 0 ? "Verdunstung/Addback prüfen." : "Nährstoffaufnahme/Addback prüfen.";
         }
         else
         {
@@ -312,8 +312,8 @@ public sealed class DeviationAnalyzerService
                 ? new Func<double, bool>(value => value < targets.EcMin || value > targets.EcMax)
                 : value => value < 0 || value > 3.0;
             participants = Consecutive(sorted, measurement => measurement.ReservoirEc, predicate);
-            message = $"Reservoir-EC {actual:0.00} liegt ausserhalb des Zielbereichs.";
-            hint = "EC-Ziel und Addback pruefen.";
+            message = $"Reservoir-EC {actual:0.00} liegt außerhalb des Zielbereichs.";
+            hint = "EC-Ziel und Addback prüfen.";
         }
 
         result.Add(CreateDeviation(
@@ -369,8 +369,8 @@ public sealed class DeviationAnalyzerService
             oben,
             "C",
             critical ? DeviationSeverity.Critical : DeviationSeverity.Warning,
-            $"Reservoir-Wassertemperatur {actual:0.0} C liegt ausserhalb des Arbeitsbereichs.",
-            "Wassertemperatur und Kuehlung pruefen.",
+            $"Reservoir-Wassertemperatur {actual:0.0} C liegt außerhalb des Arbeitsbereichs.",
+            "Wassertemperatur und Kühlung prüfen.",
             actual > oben ? "water-temp-rising-rapid" : null,
             participants));
     }
@@ -431,10 +431,10 @@ public sealed class DeviationAnalyzerService
             critical ? DeviationSeverity.Critical : DeviationSeverity.Info,
             $"pH ist in {hours:0} h um {magnitude:0.00} Punkte {direction}.",
             critical
-                ? "Kritischer pH-Drift (SOP-N1): Wurzeln, Wasserprobe, ORP und DO pruefen. "
-                  + "Bei Befund NSL ablassen, System mit HOCl spuelen und mit pH 5,8-6,0 / ORP > 400 mV neu aufsetzen."
+                ? "Kritischer pH-Drift (SOP-N1): Wurzeln, Wasserprobe, ORP und DO prüfen. "
+                  + "Bei Befund NSL ablassen, System mit HOCl spülen und mit pH 5,8-6,0 / ORP > 400 mV neu aufsetzen."
                 : "Leichter Drift (SOP-N1): nur um 0,1-0,2 schrittweise nachregeln und Temperatur, "
-                  + "Verdunstung sowie Pflanzenaktivitaet gegenpruefen.",
+                  + "Verdunstung sowie Pflanzenaktivität gegenprüfen.",
             critical ? "ph-drift-critical" : null,
             new[] { sorted[0], sorted[1] }));
     }
@@ -488,11 +488,11 @@ public sealed class DeviationAnalyzerService
         var hint = below
             // The workshop is explicit that RDWC transpires far more than soil and wants the
             // upper end — so a low VPD is holding the plant back, not protecting it.
-            ? "RDWC transpiriert 2-2,5x so stark wie Erde und vertraegt eher das obere Ende des Bands. "
-              + "Zu niedriges VPD bremst Naehrstofftransport. Luftstrom auf Blattniveau pruefen "
+            ? "RDWC transpiriert 2-2,5x so stark wie Erde und verträgt eher das obere Ende des Bands. "
+              + "Zu niedriges VPD bremst Nährstofftransport. Luftstrom auf Blattniveau prüfen "
               + "(RDWC 90-120 m/min) und die Blattstellung ansehen."
-            : "Zu hohes VPD treibt die Transpiration ueber das, was die Wurzeln liefern koennen. "
-              + "Vor dem Nachregeln von Temperatur und Feuchte den Luftstrom pruefen — er "
+            : "Zu hohes VPD treibt die Transpiration über das, was die Wurzeln liefern können. "
+              + "Vor dem Nachregeln von Temperatur und Feuchte den Luftstrom prüfen — er "
               + "verschiebt das VPD am Blatt.";
 
         result.Add(CreateDeviation(
@@ -504,8 +504,8 @@ public sealed class DeviationAnalyzerService
             targets.VpdMax,
             "kPa",
             severity,
-            $"Blatt-VPD {actual:0.00} kPa liegt {(below ? "unter" : "ueber")} dem Zielbereich "
-            + $"{targets.VpdMin:0.0}-{targets.VpdMax:0.0}.",
+            $"Blatt-VPD {actual:0.00} kPa liegt {(below ? "unter" : "über")} dem Zielbereich "
+            + $"{Zielspanne.Text(targets.VpdMin, targets.VpdMax, "0.0")}.",
             hint,
             null,
             new[] { withVpd[0].measurement }));
@@ -530,10 +530,10 @@ public sealed class DeviationAnalyzerService
             null,
             "mg/L",
             critical ? DeviationSeverity.Critical : DeviationSeverity.Warning,
-            $"Geloester Sauerstoff liegt bei {actual:0.0} mg/L.",
+            $"Gelöster Sauerstoff liegt bei {actual:0.0} mg/L.",
             critical
-                ? "Unter 6 mg/L gilt Wurzelfaeule als bestaetigt (SOP-S1). Wurzeln pruefen, Belueftung und Wassertemperatur sofort kontrollieren."
-                : "Unter 6,5 mg/L deutet auf erhoehte mikrobiologische Aktivitaet (SOP-N1). Belueftung, Umwaelzung und Wassertemperatur pruefen.",
+                ? "Unter 6 mg/L gilt Wurzelfäule als bestätigt (SOP-S1). Wurzeln prüfen, Belüftung und Wassertemperatur sofort kontrollieren."
+                : "Unter 6,5 mg/L deutet auf erhöhte mikrobiologische Aktivität (SOP-N1). Belüftung, Umwälzung und Wassertemperatur prüfen.",
             "do-critical",
             participants));
     }
@@ -583,7 +583,7 @@ public sealed class DeviationAnalyzerService
             max,
             "mV",
             critical ? DeviationSeverity.Critical : DeviationSeverity.Warning,
-            $"ORP {actual:0} mV liegt ausserhalb des Arbeitsbereichs ({min:0}–{max:0} mV).",
+            $"ORP {actual:0} mV liegt außerhalb des Arbeitsbereichs ({Zielspanne.Text(min, max, "0", "–")} mV).",
             "Wasserhygiene und Sensor plausibilisieren.",
             actual < min ? "orp-low-mild" : null,
             participants));
@@ -641,8 +641,8 @@ public sealed class DeviationAnalyzerService
             targets?.PpfdMax,
             "umol/m2/s",
             critical ? DeviationSeverity.Critical : DeviationSeverity.Warning,
-            $"PPFD {actual:0} liegt deutlich ueber dem Zielbereich.",
-            "Lichtintensitaet oder Abstand pruefen.",
+            $"PPFD {actual:0} liegt deutlich über dem Zielbereich.",
+            "Lichtintensität oder Abstand prüfen.",
             "led-bleaching-mild",
             participants));
     }
@@ -665,8 +665,8 @@ public sealed class DeviationAnalyzerService
             1600,
             "ppm",
             actual > 2500 ? DeviationSeverity.Critical : DeviationSeverity.Warning,
-            $"CO2 {actual:0} ppm liegt ueber dem Arbeitsbereich.",
-            "CO2-Zufuhr und Lueftung pruefen.",
+            $"CO2 {actual:0} ppm liegt über dem Arbeitsbereich.",
+            "CO2-Zufuhr und Lüftung prüfen.",
             null,
             participants));
     }

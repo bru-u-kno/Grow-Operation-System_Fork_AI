@@ -104,8 +104,8 @@ public static class SetpointProfilGrenzen
                 {
                     maengel.Add(new ProfilMangel(
                         $"{phase}.{feld}",
-                        $"{wert:0.##} liegt ausserhalb dessen, was physikalisch vorkommen kann "
-                        + $"({min:0}–{max:0}). Bitte Einheit pruefen."));
+                        $"{wert:0.##} liegt außerhalb dessen, was physikalisch vorkommen kann "
+                        + $"({min:0}–{max:0}). Bitte Einheit prüfen."));
                 }
             }
 
@@ -137,7 +137,7 @@ public static class SetpointProfilGrenzen
 
                 maengel.Add(new ProfilMangel(
                     $"{phase}.{(eigenUnten ? feld : gegenstueck)}",
-                    $"Die Untergrenze ({unten:0.##}) liegt ueber der Obergrenze "
+                    $"Die Untergrenze ({unten:0.##}) liegt über der Obergrenze "
                     + $"({oben:0.##}){herkunft}. So gespeichert waere danach jede Messung „daneben\", "
                     + "egal welcher Wert."));
             }
