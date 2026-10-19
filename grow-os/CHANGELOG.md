@@ -5,6 +5,10 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.262
+
+**Logo auf dunklem Grund besser lesbar.** In der dunklen Fassung (Add-on-Logo in Home Assistant, README auf GitHub im dunklen Design) hebt sich das Symbol-Quadrat jetzt von der Fläche ab: etwas hellere Platte mit feinem grünem Rand. Im Logo für Home Assistant war das Quadrat außerdem fälschlich ganz schwarz gefüllt; das ist behoben. Funktionen unverändert.
+
 ## 2.0.0-cc.261
 
 **Ein richtiges Logo.** Cultivate Control hat jetzt eine Wortmarke zum Symbol: „CULTIVATE / CONTROL“ in Versalien neben dem Regelkreis mit Keimling. Funktionen unverändert.
