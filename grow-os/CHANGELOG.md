@@ -5,6 +5,13 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.257
+
+**„Jetzt sichern“ geht wieder.** Der Knopf unter Einstellungen → Daten meldete in Home Assistant „Backup konnte nicht erstellt werden (404)“.
+
+- **Was war:** Der Knopf rief die Adresse der Sicherung ohne den Pfad auf, unter dem Home Assistant die App ausliefert, und traf damit Home Assistant selbst. Das fiel nur im Add-on auf, nicht in der Entwicklung oder in den Tests. Dasselbe galt für „Löschen“ bei einem Hydro-Aufbau.
+- **Jetzt:** Beide Aufrufe laufen über den Basispfad der App. Eine neue Prüfung liest den Quelltext und schlägt an, sobald irgendwo wieder ein API-Aufruf mit absolutem Pfad steht; sie wurde mit dem alten Fehler gegengeprüft und wird dann rot.
+
 ## 2.0.0-cc.255
 
 **Sicherung zurückspielen.** Unter Einstellungen → Daten gibt es neben „Jetzt sichern“ den Knopf „Zurückspielen …“. Damit lässt sich eine Sicherung, die auf einer anderen Installation entstanden ist, hochladen, prüfen und einspielen. So zieht man auf ein neues Add-on um, ohne den Datenordner von Hand zu kopieren.

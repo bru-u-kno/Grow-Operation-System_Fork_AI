@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, formatApiError } from '../api'
+import { resolveUrl } from '../base'
 import type { GrowSummary, SettingsOverviewDto } from '../types'
 import FileInput from '../components/FileInput'
 import { useTheme } from '../useTheme'
@@ -89,7 +90,7 @@ function SettingsPage() {
     setError(null)
     setMessage(null)
     try {
-      const initialResponse = await fetch('/api/system/backup', { method: 'POST' })
+      const initialResponse = await fetch(resolveUrl('/api/system/backup'), { method: 'POST' })
       if (!initialResponse.ok) throw new Error(`Backup konnte nicht erstellt werden (${initialResponse.status})`)
 
       const initialContentType = initialResponse.headers.get('content-type') ?? ''
@@ -103,7 +104,7 @@ function SettingsPage() {
       const manifest = await initialResponse.json() as BackupManifest
       if (!manifest.downloadUrl) throw new Error('Backup wurde erstellt, aber es fehlt die Download-URL.')
 
-      const response = await fetch(manifest.downloadUrl)
+      const response = await fetch(resolveUrl(manifest.downloadUrl))
       if (!response.ok) throw new Error(`Backup-Download fehlgeschlagen (${response.status})`)
 
       const blob = await response.blob()

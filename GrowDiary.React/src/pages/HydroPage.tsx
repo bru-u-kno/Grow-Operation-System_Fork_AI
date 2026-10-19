@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, ApiRequestError, formatApiError } from '../api'
+import { resolveUrl } from '../base'
 import type { GrowSummary, HydroSetupDto, HydroSetupLayoutType, ReservoirPosition } from '../types'
 import { SystemPlan } from '../features/hydro/SystemPlan'
 import { rowsFromLayoutType } from '../features/hydro/system-plan-model'
@@ -72,7 +73,7 @@ function HydroPage() {
     setSaving(`delete-${setup.id}`)
     setError(null)
     try {
-      const response = await fetch(`/api/hydro-setups/${setup.id}`, { method: 'DELETE' })
+      const response = await fetch(resolveUrl(`/api/hydro-setups/${setup.id}`), { method: 'DELETE' })
       if (response.status === 204) {
         setSetups((current) => current.filter((item) => item.id !== setup.id))
         setSelectedSetupId((current) => current === setup.id ? null : current)
