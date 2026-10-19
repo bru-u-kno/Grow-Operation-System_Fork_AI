@@ -142,7 +142,10 @@ public sealed class SteuerungStartwerteTests
         var geschrieben = ChillerSteuerungService.Schreibliste(new ChillerEinstellungen(), []).Select(z => z.Entity).ToList();
 
         Assert.True(geschrieben.Count >= 5, "Die Schreibliste ist leer — die Prüfung sähe nichts.");
-        Assert.Empty(OhneSchreiber("chiller", geschrieben));
+        // A-025: Der Merker ist kein Einstellwert. Neu angelegt steht er auf "aus" (Home Assistants Vorgabe), danach
+        // führt ihn die Automation "Chiller Merker Abgleich" aus dem Kühlbedarf.
+        var andererSchreiber = new[] { ChillerSteuerungService.Entitaeten.KuehlbedarfMerker };
+        Assert.Equal(andererSchreiber, OhneSchreiber("chiller", geschrieben));
     }
 
     [Fact]

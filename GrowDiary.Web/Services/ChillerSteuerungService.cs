@@ -53,6 +53,12 @@ public sealed class ChillerSteuerungService : IStartwertDienst
         /// <summary>Fork AI (F-030): Einschalten ab Ziel plus diesem Abstand.</summary>
         public const string Hysterese = "input_number.chiller_hysterese";
         public const string Waechter = "automation.water_chiller_wachter";
+
+        /// <summary>Fork AI (A-025): Der letzte Zustand des Kühlbedarfs, geführt von <see cref="MerkerAbgleich"/>.</summary>
+        public const string KuehlbedarfMerker = "input_boolean.chiller_kuhlbedarf_merker";
+
+        /// <summary>Fork AI (A-025): Die Automation, die den Kühlbedarf in den Merker spiegelt.</summary>
+        public const string MerkerAbgleich = "automation.chiller_merker_abgleich";
     }
 
     private readonly SteuerungRepository _repo;

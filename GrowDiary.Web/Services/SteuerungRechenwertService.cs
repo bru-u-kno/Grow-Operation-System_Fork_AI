@@ -86,6 +86,15 @@ public sealed class SteuerungRechenwertService
             "{% set m = states('input_boolean.zuluft_bedarf_merker') %}{% set prev = (m == 'on') if m in ['on','off'] else ((this.state == 'on') if this is defined else false) %}",
             Merker: ZuluftSteuerungService.Entitaeten.BedarfMerker,
             Abgleich: ZuluftSteuerungService.Entitaeten.MerkerAbgleich),
+        // Fork AI (A-025): Derselbe Rückfall im Kühlbedarf des Wasserkühlers. Der Titel ist der, unter dem der Fork den
+        // Eintrag anlegt; eine handgebaute Fassung mit anderem Titel oder anderem Wortlaut bleibt unberührt.
+        new Nachzug(
+            "binary_sensor.chiller_kuhlbedarf",
+            "Chiller Kuhlbedarf",
+            "{% set prev = (this.state == 'on') if this is defined else false %}",
+            "{% set m = states('input_boolean.chiller_kuhlbedarf_merker') %}{% set prev = (m == 'on') if m in ['on','off'] else ((this.state == 'on') if this is defined else false) %}",
+            Merker: ChillerSteuerungService.Entitaeten.KuehlbedarfMerker,
+            Abgleich: ChillerSteuerungService.Entitaeten.MerkerAbgleich),
         new Nachzug(
             "binary_sensor.zuluft_bedarf",
             "Zuluft Bedarf",

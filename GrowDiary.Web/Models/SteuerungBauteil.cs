@@ -475,6 +475,10 @@ public static class SteuerungBauteile
             Min: 0.1, Max: 3, Schritt: 0.1, Einheit: "K"),
         new(Chiller, "input_datetime.chiller_letzter_schaltvorgang", "Chiller letzter Schaltvorgang", BauteilArt.Zeitpunkt,
             "Zeitstempel statt last_changed — eine Funksteckdose fällt bei WLAN-Aussetzern kurz aus."),
+        // Fork AI (A-025): Der letzte Zustand des Kühlbedarfs. Im Haltebereich der Hysterese rechnet der Bedarf damit
+        // statt mit this.state, das nach einem Aussetzer (Fühler, Neuladen) "unavailable" ist.
+        new(Chiller, "input_boolean.chiller_kuhlbedarf_merker", "Chiller Kuhlbedarf Merker", BauteilArt.Schalter,
+            "Merkt sich, ob der Kühlbedarf zuletzt an oder aus war. Der Bedarf hält damit seinen Zustand auch über einen Fühler-Aussetzer hinweg."),
 
         // --- Rechenwerte ----------------------------------------------------
         // Das aktive Ziel hängt am Licht, nicht an der Uhr. Fällt der
@@ -487,13 +491,18 @@ public static class SteuerungBauteile
             Verfuegbarkeit: "{{ has_value('input_number.chiller_zieltemperatur_tag') and has_value('input_number.chiller_zieltemperatur_nacht') }}"),
         new(Chiller, "binary_sensor.chiller_kuhlbedarf", "Chiller Kuhlbedarf", BauteilArt.RechenSchalter,
             "An ab Ziel plus Hysterese, aus ab Ziel minus Hysterese — dazwischen bleibt der letzte Zustand.",
-            Vorlage: "{% set t = states('[[wasser_temp]]') | float %}{% set z = states('sensor.chiller_zieltemperatur_aktiv') | float %}{% set h = states('input_number.chiller_hysterese') | float(0.3) %}{% set prev = (this.state == 'on') if this is defined else false %}{% if t >= z + h %}on{% elif t <= z - h %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
+            Vorlage: "{% set t = states('[[wasser_temp]]') | float %}{% set z = states('sensor.chiller_zieltemperatur_aktiv') | float %}{% set h = states('input_number.chiller_hysterese') | float(0.3) %}{% set m = states('input_boolean.chiller_kuhlbedarf_merker') %}{% set prev = (m == 'on') if m in ['on','off'] else ((this.state == 'on') if this is defined else false) %}{% if t >= z + h %}on{% elif t <= z - h %}off{% else %}{{ 'on' if prev else 'off' }}{% endif %}",
             Verfuegbarkeit: "{{ has_value('[[wasser_temp]]') and has_value('sensor.chiller_zieltemperatur_aktiv') }}"),
 
         // --- Automationen ---------------------------------------------------
         // Welche der beiden Automationen gebraucht wird, hängt an den Rollen:
         // die Regelung an der Steckdose, der Sollwert am Sollwert-Gerät. Keine
         // ist für sich Pflicht — die Seite sagt, welche Ansteuerung gilt.
+        // Fork AI (A-025): Spiegelt den Kühlbedarf in den Merker. Reagiert nie auf "unavailable". Gebraucht wird sie
+        // unabhängig von der Ansteuerung (Steckdose oder Sollwert), solange der Kühlbedarf berechnet wird.
+        new(Chiller, "automation.chiller_merker_abgleich", "Chiller Merker Abgleich", BauteilArt.Automation,
+            "Schreibt den Zustand des Kühlbedarfs in den Merker, solange er an oder aus ist — bei \"nicht verfügbar\" bleibt der Merker stehen.",
+            VorlagenDatei: "merker", Probelauf: ProbelaufRolle.Laufenlassen),
         new(Chiller, "automation.water_chiller_regelung", "Water Chiller Regelung", BauteilArt.Automation,
             "Schaltet die Steckdose nach Kühlbedarf, gegen Mindestlaufzeit und -pause.",
             Pflicht: false, HaengtAn: new[] { "steckdose" },
