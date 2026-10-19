@@ -293,6 +293,12 @@ Eingerichtet in `.claude/settings.json`, die Skripte in `.claude/hooks/`:
 | nach jeder `.cs`/`.ts`/`.tsx`-Änderung | `dotnet build` bzw. `tsc -b` | ja |
 | vor `git commit` | das volle Tor (Backend, Typen, Lint, Vitest) | ja |
 
+Das Tor läuft seit cc.255 **parallel** (Backend in drei Teilen wie `ci.yml`, tsc ‖ Lint ‖ Vitest) und merkt sich ein grünes Ergebnis je
+Inhalt des Arbeitsbaums (`<git-dir>/tor-cache`, ≤ 6 h, nie bei Rot, ungültig bei Änderung an `vor-commit.sh`/`werkzeuge.sh`). Dauern stehen
+in `<git-dir>/tor-zeiten.csv`. Zeigt der Hook „Aus dem Zwischenspeicher", wurde nichts neu gefahren — wer das nicht will, ändert eine Zeile
+oder löscht `<git-dir>/tor-cache`. Meldet er „ACHTUNG: Backend-Teil … im Parallellauf rot, einzeln grün", hängt ein Test von der
+Gleichzeitigkeit ab: nachgehen, nicht ignorieren.
+
 Beide sind nachgewiesen: Fehler eingebaut, Hook wurde rot. **Sie ersetzen die
 fünf Prüfungen nicht** — sie fangen Tippfehler und rotes CI, nicht ein
 doppeltes Formular oder eine Seite, die niemand liest.

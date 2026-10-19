@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.255
+
+**Cultivate Control.** Das Commit-Tor für die Entwicklung ist deutlich schneller geworden; die Prüfungen selbst sind dieselben geblieben. Die App ändert sich dadurch nicht.
+
+- **Was war:** Vor jedem Commit lief das Tor nacheinander durch: Backend-Tests (rund 4 Minuten, die Maschine wartete dabei überwiegend), dann Typen, Lint und Frontend-Tests. Ein Commit mit Backend-Änderung brauchte gut 5 Minuten, ein zweiter Versuch mit unverändertem Inhalt noch einmal dasselbe.
+- **Jetzt:** Die drei Backend-Teile laufen gleichzeitig (dieselben Filter und Mindestzahlen wie in der CI), ebenso Typprüfung, Lint und Frontend-Tests. Ein grünes Ergebnis wird je Inhalt des Arbeitsbaums gemerkt (höchstens 6 Stunden, nie bei Rot, ungültig sobald sich das Tor selbst ändert). Fällt ein Backend-Teil durch, läuft er einmal einzeln wieder; war es nur die Gleichzeitigkeit, steht eine deutliche Warnung im Ergebnis. Jede Dauer steht in einer lokalen Datei im Git-Verzeichnis.
+- **Gemessen:** Commit mit Backend-Änderung etwa 345 s → 138 s (bei hoher Last der Maschine), nur Frontend 80 s → 46–66 s, gleicher Inhalt erneut 1 s.
+- **Prüfungen:** Fehler eingebaut, das Tor wurde jedes Mal rot und der Commit unterblieb: Typfehler, Lint-Verstoß, roter Frontend-Test, Datenschutz-Verstoß in einer unversionierten Datei, roter Test in jedem der drei Backend-Teile, Bau-Fehler, zu niedrige Testzahl (Mengenwächter). Ein rotes Ergebnis wurde bei der Wiederholung nicht aus dem Zwischenspeicher bedient.
+
 ## 2.0.0-cc.254
 
 **Neuer Name: Cultivate Control.** Aus „Grow OS Fork AI“ wird „Cultivate Control“. Funktionen und Daten bleiben gleich, geändert haben sich Name, Kennung und Adresse.
