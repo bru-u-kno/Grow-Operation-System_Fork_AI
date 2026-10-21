@@ -187,27 +187,27 @@ public sealed partial class SystemApiController
 
         if (!containsDatabase)
         {
-            blockers.Add("Backup enthaelt keine Hauptdatenbank.");
+            blockers.Add("Backup enthält keine Hauptdatenbank.");
         }
         if (containsSecrets)
         {
-            blockers.Add("Backup enthaelt potenzielle Secrets.");
+            blockers.Add("Backup enthält potenzielle Secrets.");
         }
         if (containsKeys)
         {
-            blockers.Add("Backup enthaelt DataProtectionKeys.");
+            blockers.Add("Backup enthält DataProtectionKeys.");
         }
         if (containsUploads)
         {
-            blockers.Add("Backup enthaelt Upload-Dateien und ist nicht restore-ready.");
+            blockers.Add("Backup enthält Upload-Dateien und ist nicht restore-ready.");
         }
         if (hasUnsafeEntries)
         {
-            blockers.Add("Backup enthaelt unsichere Pfade.");
+            blockers.Add("Backup enthält unsichere Pfade.");
         }
         if (mediaNotImages)
         {
-            blockers.Add("Backup enthaelt bei den Fotos und Kamerabildern Dateien, die keine Bilder sind.");
+            blockers.Add("Backup enthält bei den Fotos und Kamerabildern Dateien, die keine Bilder sind.");
         }
         if (mediaCount > 0)
         {
@@ -524,7 +524,7 @@ public sealed partial class SystemApiController
 
             if (!System.IO.File.Exists(extractedDb))
             {
-                throw new InvalidOperationException("Backup enthaelt keine extrahierbare Hauptdatenbank.");
+                throw new InvalidOperationException("Backup enthält keine extrahierbare Hauptdatenbank.");
             }
 
             var integrityResult = RunSqliteQuickCheck(extractedDb);

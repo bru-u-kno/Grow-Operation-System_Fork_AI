@@ -8,7 +8,7 @@ namespace GrowDiary.Web.Tests;
 /// </summary>
 /// <remarks>
 /// Gelesen wird der Quelltext der Controller: jede Zeile, die eine Fehler- oder Hinweismeldung erzeugt
-/// (<c>AddModelError</c>, <c>ConflictError</c>, <c>BadRequestError</c>, <c>errors.Add</c>, <c>warnings.Add</c>).
+/// (<c>AddModelError</c>, <c>ConflictError</c>, <c>BadRequestError</c>, <c>errors.Add</c>, <c>warnings.Add</c>, <c>blockers.Add</c>, <c>InvalidOperationException</c>).
 /// Das erste Argument von <c>ConflictError</c>/<c>BadRequestError</c> ist ein maschinenlesbarer Code
 /// (<c>datum_ungueltig</c>) und bleibt ASCII — er steht nicht in der Prüfung, weil nur Wörter mit Leerzeichen
 /// drumherum gelten. Interpolationen in <c>{…}</c> sind ausgenommen.
@@ -16,7 +16,7 @@ namespace GrowDiary.Web.Tests;
 public sealed class MeldungenMitUmlautenTests
 {
     private static readonly Regex Senke = new(
-        @"AddModelError|ConflictError|BadRequestError|NotFoundError|errors\.Add|warnings\.Add", RegexOptions.Compiled);
+        @"AddModelError|ConflictError|BadRequestError|NotFoundError|errors\.Add|warnings\.Add|blockers\.Add|InvalidOperationException", RegexOptions.Compiled);
 
     private static readonly Regex Zeichenkette = new("\\$?\"((?:[^\"\\\\]|\\\\.)*)\"", RegexOptions.Compiled);
 

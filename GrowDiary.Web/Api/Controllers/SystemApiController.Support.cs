@@ -355,7 +355,7 @@ public sealed partial class SystemApiController
 
             if (!destination.StartsWith(root, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("Backup enthaelt einen unsicheren Pfad: " + name);
+                throw new InvalidOperationException("Backup enthält einen unsicheren Pfad: " + name);
             }
 
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destination)!);

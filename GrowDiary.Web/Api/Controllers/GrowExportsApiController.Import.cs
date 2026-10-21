@@ -166,7 +166,7 @@ public sealed partial class GrowExportsApiController
 
     private GrowRun ToImportedGrowRun(GrowExportDto export)
     {
-        var source = export.Grow ?? throw new InvalidOperationException("Export enthaelt keinen Grow-Datensatz.");
+        var source = export.Grow ?? throw new InvalidOperationException("Export enthält keinen Grow-Datensatz.");
         var importedName = string.IsNullOrWhiteSpace(source.Name)
             ? $"Import {export.ExportId}"
             : source.Name.Trim() + " (Import)";

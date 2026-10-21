@@ -48,7 +48,7 @@ public sealed partial class GrowExportsApiController
         }
         if (export.Grow is null)
         {
-            blockers.Add("Export enthaelt keinen Grow-Datensatz.");
+            blockers.Add("Export enthält keinen Grow-Datensatz.");
         }
 
         var source = new GrowImportPlanSourceDto(
