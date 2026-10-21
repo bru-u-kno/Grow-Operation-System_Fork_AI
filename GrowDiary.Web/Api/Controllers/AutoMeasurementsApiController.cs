@@ -182,7 +182,7 @@ public sealed class AutoMeasurementsApiController : ApiControllerBase
             var mapping = mappings[i];
             if (!Enum.IsDefined(mapping.MeasurementField))
             {
-                ModelState.AddModelError(nameof(AutoMeasurementFieldMappingUpsertRequest.MeasurementField), $"MeasurementField in Zeile {i + 1} ist ungueltig.");
+                ModelState.AddModelError(nameof(AutoMeasurementFieldMappingUpsertRequest.MeasurementField), $"MeasurementField in Zeile {i + 1} ist ungültig.");
             }
 
             if (string.IsNullOrWhiteSpace(mapping.MetricKey))

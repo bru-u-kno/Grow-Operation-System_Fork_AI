@@ -568,7 +568,7 @@ public sealed class KostenApiController : ApiControllerBase
 
             if (!double.IsFinite(zeile.Menge) || zeile.Menge <= 0)
             {
-                return BadRequestError("menge_invalid", $"Die Menge fuer Artikel {zeile.ArtikelId} muss groesser als 0 sein.");
+                return BadRequestError("menge_invalid", $"Die Menge für Artikel {zeile.ArtikelId} muss größer als 0 sein.");
             }
         }
 

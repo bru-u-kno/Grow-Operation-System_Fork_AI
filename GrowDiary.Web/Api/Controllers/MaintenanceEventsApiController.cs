@@ -133,17 +133,17 @@ public sealed class MaintenanceEventsApiController : ApiControllerBase
 
         if (!Enum.IsDefined(eventType))
         {
-            ModelState.AddModelError(nameof(CreateMaintenanceEventRequest.EventType), "EventType ist ungueltig.");
+            ModelState.AddModelError(nameof(CreateMaintenanceEventRequest.EventType), "EventType ist ungültig.");
         }
 
         if (!Enum.IsDefined(status))
         {
-            ModelState.AddModelError(nameof(CreateMaintenanceEventRequest.Status), "Status ist ungueltig.");
+            ModelState.AddModelError(nameof(CreateMaintenanceEventRequest.Status), "Status ist ungültig.");
         }
 
         if (!Enum.IsDefined(result))
         {
-            ModelState.AddModelError(nameof(CreateMaintenanceEventRequest.Result), "Result ist ungueltig.");
+            ModelState.AddModelError(nameof(CreateMaintenanceEventRequest.Result), "Result ist ungültig.");
         }
 
         if (string.IsNullOrWhiteSpace(title))

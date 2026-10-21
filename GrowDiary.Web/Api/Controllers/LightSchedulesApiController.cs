@@ -110,7 +110,7 @@ public sealed class LightSchedulesApiController : ApiControllerBase
 
         if (onValid && offValid && string.Equals(lightsOnTime.Trim(), lightsOffTime.Trim(), StringComparison.Ordinal))
         {
-            ModelState.AddModelError(nameof(CreateLightScheduleRequest.LightsOffTime), "LightsOnTime und LightsOffTime duerfen nicht gleich sein.");
+            ModelState.AddModelError(nameof(CreateLightScheduleRequest.LightsOffTime), "LightsOnTime und LightsOffTime dürfen nicht gleich sein.");
         }
 
         if (!Enum.IsDefined(source))

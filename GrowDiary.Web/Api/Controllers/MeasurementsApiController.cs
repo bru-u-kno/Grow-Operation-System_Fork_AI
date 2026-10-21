@@ -196,7 +196,7 @@ public sealed class MeasurementsApiController : ApiControllerBase
 
         if (request.Photos.Count == 0)
         {
-            ModelState.AddModelError(nameof(request.Photos), "Bitte waehle mindestens ein Foto aus.");
+            ModelState.AddModelError(nameof(request.Photos), "Bitte wähle mindestens ein Foto aus.");
             return ValidationError();
         }
 

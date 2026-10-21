@@ -254,7 +254,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
 
         if (!Enum.IsDefined(request.Kind))
         {
-            ModelState.AddModelError(nameof(request.Kind), "Addback-Art ist ungueltig.");
+            ModelState.AddModelError(nameof(request.Kind), "Addback-Art ist ungültig.");
         }
 
         if (!ModelState.IsValid)
@@ -383,7 +383,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
 
         if (!Enum.IsDefined(request.Kind))
         {
-            ModelState.AddModelError(nameof(request.Kind), "Changeout-Art ist ungueltig.");
+            ModelState.AddModelError(nameof(request.Kind), "Changeout-Art ist ungültig.");
         }
 
         if (!ModelState.IsValid)
@@ -562,7 +562,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
 
         if (grow.StartMaterial != StartMaterial.Seed)
         {
-            return BadRequestError("invalid_action", "Keimungsbestaetigung ist nur fuer Samen-Grows moeglich.");
+            return BadRequestError("invalid_action", "Keimungsbestätigung ist nur für Samen-Grows möglich.");
         }
 
         if (!grow.GerminatedAt.HasValue)

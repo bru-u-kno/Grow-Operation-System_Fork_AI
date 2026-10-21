@@ -19,12 +19,29 @@ namespace GrowDiary.Web.Tests.Services;
 /// </remarks>
 public static class TestKnowledgeBase
 {
+    // Jeder Aufruf legt einen Ordner an (274 Dateien). Früher blieben sie liegen: auf der Entwicklungsmaschine
+    // über 3.600 Ordner, bis /tmp keine Inodes mehr hatte. Jetzt räumt der Testprozess am Ende selbst auf.
+    private static readonly System.Collections.Concurrent.ConcurrentBag<string> Angelegt = new();
+
+    static TestKnowledgeBase()
+        => AppDomain.CurrentDomain.ProcessExit += (_, _) => Aufraeumen();
+
+    private static void Aufraeumen()
+    {
+        foreach (var ordner in Angelegt)
+        {
+            try { if (Directory.Exists(ordner)) Directory.Delete(ordner, recursive: true); }
+            catch (Exception) { /* beim Beenden unwichtig: der nächste Lauf legt neue an */ }
+        }
+    }
+
     public static TargetValueService TargetValues()
         => new(Loader());
 
     public static KnowledgeBaseLoader Loader()
     {
         var tempRoot = Path.Combine(Path.GetTempPath(), "growos-knowledge-" + Guid.NewGuid().ToString("N"));
+        Angelegt.Add(tempRoot);
         CopyDefaults(Path.Combine(ProjectRoot(), "GrowDiary.Web", "wwwroot", "knowledge-defaults"), tempRoot);
 
         var loader = new KnowledgeBaseLoader(new AppPaths(tempRoot), NullLogger<KnowledgeBaseLoader>.Instance);

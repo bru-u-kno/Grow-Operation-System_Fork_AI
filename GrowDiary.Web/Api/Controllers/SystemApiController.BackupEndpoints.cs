@@ -19,7 +19,7 @@ public sealed partial class SystemApiController
     {
         if (!IsSafeBackupFileName(fileName))
         {
-            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungueltig.");
+            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungültig.");
         }
 
         var backupPath = ResolveBackupPath(fileName);
@@ -93,7 +93,7 @@ public sealed partial class SystemApiController
     {
         if (!IsSafeBackupFileName(fileName))
         {
-            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungueltig.");
+            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungültig.");
         }
 
         var backupPath = ResolveBackupPath(fileName);
@@ -454,7 +454,7 @@ public sealed partial class SystemApiController
     {
         if (!IsSafeBackupFileName(fileName))
         {
-            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungueltig.");
+            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungültig.");
         }
 
         var backupPath = ResolveBackupPath(fileName);
@@ -658,7 +658,7 @@ public sealed partial class SystemApiController
     {
         if (!IsSafeBackupFileName(fileName))
         {
-            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungueltig.");
+            return BadRequestError("invalid_backup_file", "Backup-Dateiname ist ungültig.");
         }
 
         var fullPath = ResolveBackupPath(fileName);

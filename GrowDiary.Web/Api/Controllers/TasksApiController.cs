@@ -83,7 +83,7 @@ public sealed class TasksApiController : ApiControllerBase
         }
         catch
         {
-            ModelState.AddModelError(nameof(request.DueAtLocal), "Faelligkeitsdatum konnte nicht gelesen werden.");
+            ModelState.AddModelError(nameof(request.DueAtLocal), "Fälligkeitsdatum konnte nicht gelesen werden.");
             return ValidationError();
         }
     }

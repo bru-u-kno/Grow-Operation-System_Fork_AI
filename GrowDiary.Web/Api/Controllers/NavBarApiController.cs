@@ -85,7 +85,7 @@ public sealed class NavBarApiController : ApiControllerBase
     {
         if (request is null)
         {
-            return BadRequestError("navbar_invalid", "Es wurde nichts uebergeben.");
+            return BadRequestError("navbar_invalid", "Es wurde nichts übergeben.");
         }
 
         // Das Ruecksprungziel kommt eigenstaendig: wer nur das Dashboard
@@ -135,7 +135,7 @@ public sealed class NavBarApiController : ApiControllerBase
 
         if (bereinigt.Count == 0)
         {
-            return BadRequestError("navbar_invalid", "Die Reihenfolge enthielt kein gueltiges Ziel.");
+            return BadRequestError("navbar_invalid", "Die Reihenfolge enthielt kein gültiges Ziel.");
         }
 
         _settings.SetValue(SettingsKey, JsonSerializer.Serialize(bereinigt));

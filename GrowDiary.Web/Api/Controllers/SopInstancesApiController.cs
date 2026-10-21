@@ -99,7 +99,7 @@ public sealed class SopInstancesApiController : ApiControllerBase
         }
         catch (InvalidOperationException)
         {
-            return ConflictError("sop_instance_not_active", "SOP-Instanz ist nicht aktiv und kann nicht mehr geaendert werden.");
+            return ConflictError("sop_instance_not_active", "SOP-Instanz ist nicht aktiv und kann nicht mehr geändert werden.");
         }
     }
 
@@ -186,7 +186,7 @@ public sealed class SopInstancesApiController : ApiControllerBase
         }
         else if (sop.Steps.Count == 0)
         {
-            ModelState.AddModelError(nameof(request.SopId), $"SOP '{request.SopId}' hat keine ausfuehrbaren Steps.");
+            ModelState.AddModelError(nameof(request.SopId), $"SOP '{request.SopId}' hat keine ausführbaren Steps.");
         }
 
         if (!ModelState.IsValid)
@@ -212,7 +212,7 @@ public sealed class SopInstancesApiController : ApiControllerBase
         }
         catch (InvalidOperationException)
         {
-            return ConflictError("active_sop_exists", "Fuer diesen Grow ist diese SOP bereits aktiv.");
+            return ConflictError("active_sop_exists", "Für diesen Grow ist diese SOP bereits aktiv.");
         }
     }
 

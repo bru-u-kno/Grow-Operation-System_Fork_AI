@@ -84,7 +84,7 @@ public sealed class SetupsApiController : ApiControllerBase
 
         if (!SetupTentCompatibilityPolicy.IsCompatible(tent.TentType, request.SetupType))
         {
-            ModelState.AddModelError(nameof(request.SetupType), $"Setup-Typ {request.SetupType} ist fuer Tent-Typ {tent.TentType} nicht erlaubt.");
+            ModelState.AddModelError(nameof(request.SetupType), $"Setup-Typ {request.SetupType} ist für Tent-Typ {tent.TentType} nicht erlaubt.");
             return ValidationError();
         }
 

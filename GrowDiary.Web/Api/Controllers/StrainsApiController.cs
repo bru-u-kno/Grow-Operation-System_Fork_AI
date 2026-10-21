@@ -97,12 +97,12 @@ public sealed class StrainsApiController : ApiControllerBase
 
         if (flowerWeeksMin.HasValue && flowerWeeksMax.HasValue && flowerWeeksMin.Value > flowerWeeksMax.Value)
         {
-            ModelState.AddModelError(nameof(CreateStrainRequest.FlowerWeeksMin), "FlowerWeeksMin darf nicht groesser als FlowerWeeksMax sein.");
+            ModelState.AddModelError(nameof(CreateStrainRequest.FlowerWeeksMin), "FlowerWeeksMin darf nicht größer als FlowerWeeksMax sein.");
         }
 
         if (multipliers.Any(factor => factor.HasValue && factor.Value <= 0))
         {
-            ModelState.AddModelError("Factors", "Naehrstoffbedarf und Streckung muessen groesser als 0 sein.");
+            ModelState.AddModelError("Factors", "Nährstoffbedarf und Streckung müssen größer als 0 sein.");
         }
 
         if (vpdPreferenceShift is { } shift && Math.Abs(shift) > 1)

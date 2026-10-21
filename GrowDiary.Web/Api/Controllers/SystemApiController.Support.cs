@@ -194,7 +194,7 @@ public sealed partial class SystemApiController
         }
         catch
         {
-            warnings.Add("Backup-Datenbank konnte nicht fuer die Schema-Pruefung gelesen werden.");
+            warnings.Add("Backup-Datenbank konnte nicht für die Schema-Prüfung gelesen werden.");
             return null;
         }
         finally

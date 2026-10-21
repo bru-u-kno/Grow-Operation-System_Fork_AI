@@ -47,7 +47,7 @@ public sealed class RiskEventsApiController : ApiControllerBase
     {
         if (status.HasValue && !Enum.IsDefined(status.Value))
         {
-            ModelState.AddModelError(nameof(status), "Status ist ungueltig.");
+            ModelState.AddModelError(nameof(status), "Status ist ungültig.");
             return ValidationError();
         }
 
@@ -227,7 +227,7 @@ public sealed class RiskEventsApiController : ApiControllerBase
 
         if (!riskEvent.GrowId.HasValue)
         {
-            return BadRequestError("risk_event_has_no_grow", "RiskEvent hat keinen Grow-Bezug. SOP-Start benoetigt GrowId.");
+            return BadRequestError("risk_event_has_no_grow", "RiskEvent hat keinen Grow-Bezug. SOP-Start benötigt GrowId.");
         }
 
         var sop = _knowledgeBase.Sops.FirstOrDefault(item => string.Equals(item.Id, request.SopId, StringComparison.OrdinalIgnoreCase));
@@ -237,7 +237,7 @@ public sealed class RiskEventsApiController : ApiControllerBase
         }
         else if (sop.Steps.Count == 0)
         {
-            ModelState.AddModelError(nameof(StartRiskEventSopRequest.SopId), $"SOP '{request.SopId}' hat keine ausfuehrbaren Steps.");
+            ModelState.AddModelError(nameof(StartRiskEventSopRequest.SopId), $"SOP '{request.SopId}' hat keine ausführbaren Steps.");
         }
 
         if (!ModelState.IsValid)
@@ -262,7 +262,7 @@ public sealed class RiskEventsApiController : ApiControllerBase
         }
         catch (InvalidOperationException)
         {
-            return ConflictError("active_sop_exists", "Fuer diesen Grow ist diese SOP bereits aktiv.");
+            return ConflictError("active_sop_exists", "Für diesen Grow ist diese SOP bereits aktiv.");
         }
 
         CreateReminderTasksForSteps(instance);
@@ -291,10 +291,10 @@ public sealed class RiskEventsApiController : ApiControllerBase
         DateTime? resolvedAtUtc,
         DateTime? acknowledgedAtUtc)
     {
-        if (!Enum.IsDefined(eventType)) ModelState.AddModelError(nameof(CreateRiskEventRequest.EventType), "EventType ist ungueltig.");
-        if (!Enum.IsDefined(severity)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Severity), "Severity ist ungueltig.");
-        if (!Enum.IsDefined(status)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Status), "Status ist ungueltig.");
-        if (!Enum.IsDefined(source)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Source), "Source ist ungueltig.");
+        if (!Enum.IsDefined(eventType)) ModelState.AddModelError(nameof(CreateRiskEventRequest.EventType), "EventType ist ungültig.");
+        if (!Enum.IsDefined(severity)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Severity), "Severity ist ungültig.");
+        if (!Enum.IsDefined(status)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Status), "Status ist ungültig.");
+        if (!Enum.IsDefined(source)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Source), "Source ist ungültig.");
         if (string.IsNullOrWhiteSpace(title)) ModelState.AddModelError(nameof(CreateRiskEventRequest.Title), "Title darf nicht leer sein.");
 
         if (hardwareItemId.HasValue && _repository.GetHardwareItem(hardwareItemId.Value) is null)

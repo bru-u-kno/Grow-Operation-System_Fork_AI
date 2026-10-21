@@ -519,7 +519,7 @@ public sealed class GrowsApiController : ApiControllerBase
 
         if (hydroSetup.Status == HydroSetupStatus.Archived)
         {
-            ModelState.AddModelError(fieldName, "Archivierte Hydro-Setups koennen keinem neuen oder aktiven Grow zugeordnet werden.");
+            ModelState.AddModelError(fieldName, "Archivierte Hydro-Setups können keinem neuen oder aktiven Grow zugeordnet werden.");
             return false;
         }
 
@@ -531,7 +531,7 @@ public sealed class GrowsApiController : ApiControllerBase
 
         if (grow.TentId.HasValue && grow.TentId.Value != hydroSetup.TentId.Value)
         {
-            ModelState.AddModelError(fieldName, "Das Hydro-Setup gehoert zu einem anderen Zelt als der Grow.");
+            ModelState.AddModelError(fieldName, "Das Hydro-Setup gehört zu einem anderen Zelt als der Grow.");
             return false;
         }
 
@@ -583,13 +583,13 @@ public sealed class GrowsApiController : ApiControllerBase
 
         if (!SetupTentCompatibilityPolicy.IsCompatible(setupTent.TentType, setup.SetupType))
         {
-            ModelState.AddModelError(fieldName, $"Setup-Typ {setup.SetupType} ist fuer Tent-Typ {setupTent.TentType} nicht erlaubt.");
+            ModelState.AddModelError(fieldName, $"Setup-Typ {setup.SetupType} ist für Tent-Typ {setupTent.TentType} nicht erlaubt.");
             return false;
         }
 
         if (grow.TentId.HasValue && grow.TentId.Value != setup.TentId)
         {
-            ModelState.AddModelError(fieldName, "Das Production-Setup gehoert zu einem anderen Zelt als der GrowRun.");
+            ModelState.AddModelError(fieldName, "Das Production-Setup gehört zu einem anderen Zelt als der GrowRun.");
             return false;
         }
 
@@ -603,7 +603,7 @@ public sealed class GrowsApiController : ApiControllerBase
             return true;
         }
 
-        ModelState.AddModelError(nameof(GrowUpsertRequest.HydroStyle), "Cultivate Control unterstuetzt neue Grows aktuell nur mit DWC oder RDWC.");
+        ModelState.AddModelError(nameof(GrowUpsertRequest.HydroStyle), "Cultivate Control unterstützt neue Grows aktuell nur mit DWC oder RDWC.");
         return false;
     }
 

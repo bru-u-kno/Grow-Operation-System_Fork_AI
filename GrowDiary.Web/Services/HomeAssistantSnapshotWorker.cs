@@ -11,6 +11,7 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
 
     // Kamera-Snapshot: einmal täglich nach 12:00
     private readonly Dictionary<int, DateOnly> _lastCameraCaptureDateByTent = new();
+    private readonly Dictionary<int, DateOnly> _lastCameraWarnDateByTent = new();
     private DateOnly? _lastAggregationDateLocal;
 
     // Sensor-Ausfall (In-Memory, Edge-getriggert) + Kalibrier-Erinnerung (einmal täglich)
@@ -280,6 +281,14 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
                 var filePath = Path.Combine(dir, $"{today:yyyy-MM-dd}.jpg");
                 await File.WriteAllBytesAsync(filePath, snapshot.Value.Bytes, cancellationToken);
                 _lastCameraCaptureDateByTent[tent.Id] = today;
+            }
+            else if (!_lastCameraWarnDateByTent.TryGetValue(tent.Id, out var warnDate) || warnDate != today)
+            {
+                // Ohne Bild gab es bisher keine Spur: das Tagesbild fehlte einfach. Einmal je Tag und Zelt melden.
+                _lastCameraWarnDateByTent[tent.Id] = today;
+                _logger.LogWarning(
+                    "Kein Tagesbild für Zelt {TentId}: Kamera {Kamera} liefert kein Bild (nicht erreichbar oder Home Assistant antwortet nicht) — Versuch im nächsten Takt.",
+                    tent.Id, tent.CameraEntityId);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -183,17 +183,17 @@ public sealed class CalibrationEventsApiController : ApiControllerBase
 
         if (!Enum.IsDefined(calibrationType))
         {
-            ModelState.AddModelError(nameof(CreateCalibrationEventRequest.CalibrationType), "CalibrationType ist ungueltig.");
+            ModelState.AddModelError(nameof(CreateCalibrationEventRequest.CalibrationType), "CalibrationType ist ungültig.");
         }
 
         if (!Enum.IsDefined(status))
         {
-            ModelState.AddModelError(nameof(CreateCalibrationEventRequest.Status), "Status ist ungueltig.");
+            ModelState.AddModelError(nameof(CreateCalibrationEventRequest.Status), "Status ist ungültig.");
         }
 
         if (!Enum.IsDefined(result))
         {
-            ModelState.AddModelError(nameof(CreateCalibrationEventRequest.Result), "Result ist ungueltig.");
+            ModelState.AddModelError(nameof(CreateCalibrationEventRequest.Result), "Result ist ungültig.");
         }
 
         if (string.IsNullOrWhiteSpace(title))

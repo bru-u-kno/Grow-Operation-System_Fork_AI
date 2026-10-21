@@ -83,7 +83,7 @@ public sealed class PlantsApiController : ApiControllerBase
         }
         else if (mother.PlantRole != PlantRole.Mother)
         {
-            ModelState.AddModelError(nameof(CreateCloneFromMotherRequest.MotherPlantId), "Nur Pflanzen mit PlantRole Mother koennen als Clone-Quelle genutzt werden.");
+            ModelState.AddModelError(nameof(CreateCloneFromMotherRequest.MotherPlantId), "Nur Pflanzen mit PlantRole Mother können als Clone-Quelle genutzt werden.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Label))
@@ -158,7 +158,7 @@ public sealed class PlantsApiController : ApiControllerBase
             quarantineSetup = _repository.GetSetup(plant.SetupId.Value);
             if (quarantineSetup is null || quarantineSetup.SetupType != SetupType.Quarantine)
             {
-                ModelState.AddModelError(nameof(DecideQuarantinePlantRequest.PlantId), "Nur Plants aus einem Quarantine-Setup koennen entschieden werden.");
+                ModelState.AddModelError(nameof(DecideQuarantinePlantRequest.PlantId), "Nur Plants aus einem Quarantine-Setup können entschieden werden.");
             }
         }
 
@@ -199,7 +199,7 @@ public sealed class PlantsApiController : ApiControllerBase
             {
                 if (targetGrow.SetupId.HasValue && targetGrow.SetupId.Value != targetSetup.Id)
                 {
-                    ModelState.AddModelError(nameof(DecideQuarantinePlantRequest.TargetGrowId), "Grow passt nicht zum gewaehlten Production-Setup.");
+                    ModelState.AddModelError(nameof(DecideQuarantinePlantRequest.TargetGrowId), "Grow passt nicht zum gewählten Production-Setup.");
                 }
 
                 if (targetGrow.TentId.HasValue && targetGrow.TentId.Value != targetSetup.TentId)

@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.265
+
+**Aufräumen: Meldungen mit Umlauten, Spur im Log, Tests räumen auf.** Funktionen unverändert.
+
+- **Meldungen mit Umlauten:** Fehler- und Hinweismeldungen der Schnittstelle standen teils noch ohne Umlaute da („ungueltig“, „koennen nicht geloescht werden“). Rund 55 Texte, zum Beispiel beim Löschen eines Hydro-Setups, bei Backup-Dateinamen oder bei Grow-Prüfungen, lauten jetzt „ungültig“, „können nicht gelöscht werden“ und so weiter. Die maschinenlesbaren Codes (`datum_ungueltig`) bleiben, wie sie sind. Ein neuer Test (`MeldungenMitUmlautenTests`) hält das fest; mit einem zurückgesetzten Text wird er rot.
+- **Tagesbild: Spur, wenn die Kamera nichts liefert:** Kommt von der ersten Kamera eines Zelts kein Bild, stand bisher nichts im Log — das Tagesbild fehlte einfach. Jetzt steht einmal je Tag und Zelt eine Warnung mit dem Namen der Kamera im Log. Anlass war die Beobachtung vom 19.10., dass keine neuen Tagesbilder entstanden; Ursache war keine Programmstörung, sondern dass die Kameras in Home Assistant nicht erreichbar sind („nicht verfügbar“).
+- **Änderungsverzeichnis berichtigt:** In forkai.253 stand, die Zählung „10 / 8“ habe auch die Steuerungs-Übersicht betroffen. Das ist nicht belegt (die Übersicht zählt anders, über „nötige Geräte“) und wurde aus dem Text genommen.
+- **Tests räumen auf:** Die Wissensbasis-Tests legten je Aufruf einen Ordner im temporären Verzeichnis an und ließen ihn liegen (über 3.600 Ordner, bis keine Dateieinträge mehr frei waren). Der Testprozess löscht sie jetzt am Ende selbst.
+
 ## 2.0.0-cc.264
 
 **Logo auf dunklem Grund besser lesbar.** In der dunklen Fassung (Add-on-Logo in Home Assistant, README auf GitHub im dunklen Design) hebt sich das Symbol-Quadrat jetzt von der Fläche ab: etwas hellere Platte mit feinem grünem Rand. Im Logo für Home Assistant war das Quadrat außerdem fälschlich ganz schwarz gefüllt; das ist behoben. Funktionen unverändert.
@@ -112,7 +121,7 @@
 
 **Fork AI.** Die Zuluft-Seite zählt ihre Geräte wieder richtig: Statt „Geräte 10 / 8“ steht dort „Geräte 10 / 10“.
 
-- **Was war:** Seit forkai.241 benutzt die Zuluft zwei Rollen des Raums mit (Raum-Temperatur und Raum-Feuchte). Der Zähler („zugeordnet“) rechnete sie mit ein, der Nenner („gesamt“) nur die acht eigenen Rollen. Sobald beide Raum-Fühler gesetzt waren, stand auf der Zuluft-Seite und in der Steuerungs-Übersicht „10 / 8“ — mehr Geräte zugeordnet, als es gibt — und die Zahl färbte sich nie „vollständig“.
+- **Was war:** Seit forkai.241 benutzt die Zuluft zwei Rollen des Raums mit (Raum-Temperatur und Raum-Feuchte). Der Zähler („zugeordnet“) rechnete sie mit ein, der Nenner („gesamt“) nur die acht eigenen Rollen. Sobald beide Raum-Fühler gesetzt waren, stand auf der Zuluft-Seite „10 / 8“ — mehr Geräte zugeordnet, als es gibt — und die Zahl färbte sich nie „vollständig“.
 - **Jetzt:** Zähler und Nenner zählen dieselben Rollen (eigene und mitbenutzte, wie schon beim Zusatz-Entfeuchter). Der Entfeuchter nutzt dieselbe Zählung. Die anderen Module (CO₂, Licht, Wasserkühler, Entfeuchter, Zusatz-Entfeuchter) hatten die Abweichung nicht; das ist am laufenden Stand gegengeprüft (9 / 9, 6 / 6, 5 / 5, 9 / 9, 8 / 8).
 - **Prüfungen:** Neuer Test `GeraeteZaehlerTests`: Für alle sechs Seiten darf „zugeordnet“ nie größer als „gesamt“ sein, und die Zuluft muss die mitbenutzten Rollen im Nenner zählen. Ohne die Korrektur wird der Fall rot (erwartet 10, geliefert 8).
 

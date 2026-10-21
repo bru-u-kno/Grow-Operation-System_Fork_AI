@@ -41,7 +41,7 @@ public sealed partial class GrowExportsApiController
 
         if (!string.Equals(export.SchemaVersion, ExportSchemaVersion, StringComparison.Ordinal))
         {
-            errors.Add($"Nicht unterstuetzte Export-Schema-Version: {export.SchemaVersion}.");
+            errors.Add($"Nicht unterstützte Export-Schema-Version: {export.SchemaVersion}.");
         }
 
         if (string.IsNullOrWhiteSpace(export.ExportId))
@@ -53,7 +53,7 @@ public sealed partial class GrowExportsApiController
         var sectionCountsValid = export.SectionCounts is not null && SectionCountsEqual(export.SectionCounts, actualCounts);
         if (!sectionCountsValid)
         {
-            errors.Add("SectionCounts stimmen nicht mit dem Export-Inhalt ueberein.");
+            errors.Add("SectionCounts stimmen nicht mit dem Export-Inhalt überein.");
         }
 
         var expectedHash = ComputeIntegrityHash(export);
@@ -61,18 +61,18 @@ public sealed partial class GrowExportsApiController
             && string.Equals(export.IntegrityHash, expectedHash, StringComparison.OrdinalIgnoreCase);
         if (!integrityHashValid)
         {
-            errors.Add("IntegrityHash ist ungueltig oder fehlt.");
+            errors.Add("IntegrityHash ist ungültig oder fehlt.");
         }
 
         var containsPotentialSecrets = ContainsPotentialSecrets(export);
         if (containsPotentialSecrets)
         {
-            errors.Add("Export enthaelt potenzielle Secrets und darf nicht importiert werden.");
+            errors.Add("Export enthält potenzielle Secrets und darf nicht importiert werden.");
         }
 
         if (export.HydroSetupSnapshot is null)
         {
-            warnings.Add("Export enthaelt keinen HydroSetup-Snapshot. Vergleichbarkeit kann fuer Legacy-Grows eingeschraenkt sein.");
+            warnings.Add("Export enthält keinen HydroSetup-Snapshot. Vergleichbarkeit kann für Legacy-Grows eingeschränkt sein.");
         }
 
         return new GrowExportValidationDto(
