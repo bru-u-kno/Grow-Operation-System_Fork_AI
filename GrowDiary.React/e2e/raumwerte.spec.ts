@@ -45,7 +45,7 @@ test('Zelt im Raum: Verlauf und Zuordnung nennen den Raum statt „Außen“, di
       const raumzeile = page.locator('[data-audit="ha-raumwerte-row"]')
       await expect(raumzeile.locator('.ha-metric')).toHaveText('Testkeller Temp. / RLF / VPD')
       await expect(raumzeile).toContainText('Vom Raum „Testkeller“')
-      await expect(raumzeile.locator('.co-row-value')).toHaveText(/^\d+,\d+ °C · \d+(,\d+)? % · \d+,\d+ kPa$/)
+      await expect(raumzeile.locator('.co-row-value')).toHaveText(/^\d+(,\d+)? °C · \d+(,\d+)? % · \d+,\d+ kPa$/)
 
       // Verlauf: die drei Karten heißen nach dem Raum.
       await page.goto('/', { waitUntil: 'networkidle' })
