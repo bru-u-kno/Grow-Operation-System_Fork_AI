@@ -34,9 +34,10 @@ export function PhasenUebersicht({ phases, ernte, flipIsPlanned, daysToFlip, fli
   const voll = variante === 'voll'
   // Die Datumszeile: auf der Grow-Seite immer „Start · Geflippt/Flip geplant“, sonst nur, solange der Flip aussteht.
   const flipText = flipLabel(flipIsPlanned, daysToFlip, flipDatum)
-  const datumzeile = startDatum != null
-    ? [`Start ${startDatum}`, flipText, fertig && fertig !== '—' ? `Fertig ~${fertig}` : null].filter(Boolean).join(' · ')
-    : flipIsPlanned ? flipText : null
+  // Jede Angabe als eigenes Stück, damit ein Umbruch nie mitten durch „Fertig ~28.12.“ geht.
+  const datumzeile: string[] = startDatum != null
+    ? [`Start ${startDatum}`, flipText, fertig && fertig !== '—' ? `Fertig ~${fertig}` : null].filter((teil): teil is string => teil != null)
+    : flipIsPlanned ? [flipText] : []
   const ueberfaellig = daysToFlip != null && daysToFlip < 0 && flipIsPlanned
   // Eingeklappt ist nur, wo es einen Knopf gibt (im Anpassen-Modus der Live-Seite fehlt er, dort ist alles offen).
   const eingeklappt = voll && onUmschalten != null && zu
