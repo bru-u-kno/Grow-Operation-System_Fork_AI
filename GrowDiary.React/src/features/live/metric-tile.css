@@ -155,30 +155,3 @@
   .gos-metric-wechsel { margin-top: 8px; }
   .gos-metric-wechsel .dauer { margin-top: 4px; font: 400 var(--fs-text)/1.2 var(--font-mono); white-space: nowrap; color: var(--ink); }
 }
-
-/* Mehrere Kameras: eine Bühne, darunter der Streifen zum Umschalten. */
-@layer features {
-  .cam-stage { display: grid; gap: 8px; margin-bottom: var(--s-3); }
-  .cam-strip {
-    display: flex; gap: 8px; overflow-x: auto;
-    scrollbar-width: thin; padding-bottom: 2px;
-  }
-  .cam-strip-item {
-    flex: 0 0 auto; min-width: 0; max-width: 200px;
-    display: flex; align-items: center; gap: 8px;
-    min-height: 44px; padding: 0 12px;
-    border: 1px solid var(--hair); border-radius: var(--r-pill);
-    background: var(--panel); color: var(--muted);
-    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .06em;
-    cursor: pointer;
-  }
-  .cam-strip-index {
-    display: grid; place-items: center; flex: 0 0 auto;
-    width: 18px; height: 18px; border-radius: 50%;
-    border: 1px solid var(--hair-2); font-size: var(--fs-etikett);
-  }
-  .cam-strip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cam-strip-item:hover { border-color: var(--hair-2); color: var(--ink); }
-  .cam-strip-item.active { border-color: var(--accent); color: var(--accent-text); }
-  .cam-strip-item.active .cam-strip-index { border-color: var(--accent); }
-}

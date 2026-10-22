@@ -12,6 +12,7 @@ import {
 } from './kopf-knoepfe'
 import { MetricTile } from './MetricTile'
 import { decimalsForMetric } from './metric-tile-model'
+import { PhasenUebersicht } from './PhasenUebersicht'
 import { CameraPanel } from './CameraPanel'
 import { TrendWatchPanel } from './TrendWatchPanel'
 import { DashboardBands } from './DashboardBands'
@@ -21,7 +22,7 @@ import { DashboardEditorBar } from './DashboardEditor'
 import type { DashboardLayout, EntityValue } from './dashboard-layout'
 import { buildScore, metricProvenance } from './live-model'
 import { classNames } from '../../utils'
-import { balkenText, flipLabel, type Phase } from '../grows/phase-timeline'
+import type { Phase } from '../grows/phase-timeline'
 
 /**
  * Der Live-Bildschirm, gebaut nach dem Entwurf des Designers.
@@ -486,34 +487,8 @@ export function LiveScreen({
           </div>
           {!zu('panel:grow') && (
           <div className="ls-panel-body">
-            {/* Wischbar auf dem Telefon: die Balkenlaengen SIND die Dauer, also
-                darf die Achse nicht umbrechen — sie scrollt lieber in sich. */}
-            <div className="ls-timeline-wrap">
-            <div className="ls-timeline">
-              {timeline.map((phase) => (
-                <div
-                  key={phase.label}
-                  className={classNames('ls-phase', `is-${phase.state}`, phase.days === 0 && 'is-unknown')}
-                  /* Ohne bekannte Dauer KEIN flexGrow — ein Inline-Stil
-                     schlaegt jede Regel, und `.ls-phase.is-unknown
-                     { flex-grow: 0 }` blieb dadurch wirkungslos. */
-                  style={phase.days === 0 ? undefined : { flexGrow: phase.days }}
-                >
-                  {/* Der Fuellstand zeigt, wo im Plan man heute steht — die
-                      Balkenbreite allein sagt nur, wie lang die Phase ist. */}
-                  {phase.progress != null && (
-                    <i className="ls-phase-fill" style={{ width: `${Math.round(phase.progress * 100)}%` }} aria-hidden="true" />
-                  )}
-                  <span>{balkenText(phase.short, phase.days)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="ls-timeline-dates">
-              <span>Start {timelineDates.start}</span>
-              <span className={daysToFlip != null && daysToFlip < 0 ? 'is-due' : undefined}>{flipLabel(flipIsPlanned, daysToFlip, timelineDates.flip)}</span>
-              <span>{timelineDates.harvest === '\u2014' ? 'Ernte offen' : `Ernte ~${timelineDates.harvest}`}</span>
-            </div>
-            </div>
+            {/* Alles auf einen Blick (cc.266): Kopfzeile, Balken im Verhaeltnis der Dauern, eine Zeile je Phase. */}
+            <PhasenUebersicht phases={timeline} ernte={timelineDates.harvest} flipIsPlanned={flipIsPlanned} daysToFlip={daysToFlip} flipDatum={timelineDates.flip} />
             {/* Die offene Frage des Phasenankers unter dem Strahl, der die Phase zeigt. */}
             <PhasenErinnerung key={grow.id} growId={grow.id} erinnerung={grow.phasenanker?.erinnerung} onErledigt={onRefresh} />
           </div>

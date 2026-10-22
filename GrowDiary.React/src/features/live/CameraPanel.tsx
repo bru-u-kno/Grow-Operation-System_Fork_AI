@@ -33,7 +33,9 @@ export function CameraPanel({ tent, onReload, zu = false, onUmschalten }: {
   const [failedCamera, setFailedCamera] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const urlRef = useRef<string | null>(null)
-  const current = cameras[Math.min(active, cameras.length - 1)]
+  // Index immer gültig halten: wechselt das Zelt oder fällt eine Kamera weg, kann `active` über das Ende zeigen.
+  const aktiv = Math.min(active, Math.max(cameras.length - 1, 0))
+  const current = cameras[aktiv]
 
   useEffect(() => {
     if (!tent || !current || zu) return
@@ -121,12 +123,12 @@ export function CameraPanel({ tent, onReload, zu = false, onUmschalten }: {
         // Pfeile statt Wischleiste (Nutzerwunsch, 22.10.2026): alles auf einen Blick, kein Hin- und Herwischen; der Name
         // darf gekürzt werden, „Kamera 1 von 3“ steht darunter. Nach der letzten geht es zur ersten zurück.
         <div className="ls-cam-nav" role="group" aria-label="Kamera wählen">
-          <button type="button" className="ls-cam-pfeil" aria-label="Vorige Kamera" onClick={() => setActive((aktiv) => (aktiv - 1 + cameras.length) % cameras.length)}>‹</button>
+          <button type="button" className="ls-cam-pfeil" aria-label="Vorige Kamera" onClick={() => setActive((aktiv - 1 + cameras.length) % cameras.length)}>‹</button>
           <div className="ls-cam-mitte" aria-live="polite">
-            <span className="ls-cam-name" title={shortName(current, active)}>{shortName(current, active)}</span>
-            <small>Kamera {active + 1} von {cameras.length}</small>
+            <span className="ls-cam-name" title={shortName(current, aktiv)}>{shortName(current, aktiv)}</span>
+            <small>Kamera {aktiv + 1} von {cameras.length}</small>
           </div>
-          <button type="button" className="ls-cam-pfeil" aria-label="Nächste Kamera" onClick={() => setActive((aktiv) => (aktiv + 1) % cameras.length)}>›</button>
+          <button type="button" className="ls-cam-pfeil" aria-label="Nächste Kamera" onClick={() => setActive((aktiv + 1) % cameras.length)}>›</button>
         </div>
       )}
       </>}
