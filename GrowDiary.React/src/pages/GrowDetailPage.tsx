@@ -7,7 +7,9 @@ import { useGrowDetailBundle } from '../features/grow-detail/useGrowDetailBundle
 import { useGrowDetailMutations } from '../features/grow-detail/useGrowDetailMutations'
 import { formatGrowStatus } from '../features/grow-detail/grow-detail-model'
 import { V1Alert, V1Badge, V1Button, V1Empty, V1LinkButton, V1Page, V1Section, V1Stat } from '../components/v1'
-import { balkenText, buildPhaseTimeline, flipLabel } from '../features/grows/phase-timeline'
+import { buildPhaseTimeline } from '../features/grows/phase-timeline'
+import { useEingeklappt } from '../features/live/eingeklappt'
+import { PhasenUebersicht } from '../features/live/PhasenUebersicht'
 import { CuringSection } from '../features/curing/CuringSection'
 import { PlanAuswertung } from '../features/zielwerte/PlanAuswertung'
 import { GrowPlantsCard } from '../features/grow-detail/GrowPlantsCard'
@@ -28,6 +30,7 @@ function GrowDetailPage() {
   const { growId } = useParams()
   const { aktiv: kiAktiv } = useKiAktiv() // Fork AI (A-011): die Mappe für eigene KI gibt es nur bei KI an
   const navigate = useNavigate()
+  const einklappen = useEingeklappt(false)
   const [pflanzenSorten, setPflanzenSorten] = useState<string[]>([])
   // Wie viele Pflanzen wirklich erfasst sind. Die Kachel zeigte bisher die
   // Zahl aus dem Grow-Formular; gemeldet wurde 6 bei acht erfassten Pflanzen.
@@ -179,30 +182,23 @@ function GrowDetailPage() {
         {/* Phasen-Timeline — dieselbe Rechnung wie auf der Live-Seite. */}
         <section className="ls-panel" data-audit="grow-detail-timeline">
           <div className="ls-panel-body">
-            {/* Wischbar auf dem Telefon — siehe live-screen.css. */}
-            <div className="ls-timeline-wrap">
-            <div className="ls-timeline">
-              {timeline.phases.map((phase) => (
-                <div key={phase.label} className={`ls-phase is-${phase.state}${phase.days === 0 ? ' is-unknown' : ''}`} style={phase.days === 0 ? undefined : { flexGrow: phase.days }} title={phase.label}>
-                  {phase.progress != null && (
-                    <i className="ls-phase-fill" style={{ width: `${Math.round(phase.progress * 100)}%` }} aria-hidden="true" />
-                  )}
-                  <span>{balkenText(phase.short, phase.days)}</span>
-                </div>
-              ))}
-              {timeline.phases.length === 0 && <div className="ls-phase is-planned"><span>Kein Startdatum</span></div>}
-            </div>
-            <div className="ls-timeline-dates">
-              <span>Start {timeline.dates.start}</span>
-              <span className={timeline.daysToFlip != null && timeline.daysToFlip < 0 ? 'is-due' : undefined}>
-                {flipLabel(timeline.flipIsPlanned, timeline.daysToFlip, timeline.dates.flip)}
-              </span>
-              <span>{timeline.dates.harvest === '—' ? 'Ernte offen' : `Ernte ~${timeline.dates.harvest}`}</span>
-              {/* Die Frage, die der Strahl bisher offen liess: wann ist es fertig?
-                  Zwischen Ernte und rauchbar liegen Wochen. */}
-              {timeline.dates.ready !== '—' && <span title={timeline.readyNote}>Fertig ~{timeline.dates.ready}</span>}
-            </div>
-            </div>
+            {/* Wie auf Live (cc.267): Titel „Phasen“ mit Pfeilknopf, Kopfzeile, Balken, eine Zeile je Phase; der Zustand
+                (ein-/ausgeklappt) wird am Gerät gemerkt und gilt auch auf der Live-Seite. */}
+            {timeline.phases.length > 0
+              ? (
+                <PhasenUebersicht
+                  phases={timeline.phases}
+                  ernte={timeline.dates.harvest}
+                  flipIsPlanned={timeline.flipIsPlanned}
+                  daysToFlip={timeline.daysToFlip}
+                  flipDatum={timeline.dates.flip}
+                  startDatum={timeline.dates.start}
+                  fertig={timeline.dates.ready}
+                  zu={einklappen.istZu('panel:phasen')}
+                  onUmschalten={() => einklappen.umschalten('panel:phasen')}
+                />
+              )
+              : <div className="ls-timeline"><div className="ls-phase is-planned"><span>Kein Startdatum</span></div></div>}
             {timeline.dates.ready !== '—' && <p className="gd-ready-note">{timeline.readyNote}</p>}
             {/* Die offene Frage des Phasenankers — dort, wo die laufende Phase steht. */}
             {laeuft && <PhasenErinnerung key={grow.id} growId={grow.id} erinnerung={anker.erinnerung} onErledigt={() => loadBundle()} />}

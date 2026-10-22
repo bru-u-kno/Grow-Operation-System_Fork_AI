@@ -227,7 +227,6 @@
   .gc-facts { font: 400 var(--fs-klein)/1.6 var(--font-mono); color: var(--muted); max-width: 68ch; }
 
   /* Termine unter dem Strahl — die Phasen selbst stehen im Balken. */
-  .gc-phasetext { font: 400 var(--fs-etikett)/1.5 var(--font-mono); color: var(--muted); }
 
   /* Geplante Grows tragen die Info-Farbe, wie DAUERHAFT im Entwurf. */
   .ls-pill.is-plan { color: var(--info-text); }

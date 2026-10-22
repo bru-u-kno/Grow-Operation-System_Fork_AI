@@ -31,9 +31,10 @@ export function Klappkachel({ titel, zusammenfassung, offen = true, id, children
       <header className="v1-section-head">
         <h2>
           <button type="button" className="st-kk-kopf" aria-expanded={auf} aria-controls={koerper} onClick={() => setAuf(!auf)}>
+            {/* Wie auf der Live-Seite (cc.267): Pfeilknopf links vor dem Titel, zugeklappt die Kurzauskunft dahinter. */}
+            <span className="kk-pfeil" aria-hidden="true">{auf ? '▾' : '▸'}</span>
             <span className="st-kk-titel">{titel}</span>
             {!auf && zusammenfassung != null && <span className="st-kk-zus">{zusammenfassung}</span>}
-            <span className="ef-klapp-zeichen">{auf ? 'zuklappen ▴' : 'aufklappen ▾'}</span>
           </button>
         </h2>
       </header>

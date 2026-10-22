@@ -3,7 +3,8 @@ import { sortenText, zuechterPasst } from '../features/grows/sorten-text'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiFetch, ApiRequestError } from '../api'
 import type { GrowSummary } from '../types'
-import { balkenText, buildPhaseTimeline, currentPhaseLabel, flipLabel } from '../features/grows/phase-timeline'
+import { buildPhaseTimeline, currentPhaseLabel } from '../features/grows/phase-timeline'
+import { PhasenUebersicht } from '../features/live/PhasenUebersicht'
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
 import '../features/grows/grows.css'
 
@@ -67,38 +68,21 @@ function GrowCard({ grow }: { grow: GrowSummary }) {
       <div className="gc-head">
         <strong>{grow.name}</strong>
         <span className={`ls-pill${running ? '' : ' is-plan'}`}>{statusLabel(grow.status)}</span>
-        <span className="gc-day">{dayLabel(grow, timeline)}</span>
+        {/* Läuft die Phasen-Übersicht darunter, steht „Blüte Tag 61“ dort schon (Kopfzeile) — nicht doppelt. */}
+        {!(running && timeline.phases.length > 0) && <span className="gc-day">{dayLabel(grow, timeline)}</span>}
       </div>
       <div className="gc-body">
         {running && timeline.phases.length > 0 && (
           <>
-            {/* Derselbe Strahl wie auf Live und im Grow-Detail — mit der
-                Beschriftung IM Balken, nicht darunter. Hier stand vorher eine
-                zweite, eigene Fassung: ein fest verdrahteter Keim-Balken plus
-                ein erfundener Blüte-Rest. */}
-            {/* Wischbar wie auf Live und im Detail — die dritte Stelle mit
-                derselben Achse, beim Handy-Zuschnitt zuerst uebersehen. */}
-            <div className="ls-timeline-wrap">
-            <div className="ls-timeline is-compact">
-              {timeline.phases.map((phase) => (
-                <div
-                  key={phase.label}
-                  className={`ls-phase is-${phase.state}${phase.days === 0 ? ' is-unknown' : ''}`}
-                  style={phase.days === 0 ? undefined : { flexGrow: phase.days }}
-                  title={phase.label}
-                >
-                  {phase.progress != null && (
-                    <i className="ls-phase-fill" style={{ width: `${Math.round(phase.progress * 100)}%` }} aria-hidden="true" />
-                  )}
-                  <span>{balkenText(phase.short, phase.days)}</span>
-                </div>
-              ))}
-            </div>
-            </div>
-            <div className="gc-phasetext">
-              {flipLabel(timeline.flipIsPlanned, timeline.daysToFlip, timeline.dates.flip)}
-              {timeline.dates.harvest !== '—' && ` · Ernte ~${timeline.dates.harvest}`}
-            </div>
+            {/* Kompakt (cc.267): Kopfzeile mit Phase, Woche und Ernte plus Balken; die Zeile je Phase steht auf der Grow-Seite. */}
+            <PhasenUebersicht
+              variante="kompakt"
+              phases={timeline.phases}
+              ernte={timeline.dates.harvest}
+              flipIsPlanned={timeline.flipIsPlanned}
+              daysToFlip={timeline.daysToFlip}
+              flipDatum={timeline.dates.flip}
+            />
           </>
         )}
         <div className="gc-facts">{factsLine(grow)}</div>

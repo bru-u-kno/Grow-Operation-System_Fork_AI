@@ -488,7 +488,7 @@ export function LiveScreen({
           {!zu('panel:grow') && (
           <div className="ls-panel-body">
             {/* Alles auf einen Blick (cc.266): Kopfzeile, Balken im Verhaeltnis der Dauern, eine Zeile je Phase. */}
-            <PhasenUebersicht phases={timeline} ernte={timelineDates.harvest} flipIsPlanned={flipIsPlanned} daysToFlip={daysToFlip} flipDatum={timelineDates.flip} />
+            <PhasenUebersicht phases={timeline} ernte={timelineDates.harvest} flipIsPlanned={flipIsPlanned} daysToFlip={daysToFlip} flipDatum={timelineDates.flip} zu={zu('panel:phasen')} onUmschalten={klappe('panel:phasen')} />
             {/* Die offene Frage des Phasenankers unter dem Strahl, der die Phase zeigt. */}
             <PhasenErinnerung key={grow.id} growId={grow.id} erinnerung={grow.phasenanker?.erinnerung} onErledigt={onRefresh} />
           </div>

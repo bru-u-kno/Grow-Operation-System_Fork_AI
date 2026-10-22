@@ -183,8 +183,8 @@ export function Herkunft({ titel = 'Woher kommt das?', zeilen, links, onSpringen
   return (
     <div className="ef-herkunft-box">
       <button type="button" className="ef-hk-kopf" aria-expanded={auf} aria-controls={koerper} onClick={() => setAuf(!auf)}>
+        <span className="kk-pfeil" aria-hidden="true">{auf ? '▾' : '▸'}</span>
         <span className="ef-hk-titel">{titel}</span>
-        <span className="ef-klapp-zeichen">{auf ? 'zuklappen ▴' : 'aufklappen ▾'}</span>
       </button>
       <div id={koerper} className="ef-hk-koerper" hidden={!auf}>
         {zeilen.map((z) => (

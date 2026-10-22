@@ -269,7 +269,6 @@
     color: var(--muted); font: inherit; font-size: var(--fs-text); text-align: left; cursor: pointer;
   }
   .ef-klapp b { color: var(--ink); font-weight: 600; }
-  .ef-klapp-zeichen { flex: 0 0 auto; color: var(--accent-text); font-size: var(--fs-klein); }
 
   .ef-tempmax + .ef-tempmax { border-top: 1px solid var(--hair); }
   .ef-formel { margin: 0 0 var(--s-3); font-family: var(--font-mono); font-size: var(--fs-klein); color: var(--muted); }
@@ -341,13 +340,21 @@
   /* --- A-014: einklappbare Kacheln und Zonenfarben --- */
   .st-kk > .v1-section-head { padding: 0; }
   .st-kk > .v1-section-head h2 { flex: 1 1 auto; }
+  /* Pfeilknopf wie auf der Live-Seite (`.ls-fold-pfeil`, live-screen.css): ▾ offen, ▸ zu, links vor dem Titel. */
+  .kk-pfeil {
+    flex: 0 0 auto; display: grid; place-items: center; width: 22px; height: 22px;
+    border: 1px solid var(--hair-2); border-radius: 6px;
+    color: var(--muted); font: 500 var(--fs-klein)/1 var(--font-mono); letter-spacing: 0; text-transform: none;
+  }
+  .st-kk-kopf:hover .kk-pfeil, .ef-hk-kopf:hover .kk-pfeil { border-color: var(--accent); color: var(--ink); }
+  /* Pfeil links, Titel daneben; die Kurzauskunft (zugeklappt) steht unter dem Titel — wie `.ls-bilanz` auf Live. */
   .st-kk-kopf {
-    display: flex; align-items: baseline; gap: var(--s-3); width: 100%; min-height: 40px; padding: var(--s-2) var(--s-4);
+    display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--s-3); row-gap: 3px; width: 100%; min-height: 40px; padding: var(--s-2) var(--s-4);
     border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer;
   }
-  .st-kk-titel { flex: 0 1 auto; }
-  .st-kk-zus { flex: 1 1 auto; min-width: 0; font: 400 var(--fs-klein)/1.3 var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--faint); }
-  .st-kk-kopf .ef-klapp-zeichen { margin-left: auto; font: 400 var(--fs-klein)/1 var(--font-sans); letter-spacing: 0; text-transform: none; }
+  .st-kk-titel { grid-column: 2; min-width: 0; }
+  .st-kk-kopf .kk-pfeil { grid-column: 1; grid-row: 1; }
+  .st-kk-zus { grid-column: 2; min-width: 0; font: 400 var(--fs-klein)/1.3 var(--font-mono); letter-spacing: .02em; text-transform: none; color: var(--muted); }
   .st-kk > .st-kk-body[hidden] { display: none; }
   .st-kk:has(.st-fehler) > .st-kk-body[hidden] { display: block; }
   .st-kk-ablage { display: flex; justify-content: flex-end; gap: var(--s-2); margin-bottom: var(--s-2); }
@@ -401,7 +408,7 @@
   /* „Woher kommt das?": eine Zeile zum Aufklappen, aufgeklappt eine Zeile je Quelle. */
   .ef-herkunft-box { margin-top: var(--s-2); border-top: 1px solid var(--hair); }
   .ef-hk-kopf {
-    display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+    display: flex; align-items: center; justify-content: flex-start; gap: var(--s-3);
     width: 100%; padding: var(--s-2) 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left;
     white-space: nowrap;
   }

@@ -121,12 +121,12 @@ export function CameraPanel({ tent, onReload, zu = false, onUmschalten }: {
 
       {cameras.length > 1 && (
         // Pfeile statt Wischleiste (Nutzerwunsch, 22.10.2026): alles auf einen Blick, kein Hin- und Herwischen; der Name
-        // darf gekürzt werden, „Kamera 1 von 3“ steht darunter. Nach der letzten geht es zur ersten zurück.
+        // darf gekürzt werden, „Kamera 1/3“ steht darunter. Nach der letzten geht es zur ersten zurück.
         <div className="ls-cam-nav" role="group" aria-label="Kamera wählen">
           <button type="button" className="ls-cam-pfeil" aria-label="Vorige Kamera" onClick={() => setActive((aktiv - 1 + cameras.length) % cameras.length)}>‹</button>
           <div className="ls-cam-mitte" aria-live="polite">
             <span className="ls-cam-name" title={shortName(current, aktiv)}>{shortName(current, aktiv)}</span>
-            <small>Kamera {aktiv + 1} von {cameras.length}</small>
+            <small>Kamera {aktiv + 1}/{cameras.length}</small>
           </div>
           <button type="button" className="ls-cam-pfeil" aria-label="Nächste Kamera" onClick={() => setActive((aktiv + 1) % cameras.length)}>›</button>
         </div>

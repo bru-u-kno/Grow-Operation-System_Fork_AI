@@ -5,6 +5,15 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.267
+
+**Phasen überall in der neuen Ansicht, Einklappen wie auf der Live-Seite, Kamera „1/3“.**
+
+- **Phasen auf der Grow-Seite und in der Grow-Liste:** Die neue Phasen-Ansicht von Live (Kopfzeile „Blüte · Woche 9/10“ mit Ernte, Balken im Verhältnis der Dauern) gilt jetzt auch dort. In der **Grow-Liste** bleibt die Karte kompakt (Kopfzeile und Balken, ein ausstehender oder überfälliger Flip steht darunter); „Blüte Tag 61“ oben rechts entfällt, weil es in der Kopfzeile steht. Auf der **Grow-Seite** steht die volle Fassung mit einer Zeile je Phase und darunter „Start · Geflippt · Fertig“. Der Balken mit Beschriftung im Balken (am Handy „14 …“, nur durch Wischen ganz zu sehen) ist an beiden Stellen weg.
+- **Phasen einklappen:** Auf Live und auf der Grow-Seite lässt sich die Ansicht einklappen: Pfeilknopf (▾ offen, ▸ zu) vor dem Titel „PHASEN“, zugeklappt steht dahinter die Kurzauskunft („Blüte · Woche 9/10 · Ernte ~31.10.“). Der Zustand wird am Gerät gemerkt und gilt für beide Seiten, wie bei den übrigen eingeklappten Karten der Live-Seite.
+- **Einklappen in der Steuerung wie auf Live:** Die einklappbaren Kacheln der Steuerung, Entfeuchtung und des Nachfüllens (und die kleinen Zeilen „Woher kommt das?“, „So liest du das Band“) zeigen den Pfeilknopf jetzt links vor dem Titel statt des Textes „zuklappen ▴ / aufklappen ▾“ rechts; zugeklappt steht die Kurzauskunft unter dem Titel. Behoben nebenbei: Bei der Kachel „Verbrauch heute · …“ überdeckte „2,8 kWh“ den Text „aufklappen ▾“.
+- **Kamera:** „Kamera 1/3“ statt „Kamera 1 von 3“.
+
 ## 2.0.0-cc.266
 
 **Live: Phasen auf einen Blick und Kameras mit Pfeilen umschalten.**
