@@ -19,7 +19,7 @@ export function PhasenUebersicht({ phases, ernte, flipIsPlanned, daysToFlip, fli
 }) {
   const kopf = phasenKopf(phases)
   const zeilen = phases.map(phasenZeile)
-  const erntetext = ernte === '—' ? 'Ernte offen' : `Ernte ~${ernte}${kopf?.ueberPlan ? ' · überfällig' : ''}`
+  const erntetext = ernte === '—' ? 'Ernte offen' : `Ernte ~${ernte}${kopf?.ueberPlan && phases.some((phase) => phase.state === 'current' && phase.name === 'Blüte') ? ' · überfällig' : ''}`
   // Der Flip-Hinweis nur, solange er aussteht (oder überfällig ist); danach steht „Geflippt“ in der Phasenliste ohnehin da.
   const flip = flipIsPlanned ? flipLabel(flipIsPlanned, daysToFlip, flipDatum) : null
   return (

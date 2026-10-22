@@ -30,17 +30,25 @@ function zeile(name: string, state: Phase['state'], teile: string[], ueberPlan =
   return { name, state, teile, text: teile.join(' · '), ueberPlan }
 }
 
+/**
+ * Nur Wachstum und Blüte haben einen Plan, den man überziehen kann. Trocknen und Aushärten sind Richtwerte
+ * (30 Tage Aushärten: „wer länger aushärtet, macht nichts falsch“) — dort kein „über Plan“ und keine Warnfarbe.
+ */
+function planBarPhase(phase: Phase): boolean {
+  return phase.name === 'Veg' || phase.name === 'Blüte'
+}
+
 export function phasenZeile(phase: Phase): PhasenZeile {
   const name = PHASEN_ANZEIGE[phase.name]
   const tag = phase.dayInPhase
   if (phase.state === 'current' && tag != null) {
-    // Mit Plan („Tag 61 von 70“) oder ohne (Anzucht, Wachstum ohne geplante Dauer: nur „Tag 12“).
+    // Mit Plan („Tag 61/70“) oder ohne (Anzucht, Wachstum ohne geplante Dauer: nur „Tag 12“).
     if (phase.progress != null && phase.days > 0) {
-      if (tag > phase.days) {
+      if (tag > phase.days && planBarPhase(phase)) {
         const drueber = tag - phase.days
-        return zeile(name, phase.state, [`Tag ${tag} von ${phase.days}`, `${tageText(drueber)} über Plan`], true)
+        return zeile(name, phase.state, [`Tag ${tag}/${phase.days}`, `${tageText(drueber)} über Plan`], true)
       }
-      return zeile(name, phase.state, [`Tag ${tag} von ${phase.days}`, `Woche ${Math.ceil(tag / 7)} von ${formatNumber(phase.days / 7, 1)}`])
+      return zeile(name, phase.state, [`Tag ${tag}/${phase.days}`, `Woche ${Math.ceil(tag / 7)}/${Math.ceil(phase.days / 7)}`])
     }
     return zeile(name, phase.state, [`Tag ${tag}`, `Woche ${Math.ceil(tag / 7)}`])
   }
@@ -55,8 +63,8 @@ export function phasenKopf(phases: Phase[]): { text: string; ueberPlan: boolean 
   const name = PHASEN_ANZEIGE[aktuell.name]
   const tag = aktuell.dayInPhase
   if (tag == null) return { text: name, ueberPlan: false }
-  const ueberPlan = aktuell.progress != null && aktuell.days > 0 && tag > aktuell.days
+  const ueberPlan = planBarPhase(aktuell) && aktuell.progress != null && aktuell.days > 0 && tag > aktuell.days
   const woche = Math.ceil(tag / 7)
-  const von = aktuell.progress != null && aktuell.days > 0 && !ueberPlan ? ` von ${formatNumber(aktuell.days / 7, 1)}` : ''
+  const von = aktuell.progress != null && aktuell.days > 0 && !ueberPlan ? `/${Math.ceil(aktuell.days / 7)}` : ''
   return { text: `${name} · Woche ${woche}${von}${ueberPlan ? ' · über Plan' : ''}`, ueberPlan }
 }
