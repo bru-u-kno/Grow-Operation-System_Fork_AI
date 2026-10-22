@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.266
+
+**Live: Kameras mit Pfeilen umschalten.** Hat ein Zelt mehrere Kameras, standen sie bisher als breite Wischleiste unter dem Bild; der erste Name („Rdwc Overview Standardauflösung“) war am Handy breiter als der Bildschirm, die weiteren Kameras waren nur durch Wischen zu finden. Jetzt gibt es unter dem Bild links und rechts einen Pfeil (‹ ›), dazwischen den Namen der Kamera (bei Platzmangel mit „…“ gekürzt, der volle Name steht beim Halten) und darunter „Kamera 1 von 3“. Nach der letzten Kamera geht es zur ersten zurück. Alles ist auf einen Blick sichtbar, nichts wird gewischt; die Pfeile sind 44 px groß. Bei nur einer Kamera ändert sich nichts.
+
+- **Browser-Test berichtigt:** Der Fall „Zelt im Raum“ (`raumwerte`) verlangte für den VPD-Wert ein Komma; steht der berechnete VPD genau auf einer ganzen Zahl (1,00 oder 2,00 kPa), zeigt die Anzeige „1 kPa“ und der Test wurde zu Unrecht rot. Das Komma ist jetzt wie bei Temperatur und Luftfeuchte optional. Die Anzeige selbst ist unverändert.
+
 ## 2.0.0-cc.265
 
 **Aufräumen: Meldungen mit Umlauten, Spur im Log, Tests räumen auf.** Funktionen unverändert.

@@ -179,8 +179,7 @@
  * man am jeweiligen Ende angekommen ist. Ohne diesen Hinweis schneidet der Rand
  * einfach ab — oft sauber an einer Kante, sodass es aussieht wie fertig.
  */
-.ls-timeline-wrap,
-.ls-cam-strip {
+.ls-timeline-wrap {
   /* Die abdeckenden Ebenen MUESSEN deckend sein. Mit `--panel` (im dunklen Thema
      72 % Deckkraft) blieben am Ende des Wischwegs rund 28 % des Schattens
      stehen — der Hinweis glomm weiter, obwohl es nicht mehr weitergeht.

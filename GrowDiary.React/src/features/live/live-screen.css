@@ -506,20 +506,16 @@
     background: var(--warn-wash); color: var(--warn-text);
     font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
   }
-  .ls-cam-strip { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--hair); overflow-x: auto; }
-  .ls-cam-tab {
-    display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto;
-    min-height: 32px; padding: 0 12px;
-    border: 1px solid var(--hair); border-radius: 999px;
-    background: transparent; color: var(--muted);
-    font: 500 var(--fs-etikett)/1 var(--font-mono); letter-spacing: .06em; cursor: pointer;
+  /* Umschalten mit Pfeilen: kein Wischen, der Name wird gekürzt statt breiter als der Bildschirm (cc.266). */
+  .ls-cam-nav { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--hair); }
+  .ls-cam-pfeil {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--hair-2); background: transparent; color: var(--text);
+    font-size: 22px; line-height: 1; cursor: pointer;
   }
-  .ls-cam-tab .n {
-    display: grid; place-items: center; width: 18px; height: 18px;
-    border: 1px solid var(--hair-2); border-radius: 50%; font-size: var(--fs-etikett);
-  }
-  .ls-cam-tab.active { border-color: var(--accent); color: var(--accent-text); }
-  .ls-cam-tab.active .n { border-color: var(--accent); }
+  .ls-cam-mitte { flex: 1 1 0; min-width: 0; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+  .ls-cam-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-etikett)/1.2 var(--font-mono); color: var(--accent-text); }
+  .ls-cam-mitte small { font: 400 var(--fs-etikett)/1.2 var(--font-mono); color: var(--faint); }
 }
 
 /* Watchdog-Beobachtungen im Live-Bildschirm. */

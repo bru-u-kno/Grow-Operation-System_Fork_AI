@@ -8,7 +8,7 @@ import { KlappTitel } from './Einklappen'
  * Die Kamera als Bühne, wie im Entwurf: Kopfzeile mit Entity und Alter des
  * Bildes, darunter das Bild in voller Breite.
  *
- * Mehrere Kameras liegen als Umschaltleiste darunter — drei gleich große Karten
+ * Mehrere Kameras schaltet man mit Pfeilen darunter um (seit cc.266, vorher Wischleiste) — drei gleich große Karten
  * wären drei kleine Bilder, und bei einer Kamera schaut man auf Details.
  *
  * Das zuletzt gültige Bild bleibt stehen, wenn ein Abruf scheitert. Der Server
@@ -118,20 +118,15 @@ export function CameraPanel({ tent, onReload, zu = false, onUmschalten }: {
       </div>
 
       {cameras.length > 1 && (
-        <div className="ls-cam-strip" role="tablist" aria-label="Kamera wählen">
-          {cameras.map((camera, index) => (
-            <button
-              key={camera}
-              type="button"
-              role="tab"
-              aria-selected={index === active}
-              className={classNames('ls-cam-tab', index === active && 'active')}
-              onClick={() => setActive(index)}
-            >
-              <span className="n">{index + 1}</span>
-              {shortName(camera, index)}
-            </button>
-          ))}
+        // Pfeile statt Wischleiste (Nutzerwunsch, 22.10.2026): alles auf einen Blick, kein Hin- und Herwischen; der Name
+        // darf gekürzt werden, „Kamera 1 von 3“ steht darunter. Nach der letzten geht es zur ersten zurück.
+        <div className="ls-cam-nav" role="group" aria-label="Kamera wählen">
+          <button type="button" className="ls-cam-pfeil" aria-label="Vorige Kamera" onClick={() => setActive((aktiv) => (aktiv - 1 + cameras.length) % cameras.length)}>‹</button>
+          <div className="ls-cam-mitte" aria-live="polite">
+            <span className="ls-cam-name" title={shortName(current, active)}>{shortName(current, active)}</span>
+            <small>Kamera {active + 1} von {cameras.length}</small>
+          </div>
+          <button type="button" className="ls-cam-pfeil" aria-label="Nächste Kamera" onClick={() => setActive((aktiv) => (aktiv + 1) % cameras.length)}>›</button>
         </div>
       )}
       </>}
