@@ -36,11 +36,6 @@ describe('Schutzregeln des Live-Layouts', () => {
     expect(regel).toContain('max-width: 100%')
   })
 
-  it('macht die Phasen-Zeitachse auf dem Telefon wischbar statt abgeschnitten', () => {
-    // Die Balkenlaengen SIND die Dauer — umbrechen wuerde die Aussage zerstoeren.
-    expect(css).toMatch(/\.ls-timeline-wrap\s*\{[^}]*overflow-x:\s*auto/)
-  })
-
   it('stellt die Handlung im Quelltext vor die Kamera', () => {
     // Beim Umbruch — also auf jedem Telefon — ist die Quelltext-Reihenfolge
     // die Reihenfolge auf dem Schirm. Kritisches Risiko und „heute fällig“

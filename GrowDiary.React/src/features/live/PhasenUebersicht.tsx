@@ -82,7 +82,7 @@ export function PhasenUebersicht({ phases, ernte, flipIsPlanned, daysToFlip, fli
               ))}
             </ul>
           )}
-          {datumzeile && <p className={classNames('ls-ph-flip', ueberfaellig && 'is-ueber')}>{datumzeile}</p>}
+          {datumzeile.length > 0 && <p className={classNames('ls-ph-flip', ueberfaellig && 'is-ueber')}>{datumzeile.map((teil) => <span key={teil}>{teil}</span>)}</p>}
         </>
       )}
     </div>

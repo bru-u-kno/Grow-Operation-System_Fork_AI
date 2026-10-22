@@ -59,26 +59,6 @@ export type Phase = {
   dayInPhase?: number
 }
 
-/**
- * Beschriftung fuer den Balken: die Zahl nach VORN.
- *
- * Im Zeitstrahl stand „TROCKNE…" statt „Trocknen 10 T" — ausgerechnet die
- * Zahl, um die es geht, fiel weg, und zwar auf JEDER Schreibtischbreite. Der
- * Balken darf nicht breiter werden (seine Laenge IST die Dauer, das ist die
- * Aussage der ganzen Achse), also muss die Reihenfolge sich aendern: steht
- * die Zahl vorn, faellt beim Kuerzen immer der Name und nie die Zahl — auf
- * jeder Breite, ohne eine einzige weitere Regel.
- *
- * Abschnitte ohne bekannte Dauer bleiben, wie sie sind: sie werden gar nicht
- * gekuerzt (`flex-grow: 0`), und „— Keim" waere nur seltsam.
- */
-export function balkenText(kurz: string, tage: number): string {
-  if (tage === 0) return kurz
-  const luecke = kurz.indexOf(' ')
-  if (luecke <= 0) return kurz
-  return kurz.slice(luecke + 1) + ' ' + kurz.slice(0, luecke)
-}
-
 export type PhaseTimeline = {
   phases: Phase[]
   dates: { start: string; flip: string; harvest: string; ready: string }

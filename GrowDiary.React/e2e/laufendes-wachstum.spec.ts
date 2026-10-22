@@ -74,8 +74,10 @@ test('ein Grow im Wachstum zeigt auf Live und in der Grow-Liste keinen rohen Pha
       expect(umgebung(baum, ROH_VEG), `${pfad}: rohes „Veg" im Text (auch in Großbuchstaben gesetzt)`).toBe('')
 
       // Gegenprobe: der Kartenkopf mit der laufenden Phase steht wirklich da.
-      expect(sichtbar, `${pfad}: kein „Wachstum Tag …" — steht der Grow im Wachstum auf dem Schirm?`)
-        .toMatch(/Wachstum Tag \d+/)
+      // Live: der Seitenkopf „Wachstum Tag N“; Grow-Liste (seit cc.267): die Kopfzeile der Phasen-Ansicht „Wachstum · Woche N/M“.
+      const erwartet = pfad === '/' ? /Wachstum Tag \d+/ : /Wachstum · Woche \d+/
+      expect(sichtbar, `${pfad}: keine laufende Phase „Wachstum" — steht der Grow im Wachstum auf dem Schirm?`)
+        .toMatch(erwartet)
     }
   } finally {
     await request.put('/api/grows/1', {

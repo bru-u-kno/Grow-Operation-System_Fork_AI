@@ -34,7 +34,7 @@ export function Klappkachel({ titel, zusammenfassung, offen = true, id, children
             {/* Wie auf der Live-Seite (cc.267): Pfeilknopf links vor dem Titel, zugeklappt die Kurzauskunft dahinter. */}
             <span className="kk-pfeil" aria-hidden="true">{auf ? '▾' : '▸'}</span>
             <span className="st-kk-titel">{titel}</span>
-            {!auf && zusammenfassung != null && <span className="st-kk-zus">{zusammenfassung}</span>}
+            {!auf && zusammenfassung != null && zusammenfassung !== '' && <span className="st-kk-zus">{zusammenfassung}</span>}
           </button>
         </h2>
       </header>

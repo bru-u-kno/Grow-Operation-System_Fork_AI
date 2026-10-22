@@ -172,26 +172,6 @@
 }
 
 /**
- * Wischbereiche, die zeigen, dass sie welche sind.
- *
- * Dieselbe Machart wie bei den Tabellen (collection.css): die beiden
- * `local`-Verlaeufe fahren mit dem Inhalt und decken den Schatten ab, sobald
- * man am jeweiligen Ende angekommen ist. Ohne diesen Hinweis schneidet der Rand
- * einfach ab — oft sauber an einer Kante, sodass es aussieht wie fertig.
- */
-.ls-timeline-wrap {
-  /* Die abdeckenden Ebenen MUESSEN deckend sein. Mit `--panel` (im dunklen Thema
-     72 % Deckkraft) blieben am Ende des Wischwegs rund 28 % des Schattens
-     stehen — der Hinweis glomm weiter, obwohl es nicht mehr weitergeht.
-     `--bg` ist in beiden Themen ein Vollton. */
-  background:
-    linear-gradient(to right, var(--bg) 40%, transparent) left center / 26px 100% no-repeat local,
-    linear-gradient(to left, var(--bg) 40%, transparent) right center / 26px 100% no-repeat local,
-    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--ink) 16%, transparent), transparent) left center / 13px 100% no-repeat scroll,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 16%, transparent), transparent) right center / 13px 100% no-repeat scroll;
-}
-
-/**
  * Rueckmeldung unter der Maus.
  *
  * Zeilen, Kacheln und Zelte zeigten den Zeigefinger, aenderten sich beim

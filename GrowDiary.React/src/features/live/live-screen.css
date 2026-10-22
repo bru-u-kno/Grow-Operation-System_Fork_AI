@@ -403,25 +403,6 @@
 
   /* ---------- Phasen-Timeline ---------- */
   .ls-timeline { display: flex; gap: 2px; }
-  /* Grundregel — die gab es bisher nur im Telefon-Block. Bei 861 px, wo die
-     Seitenleiste erscheint und Platz wegnimmt, war der Wischkasten deshalb
-     ungeregelt: als Rasterkind mit `min-width: auto` wurde er 632 px breit in
-     einem 579 px breiten Panel, und weil das Panel beschneidet, war das Ende
-     einfach weg. */
-  /* `overflow-x: auto` macht die Senkrechte still zu `auto` mit — daraus
-     wurde ein Tastatur-Halt auf einem Kasten ohne jedes Bedienelement. Mit
-     der ausdruecklichen Senkrechten bleibt das Wischen quer am Telefon und
-     der tote Halt verschwindet. */
-  .ls-timeline-wrap { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-  /* Auf einer Grow-Karte ist weniger Platz — kleinere Schrift, damit die
-     Beschriftungen IM Balken stehen koennen statt darunter. */
-  .ls-timeline.is-compact .ls-phase {
-    min-height: 22px; padding: 0 6px;
-    font-size: var(--fs-etikett); letter-spacing: .06em;
-    /* Kein Abschnitt schrumpft unter seine Beschriftung — sonst stand da
-       „KEIM 12" statt „KEIM 12 T". Die Anteile verteilen sich auf den Rest. */
-    min-width: fit-content;
-  }
   .ls-phase {
     flex: 1 1 0; min-width: 0;
     display: grid; place-items: center;
@@ -460,16 +441,6 @@
   /* Abschnitte ohne bekannte Dauer bekommen nur einen schmalen Streifen und
      eine gestrichelte Kante — sie behaupten keine Länge. */
   .ls-phase.is-unknown { border-style: dashed; flex-grow: 0; flex-basis: auto; padding: 0 10px; }
-  /* Linksbuendig als LEGENDE, nicht als Beschriftung unter den Balken.
-     Mit `space-between` behauptete jede Angabe eine Stelle auf der Achse —
-     und traf sie nicht: „Ernte" stand 231 px neben dem Ende der Bluete,
-     mitten unter dem Aushaerten. */
-  .ls-timeline-dates {
-    display: flex; justify-content: start; gap: 18px; flex-wrap: wrap;
-    margin-top: 8px; font: 400 var(--fs-etikett)/1 var(--font-mono); color: var(--muted);
-  }
-  .ls-timeline-dates .is-due { color: var(--warn-text); }
-
   /* Phasen-Übersicht (cc.266): Kopfzeile, Balken im Verhältnis der Dauern, eine Zeile je Phase — kein Wischen. */
   .ls-ph { display: flex; flex-direction: column; gap: 12px; }
   .ls-ph-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -482,26 +453,16 @@
   .ls-ph-liste li:first-child { border-top: 0; }
   .ls-ph-name { min-width: 0; }
   .ls-ph-text { text-align: right; white-space: nowrap; }
+  .ls-ph-flip span { white-space: nowrap; }
   .ls-ph-text.is-zweizeilig { display: flex; flex-direction: column; gap: 2px; }
   .ls-ph-liste .is-current { color: var(--accent-text); font-weight: 700; }
   .ls-ph-liste .is-planned { color: var(--faint); }
-  .ls-ph .ls-ph-flip { margin: 0; font: 400 var(--fs-etikett)/1.3 var(--font-mono); color: var(--muted); }
+  .ls-ph .ls-ph-flip { display: flex; flex-wrap: wrap; column-gap: 14px; row-gap: 2px; margin: 0; font: 400 var(--fs-etikett)/1.3 var(--font-mono); color: var(--muted); }
 
   /* ---------- Telefon ---------- */
   @media (max-width: 640px) {
     .ls { padding: 12px 12px 32px; }
     .ls-head-bar { gap: 10px; }
-    /* Die Zeitachse traegt `min-width: fit-content` je Abschnitt, damit keine
-       Beschriftung abgeschnitten wird — auf dem Telefon summiert sich das auf
-       fast die doppelte Bildschirmbreite. Sie laesst sich nicht umbrechen,
-       ohne ihre Aussage zu verlieren (die Balkenlaengen SIND die Dauer), also
-       wischt man sie: sichtbar angeschnitten statt unsichtbar abgeschnitten. */
-    /* `min-width: 0` ist noetig, weil der Wischkasten ein Rasterkind ist und
-       damit `min-width: auto` traegt — er konnte also gar nicht unter seinen
-       Inhalt. Gemessen bei 861 px: 632 px breit in einem 579 px breiten
-       Panel, und weil das Panel beschneidet, war das Ende einfach weg. */
-    .ls-timeline-wrap { overflow-x: auto; scrollbar-width: thin; min-width: 0; }
-    .ls-timeline, .ls-timeline-dates { min-width: max-content; }
     .ls-task-when { flex-basis: 52px; }
   }
 }
