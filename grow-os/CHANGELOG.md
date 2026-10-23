@@ -5,6 +5,12 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.269
+
+**Kein Fehlalarm mehr „Licht in der Dunkelphase“, wenn das Licht ein paar Sekunden vor der gewohnten Zeit angeht.**
+
+- **Lichtwächter:** Die Schonfrist von 10 Minuten galt bisher nur nach dem Licht-aus. Der gelernte Einschaltzeitpunkt ist aber ein Median über die letzten fünf Tage, und die einzelnen Schaltzeiten streuen um ein bis drei Minuten. Ging das Licht ein paar Sekunden vor dem Median an (am 23.10.2026 um 05:01:16 bei einem Median von 05:02), kam der Push „Licht in der Dunkelphase“, obwohl nichts schiefgelaufen war. Jetzt gilt die Schonfrist auch 10 Minuten vor dem gelernten Einschalten. Echtes Licht mitten in der Dunkelphase meldet der Wächter weiter, sofort und auch in der Ruhezeit.
+
 ## 2.0.0-cc.268
 
 **Einklappen überall wie auf der Live-Seite: Pfeilknopf links, Titel in Großbuchstaben, zugeklappt eine Kurzauskunft.**
