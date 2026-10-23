@@ -21,11 +21,15 @@ namespace GrowDiary.Web.Services;
 public static class LightIntrusionGuard
 {
     /// <summary>
-    /// Die ersten Minuten nach dem geplanten Licht-aus zählen nicht.
+    /// Die Minuten rund um die gelernten Schaltzeiten zählen nicht: die ersten
+    /// nach dem Licht-aus und die letzten vor dem Licht-an.
     /// </summary>
     /// <remarks>
     /// Schaltuhren und Sensoren sind nicht taktgenau; ohne diese Schonfrist
-    /// meldete jede Sekunde Nachlauf einen Alarm.
+    /// meldete jede Sekunde Nachlauf einen Alarm. Vor dem Licht-an gilt das
+    /// genauso: die gelernte Zeit ist ein Median, und die einzelnen Flanken
+    /// streuen aus dem Poll-Takt um Minuten — am 23.10.2026 kam der Alarm, weil
+    /// das Licht 46 Sekunden vor dem Median anging.
     /// </remarks>
     public const int GraceMinutes = 10;
 
@@ -54,13 +58,15 @@ public static class LightIntrusionGuard
         var an = cycle.OnAt;
         var aus = cycle.OffAt;
 
-        // Die Schonfrist hängt hinten an der Lichtphase: kurz nach dem Ausschalten
-        // ist ein Nachzucken keine Störung.
+        // Die Schonfrist hängt an beiden Enden der Lichtphase: kurz nach dem
+        // Ausschalten ist ein Nachzucken keine Störung, und kurz vor dem
+        // gelernten Einschalten ist ein früher Schalter keine.
+        var anMitFrist = an.AddMinutes(-GraceMinutes);
         var ausMitFrist = aus.AddMinutes(GraceMinutes);
 
-        var inLichtphase = an < ausMitFrist
-            ? localTimeOfDay >= an && localTimeOfDay < ausMitFrist
-            : localTimeOfDay >= an || localTimeOfDay < ausMitFrist;
+        var inLichtphase = anMitFrist < ausMitFrist
+            ? localTimeOfDay >= anMitFrist && localTimeOfDay < ausMitFrist
+            : localTimeOfDay >= anMitFrist || localTimeOfDay < ausMitFrist;
 
         return !inLichtphase;
     }

@@ -46,6 +46,34 @@ public sealed class LightIntrusionGuardTests
     }
 
     [Fact]
+    public void AnEarlySwitchOnBeforeTheLearnedTimeIsTolerated()
+    {
+        // 23.10.2026: Licht ging um 05:01:16 an, der gelernte Median lag bei
+        // 05:02 — 46 Sekunden zu frueh, und der Push "Licht in der Dunkelphase"
+        // kam. Die Flanken streuen um Minuten, weil sie aus dem Poll-Takt
+        // kommen. Zehn Minuten vor dem gelernten Einschalten ist kein Einbruch,
+        // eine halbe Stunde davor schon.
+        Assert.False(LightIntrusionGuard.IsIntrusion(
+            Bluete, new TimeOnly(7, 59), GrowStage.Flower, SeedType.Feminized));
+        Assert.False(LightIntrusionGuard.IsIntrusion(
+            Bluete, new TimeOnly(7, 50), GrowStage.Flower, SeedType.Feminized));
+        Assert.True(LightIntrusionGuard.IsIntrusion(
+            Bluete, new TimeOnly(7, 30), GrowStage.Flower, SeedType.Feminized));
+    }
+
+    [Fact]
+    public void AnEarlySwitchOnIsToleratedAcrossMidnight()
+    {
+        // Licht an um 00:05: 23:58 davor liegt vor Mitternacht und ist noch
+        // innerhalb der Schonfrist.
+        var nachMitternacht = new LearnedCycle(12, new TimeOnly(0, 5), new TimeOnly(12, 5), 4);
+        Assert.False(LightIntrusionGuard.IsIntrusion(
+            nachMitternacht, new TimeOnly(23, 58), GrowStage.Flower, SeedType.Feminized));
+        Assert.True(LightIntrusionGuard.IsIntrusion(
+            nachMitternacht, new TimeOnly(23, 30), GrowStage.Flower, SeedType.Feminized));
+    }
+
+    [Fact]
     public void InVegItDoesNotMatter()
     {
         // Eine Stunde Licht mehr kostet in der Veg nichts.
