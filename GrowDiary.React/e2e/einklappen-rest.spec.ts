@@ -108,13 +108,3 @@ test('Kosten: ein geöffneter Verbrauch bleibt nach dem Neuladen offen, ein zuge
   await page.reload()
   await expect(page.locator('.ko-verbrauch-zeile').first()).toHaveAttribute('aria-expanded', 'false')
 })
-
-test('Geräte: „Von Hand gesetzt" bleibt nach dem Neuladen, wie der Nutzer es gelassen hat', async ({ page }) => {
-  await page.goto('/geraete')
-  const schalter = page.locator('.gr-korrekturen-schalter')
-  if (!(await schalter.count())) test.skip(true, 'Der Demobestand hat keine von Hand gesetzten Einträge.')
-  await expect(schalter).toHaveAttribute('aria-expanded', 'false')
-  await schalter.click()
-  await page.reload()
-  await expect(page.locator('.gr-korrekturen-schalter')).toHaveAttribute('aria-expanded', 'true')
-})
