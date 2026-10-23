@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.268
+
+**Einklappen überall wie auf der Live-Seite: Pfeilknopf links, Titel in Großbuchstaben, zugeklappt eine Kurzauskunft.**
+
+- **Geräte:** Jede Gerätezeile hat den Pfeilknopf (▾ offen, ▸ zu) jetzt links vor dem Namen statt „⌄/›“ rechts hinter den Zählern; Zähler und ⋯ bleiben rechts. Der Schalter „N Einträge von Hand gesetzt“ heißt „VON HAND GESETZT“, zugeklappt steht dahinter „4 Einträge“ in Warnfarbe.
+- **Kosten:** Die Zeile je Artikel heißt „VERBRAUCH“ mit Pfeilknopf; zugeklappt steht dahinter „30 Tage · 12,40 €“ (bzw. „noch nichts gebucht“) statt rechts am Rand. Die offenen Formulare (Artikel, Nachfüllung, Anschaffung) schließen über den Pfeilknopf links vor dem Titel statt über „▴“ rechts.
+- **Bluelab-Anleitung:** „BLUELAB GUARDIAN“ mit Pfeilknopf; zugeklappt steht der Stand dahinter („eingerichtet ✓“ bzw. „optional“). Der erklärende Satz steht aufgeklappt darunter.
+- **Fünf Aufklappstellen ohne Browser-Dreieck:** „Formeln vergleichen“ (Steuerung), „Erweitert · Grenzen“ (Probelauf, zugeklappt „leer = nicht überwacht“), „Details & Handlung“ (Risikokarten), „Wieder okay“ (Aufgaben, zugeklappt „2 Risiken“) und „Was das Skript tun muss“ (Bluelab-Anleitung) haben denselben Pfeilknopf. Die Eingabefelder im Probelauf bleiben auch zugeklappt in der Seite.
+- **Beobachtungs-Leitfaden:** Jeder Eintrag hat den Pfeilknopf links, zugeklappt steht darunter „4 Ursachen · 3 Mittel“. Die Symptomnamen bleiben in Normalschrift.
+- **Gemeinsamer Baustein:** Pfeil, Titel und Kurzauskunft kommen aus einem Baustein (`components/Klapp`) mit eigenem CSS; die Live-Regeln liegen im Live-CSS und fehlten auf den anderen Seiten. Neuer Browser-Test `einklappen-rest` prüft Pfeil links, Kurzauskunft und zweimaliges Umschalten an den echten Seiten.
+
 ## 2.0.0-cc.267
 
 **Phasen überall in der neuen Ansicht, Einklappen wie auf der Live-Seite, Kamera „1/3“.**
