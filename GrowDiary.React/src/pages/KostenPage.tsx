@@ -10,6 +10,7 @@ import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../
 import { feldText, istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import { phaseName } from '../deutsche-woerter'
 import { KlappKopf } from '../components/Klapp'
+import { useKlappGemerkt } from '../components/klapp-zustand'
 import '../features/kosten/kosten.css'
 
 /**
@@ -930,7 +931,9 @@ type VerbrauchsAnsicht = {
  * vielleicht niemand ansieht.
  */
 function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel; growId: number | null; onChanged?: (text?: string) => void }) {
-  const [offen, setOffen] = useState(false)
+  const [gemerkt, merke] = useKlappGemerkt(`kosten:verbrauch:${artikel.id}`)
+  const offen = gemerkt ?? false
+  const setOffen = (wert: boolean | ((vorher: boolean) => boolean)) => merke(typeof wert === 'function' ? wert(offen) : wert)
   const [spanne, setSpanne] = useState('DreissigTage')
   const [ansicht, setAnsicht] = useState<VerbrauchsAnsicht | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -1013,14 +1016,12 @@ function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel
               <col />
               <col className="ko-col-zahl" />
               <col className="ko-col-eur" />
-              <col />
             </colgroup>
             <thead>
               <tr>
                 <th scope="col">Tag</th>
                 <th scope="col">Menge</th>
                 <th scope="col">€</th>
-                <th scope="col"><span className="v1-sr-only">Entfernen</span></th>
               </tr>
             </thead>
             <tbody>
@@ -1029,14 +1030,12 @@ function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel
                   <th scope="row">
                     {kurzesDatum(z.datum)}
                     <small>{ohneDatum(z.notiz, z.datum) ?? z.quelle}</small>
+                    <button type="button" className="ko-link is-danger ko-buchung-weg" onClick={() => void entferneBuchung(z.id)} data-audit="kosten-verbrauch-entfernen">
+                      Entfernen
+                    </button>
                   </th>
                   <td>{menge(z.menge, ansicht.einheit)}</td>
                   <td>{z.eur == null ? '–' : formatNumber(z.eur, 2)}</td>
-                  <td>
-                    <V1Button onClick={() => void entferneBuchung(z.id)} audit="kosten-verbrauch-entfernen">
-                      Entfernen
-                    </V1Button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1045,7 +1044,6 @@ function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel
                 <th scope="row">{ansicht.buchungen} {ansicht.buchungen === 1 ? 'Buchung' : 'Buchungen'}</th>
                 <td>{menge(ansicht.summeMenge, ansicht.einheit)}</td>
                 <td>{formatNumber(ansicht.summeEur, 2)}</td>
-                <td />
               </tr>
             </tfoot>
           </table>

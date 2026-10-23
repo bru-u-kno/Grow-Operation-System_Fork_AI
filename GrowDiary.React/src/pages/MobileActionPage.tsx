@@ -273,6 +273,7 @@ function MobileActionPage() {
               <KlappBereich
                 titel="Wieder okay"
                 kurz={wiederOkay.length === 1 ? '1 Risiko' : `${wiederOkay.length} Risiken`}
+                merken="aufgaben:wieder-okay"
                 className="af-wieder-okay"
                 audit="risk-wieder-okay"
               >

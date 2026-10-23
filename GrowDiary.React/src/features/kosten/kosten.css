@@ -123,6 +123,8 @@
     color: var(--muted); border-bottom: 1px solid var(--hair-2, rgba(94, 231, 160, .25)); cursor: pointer;
   }
   .ko-link.is-primary { color: var(--accent-text); border-bottom-color: var(--accent-dim); }
+  /* „Entfernen“ steht als Textlink unter dem Datum der Buchung statt in einer vierten Spalte (zu schmal bei 369 px). */
+  .ko-verbrauch-tabelle .ko-buchung-weg { margin-top: var(--s-1); font-size: var(--fs-etikett); font-weight: 400; }
   .ko-link.is-danger { color: var(--danger-text); border-bottom-color: var(--danger-text); }
   .ko-link[disabled] { opacity: .5; cursor: default; }
 
@@ -141,7 +143,9 @@
     border-color: var(--accent); color: var(--accent-text); background: var(--accent-wash); font-weight: 600;
   }
 
-  .ko-verbrauch { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair); }
+  /* min-width: 0, sonst weiten die wischbaren Zeitraum-Chips den Karteninhalt über die Karte hinaus und die
+     Tabelle wird rechts abgeschnitten (am echten Stand 330 statt 277 px, 23.10.2026). */
+  .ko-verbrauch { min-width: 0; margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--hair); }
   .ko-verbrauch-spannen {
     display: flex; gap: var(--s-2); margin-bottom: var(--s-3);
     overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;

@@ -68,3 +68,53 @@ test('Geräte: die Zeile hat den Pfeilknopf links vor dem Namen', async ({ page 
   const [pfeil, name] = await Promise.all([kopf.locator('.kk-pfeil').boundingBox(), kopf.locator('.gr-name').boundingBox()])
   expect(pfeil!.x).toBeLessThan(name!.x)
 })
+
+const VERBRAUCH = {
+  einheit: 'ml', summeMenge: 360, summeEur: 1.8, buchungen: 2, kostenVollstaendig: true,
+  zeilen: [
+    { id: 901, datum: '2026-10-04', menge: 180, eur: 0.9, quelle: 'Wasserwechsel', notiz: 'Wasserwechsel RDWC 160 L, Blütewoche 7. Gebucht von Claude.' },
+    { id: 902, datum: '2026-10-05', menge: 180, eur: null, quelle: 'Wasserwechsel', notiz: null },
+  ],
+}
+
+test('Kosten: die Verbrauchstabelle passt bei 369 px in die Karte, „Entfernen" steht unter dem Datum', async ({ page }) => {
+  await page.setViewportSize({ width: 369, height: 812 })
+  await page.route(/\/api\/kosten\/artikel\/\d+\/verbrauch/, (route) => route.fulfill({ json: VERBRAUCH }))
+  await page.goto('/kosten?tab=verbrauch')
+  await page.locator('.ko-verbrauch-zeile').first().click()
+  const karte = page.locator('article.ko-artikel').first()
+  const tabelle = karte.locator('.ko-verbrauch-tabelle')
+  await expect(tabelle).toBeVisible()
+  const [k, t] = await Promise.all([karte.boundingBox(), tabelle.boundingBox()])
+  expect(t!.x + t!.width).toBeLessThanOrEqual(k!.x + k!.width)
+  // Vier Spalten gab es einmal: jetzt drei, und der Knopf wohnt in der Datumszelle.
+  await expect(tabelle.locator('thead th')).toHaveCount(3)
+  const knopf = tabelle.locator('tbody tr').first().locator('th[scope="row"] [data-audit="kosten-verbrauch-entfernen"]')
+  await expect(knopf).toBeVisible()
+  const b = await knopf.boundingBox()
+  expect(b!.x + b!.width).toBeLessThanOrEqual(k!.x + k!.width)
+})
+
+test('Kosten: ein geöffneter Verbrauch bleibt nach dem Neuladen offen, ein zugeklappter zu', async ({ page }) => {
+  await page.route(/\/api\/kosten\/artikel\/\d+\/verbrauch/, (route) => route.fulfill({ json: VERBRAUCH }))
+  await page.goto('/kosten?tab=verbrauch')
+  const zeile = page.locator('.ko-verbrauch-zeile').first()
+  await zeile.click()
+  await expect(zeile).toHaveAttribute('aria-expanded', 'true')
+  await page.reload()
+  await expect(page.locator('.ko-verbrauch-zeile').first()).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('.ko-verbrauch-tabelle').first()).toBeVisible()
+  await page.locator('.ko-verbrauch-zeile').first().click()
+  await page.reload()
+  await expect(page.locator('.ko-verbrauch-zeile').first()).toHaveAttribute('aria-expanded', 'false')
+})
+
+test('Geräte: „Von Hand gesetzt" bleibt nach dem Neuladen, wie der Nutzer es gelassen hat', async ({ page }) => {
+  await page.goto('/geraete')
+  const schalter = page.locator('.gr-korrekturen-schalter')
+  if (!(await schalter.count())) test.skip(true, 'Der Demobestand hat keine von Hand gesetzten Einträge.')
+  await expect(schalter).toHaveAttribute('aria-expanded', 'false')
+  await schalter.click()
+  await page.reload()
+  await expect(page.locator('.gr-korrekturen-schalter')).toHaveAttribute('aria-expanded', 'true')
+})

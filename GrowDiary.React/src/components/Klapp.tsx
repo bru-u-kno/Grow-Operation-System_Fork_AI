@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { classNames } from '../utils'
+import { useKlappGemerkt } from './klapp-zustand'
 import './klapp.css'
 
 /**
@@ -57,16 +58,21 @@ export function KlappKopf({ zu, onUmschalten, titel, kurz, ton, titelNormal, cla
  * Ein Bereich zum Aufklappen an Stelle von `<details>`: derselbe Kopf, der Inhalt bleibt mit `hidden` im
  * Baum (Eingabefelder darin behalten ihren Wert, Suche und Tests finden ihn). Beim ersten Anzeigen zu.
  */
-export function KlappBereich({ titel, kurz, ton, offen = false, className, audit, children }: {
+export function KlappBereich({ titel, kurz, ton, offen = false, merken, className, audit, children }: {
   titel: ReactNode
   kurz?: ReactNode
   ton?: KlappTon
   offen?: boolean
+  /** Kennung, unter der der Zustand am Gerät gemerkt wird (`components/klapp-zustand`); ohne bleibt es je Besuch. */
+  merken?: string
   className?: string
   audit?: string
   children: ReactNode
 }) {
-  const [auf, setAuf] = useState(offen)
+  const [gemerkt, merke] = useKlappGemerkt(merken)
+  const [nurHier, setNurHier] = useState(offen)
+  const auf = merken ? (gemerkt ?? offen) : nurHier
+  const setAuf = (wert: boolean) => { if (merken) merke(wert); else setNurHier(wert) }
   const koerper = useId()
   return (
     <div className={classNames('kk-bereich', className)} data-audit={audit}>

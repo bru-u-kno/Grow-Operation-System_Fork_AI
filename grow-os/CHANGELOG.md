@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.270
+
+**Kosten: Verbrauchstabelle passt wieder in die Karte; aufgeklappte Bereiche merken sich ihren Zustand.**
+
+- **Verbrauchstabelle:** Bei geöffnetem „Verbrauch“ war der Karteninhalt am Handy 330 statt 277 px breit — die wischbaren Zeitraum-Chips weiteten ihn über die Karte hinaus, und die Karte schnitt rechts ab: Die Euro-Spalte war nicht mehr ganz zu sehen, der Knopf „Entfernen“ zur Hälfte weg. Jetzt bleibt die Karte so breit wie sie ist, die Chips wischen darin, die Tabelle hat drei Spalten, und „Entfernen“ steht als kleiner Link unter dem Datum der Buchung. Der Spaltenkopf „Entfernen“, der sichtbar statt nur für Screenreader dastand, ist weg (die Hilfsklasse dafür fehlte).
+- **Zustand wird gemerkt:** „Verbrauch“ je Artikel, „Von Hand gesetzt“ (Geräte), die Bluelab-Anleitung und „Wieder okay“ (Aufgaben) bleiben nach dem Neuladen so auf- oder zugeklappt, wie du sie gelassen hast — am Gerät, wie auf der Live-Seite. Ohne eigene Wahl gilt der bisherige Standard (zu; die Bluelab-Anleitung offen, solange nicht eingerichtet).
+- **Browser-Test:** Drei neue Fälle in `einklappen-rest` (Tabelle passt bei 369 px in die Karte, Zustand bleibt nach dem Neuladen — für Verbrauch und Geräte); der Fall der Tabellenbreite wird ohne die Korrektur rot.
+
 ## 2.0.0-cc.269
 
 **Kein Fehlalarm mehr „Licht in der Dunkelphase“, wenn das Licht ein paar Sekunden vor der gewohnten Zeit angeht.**

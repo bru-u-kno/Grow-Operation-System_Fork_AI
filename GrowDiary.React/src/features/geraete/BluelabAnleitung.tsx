@@ -4,6 +4,7 @@ import { V1Card } from '../../components/v1'
 import type { GeraetZeile } from '../steuerung/steuerung-typen'
 import { BLUELAB_SCHLUESSEL, bluelabLage, type BluelabStand, type SchrittStatus } from './bluelab-anleitung'
 import { KlappBereich, KlappKopf } from '../../components/Klapp'
+import { useKlappGemerkt } from '../../components/klapp-zustand'
 import '../steuerung/steuerung.css'
 
 /**
@@ -22,7 +23,7 @@ const ZEICHEN: Record<SchrittStatus, string> = { ok: '✓', warn: '!', offen: ''
 export function BluelabAnleitung({ zeilen }: { zeilen: readonly GeraetZeile[] }) {
   const [stand, setStand] = useState<BluelabStand | null>(null)
   // null = noch nicht angefasst: dann entscheidet der Stand (fertig → zu, sonst offen)
-  const [aufgeklappt, setAufgeklappt] = useState<boolean | null>(null)
+  const [aufgeklappt, setAufgeklappt] = useKlappGemerkt('bluelab:anleitung')
 
   useEffect(() => {
     const controller = new AbortController()

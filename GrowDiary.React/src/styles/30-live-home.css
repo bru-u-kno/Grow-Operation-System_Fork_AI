@@ -17,7 +17,8 @@
 }
 
 /* Nur fuer Screenreader — genutzt u. a. in der Hardware-Tabelle. */
-.sr-only {
+.sr-only,
+.v1-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

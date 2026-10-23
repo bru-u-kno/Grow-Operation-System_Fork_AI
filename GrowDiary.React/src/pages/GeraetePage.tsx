@@ -16,6 +16,7 @@ import { rollenPfad } from '../features/geraete/rollenPfad'
 import { WartungReiter } from '../features/geraete/WartungReiter'
 import type { HomeAssistantEntity } from '../types'
 import { KlappKopf, KlappPfeil } from '../components/Klapp'
+import { useKlappGemerkt } from '../components/klapp-zustand'
 import './geraete.css'
 
 /**
@@ -131,7 +132,8 @@ export default function GeraetePage() {
   // Die Korrekturliste klappt zu: drei Kameras schoben die Geraete weit nach
   // unten. Zugeklappt bleibt eine ZEILE MIT TEXT stehen — eine blosse Zahl
   // hatte niemand als Schalter erkannt.
-  const [korrekturenOffen, setKorrekturenOffen] = useState(false)
+  const [gemerktKorrekturen, merkeKorrekturen] = useKlappGemerkt('geraete:korrekturen')
+  const korrekturenOffen = gemerktKorrekturen ?? false
   // Fork AI (forkai.134): Der Reiter steht in der Adresse — so führen Links aus
   // der Steuerung direkt in „Rollen" und dort zur passenden Regelung.
   const [params, setParams] = useSearchParams()
@@ -477,7 +479,7 @@ export default function GeraetePage() {
           <KlappKopf
             className="gr-korrekturen-schalter"
             zu={!korrekturenOffen}
-            onUmschalten={() => setKorrekturenOffen((offen) => !offen)}
+            onUmschalten={() => merkeKorrekturen(!korrekturenOffen)}
             titel="Von Hand gesetzt"
             kurz={verschobene.length + korrigierteGeraete.length === 1 ? '1 Eintrag' : `${verschobene.length + korrigierteGeraete.length} Einträge`}
             ton="warn"
