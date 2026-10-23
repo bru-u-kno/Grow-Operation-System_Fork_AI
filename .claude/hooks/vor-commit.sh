@@ -225,10 +225,32 @@ $a"
   rm -rf "$d"
 }
 
+# E2E-Waechter (23.10.2026, cc.270): Neue oder geaenderte Browser-Tests (e2e/*.ts) laufen durch den Waechtertest
+# `keine-stillen-uebersprunge` — er lehnt ein rohes `test.skip` ab. Das Tor kannte ihn nicht: ein rohes `test.skip`
+# ging durch (vitest, Typen, Lint gruen) und machte erst CI-Teil `e2e-rauch` rot (Release-Lauf cc.270, 16 Min.).
+# Dauer gemessen ≈ 22 s (kein Zwischenspeicher noetig); laeuft nur, wenn eine Datei unter GrowDiary.React/e2e/
+# vorgemerkt ist.
+waechter_pruefen() {
+  local d a t0
+  d="$(mktemp -d)"; t0="$(jetzt)"
+  if ! ( cd "$ZIEL/GrowDiary.React" && npx playwright test e2e/keine-stillen-uebersprunge.spec.ts --project=chromium --reporter=line ) > "$d/log" 2>&1; then
+    a="$(grep -E '✘|Error:|Diese Stellen|test\.skip|    - ' "$d/log" | head -10)"
+    [ -z "$a" ] && a="$(tail -n 8 "$d/log")"
+    fehler="$fehler
+E2E-WAECHTER ROT (keine-stillen-uebersprunge — rohes test.skip? darfUeberspringen aus e2e/pflicht.ts nutzen, im strengen Lauf Daten per page.route vorgeben):
+$a"
+    zeit_log e2e-waechter $(( $(jetzt) - t0 )) rot
+  else
+    zeit_log e2e-waechter $(( $(jetzt) - t0 )) gruen
+  fi
+  rm -rf "$d"
+}
+
 # Backend (.cs) und Frontend (.ts/.tsx/.css/.json) laufen gleichzeitig, sofern noetig.
-braucht_backend=0; braucht_frontend=0
+braucht_backend=0; braucht_frontend=0; braucht_waechter=0
 printf '%s\n' "$vorgemerkt" | grep -qE '\.(cs|csproj|slnx|runsettings)$' && braucht_backend=1
 printf '%s\n' "$vorgemerkt" | grep -qE '\.(ts|tsx|css|json)$' && braucht_frontend=1
+printf '%s\n' "$vorgemerkt" | grep -qE '^GrowDiary\.React/e2e/.*\.ts$' && braucht_waechter=1
 
 if [ "$braucht_backend" = 1 ]; then
   dotnet_bin="$(dotnet_finden)" || laut "Der Commit-Hook findet dotnet nicht (weder im PATH noch in ~/.dotnet)." \
@@ -273,6 +295,10 @@ $n: Zweig ohne Ergebnis abgebrochen — als ROT gewertet."
   fi
 done
 rm -rf "$ergebnis_ordner"
+# Der Waechter laeuft NACH den anderen Pruefungen, nicht daneben: Playwright schreibt waehrend des Laufs nach
+# `test-results/`, und ESLint, das gleichzeitig den Baum durchlaeuft, scheitert dann an verschwindenden Dateien
+# (am 23.10.2026 beim Probelauf gemessen: LINT ROT ohne Befund).
+[ "$braucht_waechter" = 1 ] && waechter_pruefen
 zeit_log tor-gesamt $(( $(jetzt) - gesamt_start )) "$([ -n "$fehler" ] && echo rot || echo gruen)"
 
 if [ -n "$fehler" ]; then
