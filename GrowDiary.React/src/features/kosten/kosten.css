@@ -113,17 +113,8 @@
 
 /* Fork AI (forkai.77): Verbrauch je Artikel über einen Zeitraum. */
 @layer components {
-  /* Aufklappzeile: links der Titel, rechts was drinsteht. */
-  .ko-verbrauch-zeile {
-    display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
-    width: 100%; padding: var(--s-3) 0; background: none; border: 0; color: inherit; font: inherit;
-    cursor: pointer; text-align: left;
-  }
-  .ko-verbrauch-zeile b { font-size: var(--fs-text); font-weight: 500; }
-  .ko-verbrauch-zeile span {
-    font-family: var(--font-mono); font-size: var(--fs-etikett); color: var(--faint); white-space: nowrap;
-  }
-  .ko-verbrauch-zeile:hover span, .ko-verbrauch-zeile:focus-visible span { color: var(--muted); }
+  /* Aufklappzeile: Pfeilknopf und Titel, zugeklappt dahinter Zeitraum und Summe (components/Klapp). */
+  .ko-verbrauch-zeile { padding: var(--s-2) 0; }
 
   /* Aktionen als Textlinks — vier gleich grosse Knoepfe brauchten mehr Hoehe
      als alle Stammdaten der Karte zusammen. */

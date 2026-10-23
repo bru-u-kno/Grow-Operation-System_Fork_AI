@@ -8,6 +8,7 @@ import type { CalibrationEventDto, GrowSummary, GrowTaskDto, HardwareItemDto, Ma
 import { V1Alert, V1Page, V1Skeleton } from '../components/v1'
 import { classNames } from '../utils'
 import { RiskActionCard } from '../features/risks/RiskActionCard'
+import { KlappBereich } from '../components/Klapp'
 import { istOffen, istWiederOkay } from '../features/risks/risiko-zeit'
 import { TASKS_CHANGED_EVENT } from '../useNavCounts'
 
@@ -269,8 +270,12 @@ function MobileActionPage() {
               </div>
             )}
             {wiederOkay.length > 0 && (
-              <details className="af-wieder-okay" data-audit="risk-wieder-okay">
-                <summary>Wieder okay · {wiederOkay.length}</summary>
+              <KlappBereich
+                titel="Wieder okay"
+                kurz={wiederOkay.length === 1 ? '1 Risiko' : `${wiederOkay.length} Risiken`}
+                className="af-wieder-okay"
+                audit="risk-wieder-okay"
+              >
                 <div className="af-risks">
                   {wiederOkay.map((risk) => (
                     <RiskActionCard
@@ -283,7 +288,7 @@ function MobileActionPage() {
                     />
                   ))}
                 </div>
-              </details>
+              </KlappBereich>
             )}
           </section>
 

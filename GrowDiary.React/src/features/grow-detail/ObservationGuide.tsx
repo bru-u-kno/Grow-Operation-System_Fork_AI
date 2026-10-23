@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '../../api'
+import { KlappKopf } from '../../components/Klapp'
 import { V1Card, V1Section } from '../../components/v1'
 
 type Vorschlag = { id: string; name: string; art: string }
@@ -66,14 +67,14 @@ export function ObservationGuide() {
               <ul className="og-liste">
                 {gewaehlt.beobachtungen.map((beobachtung) => (
                   <li key={beobachtung.id}>
-                    <button
-                      type="button"
+                    <KlappKopf
                       className="og-eintrag"
-                      onClick={() => setOffen(offen === beobachtung.id ? null : beobachtung.id)}
-                      aria-expanded={offen === beobachtung.id}
-                    >
-                      {beobachtung.name}
-                    </button>
+                      zu={offen !== beobachtung.id}
+                      onUmschalten={() => setOffen(offen === beobachtung.id ? null : beobachtung.id)}
+                      titel={beobachtung.name}
+                      titelNormal
+                      kurz={`${beobachtung.moeglicheUrsachen.length} ${beobachtung.moeglicheUrsachen.length === 1 ? 'Ursache' : 'Ursachen'} · ${beobachtung.vorschlaege.length} Mittel`}
+                    />
 
                     {offen === beobachtung.id && (
                       <div className="og-detail">

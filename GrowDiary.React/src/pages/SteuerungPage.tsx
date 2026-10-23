@@ -23,6 +23,7 @@ import { useBestand } from '../features/steuerung/bestand-laden'
 import { AuswahlFeld, NichtEingerichtet } from '../features/steuerung/Auswahl'
 import { useSteuerungAuswahl } from '../features/steuerung/useSteuerungAuswahl'
 import { HaltBand } from '../features/steuerung/HaltBand'
+import { KlappBereich } from '../components/Klapp'
 
 /**
  * Fork AI: Was die Prüfung der vorhandenen CO₂-Automationen meldet.
@@ -745,13 +746,12 @@ function Co2Detail({ module, aktiv, onWechsel }: { module: SteuerungModul[]; akt
                 )}
                 {r.hinweis && <p className="st-hinweis">{r.hinweis}</p>}
                 {r.alteFormel && r.neueFormel && (
-                  <details className="st-formeln">
-                    <summary>Formeln vergleichen</summary>
+                  <KlappBereich titel="Formeln vergleichen" className="st-formeln">
                     <span>In Home Assistant</span>
                     <code>{r.alteFormel}</code>
                     <span>Aktuelle Fassung von Cultivate Control</span>
                     <code>{r.neueFormel}</code>
-                  </details>
+                  </KlappBereich>
                 )}
               </div>
             ))}

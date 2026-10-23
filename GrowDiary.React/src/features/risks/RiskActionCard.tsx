@@ -9,6 +9,7 @@ import type {
   StartRiskEventSopRequest,
 } from '../../types'
 import { V1Button, V1Card } from '../../components/v1'
+import { KlappBereich } from '../../components/Klapp'
 import { formatDate, formatDateTime, formatNumber, formatSeverityLabel } from '../../utils'
 import { dauerText, istWiederOkay, leseRohwert, pruefStand, seitText, vorText, wiederholungen, zielText } from './risiko-zeit'
 
@@ -133,10 +134,9 @@ export function RiskActionCard({ risk, context, history, jetzt: jetztEin, onChan
         </div>
       )}
       {risk.description && (
-        <details className="rc-risk-details">
-          <summary>Details &amp; Handlung</summary>
+        <KlappBereich titel="Details & Handlung" className="rc-risk-details">
           <p className="rc-risk-action-desc">{risk.description}</p>
-        </details>
+        </KlappBereich>
       )}
       {!wiederOkay && (
         <div className="rc-risk-action-buttons">

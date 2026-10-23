@@ -15,6 +15,7 @@ import { ordneEintraege } from '../features/geraete/eintraegeOrdnung'
 import { rollenPfad } from '../features/geraete/rollenPfad'
 import { WartungReiter } from '../features/geraete/WartungReiter'
 import type { HomeAssistantEntity } from '../types'
+import { KlappKopf, KlappPfeil } from '../components/Klapp'
 import './geraete.css'
 
 /**
@@ -473,19 +474,14 @@ export default function GeraetePage() {
 
         {(verschobene.length > 0 || korrigierteGeraete.length > 0) && (
           <>
-          <button
-            type="button"
+          <KlappKopf
             className="gr-korrekturen-schalter"
-            aria-expanded={korrekturenOffen}
-            onClick={() => setKorrekturenOffen((offen) => !offen)}
-          >
-            <span>
-              {verschobene.length + korrigierteGeraete.length === 1
-                ? '1 Eintrag von Hand gesetzt'
-                : `${verschobene.length + korrigierteGeraete.length} Einträge von Hand gesetzt`}
-            </span>
-            <em aria-hidden="true">{korrekturenOffen ? '⌄' : '›'}</em>
-          </button>
+            zu={!korrekturenOffen}
+            onUmschalten={() => setKorrekturenOffen((offen) => !offen)}
+            titel="Von Hand gesetzt"
+            kurz={verschobene.length + korrigierteGeraete.length === 1 ? '1 Eintrag' : `${verschobene.length + korrigierteGeraete.length} Einträge`}
+            ton="warn"
+          />
           {korrekturenOffen && (
           <ul className="gr-verschobene">
             {verschobene.map(({ entitaet, geraet }) => (
@@ -660,6 +656,7 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
   return (
     <div className={eingerueckt ? 'gr-zeile is-kind' : 'gr-zeile'}>
       <button type="button" className="gr-kopf" onClick={onKlick} aria-expanded={hatKinder ? !zugeklappt : offen}>
+        <KlappPfeil zu={hatKinder ? zugeklappt : !offen} />
         <span className="gr-name">
           {geraet.name}
           <small>{unterzeile}</small>
@@ -692,7 +689,6 @@ function GeraetZeile({ geraet, offen, onKlick, werkzeug, alleGeraete, aufGeraet,
             {kinderZahl}
           </span>
         )}
-        <span className="gr-pfeil" aria-hidden="true">{(hatKinder ? !zugeklappt : offen) ? '⌄' : '›'}</span>
       </button>
 
       {/* Das Menue haengt am ⋯, nicht am Aufklappen: es soll auch bei einer

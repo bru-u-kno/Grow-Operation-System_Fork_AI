@@ -125,9 +125,6 @@
   .st-eingerueckt { margin-left: var(--s-4); }
   .st-fuss-link a { color: inherit; }
   /* A-016, Etappe 6: Bluelab-Anleitung */
-  .st-anleitung-kopf { display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: var(--s-2); padding: 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-  .st-anleitung-stand { flex: 0 0 auto; font-size: var(--fs-etikett); color: var(--faint); }
-  .st-anleitung-stand.is-ok { color: var(--accent-text); }
   .st-schrittliste { display: grid; gap: var(--s-2); margin: var(--s-2) 0 0; padding: 0; list-style: none; }
   .st-schrittliste li { display: flex; gap: var(--s-2); align-items: flex-start; }
   .st-schrittliste b { display: block; font-weight: 600; }
@@ -145,8 +142,7 @@
   .st-befund em { display: block; margin-top: 2px; font-style: normal; color: var(--ink); }
   /* Fork AI: Alte und neue Formel eines Rechenwerts zum Vergleichen. */
   .st-formeln { margin-top: var(--s-2); font-size: var(--fs-etikett); color: var(--faint); }
-  .st-formeln summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--ink); }
-  .st-formeln span { display: block; margin-top: var(--s-2); }
+  .st-formeln .kk-inhalt > span { display: block; margin-top: var(--s-2); }
   .st-formeln code { display: block; margin-top: 2px; padding: var(--s-2); font-family: var(--font-mono); font-size: var(--fs-etikett); line-height: 1.45; color: var(--ink); background: var(--sunk); border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; font-variant-ligatures: none; }
   .st-fehler { display: block; margin-top: 2px; font-size: var(--fs-etikett); color: var(--danger-text); }
 
@@ -340,13 +336,6 @@
   /* --- A-014: einklappbare Kacheln und Zonenfarben --- */
   .st-kk > .v1-section-head { padding: 0; }
   .st-kk > .v1-section-head h2 { flex: 1 1 auto; }
-  /* Pfeilknopf wie auf der Live-Seite (`.ls-fold-pfeil`, live-screen.css): ▾ offen, ▸ zu, links vor dem Titel. */
-  .kk-pfeil {
-    flex: 0 0 auto; display: grid; place-items: center; width: 22px; height: 22px;
-    border: 1px solid var(--hair-2); border-radius: 6px;
-    color: var(--muted); font: 500 var(--fs-klein)/1 var(--font-mono); letter-spacing: 0; text-transform: none;
-  }
-  .st-kk-kopf:hover .kk-pfeil, .ef-hk-kopf:hover .kk-pfeil { border-color: var(--accent); color: var(--ink); }
   /* Pfeil links, Titel daneben; die Kurzauskunft (zugeklappt) steht unter dem Titel — wie `.ls-bilanz` auf Live. */
   .st-kk-kopf {
     display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--s-3); row-gap: 3px; width: 100%; min-height: 40px; padding: var(--s-2) var(--s-4);

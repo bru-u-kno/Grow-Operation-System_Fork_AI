@@ -32,7 +32,6 @@
   font-size: var(--fs-micro, .625rem); font-weight: 600; font-variant-numeric: tabular-nums;
 }
 
-.gr-pfeil { color: var(--faint); }
 
 .gr-entitaeten { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
 .gr-entitaeten li { padding: var(--s-2) 0; border-top: 1px solid var(--hair); }
@@ -128,13 +127,8 @@
 .gr-zahlen b.is-korrigiert, .gr-zahlen b.is-korrigiert * { color: var(--warn-text) !important; }
 
 .gr-korrekturen-schalter {
-  display: flex; align-items: center; gap: var(--s-2); width: 100%;
-  margin-top: var(--s-4); padding: var(--s-2) 0;
-  background: none; border: 0; border-top: 1px solid var(--hair);
-  color: var(--warn-text); font: inherit; font-size: var(--fs-micro, .625rem);
-  letter-spacing: .04em; text-align: left; cursor: pointer;
+  margin-top: var(--s-4); padding: var(--s-2) 0; border-top: 1px solid var(--hair);
 }
-.gr-korrekturen-schalter span { flex: 1; min-width: 0; }
 
 
 

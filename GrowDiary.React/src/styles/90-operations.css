@@ -189,24 +189,11 @@
 .rc-risk-when .rc-risk-repeat {
   color: var(--warn-text);
 }
-.rc-risk-details summary {
-  cursor: pointer;
-  color: var(--v1-soft);
-  font-size: var(--fs-text);
-}
 .rc-risk-details .rc-risk-action-desc {
   margin-top: 8px;
 }
 .af-wieder-okay {
   margin-top: 12px;
-}
-.af-wieder-okay summary {
-  cursor: pointer;
-  padding: 8px 2px;
-  color: var(--v1-muted);
-  font: 600 var(--fs-etikett)/1.2 var(--font-mono);
-  letter-spacing: .12em;
-  text-transform: uppercase;
 }
 .af-wieder-okay .af-risks {
   display: grid;

@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
+import { KlappPfeil } from '../../components/Klapp'
 import { Link } from 'react-router-dom'
 import { V1Alert, V1Card } from '../../components/v1'
 import '../live/metric-tile.css'
@@ -183,7 +184,7 @@ export function Herkunft({ titel = 'Woher kommt das?', zeilen, links, onSpringen
   return (
     <div className="ef-herkunft-box">
       <button type="button" className="ef-hk-kopf" aria-expanded={auf} aria-controls={koerper} onClick={() => setAuf(!auf)}>
-        <span className="kk-pfeil" aria-hidden="true">{auf ? '▾' : '▸'}</span>
+        <KlappPfeil zu={!auf} />
         <span className="ef-hk-titel">{titel}</span>
       </button>
       <div id={koerper} className="ef-hk-koerper" hidden={!auf}>

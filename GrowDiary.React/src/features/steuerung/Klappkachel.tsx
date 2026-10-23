@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
+import { KlappPfeil } from '../../components/Klapp'
 import './steuerung.css'
 
 /**
@@ -32,7 +33,7 @@ export function Klappkachel({ titel, zusammenfassung, offen = true, id, children
         <h2>
           <button type="button" className="st-kk-kopf" aria-expanded={auf} aria-controls={koerper} onClick={() => setAuf(!auf)}>
             {/* Wie auf der Live-Seite (cc.267): Pfeilknopf links vor dem Titel, zugeklappt die Kurzauskunft dahinter. */}
-            <span className="kk-pfeil" aria-hidden="true">{auf ? '▾' : '▸'}</span>
+            <KlappPfeil zu={!auf} />
             <span className="st-kk-titel">{titel}</span>
             {!auf && zusammenfassung != null && zusammenfassung !== '' && <span className="st-kk-zus">{zusammenfassung}</span>}
           </button>

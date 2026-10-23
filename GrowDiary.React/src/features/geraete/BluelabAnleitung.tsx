@@ -3,6 +3,7 @@ import { apiFetch } from '../../api'
 import { V1Card } from '../../components/v1'
 import type { GeraetZeile } from '../steuerung/steuerung-typen'
 import { BLUELAB_SCHLUESSEL, bluelabLage, type BluelabStand, type SchrittStatus } from './bluelab-anleitung'
+import { KlappBereich, KlappKopf } from '../../components/Klapp'
 import '../steuerung/steuerung.css'
 
 /**
@@ -37,12 +38,14 @@ export function BluelabAnleitung({ zeilen }: { zeilen: readonly GeraetZeile[] })
   return (
     <V1Card>
       <div className="st-anleitung" data-audit="bluelab-anleitung">
-        <button type="button" className="st-anleitung-kopf" aria-expanded={offen} onClick={() => setAufgeklappt(!offen)}>
-          <b>Bluelab Guardian: Alarmgrenzen ans Gerät übertragen</b>
-          <span className={lage.fertig ? 'st-anleitung-stand is-ok' : 'st-anleitung-stand'}>
-            {lage.fertig ? 'eingerichtet ✓' : 'optional'}
-          </span>
-        </button>
+        <KlappKopf
+          className="st-anleitung-kopf"
+          zu={!offen}
+          onUmschalten={() => setAufgeklappt(!offen)}
+          titel="Bluelab Guardian"
+          kurz={lage.fertig ? 'eingerichtet ✓' : 'optional'}
+          ton={lage.fertig ? 'ok' : undefined}
+        />
         {offen && (
           <>
             <p className="st-hinweis">
@@ -58,8 +61,7 @@ export function BluelabAnleitung({ zeilen }: { zeilen: readonly GeraetZeile[] })
                     <b>{s.titel}</b>
                     <small>{s.text}</small>
                     {s.nr === 2 && (
-                      <details>
-                        <summary>Was das Skript tun muss</summary>
+                      <KlappBereich titel="Was das Skript tun muss" kurz="6 Schlüssel">
                         <small>
                           Es bekommt zum Beispiel <code>setting_key = setting.ph_high_alarm</code> und <code>value = 6.2</code> und
                           setzt diesen Wert beim Hersteller. Die sechs Schlüssel:{' '}
@@ -67,7 +69,7 @@ export function BluelabAnleitung({ zeilen }: { zeilen: readonly GeraetZeile[] })
                           Deine Zugangsdaten zum Hersteller gehören ins Skript oder in die Geheimnisse von Home Assistant —
                           der Fork sieht und speichert sie nie.
                         </small>
-                      </details>
+                      </KlappBereich>
                     )}
                   </span>
                 </li>

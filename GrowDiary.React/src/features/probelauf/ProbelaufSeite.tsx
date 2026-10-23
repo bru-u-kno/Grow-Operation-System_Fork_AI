@@ -8,6 +8,7 @@ import { feldText } from '../../zahlenfeld'
 import '../steuerung/steuerung.css'
 import './probelauf.css'
 import { KenntnisstandAnsicht } from './KenntnisstandAnsicht'
+import { KlappBereich } from '../../components/Klapp'
 import { ProbelaufKurve } from './ProbelaufKurve'
 import {
   erholungText, grenzenAusText, istOffen, jetztWerte, proMinuteText, restzeit, startText, statusText, wertText,
@@ -227,15 +228,14 @@ function Formular(p: {
           <li>Wird eine Grenze überschritten, bricht der Lauf ab und stellt sofort zurück.</li>
           <li>Danach: alles wie vorher, 10 Minuten Nachlauf, dann die Auswertung.</li>
         </ul>
-        <details>
-          <summary>Erweitert · Grenzen (leer = nicht überwacht)</summary>
+        <KlappBereich titel="Erweitert · Grenzen" kurz="leer = nicht überwacht">
           <div className="pl-grenzen">
             {feld('feuchteMax', 'Luftfeuchte max. (%)', p.voreinstellung?.feuchteMax)}
             {feld('tempMax', 'Temperatur max. (°C)', p.voreinstellung?.tempMax)}
             {feld('vpdMin', 'VPD min. (kPa)', p.voreinstellung?.vpdMin)}
             {feld('vpdMax', 'VPD max. (kPa)', p.voreinstellung?.vpdMax)}
           </div>
-        </details>
+        </KlappBereich>
       </div>
 
       <V1Alert message="Das greift real ins Zelt ein. Es läuft nur, solange die Grenzen halten; ein Neustart stellt von selbst zurück." tone="warn" />

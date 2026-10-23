@@ -342,6 +342,8 @@
 }
 
 .og-eintrag:hover { color: var(--accent); }
+/* Die Kurzauskunft steht unter dem Symptomnamen, nicht daneben. */
+.og-eintrag .kk-kurz { flex-basis: 100%; }
 
 .og-detail {
   display: grid;

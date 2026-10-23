@@ -9,6 +9,7 @@ import type { EntitaetTest, KostenAnschaffung, KostenArtikel, KostenNachfuellung
 import { formatDate, formatDateTime, formatNumber, toLocalInputValue } from '../utils'
 import { feldText, istLeer, istUnlesbar, zahlOderNull } from '../zahlenfeld'
 import { phaseName } from '../deutsche-woerter'
+import { KlappKopf } from '../components/Klapp'
 import '../features/kosten/kosten.css'
 
 /**
@@ -208,7 +209,7 @@ function KostenPage() {
   )
 }
 
-/** Ein offenes Formular: Kopfzeile mit Titel und ▴ zum Einklappen, rollt bei jedem Öffnen-Tipp ins Bild. */
+/** Ein offenes Formular: Kopfzeile mit Pfeilknopf und Titel zum Einklappen, rollt bei jedem Öffnen-Tipp ins Bild. */
 function FormularHuelle({ titel, sprung, onClose, children }: { titel: string; sprung: number; onClose: () => void; children: ReactNode }) {
   const huelle = useRef<HTMLDivElement>(null)
   // Nicht sofort: wenn der Klick gleichzeitig den Reiter wechselt, rendert der
@@ -219,8 +220,9 @@ function FormularHuelle({ titel, sprung, onClose, children }: { titel: string; s
   return (
     <section className="v1-section scroll-ziel" ref={huelle}>
       <header className="v1-section-head">
-        <h2>{titel}</h2>
-        <V1Button variant="ghost" onClick={onClose} audit={`kosten-form-zu`}>▴</V1Button>
+        <h2>
+          <KlappKopf zu={false} onUmschalten={onClose} titel={titel} audit="kosten-form-zu" />
+        </h2>
       </header>
       <div className="v1-section-body">{children}</div>
     </section>
@@ -981,15 +983,7 @@ function VerbrauchBlock({ artikel, growId, onChanged }: { artikel: KostenArtikel
 
   return (
     <div className="ko-verbrauch">
-      <button
-        type="button"
-        className="ko-verbrauch-zeile"
-        aria-expanded={offen}
-        onClick={() => setOffen((v) => !v)}
-      >
-        <b>Verbrauch</b>
-        <span>{zustand} {offen ? '▴' : '▾'}</span>
-      </button>
+      <KlappKopf className="ko-verbrauch-zeile" zu={!offen} onUmschalten={() => setOffen((v) => !v)} titel="Verbrauch" kurz={zustand} />
 
       {!offen ? null : (
       <>
