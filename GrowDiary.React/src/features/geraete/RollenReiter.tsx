@@ -10,6 +10,7 @@ import type { HomeAssistantEntity } from '../../types'
 import type { GeraeteSeite, GeraetZeile } from '../steuerung/steuerung-typen'
 import { EntfeuchterNamen } from './EntfeuchterNamen'
 import { BluelabAnleitung } from './BluelabAnleitung'
+import { haZustandName } from '../../deutsche-woerter'
 import { haWert } from '../../utils'
 import { entitaetsOptionen } from './entitaets-optionen'
 import { vorbereiten } from './entitaets-passung'
@@ -317,7 +318,7 @@ function RollenZeile({
           hinweisOben={leerHinweis}
         />
         <span className={zeile.gefunden ? 'st-geraet-wert is-ok' : 'st-geraet-wert is-faint'}>
-          {zeile.gefunden ? (haWert(zeile.livewert, zeile.einheit) ?? 'gefunden') : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}
+          {zeile.gefunden ? (haZustandName(haWert(zeile.livewert, zeile.einheit)) === '–' ? 'gefunden' : haZustandName(haWert(zeile.livewert, zeile.einheit))) : wert.trim() === '' ? 'nicht zugeordnet' : 'unbekannt'}
         </span>
       </div>
       {fehler && <div className="st-fehler" role="alert">{fehler}</div>}
@@ -383,7 +384,7 @@ function EigeneGeraete({
           </span>
           <span className="st-eingaben">
             <span className={geraet.gefunden ? 'st-geraet-wert is-ok' : 'st-geraet-wert is-faint'}>
-              {geraet.gefunden ? (haWert(geraet.livewert) ?? 'gefunden') : 'unbekannt'}
+              {geraet.gefunden ? (haZustandName(haWert(geraet.livewert)) === '–' ? 'gefunden' : haZustandName(haWert(geraet.livewert))) : 'unbekannt'}
             </span>
             <V1Button onClick={() => void loeschen(geraet.name)}>Entfernen</V1Button>
           </span>
