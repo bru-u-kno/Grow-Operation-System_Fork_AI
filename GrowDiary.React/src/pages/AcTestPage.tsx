@@ -137,7 +137,7 @@ export function AcTestPage() {
       setEntwurf(geholt.geraete.map((g) => g.geraet))
       setZeiten(ausStand(geholt))
     } catch (caught) {
-      setFehler(formatApiError(caught, 'Der Versuchsaufbau liess sich nicht laden.'))
+      setFehler(formatApiError(caught, 'Der Versuchsaufbau ließ sich nicht laden.'))
     }
   }, [])
 
@@ -176,7 +176,7 @@ export function AcTestPage() {
         setZeiten(ausStand(geholt))
       } catch (caught) {
         if (!abbruch.signal.aborted) {
-          setFehler(formatApiError(caught, 'Der Versuchsaufbau liess sich nicht laden.'))
+          setFehler(formatApiError(caught, 'Der Versuchsaufbau ließ sich nicht laden.'))
         }
       }
     })()
@@ -223,7 +223,7 @@ export function AcTestPage() {
       }
       await laden(zeltId)
     } catch (caught) {
-      setFehler(formatApiError(caught, 'Die Stufe liess sich nicht stellen.'))
+      setFehler(formatApiError(caught, 'Die Stufe ließ sich nicht stellen.'))
     } finally {
       setArbeitet(null)
     }
@@ -255,7 +255,7 @@ export function AcTestPage() {
       }
       await laden(zeltId)
     } catch (caught) {
-      setFehler(formatApiError(caught, 'Der Zeitplan liess sich nicht stellen.'))
+      setFehler(formatApiError(caught, 'Der Zeitplan ließ sich nicht stellen.'))
     } finally {
       setArbeitet(null)
     }
@@ -486,7 +486,7 @@ export function AcTestPage() {
                     placeholder="number.led_top_eingeschaltete_leistung"
                     onChange={(e) => setEntwurf(entwurf.map((x, k) => k === i ? { ...x, leistungEntityId: e.target.value } : x))} />
                 </V1Field>
-                <V1Field label="Modus (select, freiwillig)" hint="Wird nur angezeigt, nicht gestellt.">
+                <V1Field label="Modus (Auswahlfeld, freiwillig)" hint="Wird nur angezeigt, nicht gestellt.">
                   <input
                     value={g.modusEntityId ?? ''}
                     placeholder="select.led_top_aktiver_modus"

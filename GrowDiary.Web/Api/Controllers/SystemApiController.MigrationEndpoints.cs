@@ -85,7 +85,7 @@ public sealed partial class SystemApiController
         }
 
         var isSafe = blockers.Count == 0 && backupManifest is not null && backupValidation?.IsValid == true;
-        LogSystemAudit("system", "upgrade-preflight-run", isSafe ? "Upgrade-Preflight erfolgreich ausgefuehrt." : "Upgrade-Preflight mit Blockern ausgefuehrt.", isSafe, relatedFileName: backupManifest?.FileName, severity: isSafe ? "info" : "warning");
+        LogSystemAudit("system", "upgrade-preflight-run", isSafe ? "Upgrade-Preflight erfolgreich ausgeführt." : "Upgrade-Preflight mit Blockern ausgeführt.", isSafe, relatedFileName: backupManifest?.FileName, severity: isSafe ? "info" : "warning");
         return Ok(new UpgradePreflightDto(
             PreflightSchema: "grow-os.upgrade-preflight.v1",
             CheckedAtUtc: DateTime.UtcNow,

@@ -153,7 +153,7 @@ public sealed class HomeAssistantService
                 if (TryOpenCircuit())
                 {
                     _logger.LogWarning(
-                        "Home Assistant Statusabfragen fuer Zelt {TentId} hatten Transportfehler. Weitere Abfragen sind fuer {BackoffSeconds} Sekunden pausiert.",
+                        "Home Assistant Statusabfragen für Zelt {TentId} hatten Transportfehler. Weitere Abfragen sind für {BackoffSeconds} Sekunden pausiert.",
                         tent.Id,
                         (int)BackoffWindow.TotalSeconds);
                 }
@@ -175,13 +175,13 @@ public sealed class HomeAssistantService
             {
                 _logger.LogWarning(
                     ex,
-                    "Home Assistant Statusabfragen fuer Zelt {TentId} sind fehlgeschlagen. Weitere Abfragen sind fuer {BackoffSeconds} Sekunden pausiert.",
+                    "Home Assistant Statusabfragen für Zelt {TentId} sind fehlgeschlagen. Weitere Abfragen sind für {BackoffSeconds} Sekunden pausiert.",
                     tent.Id,
                     (int)BackoffWindow.TotalSeconds);
             }
             else
             {
-                _logger.LogDebug(ex, "Home Assistant Statusabfragen fuer Zelt {TentId} sind fehlgeschlagen.", tent.Id);
+                _logger.LogDebug(ex, "Home Assistant Statusabfragen für Zelt {TentId} sind fehlgeschlagen.", tent.Id);
             }
 
             return new Dictionary<string, HomeAssistantState>();
@@ -200,7 +200,7 @@ public sealed class HomeAssistantService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogDebug(
-                    "Home Assistant state {EntityId} fuer Metrik {MetricKey} konnte nicht geladen werden: HTTP {StatusCode}.",
+                    "Home Assistant state {EntityId} für Metrik {MetricKey} konnte nicht geladen werden: HTTP {StatusCode}.",
                     entityId,
                     key,
                     (int)response.StatusCode);
@@ -261,7 +261,7 @@ public sealed class HomeAssistantService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Home Assistant state {EntityId} fuer Metrik {MetricKey} konnte nicht geladen werden.", entityId, key);
+            _logger.LogDebug(ex, "Home Assistant state {EntityId} für Metrik {MetricKey} konnte nicht geladen werden.", entityId, key);
             return (key, null, true);
         }
     }
@@ -626,7 +626,7 @@ public sealed class HomeAssistantService
 
         if (DemoData.IsEnabled)
         {
-            _logger.LogInformation("Testdaten: {Domain}.{Service} ohne Entitaet — nicht ausgefuehrt.", domain, service);
+            _logger.LogInformation("Testdaten: {Domain}.{Service} ohne Entität — nicht ausgeführt.", domain, service);
             return true;
         }
 
@@ -709,14 +709,14 @@ public sealed class HomeAssistantService
             if (!DemoData.KennstEntitaet(entityId))
             {
                 _logger.LogWarning(
-                    "Testdaten: {Entity} gibt es nicht — {Domain}.{Service} wird nicht ausgefuehrt.",
+                    "Testdaten: {Entity} gibt es nicht — {Domain}.{Service} wird nicht ausgeführt.",
                     entityId, domain, service);
                 return HaDienstAntwort.Abgelehnt;
             }
 
             var verstanden = Demoschaltbrett.Schalten(domain, service, entityId, daten);
             _logger.LogInformation(
-                "Testdaten: {Domain}.{Service} fuer {Entity} — {Ergebnis}.",
+                "Testdaten: {Domain}.{Service} für {Entity} — {Ergebnis}.",
                 domain, service, entityId,
                 verstanden ? "im Schaltbrett vermerkt" : "unbekannter Dienst, nicht vermerkt");
             return verstanden ? HaDienstAntwort.Angenommen : HaDienstAntwort.Abgelehnt;

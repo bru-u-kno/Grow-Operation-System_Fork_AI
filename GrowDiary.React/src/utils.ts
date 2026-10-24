@@ -1,4 +1,4 @@
-import { stufenName } from './deutsche-woerter'
+import { haZustandName, stufenName } from './deutsche-woerter'
 
 export function formatDate(value: string | null | undefined, options?: Intl.DateTimeFormatOptions): string {
   if (!value) {
@@ -50,7 +50,7 @@ export function haWert(state: string | null | undefined, unit?: string | null): 
   const zahl = Number(state)
   const wert = state.trim() !== '' && Number.isFinite(zahl)
     ? formatNumber(zahl, Math.abs(zahl) < 10 ? 2 : 1)
-    : state
+    : haZustandName(state)
 
   return `${wert}${unit ? ` ${unit}` : ''}`
 }

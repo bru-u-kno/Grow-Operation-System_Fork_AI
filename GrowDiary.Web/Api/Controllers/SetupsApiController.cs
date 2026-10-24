@@ -147,7 +147,7 @@ public sealed class SetupsApiController : ApiControllerBase
 
         if (quarantineStartedAt.HasValue && quarantinePlannedEndAt.HasValue && quarantinePlannedEndAt.Value < quarantineStartedAt.Value)
         {
-            ModelState.AddModelError(nameof(UpdateSetupRequest.QuarantinePlannedEndAt), "Das geplante Ende darf nicht vor dem Quarantaene-Start liegen.");
+            ModelState.AddModelError(nameof(UpdateSetupRequest.QuarantinePlannedEndAt), "Das geplante Ende darf nicht vor dem Quarantäne-Start liegen.");
         }
     }
 

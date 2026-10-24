@@ -116,7 +116,7 @@ function ReleasePage() {
   }
 
   return (
-    <V1Page eyebrow="Release" title="Release & Daten" subtitle="Export, Import-Plan und Import sind bewusst getrennt. Import schreibt erst nach Preflight und Safety-Backup.">
+    <V1Page eyebrow="Version" title="Version & Daten" subtitle="Export, Import-Plan und Import sind bewusst getrennt. Import schreibt erst nach Preflight und Safety-Backup.">
       {error && <V1Alert title="Fehler" message={error} tone="warn" />}
       {message && <V1Alert message={message} tone="ok" />}
 
@@ -138,7 +138,7 @@ function ReleasePage() {
                   {grows.map((grow) => <option key={grow.id} value={grow.id}>{grow.name} · {grow.tentName ?? 'ohne Zelt'}</option>)}
                 </select>
               </V1Field>
-              <V1Switch label="Anonymisieren" checked={anonymize} onChange={setAnonymize} hint="Name, Sorte, HA-Entities und freie Notizen werden reduziert." />
+              <V1Switch label="Anonymisieren" checked={anonymize} onChange={setAnonymize} hint="Name, Sorte, HA-Entitäten und freie Notizen werden reduziert." />
               <V1Switch label="Foto-Metadaten" checked={includePhotoMetadata} onChange={setIncludePhotoMetadata} hint="JSON enthält keine Bilddateien, nur Metadaten." />
               {exportUrl && <a className="v1-button is-primary" href={exportUrl} download>Export JSON öffnen</a>}
             </V1Card>

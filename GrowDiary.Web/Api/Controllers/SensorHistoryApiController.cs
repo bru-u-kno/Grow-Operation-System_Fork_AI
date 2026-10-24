@@ -80,7 +80,7 @@ public sealed class SensorHistoryApiController : ApiControllerBase
         var keys = ParseMetrics(metrics);
         if (keys.Count == 0)
         {
-            return BadRequestError("metrics_required", "Bitte mindestens eine Messgroesse angeben (metrics=reservoir-ph,...).");
+            return BadRequestError("metrics_required", "Bitte mindestens eine Messgröße angeben (metrics=reservoir-ph,...).");
         }
 
         var window = ClampDays(days);

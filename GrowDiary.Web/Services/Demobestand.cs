@@ -1416,7 +1416,7 @@ public static partial class Demobestand
         if (ablauf is null) return;
 
         dienste.GetRequiredService<SopRepository>().StartSopInstance(
-            growId, ablauf, SopStartSource.Manual, null, null, "Testdaten: laeuft gerade.");
+            growId, ablauf, SopStartSource.Manual, null, null, "Testdaten: läuft gerade.");
     }
 
 }

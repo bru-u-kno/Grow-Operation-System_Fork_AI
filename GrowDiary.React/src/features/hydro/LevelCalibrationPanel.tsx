@@ -87,7 +87,7 @@ export function LevelCalibrationPanel(
     try {
       setState(await apiFetch<State>(`/api/hydro-setups/${systemId}/level-calibration/start`, { method: 'POST' }))
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Der Lauf liess sich nicht starten.')
+      setError(caught instanceof Error ? caught.message : 'Der Lauf ließ sich nicht starten.')
     } finally {
       setBusy(false)
     }

@@ -106,7 +106,7 @@ public sealed class TentRepository : RepositoryBase
         }
 
         tent.Name = tent.Name.Trim();
-        tent.Kind = string.IsNullOrWhiteSpace(tent.Kind) ? "Grow Tent" : tent.Kind.Trim();
+        tent.Kind = string.IsNullOrWhiteSpace(tent.Kind) ? "Growzelt" : tent.Kind.Trim();
         tent.AccentColor = string.IsNullOrWhiteSpace(tent.AccentColor) ? "#69b578" : tent.AccentColor.Trim();
         AddTentParameters(command, tent);
         var id = Convert.ToInt32((long)(command.ExecuteScalar() ?? 0L));
@@ -485,7 +485,7 @@ public sealed class TentRepository : RepositoryBase
         {
             Id = Convert.ToInt32((long)reader["Id"], CultureInfo.InvariantCulture),
             Name = reader["Name"]?.ToString() ?? string.Empty,
-            Kind = reader["Kind"]?.ToString() ?? "Grow Tent",
+            Kind = reader["Kind"]?.ToString() ?? "Growzelt",
             TentType = ParseEnum(NullString(reader["TentType"]), TentType.MultiPurpose),
             Status = ParseEnum(NullString(reader["Status"]), TentStatus.Active),
             Notes = NullString(reader["Notes"]),

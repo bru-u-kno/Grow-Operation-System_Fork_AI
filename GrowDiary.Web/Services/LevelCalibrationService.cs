@@ -216,7 +216,7 @@ public sealed class LevelCalibrationService
             if (session.EmptyRaw is not { } leer)
             {
                 return "Der Nullpunkt steht noch nicht — das leere System muss erst "
-                       + "15 Sekunden ruhig sein. Umwaelzpumpe an lassen und kurz warten.";
+                       + "15 Sekunden ruhig sein. Umwälzpumpe an lassen und kurz warten.";
             }
 
             var voll = LevelStability.StableValue(session.Samples, DateTime.UtcNow, LevelStability.FullSeconds);

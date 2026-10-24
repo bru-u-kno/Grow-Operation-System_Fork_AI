@@ -81,8 +81,8 @@ public sealed partial class SystemApiController
     /// <summary>Was jeder Restore-Plan sagt — und ein echtes Zurückspielen nicht.</summary>
     private static readonly string[] PlanHinweise =
     [
-        "Restore-Plan ist ein Dry-Run. Es wurden keine Dateien geaendert.",
-        "Echter Restore ist nur ueber den Restore-Endpunkt mit Safety-Backup, Schema-Pruefung und Integritaetscheck erlaubt.",
+        "Restore-Plan ist ein Dry-Run. Es wurden keine Dateien geändert.",
+        "Echter Restore ist nur über den Restore-Endpunkt mit Safety-Backup, Schema-Prüfung und Integritätscheck erlaubt.",
     ];
 
     [HttpPost("backup/{fileName}/restore-plan")]
@@ -530,7 +530,7 @@ public sealed partial class SystemApiController
             var integrityResult = RunSqliteQuickCheck(extractedDb);
             if (!string.Equals(integrityResult, "ok", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("Backup-Datenbank hat den SQLite-Integritaetscheck nicht bestanden: " + integrityResult);
+                throw new InvalidOperationException("Backup-Datenbank hat den SQLite-Integritätscheck nicht bestanden: " + integrityResult);
             }
 
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
@@ -649,7 +649,7 @@ public sealed partial class SystemApiController
 
     [HttpGet("backup/{fileName}")]
     [KeinKiZugriff("In der Sicherungsdatei kann das Home-Assistant-Token im Klartext stehen "
-        + "(ausserhalb des Add-on-Betriebs). Ein Schlüssel mit Verwaltung las es so heraus, obwohl "
+        + "(außerhalb des Add-on-Betriebs). Ein Schlüssel mit Verwaltung las es so heraus, obwohl "
         + "die HA-Verbindung selbst gesperrt ist (Prüfer A-003, 03.10.2026).")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]

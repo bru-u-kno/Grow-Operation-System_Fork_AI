@@ -126,7 +126,7 @@ function HomeAssistantPage() {
       setDrafts((current) => ({ ...current, [saved.id]: createTentDraft(saved) }))
       setMessage(`${saved.name} gespeichert.`)
     } catch (caught) {
-      setError(formatApiError(caught, 'Entity-Mapping konnte nicht gespeichert werden.'))
+      setError(formatApiError(caught, 'Die Zuordnung der Entitäten konnte nicht gespeichert werden.'))
     } finally {
       setSaving(null)
     }
@@ -165,7 +165,7 @@ function HomeAssistantPage() {
               </div>
             </div>
             <div className="co-cell">
-              <div className="co-cell-label">Entities gemappt</div>
+              <div className="co-cell-label">Entitäten zugeordnet</div>
               <div className="co-cell-value is-md">{mappedCount} von {definitions.length}</div>
             </div>
             <div className="co-cell">
@@ -173,7 +173,7 @@ function HomeAssistantPage() {
               <div className="co-cell-value is-md">{cameraCount > 0 ? String(cameraCount) : '—'}</div>
             </div>
             <div className="co-cell">
-              <div className="co-cell-label">Entities geladen</div>
+              <div className="co-cell-label">Entitäten geladen</div>
               <div className="co-cell-value is-md">{entitiesLoadedAt ? `${entities.length} · ${new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(entitiesLoadedAt)}` : 'keine'}</div>
             </div>
           </div>
@@ -206,7 +206,7 @@ function HomeAssistantPage() {
               <section className="ls-panel" data-audit="ha-mapping-panel">
                 <div className="ls-panel-head">
                   <span className="ls-label">Sensor-Mapping</span>
-                  <span className="ls-panel-meta">Metrik ← HA-Entity, je Zelt</span>
+                  <span className="ls-panel-meta">Messgröße ← HA-Entität, je Zelt</span>
                   <button type="button" className="ls-btn is-small is-primary" disabled={saving === `tent-${selectedTent.id}`} onClick={() => void saveSelectedTent()}>
                     {saving === `tent-${selectedTent.id}` ? 'Speichert…' : 'Speichern'}
                   </button>
@@ -218,7 +218,7 @@ function HomeAssistantPage() {
                   </div>
                 )}
 
-                <div className="ha-tent-row co-chips" role="tablist" aria-label="Entity-Gruppe">
+                <div className="ha-tent-row co-chips" role="tablist" aria-label="Entitätsgruppe">
                   {groups.map((group) => (
                     <button key={group.key} type="button" role="tab" aria-selected={group.key === activeGroup} className={group.key === activeGroup ? 'co-chip active' : 'co-chip'} onClick={() => setActiveGroup(group.key)}>
                       {group.label}

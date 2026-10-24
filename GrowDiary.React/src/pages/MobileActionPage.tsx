@@ -48,7 +48,7 @@ function MobileActionPage() {
       const pumpen = await safe<PumpZeltLage[]>('Pumpen', '/api/pump-watch', [])
       // Verschleiss, Pruefung, Sicherung — die Termine, die aus den Angaben am
       // Geraet selbst folgen und die frueher niemand las.
-      const wartung = await safe<WartungsPunkt[]>('Wartung faellig', '/api/maintenance-due', [])
+      const wartung = await safe<WartungsPunkt[]>('Wartung fällig', '/api/maintenance-due', [])
       // Die Glaeser im Schrank. Ohne Grow-Filter, und das ist der Punkt: nach
       // der Ernte gilt ein Grow als beendet, das Aushaerten faengt aber genau
       // dann erst an. Wer hier nach laufenden Grows filtert, sieht nie ein Glas.
@@ -58,7 +58,7 @@ function MobileActionPage() {
       const sopLists = await Promise.all(activeGrows.map((grow) => safe<SopInstanceDto[]>(`SOP ${grow.id}`, `/api/sop-instances?growId=${grow.id}`, [])))
       // Die ueberfaelligen Routinen aus den Zeitplaenen des Wissens — der Teil,
       // der frueher nur in der Mappe stand und den niemand las.
-      const dueLists = await Promise.all(activeGrows.map((grow) => safe<FaelligeRoutine[]>(`Faellig ${grow.id}`, `/api/grows/${grow.id}/due-sops`, [])))
+      const dueLists = await Promise.all(activeGrows.map((grow) => safe<FaelligeRoutine[]>(`Fällig ${grow.id}`, `/api/grows/${grow.id}/due-sops`, [])))
       const dueByGrow = activeGrows
         .map((grow, index) => ({ grow, items: dueLists[index] ?? [] }))
         .filter((entry) => entry.items.length > 0)

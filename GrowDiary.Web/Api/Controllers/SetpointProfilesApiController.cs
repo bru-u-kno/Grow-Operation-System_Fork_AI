@@ -152,21 +152,21 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
             if (!Stages.Any(s => string.Equals(s.ToString(), phase, StringComparison.OrdinalIgnoreCase)))
             {
                 ModelState.AddModelError(phase,
-                    $"\"{phase}\" ist keine Phase. Moeglich sind: {string.Join(", ", Stages)}.");
+                    $"\"{phase}\" ist keine Phase. Möglich sind: {string.Join(", ", Stages)}.");
                 continue;
             }
 
             foreach (var feld in felder.Keys.Where(k => !SetpointProfile.Fields.Contains(k, StringComparer.Ordinal)))
             {
                 ModelState.AddModelError($"{phase}.{feld}",
-                    $"\"{feld}\" ist kein Sollwert-Feld. Moeglich sind: "
+                    $"\"{feld}\" ist kein Sollwert-Feld. Möglich sind: "
                     + string.Join(", ", SetpointProfile.Fields) + ".");
             }
         }
 
         if (!ModelState.IsValid)
         {
-            return ValidationError("Das Profil laesst sich so nicht speichern.");
+            return ValidationError("Das Profil lässt sich so nicht speichern.");
         }
 
         // Gegen die Basis zusammengesetzt pruefen (Fork AI, 02.10.2026): phMin 7
@@ -185,7 +185,7 @@ public sealed class SetpointProfilesApiController : ApiControllerBase
                 ModelState.AddModelError(mangel.Feld, mangel.Meldung);
             }
 
-            return ValidationError("Das Profil laesst sich so nicht speichern.");
+            return ValidationError("Das Profil lässt sich so nicht speichern.");
         }
 
         return null;

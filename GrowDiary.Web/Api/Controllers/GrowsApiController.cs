@@ -386,7 +386,7 @@ public sealed class GrowsApiController : ApiControllerBase
             GrowId = id,
             EntityType = "Grow",
             EntityId = id,
-            Action = "Grow geaendert",
+            Action = "Grow geändert",
             Summary = $"Grow '{grow.Name}' aktualisiert. Status: {grow.Status}, SystemId: {(grow.SystemId.HasValue ? grow.SystemId.Value.ToString(CultureInfo.InvariantCulture) : "Legacy")}."
         });
 
@@ -454,8 +454,8 @@ public sealed class GrowsApiController : ApiControllerBase
             _systemAudit.Add(new SystemAuditEvent
             {
                 EventType = GrowGeloeschtProtokollTyp,
-                Action = "Grow geloescht",
-                Summary = $"Grow '{existing.Name}' (Id {id.ToString(CultureInfo.InvariantCulture)}) wurde geloescht.",
+                Action = "Grow gelöscht",
+                Summary = $"Grow '{existing.Name}' (Id {id.ToString(CultureInfo.InvariantCulture)}) wurde gelöscht.",
                 Source = "grows-api",
             });
         }

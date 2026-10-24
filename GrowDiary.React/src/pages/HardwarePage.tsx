@@ -664,7 +664,7 @@ function HardwarePage() {
                       <th scope="col">Gerät</th>
                       <th scope="col">Art</th>
                       <th scope="col">Zelt</th>
-                      <th scope="col">HA-Entity</th>
+                      <th scope="col">HA-Entität</th>
                       <th scope="col">Wert</th>
                       <th scope="col">Kalibrierung</th>
                       <th scope="col"><span className="sr-only">Aktionen</span></th>

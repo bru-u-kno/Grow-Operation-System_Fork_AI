@@ -114,7 +114,7 @@ public sealed class PhenoApiController : ApiControllerBase
 
         if (request.PestResistanceScore is { } pest && pest is < 1 or > 5)
         {
-            ModelState.AddModelError(nameof(request.PestResistanceScore), "Schaedlingsdruck wird von 1 bis 5 bewertet.");
+            ModelState.AddModelError(nameof(request.PestResistanceScore), "Schädlingsdruck wird von 1 bis 5 bewertet.");
         }
 
         if (!ModelState.IsValid)

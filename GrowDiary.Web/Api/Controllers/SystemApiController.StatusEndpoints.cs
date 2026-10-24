@@ -105,8 +105,8 @@ public sealed partial class SystemApiController
             new("api_contract_manifest", "pass", "Das Backend liefert ein maschinenlesbares API-Manifest für Kernbereiche, Endpunkte und Produktregeln."),
             new("export_integrity", "pass", "Grow-Exports enthalten ExportId, SectionCounts und IntegrityHash."),
             new("import_validate", "pass", "Grow-Export-Dateien können serverseitig validiert werden, ohne Daten zu importieren."),
-            new("security_guardrails", "pass", "Administrative System-, Settings- und Export-Endpunkte sind nur lokal oder ueber den Home-Assistant-Ingress erreichbar; Home Assistant authentifiziert den Zugriff."),
-            new("security_status", "pass", "Das Backend stellt einen Security-Status fuer die local-only/Ingress-Guardrails bereit."),
+            new("security_guardrails", "pass", "Administrative System-, Settings- und Export-Endpunkte sind nur lokal oder über den Home-Assistant-Ingress erreichbar; Home Assistant authentifiziert den Zugriff."),
+            new("security_status", "pass", "Das Backend stellt einen Security-Status für die local-only/Ingress-Guardrails bereit."),
             new("migration_status", "pass", "Das Backend protokolliert angewendete Schema-Migrationen und zeigt offene Migrationen an."),
             new("upgrade_preflight", "pass", "Vor einem Update kann ein Preflight mit Datenbankstatus, Migrationstatus und validiertem Backup ausgeführt werden."),
             new("restore_plan", "pass", "Backups können als Restore-Dry-Run analysiert werden, ohne Dateien zu überschreiben."),
@@ -114,13 +114,13 @@ public sealed partial class SystemApiController
             new("system_audit_events", "pass", "Kritische Backend-Operationen werden in einem System-Audit-Log protokolliert."),
             new("api_error_format", "pass", "API-Fehler verwenden ein einheitliches ApiError-Format mit Code, Message, FieldErrors, Status, TraceId und SchemaVersion."),
             new("legacy_mvc_containment", "pass", "Alte MVC-Backup-/Export-/Kamera-/Mutationsrouten umgehen die neuen Backup-, Export- und Security-Regeln nicht mehr."),
-            new("remote_product_api_guard", "pass", "Produkt-APIs sind nur lokal oder ueber den Home-Assistant-Ingress erreichbar; externer Zugriff laeuft ueber Home Assistant (App/Web)."),
-            new("restore_api", "pass", "Backups koennen nach Preflight, Safety-Backup und Integritaetscheck kontrolliert wiederhergestellt werden."),
+            new("remote_product_api_guard", "pass", "Produkt-APIs sind nur lokal oder über den Home-Assistant-Ingress erreichbar; externer Zugriff läuft über Home Assistant (App/Web)."),
+            new("restore_api", "pass", "Backups können nach Preflight, Safety-Backup und Integritätscheck kontrolliert wiederhergestellt werden."),
             new("migration_engine_foundation", "pass", "Migrationen besitzen einen maschinenlesbaren Plan, Backup-Pflicht und Destructive-Guardrails als Fundament."),
             new("grow_snapshots", "pass", "Neue Grows speichern unveränderliche Zelt- und HydroSetup-Snapshots für stabile Vergleiche und Exporte."),
             new("migration_engine", "partial", "Schema-Migrationen werden protokolliert; destructive Rollbacks und echte Restore-/Rollback-Automation fehlen noch."),
-            new("auth_remote", "pass", "Als Home-Assistant-Add-on laeuft Cultivate Control hinter dem Ingress; Home Assistant uebernimmt Authentifizierung und Remote-Zugriff."),
-            new("grow_import_execute", "pass", "Grow-Exports koennen kontrolliert als neue lokale Vergleichs-Grows importiert werden, ohne bestehende Grows, Zelte oder HydroSetups zu ueberschreiben.")
+            new("auth_remote", "pass", "Als Home-Assistant-Add-on läuft Cultivate Control hinter dem Ingress; Home Assistant übernimmt Authentifizierung und Remote-Zugriff."),
+            new("grow_import_execute", "pass", "Grow-Exports können kontrolliert als neue lokale Vergleichs-Grows importiert werden, ohne bestehende Grows, Zelte oder HydroSetups zu überschreiben.")
         };
 
         var dto = new BackendReleaseReadinessDto(
@@ -185,17 +185,17 @@ public sealed partial class SystemApiController
             "Secrets wie Home-Assistant-Tokens dürfen nicht in API-Responses, Exports oder Backups erscheinen.",
             "Grow-Exports müssen SectionCounts und IntegrityHash tragen, bevor sie importiert werden dürfen.",
             "Import-Planung ist ein Dry-Run und schreibt keine Daten in die Datenbank.",
-            "Echter Grow-Import legt neue lokale Vergleichs-Grows an und ueberschreibt keine bestehenden Grows, Zelte oder HydroSetups.",
-            "Administrative System-, Settings- und Export-Endpunkte sind nur lokal oder ueber den Home-Assistant-Ingress erreichbar.",
-            "Produkt-APIs sind nur lokal oder ueber den Home-Assistant-Ingress erreichbar; externer Zugriff laeuft ueber Home Assistant.",
+            "Echter Grow-Import legt neue lokale Vergleichs-Grows an und überschreibt keine bestehenden Grows, Zelte oder HydroSetups.",
+            "Administrative System-, Settings- und Export-Endpunkte sind nur lokal oder über den Home-Assistant-Ingress erreichbar.",
+            "Produkt-APIs sind nur lokal oder über den Home-Assistant-Ingress erreichbar; externer Zugriff läuft über Home Assistant.",
             "Upgrade-Preflight erstellt vor riskanten Updates ein validierbares Backup.",
-            "Restore erfordert einen gueltigen Restore-Plan, Schema-Kompatibilitaet, Safety-Backup und Integritaetscheck.",
+            "Restore erfordert einen gültigen Restore-Plan, Schema-Kompatibilität, Safety-Backup und Integritätscheck.",
             "Schema-Migrationen werden in AppliedSchemaMigrations protokolliert.",
             "Migrationen liefern einen Dry-Run-Plan mit Backup-Pflicht und Destructive-Guardrails, bevor riskante Updates umgesetzt werden.",
             "Kritische Backend-Operationen werden im SystemAuditEvents-Log protokolliert.",
             "API-Fehler folgen dem einheitlichen grow-os.api-error.v1 Format.",
             "Runtime-Daten aus App_Data werden nicht als Source-Artefakte behandelt.",
-            "Legacy-MVC-Endpunkte duerfen Backup, Export, Security oder Produktregeln nicht umgehen."
+            "Legacy-MVC-Endpunkte dürfen Backup, Export, Security oder Produktregeln nicht umgehen."
         };
 
         var areas = new[]
@@ -276,7 +276,7 @@ public sealed partial class SystemApiController
                     Endpoint("GET", "/api/exports/grows/{id}", "Grow exportieren.", true, "anonymize=true entfernt/neutralisiert nutzerbezogene Angaben.", "Export enthält ExportId, SectionCounts und IntegrityHash."),
                     Endpoint("POST", "/api/exports/grows/validate", "Grow-Export validieren, ohne Daten zu importieren.", true, "Prüft SchemaVersion, SectionCounts, IntegrityHash und potenzielle Secrets."),
                     Endpoint("POST", "/api/exports/grows/import-plan", "Grow-Export als Import-Dry-Run analysieren, ohne Daten zu schreiben.", true, "Plant neue lokale IDs, Snapshot-Behandlung und Konflikte."),
-                    Endpoint("POST", "/api/exports/grows/import", "Grow-Export kontrolliert als neuen lokalen Vergleichs-Grow importieren.", true, "Erstellt vor dem Import automatisch ein Safety-Backup.", "Importiert als neue lokale Grow-Id und ueberschreibt keine bestehenden Grows."),
+                    Endpoint("POST", "/api/exports/grows/import", "Grow-Export kontrolliert als neuen lokalen Vergleichs-Grow importieren.", true, "Erstellt vor dem Import automatisch ein Safety-Backup.", "Importiert als neue lokale Grow-Id und überschreibt keine bestehenden Grows."),
                     Endpoint("GET", "/grows/{id}/export", "Legacy-Export-Route; leitet auf /api/exports/grows/{id} um und liefert keine alten Rohdaten mehr.", false),
                     Endpoint("GET", "/settings/backup", "Legacy-Backup-Route; direkter SQLite-Download ist deaktiviert.", true),
                     Endpoint("GET", "/api/system/backend-health", "Backend-Zustand und Capabilities laden.", false),
@@ -284,11 +284,11 @@ public sealed partial class SystemApiController
                     Endpoint("GET", "/api/system/database-status", "Datenbankstatus und Pflichtschema prüfen.", true),
                     Endpoint("GET", "/api/system/api-manifest", "Maschinenlesbares API-Manifest laden.", true),
                     Endpoint("GET", "/api/system/security-status", "Security-Status und local-only/Ingress-Guardrails laden.", true),
-                    Endpoint("GET", "/api/system/audit-events", "System-Audit-Events fuer kritische Backend-Operationen laden.", true),
+                    Endpoint("GET", "/api/system/audit-events", "System-Audit-Events für kritische Backend-Operationen laden.", true),
                     Endpoint("GET", "/api/grows/{growId}/tagebuch", "Grow-Tagebuch: Tage mit Messungen, Wasserwechseln, Nachfüllen, Notizen, Fotos und Auffälligkeiten (bis=yyyy-MM-dd, tage=7).", false),
                     Endpoint("GET", "/api/grows/{growId}/tagebuch/kurven", "Die sechs Sensorkurven eines Tages mit Lichtphase (tag=yyyy-MM-dd).", false),
                     Endpoint("PUT", "/api/tagebuch/auffaelligkeiten/{id}", "Auffälligkeit ausblenden („War nichts“) oder wieder zeigen.", false),
-                    Endpoint("GET", "/api/grows/{growId}/chronik", "Chronik eines Grows: was wann geaendert wurde. Ohne Knopf — man liest sie, wenn etwas passiert ist.", true),
+                    Endpoint("GET", "/api/grows/{growId}/chronik", "Chronik eines Grows: was wann geändert wurde. Ohne Knopf — man liest sie, wenn etwas passiert ist.", true),
                     Endpoint("GET", "/api/system/error-contract", "Einheitlichen API-Fehlervertrag laden.", true),
                     Endpoint("GET", "/api/system/migration-status", "Schema-Migrationen und offene Migrationen prüfen.", true),
                     Endpoint("GET", "/api/system/migration-plan", "Schema-Migrationsplan als Dry-Run laden.", true, "Zeigt Pending/Applied, Backup-Pflicht und destructive Guardrails."),
@@ -297,7 +297,7 @@ public sealed partial class SystemApiController
                     Endpoint("GET", "/api/system/backup/{fileName}", "Backup herunterladen.", true),
                     Endpoint("GET", "/api/system/backup/{fileName}/validate", "Backup vor Restore validieren.", true),
                     Endpoint("POST", "/api/system/backup/{fileName}/restore-plan", "Restore-Dry-Run erzeugen, ohne Dateien zu überschreiben.", true, "Prüft Backupvalidität, Schema-Kompatibilität und betroffene Zielpfade."),
-                    Endpoint("POST", "/api/system/backup/{fileName}/restore", "Backup kontrolliert wiederherstellen.", true, "Erstellt vor dem Restore automatisch ein Safety-Backup.", "Restored nur schema-kompatible, validierte Backups.", "Fuehrt SQLite-Integritaetscheck vor dem Swap aus.")
+                    Endpoint("POST", "/api/system/backup/{fileName}/restore", "Backup kontrolliert wiederherstellen.", true, "Erstellt vor dem Restore automatisch ein Safety-Backup.", "Restored nur schema-kompatible, validierte Backups.", "Führt SQLite-Integritätscheck vor dem Swap aus.")
                 })
         };
 
@@ -361,15 +361,15 @@ public sealed partial class SystemApiController
             ProtectedRoutePrefixes: AdminAccessPolicy.ProtectedRoutePrefixes,
             Notes: new[]
             {
-                "Cultivate Control laeuft als Home-Assistant-Add-on hinter dem Ingress-Proxy; Home Assistant authentifiziert jeden Zugriff.",
-                "Der Add-on-Port ist nicht ins Netzwerk veroeffentlicht (ingress-only) und daher nicht direkt erreichbar.",
-                "Administrative System-, Settings- und Export-Endpunkte sind zusaetzlich nur lokal oder ueber den Ingress erreichbar."
+                "Cultivate Control läuft als Home-Assistant-Add-on hinter dem Ingress-Proxy; Home Assistant authentifiziert jeden Zugriff.",
+                "Der Add-on-Port ist nicht ins Netzwerk veröffentlicht (ingress-only) und daher nicht direkt erreichbar.",
+                "Administrative System-, Settings- und Export-Endpunkte sind zusätzlich nur lokal oder über den Ingress erreichbar."
             },
             SecretHandling: new[]
             {
                 "Home-Assistant-Token werden in API-Responses maskiert.",
-                "Backups schliessen ha-config.json, DataProtectionKeys, Uploads und Logs aus.",
-                "Grow-Exports pruefen potenzielle Secrets und tragen IntegrityHash."
+                "Backups schließen ha-config.json, DataProtectionKeys, Uploads und Logs aus.",
+                "Grow-Exports prüfen potenzielle Secrets und tragen IntegrityHash."
             });
 
         LogSystemAudit("security", "security-status-read", "Security-Status abgefragt.", true);
@@ -385,7 +385,7 @@ public sealed partial class SystemApiController
         LogSystemAudit(
             eventType: "system",
             action: "audit-events-read",
-            summary: $"System-Audit-Events abgefragt ({events.Count} Eintrag/Eintraege).",
+            summary: $"System-Audit-Events abgefragt ({events.Count} Eintrag/Einträge).",
             success: true);
         return Ok(events);
     }

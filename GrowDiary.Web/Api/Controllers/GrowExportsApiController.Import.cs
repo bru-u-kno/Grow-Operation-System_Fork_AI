@@ -137,7 +137,7 @@ public sealed partial class GrowExportsApiController
 
             LogExportAudit(
                 action: "grow-import-executed",
-                summary: $"Grow-Import erfolgreich ausgefuehrt. Neue lokale Grow-Id: {importedGrowId.Value}.",
+                summary: $"Grow-Import erfolgreich ausgeführt. Neue lokale Grow-Id: {importedGrowId.Value}.",
                 success: true,
                 relatedGrowId: importedGrowId.Value,
                 relatedFileName: export.ExportId);

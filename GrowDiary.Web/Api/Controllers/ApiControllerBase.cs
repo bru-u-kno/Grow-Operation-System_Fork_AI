@@ -47,7 +47,7 @@ public abstract class ApiControllerBase : ControllerBase
             .ToDictionary(
                 entry => string.IsNullOrWhiteSpace(entry.Key) ? "$" : entry.Key,
                 entry => entry.Value!.Errors
-                    .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Ungueltiger Wert." : error.ErrorMessage)
+                    .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Ungültiger Wert." : error.ErrorMessage)
                     .Distinct()
                     .ToArray(),
                 StringComparer.OrdinalIgnoreCase);

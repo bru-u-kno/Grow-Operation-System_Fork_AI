@@ -118,7 +118,7 @@ public static class RequestMapping
     {
         Id = id,
         Name = string.IsNullOrWhiteSpace(request.Name) ? string.Empty : request.Name.Trim(),
-        Kind = string.IsNullOrWhiteSpace(request.Kind) ? "Grow Tent" : request.Kind.Trim(),
+        Kind = string.IsNullOrWhiteSpace(request.Kind) ? "Growzelt" : request.Kind.Trim(),
         TentType = Enum.TryParse<TentType>(request.TentType, out var tt) ? tt : TentType.MultiPurpose,
         Status = Enum.TryParse<TentStatus>(request.Status, out var status) ? status : TentStatus.Active,
         Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
@@ -147,7 +147,7 @@ public static class RequestMapping
     public static Tent ToModel(this CreateTentRequest request) => new()
     {
         Name = string.IsNullOrWhiteSpace(request.Name) ? string.Empty : request.Name.Trim(),
-        Kind = string.IsNullOrWhiteSpace(request.Kind) ? "Grow Tent" : request.Kind.Trim(),
+        Kind = string.IsNullOrWhiteSpace(request.Kind) ? "Growzelt" : request.Kind.Trim(),
         TentType = Enum.TryParse<TentType>(request.TentType, out var tt) ? tt : TentType.MultiPurpose,
         Status = Enum.TryParse<TentStatus>(request.Status, out var status) ? status : TentStatus.Active,
         Notes = Normalize(request.Notes),

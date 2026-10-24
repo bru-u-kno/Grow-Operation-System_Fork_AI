@@ -418,7 +418,7 @@ public sealed class DosingApiController : ApiControllerBase
 
         var ok = await _service.TurnOffAsync(pump, cancellationToken);
         return Ok(new DoseResultDto(false, 0, 0,
-            ok ? $"{pump.Name} ausgeschaltet." : $"{pump.Name} liess sich nicht schalten — in Home Assistant nachsehen."));
+            ok ? $"{pump.Name} ausgeschaltet." : $"{pump.Name} ließ sich nicht schalten — in Home Assistant nachsehen."));
     }
 
     /// <summary>Nur rechnen, nicht dosieren — was würde jetzt herauskommen.</summary>

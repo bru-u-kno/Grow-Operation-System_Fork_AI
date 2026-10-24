@@ -35,7 +35,7 @@ public sealed partial class SchreibWerkzeuge
                  + "methode GET/POST/PUT/PATCH/DELETE, pfad relativ wie im Verzeichnis mit eingesetzten Werten (api/plants/7), query als „a=1&b=2\", body als JSON-Text. "
                  + "Ob die Stufe reicht, prüft Cultivate Control (Stufe je Funktion, siehe zugriff_pruefen); Höchstwerte, Sicherung vorher und Prüfprotokoll gelten wie überall. "
                  + "Bei Änderungen wird vorher und nachher gelesen und gemeldet, was sich geändert hat; beim Löschen steht das Gelöschte in der Antwort. "
-                 + "PUT ersetzt bei Cultivate Control meist das ganze Objekt: fehlende Rumpffelder ergänzt das Werkzeug aus dem gelesenen Stand (ergaenzen). "
+                 + "PUT ersetzt bei Cultivate Control meist das ganze Objekt: fehlende Rumpffelder ergänzt das Werkzeug aus dem gelesenen Stand (ergänzen). "
                  + "Was Cultivate Control als „nie über einen Schlüssel\" führt (fork_funktionen mit zugang=nie), lehnt das Werkzeug ab, ohne es zu rufen. Keine Datei-Uploads, keine Bilder (dafür kamera_bild, tagesbilder, foto_ansehen). "
                  + "Für Alltägliches die festen Werkzeuge nehmen (messung_eintragen, journal_eintragen, licht_schalten, pumpe_dosieren …) — sie prüfen mehr. Vor Änderungen die Rückfrage-Regel aus zugriff_pruefen beachten.")]
     [BrauchtForkSchluessel]

@@ -20,7 +20,7 @@ public sealed partial class GrowExportsApiController
         var grow = _repository.GetGrow(id);
         if (grow is null)
         {
-            LogExportAudit("grow-export-requested", $"Grow-Export fuer fehlenden Grow #{id} angefordert.", false, relatedGrowId: id, severity: "warning");
+            LogExportAudit("grow-export-requested", $"Grow-Export für fehlenden Grow #{id} angefordert.", false, relatedGrowId: id, severity: "warning");
             return NotFoundError("grow_not_found", $"Grow mit Id {id} existiert nicht.");
         }
 

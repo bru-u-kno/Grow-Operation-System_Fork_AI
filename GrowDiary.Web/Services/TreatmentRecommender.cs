@@ -109,7 +109,7 @@ public sealed class TreatmentRecommender
 
         if (treatment.PhaseFilter is not null)
         {
-            safetyNotes.Add("PhaseFilter vorhanden; aktuelle Grow-Phase ist fuer D2 nicht eindeutig pruefbar.");
+            safetyNotes.Add("PhaseFilter vorhanden; aktuelle Grow-Phase ist für D2 nicht eindeutig prüfbar.");
         }
 
         if (treatment.HardwareRequirements.Count > 0)
@@ -188,7 +188,7 @@ public sealed class TreatmentRecommender
             SopId: null,
             SopTitle: null,
             Confidence: ResolveConfidence(deviation),
-            Reason: $"Das Krankheitsbild „{symptom.Name}\" passt, aber dafuer ist weder eine Behandlung noch ein Ablauf hinterlegt.",
+            Reason: $"Das Krankheitsbild „{symptom.Name}\" passt, aber dafür ist weder eine Behandlung noch ein Ablauf hinterlegt.",
             SafetyNotes: symptom.DiagnosticChecks,
             SourceDocumentIds: Array.Empty<string>(),
             Conflicts: Array.Empty<string>(),

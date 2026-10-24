@@ -138,7 +138,7 @@ public static class SetpointProfilGrenzen
                 maengel.Add(new ProfilMangel(
                     $"{phase}.{(eigenUnten ? feld : gegenstueck)}",
                     $"Die Untergrenze ({unten:0.##}) liegt über der Obergrenze "
-                    + $"({oben:0.##}){herkunft}. So gespeichert waere danach jede Messung „daneben\", "
+                    + $"({oben:0.##}){herkunft}. So gespeichert wäre danach jede Messung „daneben\", "
                     + "egal welcher Wert."));
             }
         }

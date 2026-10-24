@@ -95,7 +95,7 @@ public sealed class Ausschalter
                 entityId, ist ?? "nichts", versuch, Versuche);
         }
 
-        _logger.LogError("{Entity} liess sich NICHT bestätigt ausschalten — in Home Assistant prüfen.", entityId);
+        _logger.LogError("{Entity} ließ sich NICHT bestätigt ausschalten — in Home Assistant prüfen.", entityId);
         return false;
     }
 

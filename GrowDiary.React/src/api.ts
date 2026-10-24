@@ -73,7 +73,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       payload = null
     }
 
-    throw new ApiRequestError(response.status, payload, `API request failed with status ${response.status}`)
+    throw new ApiRequestError(response.status, payload, `Anfrage fehlgeschlagen (Status ${response.status})`)
   }
 
   return parseResponse<T>(response)

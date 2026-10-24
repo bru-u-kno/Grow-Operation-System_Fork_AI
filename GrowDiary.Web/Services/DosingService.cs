@@ -494,7 +494,7 @@ public sealed class DosingService
         // sonst kein einziger Schritt durchspielen.
         if (pump.SimulationMode)
         {
-            _logger.LogInformation("Testbetrieb: Pumpe {Pump} laeuft {Seconds:0.#} s — es fliesst nichts.", pump.Name, kappt);
+            _logger.LogInformation("Testbetrieb: Pumpe {Pump} läuft {Seconds:0.#} s — es fließt nichts.", pump.Name, kappt);
             await _warten(TimeSpan.FromSeconds(kappt), CancellationToken.None);
             return Pumpenlauf.Gelaufen;
         }
@@ -539,7 +539,7 @@ public sealed class DosingService
             if (!aus)
             {
                 _logger.LogError(
-                    "Pumpe {Pump} ({Entity}) liess sich NICHT ausschalten — in Home Assistant prüfen.",
+                    "Pumpe {Pump} ({Entity}) ließ sich NICHT ausschalten — in Home Assistant prüfen.",
                     pump.Name, pump.HaEntityId);
             }
         }

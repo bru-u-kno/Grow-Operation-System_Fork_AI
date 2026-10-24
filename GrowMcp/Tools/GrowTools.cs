@@ -148,9 +148,9 @@ public sealed partial class GrowTools(GrowOsReader reader)
                     ? await reader.LesenAsync($"api/strains/{id}", cancellationToken)
                     : "(keine Hauptsorte in der Sortenliste hinterlegt)";
 
-                return $"Der Grow {growId} fuehrt {sorten.Count} Sorten: {string.Join(", ", sorten)}. "
-                     + "Bluetewochen, Stretch und Duengerbedarf unten gelten NUR fuer die Hauptsorte "
-                     + "des Laufs — die anderen koennen davon abweichen. Welche Sorte in welchem Topf "
+                return $"Der Grow {growId} führt {sorten.Count} Sorten: {string.Join(", ", sorten)}. "
+                     + "Blütewochen, Stretch und Düngerbedarf unten gelten NUR für die Hauptsorte "
+                     + "des Laufs — die anderen können davon abweichen. Welche Sorte in welchem Topf "
                      + "steht, liefert das Werkzeug 'pflanzen'."
                      + Environment.NewLine + Environment.NewLine
                      + "Hauptsorte:" + Environment.NewLine + haupt;

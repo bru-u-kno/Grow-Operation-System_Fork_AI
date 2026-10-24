@@ -64,7 +64,7 @@ public sealed class Tent
     /// </remarks>
     public int ChillerMaxReadingAgeMinutes { get; set; } = KuehlerService.StandardHoechstalterMinuten;
     public string Name { get; set; } = string.Empty;
-    public string Kind { get; set; } = "Grow Tent";
+    public string Kind { get; set; } = "Growzelt";
     public TentType TentType { get; set; } = TentType.MultiPurpose;
     public TentStatus Status { get; set; } = TentStatus.Active;
     public string? Notes { get; set; }

@@ -234,7 +234,7 @@ function TentsPage() {
       <V1Page
         eyebrow="Physischer Raum"
         title={editingId ? 'Zelt bearbeiten' : 'Zelt anlegen'}
-        subtitle="Raum, Größe und verbaute Technik. Home-Assistant-Entities werden separat gemappt."
+        subtitle="Raum, Größe und verbaute Technik. Home-Assistant-Entitäten werden separat zugeordnet."
         action={<V1Button onClick={closeForm}>Schließen</V1Button>}
         className="rc2-focused-form tents-page"
       >
@@ -288,7 +288,7 @@ function TentsPage() {
             <V1Card className="rc2-info-card">
               <span className="v1-card-kicker">Mapping getrennt</span>
               <h2>Sensoren nach dem Zelt anlegen mappen</h2>
-              <p>Kamera, pH, EC, VPD, Licht- und Klima-Entities gehören in das HA-Mapping. Das Zelt bleibt ein physischer Raum.</p>
+              <p>Kamera, pH, EC, VPD, Licht- und Klima-Entitäten gehören in die HA-Zuordnung. Das Zelt bleibt ein physischer Raum.</p>
               <V1LinkButton to="/home-assistant">HA-Mapping öffnen</V1LinkButton>
             </V1Card>
           </V1Section>
@@ -597,8 +597,8 @@ function countHydroForTent(items: HydroSetupDto[], tentId: number) { return item
 function getHydroForTent(items: HydroSetupDto[], tentId: number) { return items.filter((setup) => setup.tentId === tentId && setup.status === 'Active') }
 function getGrowsForTent(items: GrowSummary[], tentId: number) { return items.filter((grow) => grow.tentId === tentId && (grow.status === 'Running' || grow.status === 'Planning')) }
 function mapSensors(tent: TentDto): UpdateTentSensorRequest[] { return tent.sensors.map((sensor) => ({ id: sensor.id, metricType: sensor.metricType, haEntityId: sensor.haEntityId, displayLabel: sensor.displayLabel, isActive: sensor.isActive })) }
-function createDraft(displayOrder = 1): TentDraft { return { name: '', kind: 'Grow Tent', tentType: 'Production', notes: '', displayOrder: String(displayOrder), widthCm: '', depthCm: '', tentHeightCm: '', lightType: '', lightWatt: '', exhaustFanCount: '', exhaustM3h: '', circulationFanCount: '', co2Available: false, hasCo2Enrichment: false, raumId: '', leafTempOffsetC: '-2', leafOffsetSyncService: '', leafOffsetSyncPort: '2' } }
-function createDraftFromTent(tent: TentDto): TentDraft { return { name: tent.name, kind: tent.kind, tentType: tent.tentType, notes: tent.notes ?? '', displayOrder: String(tent.displayOrder), widthCm: String(tent.widthCm ?? ''), depthCm: String(tent.depthCm ?? ''), tentHeightCm: String(tent.tentHeightCm ?? ''), lightType: tent.lightType ?? '', lightWatt: String(tent.lightWatt ?? ''), exhaustFanCount: String(tent.exhaustFanCount ?? ''), exhaustM3h: String(tent.exhaustM3h ?? ''), circulationFanCount: String(tent.circulationFanCount ?? ''), co2Available: tent.co2Available, hasCo2Enrichment: tent.hasCo2Enrichment, raumId: tent.raumId ?? '', leafTempOffsetC: String(tent.leafTempOffsetC ?? 0), leafOffsetSyncService: tent.leafOffsetSyncService ?? '', leafOffsetSyncPort: String(tent.leafOffsetSyncPort ?? 2) } }
+function createDraft(displayOrder = 1): TentDraft { return { name: '', kind: 'Growzelt', tentType: 'Production', notes: '', displayOrder: String(displayOrder), widthCm: '', depthCm: '', tentHeightCm: '', lightType: '', lightWatt: '', exhaustFanCount: '', exhaustM3h: '', circulationFanCount: '', co2Available: false, hasCo2Enrichment: false, raumId: '', leafTempOffsetC: '-2', leafOffsetSyncService: '', leafOffsetSyncPort: '2' } }
+function createDraftFromTent(tent: TentDto): TentDraft { return { name: tent.name, kind: tent.kind === 'Grow Tent' ? 'Growzelt' : tent.kind, tentType: tent.tentType, notes: tent.notes ?? '', displayOrder: String(tent.displayOrder), widthCm: String(tent.widthCm ?? ''), depthCm: String(tent.depthCm ?? ''), tentHeightCm: String(tent.tentHeightCm ?? ''), lightType: tent.lightType ?? '', lightWatt: String(tent.lightWatt ?? ''), exhaustFanCount: String(tent.exhaustFanCount ?? ''), exhaustM3h: String(tent.exhaustM3h ?? ''), circulationFanCount: String(tent.circulationFanCount ?? ''), co2Available: tent.co2Available, hasCo2Enrichment: tent.hasCo2Enrichment, raumId: tent.raumId ?? '', leafTempOffsetC: String(tent.leafTempOffsetC ?? 0), leafOffsetSyncService: tent.leafOffsetSyncService ?? '', leafOffsetSyncPort: String(tent.leafOffsetSyncPort ?? 2) } }
 /**
  * Der Blatt-Versatz ist eine Dezimalzahl (z. B. −2,5 °C) und darf deshalb nicht
  * durch den Ganzzahl-Helfer.
@@ -613,7 +613,7 @@ function parseOffset(value: string): number {
   return parsed != null ? Math.min(0, Math.max(-10, parsed)) : 0
 }
 
-function draftToRequest(draft: TentDraft) { return { name: draft.name.trim(), kind: draft.kind.trim() || 'Grow Tent', tentType: draft.tentType, notes: toNullableString(draft.notes), displayOrder: toNullableInt(draft.displayOrder) ?? 0, accentColor: '#22c55e', widthCm: toNullableInt(draft.widthCm), depthCm: toNullableInt(draft.depthCm), tentHeightCm: toNullableInt(draft.tentHeightCm), lightType: toNullableString(draft.lightType), lightWatt: toNullableInt(draft.lightWatt), lightController: null, lightControllerEntityId: null, exhaustFanCount: toNullableInt(draft.exhaustFanCount), exhaustM3h: toNullableInt(draft.exhaustM3h), circulationFanCount: toNullableInt(draft.circulationFanCount), hvacController: null, hvacControllerEntityId: null, co2Available: draft.co2Available, hasCo2Enrichment: draft.hasCo2Enrichment, raumId: draft.raumId || null, cameraEntityId: null, leafTempOffsetC: parseOffset(draft.leafTempOffsetC), leafOffsetSyncService: draft.leafOffsetSyncService.trim(), leafOffsetSyncPort: toNullableInt(draft.leafOffsetSyncPort) ?? 2 } }
+function draftToRequest(draft: TentDraft) { return { name: draft.name.trim(), kind: draft.kind.trim() || 'Growzelt', tentType: draft.tentType, notes: toNullableString(draft.notes), displayOrder: toNullableInt(draft.displayOrder) ?? 0, accentColor: '#22c55e', widthCm: toNullableInt(draft.widthCm), depthCm: toNullableInt(draft.depthCm), tentHeightCm: toNullableInt(draft.tentHeightCm), lightType: toNullableString(draft.lightType), lightWatt: toNullableInt(draft.lightWatt), lightController: null, lightControllerEntityId: null, exhaustFanCount: toNullableInt(draft.exhaustFanCount), exhaustM3h: toNullableInt(draft.exhaustM3h), circulationFanCount: toNullableInt(draft.circulationFanCount), hvacController: null, hvacControllerEntityId: null, co2Available: draft.co2Available, hasCo2Enrichment: draft.hasCo2Enrichment, raumId: draft.raumId || null, cameraEntityId: null, leafTempOffsetC: parseOffset(draft.leafTempOffsetC), leafOffsetSyncService: draft.leafOffsetSyncService.trim(), leafOffsetSyncPort: toNullableInt(draft.leafOffsetSyncPort) ?? 2 } }
 function formatTentType(value: TentType) { return value === 'Production' ? 'Blüte / Run' : value === 'Mother' ? 'Mutter' : value === 'Propagation' ? 'Anzucht' : value === 'Quarantine' ? 'Quarantäne' : 'Mehrzweck' }
 function liveValue(live: TentLivePayload | null, key: LiveMetricKey) {
   const metric = live?.metrics.find((item) => item.key === key)

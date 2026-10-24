@@ -271,7 +271,7 @@ public sealed class SteuerungRechenwertService
             var start = await client.PostAsJsonAsync("api/config/config_entries/options/flow", new { handler = eintrag }, ct);
             if (!start.IsSuccessStatusCode)
             {
-                return new NachzugErgebnis(n.Kennung, "fehler", $"Optionsdialog liess sich nicht oeffnen ({(int)start.StatusCode}).");
+                return new NachzugErgebnis(n.Kennung, "fehler", $"Optionsdialog ließ sich nicht öffnen ({(int)start.StatusCode}).");
             }
 
             var formular = await start.Content.ReadFromJsonAsync<JsonElement>(ct);
@@ -460,7 +460,7 @@ public sealed class SteuerungRechenwertService
                 DialogPfad, new { handler = "template", show_advanced_options = false }, ct);
             if (!start.IsSuccessStatusCode)
             {
-                return (false, $"Dialog liess sich nicht oeffnen ({(int)start.StatusCode}).");
+                return (false, $"Dialog ließ sich nicht öffnen ({(int)start.StatusCode}).");
             }
 
             var eroeffnet = await start.Content.ReadFromJsonAsync<JsonElement>(ct);

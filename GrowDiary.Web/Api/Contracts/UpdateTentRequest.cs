@@ -3,7 +3,7 @@ namespace GrowDiary.Web.Api.Contracts;
 public sealed class CreateTentRequest
 {
     public string Name { get; set; } = string.Empty;
-    public string Kind { get; set; } = "Grow Tent";
+    public string Kind { get; set; } = "Growzelt";
     public string? TentType { get; set; }
     public string? Status { get; set; }
     public string? Notes { get; set; }
@@ -42,7 +42,7 @@ public sealed class UpdateTentRequest
 {
     public string? Status { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Kind { get; set; } = "Grow Tent";
+    public string Kind { get; set; } = "Growzelt";
     public string? TentType { get; set; }
     public string? Notes { get; set; }
     public int DisplayOrder { get; set; }

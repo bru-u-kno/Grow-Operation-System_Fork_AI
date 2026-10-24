@@ -194,7 +194,7 @@ function DosingPage() {
       setSuggestions((current) => ({ ...current, [pump.id]: result }))
       if (result.allowed) setDoseMl((current) => ({ ...current, [pump.id]: String(result.ml).replace('.', ',') }))
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Der Vorschlag liess sich nicht berechnen.')
+      setError(caught instanceof Error ? caught.message : 'Der Vorschlag ließ sich nicht berechnen.')
     } finally {
       setBusyPumpId(null)
     }

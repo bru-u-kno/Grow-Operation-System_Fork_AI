@@ -41,7 +41,7 @@ public sealed class PhotoStorageService
 
             if (photo.Length > MaxPhotoSizeBytes)
             {
-                modelState.AddModelError(key, "Fotos duerfen maximal 10 MB gross sein.");
+                modelState.AddModelError(key, "Fotos dürfen maximal 10 MB groß sein.");
             }
 
             var extension = Path.GetExtension(photo.FileName);
@@ -132,7 +132,7 @@ public sealed class PhotoStorageService
                 throw new ArgumentException(
                     $"„{photo.FileName}\" ist kein Bild ({(string.IsNullOrWhiteSpace(extension) ? "keine Endung" : extension)}). "
                     + $"Erlaubt sind {string.Join(", ", AllowedPhotoExtensions.Order())}. "
-                    + "Wurde ValidatePhotos vor dem Speichern uebergangen?",
+                    + "Wurde ValidatePhotos vor dem Speichern übergangen?",
                     nameof(photos));
             }
 

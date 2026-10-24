@@ -70,7 +70,7 @@ public static class ApiErrorFactory
                 entry => entry.Value
                     .Where(value => !string.IsNullOrWhiteSpace(value))
                     .Select(value => value.Trim())
-                    .DefaultIfEmpty("Ungueltiger Wert.")
+                    .DefaultIfEmpty("Ungültiger Wert.")
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToArray(),
                 StringComparer.OrdinalIgnoreCase);

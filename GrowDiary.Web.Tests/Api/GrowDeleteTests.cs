@@ -125,7 +125,7 @@ public sealed class GrowDeleteTests : IDisposable
         // Frisch gelesen, nicht aus dem Speicher: was zählt, steht in der Datei.
         var eintraege = _systemAudit.GetRecent(limit: 50, eventType: GrowsApiController.GrowGeloeschtProtokollTyp);
         var eintrag = Assert.Single(eintraege, e => e.Summary.Contains("Spurensuche 7", StringComparison.Ordinal));
-        Assert.Equal("Grow geloescht", eintrag.Action);
+        Assert.Equal("Grow gelöscht", eintrag.Action);
         Assert.Contains($"Id {growId}", eintrag.Summary, StringComparison.Ordinal);
         Assert.True(eintrag.Success);
     }

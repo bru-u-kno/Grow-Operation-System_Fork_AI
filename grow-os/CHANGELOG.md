@@ -5,6 +5,17 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.271
+
+**Sprachdurchgang: Texte durchgängig Deutsch, mit echten Umlauten — und eine Prüfung, die es so hält.**
+
+- **Hydro-System anlegen:** „Zelt waehlen“, „fuenf“, „prueft“ und „Umwaelzpumpe“ stehen jetzt mit Umlauten da.
+- **Meldungen vom Server:** Rund 130 Texte hatten „ae/oe/ue/ss“ statt „ä/ö/ü/ß“ („Grow geaendert“, „fuer“, „ueber“, „liess“): Zählerstand-Import, Alarm-Regeln, Einstellungen, Nachtrampe, Probeschaltung, Home-Assistant-Meldungen, Selbstauskunft und die Texte der KI-Werkzeuge. Neue Einträge der Grow-Chronik heißen „Grow geändert“ und „Grow gelöscht“; bestehende Einträge bleiben, wie sie sind.
+- **Geräte:** Der rohe Home-Assistant-Zustand „off“ / „Off“ zeigt sich als „aus“. Der Wert selbst und alles, was an Home Assistant geht, bleibt unverändert.
+- **Zelt-Typ:** Die Voreinstellung für neue Zelte heißt „Growzelt“ statt „Grow Tent“. Bestehende Zelte behalten ihren gespeicherten Wert; im Bearbeiten-Formular erscheint „Grow Tent“ als „Growzelt“ und wird beim nächsten Speichern so übernommen.
+- **Wörter:** „Veg-Dauer“ heißt „Wachstumsdauer“, „Entity/Entities“ heißen „Entität/Entitäten“ (Zuordnung statt „Mapping“), die Seite „Release & Daten“ heißt „Version & Daten“, „Onboarding“ heißt „Erste Schritte“, und die Fehlermeldung „API request failed with status“ lautet „Anfrage fehlgeschlagen (Status …)“.
+- **Prüfung:** Ein neuer Test liest alle Texte der Oberfläche, des Servers und der KI-Werkzeuge und schlägt an, sobald ein deutsches Wort ohne Umlaut dasteht. Schlüssel, Klassen, Platzhalter und die Namen der Home-Assistant-Hilfsgrößen sind ausgenommen.
+
 ## 2.0.0-cc.270
 
 **Kosten: Verbrauchstabelle passt wieder in die Karte; aufgeklappte Bereiche merken sich ihren Zustand.**

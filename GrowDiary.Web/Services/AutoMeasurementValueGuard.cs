@@ -41,7 +41,7 @@ public sealed class AutoMeasurementValueGuard
             && !MeasurementSanityService.IstPhysikalischMoeglich(schluessel, value))
         {
             var g = MeasurementSanityService.PhysikalischeGrenzen[schluessel];
-            return Reject(field, value, $"Ausserhalb dessen, was physikalisch vorkommen kann ({g.Min:0}–{g.Max:0}).");
+            return Reject(field, value, $"Außerhalb dessen, was physikalisch vorkommen kann ({g.Min:0}–{g.Max:0}).");
         }
 
         return field switch

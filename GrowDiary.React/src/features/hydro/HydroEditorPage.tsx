@@ -99,7 +99,7 @@ export default function HydroEditorPage() {
 
   const problems: string[] = []
   if (!draft.name.trim()) problems.push('Name fehlt.')
-  if (!draft.tentId) problems.push('Zelt waehlen — sonst kann der Plan nicht maßstabsgetreu rechnen.')
+  if (!draft.tentId) problems.push('Zelt wählen — sonst kann der Plan nicht maßstabsgetreu rechnen.')
   if (isRdwc && draft.siteCount < 2) problems.push('RDWC braucht mindestens zwei Sites.')
   if (draft.potLiters <= 0) problems.push('Topfvolumen fehlt.')
 
@@ -150,7 +150,7 @@ export default function HydroEditorPage() {
         <div>
           <div className="v1-eyebrow">Anlage / Hydro / {editingId ? 'Bearbeiten' : 'Neu'}</div>
           <h1>{editingId ? 'System bearbeiten' : 'System anlegen'}</h1>
-          <p>Eine Seite statt fuenf Schritte. Links eingeben, rechts sofort sehen — die Draufsicht prueft mit, ob das System ins Zelt passt.</p>
+          <p>Eine Seite statt fünf Schritte. Links eingeben, rechts sofort sehen — die Draufsicht prüft mit, ob das System ins Zelt passt.</p>
         </div>
       </header>
 
@@ -163,7 +163,7 @@ export default function HydroEditorPage() {
             <div className="v1-section-body v1-choice-grid">
               <button type="button" className={`v1-choice ${isRdwc ? 'active' : ''}`} onClick={() => patch({ hydroStyle: 'RDWC', siteCount: Math.max(2, draft.siteCount) })}>
                 <strong>RDWC</strong>
-                <span>Mehrere Sites, gemeinsamer Tank, Umwaelzpumpe. Addback zentral.</span>
+                <span>Mehrere Sites, gemeinsamer Tank, Umwälzpumpe. Addback zentral.</span>
               </button>
               <button type="button" className={`v1-choice ${!isRdwc ? 'active' : ''}`} onClick={() => patch({ hydroStyle: 'DWC' })}>
                 <strong>DWC</strong>
@@ -180,7 +180,7 @@ export default function HydroEditorPage() {
               </V1Field>
               <V1Field label="Zelt" hint={tent && !tent.widthCm ? 'Am Zelt fehlen die Maße — Plan rechnet mit 120×120.' : null}>
                 <select value={draft.tentId} onChange={(event) => patch({ tentId: event.target.value })}>
-                  <option value="">Zelt waehlen</option>
+                  <option value="">Zelt wählen</option>
                   {tents.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
               </V1Field>
@@ -194,7 +194,7 @@ export default function HydroEditorPage() {
             </header>
             <div className="v1-section-body v1-form-grid">
               {isRdwc && (
-                <V1Field label={`Sites — ${draft.siteCount}`} wide hint="Das Raster ergibt sich aus Sites und Reihen. Ein Widerspruch wie „6 Sites / 2×2“ ist damit unmoeglich.">
+                <V1Field label={`Sites — ${draft.siteCount}`} wide hint="Das Raster ergibt sich aus Sites und Reihen. Ein Widerspruch wie „6 Sites / 2×2“ ist damit unmöglich.">
                   <input type="range" min={2} max={12} step={1} value={draft.siteCount} onChange={(event) => patch({ siteCount: Number(event.target.value) })} />
                 </V1Field>
               )}
@@ -213,7 +213,7 @@ export default function HydroEditorPage() {
                 <input type="number" min={4} max={80} value={draft.potLiters} onChange={(event) => patch({ potLiters: Number(event.target.value) })} />
               </V1Field>
               {isRdwc && (
-                <V1Field label="Tank Liter" hint={tankThin ? 'Klein gegenueber den Eimern — pH driftet schneller.' : null}>
+                <V1Field label="Tank Liter" hint={tankThin ? 'Klein gegenüber den Eimern — pH driftet schneller.' : null}>
                   <input type="number" min={0} max={600} value={draft.tankLiters} onChange={(event) => patch({ tankLiters: Number(event.target.value) })} />
                 </V1Field>
               )}

@@ -704,7 +704,7 @@ function HydroStep({ setups, exactCount, selectedId, onSelect, tent }: { setups:
 }
 
 function TimeStep({ form, patch }: { form: GrowUpsertPayload; patch: (value: Partial<GrowUpsertPayload>) => void }) {
-  return <V1Section title="Zeit"><div className="v1-form-grid grow-form-grid"><V1Field label="Startdatum *" hint="Tag 1 des Grows — daran haengen Phasen, Tageszaehlung und Zeitstrahl. Leer heisst heute.">
+  return <V1Section title="Zeit"><div className="v1-form-grid grow-form-grid"><V1Field label="Startdatum *" hint="Tag 1 des Grows — daran hängen Phasen, Tageszählung und Zeitstrahl. Leer heisst heute.">
     <input type="date" required value={form.startDate} onChange={(event) => patch({ startDate: event.target.value })} />
   </V1Field><V1Field label="Startpunkt"><select value={form.entryPoint} onChange={(event) => patch({ entryPoint: event.target.value as GrowEntryPoint })}>{entryPoints.map((value) => <option key={value} value={value}>{einstiegName(value)}</option>)}</select></V1Field>{/* Nur anbieten, wo es auch ankommt: der Server nimmt „Tage in Phase" nur
     ausserhalb der Keimung und nur fuer Nicht-Autoflower an
@@ -723,7 +723,7 @@ function TimeStep({ form, patch }: { form: GrowUpsertPayload; patch: (value: Par
     <input type="number" min="0" value={form.autoflowerDaysSinceGermination ?? ''} onChange={(event) => patch({ autoflowerDaysSinceGermination: toNullableInt(event.target.value) })} />
   </V1Field>
 )}{form.seedType !== 'Autoflower' && (
-    <V1Field label="Veg-Dauer geplant (Tage)" hint={vegHinweis(form)}>
+    <V1Field label="Wachstumsdauer geplant (Tage)" hint={vegHinweis(form)}>
       <input
         type="number" min="1" max="365"
         value={form.plannedVegDays ?? ''}

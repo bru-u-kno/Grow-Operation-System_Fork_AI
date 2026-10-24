@@ -74,7 +74,7 @@ public static class Aufbau
                     // Die Einrichtungsseite zeigt den Schluessel. Ein anderes Add-on im
                     // internen Netz soll ihn nicht abholen koennen — siehe Tueren.IngressProxy.
                     kontext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                    await kontext.Response.WriteAsync("Nur ueber Home Assistant (Ingress) erreichbar.");
+                    await kontext.Response.WriteAsync("Nur über Home Assistant (Ingress) erreichbar.");
                     return;
 
                 case Zutritt.Erlaubt:

@@ -94,7 +94,7 @@ public sealed partial class SchreibWerkzeuge
     // ------------------------------------------------------------------ sensor_zuordnen
 
     [McpServerTool(Name = "sensor_zuordnen")]
-    [Description($"Ordnet GENAU EINE Messgröße eines Zelts einer Home-Assistant-Entität zu, hängt sie um oder löst sie (entitaet leer oder „keine\"). Prüft vorher, ob es die Entität in Home Assistant gibt und ob ihre Art passt (etwa sensor für Temperaturen). Alle anderen Zuordnungen bleiben mit ihren Ids stehen — das wird vorher/nachher verglichen. Beim Lösen bleibt die Zeile inaktiv stehen. Erst sensoren aufrufen. {StufeVerwaltung}")]
+    [Description($"Ordnet GENAU EINE Messgröße eines Zelts einer Home-Assistant-Entität zu, hängt sie um oder löst sie (entität leer oder „keine\"). Prüft vorher, ob es die Entität in Home Assistant gibt und ob ihre Art passt (etwa sensor für Temperaturen). Alle anderen Zuordnungen bleiben mit ihren Ids stehen — das wird vorher/nachher verglichen. Beim Lösen bleibt die Zeile inaktiv stehen. Erst sensoren aufrufen. {StufeVerwaltung}")]
     [BrauchtForkSchluessel(Stufen.Verwaltung)]
     public async Task<string> SensorZuordnenAsync(
         [Description("Die Id des Zelts (aus sensoren oder raum)")] int zeltId,

@@ -100,7 +100,7 @@ public sealed class AlertsApiController : ApiControllerBase
                                                && !Planzielgrenzen.KenntPlanziel(r.MetricKey)))
         {
             ModelState.AddModelError(nameof(AlertRuleDto.Quelle),
-                $"Fuer {regel.MetricKey} gibt es keinen Planwert — diese Messgroesse "
+                $"Für {regel.MetricKey} gibt es keinen Planwert — diese Messgröße "
                 + "braucht feste Grenzen.");
         }
 
@@ -114,8 +114,8 @@ public sealed class AlertsApiController : ApiControllerBase
             if (Planzielgrenzen.ToleranzOhneWirkung(regel.MetricKey) is { } grenze && regel.Toleranz >= grenze)
             {
                 ModelState.AddModelError(nameof(AlertRuleDto.Toleranz),
-                    $"Bei der Messgroesse {regel.MetricKey} ist die Toleranz ({regel.Toleranz}) so gross, "
-                    + $"dass die Regel nie melden koennte — sie muss unter {grenze} liegen.");
+                    $"Bei der Messgröße {regel.MetricKey} ist die Toleranz ({regel.Toleranz}) so groß, "
+                    + $"dass die Regel nie melden könnte — sie muss unter {grenze} liegen.");
             }
         }
 
@@ -139,15 +139,15 @@ public sealed class AlertsApiController : ApiControllerBase
             if (MeasurementSanityService.PhysikSchluesselFuerMetrik(regel.MetricKey) is not { } groesse) continue;
             MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.MinValue), groesse, regel.MinValue, $"Die Untergrenze ({regel.MetricKey})");
             MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.MaxValue), groesse, regel.MaxValue, $"Die Obergrenze ({regel.MetricKey})");
-            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.NightMinValue), groesse, regel.NightMinValue, $"Die naechtliche Untergrenze ({regel.MetricKey})");
-            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.NightMaxValue), groesse, regel.NightMaxValue, $"Die naechtliche Obergrenze ({regel.MetricKey})");
+            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.NightMinValue), groesse, regel.NightMinValue, $"Die nächtliche Untergrenze ({regel.MetricKey})");
+            MeasurementSanityService.PhysikGrenze(ModelState, nameof(AlertRuleDto.NightMaxValue), groesse, regel.NightMaxValue, $"Die nächtliche Obergrenze ({regel.MetricKey})");
         }
 
         foreach (var regel in rules.Where(r => r.Quelle == Grenzwertquelle.Fest && r.TagVertauscht))
         {
             ModelState.AddModelError(nameof(AlertRuleDto.MinValue),
-                $"Bei der Messgroesse {regel.MetricKey} liegt die Untergrenze "
-                + $"({regel.MinValue}) ueber der Obergrenze ({regel.MaxValue}). "
+                $"Bei der Messgröße {regel.MetricKey} liegt die Untergrenze "
+                + $"({regel.MinValue}) über der Obergrenze ({regel.MaxValue}). "
                 + "So gemeldet wuerde die Regel dauerhaft warnen.");
         }
 
@@ -160,8 +160,8 @@ public sealed class AlertsApiController : ApiControllerBase
         {
             var (untere, obere) = regel.GrenzenFuer(LightsNow.Off);
             ModelState.AddModelError(nameof(AlertRuleDto.NightMinValue),
-                $"Bei der Messgroesse {regel.MetricKey} liegt die naechtliche Untergrenze "
-                + $"({untere}) ueber der naechtlichen Obergrenze ({obere}). "
+                $"Bei der Messgröße {regel.MetricKey} liegt die nächtliche Untergrenze "
+                + $"({untere}) über der nächtlichen Obergrenze ({obere}). "
                 + "So gemeldet wuerde die Regel jede Nacht dauerhaft warnen.");
         }
 

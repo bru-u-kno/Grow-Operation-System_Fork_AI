@@ -337,9 +337,9 @@ public sealed class SettingsApiController : ApiControllerBase
         if (teile.Length != 2 || string.IsNullOrWhiteSpace(teile[0]) || string.IsNullOrWhiteSpace(teile[1]))
         {
             _logger.LogWarning(
-                "Blatt-Offset: {Dienst} ist keine gueltige Dienstkennung (erwartet domain.service).",
+                "Blatt-Offset: {Dienst} ist keine gültige Dienstkennung (erwartet domain.service).",
                 nachher.LeafOffsetSyncService);
-            return $"Blatt-Offset nicht uebertragen: \"{nachher.LeafOffsetSyncService}\" ist keine gueltige Dienstkennung.";
+            return $"Blatt-Offset nicht übertragen: \"{nachher.LeafOffsetSyncService}\" ist keine gültige Dienstkennung.";
         }
 
         var settings = HomeAssistantAddon.ResolveEffective(_repository.GetHomeAssistantSettings());
@@ -358,12 +358,12 @@ public sealed class SettingsApiController : ApiControllerBase
         if (ok)
         {
             _logger.LogInformation(
-                "Blatt-Offset {Offset} °C an {Dienst} (Port {Port}) uebergeben.",
+                "Blatt-Offset {Offset} °C an {Dienst} (Port {Port}) übergeben.",
                 nachher.LeafTempOffsetC, nachher.LeafOffsetSyncService, nachher.LeafOffsetSyncPort);
             return null;
         }
 
-        return "Gespeichert, aber nicht an den Controller uebertragen — Home Assistant hat den Dienst nicht angenommen.";
+        return "Gespeichert, aber nicht an den Controller übertragen — Home Assistant hat den Dienst nicht angenommen.";
     }
 
 

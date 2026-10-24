@@ -116,7 +116,7 @@ public sealed class SteuerungProbeService
         var wiederZu = zu && !Offen(nachher);
 
         _log.LogInformation(
-            "Probeschaltung: geschaltet, Zustand vorher {Vorher}, waehrend {Waehrend}, nachher {Nachher}.",
+            "Probeschaltung: geschaltet, Zustand vorher {Vorher}, während {Waehrend}, nachher {Nachher}.",
             vorher, waehrend, nachher);
 
         return new Ergebnis(true, sprang, wiederZu, co2Vorher, co2Nachher,

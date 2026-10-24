@@ -208,8 +208,8 @@ function GrowDetailPage() {
                 die Dauer, sondern der Beginn — das sagt die Erinnerung darunter. */}
             {timeline.dates.flip === '—' && !(grow.plannedVegDays != null && grow.plannedVegDays > 0) && (
               <div className="gd-plan-hint">
-                <p className="gc-facts">Keine Veg-Dauer geplant — ohne sie kann der Strahl keinen Flip- und Erntetermin zeigen.</p>
-                <Link className="ls-btn is-small" to={`/grows/${grow.id}/setup`}>Veg-Dauer eintragen</Link>
+                <p className="gc-facts">Keine Wachstumsdauer geplant — ohne sie kann der Strahl keinen Flip- und Erntetermin zeigen.</p>
+                <Link className="ls-btn is-small" to={`/grows/${grow.id}/setup`}>Wachstumsdauer eintragen</Link>
               </div>
             )}
           </div>

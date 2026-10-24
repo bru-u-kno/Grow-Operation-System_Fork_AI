@@ -395,7 +395,7 @@ if (DemoData.IsEnabled)
             }
 
             demoLogger.LogInformation(
-                "Testdaten: {Count} Messwerte und {Tage} Tageswerte fuer Zelt {TentId} nachgetragen.",
+                "Testdaten: {Count} Messwerte und {Tage} Tageswerte für Zelt {TentId} nachgetragen.",
                 anzahl, tageswerte, tent.Id);
         }
 
@@ -411,7 +411,7 @@ if (DemoData.IsEnabled)
             var angelegt = hardware.CreateHardwareItem(probe);
             calibration.HardwareItemId = angelegt.Id;
             hardware.CreateCalibrationEvent(calibration);
-            demoLogger.LogInformation("Testdaten: kalibrierte pH-Sonde fuer Zelt {TentId} angelegt.", tent.Id);
+            demoLogger.LogInformation("Testdaten: kalibrierte pH-Sonde für Zelt {TentId} angelegt.", tent.Id);
         }
 
         // Dazu ein paar zurueckliegende Dosen mit Wirkung. Ohne die hat keine
@@ -430,7 +430,7 @@ if (DemoData.IsEnabled)
             {
                 dosing.InsertEvent(dose);
             }
-            demoLogger.LogInformation("Testdaten: Dosier-Historie fuer Pumpe {Pump} nachgetragen.", pump.Name);
+            demoLogger.LogInformation("Testdaten: Dosier-Historie für Pumpe {Pump} nachgetragen.", pump.Name);
         }
     }
     catch (Exception ex)
@@ -523,7 +523,7 @@ app.Use(async (context, next) =>
                 context.Response.Body,
                 ApiErrorFactory.Forbidden(
                     "admin_access_required",
-                    "Dieser Bereich ist nur lokal oder ueber Home Assistant (Ingress) erreichbar.",
+                    "Dieser Bereich ist nur lokal oder über Home Assistant (Ingress) erreichbar.",
                     context.TraceIdentifier),
                 new JsonSerializerOptions(JsonSerializerDefaults.Web));
             return;
@@ -641,7 +641,7 @@ if (!Deutsch.IstWirksam)
 {
     app.Services.GetRequiredService<ILogger<Program>>().LogError(
         "Die deutsche Kultur ist NICHT wirksam: 6,5 wird als \"{Probe}\" geschrieben. "
-        + "Vermutlich laeuft .NET im Invariant-Modus (fehlendes ICU im Basis-Image oder "
+        + "Vermutlich läuft .NET im Invariant-Modus (fehlendes ICU im Basis-Image oder "
         + "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT). Alle Zahlen in Nutzertexten bekommen "
         + "dadurch einen englischen Dezimalpunkt.", 6.5.ToString("0.0"));
 }

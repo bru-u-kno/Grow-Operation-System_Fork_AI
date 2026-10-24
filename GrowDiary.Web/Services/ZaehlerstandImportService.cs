@@ -86,7 +86,7 @@ public sealed class ZaehlerstandImportService
         if (string.IsNullOrWhiteSpace(entityId))
         {
             return new Ergebnis(false, 0, 0, 0, null, null,
-                "Keine Strom-Quelle eingerichtet — kWh-Zaehler in den Kosten-Einstellungen waehlen.");
+                "Keine Strom-Quelle eingerichtet — kWh-Zähler in den Kosten-Einstellungen wählen.");
         }
 
         var jetzt = DateTime.UtcNow;
@@ -97,7 +97,7 @@ public sealed class ZaehlerstandImportService
         if (socket is null)
         {
             return new Ergebnis(false, 0, 0, 0, null, null,
-                "Keine Verbindung zu Home Assistant — Adresse und Token in den Einstellungen pruefen.");
+                "Keine Verbindung zu Home Assistant — Adresse und Token in den Einstellungen prüfen.");
         }
 
         // Ein Tag VOR dem Start mit abfragen: dessen Wert gilt am Ende jenes
@@ -120,7 +120,7 @@ public sealed class ZaehlerstandImportService
         if (!ergebnis.TryGetProperty(entityId, out var reihe) || reihe.ValueKind != JsonValueKind.Array)
         {
             return new Ergebnis(false, 0, 0, 0, null, null,
-                $"Fuer {entityId} liegt keine Langzeitstatistik vor. Der Sensor braucht eine state_class "
+                $"Für {entityId} liegt keine Langzeitstatistik vor. Der Sensor braucht eine state_class "
                 + "(total oder total_increasing), sonst legt Home Assistant keine an.");
         }
 
@@ -140,23 +140,23 @@ public sealed class ZaehlerstandImportService
         var angelegt = plan.Neu.Count;
         var hinweis = angelegt == 0
             ? plan.Uebersprungen > 0
-                ? $"Nichts nachzutragen — fuer alle {plan.Uebersprungen} Tage lag bereits ein Stand vor."
+                ? $"Nichts nachzutragen — für alle {plan.Uebersprungen} Tage lag bereits ein Stand vor."
                 : plan.Unstimmig > 0
                     ? "Nichts nachgetragen."
-                    : "Home Assistant hat fuer den Zeitraum keine Tageswerte geliefert."
-            : $"{angelegt} Zaehlerstaende nachgetragen"
+                    : "Home Assistant hat für den Zeitraum keine Tageswerte geliefert."
+            : $"{angelegt} Zählerstände nachgetragen"
                 + (plan.Uebersprungen > 0 ? $", {plan.Uebersprungen} Tage waren schon vorhanden" : string.Empty)
                 + ".";
 
         if (plan.Unstimmig > 0)
         {
-            hinweis += $" {plan.Unstimmig} Tageswerte passten nicht zwischen die vorhandenen Staende "
-                + "(der Zaehler waere rueckwaerts gelaufen) und wurden ausgelassen.";
+            hinweis += $" {plan.Unstimmig} Tageswerte passten nicht zwischen die vorhandenen Stände "
+                + "(der Zähler wäre rückwärts gelaufen) und wurden ausgelassen.";
         }
 
         if (plan.Loeschen.Count > 0)
         {
-            hinweis = $"Reihe neu aufgebaut: {plan.Loeschen.Count} alte Staende verworfen, " + hinweis;
+            hinweis = $"Reihe neu aufgebaut: {plan.Loeschen.Count} alte Stände verworfen, " + hinweis;
         }
 
         return new Ergebnis(true, angelegt, plan.Uebersprungen, plan.Loeschen.Count,

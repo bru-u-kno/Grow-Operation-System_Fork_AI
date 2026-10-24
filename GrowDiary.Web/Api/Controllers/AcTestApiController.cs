@@ -108,8 +108,8 @@ public sealed class AcTestApiController : ControllerBase
                 _logger.LogWarning(fehler, "AC-Test: {Entitaet} nicht lesbar.", geraet.LeistungEntityId);
                 zeile = new AcGeraetStand(
                     geraet, null, null, null, null,
-                    $"{geraet.LeistungEntityId} liess sich nicht lesen: {fehler.Message} "
-                    + "— steht in den Einstellungen eine vollstaendige Adresse mit http:// ?");
+                    $"{geraet.LeistungEntityId} ließ sich nicht lesen: {fehler.Message} "
+                    + "— steht in den Einstellungen eine vollständige Adresse mit http:// ?");
             }
 
             stand.Add(zeile);
@@ -184,7 +184,7 @@ public sealed class AcTestApiController : ControllerBase
         if (!AcTest.StufeErlaubt(request.Stufe))
         {
             return BadRequest(ApiErrorFactory.Validation(
-                $"Stufe {request.Stufe} liegt ausserhalb von {AcTest.StufeMin}–{AcTest.StufeMax}."));
+                $"Stufe {request.Stufe} liegt außerhalb von {AcTest.StufeMin}–{AcTest.StufeMax}."));
         }
 
         var einstellungen = _grows.GetEffectiveHomeAssistantSettings();

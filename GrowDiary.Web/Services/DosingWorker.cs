@@ -129,7 +129,7 @@ public sealed class DosingWorker : BackgroundService
         {
             // Kein Zustand ist eine gueltige Antwort: die Umwaelzung bleibt dann
             // unbekannt, und die Automatik dosiert nicht. Genau richtig.
-            _logger.LogDebug(ex, "Live-Zustaende fuer Zelt {TentId} nicht erreichbar.", tentId);
+            _logger.LogDebug(ex, "Live-Zustände für Zelt {TentId} nicht erreichbar.", tentId);
         }
 
         cache[tentId] = states;
@@ -312,7 +312,7 @@ public sealed class DosingWorker : BackgroundService
                     "Zweite Hälfte: " + DosingService.Grund(lauf)
                     + (rest >= 0.01 ? $" Der Rest von {rest:0.##} ml wird nicht mehr gegeben." : string.Empty)));
                 _logger.LogError(
-                    "Zweite Hälfte: {Pump} liess sich nicht sicher schalten — bis zu {Ml:0.##} ml fehlen im Becken.",
+                    "Zweite Hälfte: {Pump} ließ sich nicht sicher schalten — bis zu {Ml:0.##} ml fehlen im Becken.",
                     ziel.Name, pending.Ml);
                 break;
             }

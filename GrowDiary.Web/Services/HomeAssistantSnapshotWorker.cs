@@ -448,7 +448,7 @@ public sealed class HomeAssistantSnapshotWorker : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var tagebuch = scope.ServiceProvider.GetRequiredService<GrowDiary.Web.Services.Tagebuch.TagebuchService>();
         var neu = tagebuch.ErkennenFuerAlleZelte(DateTime.UtcNow);
-        if (neu > 0) _logger.LogInformation("Tagebuch: {Anzahl} neue Spruenge im Sensorverlauf gemerkt.", neu);
+        if (neu > 0) _logger.LogInformation("Tagebuch: {Anzahl} neue Sprünge im Sensorverlauf gemerkt.", neu);
         await Task.CompletedTask;
     }
 

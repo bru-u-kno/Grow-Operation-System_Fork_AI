@@ -578,12 +578,12 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
             {
                 GrowId = id,
                 EntryType = JournalEntryType.GerminationConfirmed,
-                Body = "Keimung bestaetigt.",
+                Body = "Keimung bestätigt.",
                 OccurredAtUtc = DateTime.UtcNow
             });
         }
 
-        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Keimung bestaetigt."));
+        return Ok(new GrowActionResultDto(_repository.GetGrow(id)!.ToDetailDto(), "Keimung bestätigt."));
     }
 
     /// <summary>
@@ -628,7 +628,7 @@ public sealed class GrowWorkflowApiController : ApiControllerBase
         var stage = GrowStageResolver.Resolve(grow, DateTime.Today);
         if (stage is not (GrowStage.Transition or GrowStage.Flower or GrowStage.Finish))
         {
-            return BadRequestError("invalid_action", "Finish gibt es erst in der Bluete.");
+            return BadRequestError("invalid_action", "Finish gibt es erst in der Blüte.");
         }
 
         if (!grow.FinishStartedAt.HasValue)

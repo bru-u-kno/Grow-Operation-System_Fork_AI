@@ -82,7 +82,7 @@ public sealed class AutoMeasurementExecutionService
             {
                 if (TryCreateMissingTentRun(config) is { } missingTentRun)
                 {
-                    MarkSkipped(missingTentRun, "Kein Tent fuer AutoMeasurementConfig ermittelbar.");
+                    MarkSkipped(missingTentRun, "Kein Tent für AutoMeasurementConfig ermittelbar.");
                 }
                 continue;
             }

@@ -766,7 +766,7 @@ public sealed class GrowCoreRepository : RepositoryBase
         {
             Id = Convert.ToInt32((long)reader["Id"]),
             Name = reader["Name"]?.ToString() ?? string.Empty,
-            Kind = reader["Kind"]?.ToString() ?? "Grow Tent",
+            Kind = reader["Kind"]?.ToString() ?? "Growzelt",
             TentType = ParseEnum(NullString(reader["TentType"]), TentType.MultiPurpose),
             Status = ParseEnum(NullString(reader["Status"]), TentStatus.Active),
             Notes = NullString(reader["Notes"]),

@@ -81,7 +81,7 @@ public sealed class NightRampApiController : ApiControllerBase
         {
             return BadRequestError(
                 "grow_without_tent",
-                "Zielgeraet und Kuehler haengen am Zelt, und dieser Grow ist keinem zugeordnet. "
+                "Zielgerät und Kühler hängen am Zelt, und dieser Grow ist keinem zugeordnet. "
                 + "Ordne ihn unter „Grow bearbeiten\" einem Zelt zu — danach lassen sich beide "
                 + "einstellen.");
         }
@@ -96,7 +96,7 @@ public sealed class NightRampApiController : ApiControllerBase
         {
             return BadRequestError(
                 "chiller_not_a_switch",
-                $"„{schalter.Trim()}\" ist keine Steckdose. Der Kuehler wird ueber switch.turn_on "
+                $"„{schalter.Trim()}\" ist keine Steckdose. Der Kühler wird über switch.turn_on "
                 + "geschaltet; die Kennung muss deshalb mit „switch.\" beginnen.");
         }
 

@@ -419,7 +419,7 @@ function SettingsPage() {
             )}
             <div className="co-row">
               <span className="co-row-text">Erste Schritte erneut zeigen</span>
-              <div className="co-row-end"><Link className="ls-btn is-small" to="/start">Onboarding</Link><Link className="ls-btn is-small" to="/release">Release &amp; Daten</Link></div>
+              <div className="co-row-end"><Link className="ls-btn is-small" to="/start">Erste Schritte</Link><Link className="ls-btn is-small" to="/release">Version &amp; Daten</Link></div>
             </div>
             <div className="co-row">
               <span className="co-row-text">Zelte / Grows</span>

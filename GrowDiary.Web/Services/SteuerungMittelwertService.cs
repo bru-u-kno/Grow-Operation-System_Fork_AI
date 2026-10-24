@@ -66,7 +66,7 @@ public sealed class SteuerungMittelwertService
         try
         {
             var start = await client.PostAsJsonAsync(OptionenPfad, new { handler = eintrag }, ct);
-            if (!start.IsSuccessStatusCode) return Scheitern($"Optionen liessen sich nicht öffnen ({(int)start.StatusCode}).");
+            if (!start.IsSuccessStatusCode) return Scheitern($"Optionen ließen sich nicht öffnen ({(int)start.StatusCode}).");
 
             var formular = await start.Content.ReadFromJsonAsync<JsonElement>(ct);
             var dialog = Text(formular, "flow_id");
@@ -115,7 +115,7 @@ public sealed class SteuerungMittelwertService
         try
         {
             var start = await client.PostAsJsonAsync(DialogPfad, new { handler = "filter", show_advanced_options = false }, ct);
-            if (!start.IsSuccessStatusCode) return (false, $"Dialog liess sich nicht öffnen ({(int)start.StatusCode}).");
+            if (!start.IsSuccessStatusCode) return (false, $"Dialog ließ sich nicht öffnen ({(int)start.StatusCode}).");
             var dialog = Text(await start.Content.ReadFromJsonAsync<JsonElement>(ct), "flow_id");
             if (string.IsNullOrWhiteSpace(dialog)) return (false, "Home Assistant hat keine Dialog-Kennung geliefert.");
 

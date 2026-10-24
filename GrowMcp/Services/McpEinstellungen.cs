@@ -33,7 +33,7 @@ public sealed class McpEinstellungen
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Die Add-on-Einstellungen liessen sich nicht lesen — es wird gesucht.");
+                logger.LogWarning(ex, "Die Add-on-Einstellungen ließen sich nicht lesen — es wird gesucht.");
             }
         }
 

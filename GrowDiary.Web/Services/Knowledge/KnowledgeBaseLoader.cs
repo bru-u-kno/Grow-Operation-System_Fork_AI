@@ -155,7 +155,7 @@ public sealed class KnowledgeBaseLoader
         if (backedUp > 0)
         {
             _logger.LogInformation(
-                "{Count} Datei(en) konnten nicht als unveraendert nachgewiesen werden; der bisherige Stand liegt daneben als *.user-backup.",
+                "{Count} Datei(en) konnten nicht als unverändert nachgewiesen werden; der bisherige Stand liegt daneben als *.user-backup.",
                 backedUp);
         }
     }
