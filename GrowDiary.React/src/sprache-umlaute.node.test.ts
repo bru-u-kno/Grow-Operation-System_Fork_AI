@@ -70,5 +70,6 @@ describe('Umlaute in Texten', () => {
   it('liest Texte aus C#, TSX und lässt Klassenlisten aus', () => {
     expect(textstuecke('a.cs', 'var x = $"Zelt {z} waehlen"; var k = "ueberblick";').map((s) => s.text)).toEqual(['Zelt ', ' waehlen'])
     expect(textstuecke('a.tsx', 'const a = <p className="st-geraet-wert is-faint">Zelt waehlen</p>').map((s) => s.text)).toEqual(['Zelt waehlen'])
+    expect(textstuecke("a.tsx", "const a = <h2>Pruefung</h2>").map((s) => s.text)).toEqual(["Pruefung"])
   })
 })

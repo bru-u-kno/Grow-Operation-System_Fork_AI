@@ -129,29 +129,34 @@ export interface Textstueck {
 const ERKENNT_CODE = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|PRAGMA|FROM|WHERE)\b.*\b(FROM|INTO|SET|TABLE|WHERE|VALUES)\b|\{%|\{\{.*\}\}|states\(|=>/s
 
 /** Ein Textstück ist Sprache, wenn ein Mensch es lesen könnte: Leerzeichen drin und kein SQL/Vorlagen-Code. */
-function istSprache(text: string): boolean {
-  if (!/ /.test(text) || ERKENNT_CODE.test(text)) return false
+function istSprache(text: string, einWort = false): boolean {
+  if (ERKENNT_CODE.test(text) || (!einWort && !/ /.test(text))) return false
+  if (einWort && (!/[A-Za-zÄÖÜäöüß]{3}/.test(text) || /^[a-z0-9_]+\.[a-z0-9_.]+$/.test(text.trim()))) return false // Entitäts-Kennungen (switch.kuehler)
   // Klassenlisten („st-geraet-wert is-faint“) und Suchwörter (alles klein, mit Bindestrich) sind keine Sprache.
   const teile = text.trim().split(/\s+/)
   if (teile.every((t) => /^[a-z0-9_:\-/[\].%]+$/.test(t)) && teile.some((t) => t.includes('-'))) return false
   return true
 }
 
+/** JSX-Attribute, deren Wert ein Mensch liest — hier genügt ein einzelnes Wort („Umwaelzpumpe“). */
+const SICHTBARE_ATTRIBUTE: ReadonlySet<string> = new Set(['label', 'title', 'placeholder', 'aria-label', 'alt', 'hint', 'eyebrow', 'subtitle', 'kicker', 'caption', 'legend', 'text', 'description'])
+
 /** Texte einer TypeScript-/TSX-Datei: Zeichenketten, Vorlagenteile und JSX-Text. */
 function textstueckeTs(name: string, quelle: string): Textstueck[] {
   const datei = ts.createSourceFile(name, quelle, ts.ScriptTarget.Latest, true, name.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const aus: Textstueck[] = []
-  const nimm = (von: number, bis: number): void => {
+  const nimm = (von: number, bis: number, einWort = false): void => {
     const text = quelle.slice(von, bis)
-    if (istSprache(text)) aus.push({ von, bis, text })
+    if (istSprache(text, einWort)) aus.push({ von, bis, text })
   }
   const geh = (knoten: ts.Node): void => {
     if (ts.isImportDeclaration(knoten) || ts.isExportDeclaration(knoten)) return
-    if (ts.isStringLiteral(knoten) || ts.isNoSubstitutionTemplateLiteral(knoten)) nimm(knoten.getStart() + 1, knoten.getEnd() - 1)
+    if (ts.isStringLiteral(knoten) && ts.isJsxAttribute(knoten.parent) && SICHTBARE_ATTRIBUTE.has(knoten.parent.name.getText())) nimm(knoten.getStart() + 1, knoten.getEnd() - 1, true)
+    else if (ts.isStringLiteral(knoten) || ts.isNoSubstitutionTemplateLiteral(knoten)) nimm(knoten.getStart() + 1, knoten.getEnd() - 1)
     else if (ts.isTemplateHead(knoten)) nimm(knoten.getStart() + 1, knoten.getEnd() - 2)
     else if (ts.isTemplateMiddle(knoten)) nimm(knoten.getStart() + 1, knoten.getEnd() - 2)
     else if (ts.isTemplateTail(knoten)) nimm(knoten.getStart() + 1, knoten.getEnd() - 1)
-    else if (ts.isJsxText(knoten)) nimm(knoten.getStart(), knoten.getEnd())
+    else if (ts.isJsxText(knoten)) nimm(knoten.getStart(), knoten.getEnd(), true)
     ts.forEachChild(knoten, geh)
   }
   geh(datei)

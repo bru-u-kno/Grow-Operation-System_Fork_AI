@@ -5,6 +5,14 @@
 > was sich ändert. Die älteren Einträge darunter sind noch englisch; sie sind
 > Geschichte und werden nicht nachübersetzt.
 
+## 2.0.0-cc.272
+
+**Sprachdurchgang, Nachtrag: die letzten Reste auf der Hydro-Seite, und die Prüfung liest jetzt auch einzelne Wörter.**
+
+- **Hydro-System anlegen:** Die Überschrift „Prüfung“ und die Beschriftung „Umwälzpumpe“ standen noch ohne Umlaut da; cc.271 hatte sie übersehen, weil die Prüfung nur Texte mit mindestens zwei Wörtern las.
+- **Zelt-Typ:** Der Platzhalter im Feld „Typ“ heißt „Growzelt“.
+- **Prüfung:** Der Umlaut-Test liest jetzt auch einzelne Wörter in Überschriften und Beschriftungen (Texte in JSX und die Attribute `label`, `title`, `placeholder` u. a.). Entitäts-Kennungen wie `switch.kuehler` bleiben ausgenommen.
+
 ## 2.0.0-cc.271
 
 **Sprachdurchgang: Texte durchgängig Deutsch, mit echten Umlauten — und eine Prüfung, die es so hält.**

@@ -234,7 +234,7 @@ export default function HydroEditorPage() {
           <section className="v1-section">
             <header className="v1-section-head"><h2>4 · Technik — optional</h2></header>
             <div className="v1-section-body v1-form-grid">
-              <label className="v1-switch"><input type="checkbox" checked={draft.hasCirculationPump} onChange={(event) => patch({ hasCirculationPump: event.target.checked })} /><strong>Umwaelzpumpe</strong></label>
+              <label className="v1-switch"><input type="checkbox" checked={draft.hasCirculationPump} onChange={(event) => patch({ hasCirculationPump: event.target.checked })} /><strong>Umwälzpumpe</strong></label>
               <label className="v1-switch"><input type="checkbox" checked={draft.hasAirPump} onChange={(event) => patch({ hasAirPump: event.target.checked })} /><strong>Luftpumpe</strong></label>
               <label className="v1-switch"><input type="checkbox" checked={draft.hasChiller} onChange={(event) => patch({ hasChiller: event.target.checked })} /><strong>Chiller</strong></label>
               <label className="v1-switch"><input type="checkbox" checked={draft.hasUvSterilizer} onChange={(event) => patch({ hasUvSterilizer: event.target.checked })} /><strong>UV-C</strong></label>
@@ -262,7 +262,7 @@ export default function HydroEditorPage() {
           </section>
 
           <section className="v1-section">
-            <header className="v1-section-head"><h2>Pruefung</h2></header>
+            <header className="v1-section-head"><h2>Prüfung</h2></header>
             <div className="v1-list">
               {problems.map((problem) => (
                 <div key={problem} className="v1-list-row warning"><span>{problem}</span></div>
